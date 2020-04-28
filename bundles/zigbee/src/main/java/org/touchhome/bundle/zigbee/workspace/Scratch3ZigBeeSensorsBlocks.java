@@ -17,20 +17,12 @@ import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
 import org.touchhome.bundle.zigbee.setting.ZigbeeCoordinatorHandlerSetting;
 import org.touchhome.bundle.zigbee.setting.ZigbeeStatusSetting;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-
 import static org.touchhome.bundle.zigbee.workspace.Scratch3ZigBeeBlocks.*;
 
 @Getter
 @Component
 @Scratch3Extension("zigbee-sensor")
 public class Scratch3ZigBeeSensorsBlocks extends Scratch3ZigbeeExtensionBlocks {
-
-    public static final Set<String> ALARM_CLUSTERS = new HashSet<>(Arrays.asList(
-            ZigBeeConverterIasFireIndicator.CLUSTER_NAME,
-            ZigBeeConverterIasWaterSensor.CLUSTER_NAME));
 
     private static final String ALARM_SENSOR = "ALARM_SENSOR";
     private static final String WATER_SENSOR = "WATER_SENSOR";

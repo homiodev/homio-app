@@ -1,5 +1,6 @@
 package org.touchhome.bundle.zigbee;
 
+import com.zsmartsystems.zigbee.zcl.clusters.ZclIasZoneCluster;
 import com.zsmartsystems.zigbee.zcl.clusters.ZclOnOffCluster;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -9,11 +10,9 @@ import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.util.SmartUtils;
 import org.touchhome.bundle.zigbee.converter.impl.ZigBeeConverterEndpoint;
 import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
-import org.touchhome.bundle.zigbee.workspace.Scratch3ZigBeeSensorsBlocks;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Log4j2
 @RestController
@@ -24,8 +23,9 @@ public class ZigBeeController {
     private final ZigBeeBundleContext zigbeeBundleContext;
 
     @GetMapping("option/zcl/{clusterId}")
-    public List<Option> filterByClusterId(@PathVariable("clusterId") int clusterId) {
-        return filterByClusterIdAndEndpointCount(clusterId, null);
+    public List<Option> filterByClusterId(@PathVariable("clusterId") int clusterId,
+                                          @RequestParam(value = "includeClusterName", required = false) boolean includeClusterName) {
+        return filterByClusterIdAndEndpointCount(clusterId, null, includeClusterName);
     }
 
     @GetMapping("option/clusterName/{clusterName}")
@@ -45,15 +45,15 @@ public class ZigBeeController {
         return list;
     }
 
-    private List<Option> filterByClusterIdAndEndpointCount(Integer clusterId, Integer endpointCount) {
+    private List<Option> filterByClusterIdAndEndpointCount(Integer clusterId, Integer endpointCount, boolean includeClusterName) {
         List<Option> list = new ArrayList<>();
         for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandlers().getZigBeeDevices().values()) {
             List<ZigBeeConverterEndpoint> endpoints = getZigBeeConverterEndpointsByClusterId(zigBeeDevice, clusterId);
 
             if (!endpoints.isEmpty()) {
                 if (endpointCount == null || endpointCount == endpoints.size()) {
-                    list.add(Option.of(zigBeeDevice.getZigBeeNodeDescription().getIeeeAddress(),
-                            entityContext.getEntity(ZigBeeDeviceEntity.PREFIX + zigBeeDevice.getNodeIeeeAddress()).getTitle()));
+                    String key = zigBeeDevice.getNodeIeeeAddress() + (includeClusterName ? "/" + endpoints.iterator().next().getClusterName() : "");
+                    list.add(Option.of(key, entityContext.getEntity(ZigBeeDeviceEntity.PREFIX + zigBeeDevice.getNodeIeeeAddress()).getTitle()));
                 }
             }
         }
@@ -62,20 +62,19 @@ public class ZigBeeController {
 
     @GetMapping("option/alarm")
     public List<Option> getAlarmSensors() {
-        return Scratch3ZigBeeSensorsBlocks.ALARM_CLUSTERS.stream()
-                .flatMap(as -> filterByClusterName(as, true).stream()).collect(Collectors.toList());
+        return filterByClusterId(ZclIasZoneCluster.CLUSTER_ID, true);
     }
 
     @GetMapping("option/buttons")
     public List<Option> getButtons() {
-        List<Option> options = filterByClusterIdAndEndpointCount(ZclOnOffCluster.CLUSTER_ID, 1);
+        List<Option> options = filterByClusterIdAndEndpointCount(ZclOnOffCluster.CLUSTER_ID, 1, false);
         options.addAll(filterByModelIdentifier("lumi.remote"));
         return options;
     }
 
     @GetMapping("option/doubleButtons")
     public List<Option> getDoubleButtons() {
-        return filterByClusterIdAndEndpointCount(ZclOnOffCluster.CLUSTER_ID, 2);
+        return filterByClusterIdAndEndpointCount(ZclOnOffCluster.CLUSTER_ID, 2, false);
     }
 
     @GetMapping("option/model/{modelIdentifier}")
