@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Configuration monitorInterval="30" status="warn">
+    <Properties>
+        <Property name="logBaseDir">${sys:user.home:-.}/state/logs</Property>
+        <Property name="pattern">%d{yyyy/MM/dd HH:mm:ss} %-5p [%-25.25t] [%-25.25c{1}] - %m%n</Property>
+    </Properties>
+
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${pattern}"/>
+        </Console>
+
+        <RollingFile name="appLog"
+                     fileName="${logBaseDir}/app.log"
+                     filePattern="${logBaseDir}/old/all-%d{yyyy-MM-dd}.log.gz"
+                     append="true">
+            <PatternLayout pattern="${pattern}"/>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${logBaseDir}/old" maxDepth="1">
+                    <IfFileName glob="*/app-*.log.gz"/>
+                    <IfLastModified age="5d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <RollingFile name="zigBeeLog"
+                     fileName="${logBaseDir}/zigBee.log"
+                     filePattern="${logBaseDir}/old/zigBee.%d{yyyy-MM-dd}.log.gz"
+                     append="true">
+            <PatternLayout pattern="${pattern}"/>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${logBaseDir}/old" maxDepth="1">
+                    <IfFileName glob="*/zigBee-*.log.gz"/>
+                    <IfLastModified age="5d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <RollingFile name="workspaceLog"
+                     fileName="${logBaseDir}/workspace.log"
+                     filePattern="${logBaseDir}/old/workspace.%d{yyyy-MM-dd}.log.gz"
+                     append="true">
+            <PatternLayout pattern="${pattern}"/>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${logBaseDir}/old" maxDepth="1">
+                    <IfFileName glob="*/workspace-*.log.gz"/>
+                    <IfLastModified age="5d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+    </Appenders>
+    <Loggers>
+        <Logger name="org.touchhome" additivity="false" level="debug">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.touchhome.bundle.zigbee" additivity="false" level="debug">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="zigBeeLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.touchhome.app.workspace" additivity="false" level="debug">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="workspaceLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.touchhome.bundle.api.workspace" additivity="false" level="debug">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="workspaceLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Root level="INFO">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>

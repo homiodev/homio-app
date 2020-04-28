@@ -1,0 +1,10 @@
+{
+  "raspberry": {
+    "name": "Raspberry",
+    "extensionDescription": "Raspberry extension",
+    "setting": {
+      "label": "Raspberry settings",
+      "st_RaspberryOneWireIntervalSetting": "1-Wire request interval"
+    }
+  }
+}

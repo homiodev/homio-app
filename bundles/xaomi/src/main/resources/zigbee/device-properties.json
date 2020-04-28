@@ -1,0 +1,19 @@
+{
+  "zigbeeRequireEndpoints": [
+    {
+      "modelId": "lumi.ctrl_ln2.aq1",
+      "name": "zigbee.mi.doubleButton",
+      "image": "zigbee-button-double"
+    },
+    {
+      "modelId": "lumi.sensor_cube.aqgl01",
+      "name": "zigbee.mi.cube",
+      "image": "zigbee-cube"
+    },
+    {
+      "modelId": "lumi.sensor_cube",
+      "name": "zigbee.mi.cube",
+      "image": "zigbee-cube"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+package org.touchhome.bundle.cloud.setting;
+
+import org.touchhome.bundle.api.BundleSettingPlugin;
+
+public class CloudServerUrlSetting implements BundleSettingPlugin<String> {
+
+    @Override
+    public SettingType getSettingType() {
+        return SettingType.Text;
+    }
+
+    @Override
+    public String getDefaultValue() {
+        return "http://event-home.com";
+    }
+
+    @Override
+    public int order() {
+        return 40;
+    }
+}

@@ -1,0 +1,89 @@
+{
+  "zigbee:ias_fire": "Fire",
+  "field": {
+    "zigBeeNodeDescription": "Node Descriptor",
+    "channelsInitialized": "Channel fetched"
+  },
+  "help": {
+    "zigBeeNodeDescription": "Zigbee Node Descriptor"
+  },
+  "SIDEBAR": {
+    "ZigBeeDeviceEntity": "ZigBee"
+  },
+  "zigbee-sensor": {
+    "name": "Zigbee sensors",
+    "extensionDescription": "ZigBee sensors extension"
+  },
+  "zigbee": {
+    "device_reinitialise": "Node rediscovery started",
+    "start_scan": "ZigBee discovery started",
+    "extensionDescription": "ZigBee extension",
+    "OFFLINE_COMMS_FAIL": "Communication failed",
+    "OFFLINE_BAD_RESPONSE": "Bad response",
+    "OFFLINE_INITIALIZE_FAIL": "Initialize failed",
+    "name": "Zigbee",
+    "setting": {
+      "label": "Zigbee settings",
+      "st_ZigbeeLogEventsButtonsSetting": "Log events",
+      "st_ZigbeeDeviceStatusSetting": "Connected devices",
+      "st_ZigbeeCoordinatorHandlerSetting": "Coordinator",
+      "st_ZigbeeJoinDeviceDuringScanOnlySetting": "Join devices during scan only",
+      "st_ZigbeeChannelIdSetting": "Channel id",
+      "st_ZigbeePanIdSetting": "Pan id",
+      "st_ZigbeePowerModeSetting": "Power mode",
+      "st_ZigbeeTxPowerSetting": "Tx Power",
+      "st_ZigbeePortBaudSetting": "Port baud",
+      "st_ZigbeeMeshUpdatePeriodSetting": "Mesh update period",
+      "st_ZigbeePortSetting": "Port",
+      "st_ZigbeeInstallCodeSetting": "Install code",
+      "st_ZigbeeLinkKeySetting": "Link key",
+      "st_ZigbeeExtendedPanIdSetting": "Extended Pan id",
+      "st_ZigbeeTrustCenterModeSetting": "Trust center mode",
+      "st_ZigbeeDiscoveryDurationSetting": "Discovery duration",
+      "st_ZigbeeNetworkKeySetting": "Network key",
+      "st_ZigbeeDiscoveryButtonSetting": "Start discovery devices",
+      "st_ZigbeeStatusMessageSetting": "Status message",
+      "st_ZigbeeStatusSetting": "Status",
+      "st_ZigbeeNetworkIdSetting": "Network Id",
+      "st_ZigbeeResetNetworkButtonSetting": "Reset network"
+    },
+    "error": {
+      "OFFLINE_DISCOVERY_INCOMPLETE": "Discovery incomplete",
+      "OFFLINE_NODE_NOT_FOUND": "Node not found",
+      "REMOVED_BY_DONGLE": "Node removed by dongle",
+      "ALIVE_TIMEOUT_REACHED": "Node alive timeout reached",
+      "HANDLER_INITIALIZING_ERROR": "Handler initialization error",
+      "NO_CLUSTER_FOUND": "No supported clusters found"
+    },
+    "action": {
+      "selectModelIdentifier": "Select Model Identifier"
+    },
+    "mi": {
+      "motion": "Lumi Motion Sensor",
+      "weather": "Weather sensor",
+      "remote": "Wireless 1-Button Switch",
+      "doubleButton": "2-Button Switch",
+      "singleButton": "1-Button Switch",
+      "smoke": "Smoke sensor",
+      "leak": "Water Leak Sensor",
+      "ht": "Temperature and Humidity Sensor",
+      "doubleRemote": "Wireless 2-Button Switch"
+    }
+  },
+  "CONSOLE": {
+    "bundle": {
+      "zigbee": "Zigbee Devices"
+    }
+  },
+  "ACTION": {
+    "PERMIT_JOIN": "Permit join",
+    "SHOW_NODE_DESCRIPTION": "Show node description",
+    "INITIALIZE_ZIGBEE_NODE": "Initialize zigbee node",
+    "ZIGBEE_PULL_CHANNELS": "Pull channels",
+    "SHOW_LAST_VALUES": "Show last values",
+    "RESPONSE": {
+      "NODE_INITIALIZATION_STARTED": "Node initialization started",
+      "ZIGBEE_PULL_CHANNELS_STARTED": "Zigbee pull channels started"
+    }
+  }
+}

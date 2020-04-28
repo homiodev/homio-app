@@ -1,0 +1,9 @@
+{
+  "arduino": {
+    "name": "Arduino",
+    "extensionDescription": "Arduino extension",
+    "setting": {
+      "label": "Arduino settings"
+    }
+  }
+}

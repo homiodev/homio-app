@@ -1,0 +1,32 @@
+flushDelayedUpdatesInterval: 30000
+checkScriptStatusTimeout: 60000
+keepGoogleCloudCacheTime: 300000
+scheduledAppPingTime: 60000
+minScriptThreadSleep: 100
+scriptEngineName: nashorn
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    show-sql: false
+
+server:
+  port: 8090

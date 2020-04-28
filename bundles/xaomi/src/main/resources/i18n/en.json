@@ -1,0 +1,14 @@
+{
+  "xaomi": {
+    "name": "Xaomi",
+    "extensionDescription": "Xaomi extension",
+    "setting": {
+      "label": "Xaomi settings"
+    }
+  },
+  "zigbee": {
+    "mi": {
+      "cube": "Cube sensor"
+    }
+  }
+}

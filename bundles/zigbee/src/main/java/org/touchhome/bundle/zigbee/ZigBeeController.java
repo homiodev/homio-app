@@ -1,0 +1,104 @@
+package org.touchhome.bundle.zigbee;
+
+import com.zsmartsystems.zigbee.zcl.clusters.ZclOnOffCluster;
+import lombok.AllArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.web.bind.annotation.*;
+import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.json.Option;
+import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.zigbee.converter.impl.ZigBeeConverterEndpoint;
+import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
+import org.touchhome.bundle.zigbee.workspace.Scratch3ZigBeeSensorsBlocks;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Log4j2
+@RestController
+@RequestMapping("/rest/zigbee")
+@AllArgsConstructor
+public class ZigBeeController {
+    private final EntityContext entityContext;
+    private final ZigBeeBundleContext zigbeeBundleContext;
+
+    @GetMapping("option/zcl/{clusterId}")
+    public List<Option> filterByClusterId(@PathVariable("clusterId") int clusterId) {
+        return filterByClusterIdAndEndpointCount(clusterId, null);
+    }
+
+    @GetMapping("option/clusterName/{clusterName}")
+    public List<Option> filterByClusterName(@PathVariable("clusterName") String clusterName,
+                                            @RequestParam(value = "includeClusterName", required = false) boolean includeClusterName) {
+        List<Option> list = new ArrayList<>();
+        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandlers().getZigBeeDevices().values()) {
+            ZigBeeConverterEndpoint zigBeeConverterEndpoint = zigBeeDevice.getZigBeeConverterEndpoints().keySet()
+                    .stream().filter(f -> f.getClusterName().equals(clusterName)).findAny().orElse(null);
+            // add zigBeeDevice
+            if (zigBeeConverterEndpoint != null) {
+                String key = zigBeeDevice.getNodeIeeeAddress() + (includeClusterName ? "/" + zigBeeConverterEndpoint.getClusterName() : "");
+                list.add(Option.of(key, zigBeeConverterEndpoint.getClusterDescription() + " - " +
+                        entityContext.getEntity(ZigBeeDeviceEntity.PREFIX + zigBeeDevice.getNodeIeeeAddress()).getTitle()));
+            }
+        }
+        return list;
+    }
+
+    private List<Option> filterByClusterIdAndEndpointCount(Integer clusterId, Integer endpointCount) {
+        List<Option> list = new ArrayList<>();
+        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandlers().getZigBeeDevices().values()) {
+            List<ZigBeeConverterEndpoint> endpoints = getZigBeeConverterEndpointsByClusterId(zigBeeDevice, clusterId);
+
+            if (!endpoints.isEmpty()) {
+                if (endpointCount == null || endpointCount == endpoints.size()) {
+                    list.add(Option.of(zigBeeDevice.getZigBeeNodeDescription().getIeeeAddress(),
+                            entityContext.getEntity(ZigBeeDeviceEntity.PREFIX + zigBeeDevice.getNodeIeeeAddress()).getTitle()));
+                }
+            }
+        }
+        return list;
+    }
+
+    @GetMapping("option/alarm")
+    public List<Option> getAlarmSensors() {
+        return Scratch3ZigBeeSensorsBlocks.ALARM_CLUSTERS.stream()
+                .flatMap(as -> filterByClusterName(as, true).stream()).collect(Collectors.toList());
+    }
+
+    @GetMapping("option/buttons")
+    public List<Option> getButtons() {
+        List<Option> options = filterByClusterIdAndEndpointCount(ZclOnOffCluster.CLUSTER_ID, 1);
+        options.addAll(filterByModelIdentifier("lumi.remote"));
+        return options;
+    }
+
+    @GetMapping("option/doubleButtons")
+    public List<Option> getDoubleButtons() {
+        return filterByClusterIdAndEndpointCount(ZclOnOffCluster.CLUSTER_ID, 2);
+    }
+
+    @GetMapping("option/model/{modelIdentifier}")
+    public List<Option> filterByModelIdentifier(@PathVariable("modelIdentifier") String modelIdentifier) {
+        List<Option> list = new ArrayList<>();
+        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandlers().getZigBeeDevices().values()) {
+            String deviceMI = zigBeeDevice.getZigBeeNodeDescription().getModelIdentifier();
+            if (deviceMI != null && deviceMI.startsWith(modelIdentifier)) {
+                list.add(Option.of(zigBeeDevice.getZigBeeNodeDescription().getIeeeAddress(),
+                        entityContext.getEntity(ZigBeeDeviceEntity.PREFIX + zigBeeDevice.getNodeIeeeAddress()).getTitle()));
+            }
+        }
+
+        return list;
+    }
+
+    private List<ZigBeeConverterEndpoint> getZigBeeConverterEndpointsByClusterId(ZigBeeDevice zigBeeDevice, Integer clusterId) {
+        List<ZigBeeConverterEndpoint> endpoints = new ArrayList<>();
+        for (ZigBeeConverterEndpoint zigBeeConverterEndpoint : zigBeeDevice.getZigBeeConverterEndpoints().keySet()) {
+            if (SmartUtils.containsAny(zigBeeConverterEndpoint.getZigBeeConverter().clientClusters(), clusterId)) {
+                endpoints.add(zigBeeConverterEndpoint);
+            }
+        }
+        return endpoints;
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "nrf24i01": {
+    "name": "NRF24I01",
+    "setting": {
+      "label": "NRF24I01 settings",
+      "st_Nrf24i01StatusSetting": "Device status",
+      "st_Nrf24i01StatusMessageSetting": "Device msg"
+    }
+  }
+}
