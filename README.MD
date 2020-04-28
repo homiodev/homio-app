@@ -1,8 +1,8 @@
 # touchHome backend application
 
-[![Build Status](https://travis-ci.com/touchhome/touchhome-backend.svg)](https://travis-ci.com/github/touchhome/touchhome-backend)
+[![Build Status](https://travis-ci.com/touchhome/touchhome-core.svg)](https://travis-ci.com/github/touchhome/touchhome-core)
 
-[![GitHub release](https://img.shields.io/github/v/release/touchhome/touchhome-backend)](https://github.com/touchhome/touchhome-backend/releases)
+[![GitHub release](https://img.shields.io/github/v/release/touchhome/touchhome-core)](https://github.com/touchhome/touchhome-core/releases)
 ###Not ready for production
 
 Backend for Smart TouchHome
