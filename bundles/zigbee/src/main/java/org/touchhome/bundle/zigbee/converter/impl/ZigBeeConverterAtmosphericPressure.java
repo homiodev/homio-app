@@ -39,6 +39,7 @@ public class ZigBeeConverterAtmosphericPressure extends ZigBeeBaseChannelConvert
 
     @Override
     public boolean initializeDevice() {
+        pollingPeriod = REPORTING_PERIOD_DEFAULT_MAX;
         ZclCluster serverCluster = endpoint.getInputCluster(ZclPressureMeasurementCluster.CLUSTER_ID);
         if (serverCluster == null) {
             log.error("{}/{}: Error opening device pressure measurement cluster", endpoint.getIeeeAddress(), endpoint.getEndpointId());

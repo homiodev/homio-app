@@ -25,6 +25,7 @@ public class ZigBeeConverterOccupancy extends ZigBeeBaseChannelConverter impleme
     @Override
     public boolean initializeDevice() {
         log.debug("{}: Initialising device occupancy cluster", endpoint.getIeeeAddress());
+        pollingPeriod = REPORTING_PERIOD_DEFAULT_MAX;
 
         ZclOccupancySensingCluster serverClusterOccupancy = (ZclOccupancySensingCluster) endpoint
                 .getInputCluster(ZclOccupancySensingCluster.CLUSTER_ID);

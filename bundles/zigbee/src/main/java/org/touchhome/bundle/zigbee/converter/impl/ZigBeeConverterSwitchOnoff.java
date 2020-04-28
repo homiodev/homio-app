@@ -38,6 +38,7 @@ public class ZigBeeConverterSwitchOnoff extends ZigBeeBaseChannelConverter
 
     @Override
     public boolean initializeDevice() {
+        pollingPeriod = REPORTING_PERIOD_DEFAULT_MAX;
         ZclOnOffCluster clientCluster = (ZclOnOffCluster) endpoint.getOutputCluster(ZclOnOffCluster.CLUSTER_ID);
         ZclOnOffCluster serverCluster = (ZclOnOffCluster) endpoint.getInputCluster(ZclOnOffCluster.CLUSTER_ID);
         if (clientCluster == null && serverCluster == null) {

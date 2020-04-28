@@ -141,6 +141,7 @@ public interface EntityContext {
 
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, Consumer<T> listener);
 
-    // handle new/old values
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener);
+
+    <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
 }

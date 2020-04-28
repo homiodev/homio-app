@@ -26,10 +26,12 @@ class ZigBeeIsAliveTracker {
     }
 
     synchronized void resetTimer(ZigBeeDevice zigBeeDevice) {
-        zigBeeDevice.getZigBeeNodeDescription().setExpectedUpdateIntervalTimer(System.currentTimeMillis());
-        log.debug("{}: Reset timeout for handler with zigBeeDevice", zigBeeDevice.getNodeIeeeAddress());
-        cancelTask(zigBeeDevice);
-        scheduleTask(zigBeeDevice);
+        if(handlerIntervalMapping.containsKey(zigBeeDevice)) {
+            zigBeeDevice.getZigBeeNodeDescription().setExpectedUpdateIntervalTimer(System.currentTimeMillis());
+            log.debug("{}: Reset timeout for handler with zigBeeDevice", zigBeeDevice.getNodeIeeeAddress());
+            cancelTask(zigBeeDevice);
+            scheduleTask(zigBeeDevice);
+        }
     }
 
     private void scheduleTask(ZigBeeDevice zigBeeDevice) {

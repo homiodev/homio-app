@@ -20,17 +20,20 @@
     {
       "modelId": "lumi.remote.b186acn01",
       "name": "zigbee.mi.remote",
-      "image": "zigbee-button-remote"
+      "image": "zigbee-button-remote",
+      "disablePooling": true
     },
     {
       "modelId": "lumi.sensor_smoke",
       "name": "zigbee.mi.smoke",
-      "image": "zigbee-smoke"
+      "image": "zigbee-smoke",
+      "disablePooling": true
     },
     {
       "modelId": "lumi.sensor_wleak.aq1",
       "name": "zigbee.mi.leak",
       "image": "zigbee-leak",
+      "disablePooling": true,
       "requireEndpoints": [
         {
           "typeId": "zigbee:ias_water",
@@ -43,6 +46,7 @@
       "modelId": "lumi.sensor_86sw2",
       "name": "zigbee.mi.doubleRemote",
       "image": "zigbee-button-doubleRemote",
+      "disablePooling": true,
       "requireEndpoints": [
         {
           "typeId": "zigbee:switch_onoff",

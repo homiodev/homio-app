@@ -40,7 +40,6 @@ public final class ZigBeeDeviceUpdateValueListener implements WorkspaceEventList
     private final Map<String, Map<ZigBeeDeviceStateUUID, State>> lastDeviceStates = new HashMap<>();
     private final Map<ZigBeeDeviceStateUUID, ScratchDeviceState> deviceStates = new HashMap<>();
 
-
     private final Map<String, Holder> warehouse = new HashMap<>();
 
     public void updateValue(ZigBeeDevice zigBeeDevice, ZigBeeDeviceStateUUID uuid, State state, boolean pooling) {
@@ -159,7 +158,7 @@ public final class ZigBeeDeviceUpdateValueListener implements WorkspaceEventList
         holder.deviceListeners.get(zigBeeDeviceStateUUID).add(listener);
     }
 
-    public void addListener(String ieeeAddress, Consumer<ScratchDeviceState> listener) {
+    public void addIeeeAddressListener(String ieeeAddress, Consumer<ScratchDeviceState> listener) {
         ieeeAddressListeners.putIfAbsent(ieeeAddress, new ArrayList<>());
         ieeeAddressListeners.get(ieeeAddress).add(listener);
     }

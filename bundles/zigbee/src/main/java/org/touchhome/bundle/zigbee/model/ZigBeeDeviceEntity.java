@@ -30,6 +30,7 @@ import javax.persistence.Entity;
 import javax.persistence.Transient;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Getter
@@ -86,7 +87,6 @@ public class ZigBeeDeviceEntity extends DeviceBaseEntity<ZigBeeDeviceEntity> {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private List<Map<Option, String>> availableLinks;
 
-    //TODO: fix this: @UIField(order = 50, type = UIFieldType.Selection, onlyEdit = true)
     private String imageIdentifier;
 
     ZigBeeDeviceEntity setModelIdentifier(String modelIdentifier) {
@@ -94,9 +94,9 @@ public class ZigBeeDeviceEntity extends DeviceBaseEntity<ZigBeeDeviceEntity> {
         tryEvaluateImageIdentifier();
 
         if (this.getTitle().equals(this.getIeeeAddress())) {
-            ZigbeeRequireEndpoint zigbeeRequireEndpoint = ZigbeeRequireEndpoints.get().getZigbeeRequireEndpoint(modelIdentifier);
-            if (zigbeeRequireEndpoint != null) {
-                String describeName = En.get().findPathText(zigbeeRequireEndpoint.getName());
+            Optional<ZigbeeRequireEndpoint> zigbeeRequireEndpoint = ZigbeeRequireEndpoints.get().getZigbeeRequireEndpoint(modelIdentifier);
+            if (zigbeeRequireEndpoint.isPresent()) {
+                String describeName = En.get().findPathText(zigbeeRequireEndpoint.get().getName());
                 if (describeName != null) {
                     setName(describeName + "(" + getNetworkAddress() + ")");
                 }

@@ -5,10 +5,7 @@ import lombok.Setter;
 import org.touchhome.bundle.api.util.SmartUtils;
 import org.touchhome.bundle.zigbee.ZigBeeNodeDescription;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Stream;
 
 public final class ZigbeeRequireEndpoints {
@@ -39,11 +36,15 @@ public final class ZigbeeRequireEndpoints {
     }
 
     public Stream<RequireEndpoint> getRequireEndpoints(String modelIdentifier) {
-        return zigbeeRequireEndpoints.stream().filter(c->c.getModelId().equals(modelIdentifier))
+        return zigbeeRequireEndpoints.stream().filter(c -> c.getModelId().equals(modelIdentifier))
                 .map(ZigbeeRequireEndpoint::getRequireEndpoints).filter(Objects::nonNull).flatMap(Collection::stream);
     }
 
-    public ZigbeeRequireEndpoint getZigbeeRequireEndpoint(String modelIdentifier) {
-        return zigbeeRequireEndpoints.stream().filter(c->c.getModelId().equals(modelIdentifier)).findAny().orElse(null);
+    public Optional<ZigbeeRequireEndpoint> getZigbeeRequireEndpoint(String modelIdentifier) {
+        return zigbeeRequireEndpoints.stream().filter(c -> c.getModelId().equals(modelIdentifier)).findAny();
+    }
+
+    public boolean isDisablePooling(String modelIdentifier) {
+        return getZigbeeRequireEndpoint(modelIdentifier).map(ZigbeeRequireEndpoint::isDisablePooling).orElse(false);
     }
 }

@@ -25,6 +25,7 @@ public class ZigBeeConverterRelativeHumidity extends ZigBeeBaseChannelConverter 
 
     @Override
     public boolean initializeDevice() {
+        pollingPeriod = REPORTING_PERIOD_DEFAULT_MAX;
         ZclRelativeHumidityMeasurementCluster serverCluster = (ZclRelativeHumidityMeasurementCluster) endpoint
                 .getInputCluster(ZclRelativeHumidityMeasurementCluster.CLUSTER_ID);
         if (serverCluster == null) {

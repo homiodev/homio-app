@@ -427,6 +427,12 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
+    public <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener) {
+        this.entityUpdateListeners.putIfAbsent(entityID, new ArrayList<>());
+        this.entityUpdateListeners.get(entityID).remove(listener);
+    }
+
+    @Override
     public <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, Consumer<T> listener) {
         this.addEntityUpdateListener(entityClass, (t, t2) -> listener.accept(t));
     }
