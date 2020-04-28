@@ -16,13 +16,13 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.setting.console.ConsoleLogLevelSetting;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.api.util.SmartUtils;
 
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
+import java.util.function.Consumer;
 
 @Component
 public class LogService implements ApplicationListener<ApplicationEnvironmentPreparedEvent> {
@@ -73,21 +73,24 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         initLogAppender();
     }
 
+    public void setEntityContext(EntityContext entityContext) {
+        for (LogAppenderHandler logAppenderHandler : logAppenderHandlers.values()) {
+            logAppenderHandler.setEntityContext(entityContext);
+        }
+    }
+
     public static class LogAppenderHandler extends CountingNoOpAppender {
         private final String appenderName;
         private final String fileName;
         private List<LogEvent> bufferedLogEvents = new ArrayList<>();
         private int intLevel = Level.DEBUG.intLevel();
+        private Consumer<LogEvent> logStrategy = event -> bufferedLogEvents.add(event);
 
         LogAppenderHandler(RollingFileAppender appender) {
             super("Smart " + appender.getName() + " Counting Appender", null);
             this.appenderName = appender.getName();
             this.fileName = appender.getFileName();
             this.start();
-        }
-
-        static void sendMultiLogEvent(String appenderName, LogEvent event, EntityContext entityContext) {
-            sendLogEvent(appenderName, event, entityContext);
         }
 
         static void sendLogEvent(String appenderName, LogEvent event, EntityContext entityContext) {
@@ -111,27 +114,23 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
             return text.length() > 25 ? text.substring(text.length() - 25) : text;
         }
 
+        public synchronized void setEntityContext(EntityContext entityContext) {
+            listenAndUpdateLogLevel(entityContext);
+
+            for (LogEvent bufferedLogEvent : bufferedLogEvents) {
+                sendLogEvent(this.appenderName, bufferedLogEvent, entityContext);
+            }
+            bufferedLogEvents = null;
+
+            this.logStrategy = event -> sendLogEvent(this.appenderName, event, entityContext);
+        }
+
         @Override
         public void append(LogEvent event) {
             if (intLevel < event.getLevel().intLevel()) {
                 return;
             }
-            if (!ApplicationContextHolder.isContextInitialized()) {
-                bufferedLogEvents.add(event);
-            } else {
-                EntityContext entityContext = ApplicationContextHolder.getBean(EntityContext.class);
-                if (bufferedLogEvents != null) {
-
-                    // update log level
-                    entityContext.onContextInitialized(() -> listenAndUpdateLogLevel(entityContext));
-
-                    for (LogEvent bufferedLogEvent : bufferedLogEvents) {
-                        sendMultiLogEvent(this.appenderName, bufferedLogEvent, entityContext);
-                    }
-                    bufferedLogEvents = null;
-                }
-                sendMultiLogEvent(this.appenderName, event, entityContext);
-            }
+            this.logStrategy.accept(event);
             super.append(event);
         }
 
