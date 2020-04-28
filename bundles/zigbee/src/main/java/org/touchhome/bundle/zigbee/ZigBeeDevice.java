@@ -25,9 +25,6 @@ import java.util.function.BiConsumer;
 @Log4j2
 public class ZigBeeDevice implements ZigBeeNetworkNodeListener, ZigBeeAnnounceListener {
 
-    private static final int POLLING_PERIOD_MIN = 5;
-    private static final int POLLING_PERIOD_MAX = 86400;
-
     /**
      * The map of all the zigBeeConverterEndpoints defined for this thing
      */
@@ -40,7 +37,7 @@ public class ZigBeeDevice implements ZigBeeNetworkNodeListener, ZigBeeAnnounceLi
     private ScheduledFuture<?> pollingJob = null;
     @Getter
     @Setter
-    private int pollingPeriod = POLLING_PERIOD_MAX;
+    private int pollingPeriod = 86400;
     @Getter
     private ZigBeeNodeDescription zigBeeNodeDescription;
     private ZigBeeDiscoveryService discoveryService;
@@ -154,8 +151,8 @@ public class ZigBeeDevice implements ZigBeeNetworkNodeListener, ZigBeeAnnounceLi
             }
 
             int expectedUpdatePeriod = getExpectedUpdatePeriod(this.zigBeeConverterEndpoints.values());
-            if (ZigbeeRequireEndpoints.get().isDisablePooling(zigBeeNodeDescription.getModelIdentifier())
-                    || expectedUpdatePeriod != Integer.MAX_VALUE) {
+            if (!ZigbeeRequireEndpoints.get().isDisablePooling(zigBeeNodeDescription.getModelIdentifier())
+                    && expectedUpdatePeriod != Integer.MAX_VALUE) {
                 expectedUpdatePeriod = (expectedUpdatePeriod * 2) + 30;
                 log.debug("{}: Setting ONLINE/OFFLINE timeout interval to: {}", nodeIeeeAddress, expectedUpdatePeriod);
                 this.discoveryService.getZigBeeIsAliveTracker().addHandler(this, expectedUpdatePeriod);
@@ -239,8 +236,7 @@ public class ZigBeeDevice implements ZigBeeNetworkNodeListener, ZigBeeAnnounceLi
                 }
 
                 if (!handler.initializeDevice()) {
-                    log.info("{}: failed to initialise device", nodeIeeeAddress);
-                    continue;
+                    log.info("{}: failed to initialise device converter <{}>", nodeIeeeAddress, zigBeeConverterEndpoint.toUUID());
                 }
 
                 if (!handler.initializeConverter()) {
@@ -332,16 +328,8 @@ public class ZigBeeDevice implements ZigBeeNetworkNodeListener, ZigBeeAnnounceLi
 
         synchronized (pollingSync) {
             stopPolling();
-
-            if (pollingPeriod < POLLING_PERIOD_MIN) {
-                log.debug("{}: Polling period was set below minimum value. Using minimum.", nodeIeeeAddress);
-                pollingPeriod = POLLING_PERIOD_MIN;
-            }
-
-            if (pollingPeriod > POLLING_PERIOD_MAX) {
-                log.debug("{}: Polling period was set above maximum value. Using maximum.", nodeIeeeAddress);
-                pollingPeriod = POLLING_PERIOD_MAX;
-            }
+            pollingPeriod = Math.max(pollingPeriod, 5);
+            pollingPeriod = Math.min(pollingPeriod, 86400);
 
             // Polling starts almost immediately to get an immediate refresh
             // Add some random element to the period so that all things aren't synchronised

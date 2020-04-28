@@ -23,7 +23,7 @@ public abstract class ZigBeeInputBaseConverter extends ZigBeeBaseChannelConverte
 
     @Override
     public boolean initializeDevice() {
-        log.debug("{}/{}: Initialising device cluster", endpoint.getIeeeAddress(), endpoint.getEndpointId());
+        log.debug("{}/{}: Initialising {} device cluster", endpoint.getIeeeAddress(), endpoint.getEndpointId(), getClass().getSimpleName());
 
         ZclCluster zclCluster = getZclCluster();
         if (zclCluster != null) {

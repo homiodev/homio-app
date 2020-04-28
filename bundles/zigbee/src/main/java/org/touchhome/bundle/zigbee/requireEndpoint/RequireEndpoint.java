@@ -2,12 +2,14 @@ package org.touchhome.bundle.zigbee.requireEndpoint;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.touchhome.bundle.api.util.SmartUtils;
 import org.touchhome.bundle.zigbee.converter.impl.ZigBeeConverter;
 import org.touchhome.bundle.zigbee.converter.impl.ZigBeeConverterEndpoint;
 
 @Getter
 @Setter
+@ToString
 public class RequireEndpoint {
     private int endpoint;
     private int inputCluster;

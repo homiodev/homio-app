@@ -23,7 +23,7 @@ public abstract class ZigBeeBaseChannelConverter {
 
     protected final int REPORTING_PERIOD_DEFAULT_MAX = 7200;
 
-    protected final int POLLING_PERIOD_HIGH = 60;
+    protected final int POLLING_PERIOD_HIGH = 300;
 
     @Getter
     protected int pollingPeriod = Integer.MAX_VALUE;
