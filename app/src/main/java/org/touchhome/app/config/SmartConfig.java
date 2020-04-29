@@ -286,7 +286,6 @@ public class SmartConfig extends WebSecurityConfigurerAdapter implements WebMvcC
         registry.addInterceptor(new CacheControlHandlerInterceptor());
     }
 
-
     @JsonIdentityInfo(generator = JSOGGenerator.class, property = "entityID", resolver = JSOGResolver.class)
     interface Bean2MixIn {
     }

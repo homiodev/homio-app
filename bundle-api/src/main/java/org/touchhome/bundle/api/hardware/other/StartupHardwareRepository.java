@@ -13,4 +13,7 @@ public interface StartupHardwareRepository {
             @HardwareQuery("grep -xF ':cmd' /etc/rc.local && echo '1' || sudo sed -i '/exit 0/i :cmd' /etc/rc.local"),
     })
     String addStartupCommand(@ApiParam("cmd") String cmd);
+
+    @HardwareQuery("sudo ./update.sh :version")
+    String updateApp(@ApiParam("version") String version);
 }

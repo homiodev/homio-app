@@ -1,9 +1,10 @@
 #!/bin/sh
 
-PROGRAM_NAME=SmartHouse
+VERSION=$1
+PROGRAM_NAME="touchHome.jar"
 PROGRAM_PATH=$HOME/${PROGRAM_NAME}.jar
-EXPECTED_CHECKSUM=$(curl https://raw.githubusercontent.com/CasperReduct/test/master/README.md -s)
-RELEASE_PROGRAM_URL="https://cdn.sstatic.net/Img/unified/sprites.svg?v=fcc0ea44ba27"
+EXPECTED_CHECKSUM=$(curl https://github.com/touchhome/touchHome-core/releases/download/${VERSION}/touchHome.jar.md5 -s)
+RELEASE_PROGRAM_URL="https://github.com/touchhome/touchHome-core/releases/download/${VERSION}/touchHome.jar"
 if [ -f "$PROGRAM_PATH" ]; then
     ACTUAL_CHECKSUM=`md5sum ${PROGRAM_PATH} | awk '{ print $1 }'`
     if [ "$ACTUAL_CHECKSUM" == "$EXPECTED_CHECKSUM" ]; then
