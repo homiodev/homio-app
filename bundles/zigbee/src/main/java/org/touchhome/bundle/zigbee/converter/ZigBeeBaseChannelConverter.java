@@ -1,7 +1,6 @@
 package org.touchhome.bundle.zigbee.converter;
 
 import com.zsmartsystems.zigbee.*;
-import com.zsmartsystems.zigbee.zcl.ZclAttribute;
 import com.zsmartsystems.zigbee.zcl.ZclCluster;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
@@ -24,10 +23,10 @@ public abstract class ZigBeeBaseChannelConverter {
 
     protected final int REPORTING_PERIOD_DEFAULT_MAX = 7200;
 
-    protected final int POLLING_PERIOD_HIGH = 60;
+    protected final int POLLING_PERIOD_HIGH = 300;
 
     @Getter
-    protected int pollingPeriod = REPORTING_PERIOD_DEFAULT_MAX;
+    protected int pollingPeriod = Integer.MAX_VALUE;
 
     @Getter
     protected int minimalReportingPeriod = Integer.MAX_VALUE;
@@ -247,8 +246,7 @@ public abstract class ZigBeeBaseChannelConverter {
     // Configure reporting
     protected void updateServerPoolingPeriod(ZclCluster serverCluster, int attributeId, boolean isUpdate, Object reportableChange) throws InterruptedException, ExecutionException {
         ZigBeeDeviceEntity zbe = zigBeeDevice.getZigBeeDeviceEntity();
-        ZclAttribute attribute = serverCluster.getAttribute(attributeId);
-        CommandResult reportingResponse = attribute.setReporting(zbe.getReportingTimeMin(), zbe.getReportingTimeMax(), reportableChange).get();
+        CommandResult reportingResponse = serverCluster.setReporting(attributeId, zbe.getReportingTimeMin(), zbe.getReportingTimeMax(), reportableChange).get();
         if (isUpdate) {
             handleReportingResponse(reportingResponse, zbe.getPoolingPeriod(), zbe.getReportingTimeMax());
         } else {
@@ -258,5 +256,9 @@ public abstract class ZigBeeBaseChannelConverter {
 
     public void updateConfiguration() {
 
+    }
+
+    public Integer getMinPoolingInterval() {
+        return Math.min(this.pollingPeriod, this.minimalReportingPeriod);
     }
 }

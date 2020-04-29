@@ -19,6 +19,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.touchhome.app.LogService;
 import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSONJSON;
 import org.touchhome.app.manager.BackgroundProcessManager;
@@ -95,7 +96,6 @@ public class InternalManager implements EntityContext {
     private final Set<NotificationEntityJSON> notifications = new HashSet<>();
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
-    private List<Runnable> contextInitializedListeners = new ArrayList<>();
     private Map<Class<? extends BundleSettingPlugin>, List<Consumer<?>>> settingListeners = new HashMap<>();
 
     public Set<NotificationEntityJSON> getNotifications() {
@@ -119,6 +119,7 @@ public class InternalManager implements EntityContext {
         repositories = applicationContext.getBean("repositories", Map.class);
 
         applicationContext.getBean(LoggerManager.class).postConstruct();
+        applicationContext.getBean(LogService.class).setEntityContext(this);
 
         applicationContext.getBean(SettingRepository.class).postConstruct(settingPluginsByPluginKey.values());
         registerEntityListeners();
@@ -143,8 +144,6 @@ public class InternalManager implements EntityContext {
 
         applicationContext.getBean(WorkspaceManager.class).postConstruct();
         applicationContext.getBean(WidgetManager.class).postConstruct();
-
-        this.contextInitializedListeners.forEach(Runnable::run);
 
         // trigger handlers when variables changed
         this.addEntityUpdateListener(WorkspaceVariableEntity.class, (source, oldSource) -> {
@@ -417,11 +416,6 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public void onContextInitialized(Runnable contextInitialized) {
-        this.contextInitializedListeners.add(contextInitialized);
-    }
-
-    @Override
     public <T extends BaseEntity> void addEntityUpdateListener(String entityID, Consumer<T> listener) {
         this.addEntityUpdateListener(entityID, (t, t2) -> listener.accept((T) t));
     }
@@ -430,6 +424,12 @@ public class InternalManager implements EntityContext {
     public <T extends BaseEntity> void addEntityUpdateListener(String entityID, BiConsumer<T, T> listener) {
         this.entityUpdateListeners.putIfAbsent(entityID, new ArrayList<>());
         this.entityUpdateListeners.get(entityID).add(listener);
+    }
+
+    @Override
+    public <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener) {
+        this.entityUpdateListeners.putIfAbsent(entityID, new ArrayList<>());
+        this.entityUpdateListeners.get(entityID).remove(listener);
     }
 
     @Override

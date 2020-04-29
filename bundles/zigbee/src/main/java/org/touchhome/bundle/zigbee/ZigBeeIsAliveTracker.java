@@ -13,6 +13,7 @@ class ZigBeeIsAliveTracker {
     private Map<ZigBeeDevice, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
 
     void addHandler(ZigBeeDevice zigBeeDevice, int expectedUpdateInterval) {
+        zigBeeDevice.getZigBeeNodeDescription().setExpectedUpdateInterval(expectedUpdateInterval);
         log.debug("{}: Add IsAlive Tracker", zigBeeDevice.getNodeIeeeAddress());
         handlerIntervalMapping.put(zigBeeDevice, expectedUpdateInterval);
         resetTimer(zigBeeDevice);
@@ -25,9 +26,12 @@ class ZigBeeIsAliveTracker {
     }
 
     synchronized void resetTimer(ZigBeeDevice zigBeeDevice) {
-        log.debug("{}: Reset timeout for handler with zigBeeDevice", zigBeeDevice.getNodeIeeeAddress());
-        cancelTask(zigBeeDevice);
-        scheduleTask(zigBeeDevice);
+        if(handlerIntervalMapping.containsKey(zigBeeDevice)) {
+            zigBeeDevice.getZigBeeNodeDescription().setExpectedUpdateIntervalTimer(System.currentTimeMillis());
+            log.debug("{}: Reset timeout for handler with zigBeeDevice", zigBeeDevice.getNodeIeeeAddress());
+            cancelTask(zigBeeDevice);
+            scheduleTask(zigBeeDevice);
+        }
     }
 
     private void scheduleTask(ZigBeeDevice zigBeeDevice) {

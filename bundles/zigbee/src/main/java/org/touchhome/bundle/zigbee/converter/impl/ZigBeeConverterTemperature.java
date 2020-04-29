@@ -29,6 +29,7 @@ public class ZigBeeConverterTemperature extends ZigBeeBaseChannelConverter imple
 
     @Override
     public boolean initializeDevice() {
+        pollingPeriod = REPORTING_PERIOD_DEFAULT_MAX;
         ZclTemperatureMeasurementCluster clientCluster = (ZclTemperatureMeasurementCluster) endpoint
                 .getInputCluster(ZclTemperatureMeasurementCluster.CLUSTER_ID);
         if (clientCluster == null) {

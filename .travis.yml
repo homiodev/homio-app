@@ -1,11 +1,17 @@
 language: java
-
 jdk: openjdk8
-
+before_deploy: git checkout master
+install: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 cache:
   directories:
   - $HOME/.m2
-  - $HOME/.bnd/cache/
-
-before_deploy: git checkout master
-install: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+deploy:
+  provider: releases
+  skip_cleanup: true
+  api_key: $GITHUB_OAUTH_API_KEY
+  file_glob: true
+  draft: true
+  file:
+    - "app/target/*.jar"
+  on:
+    tags: true

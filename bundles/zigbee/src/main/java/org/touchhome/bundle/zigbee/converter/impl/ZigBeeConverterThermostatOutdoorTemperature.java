@@ -25,6 +25,7 @@ public class ZigBeeConverterThermostatOutdoorTemperature extends ZigBeeBaseChann
 
     @Override
     public boolean initializeDevice() {
+        pollingPeriod = REPORTING_PERIOD_DEFAULT_MAX;
         ZclThermostatCluster serverCluster = (ZclThermostatCluster) endpoint
                 .getInputCluster(ZclThermostatCluster.CLUSTER_ID);
         if (serverCluster == null) {

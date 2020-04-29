@@ -7,7 +7,7 @@ import com.zsmartsystems.zigbee.zcl.clusters.iaszone.ZoneTypeEnum;
 /**
  * Converter for the IAS motion sensor.
  */
-@ZigBeeConverter(name = "zigbee:ias_motionintrusion", clientClusters = {ZclIasZoneCluster.CLUSTER_ID})
+@ZigBeeConverter(name = "zigbee:ias_motionintrusion", description = "Motion intrusion alarm", clientClusters = {ZclIasZoneCluster.CLUSTER_ID})
 public class ZigBeeConverterIasMotionIntrusion extends ZigBeeConverterIas {
 
     @Override

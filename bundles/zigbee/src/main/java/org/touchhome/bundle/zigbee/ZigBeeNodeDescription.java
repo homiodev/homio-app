@@ -1,5 +1,6 @@
 package org.touchhome.bundle.zigbee;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.zsmartsystems.zigbee.IeeeAddress;
 import com.zsmartsystems.zigbee.ZigBeeNode;
@@ -20,6 +21,7 @@ import org.touchhome.bundle.zigbee.converter.ZigBeeBaseChannelConverter;
 import org.touchhome.bundle.zigbee.converter.impl.ZigBeeConverterEndpoint;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.zsmartsystems.zigbee.zcl.clusters.ZclBasicCluster.*;
@@ -31,6 +33,25 @@ import static com.zsmartsystems.zigbee.zcl.clusters.ZclBasicCluster.*;
 public class ZigBeeNodeDescription {
 
     private final String ieeeAddress;
+
+    @Setter
+    @JsonIgnore
+    private Integer expectedUpdateInterval;
+    @Setter
+    @JsonIgnore
+    private Long expectedUpdateIntervalTimer;
+
+    public String getMaxTimeoutBeforeOfflineNode() {
+        return expectedUpdateInterval == null ? "Not set" : TimeUnit.SECONDS.toMinutes(expectedUpdateInterval) + "min";
+    }
+
+    public String getTimeoutBeforeOfflineNode() {
+        if (expectedUpdateIntervalTimer == null) {
+            return "Not set";
+        }
+        String min = String.valueOf(TimeUnit.SECONDS.toMinutes(expectedUpdateInterval - (System.currentTimeMillis() - expectedUpdateIntervalTimer) / 1000));
+        return "Expired in: " + min + "min";
+    }
 
     private NodeDescriptor.LogicalType logicalType;
     private Integer networkAddress;

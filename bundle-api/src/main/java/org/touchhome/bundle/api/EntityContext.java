@@ -135,15 +135,13 @@ public interface EntityContext {
     @PublicJsMethod
     <T extends BaseEntity> T getEntityByName(String name, Class<T> entityClass);
 
-    @PublicJsMethod
-    void onContextInitialized(Runnable contextInitialized);
-
     <T extends BaseEntity> void addEntityUpdateListener(String entityID, Consumer<T> listener);
 
     <T extends BaseEntity> void addEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
 
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, Consumer<T> listener);
 
-    // handle new/old values
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener);
+
+    <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
 }

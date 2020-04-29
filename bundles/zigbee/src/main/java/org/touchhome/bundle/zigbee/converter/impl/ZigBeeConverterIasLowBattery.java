@@ -6,7 +6,7 @@ import com.zsmartsystems.zigbee.zcl.clusters.ZclIasZoneCluster;
 /**
  * Converter for the IAS low battery indicator.
  */
-@ZigBeeConverter(name = "zigbee:iaslowbattery", clientClusters = {ZclIasZoneCluster.CLUSTER_ID})
+@ZigBeeConverter(name = "zigbee:iaslowbattery", description = "Low battery alarm", clientClusters = {ZclIasZoneCluster.CLUSTER_ID})
 public class ZigBeeConverterIasLowBattery extends ZigBeeConverterIas {
 
     @Override

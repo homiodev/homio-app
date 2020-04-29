@@ -13,6 +13,7 @@ public class ZigbeeRequireEndpoint {
     private String modelId;
     private String name;
     private String image;
+    private boolean disablePooling = false;
     private List<RequireEndpoint> requireEndpoints;
 
     boolean matchAllTypes(Collection<ZigBeeNodeDescription.ChannelDescription> channels) {

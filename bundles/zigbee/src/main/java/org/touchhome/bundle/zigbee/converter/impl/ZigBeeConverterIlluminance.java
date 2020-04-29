@@ -30,6 +30,7 @@ public class ZigBeeConverterIlluminance extends ZigBeeBaseChannelConverter imple
 
     @Override
     public boolean initializeDevice() {
+        pollingPeriod = REPORTING_PERIOD_DEFAULT_MAX;
         ZclIlluminanceMeasurementCluster serverCluster = (ZclIlluminanceMeasurementCluster) endpoint
                 .getInputCluster(ZclIlluminanceMeasurementCluster.CLUSTER_ID);
         if (serverCluster == null) {
