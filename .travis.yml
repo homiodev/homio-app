@@ -4,12 +4,13 @@ before_deploy: git checkout master
 install: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 cache:
   directories:
-  - "$HOME/.m2/repository"
+  - $HOME/.m2
 deploy:
-  provider: bintray
-  file: "bintray-descriptor.json"
-  user:touchhome
-  key: $BINTRAY_API_KEY
+  provider: releases
+  skip_cleanup: true
+  api_key: $GITHUB_OAUTH_API_KEY
+  file_glob: true
+  file:
+    - "app/target/*.jar"
   on:
-    repo: https://github.com/touchhome/touchHome-core
-    tags: false
+    tags: true
