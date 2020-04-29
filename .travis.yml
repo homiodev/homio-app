@@ -1,11 +1,15 @@
 language: java
-
 jdk: openjdk8
-
-cache:
-  directories:
-  - $HOME/.m2
-  - $HOME/.bnd/cache/
-
 before_deploy: git checkout master
 install: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+cache:
+  directories:
+  - "$HOME/.m2/repository"
+deploy:
+  provider: bintray
+  file: "bintray-descriptor.json"
+  user:touchhome
+  key: $BINTRAY_API_KEY
+  on:
+    repo: https://github.com/touchhome/touchHome-core
+    tags: false
