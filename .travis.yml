@@ -1,6 +1,5 @@
 language: java
 jdk: openjdk8
-before_deploy: git checkout master
 install: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 cache:
   directories:
