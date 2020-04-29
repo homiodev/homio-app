@@ -10,6 +10,7 @@ deploy:
   skip_cleanup: true
   api_key: $GITHUB_OAUTH_API_KEY
   file_glob: true
+  draft: true
   file:
     - "app/target/*.jar"
   on:
