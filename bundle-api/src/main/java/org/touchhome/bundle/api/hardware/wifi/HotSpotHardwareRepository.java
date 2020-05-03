@@ -7,10 +7,10 @@ import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 
 @HardwareRepositoryAnnotation
 public interface HotSpotHardwareRepository {
-    @HardwareQuery("sudo apt-get -y install hostapd")
+    @HardwareQuery("sudo $PM -y install hostapd")
     void installHostapd();
 
-    @HardwareQuery("sudo apt-get -y install dnsmasq")
+    @HardwareQuery("sudo $PM -y install dnsmasq")
     void installDnsmasq();
 
     @HardwareQuery("sudo systemctl disable hostapd")

@@ -13,6 +13,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.stereotype.Component;
 import org.thavam.util.concurrent.blockingMap.BlockingHashMap;
 import org.thavam.util.concurrent.blockingMap.BlockingMap;
+import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.hardware.api.*;
 import org.touchhome.bundle.api.util.ClassFinder;
 
@@ -34,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Log4j2
 @Component
@@ -42,6 +44,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     private static final BlockingQueue<PrintContext> printLogsJobs = new LinkedBlockingQueue<>(10);
     private static final BlockingMap<Process, List<String>> inputResponse = new BlockingHashMap<>();
     private static final Constructor<MethodHandles.Lookup> lookupConstructor;
+    private static final String pm;
 
     private static Thread logThread = new Thread(() -> {
         while (!Thread.currentThread().isInterrupted()) {
@@ -71,6 +74,17 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         } catch (Exception ex) {
             throw new RuntimeException("Unable to instantiate MethodHandles.Lookup", ex);
         }
+        pm = determinePackageManager();
+    }
+
+    @SneakyThrows
+    private static String determinePackageManager() {
+        String[] availablePackageManagers = new String[]{"apt-get", "yum"};
+        String cmd = Stream.of(availablePackageManagers).map(pm -> "command -v " + pm).collect(Collectors.joining(" || "));
+        Process process = Runtime.getRuntime().exec(cmd);
+        process.waitFor();
+        String result = String.join("", IOUtils.readLines(process.getInputStream()));
+        return Stream.of(availablePackageManagers).filter(result::contains).findAny().orElseThrow(() -> new NotFoundException("No package manager found"));
     }
 
     static {
@@ -131,6 +145,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     private Object handleHardwareQuery(HardwareQuery hardwareQuery, Object[] args, Method method) throws InstantiationException, IllegalAccessException {
         ErrorsHandler errorsHandler = method.getAnnotation(ErrorsHandler.class);
         String command = replaceStringWithArgs(hardwareQuery.value(), args, method);
+        command = command.replace("$PM", pm);
         log.info("Hardware execute command: <{}>", command);
 
         int retValue;

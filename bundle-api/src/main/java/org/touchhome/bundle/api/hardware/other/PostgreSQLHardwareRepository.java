@@ -9,8 +9,8 @@ import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 public interface PostgreSQLHardwareRepository {
 
     @HardwareQueries({
-            @HardwareQuery("sudo apt-get update"),
-            @HardwareQuery(value = "sudo apt-get install -y postgresql", printOutput = true, maxSecondsTimeout = 300),
+            @HardwareQuery("sudo $PM update"),
+            @HardwareQuery(value = "sudo $PM install -y postgresql", printOutput = true, maxSecondsTimeout = 300),
     })
     void installPostgreSQL();
 
