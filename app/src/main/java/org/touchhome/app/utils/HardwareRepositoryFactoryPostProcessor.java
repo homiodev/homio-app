@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Log4j2
 @Component
@@ -79,12 +78,13 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
 
     @SneakyThrows
     private static String determinePackageManager() {
-        String[] availablePackageManagers = new String[]{"apt-get", "yum"};
-        String cmd = Stream.of(availablePackageManagers).map(pm -> "command -v " + pm).collect(Collectors.joining(" || "));
-        Process process = Runtime.getRuntime().exec(cmd);
-        process.waitFor();
-        String result = String.join("", IOUtils.readLines(process.getInputStream()));
-        return Stream.of(availablePackageManagers).filter(result::contains).findAny().orElseThrow(() -> new NotFoundException("No package manager found"));
+        for (String pm : new String[]{"apt-get", "yum"}) {
+            Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", pm + "version"});
+            if (process.waitFor() == 0) {
+                return pm;
+            }
+        }
+        throw new NotFoundException("No package manager found");
     }
 
     static {
