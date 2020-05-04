@@ -157,7 +157,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 File dir = new File(replaceStringWithArgs(hardwareQuery.dir(), args, method));
                 process = Runtime.getRuntime().exec(command, null, dir);
             } else {
-                process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "\"" + command + "\""});
+                process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "'" + command + "'"});
             }
 
             if (hardwareQuery.printOutput()) {
