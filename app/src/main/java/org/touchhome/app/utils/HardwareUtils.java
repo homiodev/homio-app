@@ -45,7 +45,7 @@ final class HardwareUtils {
         WirelessHardwareRepository repository = beanFactory.getBean(WirelessHardwareRepository.class);
 
         boolean hasInetAccess = repository.hasInternetAccess("http://www.google.com");
-        if(hasInetAccess) {
+        if (hasInetAccess) {
             log.info("Device connected to network <{}>", repository.getNetworkDescription());
         } else {
             log.error("!!!Device not connected to internet.!!!");
@@ -91,9 +91,7 @@ final class HardwareUtils {
         PostgreSQLHardwareRepository repository = beanFactory.getBean(PostgreSQLHardwareRepository.class);
         try {
             log.info("PostgreSQL already installed <{}>", repository.getPostgreSQLVersion());
-            String postgreSQLStatus = repository.getPostgreSQLStatus();
-            log.info("PostgreSQL status <{}>", postgreSQLStatus);
-            if(postgreSQLStatus.contains("stop")) {
+            if (repository.isPostgreSQLRunning() != 0) {
                 repository.startPostgreSQLService();
             }
         } catch (HardwareException ex) {

@@ -144,8 +144,12 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
 
     private Object handleHardwareQuery(HardwareQuery hardwareQuery, Object[] args, Method method) throws InstantiationException, IllegalAccessException {
         ErrorsHandler errorsHandler = method.getAnnotation(ErrorsHandler.class);
-        String command = replaceStringWithArgs(hardwareQuery.value(), args, method);
-        command = command.replace("$PM", pm);
+        List<String> parts = new ArrayList<>();
+        for (String cmd : hardwareQuery.value()) {
+            parts.add(replaceStringWithArgs(cmd, args, method).replace("$PM", pm));
+        }
+        String[] cmdParts = parts.toArray(new String[0]);
+        String command = String.join(", ", parts);
         log.info("Hardware execute command: <{}>", command);
 
         int retValue;
@@ -155,9 +159,11 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             Process process;
             if (StringUtils.isNotEmpty(hardwareQuery.dir())) {
                 File dir = new File(replaceStringWithArgs(hardwareQuery.dir(), args, method));
-                process = Runtime.getRuntime().exec(command, null, dir);
+                process = Runtime.getRuntime().exec(cmdParts, null, dir);
+            } else if (cmdParts.length == 1) {
+                process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", cmdParts[0]});
             } else {
-                process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", command});
+                process = Runtime.getRuntime().exec(cmdParts);
             }
 
             if (hardwareQuery.printOutput()) {
@@ -173,6 +179,8 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             errors = Collections.singletonList(ex.getMessage());
         }
 
+        Class<?> returnType = method.getReturnType();
+
         if (retValue != 0) {
             throwErrors(errorsHandler, errors);
             if (errorsHandler != null) {
@@ -184,6 +192,15 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                     throw new IllegalStateException(error);
                 }
             } else {
+                if (returnType.isPrimitive()) {
+                    switch (returnType.getName()) {
+                        case "int":
+                            return retValue;
+                        case "boolean":
+                            return false;
+                    }
+                }
+
                 log.error("Error while execute command <{}>. Code: <{}>, Msg: <{}>", command, retValue, String.join(", ", errors));
                 if (!hardwareQuery.ignoreOnError()) {
                     throw new HardwareException(errors, retValue);
@@ -225,7 +242,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             } else if (booleanParse != null) {
                 return handleBucket(inputs, booleanParse);
             } else {
-                return handleBucket(inputs, method.getReturnType(), retValue);
+                return handleBucket(inputs, returnType, retValue);
             }
         }
         return null;
@@ -234,10 +251,6 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     private Object handleBucket(List<String> input, Class<?> genericClass, int retValue) throws IllegalAccessException, InstantiationException {
         if (genericClass.isPrimitive()) {
             switch (genericClass.getName()) {
-                case "int":
-                    return retValue;
-                case "boolean":
-                    return retValue == 0;
                 case "void":
                     return null;
             }

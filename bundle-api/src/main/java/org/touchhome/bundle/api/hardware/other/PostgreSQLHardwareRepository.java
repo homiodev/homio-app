@@ -16,8 +16,8 @@ public interface PostgreSQLHardwareRepository {
     @HardwareQuery("psql --version")
     String getPostgreSQLVersion();
 
-    @HardwareQuery("service postgresql status")
-    String getPostgreSQLStatus();
+    @HardwareQuery(value = {"/sbin/service", "postgresql", "status"})
+    boolean isPostgreSQLRunning();
 
     @HardwareQuery("sudo -u postgres psql -c \"ALTER USER postgres PASSWORD ':pwd';\"")
     void changePostgresPassword(@ApiParam("pwd") String pwd);

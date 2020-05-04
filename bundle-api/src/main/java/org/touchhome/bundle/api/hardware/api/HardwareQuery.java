@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface HardwareQuery {
-    String value();
+    String[] value();
 
     int maxSecondsTimeout() default 60;
 
