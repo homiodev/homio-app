@@ -291,11 +291,15 @@ public class Rf433Service implements BundleContext {
                         IntStream.rangeClosed(secondBucket.getKey(), secondBucket.getValue()).forEach(blockedIndexes::add);
                         // now first index is last index of second bucket + 1
                         fromIndex = secondBucket.getValue() + 1;
-                        while (blockedIndexes.contains(fromIndex)) fromIndex++;
+                        while (blockedIndexes.contains(fromIndex)) {
+                            fromIndex++;
+                        }
                     } else {
                         // try figure out next index to find
                         fromIndex = secondBucket.getValue() - fromIndex > maxTime ? secondBucket.getValue() + 1 : fromIndex + 1;
-                        while (blockedIndexes.contains(fromIndex)) fromIndex++;
+                        while (blockedIndexes.contains(fromIndex)) {
+                            fromIndex++;
+                        }
                     }
                     secondBucket = findTimeBucketStartFrom(fromIndex, maxTime, blockedIndexes);
                 }
@@ -346,11 +350,15 @@ public class Rf433Service implements BundleContext {
                         IntStream.rangeClosed(secondBucket.getKey(), secondBucket.getValue()).forEach(blockedIndexes::add);
                         // now first index is last index of second bucket + 1
                         fromIndex = secondBucket.getValue() + 1;
-                        while (blockedIndexes.contains(fromIndex)) fromIndex++;
+                        while (blockedIndexes.contains(fromIndex)) {
+                            fromIndex++;
+                        }
                     } else {
                         // try figure out next index to find
                         fromIndex = secondBucket.getValue() - fromIndex > maxTime ? secondBucket.getValue() + 1 : fromIndex + 1;
-                        while (blockedIndexes.contains(fromIndex)) fromIndex++;
+                        while (blockedIndexes.contains(fromIndex)) {
+                            fromIndex++;
+                        }
                     }
                     secondBucket = findTimeBucketStartFrom(fromIndex, maxTime, blockedIndexes);
                 }
@@ -390,7 +398,9 @@ public class Rf433Service implements BundleContext {
             while (times[toIndex] - times[fromIndex] < maxTime) {
                 toIndex++;
                 if (blockedIndexes.contains(toIndex)) {
-                    while (blockedIndexes.contains(toIndex)) toIndex++;
+                    while (blockedIndexes.contains(toIndex)) {
+                        toIndex++;
+                    }
                     return findTimeBucketStartFrom(toIndex, maxTime, blockedIndexes);
                 }
                 if (toIndex >= times.length) {

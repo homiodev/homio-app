@@ -19,6 +19,10 @@ public final class ZigbeeRequireEndpoints {
         }
     }
 
+    @Getter
+    @Setter
+    private List<ZigbeeRequireEndpoint> zigbeeRequireEndpoints = new ArrayList<>();
+
     public static ZigbeeRequireEndpoints get() {
         return INSTANCE;
     }
@@ -26,10 +30,6 @@ public final class ZigbeeRequireEndpoints {
     public String getImage(String modelId) {
         return zigbeeRequireEndpoints.stream().filter(c -> c.getModelId().equals(modelId)).map(ZigbeeRequireEndpoint::getImage).findAny().orElse(null);
     }
-
-    @Getter
-    @Setter
-    private List<ZigbeeRequireEndpoint> zigbeeRequireEndpoints = new ArrayList<>();
 
     public ZigbeeRequireEndpoint findByNode(ZigBeeNodeDescription zigBeeNodeDescription) {
         return this.zigbeeRequireEndpoints.stream().filter(c -> c.matchAllTypes(zigBeeNodeDescription.getChannels())).findAny().orElse(null);

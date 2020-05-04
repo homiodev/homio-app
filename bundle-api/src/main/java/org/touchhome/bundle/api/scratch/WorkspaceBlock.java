@@ -2,7 +2,6 @@ package org.touchhome.bundle.api.scratch;
 
 import org.json.JSONArray;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.BaseEntity;
 
 import java.util.Map;
 import java.util.function.Consumer;

@@ -34,10 +34,12 @@ public class CodeParser {
                 splitted.add(result.toString().trim());
                 result.setLength(0);// clean buffer
             } else {
-                if (c == '(')
+                if (c == '(') {
                     nextingLevel++;
-                if (c == ')')
+                }
+                if (c == ')') {
                     nextingLevel--;
+                }
                 result.append(c);
             }
         }

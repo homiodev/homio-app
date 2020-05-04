@@ -131,6 +131,21 @@ public class Scratch3ZigBeeBlocks extends Scratch3ZigbeeExtensionBlocks {
         return scratchDeviceState == null ? 0 : scratchDeviceState.getState().intValue();
     }
 
+    static ZigBeeDeviceEntity getZigBeeDevice(WorkspaceBlock workspaceBlock, String key, MenuBlock menuBlock) {
+        return getZigBeeDevice(workspaceBlock, workspaceBlock.getMenuValue(key, menuBlock, String.class));
+    }
+
+    static ZigBeeDeviceEntity getZigBeeDevice(WorkspaceBlock workspaceBlock, String ieeeAddress) {
+        if (ieeeAddress == null) {
+            workspaceBlock.logErrorAndThrow("Unable to find ieeeAddress");
+        }
+        ZigBeeDeviceEntity entity = workspaceBlock.getEntityContext().getEntity(ZigBeeDeviceEntity.PREFIX + ieeeAddress);
+        if (entity == null) {
+            workspaceBlock.logErrorAndThrow("Unable to find ZigBee node with IEEEAddress: <{}>", ieeeAddress);
+        }
+        return entity;
+    }
+
     private void handleWhenEventReceived(WorkspaceBlock workspaceBlock, ZigBeeEventHandler handler) {
         WorkspaceBlock workspaceEventBlock = workspaceBlock.getInputWorkspaceBlock("EVENT");
 
@@ -211,20 +226,5 @@ public class Scratch3ZigBeeBlocks extends Scratch3ZigbeeExtensionBlocks {
 
     private interface ZigBeeEventHandler {
         void handle(ZigBeeDeviceEntity zigBeeDeviceEntity, ScratchDeviceState scratchDeviceState);
-    }
-
-    static ZigBeeDeviceEntity getZigBeeDevice(WorkspaceBlock workspaceBlock, String key, MenuBlock menuBlock) {
-        return getZigBeeDevice(workspaceBlock, workspaceBlock.getMenuValue(key, menuBlock, String.class));
-    }
-
-    static ZigBeeDeviceEntity getZigBeeDevice(WorkspaceBlock workspaceBlock, String ieeeAddress) {
-        if (ieeeAddress == null) {
-            workspaceBlock.logErrorAndThrow("Unable to find ieeeAddress");
-        }
-        ZigBeeDeviceEntity entity = workspaceBlock.getEntityContext().getEntity(ZigBeeDeviceEntity.PREFIX + ieeeAddress);
-        if (entity == null) {
-            workspaceBlock.logErrorAndThrow("Unable to find ZigBee node with IEEEAddress: <{}>", ieeeAddress);
-        }
-        return entity;
     }
 }

@@ -216,8 +216,12 @@ public abstract class ZigBeeBaseChannelConverter {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         ZigBeeBaseChannelConverter that = (ZigBeeBaseChannelConverter) o;
         return Objects.equals(zigBeeConverterEndpoint, that.zigBeeConverterEndpoint);
     }

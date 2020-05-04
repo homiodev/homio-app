@@ -1,7 +1,6 @@
 package org.touchhome.bundle.api.util;
 
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.cache.annotation.Cacheable;
@@ -17,7 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Log4j2
 @Component
 public class ClassFinder {
     public static final String CLASSES_WITH_PARENT_CLASS = "CLASSES_WITH_PARENT_CLASS";

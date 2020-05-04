@@ -1,7 +1,8 @@
-import RPi.GPIO as GPIO
 import argparse
 import struct
 import time
+
+import RPi.GPIO as GPIO
 
 parser = argparse.ArgumentParser(
     description='Script to transmit data by rf433 transmitter')

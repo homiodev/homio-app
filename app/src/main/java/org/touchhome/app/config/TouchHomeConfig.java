@@ -11,11 +11,8 @@ import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule;
 import com.pi4j.io.gpio.Pin;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControlHandlerInterceptor;
-import org.apache.catalina.Context;
-import org.apache.tomcat.util.scan.StandardJarScanner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -303,7 +300,7 @@ public class TouchHomeConfig extends WebSecurityConfigurerAdapter implements Web
     interface Bean2MixIn {
     }
 
-    @Bean
+    /*@Bean
     public TomcatServletWebServerFactory tomcatFactory() {
         // disable JAR scanning
         return new TomcatServletWebServerFactory() {
@@ -312,5 +309,5 @@ public class TouchHomeConfig extends WebSecurityConfigurerAdapter implements Web
                 ((StandardJarScanner) context.getJarScanner()).setScanManifest(false);
             }
         };
-    }
+    }*/
 }

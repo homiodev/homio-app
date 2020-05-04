@@ -7,7 +7,7 @@ import com.zsmartsystems.zigbee.zcl.clusters.iaszone.ZoneTypeEnum;
 /**
  * Converter for the IAS contact sensor.
  */
-@ZigBeeConverter(name = "zigbee:ias_contactportal1", description = "Contact alarm",  clientClusters = {ZclIasZoneCluster.CLUSTER_ID})
+@ZigBeeConverter(name = "zigbee:ias_contactportal1", description = "Contact alarm", clientClusters = {ZclIasZoneCluster.CLUSTER_ID})
 public class ZigBeeConverterIasContactPortal1 extends ZigBeeConverterIas {
 
     @Override

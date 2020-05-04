@@ -32,7 +32,7 @@ public class ZigbeeRequireEndpoint {
         for (ZigBeeNodeDescription.ChannelDescription channel : channels) {
             if (requireEndpoint.getEndpoint() == channel.getChannelUUID().getEndpointId() &&
                     requireEndpoint.getInputCluster() == channel.getChannelUUID().getClusterId() &&
-                    requireEndpoint. getTypeId().equals(channel.getChannelUUID().getClusterName())) {
+                    requireEndpoint.getTypeId().equals(channel.getChannelUUID().getClusterName())) {
                 return true;
             }
         }

@@ -82,8 +82,12 @@ public class Option implements Comparable<Option> {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Option)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Option)) {
+            return false;
+        }
         Option option = (Option) o;
         return Objects.equals(key, option.key);
     }

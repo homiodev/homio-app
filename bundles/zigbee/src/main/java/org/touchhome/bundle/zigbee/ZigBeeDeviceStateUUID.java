@@ -32,8 +32,12 @@ public class ZigBeeDeviceStateUUID {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         ZigBeeDeviceStateUUID that = (ZigBeeDeviceStateUUID) o;
         if (!Objects.equals(ieeeAddress, that.ieeeAddress) || !Objects.equals(clusterId, that.clusterId)) {
             return false;

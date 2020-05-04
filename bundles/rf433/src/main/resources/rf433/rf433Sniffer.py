@@ -2,6 +2,7 @@ import argparse
 import struct
 import time
 from datetime import datetime
+
 from rpi_rf import RFDevice
 
 rfdevice = None

@@ -77,6 +77,10 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         pm = EntityContext.isTestApplication() ? "" : determinePackageManager();
     }
 
+    static {
+        logThread.start();
+    }
+
     @SneakyThrows
     private static String determinePackageManager() {
         for (String pm : new String[]{"apt-get", "yum"}) {
@@ -86,10 +90,6 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             }
         }
         throw new NotFoundException("No package manager found");
-    }
-
-    static {
-        logThread.start();
     }
 
     @Override
@@ -210,7 +210,9 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             }
         } else {
             for (String error : errors) {
-                if (!error.isEmpty()) log.warn("Error execute hardware process <{}>", error);
+                if (!error.isEmpty()) {
+                    log.warn("Error execute hardware process <{}>", error);
+                }
             }
             inputs = inputs.stream().map(String::trim).collect(Collectors.toList());
             ListParse listParse = method.getAnnotation(ListParse.class);

@@ -111,9 +111,13 @@ public abstract class RF24Base {
     }
 
     private boolean isNewReadingPipes(List<Pipe> readPiped) {
-        if (actualReadPipes == null) return true;
+        if (actualReadPipes == null) {
+            return true;
+        }
 
-        if (actualReadPipes.size() != readPiped.size()) return true;
+        if (actualReadPipes.size() != readPiped.size()) {
+            return true;
+        }
 
         for (int i = 0; i < actualReadPipes.size(); i++) {
             final Pipe actual = actualReadPipes.get(i);

@@ -31,8 +31,12 @@ public class ZigBeeConverterEndpoint {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         ZigBeeConverterEndpoint that = (ZigBeeConverterEndpoint) o;
         return clusterId == that.clusterId &&
                 endpointId == that.endpointId &&
