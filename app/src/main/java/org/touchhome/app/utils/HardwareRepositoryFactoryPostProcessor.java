@@ -13,6 +13,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.stereotype.Component;
 import org.thavam.util.concurrent.blockingMap.BlockingHashMap;
 import org.thavam.util.concurrent.blockingMap.BlockingMap;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.hardware.api.*;
 import org.touchhome.bundle.api.util.ClassFinder;
@@ -73,7 +74,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         } catch (Exception ex) {
             throw new RuntimeException("Unable to instantiate MethodHandles.Lookup", ex);
         }
-        pm = determinePackageManager();
+        pm = EntityContext.isTestApplication() ? "" : determinePackageManager();
     }
 
     @SneakyThrows

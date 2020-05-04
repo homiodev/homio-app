@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.json.bgp.BackgroundProcessServiceJSON;
 import org.touchhome.bundle.api.thread.BackgroundProcessService;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.annotation.PreDestroy;
 import java.util.ArrayList;
@@ -121,7 +121,7 @@ public class BackgroundProcessManager {
                 try {
                     backgroundProcessService.run();
                 } catch (Exception ex) {
-                    cancelTask(backgroundProcessService, FAILED, SmartUtils.getErrorMessage(ex));
+                    cancelTask(backgroundProcessService, FAILED, TouchHomeUtils.getErrorMessage(ex));
                 }
             };
 

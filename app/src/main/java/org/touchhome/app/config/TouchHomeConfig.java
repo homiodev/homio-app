@@ -11,8 +11,11 @@ import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule;
 import com.pi4j.io.gpio.Pin;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControlHandlerInterceptor;
+import org.apache.catalina.Context;
+import org.apache.tomcat.util.scan.StandardJarScanner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -85,7 +88,7 @@ import java.util.stream.Collectors;
 @EnableWebSecurity
 @EnableJpaRepositories(basePackages = "org.touchhome.app.repository.crud", repositoryFactoryBeanClass = CrudRepositoryFactoryBean.class)
 @EnableTransactionManagement(proxyTargetClass = true)
-public class SmartConfig extends WebSecurityConfigurerAdapter implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
+public class TouchHomeConfig extends WebSecurityConfigurerAdapter implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -98,6 +101,16 @@ public class SmartConfig extends WebSecurityConfigurerAdapter implements WebMvcC
     @Bean
     public List<WidgetBaseEntity> widgetBaseEntities(ClassFinder classFinder) {
         return ClassFinder.createClassesWithParent(WidgetBaseEntity.class, classFinder);
+    }
+
+    @Bean
+    public Map<String, Class<? extends BaseEntity>> baseEntityClasses(ClassFinder classFinder) {
+        return classFinder.getClassesWithParent(BaseEntity.class, null).stream().collect(Collectors.toMap(Class::getName, s -> s));
+    }
+
+    @Bean
+    public Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses(ClassFinder classFinder) {
+        return classFinder.getClassesWithParent(BaseEntity.class, null).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
     }
 
     @Override
@@ -288,5 +301,16 @@ public class SmartConfig extends WebSecurityConfigurerAdapter implements WebMvcC
 
     @JsonIdentityInfo(generator = JSOGGenerator.class, property = "entityID", resolver = JSOGResolver.class)
     interface Bean2MixIn {
+    }
+
+    @Bean
+    public TomcatServletWebServerFactory tomcatFactory() {
+        // disable JAR scanning
+        return new TomcatServletWebServerFactory() {
+            @Override
+            protected void postProcessContext(Context context) {
+                ((StandardJarScanner) context.getJarScanner()).setScanManifest(false);
+            }
+        };
     }
 }

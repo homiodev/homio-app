@@ -16,7 +16,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
 import org.touchhome.bundle.api.ui.PublicJsMethod;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.script.*;
 import java.io.PrintStream;
@@ -57,7 +57,7 @@ public class ScriptManager {
                 backgroundProcessManager.fireIfNeedRestart(scriptEntity.createBackgroundProcessService());
             } catch (Exception ex) {
                 scriptEntity.setScriptStatus(BackgroundProcessStatus.FAILED);
-                scriptEntity.setError(SmartUtils.getErrorMessage(ex));
+                scriptEntity.setError(TouchHomeUtils.getErrorMessage(ex));
                 entityContext.save(scriptEntity);
                 log.error("Error while start script after crash: " + scriptEntity.getEntityID(), ex);
             }
@@ -168,7 +168,7 @@ public class ScriptManager {
                 future.cancel(true);
                 singleCallExecutorService.shutdownNow();
                 singleCallExecutorService = Executors.newSingleThreadExecutor();
-                throw new ExecutionException("Script evaluation stuck. Got TimeoutException: " + SmartUtils.getErrorMessage(ex), ex);
+                throw new ExecutionException("Script evaluation stuck. Got TimeoutException: " + TouchHomeUtils.getErrorMessage(ex), ex);
             }
         } catch (Exception ex) {
             log.error("Can not compile script: " + scriptEntity.getEntityID());
@@ -205,7 +205,7 @@ public class ScriptManager {
             future.cancel(true);
             singleCallExecutorService.shutdownNow();
             singleCallExecutorService = Executors.newSingleThreadExecutor();
-            throw new ExecutionException("Script stuck. Got TimeoutException: " + SmartUtils.getErrorMessage(ex), ex);
+            throw new ExecutionException("Script stuck. Got TimeoutException: " + TouchHomeUtils.getErrorMessage(ex), ex);
         }
     }
 }

@@ -25,7 +25,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 @Log4j2
-public class SmartUtils {
+public class TouchHomeUtils {
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Path TMP_FOLDER = Paths.get(FileUtils.getTempDirectoryPath());
@@ -33,13 +33,13 @@ public class SmartUtils {
     private static Path rootPath = SystemUtils.getUserHome().toPath().resolve("state");
 
     static {
-        SmartUtils.createDirectoriesIfNotExists(rootPath);
+        TouchHomeUtils.createDirectoriesIfNotExists(rootPath);
     }
 
     @SneakyThrows
     public static <T> T readAndMergeJSON(String resource, T targetObject) {
         ObjectReader updater = OBJECT_MAPPER.readerForUpdating(targetObject);
-        Enumeration<URL> resources = SmartUtils.class.getClassLoader().getResources(resource);
+        Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources(resource);
         while (resources.hasMoreElements()) {
             updater.readValue(resources.nextElement());
         }
@@ -48,7 +48,7 @@ public class SmartUtils {
 
     @SneakyThrows
     public static <T> List<T> readJSON(String resource, Class<T> targetClass) {
-        Enumeration<URL> resources = SmartUtils.class.getClassLoader().getResources(resource);
+        Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources(resource);
         List<T> list = new ArrayList<>();
         while (resources.hasMoreElements()) {
             list.add(OBJECT_MAPPER.readValue(resources.nextElement(), targetClass));
@@ -87,9 +87,9 @@ public class SmartUtils {
 
     public static List<String> readFile(String fileName) {
         try {
-            return IOUtils.readLines(SmartUtils.class.getClassLoader().getResourceAsStream(fileName));
+            return IOUtils.readLines(TouchHomeUtils.class.getClassLoader().getResourceAsStream(fileName));
         } catch (Exception ex) {
-            log.error(SmartUtils.getErrorMessage(ex), ex);
+            log.error(TouchHomeUtils.getErrorMessage(ex), ex);
 
         }
         return Collections.emptyList();
@@ -97,7 +97,7 @@ public class SmartUtils {
 
     @SneakyThrows
     public static void copyResource(String fileName, Path targetPath) {
-        Files.copy(Objects.requireNonNull(SmartUtils.class.getClassLoader().getResourceAsStream(fileName)),
+        Files.copy(Objects.requireNonNull(TouchHomeUtils.class.getClassLoader().getResourceAsStream(fileName)),
                 targetPath, StandardCopyOption.REPLACE_EXISTING);
     }
 
@@ -221,7 +221,7 @@ public class SmartUtils {
         }
 
         // Open and check input stream
-        try (InputStream is = SmartUtils.class.getResourceAsStream(path);
+        try (InputStream is = TouchHomeUtils.class.getResourceAsStream(path);
              OutputStream os = new FileOutputStream(temp)) {
             if (is == null) {
                 throw new FileNotFoundException("File " + path + " was not found inside JAR.");
@@ -241,7 +241,7 @@ public class SmartUtils {
 
     @SneakyThrows
     public static List<Map<String, String>> readProperties(String path) {
-        Enumeration<URL> resources = SmartUtils.class.getClassLoader().getResources(path);
+        Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources(path);
         List<Map<String, String>> properties = new ArrayList<>();
         while (resources.hasMoreElements()) {
             try (InputStream input = resources.nextElement().openStream()) {

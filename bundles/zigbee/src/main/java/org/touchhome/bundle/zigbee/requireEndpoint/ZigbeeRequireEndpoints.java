@@ -2,7 +2,7 @@ package org.touchhome.bundle.zigbee.requireEndpoint;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.zigbee.ZigBeeNodeDescription;
 
 import java.util.*;
@@ -14,7 +14,7 @@ public final class ZigbeeRequireEndpoints {
 
     static {
         INSTANCE = new ZigbeeRequireEndpoints();
-        for (ZigbeeRequireEndpoints file : SmartUtils.readJSON("zigbee/device-properties.json", ZigbeeRequireEndpoints.class)) {
+        for (ZigbeeRequireEndpoints file : TouchHomeUtils.readJSON("zigbee/device-properties.json", ZigbeeRequireEndpoints.class)) {
             INSTANCE.getZigbeeRequireEndpoints().addAll(file.getZigbeeRequireEndpoints());
         }
     }

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.repository.impl.UserRepository;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerRestartSetting;
@@ -84,7 +84,7 @@ public class NettyClientService {
                     updateConnectionStatus(ServerConnectionStatus.DISCONNECTED, "");
                 } catch (Exception ex) {
                     log.error("Netty client finished with error", ex);
-                    updateConnectionStatus(ServerConnectionStatus.DISCONNECTED_WIDTH_ERRORS, SmartUtils.getErrorMessage(ex));
+                    updateConnectionStatus(ServerConnectionStatus.DISCONNECTED_WIDTH_ERRORS, TouchHomeUtils.getErrorMessage(ex));
                 }
              /*   try {
                     workGroup.shutdownGracefully().get();

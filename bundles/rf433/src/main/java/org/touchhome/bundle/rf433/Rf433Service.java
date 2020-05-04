@@ -7,7 +7,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.rf433.dto.Rf433JSON;
 import org.touchhome.bundle.rf433.model.RF433SignalEntity;
 
@@ -34,7 +34,7 @@ public class Rf433Service implements BundleContext {
     private boolean isTestApplication = false;
 
     public void init() {
-        rf433Dir = SmartUtils.path("rf433");
+        rf433Dir = TouchHomeUtils.path("rf433");
         try {
             Files.createDirectories(rf433Dir);
             Files.walkFileTree(rf433Dir, new SimpleFileVisitor<Path>() {
@@ -44,17 +44,17 @@ public class Rf433Service implements BundleContext {
                         try {
                             Files.delete(file);
                         } catch (Exception ex) {
-                            log.error("Can't delete lock file: " + SmartUtils.getErrorMessage(ex), ex);
+                            log.error("Can't delete lock file: " + TouchHomeUtils.getErrorMessage(ex), ex);
                         }
                     }
                     return FileVisitResult.CONTINUE;
                 }
             });
             rf433TransmitterPy = rf433Dir.resolve("rf433Transmitter.py");
-            SmartUtils.copyResource("rf433/rf433Transmitter.py", rf433TransmitterPy);
+            TouchHomeUtils.copyResource("rf433/rf433Transmitter.py", rf433TransmitterPy);
 
             rf433ReceiverPy = rf433Dir.resolve("rf433Sniffer.py");
-            SmartUtils.copyResource("rf433/rf433Sniffer.py", rf433ReceiverPy);
+            TouchHomeUtils.copyResource("rf433/rf433Sniffer.py", rf433ReceiverPy);
         } catch (IOException e) {
             log.error(e.getMessage(), e);
             throw new RuntimeException(e);
@@ -106,14 +106,14 @@ public class Rf433Service implements BundleContext {
                 signal.values[i++] = value == '1' ? 1 : 0;
             }
         } else {
-            signal.times = SmartUtils.readFile("test/RECEIVED_SIGNAL_0_CONVERTED")
+            signal.times = TouchHomeUtils.readFile("test/RECEIVED_SIGNAL_0_CONVERTED")
                     .stream()
                     .map(line -> {
                         BigDecimal value = new BigDecimal(line);
                         value = value.setScale(rf433JSON.getSignalAccuracy(), RoundingMode.HALF_EVEN);
                         return value.floatValue();
                     }).toArray(Float[]::new);
-            signal.values = SmartUtils.readFile("test/RECEIVED_SIGNAL_1")
+            signal.values = TouchHomeUtils.readFile("test/RECEIVED_SIGNAL_1")
                     .stream()
                     .map(v -> v.equals("1") ? 1 : 0).toArray(Integer[]::new);
         }

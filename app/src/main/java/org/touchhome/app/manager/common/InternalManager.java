@@ -22,7 +22,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.touchhome.app.LogService;
 import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSONJSON;
-import org.touchhome.app.manager.BackgroundProcessManager;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.WidgetManager;
 import org.touchhome.app.manager.scripting.ScriptManager;
@@ -55,7 +54,7 @@ import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.ClassFinder;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
 import org.touchhome.bundle.cloud.impl.NettyClientService;
@@ -376,7 +375,7 @@ public class InternalManager implements EntityContext {
     @Override
     public void sendErrorMessage(String message, Exception ex) {
         sendNotification(new NotificationEntityJSON("error-" + message.hashCode())
-                .setName(message + ". Cause: " + SmartUtils.getErrorMessage(ex))
+                .setName(message + ". Cause: " + TouchHomeUtils.getErrorMessage(ex))
                 .setNotificationType(NotificationType.danger));
     }
 

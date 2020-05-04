@@ -85,14 +85,14 @@ public class GoogleDriveCloudManager {
             //    getFolder(entity.getCloudFolder()).addOrUpdateFile(entity.getTitle(), entity.getTitle(), fetchPropertiesFromObject(entity));
             }
         } catch (Exception ex) {
-            log.error(SmartUtils.getErrorMessage(ex)
+            log.error(TouchHomeUtils.getErrorMessage(ex)
                     , ex);
         } finally {
             if (tempFile != null) {
                 try {
                     Files.deleteIfExists(tempFile);
                 } catch (IOException ex) {
-                    log.error(SmartUtils.getErrorMessage(ex), ex);
+                    log.error(TouchHomeUtils.getErrorMessage(ex), ex);
                 }
             }
         }

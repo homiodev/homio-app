@@ -3,7 +3,7 @@ package org.touchhome.bundle.api.manager;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,7 +19,7 @@ public class En {
 
     public ObjectNode getLangJson(String lang) {
         if (EntityContext.isTestApplication() || !i18nLang.containsKey(lang)) {
-            i18nLang.put(lang, SmartUtils.readAndMergeJSON("i18n/" + lang + ".json", SmartUtils.OBJECT_MAPPER.createObjectNode()));
+            i18nLang.put(lang, TouchHomeUtils.readAndMergeJSON("i18n/" + lang + ".json", TouchHomeUtils.OBJECT_MAPPER.createObjectNode()));
         }
         return i18nLang.get(lang);
     }

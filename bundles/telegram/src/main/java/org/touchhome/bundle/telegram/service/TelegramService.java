@@ -60,7 +60,7 @@ public class TelegramService {
         try {
             if (isNotEmpty(entityContext.getSettingValue(TelegramBotNameSetting.class)) &&
                     isNotEmpty(entityContext.getSettingValue(TelegramBotTokenSetting.class))) {
-                this.telegramBot = botsApi.registerBot(new SmartTelegramBot(botOptions, entityContext));
+                this.telegramBot = botsApi.registerBot(new TelegramBot(botOptions, entityContext));
                 log.info("Telegram bot started");
                 entityContext.sendInfoMessage("Telegram bot started");
             } else {

@@ -11,7 +11,7 @@ import org.freedesktop.dbus.Path;
 import org.freedesktop.dbus.UInt16;
 import org.freedesktop.dbus.Variant;
 import org.freedesktop.dbus.exceptions.DBusException;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -132,7 +132,7 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
             try {
                 value = readListener.get();
             } catch (Exception ex) {
-                log.error("Error while read from ble: <{}>", SmartUtils.getErrorMessage(ex));
+                log.error("Error while read from ble: <{}>", TouchHomeUtils.getErrorMessage(ex));
                 value = new byte[0];
             }
         }

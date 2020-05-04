@@ -23,7 +23,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.repository.impl.UserRepository.DEFAULT_USER_ID;
-import static org.touchhome.bundle.api.util.SmartUtils.distinctByKey;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.distinctByKey;
 
 @Log4j2
 @Controller

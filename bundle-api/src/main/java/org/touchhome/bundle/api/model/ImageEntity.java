@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.persistence.*;
 import java.nio.file.Files;
@@ -56,7 +56,7 @@ public class ImageEntity extends BaseEntity<ImageEntity> {
     @SneakyThrows
     public Path toPath() {
         if (fileSystem != null) {
-            return SmartUtils.getOrCreateNewFileSystem(fileSystem).getPath(path);
+            return TouchHomeUtils.getOrCreateNewFileSystem(fileSystem).getPath(path);
         }
         return Paths.get(path);
     }

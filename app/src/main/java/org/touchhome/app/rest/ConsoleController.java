@@ -17,7 +17,7 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.tritonus.share.ArraySet;
 
 import java.lang.reflect.Method;
@@ -98,7 +98,7 @@ public class ConsoleController {
                 List<? extends HasEntityIdentifier> baseEntities = consolePlugin.drawEntity();
                 HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID))
                         .findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-                Method method = SmartUtils.findRequreMethod(identifier.getClass(), selectOptionMethod);
+                Method method = TouchHomeUtils.findRequreMethod(identifier.getClass(), selectOptionMethod);
                 return (List) ItemController.executeMethodAction(method, identifier, applicationContext, null);
             }
         }

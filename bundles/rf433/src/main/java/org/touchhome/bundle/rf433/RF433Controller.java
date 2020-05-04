@@ -88,9 +88,9 @@ public class RF433Controller {
         if (rf433JSON.getForce()) {
             PinRepository.PinEntryBinding pinEntryBinding = pinRepository.findByEntityID(RF433DevicePlugin.class, PinPool.INPUT);
             signal = rf433Manager.readSignal(pinEntryBinding.getSourceBCMPin().getAddress(), rf433JSON);
-            SmartUtils.serialize(signal);
+            TouchHomeUtils.serialize(signal);
         } else {
-            signal = SmartUtils.deSerialize(Rf433Manager.RF433Signal.class);
+            signal = TouchHomeUtils.deSerialize(Rf433Manager.RF433Signal.class);
         }
 
         if (rf433JSON.getOmitDuplicateTime()) {

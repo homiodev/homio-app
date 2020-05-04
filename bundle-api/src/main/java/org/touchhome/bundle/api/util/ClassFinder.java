@@ -2,7 +2,6 @@ package org.touchhome.bundle.api.util;
 
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.cache.annotation.Cacheable;
@@ -17,7 +16,6 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Log4j2
 @Component
@@ -138,28 +136,5 @@ public class ClassFinder {
         } catch (Exception ex) {
             System.out.printf("ex.get");
         }
-    }
-
-    /*public static <T> List<Class<? extends T>> getClassesWithParentAndTypeArgument(Class<T> parentClass, Class<?> clazz, int typeArgumentIndex) {
-        List<Class<? extends T>> result = new ArrayList<>();
-        List<Class<? extends T>> classes = ClassFinder.getClassesWithParent(parentClass, false);
-        for (Class<? extends T> aClass : classes) {
-            Type genericSuperclass = ClassUtil.getGenericSuperclass(aClass);
-            if (genericSuperclass instanceof ParameterizedType) {
-                Type type = ((ParameterizedType) genericSuperclass).getActualTypeArguments()[typeArgumentIndex];
-                if (type instanceof Class && clazz.getSimpleName().equals(((Class) type).getSimpleName())) {
-                    result.add(aClass);
-                }
-            }
-        }
-        return result;
-    }*/
-
-    public Optional<Class<? extends BaseEntity>> getClass(String className, String packageName) {
-        return new Reflections(packageName).getSubTypesOf(BaseEntity.class).stream().filter(aClass -> aClass.getName().equals(className)).findAny();
-    }
-
-    public Optional<Class<? extends BaseEntity>> getBaseEntityByName(String className) {
-        return new Reflections("org.touchhome").getSubTypesOf(BaseEntity.class).stream().filter(aClass -> aClass.getSimpleName().equals(className)).findAny();
     }
 }

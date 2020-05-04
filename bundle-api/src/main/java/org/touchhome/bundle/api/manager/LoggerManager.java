@@ -15,7 +15,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -25,7 +25,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Consumer;
 
-import static org.touchhome.bundle.api.util.SmartUtils.resolvePath;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.resolvePath;
 
 @Log4j2
 @Controller
@@ -67,7 +67,7 @@ public class LoggerManager {
                         try {
                             Files.delete(file);
                         } catch (Exception ex) {
-                            log.error("Can't delete lock file: <{}>", SmartUtils.getErrorMessage(ex), ex);
+                            log.error("Can't delete lock file: <{}>", TouchHomeUtils.getErrorMessage(ex), ex);
                         }
                     }
                     return FileVisitResult.CONTINUE;

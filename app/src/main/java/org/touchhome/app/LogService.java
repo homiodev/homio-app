@@ -16,7 +16,7 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.setting.console.ConsoleLogLevelSetting;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -106,7 +106,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
         private static String formatLogMessage(LogEvent event, String message) {
             return String.format("%s %-5s [%-25s] [%-25s] - %s",
-                    SmartUtils.dateFormat.format(new Date(event.getTimeMillis())),
+                    TouchHomeUtils.dateFormat.format(new Date(event.getTimeMillis())),
                     event.getLevel(), maxLength(event.getThreadName()), maxLength(event.getLoggerName()), message);
         }
 

@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.DeviceStatus;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.nrf24i01.rf24.Command;
 import org.touchhome.bundle.nrf24i01.rf24.NRF24IL01DeviceEntity;
 import org.touchhome.bundle.nrf24i01.rf24.options.*;
@@ -164,7 +164,7 @@ public abstract class RF24Base {
                 entityContext.setSettingValue(Nrf24i01StatusSetting.class, DeviceStatus.ONLINE);
             } catch (Exception ex) {
                 log.error("Error while init NRF24L01", ex);
-                entityContext.setSettingValue(Nrf24i01StatusMessageSetting.class, SmartUtils.getErrorMessage(ex));
+                entityContext.setSettingValue(Nrf24i01StatusMessageSetting.class, TouchHomeUtils.getErrorMessage(ex));
                 entityContext.setSettingValue(Nrf24i01StatusSetting.class, DeviceStatus.OFFLINE);
                 nrf24I01DeviceRepository.deleteAll();
                 radio = null;

@@ -1,7 +1,7 @@
 package org.touchhome.bundle.api.json;
 
 import lombok.Getter;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Getter
 public class ErrorHolder {
@@ -11,7 +11,7 @@ public class ErrorHolder {
 
     public ErrorHolder(String message, Exception ex) {
         this.message = message;
-        this.cause = SmartUtils.getErrorMessage(ex);
+        this.cause = TouchHomeUtils.getErrorMessage(ex);
         this.errorType = ex.getClass().getSimpleName();
     }
 }

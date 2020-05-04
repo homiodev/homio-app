@@ -3,7 +3,6 @@ package org.touchhome.app.manager.common;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.reflections.Reflections;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.BackgroundProcessManager;
@@ -15,7 +14,7 @@ import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
 import org.touchhome.bundle.api.util.ClassFinder;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.persistence.Entity;
 import java.util.List;
@@ -32,7 +31,7 @@ import static org.touchhome.app.manager.CacheService.*;
 @RequiredArgsConstructor
 public class EntityManager {
 
-    private static Map<String, Class<? extends BaseEntity>> baseEntityClasses = new Reflections("org.touchhome").getSubTypesOf(BaseEntity.class).stream().collect(Collectors.toMap(Class::getName, s -> s));
+    private final Map<String, Class<? extends BaseEntity>> baseEntityClasses;
 
     private final ClassFinder classFinder;
     private final BackgroundProcessManager backgroundProcessManager;
@@ -108,7 +107,7 @@ public class EntityManager {
                     backgroundProcessManager.fireIfNeedRestart(service);
                 }
             } catch (Exception ex) {
-                service.setStatus(BackgroundProcessStatus.FAILED, SmartUtils.getErrorMessage(ex));
+                service.setStatus(BackgroundProcessStatus.FAILED, TouchHomeUtils.getErrorMessage(ex));
             }
         } catch (Exception ex) {
             throw new RuntimeException(ex);

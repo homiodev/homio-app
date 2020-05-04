@@ -3,7 +3,7 @@ package org.touchhome.bundle.zigbee.setting;
 import lombok.extern.log4j.Log4j2;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.nio.file.Files;
 import java.util.Collections;
@@ -26,7 +26,7 @@ public class ZigbeeNetworkIdSetting implements BundleSettingPlugin<String> {
     @Override
     public List<Option> loadAvailableValues() {
         try {
-            return Files.walk(SmartUtils.resolvePath("zigbee"), 1)
+            return Files.walk(TouchHomeUtils.resolvePath("zigbee"), 1)
                     .filter(f -> Files.isDirectory(f) && !f.getFileName().toString().equals("zigbee"))
                     .map(f -> Option.key(f.getFileName().toString()))
                     .collect(Collectors.toList());

@@ -23,7 +23,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.scratch.Scratch3Block;
 import org.touchhome.bundle.api.scratch.Scratch3Extension;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 
 import javax.annotation.PostConstruct;
@@ -83,7 +83,7 @@ public class WorkspaceController {
         if (stream == null) {
             throw new NotFoundException("Unable to find workspace extension bundle image for bundle: " + bundleID);
         }
-        return SmartUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
+        return TouchHomeUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
     }
 
     @GetMapping("{entityID}")

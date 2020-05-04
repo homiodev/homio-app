@@ -34,7 +34,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
 import org.touchhome.bundle.api.ui.method.UIMethodAction;
 import org.touchhome.bundle.api.util.ClassFinder;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.raspberry.RaspberryManager;
 
 import javax.persistence.Entity;
@@ -63,6 +63,7 @@ public class ItemController {
     private final ClassFinder classFinder;
     private final ImageManager imageManager;
     private final ApplicationContext applicationContext;
+    private final Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
 
     @SneakyThrows
     static Object executeAction(UIActionDescription uiActionDescription, Object actionHolder, ApplicationContext applicationContext, BaseEntity actionEntity) {
@@ -243,13 +244,12 @@ public class ItemController {
     private void putTypeToEntityIfNotExists(String type) {
         if (!typeToEntityClassNames.containsKey(type)) {
             typeToEntityClassNames.put(type, new ArrayList<>());
-            Optional<Class<? extends BaseEntity>> baseEntityByName = classFinder.getBaseEntityByName(type);
-            if (baseEntityByName.isPresent()) {
-                Class<? extends BaseEntity> aClass = baseEntityByName.get();
-                if (Modifier.isAbstract(aClass.getModifiers())) {
-                    typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(aClass));
+            Class<? extends BaseEntity> baseEntityByName = baseEntitySimpleClasses.get(type);
+            if (baseEntityByName != null) {
+                if (Modifier.isAbstract(baseEntityByName.getModifiers())) {
+                    typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(baseEntityByName));
                 } else {
-                    typeToEntityClassNames.get(type).add(aClass);
+                    typeToEntityClassNames.get(type).add(baseEntityByName);
                 }
             }
         }
@@ -343,7 +343,7 @@ public class ItemController {
             entity = getInstanceByClass(entityID); // i.e in case we load Widget
         }
         if (StringUtils.isNotEmpty(selectOptionMethod)) {
-            Method method = SmartUtils.findRequreMethod(entity.getClass(), selectOptionMethod);
+            Method method = TouchHomeUtils.findRequreMethod(entity.getClass(), selectOptionMethod);
             return (List) executeMethodAction(method, entity, applicationContext, entity);
         }
 

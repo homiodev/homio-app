@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.repository.ImageRepository;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.ImageEntity;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.touchhome.bundle.api.util.SmartUtils.resolvePath;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.resolvePath;
 
 @Log4j2
 @Component
@@ -36,7 +36,7 @@ public class ImageManager {
 
     @SneakyThrows
     public ResponseEntity<InputStreamResource> getImage(Path imagePath) {
-        return SmartUtils.inputStreamToResource(Files.newInputStream(imagePath), MediaType.parseMediaType(Files.probeContentType(imagePath)));
+        return TouchHomeUtils.inputStreamToResource(Files.newInputStream(imagePath), MediaType.parseMediaType(Files.probeContentType(imagePath)));
     }
 
     public boolean isExistsImage(String imageID) {

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.DeviceStatus;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
 import org.touchhome.bundle.arduino.repository.ArduinoDeviceRepository;
 import org.touchhome.bundle.nrf24i01.rf24.communication.RF24Message;
@@ -29,9 +29,9 @@ public class RF24Service implements BundleContext {
     static {
         String libName = "/librf24bcmjava.so";
         try {
-            SmartUtils.loadLibraryFromJar(libName);
+            TouchHomeUtils.loadLibraryFromJar(libName);
         } catch (Throwable ex) {
-            errorLoadingLibrary = SmartUtils.getErrorMessage(ex);
+            errorLoadingLibrary = TouchHomeUtils.getErrorMessage(ex);
             log.error("Error while load library <{}>", libName);
         }
     }
