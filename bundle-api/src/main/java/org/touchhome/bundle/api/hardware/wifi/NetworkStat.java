@@ -1,40 +1,31 @@
 package org.touchhome.bundle.api.hardware.wifi;
 
+import lombok.Getter;
+import lombok.ToString;
 import org.touchhome.bundle.api.hardware.api.ListParse;
 
+@Getter
+@ToString
 public class NetworkStat {
 
     @ListParse.LineParse("Mode:([^\\s]+).*")
-    public String mode;
+    private String mode;
 
     @ListParse.LineParse(".*Frequency:(.*) GHz.*")
-    public String frequency;
+    private String frequency;
 
     @ListParse.LineParse("Bit Rate=(\\d+) Mb/s.*")
-    public String bitRate;
+    private String bitRate;
 
     @ListParse.LineParse(".* ESSID:\"(.*)\"")
-    public String ssid;
+    private String ssid;
 
     @ListParse.LineParse(".* Access Point: ([a-fA-F0-9:]*)")
-    public String accessPoint;
+    private String accessPoint;
 
     @ListParse.LineParse(".* Signal level=(-??\\d+)[^\\d].*")
-    public Integer strength;
+    private Integer strength;
 
     @ListParse.LineParse(".* Quality=(\\d+)[^\\d].*")
-    public Integer quality;
-
-    @Override
-    public String toString() {
-        return "NetworkStat{" +
-                "mode='" + mode + '\'' +
-                ", frequency='" + frequency + '\'' +
-                ", bitRate='" + bitRate + '\'' +
-                ", ssid='" + ssid + '\'' +
-                ", accessPoint='" + accessPoint + '\'' +
-                ", strength=" + strength +
-                ", quality=" + quality +
-                '}';
-    }
+    private Integer quality;
 }

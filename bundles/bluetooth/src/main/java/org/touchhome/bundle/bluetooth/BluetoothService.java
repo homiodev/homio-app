@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.other.RaspberryHardwareRepository;
+import org.touchhome.bundle.api.hardware.wifi.Network;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.cloud.impl.ServerConnectionStatus;
@@ -97,7 +98,7 @@ public class BluetoothService implements BundleContext {
                 }));
 
         bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, () -> readSafeValue(() ->
-                wirelessHardwareRepository.scan().stream().filter(distinctByKey(network -> network.ssid)).map(n -> n.ssid + "%&%" + n.strength).collect(Collectors.joining("%#%"))));
+                wirelessHardwareRepository.scan().stream().filter(distinctByKey(Network::getSsid)).map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"))));
 
         // for set wifi we set wifi/pwd
         bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, bytes ->

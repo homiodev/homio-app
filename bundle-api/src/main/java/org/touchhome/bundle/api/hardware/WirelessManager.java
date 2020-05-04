@@ -19,7 +19,7 @@ public class WirelessManager {
 
     public NetworkStat connectToWPANetwork(String apSSID, String password) {
         return connectToNetworkInternal(apSSID, network -> {
-            if (network.encryption_wpa2) {
+            if (network.isEncryption_wpa2()) {
                 wirelessHardwareRepository.connect_wpa(apSSID, password);
                 return true;
             } else {
@@ -31,7 +31,7 @@ public class WirelessManager {
 
     public NetworkStat connectToOpenNetwork(String apSSID, String iface) {
         return connectToNetworkInternal(apSSID, network -> {
-            if (!network.encryption_any) {
+            if (!network.isEncryption_any()) {
                 wirelessHardwareRepository.connect_open(apSSID);
                 return true;
             } else {
@@ -43,12 +43,12 @@ public class WirelessManager {
 
     private NetworkStat connectToNetworkInternal(String apSSID, Function<Network, Boolean> connector) {
         NetworkStat networkStat = wirelessHardwareRepository.stat();
-        if (networkStat.ssid.equals(apSSID)) {
+        if (networkStat.getSsid().equals(apSSID)) {
             log.info("Already connected to ssid: <{}>", apSSID);
             return networkStat;
         }
         // connect only if we are not connected yet
-        Optional<Network> optionalNetwork = wirelessHardwareRepository.scan().stream().filter(n -> n.ssid.startsWith(apSSID)).findAny();
+        Optional<Network> optionalNetwork = wirelessHardwareRepository.scan().stream().filter(n -> n.getSsid().startsWith(apSSID)).findAny();
         if (optionalNetwork.isPresent()) {
             Network network = optionalNetwork.get();
             // connect only if AP is open
@@ -56,7 +56,7 @@ public class WirelessManager {
                 wirelessHardwareRepository.connect_open(apSSID);
 
                 networkStat = wirelessHardwareRepository.stat();
-                if (networkStat.ssid.equals(apSSID)) {
+                if (networkStat.getSsid().equals(apSSID)) {
                     return networkStat;
 
                 } else {

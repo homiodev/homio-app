@@ -1,33 +1,37 @@
 package org.touchhome.bundle.api.hardware.wifi;
 
+import lombok.Getter;
+import lombok.ToString;
 import org.touchhome.bundle.api.hardware.api.ListParse;
 
+@Getter
+@ToString
 public class Network {
 
     @ListParse.BooleanLineParse(value = "IE: WPA Version 1", when = "IE: WPA Version 1", group = 0)
-    public boolean encryption_wpa;
+    private boolean encryption_wpa;
 
     @ListParse.BooleanLineParse(value = "IE: IEEE 802.11i/WPA2 Version 1", when = "IE: IEEE 802.11i/WPA2 Version 1", group = 0)
-    public boolean encryption_wpa2;
+    private boolean encryption_wpa2;
 
     @ListParse.BooleanLineParse(value = "Encryption key:(on|off)", when = "on")
-    public boolean encryption_any;
+    private boolean encryption_any;
 
     @ListParse.LineParse(".* Signal level=(-??\\d+)[^\\d].*")
-    public Integer strength;
+    private Integer strength;
 
     @ListParse.LineParse("Quality=(\\d+)[^\\d].*")
-    public Integer quality;
+    private Integer quality;
 
     @ListParse.LineParse("Mode:(.*)")
-    public String mode;
+    private String mode;
 
     @ListParse.LineParse("Channel:([0-9]{1,2})")
-    public Integer channel;
+    private Integer channel;
 
     @ListParse.LineParse("ESSID:\"(.*)\"")
-    public String ssid;
+    private String ssid;
 
     @ListParse.LineParse(".* Address: (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})")
-    public String address;
+    private String address;
 }
