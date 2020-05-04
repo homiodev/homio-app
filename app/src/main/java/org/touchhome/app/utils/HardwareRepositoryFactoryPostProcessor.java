@@ -181,6 +181,16 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
 
         Class<?> returnType = method.getReturnType();
 
+        // in case we expect return num we ignore any errors
+        if (returnType.isPrimitive()) {
+            switch (returnType.getName()) {
+                case "int":
+                    return retValue;
+                case "boolean":
+                    return false;
+            }
+        }
+
         if (retValue != 0) {
             throwErrors(errorsHandler, errors);
             if (errorsHandler != null) {
@@ -192,15 +202,6 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                     throw new IllegalStateException(error);
                 }
             } else {
-                if (returnType.isPrimitive()) {
-                    switch (returnType.getName()) {
-                        case "int":
-                            return retValue;
-                        case "boolean":
-                            return false;
-                    }
-                }
-
                 log.error("Error while execute command <{}>. Code: <{}>, Msg: <{}>", command, retValue, String.join(", ", errors));
                 if (!hardwareQuery.ignoreOnError()) {
                     throw new HardwareException(errors, retValue);
@@ -232,7 +233,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 Class<?> genericClass = listParse.clazz();
                 List result = new ArrayList();
                 for (List<String> bucket : buckets) {
-                    result.add(handleBucket(bucket, genericClass, retValue));
+                    result.add(handleBucket(bucket, genericClass));
                 }
                 return result;
             } else if (lineParse != null) {
@@ -242,13 +243,13 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             } else if (booleanParse != null) {
                 return handleBucket(inputs, booleanParse);
             } else {
-                return handleBucket(inputs, returnType, retValue);
+                return handleBucket(inputs, returnType);
             }
         }
         return null;
     }
 
-    private Object handleBucket(List<String> input, Class<?> genericClass, int retValue) throws IllegalAccessException, InstantiationException {
+    private Object handleBucket(List<String> input, Class<?> genericClass) throws IllegalAccessException, InstantiationException {
         if (genericClass.isPrimitive()) {
             switch (genericClass.getName()) {
                 case "void":
