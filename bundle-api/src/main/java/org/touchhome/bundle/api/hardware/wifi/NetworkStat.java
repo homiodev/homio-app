@@ -25,10 +25,6 @@ public class NetworkStat {
     @ListParse.LineParse(".* Quality=(\\d+)[^\\d].*")
     public Integer quality;
 
-    public boolean hasInternetAccess() {
-        return this.ssid != null;
-    }
-
     @Override
     public String toString() {
         return "NetworkStat{" +

@@ -10,7 +10,7 @@ import org.touchhome.bundle.api.hardware.other.GPIOHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.PostgreSQLHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.HotSpotHardwareRepository;
-import org.touchhome.bundle.api.hardware.wifi.NetworkStat;
+import org.touchhome.bundle.api.hardware.wifi.NetworkDescription;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 
 @Log4j2
@@ -20,6 +20,7 @@ final class HardwareUtils {
 
     /**
      * This method fires before ApplicationContext startup to make sure all related dependencies up
+     *
      * @param beanFactory
      */
     static void prepareHardware(ConfigurableListableBeanFactory beanFactory) {
@@ -31,7 +32,7 @@ final class HardwareUtils {
             checkDatabaseInstalled(beanFactory);
             checkWiringPi(beanFactory);
             // TODO: check what to do with this: checkHotSpotAndWifi(beanFactory);
-            checkWifi(beanFactory);
+            checkInternetConnection(beanFactory);
             startupCheck(beanFactory);
         }
     }
@@ -41,15 +42,18 @@ final class HardwareUtils {
         repository.addStartupCommand("sudo java -jar /root/touchHome.jar&");
     }
 
-    private static void checkWifi(ConfigurableListableBeanFactory beanFactory) {
+    private static void checkInternetConnection(ConfigurableListableBeanFactory beanFactory) {
         WirelessHardwareRepository repository = beanFactory.getBean(WirelessHardwareRepository.class);
 
-        NetworkStat networkStat = repository.stat();
+        NetworkDescription networkDescription = repository.getNetworkDescription("wlan0");
+        if (networkDescription == null || networkDescription.inet == null) {
+            networkDescription = repository.getNetworkDescription("eth0");
+        }
 
-        if (!networkStat.hasInternetAccess()) {
-            log.warn("!!!Device not connected to wifi.!!!");
+        if (networkDescription == null || networkDescription.inet == null) {
+            log.error("!!!Device not connected to internet.!!!");
         } else {
-            log.info("Device connected to wifi network <{}>", networkStat);
+            log.info("Device connected to network <{}>", networkDescription);
         }
     }
 
