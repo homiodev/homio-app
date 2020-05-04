@@ -9,7 +9,6 @@ import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 public interface PostgreSQLHardwareRepository {
 
     @HardwareQueries({
-            @HardwareQuery("sudo $PM update"),
             @HardwareQuery(value = "sudo $PM install -y postgresql", printOutput = true, maxSecondsTimeout = 300),
     })
     void installPostgreSQL();
@@ -18,7 +17,7 @@ public interface PostgreSQLHardwareRepository {
     String getPostgreSQLVersion();
 
     @HardwareQuery("sudo -u postgres psql -c \"ALTER USER postgres PASSWORD ':pwd';\"")
-    String changePostgresPassword(@ApiParam("pwd") String pwd);
+    void changePostgresPassword(@ApiParam("pwd") String pwd);
 }
 
 

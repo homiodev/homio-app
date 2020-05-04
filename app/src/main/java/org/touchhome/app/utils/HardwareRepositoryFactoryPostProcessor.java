@@ -79,7 +79,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     @SneakyThrows
     private static String determinePackageManager() {
         for (String pm : new String[]{"apt-get", "yum"}) {
-            Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", pm + "version"});
+            Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", pm + " version"});
             if (process.waitFor() == 0) {
                 return pm;
             }
@@ -185,7 +185,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 }
             } else {
                 // throw error anyway
-                log.error("Error while execute command. Code: <{}>, Msg: <{}>", retValue, String.join(", ", errors));
+                log.error("Error while execute command <{}>. Code: <{}>, Msg: <{}>", command, retValue, String.join(", ", errors));
                 throw new HardwareException(errors, retValue);
             }
         } else {
