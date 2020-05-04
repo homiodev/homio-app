@@ -100,6 +100,7 @@ final class HardwareUtils {
             log.warn("PostgreSQL not installed. Installing it...");
             repository.installPostgreSQL();
             log.info("PostgreSQL installed successfully.");
+            repository.startPostgreSQLService();
             String pwd = beanFactory.getBean(Environment.class).getProperty("spring.datasource.password");
             repository.changePostgresPassword(pwd);
         }
