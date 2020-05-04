@@ -16,8 +16,15 @@ public interface PostgreSQLHardwareRepository {
     @HardwareQuery("psql --version")
     String getPostgreSQLVersion();
 
+    @HardwareQuery("service postgresql status")
+    String getPostgreSQLStatus();
+
     @HardwareQuery("sudo -u postgres psql -c \"ALTER USER postgres PASSWORD ':pwd';\"")
     void changePostgresPassword(@ApiParam("pwd") String pwd);
+
+    @HardwareQuery(value = "sudo service postgresql start", printOutput = true)
+    void startPostgreSQLService();
+
 }
 
 

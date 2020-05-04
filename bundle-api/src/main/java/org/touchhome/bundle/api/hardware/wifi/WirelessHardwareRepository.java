@@ -6,6 +6,8 @@ import org.touchhome.bundle.api.hardware.api.HardwareQuery;
 import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 import org.touchhome.bundle.api.hardware.api.ListParse;
 
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.List;
 
 @HardwareRepositoryAnnotation
@@ -58,4 +60,23 @@ public interface WirelessHardwareRepository {
 
     @HardwareQuery("wpa_passphrase \":ssid\" \":password\" > /etc/wpa_supplicant/wpa_supplicant.conf")
     void setWifiPassword(@ApiParam("ssid") String ssid, @ApiParam("password") String password);
+
+    @HardwareQuery("ip addr | awk '/state UP/ {print $2}' | sed 's/.$//'")
+    String getActiveNetworkInterface();
+
+    default boolean hasInternetAccess(String spec) {
+        try {
+            URL url = new URL(spec);
+            URLConnection connection = url.openConnection();
+            connection.connect();
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    default NetworkDescription getNetworkDescription() {
+        String activeNetworkInterface = getActiveNetworkInterface();
+        return getNetworkDescription(activeNetworkInterface);
+    }
 }

@@ -10,7 +10,6 @@ import org.touchhome.bundle.api.hardware.other.GPIOHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.PostgreSQLHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.HotSpotHardwareRepository;
-import org.touchhome.bundle.api.hardware.wifi.NetworkDescription;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 
 @Log4j2
@@ -45,15 +44,11 @@ final class HardwareUtils {
     private static void checkInternetConnection(ConfigurableListableBeanFactory beanFactory) {
         WirelessHardwareRepository repository = beanFactory.getBean(WirelessHardwareRepository.class);
 
-        NetworkDescription networkDescription = repository.getNetworkDescription("wlan0");
-        if (networkDescription == null || networkDescription.inet == null) {
-            networkDescription = repository.getNetworkDescription("eth0");
-        }
-
-        if (networkDescription == null || networkDescription.inet == null) {
-            log.error("!!!Device not connected to internet.!!!");
+        boolean hasInetAccess = repository.hasInternetAccess("http://www.google.com");
+        if(hasInetAccess) {
+            log.info("Device connected to network <{}>", repository.getNetworkDescription());
         } else {
-            log.info("Device connected to network <{}>", networkDescription);
+            log.error("!!!Device not connected to internet.!!!");
         }
     }
 
@@ -96,6 +91,11 @@ final class HardwareUtils {
         PostgreSQLHardwareRepository repository = beanFactory.getBean(PostgreSQLHardwareRepository.class);
         try {
             log.info("PostgreSQL already installed <{}>", repository.getPostgreSQLVersion());
+            String postgreSQLStatus = repository.getPostgreSQLStatus();
+            log.info("PostgreSQL status <{}>", postgreSQLStatus);
+            if(postgreSQLStatus.contains("stop")) {
+                repository.startPostgreSQLService();
+            }
         } catch (HardwareException ex) {
             log.warn("PostgreSQL not installed. Installing it...");
             repository.installPostgreSQL();
