@@ -13,7 +13,7 @@ public interface GPIOHardwareRepository {
     @HardwareQuery(value = "gpio readall", printOutput = true)
     void printWiringPiInfo();
 
-    @HardwareQuery(value = "sudo $PM install wiringpi", printOutput = true)
+    @HardwareQuery(value = "sudo $PM install wiringpi", printOutput = true, ignoreOnError = true)
     void installWiringPiAuto();
 
     @HardwareQueries(

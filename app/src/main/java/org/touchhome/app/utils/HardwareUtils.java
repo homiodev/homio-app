@@ -47,9 +47,9 @@ final class HardwareUtils {
         NetworkStat networkStat = repository.stat();
 
         if (!networkStat.hasInternetAccess()) {
-            log.warn("!!!Pi not connected to wifi.!!!");
+            log.warn("!!!Device not connected to wifi.!!!");
         } else {
-            log.info("Pi connected to wifi network <{}>", networkStat);
+            log.info("Device connected to wifi network <{}>", networkStat);
         }
     }
 

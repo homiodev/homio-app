@@ -184,9 +184,10 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                     throw new IllegalStateException(error);
                 }
             } else {
-                // throw error anyway
                 log.error("Error while execute command <{}>. Code: <{}>, Msg: <{}>", command, retValue, String.join(", ", errors));
-                throw new HardwareException(errors, retValue);
+                if (!hardwareQuery.ignoreOnError()) {
+                    throw new HardwareException(errors, retValue);
+                }
             }
         } else {
             for (String error : errors) {

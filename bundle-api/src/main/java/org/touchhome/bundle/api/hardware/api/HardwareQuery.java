@@ -16,4 +16,6 @@ public @interface HardwareQuery {
     String dir() default "";
 
     boolean printOutput() default false;
+
+    boolean ignoreOnError() default false;
 }
