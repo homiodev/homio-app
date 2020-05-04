@@ -1,6 +1,5 @@
 package org.touchhome.app.manager;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,7 +7,6 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.json.bgp.BackgroundProcessServiceJSON;
 import org.touchhome.bundle.api.thread.BackgroundProcessService;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
-import org.touchhome.bundle.api.util.ClassFinder;
 import org.touchhome.bundle.api.util.SmartUtils;
 
 import javax.annotation.PreDestroy;
@@ -20,13 +18,12 @@ import static org.touchhome.bundle.api.thread.BackgroundProcessStatus.*;
 
 @Log4j2
 @Component
-@RequiredArgsConstructor
 public class BackgroundProcessManager {
 
-    private static Set<Class<? extends BackgroundProcessService>> backgroundProcessServices = new Reflections("org.touchhome").getSubTypesOf(BackgroundProcessService.class);
-    private final ClassFinder classFinder;
     @Value("${backgroundProcessThreadsMaxCount:1000}")
     private int backgroundProcessThreadsMaxCount;
+
+    private static Set<Class<? extends BackgroundProcessService>> backgroundProcessServices = new Reflections("org.touchhome").getSubTypesOf(BackgroundProcessService.class);
 
     private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
 
@@ -43,7 +40,7 @@ public class BackgroundProcessManager {
         }
     }
 
-    public ScheduledThreadPoolExecutor getScheduledThreadPoolExecutor() {
+    private ScheduledThreadPoolExecutor getScheduledThreadPoolExecutor() {
         if (scheduledThreadPoolExecutor == null) {
             scheduledThreadPoolExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(backgroundProcessThreadsMaxCount);
             scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);

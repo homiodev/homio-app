@@ -1,6 +1,5 @@
 package org.touchhome.bundle.api.util;
 
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.reflections.Reflections;
@@ -22,7 +21,6 @@ import java.util.Optional;
 
 @Log4j2
 @Component
-@RequiredArgsConstructor
 public class ClassFinder {
     public static final String CLASSES_WITH_PARENT_CLASS = "CLASSES_WITH_PARENT_CLASS";
     public static final String REPOSITORY_BY_CLAZZ = "REPOSITORY_BY_CLAZZ";
