@@ -91,7 +91,7 @@ final class HardwareUtils {
         PostgreSQLHardwareRepository repository = beanFactory.getBean(PostgreSQLHardwareRepository.class);
         try {
             log.info("PostgreSQL already installed <{}>", repository.getPostgreSQLVersion());
-            if (repository.isPostgreSQLRunning() != 0) {
+            if (!repository.isPostgreSQLRunning()) {
                 repository.startPostgreSQLService();
             }
         } catch (HardwareException ex) {
