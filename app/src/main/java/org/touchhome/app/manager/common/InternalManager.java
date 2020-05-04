@@ -274,7 +274,7 @@ public class InternalManager implements EntityContext {
             return pluginFor.parseValue(StringUtils.defaultIfEmpty(settingTransientState.get(pluginFor), pluginFor.getDefaultValue()));
         } else {
             SettingEntity settingEntity = getEntity(SettingRepository.getKey(pluginFor));
-            return pluginFor.parseValue(StringUtils.defaultIfEmpty(settingEntity.getValue(), pluginFor.getDefaultValue()));
+            return pluginFor.parseValue(StringUtils.defaultIfEmpty(settingEntity == null ? null : settingEntity.getValue(), pluginFor.getDefaultValue()));
         }
     }
 
