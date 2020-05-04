@@ -51,7 +51,7 @@ public interface WirelessHardwareRepository {
     void connect_open(String essid);
 
     @HardwareQuery(value = "sudo ifconfig :iface", ignoreOnError = true)
-    NetworkDescription getNetworkDescription(String iface);
+    NetworkDescription getNetworkDescription(@ApiParam("iface") String iface);
 
     @HardwareQuery("sudo grep -r 'psk=' /etc/wpa_supplicant/wpa_supplicant.conf | cut -d = -f 2 | cut -d \\\" -f 2")
     String getWifiPassword();
