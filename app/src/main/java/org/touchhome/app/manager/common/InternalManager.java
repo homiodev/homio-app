@@ -130,7 +130,6 @@ public class InternalManager implements EntityContext {
 
         applicationContext.getBean(UserRepository.class).postConstruct();
         applicationContext.getBean(NettyClientService.class).postConstruct();
-        applicationContext.getBean(BackgroundProcessManager.class).postConstruct();
         applicationContext.getBean(ScriptManager.class).postConstruct();
         applicationContext.getBean(ConsoleController.class).postConstruct();
         applicationContext.getBean(SettingController.class).postConstruct(settingPluginsByPluginKey);

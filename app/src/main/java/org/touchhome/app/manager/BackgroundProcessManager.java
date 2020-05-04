@@ -1,7 +1,6 @@
 package org.touchhome.app.manager;
 
 import lombok.extern.log4j.Log4j2;
-import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.json.bgp.BackgroundProcessServiceJSON;
@@ -10,8 +9,10 @@ import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
 import org.touchhome.bundle.api.util.SmartUtils;
 
 import javax.annotation.PreDestroy;
-import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 import static org.touchhome.bundle.api.thread.BackgroundProcessStatus.*;
@@ -23,22 +24,9 @@ public class BackgroundProcessManager {
     @Value("${backgroundProcessThreadsMaxCount:1000}")
     private int backgroundProcessThreadsMaxCount;
 
-    private static Set<Class<? extends BackgroundProcessService>> backgroundProcessServices = new Reflections("org.touchhome").getSubTypesOf(BackgroundProcessService.class);
-
     private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
 
     private Map<String, BackgroundProcessDescriptor> threads = new ConcurrentHashMap<>();
-
-    public void postConstruct() {
-        for (Class<? extends BackgroundProcessService> aClass : backgroundProcessServices) {
-            try {
-                Constructor<? extends BackgroundProcessService> constructor = aClass.getDeclaredConstructor();
-                fireIfNeedRestart(constructor.newInstance());
-            } catch (Exception ignore) {
-
-            }
-        }
-    }
 
     private ScheduledThreadPoolExecutor getScheduledThreadPoolExecutor() {
         if (scheduledThreadPoolExecutor == null) {
