@@ -117,7 +117,7 @@ final class HardwareUtils {
                     Files.walk(fs.getPath("/BOOT-INF/classes/files")).forEach((Path path) -> {
                         if (Files.isRegularFile(path)) {
                             try {
-                                Files.copy(path, target.resolve(path.getFileName()));
+                                Files.copy(path, target.resolve(path.getFileName().toString()));
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
