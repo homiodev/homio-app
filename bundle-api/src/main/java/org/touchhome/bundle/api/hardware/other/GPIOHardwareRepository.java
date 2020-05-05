@@ -22,12 +22,3 @@ public interface GPIOHardwareRepository {
     @HardwareQuery("rm -rf buildWiringPi")
     void installWiringPiManually(@ApiParam("sysDir") String sysDir, @ApiParam("tomcatDir") String tomcatDir);
 }
-
-
-
-
-
-
-
-
-

@@ -10,7 +10,7 @@ import org.freedesktop.dbus.Variant;
 import org.springframework.stereotype.Controller;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.hardware.other.RaspberryHardwareRepository;
+import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.Network;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.UserEntity;
@@ -49,7 +49,7 @@ public class BluetoothService implements BundleContext {
     private static final int TIME_REFRESH_PASSWORD = 10 * 60 * 1000; // 10min
     private static long timeSinceLastCheckPassword = -1;
     private final EntityContext entityContext;
-    private final RaspberryHardwareRepository raspberryHardwareRepository;
+    private final LinuxHardwareRepository linuxHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
     private BluetoothApplication bluetoothApplication;
     private UserEntity user;
@@ -77,18 +77,18 @@ public class BluetoothService implements BundleContext {
             }
         });
 
-        bluetoothApplication.newReadCharacteristic("cpu_load", CPU_LOAD_UUID, () -> readSafeValue(raspberryHardwareRepository::getCpuLoad));
-        bluetoothApplication.newReadCharacteristic("cpu_temp", CPU_TEMP_UUID, () -> readSafeValue(raspberryHardwareRepository::getCpuTemp));
-        bluetoothApplication.newReadCharacteristic("memory", MEMORY_UUID, () -> readSafeValue(raspberryHardwareRepository::getMemory));
-        bluetoothApplication.newReadCharacteristic("sd_memory", SD_MEMORY_UUID, () -> readSafeValue(() -> raspberryHardwareRepository.getSDCardMemory().toFineString()));
-        bluetoothApplication.newReadCharacteristic("uptime", UPTIME_UUID, () -> readSafeValue(raspberryHardwareRepository::getUptime));
-        bluetoothApplication.newReadCharacteristic("ip", IP_ADDRESS_UUID, () -> readSafeValue(raspberryHardwareRepository::getIpAddress));
+        bluetoothApplication.newReadCharacteristic("cpu_load", CPU_LOAD_UUID, () -> readSafeValue(linuxHardwareRepository::getCpuLoad));
+        bluetoothApplication.newReadCharacteristic("cpu_temp", CPU_TEMP_UUID, () -> readSafeValue(linuxHardwareRepository::getCpuTemp));
+        bluetoothApplication.newReadCharacteristic("memory", MEMORY_UUID, () -> readSafeValue(linuxHardwareRepository::getMemory));
+        bluetoothApplication.newReadCharacteristic("sd_memory", SD_MEMORY_UUID, () -> readSafeValue(() -> linuxHardwareRepository.getSDCardMemory().toFineString()));
+        bluetoothApplication.newReadCharacteristic("uptime", UPTIME_UUID, () -> readSafeValue(linuxHardwareRepository::getUptime));
+        bluetoothApplication.newReadCharacteristic("ip", IP_ADDRESS_UUID, () -> readSafeValue(linuxHardwareRepository::getIpAddress));
         bluetoothApplication.newReadCharacteristic("write_ban", WRITE_BAN_UUID, () -> bluetoothApplication.gatherWriteBan().getBytes());
         bluetoothApplication.newReadWriteCharacteristic("device_model", DEVICE_MODEL_UUID, bytes -> writeSafeValue(() -> {
             if (user.getPassword().equals(new String(bytes))) {
-                raspberryHardwareRepository.reboot();
+                linuxHardwareRepository.reboot();
             }
-        }), () -> readSafeValue(raspberryHardwareRepository::getDeviceModel));
+        }), () -> readSafeValue(linuxHardwareRepository::getDeviceModel));
 
         bluetoothApplication.newReadCharacteristic("server_connected", SERVER_CONNECTED_UUID, () ->
                 readSafeValue(() -> {
@@ -108,7 +108,7 @@ public class BluetoothService implements BundleContext {
                         wirelessHardwareRepository.setWifiPassword(split[0], split[1]);
                         wirelessHardwareRepository.restartNetworkInterface();
                     }
-                }), () -> readSafeValue(raspberryHardwareRepository::getWifiName));
+                }), () -> readSafeValue(linuxHardwareRepository::getWifiName));
 
         // we may set pwd only once for now
         bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, bytes -> {

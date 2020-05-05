@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component;
 import org.thavam.util.concurrent.blockingMap.BlockingHashMap;
 import org.thavam.util.concurrent.blockingMap.BlockingMap;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.hardware.api.*;
+import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.util.ClassFinder;
 
 import java.io.BufferedReader;
@@ -44,7 +44,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     private static final BlockingQueue<PrintContext> printLogsJobs = new LinkedBlockingQueue<>(10);
     private static final BlockingMap<Process, List<String>> inputResponse = new BlockingHashMap<>();
     private static final Constructor<MethodHandles.Lookup> lookupConstructor;
-    private static final String pm;
+    private String pm;
 
     private static Thread logThread = new Thread(() -> {
         while (!Thread.currentThread().isInterrupted()) {
@@ -74,22 +74,10 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         } catch (Exception ex) {
             throw new RuntimeException("Unable to instantiate MethodHandles.Lookup", ex);
         }
-        pm = EntityContext.isTestApplication() ? "" : determinePackageManager();
     }
 
     static {
         logThread.start();
-    }
-
-    @SneakyThrows
-    private static String determinePackageManager() {
-        for (String pm : new String[]{"apt-get", "yum"}) {
-            Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", pm + " version"});
-            if (process.waitFor() == 0) {
-                return pm;
-            }
-        }
-        throw new NotFoundException("No package manager found");
     }
 
     @Override
@@ -124,6 +112,11 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             }));
         }
 
+        if (!EntityContext.isTestApplication()) {
+            LinuxHardwareRepository repository = beanFactory.getBean(LinuxHardwareRepository.class);
+            this.pm = repository.getOs().getPackageManager();
+        }
+
         HardwareUtils.prepareHardware(beanFactory);
     }
 
@@ -147,7 +140,8 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         ErrorsHandler errorsHandler = method.getAnnotation(ErrorsHandler.class);
         List<String> parts = new ArrayList<>();
         for (String cmd : hardwareQuery.value()) {
-            parts.add(replaceStringWithArgs(cmd, args, method).replace("$PM", pm));
+            String rcmd = replaceStringWithArgs(cmd, args, method);
+            parts.add(rcmd.contains("$PM") ? rcmd.replace("$PM", pm) : rcmd);
         }
         String[] cmdParts = parts.toArray(new String[0]);
         String command = String.join(", ", parts);
@@ -158,6 +152,9 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         List<String> inputs = Collections.emptyList();
         try {
             Process process;
+            if (StringUtils.isNotEmpty(hardwareQuery.echo())) {
+                log.info("Hardware: " + hardwareQuery.echo());
+            }
             if (StringUtils.isNotEmpty(hardwareQuery.dir())) {
                 File dir = new File(replaceStringWithArgs(hardwareQuery.dir(), args, method));
                 process = Runtime.getRuntime().exec(cmdParts, null, dir);

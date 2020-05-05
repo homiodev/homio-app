@@ -55,7 +55,7 @@ final class HardwareUtils {
 
         if (!repository.isAutoHotSpotServiceExists()) {
             String rpiSysDir = null;
-            repository.installHostapd(rpiSysDir);
+            repository.installAutoHotSpot(rpiSysDir);
         }
     }
 
