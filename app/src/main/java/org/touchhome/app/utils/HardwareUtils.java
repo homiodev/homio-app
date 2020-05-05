@@ -4,12 +4,12 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.env.Environment;
+import org.touchhome.app.hardware.HotSpotHardwareRepository;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.api.HardwareException;
 import org.touchhome.bundle.api.hardware.other.GPIOHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.PostgreSQLHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
-import org.touchhome.bundle.api.hardware.wifi.HotSpotHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 
 @Log4j2
@@ -19,8 +19,6 @@ final class HardwareUtils {
 
     /**
      * This method fires before ApplicationContext startup to make sure all related dependencies up
-     *
-     * @param beanFactory
      */
     static void prepareHardware(ConfigurableListableBeanFactory beanFactory) {
         if (hardwareChecked) {
@@ -30,7 +28,7 @@ final class HardwareUtils {
         if (!EntityContext.isTestApplication()) {
             checkDatabaseInstalled(beanFactory);
             checkWiringPi(beanFactory);
-            // TODO: check what to do with this: checkHotSpotAndWifi(beanFactory);
+            checkHotSpotAndWifi(beanFactory);
             checkInternetConnection(beanFactory);
             startupCheck(beanFactory);
         }
@@ -55,21 +53,9 @@ final class HardwareUtils {
     private static void checkHotSpotAndWifi(ConfigurableListableBeanFactory beanFactory) {
         HotSpotHardwareRepository repository = beanFactory.getBean(HotSpotHardwareRepository.class);
 
-        if (repository.isAutoHotSpotServiceExists()) {
+        if (!repository.isAutoHotSpotServiceExists()) {
             String rpiSysDir = null;
-            repository.installHostapd();
-            repository.installDnsmasq();
-            repository.disableHostapd();
-            repository.disableDnsmasq();
-            repository.copyHostapdConf(rpiSysDir);
-            repository.replaceDaemonConfPath();
-            repository.appendDnsmasqContent(rpiSysDir);
-            repository.copyHostapdConf(rpiSysDir);
-            repository.copyInterfaces(rpiSysDir);
-            repository.ignoreWpaConfiguration();
-            repository.copyAutoHotSpotService(rpiSysDir);
-            repository.enableAutoHotSpotService();
-            repository.copyAutoHotSpot(rpiSysDir);
+            repository.installHostapd(rpiSysDir);
         }
     }
 

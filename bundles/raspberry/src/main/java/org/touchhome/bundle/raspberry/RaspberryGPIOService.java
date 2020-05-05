@@ -30,14 +30,7 @@ import java.util.stream.Collectors;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class RaspberryManager {
-    private static final int PI_SPI_BAUD_125KHZ = 125000;
-    private static final int PI_SPI_BAUD_250KHZ = PI_SPI_BAUD_125KHZ * 2;
-    private static final int PI_SPI_BAUD_500KHZ = PI_SPI_BAUD_250KHZ * 2;
-    private static final int PI_SPI_BAUD_1MHZ = PI_SPI_BAUD_500KHZ * 2;
-    private static final int PI_SPI_BAUD_2MHZ = PI_SPI_BAUD_1MHZ * 2;
-    private static final int PI_SPI_BAUD_4MHZ = PI_SPI_BAUD_2MHZ * 2;
-    public static final int PI_SPI_BAUD_8MHZ = PI_SPI_BAUD_4MHZ * 2;
+public class RaspberryGPIOService {
     private static GpioController gpio;
     private static Boolean available;
     private final Map<String, DefaultKeyValue<Long, Float>> ds18B20Values = new HashMap<>();

@@ -35,7 +35,7 @@ import org.touchhome.bundle.api.ui.field.UIFilterOptions;
 import org.touchhome.bundle.api.ui.method.UIMethodAction;
 import org.touchhome.bundle.api.util.ClassFinder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.raspberry.RaspberryManager;
+import org.touchhome.bundle.raspberry.RaspberryGPIOService;
 
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
@@ -57,7 +57,7 @@ public class ItemController {
 
     private static Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
     private final ObjectMapper objectMapper;
-    private final RaspberryManager raspberryManager;
+    private final RaspberryGPIOService raspberryGPIOService;
     private final EntityContext entityContext;
     private final EntityManager entityManager;
     private final ClassFinder classFinder;
@@ -319,7 +319,7 @@ public class ItemController {
 
     @GetMapping("raspberry/DS18B20")
     public List<BaseEntity> getRaspberryDS18B20() {
-        return raspberryManager.getDS18B20()
+        return raspberryGPIOService.getDS18B20()
                 .stream().map(s -> BaseEntity.of(s, s)).collect(Collectors.toList());
     }
 
