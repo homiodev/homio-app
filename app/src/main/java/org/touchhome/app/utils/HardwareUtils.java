@@ -26,12 +26,17 @@ final class HardwareUtils {
         }
         hardwareChecked = true;
         if (!EntityContext.isTestApplication()) {
+            copyResources();
             checkDatabaseInstalled(beanFactory);
             checkWiringPi(beanFactory);
             checkHotSpotAndWifi(beanFactory);
             checkInternetConnection(beanFactory);
             startupCheck(beanFactory);
         }
+    }
+
+    private static void copyResources() {
+
     }
 
     private static void startupCheck(ConfigurableListableBeanFactory beanFactory) {
