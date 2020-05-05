@@ -25,9 +25,6 @@ public interface HotSpotHardwareRepository {
     @HardwareQuery("test -f /usr/bin/autohotspot && echo true || echo false")
     boolean isAutoHotSpotServiceExists();
 
-    @HardwareQuery(value = "sudo autohotspot swipe", printOutput = true)
-    void switchHotSpot();
-
     @HardwareQuery("sudo iw dev wlan0 set power_save off")
     void fixLooseWifi();
 }

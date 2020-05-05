@@ -12,6 +12,9 @@ import java.util.List;
 
 @HardwareRepositoryAnnotation
 public interface WirelessHardwareRepository {
+    @HardwareQuery(value = "sudo autohotspot swipe", printOutput = true)
+    void switchHotSpot();
+
     @HardwareQuery("sudo iwlist wlan0 scan")
     @ErrorsHandler(onRetCodeError = "Got some major errors from our scan command",
             notRecognizeError = "Got some errors from our scan command",

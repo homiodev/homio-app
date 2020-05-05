@@ -68,4 +68,8 @@ public class WirelessManager {
         }
         return null;
     }
+
+    public void switchHotSpot() {
+        this.wirelessHardwareRepository.switchHotSpot();
+    }
 }

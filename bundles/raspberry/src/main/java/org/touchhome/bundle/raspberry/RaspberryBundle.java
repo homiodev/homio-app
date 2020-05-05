@@ -10,8 +10,10 @@ import org.touchhome.bundle.api.BundleContext;
 @RequiredArgsConstructor
 public class RaspberryBundle implements BundleContext {
 
-    public void init() {
+    private final RaspberryGPIOService raspberryGPIOService;
 
+    public void init() {
+        raspberryGPIOService.init();
     }
 
     @Override
