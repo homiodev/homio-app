@@ -114,10 +114,12 @@ final class HardwareUtils {
             URL url = resources.nextElement();
             if (url.getProtocol().equals("jar")) {
                 try (ZipFileSystem fs = (ZipFileSystem) FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
-                    Files.walk(fs.getPath("/BOOT-INF/classes/files")).forEach((Path path) -> {
+                    String jarFiles = "/BOOT-INF/classes/files";
+                    Files.walk(fs.getPath(jarFiles)).forEach((Path path) -> {
                         if (Files.isRegularFile(path)) {
                             try {
-                                Files.copy(path, target.resolve(path.getFileName().toString()));
+                                String targetPath = path.toString().substring(jarFiles.length());
+                                Files.copy(path, target.resolve(targetPath));
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
