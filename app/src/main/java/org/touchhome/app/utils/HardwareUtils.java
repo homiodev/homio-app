@@ -19,7 +19,9 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 import java.io.File;
 import java.net.URL;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Enumeration;
 
@@ -57,8 +59,13 @@ final class HardwareUtils {
             if(url.getProtocol().equals("jar")) {
                 try(ZipFileSystem zipfs = (ZipFileSystem) FileSystems.newFileSystem(url.toURI(), Collections.emptyMap()))
                 {
-                    zipfs.getFileStores();
-
+                    Files.walk(Paths.get(url.toURI())).forEach((Path path) -> {
+                        if (Files.isRegularFile(path)) {
+                            Files.copy(path, target.resolve(path.getFileName()));
+                        } else {
+                            System.out.print("Directory: " + path);
+                        }
+                    });
                 }
             } else {
                 FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
