@@ -17,6 +17,7 @@ import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -45,31 +46,6 @@ final class HardwareUtils {
             checkHotSpotAndWifi(beanFactory);
             checkInternetConnection(beanFactory);
             startupCheck(beanFactory);
-        }
-    }
-
-    @SneakyThrows
-    private static void copyResources() {
-        Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources("files");
-        Path target = TouchHomeUtils.resolvePath("files");
-        FileUtils.cleanDirectory(target.toFile());
-
-        while (resources.hasMoreElements()) {
-            URL url = resources.nextElement();
-            if(url.getProtocol().equals("jar")) {
-                try(ZipFileSystem zipfs = (ZipFileSystem) FileSystems.newFileSystem(url.toURI(), Collections.emptyMap()))
-                {
-                    Files.walk(Paths.get(url.toURI())).forEach((Path path) -> {
-                        if (Files.isRegularFile(path)) {
-                            Files.copy(path, target.resolve(path.getFileName()));
-                        } else {
-                            System.out.print("Directory: " + path);
-                        }
-                    });
-                }
-            } else {
-                FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
-            }
         }
     }
 
@@ -126,6 +102,34 @@ final class HardwareUtils {
             repository.startPostgreSQLService();
             String pwd = beanFactory.getBean(Environment.class).getProperty("spring.datasource.password");
             repository.changePostgresPassword(pwd);
+        }
+    }
+
+    @SneakyThrows
+    private static void copyResources() {
+        Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources("files");
+        Path target = TouchHomeUtils.resolvePath("files");
+        FileUtils.cleanDirectory(target.toFile());
+
+        while (resources.hasMoreElements()) {
+            URL url = resources.nextElement();
+            if (url.getProtocol().equals("jar")) {
+                try (ZipFileSystem zipfs = (ZipFileSystem) FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
+                    Files.walk(Paths.get(url.toURI())).forEach((Path path) -> {
+                        if (Files.isRegularFile(path)) {
+                            try {
+                                Files.copy(path, target.resolve(path.getFileName()));
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        } else {
+                            System.out.print("Directory: " + path);
+                        }
+                    });
+                }
+            } else {
+                FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
+            }
         }
     }
 }
