@@ -75,8 +75,7 @@ final class HardwareUtils {
         HotSpotHardwareRepository repository = beanFactory.getBean(HotSpotHardwareRepository.class);
 
         if (!repository.isAutoHotSpotServiceExists()) {
-            String rpiSysDir = null;
-            repository.installAutoHotSpot(rpiSysDir);
+            repository.installAutoHotSpot(TouchHomeUtils.resolvePath("files", "hotspot").toAbsolutePath().toString());
         }
     }
 
