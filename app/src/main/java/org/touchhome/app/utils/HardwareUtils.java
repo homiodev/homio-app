@@ -1,6 +1,8 @@
 package org.touchhome.app.utils;
 
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.env.Environment;
@@ -11,6 +13,12 @@ import org.touchhome.bundle.api.hardware.other.GPIOHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.PostgreSQLHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
+
+import java.io.File;
+import java.net.URL;
+import java.nio.file.Path;
+import java.util.Enumeration;
 
 @Log4j2
 final class HardwareUtils {
@@ -35,8 +43,16 @@ final class HardwareUtils {
         }
     }
 
+    @SneakyThrows
     private static void copyResources() {
+        Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources("files");
+        Path target = TouchHomeUtils.resolvePath("files");
+        FileUtils.cleanDirectory(target.toFile());
 
+        while (resources.hasMoreElements()) {
+            URL url = resources.nextElement();
+            FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
+        }
     }
 
     private static void startupCheck(ConfigurableListableBeanFactory beanFactory) {

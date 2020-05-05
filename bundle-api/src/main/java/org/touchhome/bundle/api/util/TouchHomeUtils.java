@@ -30,9 +30,14 @@ public class TouchHomeUtils {
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Path TMP_FOLDER = Paths.get(FileUtils.getTempDirectoryPath());
     public static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-    private static Path rootPath = SystemUtils.getUserHome().toPath().resolve("state");
+    private static Path rootPath;
 
     static {
+        if (SystemUtils.IS_OS_WINDOWS) {
+            rootPath = SystemUtils.getUserHome().toPath().resolve("touchhome");
+        } else {
+            rootPath = Paths.get("/opt/touchhome");
+        }
         TouchHomeUtils.createDirectoriesIfNotExists(rootPath);
     }
 
