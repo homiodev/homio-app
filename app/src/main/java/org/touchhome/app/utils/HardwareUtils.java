@@ -22,7 +22,6 @@ import java.net.URL;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Enumeration;
 
@@ -114,8 +113,8 @@ final class HardwareUtils {
         while (resources.hasMoreElements()) {
             URL url = resources.nextElement();
             if (url.getProtocol().equals("jar")) {
-                try (ZipFileSystem zipfs = (ZipFileSystem) FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
-                    Files.walk(Paths.get(url.toURI())).forEach((Path path) -> {
+                try (ZipFileSystem fs = (ZipFileSystem) FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
+                    Files.walk(fs.getPath("/BOOT-INF/classes/files")).forEach((Path path) -> {
                         if (Files.isRegularFile(path)) {
                             try {
                                 Files.copy(path, target.resolve(path.getFileName()));
