@@ -1,5 +1,6 @@
 package org.touchhome.app.utils;
 
+import com.sun.nio.zipfs.ZipFileSystem;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
@@ -17,7 +18,9 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.File;
 import java.net.URL;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Enumeration;
 
 @Log4j2
@@ -51,7 +54,15 @@ final class HardwareUtils {
 
         while (resources.hasMoreElements()) {
             URL url = resources.nextElement();
-            FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
+            if(url.getProtocol().equals("jar")) {
+                try(ZipFileSystem zipfs = (ZipFileSystem) FileSystems.newFileSystem(url.toURI(), Collections.emptyMap()))
+                {
+                    zipfs.getFileStores();
+
+                }
+            } else {
+                FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
+            }
         }
     }
 
