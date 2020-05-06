@@ -37,6 +37,7 @@ import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.method.UIFieldCreateWorkspaceVariableOnEmpty;
 import org.touchhome.bundle.api.ui.method.UIFieldSelectValueOnEmpty;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.bluetooth.BluetoothService;
 
 import javax.persistence.OneToMany;
 import java.beans.Introspector;
@@ -60,6 +61,7 @@ import static org.apache.commons.lang.StringUtils.trimToNull;
 @RequiredArgsConstructor
 public class UtilsController {
 
+    private final BluetoothService bluetoothService;
     private final InternalManager entityContext;
     private final ScriptManager scriptManager;
     private final CodeParser codeParser;
@@ -251,6 +253,11 @@ public class UtilsController {
     @GetMapping("status")
     public String getStatus() {
         return "ok";
+    }
+
+    @GetMapping("device/characteristics")
+    public Map<String, byte[]> getDeviceCharacteristics() {
+        return bluetoothService.getDeviceCharacteristics();
     }
 
     @PostMapping("getCompletions")

@@ -19,6 +19,8 @@ import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerRestartSetting;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -53,6 +55,13 @@ public class BluetoothService implements BundleContext {
     private final WirelessHardwareRepository wirelessHardwareRepository;
     private BluetoothApplication bluetoothApplication;
     private UserEntity user;
+
+    public Map<String, byte[]> getDeviceCharacteristics() {
+        Map<String, byte[]> map = new HashMap<>();
+        map.put(CPU_LOAD_UUID, readSafeValue(linuxHardwareRepository::getCpuLoad));
+
+        return map;
+    }
 
     public void init() {
         if (EntityContext.isTestApplication()) {
