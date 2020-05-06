@@ -97,7 +97,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                     }
                     return null;
                 }
-                if (method.isAnnotationPresent(HardwareQuery.class)) {
+                if (method.isAnnotationPresent(HardwareQuery.class)) { // TODO: badddddddddddddddddddddddd
                     HardwareQuery hardwareQuery = method.getAnnotation(HardwareQuery.class);
                     return handleHardwareQuery(hardwareQuery, args, method);
                 }
@@ -209,7 +209,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         } else {
             for (String error : errors) {
                 if (!error.isEmpty()) {
-                    log.warn("Error execute hardware process <{}>", error);
+                    log.warn("Error <{}>", error);
                 }
             }
             inputs = inputs.stream().map(String::trim).collect(Collectors.toList());
