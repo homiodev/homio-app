@@ -123,7 +123,7 @@ final class HardwareUtils {
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
-                    })
+                    });
                 }
             } else {
                 FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
