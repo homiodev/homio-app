@@ -19,9 +19,7 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.Collections;
 import java.util.Enumeration;
 
@@ -108,7 +106,6 @@ final class HardwareUtils {
     private static void copyResources() {
         Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources("files");
         Path target = TouchHomeUtils.resolvePath("files");
-        FileUtils.cleanDirectory(target.toFile());
 
         while (resources.hasMoreElements()) {
             URL url = resources.nextElement();
@@ -119,7 +116,7 @@ final class HardwareUtils {
                         try {
                             Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
                             Files.createDirectories(resolve.getParent());
-                            Files.copy(path, resolve);
+                            Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
