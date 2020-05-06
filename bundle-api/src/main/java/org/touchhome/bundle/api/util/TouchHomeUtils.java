@@ -2,6 +2,7 @@ package org.touchhome.bundle.api.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
@@ -31,6 +32,8 @@ public class TouchHomeUtils {
     private static final Path TMP_FOLDER = Paths.get(FileUtils.getTempDirectoryPath());
     public static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
     private static Path rootPath;
+    @Getter
+    private static Path filesPath;
 
     static {
         if (SystemUtils.IS_OS_WINDOWS) {
@@ -38,7 +41,8 @@ public class TouchHomeUtils {
         } else {
             rootPath = Paths.get("/opt/touchhome");
         }
-        TouchHomeUtils.createDirectoriesIfNotExists(rootPath);
+        filesPath = rootPath.resolve("files");
+        TouchHomeUtils.createDirectoriesIfNotExists(filesPath);
     }
 
     @SneakyThrows
@@ -100,22 +104,8 @@ public class TouchHomeUtils {
         return Collections.emptyList();
     }
 
-    @SneakyThrows
-    public static void copyResource(String fileName, Path targetPath) {
-        Files.copy(Objects.requireNonNull(TouchHomeUtils.class.getClassLoader().getResourceAsStream(fileName)),
-                targetPath, StandardCopyOption.REPLACE_EXISTING);
-    }
-
     public static Path path(String path) {
         return rootPath.resolve(path);
-    }
-
-    private static String getSimpleNameFromMethod(Method method) {
-        String fieldName = method.getName().startsWith("get") ? method.getName().substring(3) : (method.getName().startsWith("is") ? method.getName().substring(2) : method.getName());
-        char c[] = fieldName.toCharArray();
-        c[0] = Character.toLowerCase(c[0]);
-        fieldName = new String(c);
-        return fieldName;
     }
 
     public static String getErrorMessage(Throwable ex) {

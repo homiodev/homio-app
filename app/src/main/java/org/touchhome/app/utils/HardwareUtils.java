@@ -66,7 +66,7 @@ final class HardwareUtils {
         HotSpotHardwareRepository repository = beanFactory.getBean(HotSpotHardwareRepository.class);
 
         if (!repository.isAutoHotSpotServiceExists()) {
-            repository.installAutoHotSpot(TouchHomeUtils.resolvePath("files", "hotspot").toAbsolutePath().toString());
+            repository.installAutoHotSpot(TouchHomeUtils.getFilesPath().resolve("hotspot").toAbsolutePath().toString());
         }
     }
 
@@ -102,7 +102,7 @@ final class HardwareUtils {
     @SneakyThrows
     private static void copyResources() {
         Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources("files");
-        Path target = TouchHomeUtils.resolvePath("files");
+        Path target = TouchHomeUtils.getFilesPath();
 
         while (resources.hasMoreElements()) {
             URL url = resources.nextElement();

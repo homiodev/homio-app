@@ -2,6 +2,7 @@ package org.touchhome.bundle.rf433;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Component;
@@ -18,43 +19,32 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.stream.IntStream;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 @Log4j2
 @Component
 @RequiredArgsConstructor
 public class Rf433Service implements BundleContext {
-    private static Path rf433Dir;
+    private static Path rf433Dir = TouchHomeUtils.resolvePath("rf433");
     private final EntityContext entityContext;
     private Path rf433TransmitterPy;
     private Path rf433ReceiverPy;
     private boolean isTestApplication = false;
 
     public void init() {
-        rf433Dir = TouchHomeUtils.path("rf433");
         try {
-            Files.createDirectories(rf433Dir);
-            Files.walkFileTree(rf433Dir, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    if (file.getFileName().toString().endsWith(".getPinRequestType")) {
-                        try {
-                            Files.delete(file);
-                        } catch (Exception ex) {
-                            log.error("Can't delete lock file: " + TouchHomeUtils.getErrorMessage(ex), ex);
-                        }
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-            });
+            FileUtils.cleanDirectory(rf433Dir.toFile());
             rf433TransmitterPy = rf433Dir.resolve("rf433Transmitter.py");
-            TouchHomeUtils.copyResource("rf433/rf433Transmitter.py", rf433TransmitterPy);
+            Files.copy(TouchHomeUtils.getFilesPath().resolve("rf433").resolve("rf433Transmitter.py"), rf433TransmitterPy, REPLACE_EXISTING);
 
             rf433ReceiverPy = rf433Dir.resolve("rf433Sniffer.py");
-            TouchHomeUtils.copyResource("rf433/rf433Sniffer.py", rf433ReceiverPy);
+            Files.copy(TouchHomeUtils.getFilesPath().resolve("rf433").resolve("rf433Sniffer.py"), rf433ReceiverPy, REPLACE_EXISTING);
         } catch (IOException e) {
             log.error(e.getMessage(), e);
             throw new RuntimeException(e);
@@ -149,7 +139,7 @@ public class Rf433Service implements BundleContext {
         Path path = rf433Dir.resolve("testWave.getPinRequestType");
         Path entityPath = rf433Dir.resolve(entity.getEntityID());
         entity.setPath(entityPath.toString());
-        Files.move(path, entityPath, StandardCopyOption.REPLACE_EXISTING);
+        Files.move(path, entityPath, REPLACE_EXISTING);
 
         return entityContext.save(entity);
     }
