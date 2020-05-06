@@ -119,7 +119,7 @@ final class HardwareUtils {
                         if (Files.isRegularFile(path)) {
                             try {
                                 Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
-                                Files.createDirectories(resolve);
+                                Files.createDirectories(resolve.getParent());
                                 Files.copy(path, resolve);
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
