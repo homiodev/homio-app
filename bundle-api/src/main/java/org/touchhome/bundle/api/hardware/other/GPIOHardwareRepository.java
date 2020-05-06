@@ -6,13 +6,13 @@ import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 
 @HardwareRepositoryAnnotation
 public interface GPIOHardwareRepository {
-    @HardwareQuery(value = "gpio -v", printOutput = true)
+    @HardwareQuery(echo = "Printing wiring PI version", value = "gpio -v", printOutput = true)
     void printWiringPiVersion();
 
-    @HardwareQuery(value = "gpio readall", printOutput = true)
+    @HardwareQuery(echo = "Printing wiring PI info", value = "gpio readall", printOutput = true)
     boolean printWiringPiInfo();
 
-    @HardwareQuery(value = "sudo $PM install wiringpi", printOutput = true, ignoreOnError = true)
+    @HardwareQuery(echo = "Install GPIO", value = "sudo $PM install wiringpi", printOutput = true, ignoreOnError = true)
     void installWiringPiAuto();
 
     @HardwareQuery("mkdir buildWiringPi")

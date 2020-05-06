@@ -145,16 +145,17 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         }
         String[] cmdParts = parts.toArray(new String[0]);
         String command = String.join(", ", parts);
-        log.info("Hardware execute command: <{}>", command);
+        if (StringUtils.isNotEmpty(hardwareQuery.echo())) {
+            log.info("Execute: <{}>. Command: <{}>", hardwareQuery.echo(), command);
+        } else {
+            log.info("Execute command: <{}>", command);
+        }
 
         int retValue;
         List<String> errors;
         List<String> inputs = Collections.emptyList();
         try {
             Process process;
-            if (StringUtils.isNotEmpty(hardwareQuery.echo())) {
-                log.info("Hardware: " + hardwareQuery.echo());
-            }
             if (StringUtils.isNotEmpty(hardwareQuery.dir())) {
                 File dir = new File(replaceStringWithArgs(hardwareQuery.dir(), args, method));
                 process = Runtime.getRuntime().exec(cmdParts, null, dir);

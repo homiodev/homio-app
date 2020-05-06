@@ -72,10 +72,7 @@ final class HardwareUtils {
 
     private static void checkWiringPi(ConfigurableListableBeanFactory beanFactory) {
         GPIOHardwareRepository repository = beanFactory.getBean(GPIOHardwareRepository.class);
-        log.info("Printing wiring PI version...");
         repository.printWiringPiVersion();
-
-        log.info("Printing wiring PI info...");
         if (!repository.printWiringPiInfo()) {
             log.warn("Unable to get wiring PI info");
             repository.installWiringPiAuto();
