@@ -6,10 +6,8 @@ import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 
 @HardwareRepositoryAnnotation
 public interface HotSpotHardwareRepository {
-    @HardwareQuery(echo = "Install Hostapd", value = "sudo $PM -y install hostapd")
-    @HardwareQuery(echo = "Install Dnsmasq", value = "sudo $PM -y install dnsmasq")
-    @HardwareQuery(echo = "Disable Hostapd", value = "sudo systemctl disable hostapd")
-    @HardwareQuery(echo = "Disable Dnsmasq", value = "sudo systemctl disable dnsmasq")
+    @HardwareQuery(echo = "Install Hostapd", value = "sudo $PM -y install hostapd && sudo systemctl disable hostapd")
+    @HardwareQuery(echo = "Install Dnsmasq", value = "sudo $PM -y install dnsmasq && sudo systemctl disable dnsmasq")
     @HardwareQuery(echo = "Copy Hostapd Conf", value = "sudo cp :sysDir/hostapd.conf /etc/hostapd/hostapd.conf")
     @HardwareQuery(echo = "Replace Daemon ConfPath", value = "sudo sed -i 's/#DAEMON_CONF=\"\"/DAEMON_CONF=\"/etc/hostapd/hostapd.conf\"/g' /etc/default/hostapd\n")
     @HardwareQuery(echo = "Append Dnsmasq Content", value = "cat :sysDir/dnsmasq.conf >> /etc/dnsmasq.conf")
