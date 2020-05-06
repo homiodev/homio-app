@@ -6,7 +6,6 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.nrf24i01.rf24.command.RF24CommandPlugin;
-import org.touchhome.bundle.nrf24i01.rf24.repository.NRF24I01DeviceRepository;
 import pl.grzeslowski.smarthome.rf24.helpers.Pipe;
 
 import java.nio.ByteBuffer;
@@ -35,8 +34,8 @@ public class Rf24Communicator extends RF24Base {
     private volatile boolean isReadingDone = false;
     private volatile boolean isAllowGlobalReading = true;
 
-    public Rf24Communicator(Map<Byte, RF24CommandPlugin> rf24CommandPlugins, EntityContext entityContext, NRF24I01DeviceRepository nrf24I01DeviceRepository) {
-        super(entityContext, nrf24I01DeviceRepository);
+    public Rf24Communicator(Map<Byte, RF24CommandPlugin> rf24CommandPlugins, EntityContext entityContext) {
+        super(entityContext);
         this.rf24CommandPlugins = rf24CommandPlugins;
     }
 
