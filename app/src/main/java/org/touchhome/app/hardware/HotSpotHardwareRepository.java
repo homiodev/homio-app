@@ -19,7 +19,7 @@ public interface HotSpotHardwareRepository {
     @HardwareQuery(echo = "Set AutoHotSpot executable", value = "sudo chmod +x /usr/bin/autohotspot")
     void installAutoHotSpot(@ApiParam("sysDir") String sysDir);
 
-    @HardwareQuery("test -f /usr/bin/autohotspot && echo true || echo false")
+    @HardwareQuery("test -f /usr/bin/autohotspot")
     boolean isAutoHotSpotServiceExists();
 
     @HardwareQuery("sudo iw dev wlan0 set power_save off")
