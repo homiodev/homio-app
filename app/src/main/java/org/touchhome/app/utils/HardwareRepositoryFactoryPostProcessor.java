@@ -186,7 +186,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 case "int":
                     return retValue;
                 case "boolean":
-                    return false;
+                    return retValue == 0;
             }
         }
 
