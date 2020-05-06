@@ -115,19 +115,15 @@ final class HardwareUtils {
             if (url.getProtocol().equals("jar")) {
                 try (ZipFileSystem fs = (ZipFileSystem) FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
                     String jarFiles = "/BOOT-INF/classes/files";
-                    Files.walk(fs.getPath(jarFiles)).forEach((Path path) -> {
-                        if (Files.isRegularFile(path)) {
-                            try {
-                                Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
-                                Files.createDirectories(resolve.getParent());
-                                Files.copy(path, resolve);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                        } else {
-                            System.out.print("Directory: " + path);
+                    Files.walk(fs.getPath(jarFiles)).filter(f -> Files.isRegularFile(f)).forEach((Path path) -> {
+                        try {
+                            Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
+                            Files.createDirectories(resolve.getParent());
+                            Files.copy(path, resolve);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
                         }
-                    });
+                    })
                 }
             } else {
                 FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
