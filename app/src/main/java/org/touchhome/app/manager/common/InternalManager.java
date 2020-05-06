@@ -33,6 +33,7 @@ import org.touchhome.app.rest.ConsoleController;
 import org.touchhome.app.rest.SettingController;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
+import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.BundleSettingPlugin;
@@ -137,6 +138,7 @@ public class InternalManager implements EntityContext {
 
         // init modules
         for (BundleContext bundleContext : applicationContext.getBeansOfType(BundleContext.class).values()) {
+            HardwareUtils.copyResources(bundleContext.getClass());
             bundleContext.init();
         }
 

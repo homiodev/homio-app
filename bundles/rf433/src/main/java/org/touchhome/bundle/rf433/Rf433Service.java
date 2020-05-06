@@ -38,6 +38,9 @@ public class Rf433Service implements BundleContext {
     private boolean isTestApplication = false;
 
     public void init() {
+        if (EntityContext.isTestApplication()) {
+            return;
+        }
         try {
             FileUtils.cleanDirectory(rf433Dir.toFile());
             rf433TransmitterPy = rf433Dir.resolve("rf433Transmitter.py");

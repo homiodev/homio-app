@@ -24,7 +24,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 
 @Log4j2
-final class HardwareUtils {
+public final class HardwareUtils {
 
     private static boolean hardwareChecked = false;
 
@@ -37,7 +37,7 @@ final class HardwareUtils {
         }
         hardwareChecked = true;
         if (!EntityContext.isTestApplication()) {
-            copyResources();
+            copyResources(TouchHomeUtils.class);
             checkDatabaseInstalled(beanFactory);
             checkWiringPi(beanFactory);
             checkHotSpotAndWifi(beanFactory);
@@ -100,8 +100,8 @@ final class HardwareUtils {
     }
 
     @SneakyThrows
-    private static void copyResources() {
-        Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources("files");
+    public static void copyResources(Class clzz) {
+        Enumeration<URL> resources = clzz.getClassLoader().getResources("files");
         Path target = TouchHomeUtils.getFilesPath();
 
         while (resources.hasMoreElements()) {

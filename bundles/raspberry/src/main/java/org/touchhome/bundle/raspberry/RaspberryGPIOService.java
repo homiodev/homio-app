@@ -43,6 +43,7 @@ public class RaspberryGPIOService {
     @Value("${w1BaseDir:/sys/devices/w1_bus_master1}")
     private Path w1BaseDir;
 
+    @SneakyThrows
     void init() {
         if (isGPIOAvailable()) {
             addGpioListenerDigital(RaspberryGpioPin.PIN40, PinMode.DIGITAL_INPUT, event -> {
@@ -65,11 +66,15 @@ public class RaspberryGPIOService {
 
     private boolean isGPIOAvailable() {
         if (available == null) {
-            try {
-                getGpio();
-                available = true;
-            } catch (Throwable ignore) {
+            if (EntityContext.isTestApplication()) {
                 available = false;
+            } else {
+                try {
+                    getGpio();
+                    available = true;
+                } catch (Throwable ignore) {
+                    available = false;
+                }
             }
         }
         return available;
