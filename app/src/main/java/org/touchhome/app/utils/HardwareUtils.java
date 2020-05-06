@@ -118,8 +118,9 @@ final class HardwareUtils {
                     Files.walk(fs.getPath(jarFiles)).forEach((Path path) -> {
                         if (Files.isRegularFile(path)) {
                             try {
-                                String targetPath = path.toString().substring(jarFiles.length() + 1);
-                                Files.copy(path, target.resolve(targetPath));
+                                Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
+                                Files.createDirectories(resolve);
+                                Files.copy(path, resolve);
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
