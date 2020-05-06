@@ -1,5 +1,6 @@
 package org.touchhome.bundle.nrf24i01.rf24;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +22,11 @@ import pl.grzeslowski.smarthome.rf24.helpers.Pipe;
 
 @Log4j2
 @Component
+@RequiredArgsConstructor
 public class RF24Service implements BundleContext {
+    private final Rf24Communicator rf24Communicator;
+    private final EntityContext entityContext;
+
     private static final Pipe GLOBAL_WRITE_PIPE = new Pipe("2Node");
     private static byte messageID = 0;
     private static String errorLoadingLibrary = null;
@@ -47,12 +52,6 @@ public class RF24Service implements BundleContext {
 
     @Value("${rf24AutoAck:false}")
     private boolean rf24AutoAck;
-
-    @Autowired
-    private Rf24Communicator rf24Communicator;
-
-    @Autowired
-    private EntityContext entityContext;
 
     public boolean isNrf24L01Works() {
         return errorLoadingLibrary == null && rf24Communicator.getNRF24L01() != null;

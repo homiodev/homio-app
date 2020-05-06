@@ -6,11 +6,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.DeviceStatus;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.nrf24i01.rf24.Command;
-import org.touchhome.bundle.nrf24i01.rf24.NRF24IL01DeviceEntity;
-import org.touchhome.bundle.nrf24i01.rf24.options.*;
-import org.touchhome.bundle.nrf24i01.rf24.repository.NRF24I01DeviceRepository;
-import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01StatusMessageSetting;
-import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01StatusSetting;
+import org.touchhome.bundle.nrf24i01.rf24.setting.*;
 import pl.grzeslowski.smarthome.rf24.exceptions.CloseRf24Exception;
 import pl.grzeslowski.smarthome.rf24.exceptions.WriteRf24Exception;
 import pl.grzeslowski.smarthome.rf24.generated.RF24;
@@ -31,7 +27,6 @@ public abstract class RF24Base {
     private static boolean initialized = false;
     final ByteBuffer readBuffer = ByteBuffer.allocate(32);
     final EntityContext entityContext;
-    final NRF24I01DeviceRepository nrf24I01DeviceRepository;
     private final ByteBuffer sendBuffer = ByteBuffer.allocate(32);
     RF24 radio;
     private List<Pipe> actualReadPipes;
@@ -139,23 +134,15 @@ public abstract class RF24Base {
 
             Pins pins = new Pins(RpiGpio.RPI_V2_GPIO_P1_22.getGpioPin(), RpiGpio.RPI_V2_GPIO_P1_24.getGpioPin(), ClockSpeed.BCM2835_SPI_SPEED_8MHZ);
 //            Retry retry = new Retry((short) 15, (short) 15);
-            nrf24I01DeviceRepository.deleteAll();
-            NRF24IL01DeviceEntity nrf24IL01DeviceEntity = new NRF24IL01DeviceEntity();
-            nrf24IL01DeviceEntity.setCrcSize(CRCSize.ENABLE_8_BITS);
-            nrf24IL01DeviceEntity.setPaLevel(PALevel.RF24_PA_MIN);
-            nrf24IL01DeviceEntity.setRetryCount(RetryCount.RETRY_15);
-            nrf24IL01DeviceEntity.setRetryDelay(RetryDelay.DELAY_15);
-            nrf24IL01DeviceEntity.setDataRate(DataRate.RF24_250KBPS);
-            entityContext.save(nrf24IL01DeviceEntity);
 
             try {
                 radio = new RF24(pins.getCePin(), pins.getCsPin(), pins.getClockSpeed());
                 //rf24.setPayloadSize(payload.getSize());
                 radio.begin();
-                radio.setRetries(nrf24IL01DeviceEntity.getRetryDelay().delay, nrf24IL01DeviceEntity.getRetryCount().count);
-                radio.setCRCLength(nrf24IL01DeviceEntity.getCrcSize().valueSupplier.get());
-                radio.setPALevel((short) nrf24IL01DeviceEntity.getPaLevel().valueSupplier.get().swigValue());
-                radio.setDataRate(nrf24IL01DeviceEntity.getDataRate().valueSupplier.get());
+                radio.setRetries(entityContext.getSettingValue(Nrf24i01RetryDelaySetting.class).delay, entityContext.getSettingValue(Nrf24i01RetryCountSetting.class).count);
+                radio.setCRCLength(entityContext.getSettingValue(Nrf24i01CrcSizeSetting.class).valueSupplier.get());
+                radio.setPALevel((short) entityContext.getSettingValue(Nrf24i01PALevelSetting.class).valueSupplier.get().swigValue());
+                radio.setDataRate(entityContext.getSettingValue(Nrf24i01DataRateSetting.class).valueSupplier.get());
 
                 radio.setChannel((short) 0x4c);
                 radio.printDetails();
@@ -170,7 +157,6 @@ public abstract class RF24Base {
                 log.error("Error while init NRF24L01", ex);
                 entityContext.setSettingValue(Nrf24i01StatusMessageSetting.class, TouchHomeUtils.getErrorMessage(ex));
                 entityContext.setSettingValue(Nrf24i01StatusSetting.class, DeviceStatus.OFFLINE);
-                nrf24I01DeviceRepository.deleteAll();
                 radio = null;
             }
         }
