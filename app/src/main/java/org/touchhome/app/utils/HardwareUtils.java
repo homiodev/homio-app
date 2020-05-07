@@ -106,7 +106,7 @@ public final class HardwareUtils {
         Path target = TouchHomeUtils.getFilesPath();
         if (url.getProtocol().equals("jar")) {
             try (FileSystem fs = FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
-                String jarFiles = "/BOOT-INF/classes/files";
+                String jarFiles = "/BOOT-INF/classes/asm_files";
                 Files.walk(fs.getPath(jarFiles)).filter(f -> Files.isRegularFile(f)).forEach((Path path) -> {
                     try {
                         Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
