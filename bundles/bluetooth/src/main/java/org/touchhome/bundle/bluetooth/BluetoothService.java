@@ -47,6 +47,7 @@ public class BluetoothService implements BundleContext {
     private static final String SD_MEMORY_UUID = PREFIX + "11";
     private static final String WRITE_BAN_UUID = PREFIX + "12";
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
+    private static final String PWD_REQUIRE_UUID = PREFIX + "14";
 
     private static final int TIME_REFRESH_PASSWORD = 10 * 60 * 1000; // 10min
     private static long timeSinceLastCheckPassword = -1;
@@ -75,6 +76,27 @@ public class BluetoothService implements BundleContext {
         map.put(KEYSTORE_SET_UUID, readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
 
         return map;
+    }
+
+    public void setDeviceCharacteristic(String uuid, String value) {
+        if (value != null) {
+            switch (uuid) {
+                case DEVICE_MODEL_UUID:
+                    rebootDevice(value.getBytes());
+                    return;
+                case WIFI_NAME_UUID:
+                    writeWifiSSID(value.getBytes());
+                    return;
+                case PWD_SET_UUID:
+                    writePwd(value.getBytes());
+                    return;
+                case KEYSTORE_SET_UUID:
+                    writeKeystore(value.getBytes());
+                    return;
+                case PWD_REQUIRE_UUID:
+                    updatePasswordCheck(value.getBytes());
+            }
+        }
     }
 
     public void init() {
@@ -107,45 +129,13 @@ public class BluetoothService implements BundleContext {
         bluetoothApplication.newReadCharacteristic("uptime", UPTIME_UUID, () -> readSafeValue(linuxHardwareRepository::getUptime));
         bluetoothApplication.newReadCharacteristic("ip", IP_ADDRESS_UUID, () -> readSafeValue(linuxHardwareRepository::getIpAddress));
         bluetoothApplication.newReadCharacteristic("write_ban", WRITE_BAN_UUID, () -> bluetoothApplication.gatherWriteBan().getBytes());
-        bluetoothApplication.newReadWriteCharacteristic("device_model", DEVICE_MODEL_UUID, bytes -> writeSafeValue(() -> {
-            if (user.getPassword().equals(new String(bytes))) {
-                linuxHardwareRepository.reboot();
-            }
-        }), () -> readSafeValue(linuxHardwareRepository::getDeviceModel));
-
+        bluetoothApplication.newReadWriteCharacteristic("device_model", DEVICE_MODEL_UUID, this::rebootDevice, () -> readSafeValue(linuxHardwareRepository::getDeviceModel));
         bluetoothApplication.newReadCharacteristic("server_connected", SERVER_CONNECTED_UUID, this::readServerConnected);
-
         bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, this::readWifiList);
-
-        // for set wifi we set wifi/pwd
-        bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, bytes ->
-                writeSafeValue(() -> {
-                    String[] split = new String(bytes).split("%&%");
-                    if (split.length == 2 && split[1].length() >= 8) {
-                        wirelessHardwareRepository.setWifiPassword(split[0], split[1]);
-                        wirelessHardwareRepository.restartNetworkInterface();
-                    }
-                }), () -> readSafeValue(linuxHardwareRepository::getWifiName));
-
-        // we may set pwd only once for now
-        bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, bytes -> {
-            String pwd = new String(bytes);
-            if (user.getPassword() == null) {
-                entityContext.save(user.setPassword(pwd));
-                timeSinceLastCheckPassword = System.currentTimeMillis();
-            } else {
-                // refresh time
-                if (user.getPassword().equals(pwd)) {
-                    timeSinceLastCheckPassword = System.currentTimeMillis();
-                }
-            }
-        }, this::readPwdSet);
-
-        bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, bytes ->
-                        writeSafeValue(() -> {
-                            entityContext.save(user.setKeystore(bytes));
-                            entityContext.setSettingValue(CloudServerRestartSetting.class, "");
-                        }),
+        bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, this::writeWifiSSID, () -> readSafeValue(linuxHardwareRepository::getWifiName));
+        bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, this::writePwd, this::readPwdSet);
+        bluetoothApplication.newWriteCharacteristic("pwd_req", PWD_REQUIRE_UUID, this::updatePasswordCheck);
+        bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, this::writeKeystore,
                 () -> readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
 
         // start ble
@@ -155,6 +145,43 @@ public class BluetoothService implements BundleContext {
         } catch (Exception ex) {
             log.error("Unable to start bluetooth service", ex);
         }
+    }
+
+    private void updatePasswordCheck(byte[] bytes) {
+        if (user.getPassword().equals(new String(bytes))) {
+            timeSinceLastCheckPassword = System.currentTimeMillis();
+        }
+    }
+
+    private void writeKeystore(byte[] bytes) {
+        writeSafeValue(() -> {
+            entityContext.save(user.setKeystore(bytes));
+            entityContext.setSettingValue(CloudServerRestartSetting.class, "");
+        });
+    }
+
+    private void writePwd(byte[] bytes) {
+        String pwd = new String(bytes);
+        entityContext.save(user.setPassword(pwd));
+        timeSinceLastCheckPassword = System.currentTimeMillis();
+    }
+
+    private void writeWifiSSID(byte[] bytes) {
+        writeSafeValue(() -> {
+            String[] split = new String(bytes).split("%&%");
+            if (split.length == 2 && split[1].length() >= 8) {
+                wirelessHardwareRepository.setWifiPassword(split[0], split[1]);
+                wirelessHardwareRepository.restartNetworkInterface();
+            }
+        });
+    }
+
+    private void rebootDevice(byte[] bytes) {
+        writeSafeValue(() -> {
+            if (user.getPassword().equals(new String(bytes))) {
+                linuxHardwareRepository.reboot();
+            }
+        });
     }
 
     @Override

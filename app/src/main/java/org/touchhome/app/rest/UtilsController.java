@@ -255,9 +255,14 @@ public class UtilsController {
         return new JSONObject().put("status", "ok");
     }
 
-    @GetMapping("device/characteristics")
+    @GetMapping("device/characteristic")
     public Map<String, byte[]> getDeviceCharacteristics() {
         return bluetoothService.getDeviceCharacteristics();
+    }
+
+    @PutMapping("device/characteristic/{uuid}")
+    public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody String value) {
+        bluetoothService.setDeviceCharacteristic(uuid, value);
     }
 
     @PostMapping("getCompletions")
