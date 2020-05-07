@@ -2,6 +2,7 @@ package org.touchhome.bundle.nrf24i01.rf24.communication;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
@@ -37,6 +38,16 @@ public class Rf24Communicator extends RF24Base {
     public Rf24Communicator(Map<Byte, RF24CommandPlugin> rf24CommandPlugins, EntityContext entityContext) {
         super(entityContext);
         this.rf24CommandPlugins = rf24CommandPlugins;
+    }
+
+    @SneakyThrows
+    public boolean stopRunPipeReadWrite() {
+        globalReadingThread.interrupt();
+        globalWritingThread.interrupt();
+        globalReadingThread.join(60000);
+        globalWritingThread.join(60000);
+
+        return !globalReadingThread.isAlive() && !globalWritingThread.isAlive();
     }
 
     public void runPipeReadWrite() {

@@ -15,6 +15,7 @@ import org.touchhome.bundle.nrf24i01.rf24.communication.ReadListener;
 import org.touchhome.bundle.nrf24i01.rf24.communication.Rf24Communicator;
 import org.touchhome.bundle.nrf24i01.rf24.communication.SendCommand;
 import org.touchhome.bundle.nrf24i01.rf24.options.*;
+import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01EnableButtonsSetting;
 import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01StatusMessageSetting;
 import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01StatusSetting;
 import pl.grzeslowski.smarthome.rf24.helpers.Pipe;
@@ -26,19 +27,11 @@ public class RF24Service implements BundleContext {
     private final Rf24Communicator rf24Communicator;
     private final EntityContext entityContext;
 
+    private static final String libName = "/librf24bcmjava.so";
     private static final Pipe GLOBAL_WRITE_PIPE = new Pipe("2Node");
     private static byte messageID = 0;
     private static String errorLoadingLibrary = null;
-
-    static {
-        String libName = "/librf24bcmjava.so";
-        try {
-            TouchHomeUtils.loadLibraryFromJar(libName);
-        } catch (Throwable ex) {
-            errorLoadingLibrary = TouchHomeUtils.getErrorMessage(ex);
-            log.error("Error while load library <{}>", libName);
-        }
-    }
+    private boolean libLoaded = false;
 
     @Value("${rf24RetryDelay:15}")
     private short rf24RetryDelay;
@@ -53,17 +46,35 @@ public class RF24Service implements BundleContext {
     private boolean rf24AutoAck;
 
     public boolean isNrf24L01Works() {
-        return errorLoadingLibrary == null && rf24Communicator.getNRF24L01() != null;
+        return libLoaded && errorLoadingLibrary == null && rf24Communicator.getNRF24L01() != null;
+    }
+
+    private void loadLibrary() {
+        if (!libLoaded) {
+            try {
+                TouchHomeUtils.loadLibraryFromJar(libName);
+            } catch (Throwable ex) {
+                log.error("Error while load library <{}>", libName);
+                errorLoadingLibrary = TouchHomeUtils.getErrorMessage(ex);
+                entityContext.setSettingValue(Nrf24i01StatusMessageSetting.class, errorLoadingLibrary);
+                entityContext.setSettingValue(Nrf24i01StatusSetting.class, DeviceStatus.OFFLINE);
+            }
+        }
     }
 
     public void init() {
-        if (isNrf24L01Works()) {
-            rf24Communicator.runPipeReadWrite();
-        }
-        if (errorLoadingLibrary != null) {
-            entityContext.setSettingValue(Nrf24i01StatusMessageSetting.class, errorLoadingLibrary);
-            entityContext.setSettingValue(Nrf24i01StatusSetting.class, DeviceStatus.OFFLINE);
-        }
+        entityContext.listenSettingValue(Nrf24i01EnableButtonsSetting.class, enable -> {
+            if (enable) {
+                loadLibrary();
+                if (isNrf24L01Works()) {
+                    rf24Communicator.runPipeReadWrite();
+                }
+            } else {
+                if (!rf24Communicator.stopRunPipeReadWrite()) {
+                    log.error("Unable to stop read/write threads");
+                }
+            }
+        });
     }
 
     @Override

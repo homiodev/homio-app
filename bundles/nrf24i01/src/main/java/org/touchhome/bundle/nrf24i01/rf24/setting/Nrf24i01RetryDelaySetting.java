@@ -16,7 +16,7 @@ public class Nrf24i01RetryDelaySetting implements BundleSettingPlugin<RetryDelay
 
     @Override
     public int order() {
-        return 0;
+        return 50;
     }
 
     @Override

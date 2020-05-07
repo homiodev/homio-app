@@ -17,7 +17,7 @@ public class Nrf24i01PALevelSetting implements BundleSettingPlugin<PALevel> {
 
     @Override
     public int order() {
-        return 0;
+        return 30;
     }
 
     @Override

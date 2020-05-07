@@ -16,7 +16,7 @@ public class Nrf24i01CrcSizeSetting implements BundleSettingPlugin<CRCSize> {
 
     @Override
     public int order() {
-        return 0;
+        return 10;
     }
 
     @Override

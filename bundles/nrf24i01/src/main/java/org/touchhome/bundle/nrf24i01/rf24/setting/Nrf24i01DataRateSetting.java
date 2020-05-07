@@ -16,7 +16,7 @@ public class Nrf24i01DataRateSetting implements BundleSettingPlugin<DataRate> {
 
     @Override
     public int order() {
-        return 0;
+        return 20;
     }
 
     @Override

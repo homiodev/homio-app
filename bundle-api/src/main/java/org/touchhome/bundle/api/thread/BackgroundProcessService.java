@@ -35,6 +35,7 @@ public abstract class BackgroundProcessService<ReturnType> implements Comparable
 
     public BackgroundProcessService(String id) {
         this.id = id;
+        log.info("Create BGP service: <{}>", id);
     }
 
     protected abstract ReturnType runInternal() throws Exception;

@@ -17,7 +17,7 @@ public class Nrf24i01RetryCountSetting implements BundleSettingPlugin<RetryCount
 
     @Override
     public int order() {
-        return 0;
+        return 40;
     }
 
     @Override

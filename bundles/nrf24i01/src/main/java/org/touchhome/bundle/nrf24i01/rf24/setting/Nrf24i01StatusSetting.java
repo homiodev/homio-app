@@ -14,7 +14,7 @@ public class Nrf24i01StatusSetting implements BundleSettingPlugin<DeviceStatus> 
 
     @Override
     public int order() {
-        return 0;
+        return 2;
     }
 
     @Override
