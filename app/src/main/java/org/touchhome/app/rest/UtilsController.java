@@ -250,9 +250,9 @@ public class UtilsController {
         return entityContext.getNotifications();
     }
 
-    @GetMapping("status")
-    public String getStatus() {
-        return "ok";
+    @GetMapping("health")
+    public JSONObject getStatus() {
+        return new JSONObject().put("status", "ok");
     }
 
     @GetMapping("device/characteristics")
