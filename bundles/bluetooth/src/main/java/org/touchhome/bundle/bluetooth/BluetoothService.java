@@ -50,15 +50,29 @@ public class BluetoothService implements BundleContext {
 
     private static final int TIME_REFRESH_PASSWORD = 10 * 60 * 1000; // 10min
     private static long timeSinceLastCheckPassword = -1;
+
+    private BluetoothApplication bluetoothApplication;
+    private UserEntity user;
+
     private final EntityContext entityContext;
     private final LinuxHardwareRepository linuxHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
-    private BluetoothApplication bluetoothApplication;
-    private UserEntity user;
 
     public Map<String, byte[]> getDeviceCharacteristics() {
         Map<String, byte[]> map = new HashMap<>();
         map.put(CPU_LOAD_UUID, readSafeValue(linuxHardwareRepository::getCpuLoad));
+        map.put(CPU_TEMP_UUID, readSafeValue(linuxHardwareRepository::getCpuTemp));
+        map.put(MEMORY_UUID, readSafeValue(linuxHardwareRepository::getMemory));
+        map.put(SD_MEMORY_UUID, readSafeValue(() -> linuxHardwareRepository.getSDCardMemory().toFineString()));
+        map.put(UPTIME_UUID, readSafeValue(linuxHardwareRepository::getUptime));
+        map.put(IP_ADDRESS_UUID, readSafeValue(linuxHardwareRepository::getIpAddress));
+        map.put(WRITE_BAN_UUID, bluetoothApplication == null ? "".getBytes() : bluetoothApplication.gatherWriteBan().getBytes());
+        map.put(DEVICE_MODEL_UUID, readSafeValue(linuxHardwareRepository::getDeviceModel));
+        map.put(SERVER_CONNECTED_UUID, readServerConnected());
+        map.put(WIFI_LIST_UUID, readWifiList());
+        map.put(WIFI_NAME_UUID, readSafeValue(linuxHardwareRepository::getWifiName));
+        map.put(PWD_SET_UUID, readPwdSet());
+        map.put(KEYSTORE_SET_UUID, readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
 
         return map;
     }
@@ -99,15 +113,9 @@ public class BluetoothService implements BundleContext {
             }
         }), () -> readSafeValue(linuxHardwareRepository::getDeviceModel));
 
-        bluetoothApplication.newReadCharacteristic("server_connected", SERVER_CONNECTED_UUID, () ->
-                readSafeValue(() -> {
-                    String error = entityContext.getSettingValue(CloudServerConnectionMessageSetting.class);
-                    ServerConnectionStatus status = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
-                    return status.name() + "%&%" + error;
-                }));
+        bluetoothApplication.newReadCharacteristic("server_connected", SERVER_CONNECTED_UUID, this::readServerConnected);
 
-        bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, () -> readSafeValue(() ->
-                wirelessHardwareRepository.scan().stream().filter(distinctByKey(Network::getSsid)).map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"))));
+        bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, this::readWifiList);
 
         // for set wifi we set wifi/pwd
         bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, bytes ->
@@ -131,14 +139,7 @@ public class BluetoothService implements BundleContext {
                     timeSinceLastCheckPassword = System.currentTimeMillis();
                 }
             }
-        }, () -> {
-            if (user.getPassword() == null) {
-                return "none".getBytes();
-            } else if (System.currentTimeMillis() - timeSinceLastCheckPassword > TIME_REFRESH_PASSWORD) {
-                return "required".getBytes();
-            }
-            return "ok".getBytes();
-        });
+        }, this::readPwdSet);
 
         bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, bytes ->
                         writeSafeValue(() -> {
@@ -164,6 +165,28 @@ public class BluetoothService implements BundleContext {
     @Override
     public int order() {
         return Integer.MAX_VALUE;
+    }
+
+    private byte[] readPwdSet() {
+        if (user.getPassword() == null) {
+            return "none".getBytes();
+        } else if (System.currentTimeMillis() - timeSinceLastCheckPassword > TIME_REFRESH_PASSWORD) {
+            return "required".getBytes();
+        }
+        return "ok".getBytes();
+    }
+
+    private byte[] readWifiList() {
+        return readSafeValue(() ->
+                wirelessHardwareRepository.scan().stream().filter(distinctByKey(Network::getSsid)).map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%")));
+    }
+
+    private byte[] readServerConnected() {
+        return readSafeValue(() -> {
+            String error = entityContext.getSettingValue(CloudServerConnectionMessageSetting.class);
+            ServerConnectionStatus status = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
+            return status.name() + "%&%" + error;
+        });
     }
 
     private void writeSafeValue(Runnable runnable) {
