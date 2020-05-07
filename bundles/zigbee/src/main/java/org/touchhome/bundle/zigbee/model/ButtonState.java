@@ -1,10 +1,10 @@
 package org.touchhome.bundle.zigbee.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @Getter
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ButtonState implements State {
     private final ButtonPressType buttonPressType;
 

@@ -1,6 +1,6 @@
 package org.touchhome.app.manager;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.core.io.InputStreamResource;
@@ -22,7 +22,7 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.resolvePath;
 
 @Log4j2
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ImageManager {
 
     static Path imagesDir = resolvePath("images");

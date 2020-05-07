@@ -1,9 +1,9 @@
 package org.touchhome.bundle.nrf24i01.rf24;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Getter
 public enum Command {
     EXECUTED(0),
@@ -24,5 +24,5 @@ public enum Command {
     REMOVE_HANDLER_REQUEST_WHEN_PIN_VALUE_OP_THAN(15),
     HANDLER_REQUEST_WHEN_PIN_VALUE_OP_THAN(30);
 
-    private int value;
+    private final int value;
 }

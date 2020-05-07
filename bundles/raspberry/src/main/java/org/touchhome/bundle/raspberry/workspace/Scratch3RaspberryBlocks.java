@@ -3,15 +3,15 @@ package org.touchhome.bundle.raspberry.workspace;
 import com.pi4j.io.gpio.PinMode;
 import com.pi4j.io.gpio.PinPullResistance;
 import com.pi4j.io.gpio.PinState;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.scratch.*;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
-import org.touchhome.bundle.raspberry.RaspberryGpioPin;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
+import org.touchhome.bundle.raspberry.RaspberryGpioPin;
 
 import java.util.function.Predicate;
 
@@ -132,7 +132,7 @@ public class Scratch3RaspberryBlocks extends Scratch3ExtensionBlocks {
         return workspaceBlock.getMenuValue("PIN", allPinMenu, RaspberryGpioPin.class);
     }
 
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     public enum Hilo {
         high(PinState::isHigh, PinState.HIGH), low(PinState::isLow, PinState.LOW);
 

@@ -1,6 +1,6 @@
 package org.touchhome.bundle.api.scratch;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -15,7 +15,7 @@ import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 
 import java.util.Map;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 class LinkCodeGenerator {
 
     private final String extension;

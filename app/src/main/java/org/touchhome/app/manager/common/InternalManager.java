@@ -33,7 +33,6 @@ import org.touchhome.app.rest.ConsoleController;
 import org.touchhome.app.rest.SettingController;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
-import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.BundleSettingPlugin;

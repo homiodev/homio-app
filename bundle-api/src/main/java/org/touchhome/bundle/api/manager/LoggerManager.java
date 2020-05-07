@@ -1,6 +1,6 @@
 package org.touchhome.bundle.api.manager;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.logging.log4j.Level;
@@ -29,14 +29,14 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.resolvePath;
 
 @Log4j2
 @Controller
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class LoggerManager {
 
-    public static Path logsDir = resolvePath("logs");
+    private static Path logsDir = resolvePath("logs");
 
     public final EntityContext entityContext;
 
-    public static String escapeName(String name) {
+    private static String escapeName(String name) {
         return name.replaceAll("[^A-Za-z0-9_]", "");
     }
 

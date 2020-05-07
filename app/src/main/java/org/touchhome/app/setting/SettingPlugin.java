@@ -1,7 +1,7 @@
 package org.touchhome.app.setting;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 
 public interface SettingPlugin<T> extends BundleSettingPlugin<T> {
@@ -12,7 +12,7 @@ public interface SettingPlugin<T> extends BundleSettingPlugin<T> {
         return "GENERAL";
     }
 
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     enum GroupKey {
         dashboard("fas fa-tachometer-alt"),
         workspace("fas fa-map"),

@@ -1,6 +1,7 @@
 package org.touchhome.bundle.nrf24i01.rf24.command;
 
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
@@ -10,7 +11,7 @@ import org.touchhome.bundle.nrf24i01.rf24.communication.RF24Message;
 import static org.touchhome.bundle.nrf24i01.rf24.Command.SET_UNIQUE_READ_ADDRESS;
 
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class RF24SetUniqueReadAddressCommand implements RF24CommandPlugin {
 
     private final EntityContext entityContext;

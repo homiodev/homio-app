@@ -2,7 +2,7 @@ package org.touchhome.bundle.zigbee;
 
 import com.zsmartsystems.zigbee.zcl.clusters.ZclIasZoneCluster;
 import com.zsmartsystems.zigbee.zcl.clusters.ZclOnOffCluster;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.bundle.api.EntityContext;
@@ -17,7 +17,7 @@ import java.util.List;
 @Log4j2
 @RestController
 @RequestMapping("/rest/zigbee")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ZigBeeController {
     private final EntityContext entityContext;
     private final ZigBeeBundleContext zigbeeBundleContext;

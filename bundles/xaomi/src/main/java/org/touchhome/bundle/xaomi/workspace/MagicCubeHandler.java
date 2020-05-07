@@ -2,7 +2,6 @@ package org.touchhome.bundle.xaomi.workspace;
 
 import com.zsmartsystems.zigbee.zcl.clusters.ZclAnalogInputBasicCluster;
 import com.zsmartsystems.zigbee.zcl.clusters.ZclMultistateInputBasicCluster;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.touchhome.bundle.zigbee.model.State;
@@ -52,7 +51,7 @@ final class MagicCubeHandler {
     }
 
     @Getter
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     public enum MoveSide {
         MOVE_SIDE_ANY(-256),
         MOVE_SIDE_1(256),
@@ -62,7 +61,7 @@ final class MagicCubeHandler {
         MOVE_SIDE_5(260),
         MOVE_SIDE_6(261);
 
-        private int side;
+        private final int side;
 
         private static boolean isMoveSide(int value) {
             return value > 255 && value < 262;
@@ -79,7 +78,7 @@ final class MagicCubeHandler {
     }
 
     @Getter
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     public enum TapSide {
         TAP_SIDE_ANY(-512),
         TAP_SIDE_1(512),
@@ -89,7 +88,7 @@ final class MagicCubeHandler {
         TAP_SIDE_5(516),
         TAP_SIDE_6(517);
 
-        private int side;
+        private final int side;
 
         private static boolean isTapSide(int value) {
             return value > 511 && value < 518;

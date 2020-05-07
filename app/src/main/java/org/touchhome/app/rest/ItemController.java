@@ -1,8 +1,8 @@
 package org.touchhome.app.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
@@ -52,7 +52,7 @@ import static org.touchhome.app.rest.UtilsController.fillEntityUIMetadataList;
 @Log4j2
 @RestController
 @RequestMapping("/rest/item")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ItemController {
 
     private static Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();

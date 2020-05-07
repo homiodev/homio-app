@@ -44,8 +44,6 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     private static final BlockingQueue<PrintContext> printLogsJobs = new LinkedBlockingQueue<>(10);
     private static final BlockingMap<Process, List<String>> inputResponse = new BlockingHashMap<>();
     private static final Constructor<MethodHandles.Lookup> lookupConstructor;
-    private String pm;
-
     private static Thread logThread = new Thread(() -> {
         while (!Thread.currentThread().isInterrupted()) {
             try {
@@ -79,6 +77,8 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     static {
         logThread.start();
     }
+
+    private String pm;
 
     @Override
     @SneakyThrows

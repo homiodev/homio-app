@@ -2,12 +2,12 @@ package org.touchhome.bundle.cloud.impl;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ClientProcessingHandler extends ChannelInboundHandlerAdapter {
 
     private final DispatcherServletService dispatcherServletService;

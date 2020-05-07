@@ -353,7 +353,7 @@ public class WidgetController {
     }
 
     @Getter
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     private static class AvailableWidget {
         private final String className;
         private final String image;

@@ -1,6 +1,6 @@
 package org.touchhome.app.rest;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.json.bgp.BackgroundProcessStatusJSON;
@@ -21,7 +21,7 @@ import java.util.Set;
 
 @RestController
 @RequestMapping("/rest/background")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class BackgroundProcessController {
 
     private final ScriptRepository scriptRepository;

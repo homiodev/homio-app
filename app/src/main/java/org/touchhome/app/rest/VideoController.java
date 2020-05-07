@@ -1,6 +1,6 @@
 package org.touchhome.app.rest;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,7 +14,7 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/rest/video")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class VideoController {
 
     private final VideoManager videoManager;

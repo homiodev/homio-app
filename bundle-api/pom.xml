@@ -11,7 +11,7 @@
 
     <artifactId>bundle-api</artifactId>
     <packaging>jar</packaging>
-    
+
     <dependencies>
         <dependency>
             <groupId>tec.uom</groupId>

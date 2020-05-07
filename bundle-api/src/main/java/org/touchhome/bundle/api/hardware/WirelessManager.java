@@ -1,6 +1,6 @@
 package org.touchhome.bundle.api.hardware;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.hardware.wifi.Network;
@@ -14,7 +14,7 @@ import java.util.function.Function;
 
 @Log4j2
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class WirelessManager {
 
     private final WirelessHardwareRepository wirelessHardwareRepository;
