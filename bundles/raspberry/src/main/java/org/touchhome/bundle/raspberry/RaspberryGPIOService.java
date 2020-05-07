@@ -49,7 +49,7 @@ public class RaspberryGPIOService {
             addGpioListenerDigital(RaspberryGpioPin.PIN40, PinMode.DIGITAL_INPUT, event -> {
                 log.info("Fired HotSpot creation on GPIO event state: <{}>", event.getState().isHigh());
                 if (event.getState().isHigh()) {
-                    wirelessManager.switchHotSpot();
+                    wirelessManager.enableHotspot(60);
                 }
             });
         }

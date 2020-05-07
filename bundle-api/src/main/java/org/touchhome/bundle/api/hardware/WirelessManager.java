@@ -8,6 +8,8 @@ import org.touchhome.bundle.api.hardware.wifi.NetworkStat;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 
 import java.util.Optional;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.function.Function;
 
 @Log4j2
@@ -16,6 +18,7 @@ import java.util.function.Function;
 public class WirelessManager {
 
     private final WirelessHardwareRepository wirelessHardwareRepository;
+    private Timer hotspotCancelTimer;
 
     public NetworkStat connectToWPANetwork(String apSSID, String password) {
         return connectToNetworkInternal(apSSID, network -> {
@@ -69,7 +72,20 @@ public class WirelessManager {
         return null;
     }
 
-    public void switchHotSpot() {
-        this.wirelessHardwareRepository.switchHotSpot();
+    public void enableHotspot(int hotSpotEnableTimeout) {
+        if (hotspotCancelTimer == null) {
+            this.hotspotCancelTimer = new Timer("hotspot-cancel-timer");
+
+            log.info("Enabling hotspot for <{}> seconds", hotSpotEnableTimeout);
+            this.wirelessHardwareRepository.switchHotSpot();
+            this.hotspotCancelTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    log.info("Disabling hotspot");
+                    wirelessHardwareRepository.switchHotSpot();
+                    hotspotCancelTimer = null;
+                }
+            }, hotSpotEnableTimeout * 1000);
+        }
     }
 }

@@ -12,7 +12,7 @@ import java.util.List;
 
 @HardwareRepositoryAnnotation
 public interface WirelessHardwareRepository {
-    @HardwareQuery(value = "sudo autohotspot swipe", printOutput = true)
+    @HardwareQuery(echo = "Switch hotspot", value = "sudo autohotspot swipe", printOutput = true)
     void switchHotSpot();
 
     @HardwareQuery("sudo iwlist wlan0 scan")
