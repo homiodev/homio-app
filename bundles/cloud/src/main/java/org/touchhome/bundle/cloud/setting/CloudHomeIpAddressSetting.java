@@ -11,7 +11,7 @@ public class CloudHomeIpAddressSetting implements BundleSettingPlugin<String> {
 
     @Override
     public String getDefaultValue() {
-        return "http://localhost:8090";
+        return "http://localhost:9111";
     }
 
     @Override

@@ -149,7 +149,7 @@ public class TouchHomeConfig extends WebSecurityConfigurerAdapter implements Web
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedMethods("*")
-                .allowedOrigins("http://localhost:8090");
+                .allowedOrigins("http://localhost:9111");
     }
 
     @Bean
