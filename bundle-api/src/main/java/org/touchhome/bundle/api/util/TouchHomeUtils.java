@@ -41,7 +41,7 @@ public class TouchHomeUtils {
         } else {
             rootPath = Paths.get("/opt/touchhome");
         }
-        filesPath = rootPath.resolve("files");
+        filesPath = rootPath.resolve("asm_files");
         TouchHomeUtils.createDirectoriesIfNotExists(filesPath);
     }
 

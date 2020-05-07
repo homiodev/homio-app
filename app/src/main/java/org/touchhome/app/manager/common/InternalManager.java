@@ -137,8 +137,8 @@ public class InternalManager implements EntityContext {
         listenSettingValue(SystemClearCacheButtonSetting.class, cacheService::clearCache);
 
         // init modules
+        log.info("Initialize bundles");
         for (BundleContext bundleContext : applicationContext.getBeansOfType(BundleContext.class).values()) {
-            HardwareUtils.copyResources(bundleContext.getClass());
             bundleContext.init();
         }
 

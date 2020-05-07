@@ -1,6 +1,5 @@
 package org.touchhome.app.utils;
 
-import com.sun.nio.zipfs.ZipFileSystem;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
@@ -21,7 +20,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.Collections;
-import java.util.Enumeration;
 
 @Log4j2
 public final class HardwareUtils {
@@ -37,7 +35,7 @@ public final class HardwareUtils {
         }
         hardwareChecked = true;
         if (!EntityContext.isTestApplication()) {
-            copyResources(TouchHomeUtils.class);
+            copyResources();
             checkDatabaseInstalled(beanFactory);
             checkWiringPi(beanFactory);
             checkHotSpotAndWifi(beanFactory);
@@ -100,28 +98,27 @@ public final class HardwareUtils {
     }
 
     @SneakyThrows
-    public static void copyResources(Class clzz) {
-        Enumeration<URL> resources = clzz.getClassLoader().getResources("files");
+    private static void copyResources() {
+        URL url = HardwareUtils.class.getClassLoader().getResource("asm_files");
+        if (url == null) {
+            throw new IllegalStateException("Unable to find 'asm_files' directory.");
+        }
         Path target = TouchHomeUtils.getFilesPath();
-
-        while (resources.hasMoreElements()) {
-            URL url = resources.nextElement();
-            if (url.getProtocol().equals("jar")) {
-                try (ZipFileSystem fs = (ZipFileSystem) FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
-                    String jarFiles = "/BOOT-INF/classes/files";
-                    Files.walk(fs.getPath(jarFiles)).filter(f -> Files.isRegularFile(f)).forEach((Path path) -> {
-                        try {
-                            Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
-                            Files.createDirectories(resolve.getParent());
-                            Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                }
-            } else {
-                FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
+        if (url.getProtocol().equals("jar")) {
+            try (FileSystem fs = FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
+                String jarFiles = "/BOOT-INF/classes/files";
+                Files.walk(fs.getPath(jarFiles)).filter(f -> Files.isRegularFile(f)).forEach((Path path) -> {
+                    try {
+                        Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
+                        Files.createDirectories(resolve.getParent());
+                        Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
             }
+        } else {
+            FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
         }
     }
 }
