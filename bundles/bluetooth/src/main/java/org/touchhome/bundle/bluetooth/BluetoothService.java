@@ -59,21 +59,21 @@ public class BluetoothService implements BundleContext {
     private final LinuxHardwareRepository linuxHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
 
-    public Map<String, byte[]> getDeviceCharacteristics() {
-        Map<String, byte[]> map = new HashMap<>();
-        map.put(CPU_LOAD_UUID, readSafeValue(linuxHardwareRepository::getCpuLoad));
-        map.put(CPU_TEMP_UUID, readSafeValue(linuxHardwareRepository::getCpuTemp));
-        map.put(MEMORY_UUID, readSafeValue(linuxHardwareRepository::getMemory));
-        map.put(SD_MEMORY_UUID, readSafeValue(() -> linuxHardwareRepository.getSDCardMemory().toFineString()));
-        map.put(UPTIME_UUID, readSafeValue(linuxHardwareRepository::getUptime));
-        map.put(IP_ADDRESS_UUID, readSafeValue(linuxHardwareRepository::getIpAddress));
-        map.put(WRITE_BAN_UUID, bluetoothApplication == null ? "".getBytes() : bluetoothApplication.gatherWriteBan().getBytes());
-        map.put(DEVICE_MODEL_UUID, readSafeValue(linuxHardwareRepository::getDeviceModel));
-        map.put(SERVER_CONNECTED_UUID, readServerConnected());
-        map.put(WIFI_LIST_UUID, readWifiList());
-        map.put(WIFI_NAME_UUID, readSafeValue(linuxHardwareRepository::getWifiName));
+    public Map<String, String> getDeviceCharacteristics() {
+        Map<String, String> map = new HashMap<>();
+        map.put(CPU_LOAD_UUID, readSafeValueStr(linuxHardwareRepository::getCpuLoad));
+        map.put(CPU_TEMP_UUID, readSafeValueStr(linuxHardwareRepository::getCpuTemp));
+        map.put(MEMORY_UUID, readSafeValueStr(linuxHardwareRepository::getMemory));
+        map.put(SD_MEMORY_UUID, readSafeValueStr(() -> linuxHardwareRepository.getSDCardMemory().toFineString()));
+        map.put(UPTIME_UUID, readSafeValueStr(linuxHardwareRepository::getUptime));
+        map.put(IP_ADDRESS_UUID, readSafeValueStr(linuxHardwareRepository::getIpAddress));
+        map.put(WRITE_BAN_UUID, bluetoothApplication == null ? "" : bluetoothApplication.gatherWriteBan());
+        map.put(DEVICE_MODEL_UUID, readSafeValueStr(linuxHardwareRepository::getDeviceModel));
+        map.put(SERVER_CONNECTED_UUID, readSafeValueStr(this::readServerConnected));
+        map.put(WIFI_LIST_UUID, readSafeValueStr(this::readWifiList));
+        map.put(WIFI_NAME_UUID, readSafeValueStr(linuxHardwareRepository::getWifiName));
         map.put(PWD_SET_UUID, readPwdSet());
-        map.put(KEYSTORE_SET_UUID, readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
+        map.put(KEYSTORE_SET_UUID, readSafeValueStr(() -> String.valueOf(user.getKeystore() != null)));
 
         return map;
     }
@@ -130,10 +130,10 @@ public class BluetoothService implements BundleContext {
         bluetoothApplication.newReadCharacteristic("ip", IP_ADDRESS_UUID, () -> readSafeValue(linuxHardwareRepository::getIpAddress));
         bluetoothApplication.newReadCharacteristic("write_ban", WRITE_BAN_UUID, () -> bluetoothApplication.gatherWriteBan().getBytes());
         bluetoothApplication.newReadWriteCharacteristic("device_model", DEVICE_MODEL_UUID, this::rebootDevice, () -> readSafeValue(linuxHardwareRepository::getDeviceModel));
-        bluetoothApplication.newReadCharacteristic("server_connected", SERVER_CONNECTED_UUID, this::readServerConnected);
-        bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, this::readWifiList);
+        bluetoothApplication.newReadCharacteristic("server_connected", SERVER_CONNECTED_UUID, () -> readSafeValue(this::readServerConnected));
+        bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, () -> readSafeValue(this::readWifiList));
         bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, this::writeWifiSSID, () -> readSafeValue(linuxHardwareRepository::getWifiName));
-        bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, this::writePwd, this::readPwdSet);
+        bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, this::writePwd, () -> readPwdSet().getBytes());
         bluetoothApplication.newWriteCharacteristic("pwd_req", PWD_REQUIRE_UUID, this::updatePasswordCheck);
         bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, this::writeKeystore,
                 () -> readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
@@ -194,26 +194,23 @@ public class BluetoothService implements BundleContext {
         return Integer.MAX_VALUE;
     }
 
-    private byte[] readPwdSet() {
+    private String readPwdSet() {
         if (user.getPassword() == null) {
-            return "none".getBytes();
+            return "none";
         } else if (System.currentTimeMillis() - timeSinceLastCheckPassword > TIME_REFRESH_PASSWORD) {
-            return "required".getBytes();
+            return "required";
         }
-        return "ok".getBytes();
+        return "ok";
     }
 
-    private byte[] readWifiList() {
-        return readSafeValue(() ->
-                wirelessHardwareRepository.scan().stream().filter(distinctByKey(Network::getSsid)).map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%")));
+    private String readWifiList() {
+        return wirelessHardwareRepository.scan().stream().filter(distinctByKey(Network::getSsid)).map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"));
     }
 
-    private byte[] readServerConnected() {
-        return readSafeValue(() -> {
-            String error = entityContext.getSettingValue(CloudServerConnectionMessageSetting.class);
-            ServerConnectionStatus status = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
-            return status.name() + "%&%" + error;
-        });
+    private String readServerConnected() {
+        String error = entityContext.getSettingValue(CloudServerConnectionMessageSetting.class);
+        ServerConnectionStatus status = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
+        return status.name() + "%&%" + error;
     }
 
     private void writeSafeValue(Runnable runnable) {
@@ -227,5 +224,12 @@ public class BluetoothService implements BundleContext {
             return supplier.get().getBytes();
         }
         return new byte[0];
+    }
+
+    private String readSafeValueStr(Supplier<String> supplier) {
+        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
+            return supplier.get();
+        }
+        return "";
     }
 }

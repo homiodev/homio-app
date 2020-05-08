@@ -256,7 +256,7 @@ public class UtilsController {
     }
 
     @GetMapping("device/characteristic")
-    public Map<String, byte[]> getDeviceCharacteristics() {
+    public Map<String, String> getDeviceCharacteristics() {
         return bluetoothService.getDeviceCharacteristics();
     }
 
