@@ -31,8 +31,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .httpBasic()
                 .and()
                 .authorizeRequests()
-                .antMatchers("/rest/*").permitAll()
+                .antMatchers("/rest/health", "/rest/device/*").permitAll()
                 .anyRequest().authenticated()
+                .and().cors()
                 .and().csrf().disable();
     }
 

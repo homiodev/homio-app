@@ -124,11 +124,11 @@ public class BluetoothService implements BundleContext {
     }
 
     public void init() {
+        this.user = entityContext.getEntity(DEFAULT_USER_ID);
         if (EntityContext.isTestApplication()) {
             log.info("Bluetooth skipped in test applications");
             return;
         }
-        this.user = entityContext.getEntity(DEFAULT_USER_ID);
 
         log.info("Starting bluetooth...");
 
