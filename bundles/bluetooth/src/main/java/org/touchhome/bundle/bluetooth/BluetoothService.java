@@ -2,6 +2,7 @@ package org.touchhome.bundle.bluetooth;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang.StringUtils;
 import org.ble.BleApplicationListener;
 import org.ble.BluetoothApplication;
 import org.dbus.InterfacesAddedSignal.InterfacesAdded;
@@ -21,15 +22,12 @@ import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerRestartSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerUrlSetting;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.repository.impl.UserRepository.DEFAULT_USER_ID;
+import static org.touchhome.bundle.api.repository.impl.UserRepository.ADMIN_USER;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.distinctByKey;
 
 @Log4j2
@@ -54,7 +52,7 @@ public class BluetoothService implements BundleContext {
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
     private static final String PWD_REQUIRE_UUID = PREFIX + "14";
 
-    private static final int TIME_REFRESH_PASSWORD = 1 * 60 * 1000; // 1min // TODO
+    private static final int TIME_REFRESH_PASSWORD = 1 * 60 * 1000; // 1min // TODO CHANGE to 5 min
     private static long timeSinceLastCheckPassword = -1;
 
     public static final int MIN_WRITE_TIMEOUT = 60000;
@@ -124,7 +122,7 @@ public class BluetoothService implements BundleContext {
     }
 
     public void init() {
-        this.user = entityContext.getEntity(DEFAULT_USER_ID);
+        this.user = entityContext.getEntity(ADMIN_USER);
         if (EntityContext.isTestApplication()) {
             log.info("Bluetooth skipped in test applications");
             return;
@@ -176,7 +174,7 @@ public class BluetoothService implements BundleContext {
     }
 
     private void updatePasswordCheck(byte[] bytes) {
-        if (user.getPassword().equals(new String(bytes))) {
+        if (user.matchPassword(passwordEncoder, new String(bytes))) {
             timeSinceLastCheckPassword = System.currentTimeMillis();
             passwordBan = false;
         } else {
@@ -197,12 +195,16 @@ public class BluetoothService implements BundleContext {
      */
     private void writePwd(byte[] bytes) {
         String[] split = new String(bytes).split("%&%");
-        String password = split[0];
-        if (user.getPassword() == null) {
-            entityContext.save(user.setPassword(password));
+        String email = split[0];
+        String encodedPassword = split[1];
+        String encodedOldPassword = split[2];
+        if (user.isPasswordNotSet()) {
+            entityContext.save(user.setUserId(email).setPassword(encodedPassword));
             timeSinceLastCheckPassword = System.currentTimeMillis();
-        } else if (split.length > 1 && split[1].equals(passwordEncoder.encode(user.getPassword()))) {
-            entityContext.save(user.setPassword(password));
+        } else if (StringUtils.isNotEmpty(encodedOldPassword) &&
+                Objects.equals(user.getUserId(), email) &&
+                user.matchPassword(encodedOldPassword)) {
+            entityContext.save(user.setPassword(encodedPassword));
         }
     }
 
@@ -218,7 +220,7 @@ public class BluetoothService implements BundleContext {
 
     private void rebootDevice(byte[] bytes) {
         writeSafeValue(() -> {
-            if (user.getPassword().equals(new String(bytes))) {
+            if (user.matchPassword(passwordEncoder, new String(bytes))) {
                 linuxHardwareRepository.reboot();
             }
         });
@@ -240,7 +242,7 @@ public class BluetoothService implements BundleContext {
         }
         if (passwordBan) {
             return "ban:" + (TIME_REFRESH_PASSWORD - (System.currentTimeMillis() - passwordBanTimeout)) / 1000;
-        } else if (user.getPassword() == null) {
+        } else if (user.isPasswordNotSet()) {
             return "none";
         } else if (System.currentTimeMillis() - timeSinceLastCheckPassword > TIME_REFRESH_PASSWORD) {
             return "required";

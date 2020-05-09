@@ -65,8 +65,8 @@ public class NettyClientService {
     }
 
     private void connectToServer() {
-        UserEntity user = entityContext.getEntity(UserRepository.DEFAULT_USER_ID);
-        if (user.getPassword() == null) {
+        UserEntity user = entityContext.getEntity(UserRepository.ADMIN_USER);
+        if (user.isPasswordNotSet()) {
             updateConnectionStatus(serverConnectionStatus, "CLOUD.USER_HAS_NO_PASSWORD");
             log.warn("Unable start server discovering. User password is empty");
             return;
@@ -116,7 +116,7 @@ public class NettyClientService {
                 ChannelPipeline pipeline = socketChannel.pipeline();
 
                 if (NettyClientService.this.serverUseSSl) {
-                    UserEntity user = entityContext.getEntity(UserRepository.DEFAULT_USER_ID);
+                    UserEntity user = entityContext.getEntity(UserRepository.ADMIN_USER);
                     SSLContext sslContext = SslUtil.createSSLContext(user.getKeystore(), user.getPassword());
                     SSLEngine engine = sslContext.createSSLEngine(
                             NettyClientService.this.serverHost,

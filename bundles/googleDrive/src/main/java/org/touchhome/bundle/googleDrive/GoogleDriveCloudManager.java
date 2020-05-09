@@ -25,7 +25,7 @@ public class GoogleDriveCloudManager {
 
     private synchronized GoogleDriveFileSystem.Folder getFolder(String folder) throws IOException, GoogleDriveFileSystem.CodeExchangeException {
         //try {
-        //   GoogleDriveFileSystem.Folder userFolder = googleDriveFileSystem.getRootFolder().getChildFolder(UserRepository.DEFAULT_USER_ID, true);
+        //   GoogleDriveFileSystem.Folder userFolder = googleDriveFileSystem.getRootFolder().getChildFolder(UserRepository.ADMIN_USER, true);
         //   return userFolder.getChildFolder(folder, true);
         return null;
         /*} catch (Exception ex) {

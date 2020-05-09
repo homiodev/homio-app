@@ -17,6 +17,6 @@ public class UserController {
 
     @GetMapping("")
     public UserEntity getUser() {
-        return entityContext.getEntity(UserRepository.DEFAULT_USER_ID);
+        return entityContext.getEntity(UserRepository.ADMIN_USER);
     }
 }

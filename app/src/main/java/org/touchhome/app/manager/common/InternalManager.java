@@ -68,7 +68,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.repository.impl.UserRepository.DEFAULT_USER_ID;
+import static org.touchhome.bundle.api.repository.impl.UserRepository.ADMIN_USER;
 import static org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID;
 
 @Log4j2
@@ -443,9 +443,9 @@ public class InternalManager implements EntityContext {
     }
 
     private void createUser() {
-        UserEntity userEntity = getEntity(DEFAULT_USER_ID);
+        UserEntity userEntity = getEntity(ADMIN_USER);
         if (userEntity == null) {
-            userEntity = save(new UserEntity().computeEntityID(() -> DEFAULT_USER_ID));
+            userEntity = save(new UserEntity().computeEntityID(() -> ADMIN_USER));
         }
         UserEntity.set(userEntity);
         addEntityUpdateListener(UserEntity.class, user -> {

@@ -5,13 +5,15 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.hibernate.annotations.Type;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
+import java.util.Collections;
 
-@Getter
 @Setter
 @Entity
 @Accessors(chain = true)
@@ -19,25 +21,32 @@ public class UserEntity extends BaseEntity<UserEntity> {
 
     private static UserEntity INSTANCE;
 
+    @Getter
     private String userId;
 
+    @Getter
     @JsonIgnore
     private String password;
 
     @Lob
     @Type(type = "org.hibernate.type.BinaryType")
     @JsonIgnore
+    @Getter
     private byte[] keystore;
 
     @JsonIgnore
+    @Getter
     private String googleDriveAccessToken;
 
     @JsonIgnore
+    @Getter
     private String googleDriveRefreshToken;
 
+    @Getter
     private String lang = "en";
 
     @Enumerated(EnumType.STRING)
+    @Getter
     private UserType userType = UserType.REGULAR;
 
     public static UserEntity get() {
@@ -46,6 +55,23 @@ public class UserEntity extends BaseEntity<UserEntity> {
 
     public static void set(UserEntity userEntity) {
         INSTANCE = userEntity;
+    }
+
+    public boolean matchPassword(PasswordEncoder passwordEncoder, String rawPassword) {
+        return passwordEncoder.matches(rawPassword, password);
+    }
+
+    public boolean matchPassword(String encodedPassword) {
+        return this.password != null && this.password.equals(encodedPassword);
+    }
+
+    public UserDetails createUserDetails() {
+        return new org.springframework.security.core.userdetails.User(userId, password, true,
+                true, true, true, Collections.emptyList());
+    }
+
+    public boolean isPasswordNotSet() {
+        return password == null;
     }
 
     public enum UserType {

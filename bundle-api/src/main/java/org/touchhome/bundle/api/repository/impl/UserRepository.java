@@ -10,7 +10,7 @@ public class UserRepository extends AbstractRepository<UserEntity> {
 
     public static final String PREFIX = "u_";
 
-    public static final String DEFAULT_USER_ID = PREFIX + "user";
+    public static final String ADMIN_USER = PREFIX + "user";
     private final EntityContext entityContext;
 
     public UserRepository(EntityContext entityContext) {
@@ -19,10 +19,10 @@ public class UserRepository extends AbstractRepository<UserEntity> {
     }
 
     public void postConstruct() {
-        UserEntity entity = entityContext.getEntity(DEFAULT_USER_ID);
+        UserEntity entity = entityContext.getEntity(ADMIN_USER);
         if (entity == null) {
             entity = new UserEntity();
-            entityContext.save(entity.computeEntityID(() -> DEFAULT_USER_ID));
+            entityContext.save(entity.computeEntityID(() -> ADMIN_USER));
         }
     }
 }

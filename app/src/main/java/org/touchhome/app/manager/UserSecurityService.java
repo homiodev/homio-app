@@ -22,7 +22,7 @@ public class UserSecurityService implements UserDetailsService {
      */
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        UserEntity user = entityContext.getEntity(UserRepository.DEFAULT_USER_ID);
+        UserEntity user = entityContext.getEntity(UserRepository.ADMIN_USER);
         if (user == null) {
             throw new UsernameNotFoundException("User with email: " + email + " not found");
         }
@@ -30,7 +30,6 @@ public class UserSecurityService implements UserDetailsService {
     }
 
     private UserDetails buildUserForAuthentication(UserEntity user) {
-        return new org.springframework.security.core.userdetails.User(user.getName(), user.getPassword(), true,
-                true, true, true, Collections.emptyList());
+        return user.createUserDetails();
     }
 }
