@@ -19,8 +19,11 @@ import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerRestartSetting;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -52,12 +55,15 @@ public class BluetoothService implements BundleContext {
     private static final int TIME_REFRESH_PASSWORD = 10 * 60 * 1000; // 10min
     private static long timeSinceLastCheckPassword = -1;
 
+    public static final int MIN_WRITE_TIMEOUT = 60000;
+
     private BluetoothApplication bluetoothApplication;
     private UserEntity user;
 
     private final EntityContext entityContext;
     private final LinuxHardwareRepository linuxHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
+    private final Map<String, Long> wifiWriteProtect = new ConcurrentHashMap<>();
 
     public Map<String, String> getDeviceCharacteristics() {
         Map<String, String> map = new HashMap<>();
@@ -67,7 +73,7 @@ public class BluetoothService implements BundleContext {
         map.put(SD_MEMORY_UUID, readSafeValueStr(() -> linuxHardwareRepository.getSDCardMemory().toFineString()));
         map.put(UPTIME_UUID, readSafeValueStr(linuxHardwareRepository::getUptime));
         map.put(IP_ADDRESS_UUID, readSafeValueStr(linuxHardwareRepository::getIpAddress));
-        map.put(WRITE_BAN_UUID, bluetoothApplication == null ? "" : bluetoothApplication.gatherWriteBan());
+        map.put(WRITE_BAN_UUID, gatherWriteBan());
         map.put(DEVICE_MODEL_UUID, readSafeValueStr(linuxHardwareRepository::getDeviceModel));
         map.put(SERVER_CONNECTED_UUID, readSafeValueStr(this::readServerConnected));
         map.put(WIFI_LIST_UUID, readSafeValueStr(this::readWifiList));
@@ -78,8 +84,19 @@ public class BluetoothService implements BundleContext {
         return map;
     }
 
+    private String gatherWriteBan() {
+        List<String> status = new ArrayList<>();
+        for (Map.Entry<String, Long> entry : wifiWriteProtect.entrySet()) {
+            if (System.currentTimeMillis() - entry.getValue() < MIN_WRITE_TIMEOUT) {
+                status.add(entry.getKey() + "%&%" + (int) ((MIN_WRITE_TIMEOUT - (System.currentTimeMillis() - entry.getValue())) / 1000));
+            }
+        }
+        return String.join("%#%", status);
+    }
+
     public void setDeviceCharacteristic(String uuid, String value) {
-        if (value != null) {
+        if (value != null && (!wifiWriteProtect.containsKey(uuid) || System.currentTimeMillis() - wifiWriteProtect.get(uuid) > MIN_WRITE_TIMEOUT)) {
+            wifiWriteProtect.put(uuid, System.currentTimeMillis());
             switch (uuid) {
                 case DEVICE_MODEL_UUID:
                     rebootDevice(value.getBytes());
