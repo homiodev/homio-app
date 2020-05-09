@@ -65,6 +65,9 @@ public class BluetoothService implements BundleContext {
     private final WirelessHardwareRepository wirelessHardwareRepository;
     private final Map<String, Long> wifiWriteProtect = new ConcurrentHashMap<>();
 
+    private boolean passwordBan;
+    private Long passwordBanTimeout = 0L;
+
     public Map<String, String> getDeviceCharacteristics() {
         Map<String, String> map = new HashMap<>();
         map.put(CPU_LOAD_UUID, readSafeValueStr(linuxHardwareRepository::getCpuLoad));
@@ -167,6 +170,10 @@ public class BluetoothService implements BundleContext {
     private void updatePasswordCheck(byte[] bytes) {
         if (user.getPassword().equals(new String(bytes))) {
             timeSinceLastCheckPassword = System.currentTimeMillis();
+            passwordBan = false;
+        } else {
+            passwordBan = true;
+            passwordBanTimeout = System.currentTimeMillis();
         }
     }
 
@@ -212,7 +219,12 @@ public class BluetoothService implements BundleContext {
     }
 
     private String readPwdSet() {
-        if (user.getPassword() == null) {
+        if (passwordBan && System.currentTimeMillis() - passwordBanTimeout > TIME_REFRESH_PASSWORD) {
+            passwordBan = false;
+        }
+        if (passwordBan) {
+            return "ban";
+        } else if (user.getPassword() == null) {
             return "none";
         } else if (System.currentTimeMillis() - timeSinceLastCheckPassword > TIME_REFRESH_PASSWORD) {
             return "required";
