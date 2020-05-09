@@ -7,6 +7,7 @@ import org.ble.BluetoothApplication;
 import org.dbus.InterfacesAddedSignal.InterfacesAdded;
 import org.dbus.InterfacesRomovedSignal.InterfacesRemoved;
 import org.freedesktop.dbus.Variant;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
@@ -62,6 +63,7 @@ public class BluetoothService implements BundleContext {
     private UserEntity user;
 
     private final EntityContext entityContext;
+    private final PasswordEncoder passwordEncoder;
     private final LinuxHardwareRepository linuxHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
     private final Map<String, Long> wifiWriteProtect = new ConcurrentHashMap<>();
@@ -190,10 +192,17 @@ public class BluetoothService implements BundleContext {
         });
     }
 
+    /**
+     * We may set password only once. If user wants update password, he need pass old password hash
+     */
     private void writePwd(byte[] bytes) {
-        String pwd = new String(bytes);
-        entityContext.save(user.setPassword(pwd));
-        timeSinceLastCheckPassword = System.currentTimeMillis();
+        String[] split = new String(bytes).split("%&%");
+        if (user.getPassword() == null) {
+            entityContext.save(user.setPassword(split[0]));
+            timeSinceLastCheckPassword = System.currentTimeMillis();
+        } else if (split.length > 1 && split[1].equals(passwordEncoder.encode(user.getPassword()))) {
+            entityContext.save(user.setPassword(split[0]));
+        }
     }
 
     private void writeWifiSSID(byte[] bytes) {
