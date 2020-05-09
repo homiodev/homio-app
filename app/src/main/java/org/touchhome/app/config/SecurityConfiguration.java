@@ -32,7 +32,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .and()
                 .authorizeRequests()
                 .antMatchers("/rest/health",
-                        "rest/device/characteristic/*",
+                        "/rest/device/characteristic/*",
                         "/rest/device/*").permitAll()
                 .anyRequest().authenticated()
                 .and().cors()
