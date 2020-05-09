@@ -197,11 +197,12 @@ public class BluetoothService implements BundleContext {
      */
     private void writePwd(byte[] bytes) {
         String[] split = new String(bytes).split("%&%");
+        String password = split[0];
         if (user.getPassword() == null) {
-            entityContext.save(user.setPassword(split[0]));
+            entityContext.save(user.setPassword(password));
             timeSinceLastCheckPassword = System.currentTimeMillis();
         } else if (split.length > 1 && split[1].equals(passwordEncoder.encode(user.getPassword()))) {
-            entityContext.save(user.setPassword(split[0]));
+            entityContext.save(user.setPassword(password));
         }
     }
 

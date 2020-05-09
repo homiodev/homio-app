@@ -31,13 +31,9 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
@@ -65,6 +61,7 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -82,13 +79,19 @@ import java.util.stream.Collectors;
 @Import(value = {
         WebSocketConfig.class
 })
-@EnableWebSecurity
 @EnableJpaRepositories(basePackages = "org.touchhome.app.repository.crud", repositoryFactoryBeanClass = CrudRepositoryFactoryBean.class)
 @EnableTransactionManagement(proxyTargetClass = true)
-public class TouchHomeConfig extends WebSecurityConfigurerAdapter implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
+public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
 
     @Autowired
     private ApplicationContext applicationContext;
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedMethods("*")
+                .allowedOrigins("http://localhost:9111");
+    }
 
     @Bean
     public Map<String, Scratch3ExtensionBlocks> scratch3Blocks(List<Scratch3ExtensionBlocks> scratch3Blocks) {
@@ -110,21 +113,9 @@ public class TouchHomeConfig extends WebSecurityConfigurerAdapter implements Web
         return classFinder.getClassesWithParent(BaseEntity.class, null).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
     }
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.cors().and().csrf().disable();
-    }
-
     @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Collections.singletonList("*"));
-        configuration.setAllowedMethods(Collections.singletonList("*"));
-        configuration.setAllowedHeaders(Collections.singletonList("*"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(5);
     }
 
     @Bean
@@ -143,13 +134,6 @@ public class TouchHomeConfig extends WebSecurityConfigurerAdapter implements Web
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         taskRegistrar.setScheduler(Executors.newScheduledThreadPool(4));
-    }
-
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedMethods("*")
-                .allowedOrigins("http://localhost:9111");
     }
 
     @Bean
@@ -256,7 +240,7 @@ public class TouchHomeConfig extends WebSecurityConfigurerAdapter implements Web
      * After spring context initialization
      */
     @Override
-    public void onApplicationEvent(ApplicationEvent event) {
+    public void onApplicationEvent(@NotNull ApplicationEvent event) {
         if (event instanceof ContextRefreshedEvent) {
             ApplicationContext applicationContext = ((ContextRefreshedEvent) event).getApplicationContext();
             applicationContext.getBean(InternalManager.class).afterContextStart(applicationContext);
@@ -299,15 +283,4 @@ public class TouchHomeConfig extends WebSecurityConfigurerAdapter implements Web
     @JsonIdentityInfo(generator = JSOGGenerator.class, property = "entityID", resolver = JSOGResolver.class)
     interface Bean2MixIn {
     }
-
-    /*@Bean
-    public TomcatServletWebServerFactory tomcatFactory() {
-        // disable JAR scanning
-        return new TomcatServletWebServerFactory() {
-            @Override
-            protected void postProcessContext(Context context) {
-                ((StandardJarScanner) context.getJarScanner()).setScanManifest(false);
-            }
-        };
-    }*/
 }
