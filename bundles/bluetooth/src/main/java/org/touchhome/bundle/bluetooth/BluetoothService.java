@@ -228,7 +228,7 @@ public class BluetoothService implements BundleContext {
             passwordBan = false;
         }
         if (passwordBan) {
-            return "ban";
+            return "ban:" + passwordBanTimeout;
         } else if (user.getPassword() == null) {
             return "none";
         } else if (System.currentTimeMillis() - timeSinceLastCheckPassword > TIME_REFRESH_PASSWORD) {
