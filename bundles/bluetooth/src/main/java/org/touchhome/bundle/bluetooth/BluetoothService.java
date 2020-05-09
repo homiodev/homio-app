@@ -18,6 +18,7 @@ import org.touchhome.bundle.cloud.impl.ServerConnectionStatus;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerRestartSetting;
+import org.touchhome.bundle.cloud.setting.CloudServerUrlSetting;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -244,7 +245,7 @@ public class BluetoothService implements BundleContext {
     private String readServerConnected() {
         String error = entityContext.getSettingValue(CloudServerConnectionMessageSetting.class);
         ServerConnectionStatus status = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
-        return status.name() + "%&%" + error;
+        return status.name() + "%&%" + error + "%&%" + entityContext.getSettingValue(CloudServerUrlSetting.class);
     }
 
     private void writeSafeValue(Runnable runnable) {
