@@ -52,7 +52,7 @@ public class BluetoothService implements BundleContext {
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
     private static final String PWD_REQUIRE_UUID = PREFIX + "14";
 
-    private static final int TIME_REFRESH_PASSWORD = 10 * 60 * 1000; // 10min
+    private static final int TIME_REFRESH_PASSWORD = 1 * 60 * 1000; // 1min // TODO
     private static long timeSinceLastCheckPassword = -1;
 
     public static final int MIN_WRITE_TIMEOUT = 60000;
