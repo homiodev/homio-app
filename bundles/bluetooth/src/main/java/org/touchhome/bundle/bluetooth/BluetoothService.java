@@ -83,6 +83,7 @@ public class BluetoothService implements BundleContext {
         map.put(WIFI_NAME_UUID, readSafeValueStr(linuxHardwareRepository::getWifiName));
         map.put(PWD_SET_UUID, readPwdSet());
         map.put(KEYSTORE_SET_UUID, readSafeValueStr(() -> String.valueOf(user.getKeystore() != null)));
+        map.put(PWD_REQUIRE_UUID, readTimeToReleaseSession());
 
         return map;
     }
@@ -154,7 +155,7 @@ public class BluetoothService implements BundleContext {
         bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, () -> readSafeValue(this::readWifiList));
         bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, this::writeWifiSSID, () -> readSafeValue(linuxHardwareRepository::getWifiName));
         bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, this::writePwd, () -> readPwdSet().getBytes());
-        bluetoothApplication.newWriteCharacteristic("pwd_req", PWD_REQUIRE_UUID, this::updatePasswordCheck);
+        bluetoothApplication.newReadWriteCharacteristic("pwd_req", PWD_REQUIRE_UUID, this::updatePasswordCheck, () -> readTimeToReleaseSession().getBytes());
         bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, this::writeKeystore,
                 () -> readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
 
@@ -165,6 +166,10 @@ public class BluetoothService implements BundleContext {
         } catch (Exception ex) {
             log.error("Unable to start bluetooth service", ex);
         }
+    }
+
+    private String readTimeToReleaseSession() {
+        return Long.toString((TIME_REFRESH_PASSWORD - (System.currentTimeMillis() - timeSinceLastCheckPassword)) / 1000);
     }
 
     private void updatePasswordCheck(byte[] bytes) {
