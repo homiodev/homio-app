@@ -45,7 +45,7 @@ public class NettyClientService {
     public void postConstruct() {
         updateConnectionStatus(ServerConnectionStatus.NOT_CONNECTED, "");
         connectToServer();
-        this.entityContext.listenSettingValue(CloudServerRestartSetting.class, this::restart);
+        this.entityContext.listenSettingValueAsync(CloudServerRestartSetting.class, this::restart);
     }
 
     private void restart() {

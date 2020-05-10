@@ -286,28 +286,10 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public void listenSettingValue(Class<? extends BundleSettingPlugin> bundleSettingPluginClazz, Runnable listener) {
-        settingListeners.putIfAbsent(bundleSettingPluginClazz, new ArrayList<>());
-        settingListeners.get(bundleSettingPluginClazz).add(o -> listener.run());
-    }
-
-    @Override
     public <T> void setSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value) {
         BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
         setSettingValueSilence(settingPluginClazz, value);
         fireNotifySettingHandlers(settingPluginClazz, value, pluginFor);
-    }
-
-    @Override
-    public <K, V> void updateSettingValue(Class<? extends BundleSettingPlugin<Map<K, V>>> settingPluginClazz, @NotNull K key, V value) {
-        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
-        log.debug("Update setting <{}> value <{}>", SettingRepository.getKey(pluginFor), value);
-        Map<K, V> settingValue = this.getSettingValue(settingPluginClazz);
-        settingValue.put(key, value);
-
-        String serValue = pluginFor.writeValue(settingValue);
-        this.setSettingValueRaw(settingPluginClazz, serValue);
-        fireNotifySettingHandlers(settingPluginClazz, settingValue, pluginFor);
     }
 
     @Override

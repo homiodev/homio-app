@@ -2,7 +2,7 @@ package org.touchhome.app.setting.system;
 
 import org.touchhome.app.setting.SettingPlugin;
 
-public class SystemClearWorkspaceVariablesButtonSetting implements SettingPlugin {
+public class SystemClearWorkspaceVariablesButtonSetting implements SettingPlugin<Void> {
 
     @Override
     public GroupKey getGroupKey() {

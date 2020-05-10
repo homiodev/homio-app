@@ -76,7 +76,7 @@ public interface BundleSettingPlugin<T> {
     }
 
     default String writeValue(T value) {
-        return value.toString();
+        return value == null ? "" : value.toString();
     }
 
     @AllArgsConstructor

@@ -11,7 +11,6 @@ import org.touchhome.bundle.api.ui.PublicJsMethod;
 
 import javax.validation.constraints.NotNull;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -49,18 +48,27 @@ public interface EntityContext {
     @PublicJsMethod
     <T> T getSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz);
 
-    <T> void listenSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, Consumer<T> listener);
+    default <T> void listenSettingValueAsync(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, Consumer<T> listener) {
+        listenSettingValue(bundleSettingPluginClazz, value ->
+                new Thread(() -> listener.accept(value), "run-listen-value-async-" + bundleSettingPluginClazz.getSimpleName()).start());
+    }
 
-    void listenSettingValue(Class<? extends BundleSettingPlugin> bundleSettingPluginClazz, Runnable listener);
+    default <T> void listenSettingValueAsync(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, Runnable listener) {
+        listenSettingValue(bundleSettingPluginClazz, value ->
+                new Thread(listener, "run-listen-value-async-" + bundleSettingPluginClazz.getSimpleName()).start());
+    }
+
+    default <T> void listenSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, Runnable listener) {
+        listenSettingValue(bundleSettingPluginClazz, p -> listener.run());
+    }
+
+    <T> void listenSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, Consumer<T> listener);
 
     @PublicJsMethod
     <T> void setSettingValueRaw(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, @NotNull String value);
 
     @PublicJsMethod
-    <T> void setSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, @NotNull T value);
-
-    @PublicJsMethod
-    <K, V> void updateSettingValue(Class<? extends BundleSettingPlugin<Map<K, V>>> bundleSettingPluginClazz, @NotNull K key, V value);
+    <T> void setSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, T value);
 
     @PublicJsMethod
     <T> void setSettingValueSilence(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull T value);

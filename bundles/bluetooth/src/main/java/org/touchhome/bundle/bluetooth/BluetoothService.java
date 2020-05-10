@@ -52,7 +52,7 @@ public class BluetoothService implements BundleContext {
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
     private static final String PWD_REQUIRE_UUID = PREFIX + "14";
 
-    private static final int TIME_REFRESH_PASSWORD = 1 * 60 * 1000; // 1min // TODO CHANGE to 5 min
+    private static final int TIME_REFRESH_PASSWORD = 5 * 60 * 1000;
     private static long timeSinceLastCheckPassword = -1;
 
     public static final int MIN_WRITE_TIMEOUT = 60000;
@@ -186,7 +186,7 @@ public class BluetoothService implements BundleContext {
     private void writeKeystore(byte[] bytes) {
         writeSafeValue(() -> {
             entityContext.save(user.setKeystore(bytes));
-            entityContext.setSettingValue(CloudServerRestartSetting.class, "");
+            entityContext.setSettingValue(CloudServerRestartSetting.class, null);
         });
     }
 
@@ -201,12 +201,13 @@ public class BluetoothService implements BundleContext {
         if (user.isPasswordNotSet()) {
             log.warn("Set primary admin password for user: <{}>", email);
             entityContext.save(user.setUserId(email).setPassword(encodedPassword));
-            timeSinceLastCheckPassword = System.currentTimeMillis();
+            this.entityContext.setSettingValue(CloudServerRestartSetting.class, null);
         } else if (StringUtils.isNotEmpty(encodedOldPassword) &&
                 Objects.equals(user.getUserId(), email) &&
                 user.matchPassword(encodedOldPassword)) {
             log.warn("Reset primary admin password for user: <{}>", email);
             entityContext.save(user.setPassword(encodedPassword));
+            this.entityContext.setSettingValue(CloudServerRestartSetting.class, null);
         }
         this.updatePasswordCheck(encodedPassword.getBytes());
     }

@@ -40,7 +40,7 @@ public class TelegramService {
         start();
     }
 
-    public void restart() {
+    private void restart() {
         if (telegramBot != null && telegramBot.isRunning()) {
             telegramBot.stop();
         }

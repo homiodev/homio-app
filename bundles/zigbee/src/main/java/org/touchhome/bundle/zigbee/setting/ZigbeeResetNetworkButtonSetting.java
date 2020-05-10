@@ -2,7 +2,7 @@ package org.touchhome.bundle.zigbee.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
 
-public class ZigbeeResetNetworkButtonSetting implements BundleSettingPlugin {
+public class ZigbeeResetNetworkButtonSetting implements BundleSettingPlugin<Void> {
 
     @Override
     public SettingType getSettingType() {
