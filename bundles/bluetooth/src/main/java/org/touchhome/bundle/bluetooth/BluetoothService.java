@@ -51,7 +51,8 @@ public class BluetoothService implements BundleContext {
     private static final String WRITE_BAN_UUID = PREFIX + "12";
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
 
-    private static final int TIME_REFRESH_PASSWORD = 601000;
+    public static final int MIN_WRITE_TIMEOUT = 60000;
+    private static final int TIME_REFRESH_PASSWORD = 5 * 60000; // 5 minute for session
     private static long timeSinceLastCheckPassword = -1;
 
     private BluetoothApplication bluetoothApplication;
@@ -85,15 +86,15 @@ public class BluetoothService implements BundleContext {
     private String gatherWriteBan() {
         List<String> status = new ArrayList<>();
         for (Map.Entry<String, Long> entry : wifiWriteProtect.entrySet()) {
-            if (System.currentTimeMillis() - entry.getValue() < TIME_REFRESH_PASSWORD) {
-                status.add(entry.getKey() + "%&%" + ((TIME_REFRESH_PASSWORD - (System.currentTimeMillis() - entry.getValue())) / 1000));
+            if (System.currentTimeMillis() - entry.getValue() < MIN_WRITE_TIMEOUT) {
+                status.add(entry.getKey() + "%&%" + ((MIN_WRITE_TIMEOUT - (System.currentTimeMillis() - entry.getValue())) / 1000));
             }
         }
         return String.join("%#%", status);
     }
 
     public void setDeviceCharacteristic(String uuid, String value) {
-        if (value != null && (!wifiWriteProtect.containsKey(uuid) || System.currentTimeMillis() - wifiWriteProtect.get(uuid) > TIME_REFRESH_PASSWORD)) {
+        if (value != null && (!wifiWriteProtect.containsKey(uuid) || System.currentTimeMillis() - wifiWriteProtect.get(uuid) > MIN_WRITE_TIMEOUT)) {
             wifiWriteProtect.put(uuid, System.currentTimeMillis());
             switch (uuid) {
                 case DEVICE_MODEL_UUID:
