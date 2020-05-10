@@ -199,13 +199,11 @@ public class BluetoothService implements BundleContext {
         String encodedPassword = split[1];
         String encodedOldPassword = split.length > 2 ? split[2] : "";
         if (user.isPasswordNotSet()) {
-            log.warn("Set primary admin password for user: <{}>", email);
             entityContext.save(user.setUserId(email).setPassword(encodedPassword));
             timeSinceLastCheckPassword = System.currentTimeMillis();
         } else if (StringUtils.isNotEmpty(encodedOldPassword) &&
                 Objects.equals(user.getUserId(), email) &&
                 user.matchPassword(encodedOldPassword)) {
-            log.warn("Rest primary admin password for user: <{}>", email);
             entityContext.save(user.setPassword(encodedPassword));
         }
     }

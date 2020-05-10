@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang.StringUtils;
 import org.hibernate.annotations.Type;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -71,7 +72,7 @@ public class UserEntity extends BaseEntity<UserEntity> {
     }
 
     public boolean isPasswordNotSet() {
-        return password == null;
+        return StringUtils.isEmpty(password);
     }
 
     public enum UserType {
