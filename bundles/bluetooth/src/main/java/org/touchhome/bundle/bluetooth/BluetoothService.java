@@ -205,9 +205,10 @@ public class BluetoothService implements BundleContext {
         } else if (StringUtils.isNotEmpty(encodedOldPassword) &&
                 Objects.equals(user.getUserId(), email) &&
                 user.matchPassword(encodedOldPassword)) {
-            log.warn("Rest primary admin password for user: <{}>", email);
+            log.warn("Reset primary admin password for user: <{}>", email);
             entityContext.save(user.setPassword(encodedPassword));
         }
+        this.updatePasswordCheck(encodedPassword.getBytes());
     }
 
     private void writeWifiSSID(byte[] bytes) {
