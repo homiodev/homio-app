@@ -97,7 +97,7 @@ public class BluetoothService implements BundleContext {
             wifiWriteProtect.put(uuid, System.currentTimeMillis());
             switch (uuid) {
                 case DEVICE_MODEL_UUID:
-                    rebootDevice(value.getBytes());
+                    rebootDevice(null);
                     return;
                 case WIFI_NAME_UUID:
                     writeWifiSSID(value.getBytes());
@@ -204,12 +204,8 @@ public class BluetoothService implements BundleContext {
         });
     }
 
-    private void rebootDevice(byte[] bytes) {
-        writeSafeValue(() -> {
-            if (user.matchPassword(passwordEncoder, new String(bytes))) {
-                linuxHardwareRepository.reboot();
-            }
-        });
+    private void rebootDevice(byte[] ignore) {
+        writeSafeValue(linuxHardwareRepository::reboot);
     }
 
     @Override
