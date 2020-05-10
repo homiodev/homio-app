@@ -58,10 +58,6 @@ public class UserEntity extends BaseEntity<UserEntity> {
         INSTANCE = userEntity;
     }
 
-    public boolean matchPassword(PasswordEncoder passwordEncoder, String rawPassword) {
-        return passwordEncoder.matches(rawPassword, password);
-    }
-
     public boolean matchPassword(String encodedPassword) {
         return this.password != null && this.password.equals(encodedPassword);
     }

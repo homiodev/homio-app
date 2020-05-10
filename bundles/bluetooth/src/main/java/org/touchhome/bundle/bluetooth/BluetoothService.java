@@ -8,7 +8,6 @@ import org.ble.BluetoothApplication;
 import org.dbus.InterfacesAddedSignal.InterfacesAdded;
 import org.dbus.InterfacesRomovedSignal.InterfacesRemoved;
 import org.freedesktop.dbus.Variant;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
@@ -59,7 +58,6 @@ public class BluetoothService implements BundleContext {
     private UserEntity user;
 
     private final EntityContext entityContext;
-    private final PasswordEncoder passwordEncoder;
     private final LinuxHardwareRepository linuxHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
     private final Map<String, Long> wifiWriteProtect = new ConcurrentHashMap<>();
@@ -190,7 +188,7 @@ public class BluetoothService implements BundleContext {
             this.entityContext.setSettingValue(CloudServerRestartSetting.class, null);
         }
 
-        if (user.matchPassword(passwordEncoder, encodedPassword)) {
+        if (user.matchPassword(encodedPassword)) {
             timeSinceLastCheckPassword = System.currentTimeMillis();
         }
     }
