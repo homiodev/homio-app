@@ -50,12 +50,9 @@ public class BluetoothService implements BundleContext {
     private static final String SD_MEMORY_UUID = PREFIX + "11";
     private static final String WRITE_BAN_UUID = PREFIX + "12";
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
-    private static final String PWD_REQUIRE_UUID = PREFIX + "14";
 
-    private static final int TIME_REFRESH_PASSWORD = 5 * 60 * 1000;
+    private static final int TIME_REFRESH_PASSWORD = 601000;
     private static long timeSinceLastCheckPassword = -1;
-
-    public static final int MIN_WRITE_TIMEOUT = 60000;
 
     private BluetoothApplication bluetoothApplication;
     private UserEntity user;
@@ -65,9 +62,6 @@ public class BluetoothService implements BundleContext {
     private final LinuxHardwareRepository linuxHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
     private final Map<String, Long> wifiWriteProtect = new ConcurrentHashMap<>();
-
-    private boolean passwordBan;
-    private Long passwordBanTimeout = 0L;
 
     public Map<String, String> getDeviceCharacteristics() {
         Map<String, String> map = new HashMap<>();
@@ -84,7 +78,6 @@ public class BluetoothService implements BundleContext {
         map.put(WIFI_NAME_UUID, readSafeValueStr(linuxHardwareRepository::getWifiName));
         map.put(PWD_SET_UUID, readPwdSet());
         map.put(KEYSTORE_SET_UUID, readSafeValueStr(() -> String.valueOf(user.getKeystore() != null)));
-        map.put(PWD_REQUIRE_UUID, readTimeToReleaseSession());
 
         return map;
     }
@@ -92,15 +85,15 @@ public class BluetoothService implements BundleContext {
     private String gatherWriteBan() {
         List<String> status = new ArrayList<>();
         for (Map.Entry<String, Long> entry : wifiWriteProtect.entrySet()) {
-            if (System.currentTimeMillis() - entry.getValue() < MIN_WRITE_TIMEOUT) {
-                status.add(entry.getKey() + "%&%" + (int) ((MIN_WRITE_TIMEOUT - (System.currentTimeMillis() - entry.getValue())) / 1000));
+            if (System.currentTimeMillis() - entry.getValue() < TIME_REFRESH_PASSWORD) {
+                status.add(entry.getKey() + "%&%" + ((TIME_REFRESH_PASSWORD - (System.currentTimeMillis() - entry.getValue())) / 1000));
             }
         }
         return String.join("%#%", status);
     }
 
     public void setDeviceCharacteristic(String uuid, String value) {
-        if (value != null && (!wifiWriteProtect.containsKey(uuid) || System.currentTimeMillis() - wifiWriteProtect.get(uuid) > MIN_WRITE_TIMEOUT)) {
+        if (value != null && (!wifiWriteProtect.containsKey(uuid) || System.currentTimeMillis() - wifiWriteProtect.get(uuid) > TIME_REFRESH_PASSWORD)) {
             wifiWriteProtect.put(uuid, System.currentTimeMillis());
             switch (uuid) {
                 case DEVICE_MODEL_UUID:
@@ -114,9 +107,6 @@ public class BluetoothService implements BundleContext {
                     return;
                 case KEYSTORE_SET_UUID:
                     writeKeystore(value.getBytes());
-                    return;
-                case PWD_REQUIRE_UUID:
-                    updatePasswordCheck(value.getBytes());
             }
         }
     }
@@ -156,7 +146,6 @@ public class BluetoothService implements BundleContext {
         bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, () -> readSafeValue(this::readWifiList));
         bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, this::writeWifiSSID, () -> readSafeValue(linuxHardwareRepository::getWifiName));
         bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, this::writePwd, () -> readPwdSet().getBytes());
-        bluetoothApplication.newReadWriteCharacteristic("pwd_req", PWD_REQUIRE_UUID, this::updatePasswordCheck, () -> readTimeToReleaseSession().getBytes());
         bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, this::writeKeystore,
                 () -> readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
 
@@ -173,16 +162,6 @@ public class BluetoothService implements BundleContext {
         return Long.toString((TIME_REFRESH_PASSWORD - (System.currentTimeMillis() - timeSinceLastCheckPassword)) / 1000);
     }
 
-    private void updatePasswordCheck(byte[] bytes) {
-        if (user.matchPassword(passwordEncoder, new String(bytes))) {
-            timeSinceLastCheckPassword = System.currentTimeMillis();
-            passwordBan = false;
-        } else {
-            passwordBan = true;
-            passwordBanTimeout = System.currentTimeMillis();
-        }
-    }
-
     private void writeKeystore(byte[] bytes) {
         writeSafeValue(() -> {
             entityContext.save(user.setKeystore(bytes));
@@ -197,19 +176,22 @@ public class BluetoothService implements BundleContext {
         String[] split = new String(bytes).split("%&%");
         String email = split[0];
         String encodedPassword = split[1];
-        String encodedOldPassword = split.length > 2 ? split[2] : "";
+        String encodedPreviousPassword = split.length > 2 ? split[2] : "";
         if (user.isPasswordNotSet()) {
             log.warn("Set primary admin password for user: <{}>", email);
             entityContext.save(user.setUserId(email).setPassword(encodedPassword));
             this.entityContext.setSettingValue(CloudServerRestartSetting.class, null);
-        } else if (StringUtils.isNotEmpty(encodedOldPassword) &&
+        } else if (StringUtils.isNotEmpty(encodedPreviousPassword) &&
                 Objects.equals(user.getUserId(), email) &&
-                user.matchPassword(encodedOldPassword)) {
+                user.matchPassword(encodedPreviousPassword)) {
             log.warn("Reset primary admin password for user: <{}>", email);
             entityContext.save(user.setPassword(encodedPassword));
             this.entityContext.setSettingValue(CloudServerRestartSetting.class, null);
         }
-        this.updatePasswordCheck(encodedPassword.getBytes());
+
+        if (user.matchPassword(passwordEncoder, encodedPassword)) {
+            timeSinceLastCheckPassword = System.currentTimeMillis();
+        }
     }
 
     private void writeWifiSSID(byte[] bytes) {
@@ -241,17 +223,12 @@ public class BluetoothService implements BundleContext {
     }
 
     private String readPwdSet() {
-        if (passwordBan && System.currentTimeMillis() - passwordBanTimeout > TIME_REFRESH_PASSWORD) {
-            passwordBan = false;
-        }
-        if (passwordBan) {
-            return "ban:" + (TIME_REFRESH_PASSWORD - (System.currentTimeMillis() - passwordBanTimeout)) / 1000;
-        } else if (user.isPasswordNotSet()) {
+        if (user.isPasswordNotSet()) {
             return "none";
         } else if (System.currentTimeMillis() - timeSinceLastCheckPassword > TIME_REFRESH_PASSWORD) {
             return "required";
         }
-        return "ok";
+        return "ok:" + readTimeToReleaseSession();
     }
 
     private String readWifiList() {
