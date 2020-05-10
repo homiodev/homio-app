@@ -33,7 +33,7 @@ public interface WirelessHardwareRepository {
     @ErrorsHandler(onRetCodeError = "There was an unknown error disabling the interface", notRecognizeError = "There was an error disabling the interface", errorHandlers = {})
     void disable();
 
-    @HardwareQuery(value = "sudo /etc/init.d/networking restart", printOutput = true)
+    @HardwareQuery(echo = "Restart network interface", value = "sudo /etc/init.d/networking restart", printOutput = true)
     void restartNetworkInterface();
 
     @HardwareQuery("sudo ifconfig wlan0 up")
@@ -61,8 +61,8 @@ public interface WirelessHardwareRepository {
     @HardwareQuery("sudo grep -r 'psk=' /etc/wpa_supplicant/wpa_supplicant.conf | cut -d = -f 2 | cut -d \\\" -f 2")
     String getWifiPassword();
 
-    @HardwareQuery("wpa_passphrase \":ssid\" \":password\" > /etc/wpa_supplicant/wpa_supplicant.conf")
-    void setWifiPassword(@ApiParam("ssid") String ssid, @ApiParam("password") String password);
+    @HardwareQuery(echo = "Set WIFI credentials", value = "wpa_passphrase \":ssid\" \":password\" > /etc/wpa_supplicant/wpa_supplicant.conf")
+    void setWifiCredentials(@ApiParam("ssid") String ssid, @ApiParam("password") String password);
 
     @HardwareQuery("ip addr | awk '/state UP/ {print $2}' | sed 's/.$//'")
     String getActiveNetworkInterface();

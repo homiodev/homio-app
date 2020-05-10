@@ -199,11 +199,13 @@ public class BluetoothService implements BundleContext {
         String encodedPassword = split[1];
         String encodedOldPassword = split.length > 2 ? split[2] : "";
         if (user.isPasswordNotSet()) {
+            log.warn("Set primary admin password for user: <{}>", email);
             entityContext.save(user.setUserId(email).setPassword(encodedPassword));
             timeSinceLastCheckPassword = System.currentTimeMillis();
         } else if (StringUtils.isNotEmpty(encodedOldPassword) &&
                 Objects.equals(user.getUserId(), email) &&
                 user.matchPassword(encodedOldPassword)) {
+            log.warn("Rest primary admin password for user: <{}>", email);
             entityContext.save(user.setPassword(encodedPassword));
         }
     }
@@ -212,7 +214,7 @@ public class BluetoothService implements BundleContext {
         writeSafeValue(() -> {
             String[] split = new String(bytes).split("%&%");
             if (split.length == 2 && split[1].length() >= 8) {
-                wirelessHardwareRepository.setWifiPassword(split[0], split[1]);
+                wirelessHardwareRepository.setWifiCredentials(split[0], split[1]);
                 wirelessHardwareRepository.restartNetworkInterface();
             }
         });
