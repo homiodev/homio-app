@@ -91,7 +91,7 @@ public class BluetoothService implements BundleContext {
         return String.join("%#%", status);
     }
 
-    public void setDeviceCharacteristic(String uuid, String value) {
+    public void setDeviceCharacteristic(String uuid, byte[] value) {
         if (value != null && (!wifiWriteProtect.containsKey(uuid) || System.currentTimeMillis() - wifiWriteProtect.get(uuid) > MIN_WRITE_TIMEOUT)) {
             wifiWriteProtect.put(uuid, System.currentTimeMillis());
             switch (uuid) {
@@ -99,13 +99,13 @@ public class BluetoothService implements BundleContext {
                     rebootDevice(null);
                     return;
                 case WIFI_NAME_UUID:
-                    writeWifiSSID(value.getBytes());
+                    writeWifiSSID(value);
                     return;
                 case PWD_SET_UUID:
-                    writePwd(value.getBytes());
+                    writePwd(value);
                     return;
                 case KEYSTORE_SET_UUID:
-                    writeKeystore(value.getBytes());
+                    writeKeystore(value);
             }
         }
     }

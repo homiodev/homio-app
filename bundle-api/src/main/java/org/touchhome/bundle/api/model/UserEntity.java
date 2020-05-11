@@ -7,6 +7,7 @@ import lombok.experimental.Accessors;
 import org.apache.commons.lang.StringUtils;
 import org.hibernate.annotations.Type;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.touchhome.bundle.api.util.SslUtil;
 
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -80,6 +81,7 @@ public class UserEntity extends BaseEntity<UserEntity> {
 
     public UserEntity setKeystore(byte[] keystore) {
         this.keystore = keystore;
+        SslUtil.validateKeyStore(keystore, password);
         this.keystoreDate = new Date();
         return this;
     }
