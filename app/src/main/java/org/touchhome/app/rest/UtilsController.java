@@ -261,7 +261,7 @@ public class UtilsController {
     }
 
     @PutMapping("device/characteristic/{uuid}")
-    public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, byte[] value) {
+    public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
         bluetoothService.setDeviceCharacteristic(uuid, value);
     }
 
