@@ -76,7 +76,7 @@ public class BluetoothService implements BundleContext {
         map.put(WIFI_LIST_UUID, readSafeValueStr(this::readWifiList));
         map.put(WIFI_NAME_UUID, readSafeValueStr(linuxHardwareRepository::getWifiName));
         map.put(PWD_SET_UUID, readPwdSet());
-        map.put(KEYSTORE_SET_UUID, readSafeValueStr(() -> String.valueOf(user.getKeystore() != null)));
+        map.put(KEYSTORE_SET_UUID, readSafeValueStr(() -> String.valueOf(user.getKeystoreDate() == null ? "" : user.getKeystoreDate().getTime())));
 
         return map;
     }

@@ -7,13 +7,13 @@ import lombok.experimental.Accessors;
 import org.apache.commons.lang.StringUtils;
 import org.hibernate.annotations.Type;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import java.util.Collections;
+import java.util.Date;
 
 @Setter
 @Entity
@@ -34,6 +34,9 @@ public class UserEntity extends BaseEntity<UserEntity> {
     @JsonIgnore
     @Getter
     private byte[] keystore;
+
+    @Getter
+    private Date keystoreDate;
 
     @JsonIgnore
     @Getter
@@ -73,5 +76,11 @@ public class UserEntity extends BaseEntity<UserEntity> {
 
     public enum UserType {
         REGULAR, TELEGRAM
+    }
+
+    public UserEntity setKeystore(byte[] keystore) {
+        this.keystore = keystore;
+        this.keystoreDate = new Date();
+        return this;
     }
 }
