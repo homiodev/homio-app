@@ -51,6 +51,7 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.Principal;
 import java.util.*;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
@@ -250,9 +251,9 @@ public class UtilsController {
         return entityContext.getNotifications();
     }
 
-    @GetMapping("health")
-    public JSONObject getStatus() {
-        return new JSONObject().put("status", "ok");
+    @GetMapping("status")
+    public int getStatus(Principal user) {
+        return user == null ? 401 : 200;
     }
 
     @GetMapping("device/characteristic")
