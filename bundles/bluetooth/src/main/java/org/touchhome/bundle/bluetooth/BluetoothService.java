@@ -163,6 +163,7 @@ public class BluetoothService implements BundleContext {
 
     private void writeKeystore(byte[] bytes) {
         writeSafeValue(() -> {
+            log.warn("Writing keystore");
             entityContext.save(user.setKeystore(bytes));
             entityContext.setSettingValue(CloudServerRestartSetting.class, null);
         });
@@ -195,6 +196,7 @@ public class BluetoothService implements BundleContext {
 
     private void writeWifiSSID(byte[] bytes) {
         writeSafeValue(() -> {
+            log.info("Writing wifi credentials");
             String[] split = new String(bytes).split("%&%");
             if (split.length == 2 && split[1].length() >= 8) {
                 wirelessHardwareRepository.setWifiCredentials(split[0], split[1]);

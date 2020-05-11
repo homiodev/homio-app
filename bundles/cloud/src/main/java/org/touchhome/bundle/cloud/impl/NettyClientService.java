@@ -16,9 +16,7 @@ import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.util.SslUtil;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
-import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
-import org.touchhome.bundle.cloud.setting.CloudServerRestartSetting;
+import org.touchhome.bundle.cloud.setting.*;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -32,12 +30,10 @@ public class NettyClientService {
 
     private final DispatcherServletService dispatcherServletService;
     private final EntityContext entityContext;
-    @Value("${serverPort:8888}")
-    private int serverPort;
-    @Value("${serverHost:localhost}")
-    private String serverHost;
+
     @Value("${serverUseSSl:true}")
     private boolean serverUseSSl;
+
     private EventLoopGroup workGroup = new NioEventLoopGroup();
     private Thread listenClientsThread;
 
@@ -47,6 +43,8 @@ public class NettyClientService {
         updateConnectionStatus(ServerConnectionStatus.NOT_CONNECTED, "");
         connectToServer();
         this.entityContext.listenSettingValueAsync(CloudServerRestartSetting.class, this::restart);
+        this.entityContext.listenSettingValueAsync(CloudServerUrlSetting.class, this::restart);
+        this.entityContext.listenSettingValueAsync(CloudServerPortSetting.class, this::restart);
     }
 
     private void restart() {
@@ -87,20 +85,13 @@ public class NettyClientService {
                     log.error("Netty client finished with error", ex);
                     updateConnectionStatus(ServerConnectionStatus.DISCONNECTED_WIDTH_ERRORS, TouchHomeUtils.getErrorMessage(ex));
                 }
-             /*   try {
-                    workGroup.shutdownGracefully().get();
-                } catch (Exception ex) {
-                    log.error("Unable to finish workgroup", ex);
-                    throw new RuntimeException(ex);
-                }*/
                 try {
-                    Thread.sleep(60000);
+                    TimeUnit.SECONDS.sleep(60);
                 } catch (InterruptedException ignore) {
                 }
             }
             log.error("Netty client finished");
-        });
-        listenClientsThread.setName("Thread - netty");
+        }, "Thread - netty");
         listenClientsThread.start();
     }
 
@@ -111,6 +102,9 @@ public class NettyClientService {
         bootstrap.channel(NioSocketChannel.class);
         bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
 
+        String host = entityContext.getSettingValue(CloudServerUrlSetting.class);
+        Integer port = entityContext.getSettingValue(CloudServerPortSetting.class);
+
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             public void initChannel(SocketChannel socketChannel) throws Exception {
                 log.info("Client init channel: <{}>", socketChannel.toString());
@@ -119,12 +113,9 @@ public class NettyClientService {
                 if (NettyClientService.this.serverUseSSl) {
                     UserEntity user = entityContext.getEntity(UserRepository.ADMIN_USER);
                     SSLContext sslContext = SslUtil.createSSLContext(user.getKeystore(), user.getPassword());
-                    SSLEngine engine = sslContext.createSSLEngine(
-                            NettyClientService.this.serverHost,
-                            NettyClientService.this.serverPort);
+                    SSLEngine engine = sslContext.createSSLEngine(host, port);
                     engine.setEnabledProtocols(new String[]{"TLSv1.2"});
                     engine.setUseClientMode(true);
-
                     pipeline.addLast(new SslHandler(engine, false));
                 }
 
@@ -134,7 +125,7 @@ public class NettyClientService {
                         new ClientProcessingHandler(dispatcherServletService));
             }
         });
-        ChannelFuture channelFuture = bootstrap.connect(NettyClientService.this.serverHost, NettyClientService.this.serverPort).sync();
+        ChannelFuture channelFuture = bootstrap.connect(host, port).sync();
         updateConnectionStatus(ServerConnectionStatus.CONNECTED, "");
         log.info("Netty client started");
 

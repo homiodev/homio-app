@@ -12,6 +12,7 @@ import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -80,11 +81,11 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private void lockForEvent(WorkspaceBlock workspaceBlock, String inputName, Supplier<Boolean> supplier) {
         if (workspaceBlock.hasInput(inputName) && workspaceBlock.hasInput(SUBSTACK)) {
 
-            WorkspaceBlock substack = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
             BroadcastLock lock = broadcastLockManager.listenEvent(workspaceBlock, supplier);
             while (!Thread.currentThread().isInterrupted()) {
                 if (lock.await(workspaceBlock)) {
-                    substack.handle();
+                    child.handle();
                 }
             }
         }
@@ -92,9 +93,9 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     private void repeatUntilHandler(WorkspaceBlock workspaceBlock) {
         if (workspaceBlock.hasInput(SUBSTACK) && workspaceBlock.hasInput(CONDITION)) {
-            WorkspaceBlock substack = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
             while (workspaceBlock.getInputBoolean(CONDITION)) {
-                substack.handle();
+                child.handle();
             }
         }
     }
@@ -130,10 +131,10 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void repeatHandler(WorkspaceBlock workspaceBlock) {
-        WorkspaceBlock substack = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+        WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
         int times = workspaceBlock.getInputInteger("TIMES");
         for (int i = 0; i < times; i++) {
-            substack.handle();
+            child.handle();
         }
     }
 
@@ -143,14 +144,14 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         if (duration < 1 || duration > 3600) {
             throw new RuntimeException("Unable to sleep current block, because duration is more than 1 hour. Actual value is: " + duration);
         }
-        Thread.sleep(duration * 1000);
+        TimeUnit.SECONDS.sleep(duration);
     }
 
     @SneakyThrows
     private void foreverHandler(WorkspaceBlock workspaceBlock) {
-        WorkspaceBlock substack = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+        WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
         while (!Thread.currentThread().isInterrupted()) {
-            substack.handle();
+            child.handle();
 
             Thread.sleep(100); // wait at least 100ms for 'clumsy hands'
         }

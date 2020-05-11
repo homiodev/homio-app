@@ -33,7 +33,7 @@ public interface LinuxHardwareRepository {
     @HardwareQuery("iwgetid -r")
     String getWifiName();
 
-    @HardwareQuery("sudo reboot")
+    @HardwareQuery(echo = "Reboot device", value = "sudo reboot")
     void reboot();
 
     @HardwareQuery("cat /etc/os-release")

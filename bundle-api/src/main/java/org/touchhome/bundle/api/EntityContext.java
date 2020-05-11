@@ -54,8 +54,7 @@ public interface EntityContext {
     }
 
     default <T> void listenSettingValueAsync(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, Runnable listener) {
-        listenSettingValue(bundleSettingPluginClazz, value ->
-                new Thread(listener, "run-listen-value-async-" + bundleSettingPluginClazz.getSimpleName()).start());
+        listenSettingValueAsync(bundleSettingPluginClazz, t -> listener.run());
     }
 
     default <T> void listenSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, Runnable listener) {
