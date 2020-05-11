@@ -6,7 +6,7 @@ public class CloudServerPortSetting implements BundleSettingPlugin<Integer> {
 
     @Override
     public SettingType getSettingType() {
-        return SettingType.Text;
+        return SettingType.Integer;
     }
 
     @Override
