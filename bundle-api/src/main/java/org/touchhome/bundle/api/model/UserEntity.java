@@ -21,7 +21,7 @@ import java.util.Date;
 @Accessors(chain = true)
 public class UserEntity extends BaseEntity<UserEntity> {
 
-    private static UserEntity INSTANCE;
+    public static final String PREFIX = "u_";
 
     @Getter
     private String userId;
@@ -53,14 +53,6 @@ public class UserEntity extends BaseEntity<UserEntity> {
     @Enumerated(EnumType.STRING)
     @Getter
     private UserType userType = UserType.REGULAR;
-
-    public static UserEntity get() {
-        return INSTANCE;
-    }
-
-    public static void set(UserEntity userEntity) {
-        INSTANCE = userEntity;
-    }
 
     public boolean matchPassword(String encodedPassword) {
         return this.password != null && this.password.equals(encodedPassword);

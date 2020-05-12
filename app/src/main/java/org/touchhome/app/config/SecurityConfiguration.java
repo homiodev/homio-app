@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.touchhome.app.auth.DoubleCheckPasswordAuthenticationProvider;
 import org.touchhome.app.auth.UserSecurityService;
 
 import java.util.Collections;
@@ -48,7 +49,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        DoubleCheckPasswordAuthenticationProvider authProvider = new DoubleCheckPasswordAuthenticationProvider();
         authProvider.setUserDetailsService(userSecurityService);
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;

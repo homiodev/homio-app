@@ -25,7 +25,7 @@ public class En {
     }
 
     public String findPathText(String name) {
-        ObjectNode langJson = getLangJson(UserEntity.get().getLang());
+        ObjectNode langJson = getLangJson("en");
         return langJson.at("/" + name.replaceAll("\\.", "/")).textValue();
     }
 }

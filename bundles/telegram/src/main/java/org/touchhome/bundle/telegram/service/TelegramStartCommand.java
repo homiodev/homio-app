@@ -7,7 +7,6 @@ import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.bots.AbsSender;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
-import org.touchhome.bundle.api.repository.impl.UserRepository;
 
 /**
  * https://github.com/rubenlagus/TelegramBots
@@ -37,7 +36,7 @@ public final class TelegramStartCommand extends TelegramBaseCommand {
         SendMessage message = new SendMessage();
         message.setChatId(chat.getId().toString());
 
-        UserEntity entity = entityContext.getEntity(UserRepository.PREFIX + user.getId());
+        UserEntity entity = entityContext.getEntity(UserEntity.PREFIX + user.getId());
         if (entity != null) {
             sb.append("User: <").append(entity.getName()).append("> already registered");
             log.info("Telegram user <{}> already registered", entity.getName());
@@ -46,7 +45,7 @@ public final class TelegramStartCommand extends TelegramBaseCommand {
                     .setName(user.getFirstName())
                     .setUserType(UserEntity.UserType.TELEGRAM)
                     .setUserId(String.valueOf(user.getId()))
-                    .setEntityID(UserRepository.PREFIX + user.getId());
+                    .setEntityID(UserEntity.PREFIX + user.getId());
             entityContext.save(entity);
             sb.append("User <").append(entity.getName()).append("> has been registered successfully.");
             log.info("Telegram user <{}> has been registered successfully.", entity.getName());

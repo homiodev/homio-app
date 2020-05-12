@@ -427,14 +427,8 @@ public class InternalManager implements EntityContext {
     private void createUser() {
         UserEntity userEntity = getEntity(ADMIN_USER);
         if (userEntity == null) {
-            userEntity = save(new UserEntity().computeEntityID(() -> ADMIN_USER));
+            save(new UserEntity().computeEntityID(() -> ADMIN_USER));
         }
-        UserEntity.set(userEntity);
-        addEntityUpdateListener(UserEntity.class, user -> {
-            if (user.getUserType() == UserEntity.UserType.REGULAR) {
-                UserEntity.set(user);
-            }
-        });
     }
 
     private void createRaspberryDevice() {
