@@ -50,13 +50,7 @@ public class AuthController {
     @Getter
     @Setter
     private static class Credentials {
-
         private String email;
         private String password;
-
-        public void trim() {
-            this.email = this.email.trim();
-            this.password = this.password.trim();
-        }
     }
 }
