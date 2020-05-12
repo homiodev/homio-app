@@ -12,10 +12,6 @@ management:
         include: "*"
 
 spring:
-  servlet:
-    session:
-      cookie:
-        name: DSESSIONID
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/postgres
@@ -33,4 +29,11 @@ spring:
     show-sql: false
 
 server:
+  servlet:
+    session:
+      timeout: 60m
+      cookie:
+        http-only: true
+        secure: false
+        name: DSESSIONID
   port: 9111
