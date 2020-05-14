@@ -68,7 +68,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.repository.impl.UserRepository.ADMIN_USER;
+import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID;
 
 @Log4j2

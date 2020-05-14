@@ -23,6 +23,8 @@ import javax.net.ssl.SSLEngine;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
+
 @Log4j2
 @Component
 @RequiredArgsConstructor
@@ -64,7 +66,7 @@ public class NettyClientService {
     }
 
     private void connectToServer() {
-        UserEntity user = entityContext.getEntity(UserRepository.ADMIN_USER);
+        UserEntity user = entityContext.getEntity(ADMIN_USER);
         if (user.isPasswordNotSet()) {
             updateConnectionStatus(serverConnectionStatus, "CLOUD.USER_HAS_NO_PASSWORD");
             log.warn("Unable start server discovering. User password is empty");
@@ -111,7 +113,7 @@ public class NettyClientService {
                 ChannelPipeline pipeline = socketChannel.pipeline();
 
                 if (NettyClientService.this.serverUseSSl) {
-                    UserEntity user = entityContext.getEntity(UserRepository.ADMIN_USER);
+                    UserEntity user = entityContext.getEntity(ADMIN_USER);
                     SSLContext sslContext = SslUtil.createSSLContext(user.getKeystore(), user.getPassword());
                     SSLEngine engine = sslContext.createSSLEngine(host, port);
                     engine.setEnabledProtocols(new String[]{"TLSv1.2"});

@@ -23,6 +23,8 @@ public class UserEntity extends BaseEntity<UserEntity> {
 
     public static final String PREFIX = "u_";
 
+    public static final String ADMIN_USER = PREFIX + "user";
+
     @Getter
     private String userId;
 

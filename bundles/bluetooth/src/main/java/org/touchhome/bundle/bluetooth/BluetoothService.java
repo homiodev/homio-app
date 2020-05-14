@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.repository.impl.UserRepository.ADMIN_USER;
+import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.distinctByKey;
 
 @Log4j2

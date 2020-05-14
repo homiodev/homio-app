@@ -30,7 +30,7 @@ import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.util.*;
 
-import static org.touchhome.bundle.api.repository.impl.UserRepository.ADMIN_USER;
+import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 
 @Component
 @RequiredArgsConstructor
@@ -149,14 +149,14 @@ public class GoogleDriveFileSystem implements BundleContext {
     public Drive getDrive(String code) throws IOException, CodeExchangeException {
         if (drive == null) {
             if (code == null) {
-                Credential storedCredentials = getStoredCredentials(UserRepository.ADMIN_USER);
+                Credential storedCredentials = getStoredCredentials(ADMIN_USER);
                 if (storedCredentials != null) {
                     drive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, storedCredentials).setApplicationName(APPLICATION_NAME).build();
                 } else {
-                    throw new CodeExchangeException(getAuthorizationUrl(UserRepository.ADMIN_USER/*userManager.getSharedEmail()*/));
+                    throw new CodeExchangeException(getAuthorizationUrl(ADMIN_USER/*userManager.getSharedEmail()*/));
                 }
             } else {
-                UserEntity userEntity = entityContext.getEntity(UserRepository.ADMIN_USER);
+                UserEntity userEntity = entityContext.getEntity(ADMIN_USER);
                 Credential credentials = getCredentials(code, userEntity == null ? null : userEntity.getUserId());
                 drive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials).setApplicationName(APPLICATION_NAME).build();
             }

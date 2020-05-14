@@ -9,9 +9,14 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
+import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.repository.impl.UserRepository;
 
 import java.security.Principal;
+
+import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 
 @Log4j2
 @RestController
@@ -22,10 +27,17 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
+    private final EntityContext entityContext;
 
     @GetMapping("status")
     public int getStatus(Principal user) {
-        return user == null ? 401 : 200;
+        UserEntity userEntity = entityContext.getEntity(ADMIN_USER);
+        return user == null ? (userEntity.isPasswordNotSet() ? 402 : 401) : 200;
+    }
+
+    @GetMapping("user")
+    public UserEntity getUser() {
+        return entityContext.getEntity(ADMIN_USER);
     }
 
     @PostMapping("login")

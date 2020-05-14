@@ -5,12 +5,12 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
+import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.model.UserEntity.PREFIX;
 
 @Repository
 public class UserRepository extends AbstractRepository<UserEntity> {
 
-    public static final String ADMIN_USER = PREFIX + "user";
     private final EntityContext entityContext;
 
     public UserRepository(EntityContext entityContext) {
