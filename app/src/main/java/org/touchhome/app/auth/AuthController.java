@@ -45,17 +45,10 @@ public class AuthController {
         log.info("Login <{}>", credentials.getEmail());
         try {
             String username = credentials.getEmail();
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, credentials.getPassword()));
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, credentials));
             return jwtTokenProvider.createToken(username, userRepository.getUser(username).getRoles());
         } catch (AuthenticationException e) {
             throw new BadCredentialsException("Invalid username/password supplied");
         }
-    }
-
-    @Getter
-    @Setter
-    private static class Credentials {
-        private String email;
-        private String password;
     }
 }

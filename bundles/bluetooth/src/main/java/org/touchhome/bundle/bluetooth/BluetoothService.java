@@ -75,8 +75,8 @@ public class BluetoothService implements BundleContext {
         map.put(SERVER_CONNECTED_UUID, readSafeValueStr(this::readServerConnected));
         map.put(WIFI_LIST_UUID, readSafeValueStr(this::readWifiList));
         map.put(WIFI_NAME_UUID, readSafeValueStr(linuxHardwareRepository::getWifiName));
-        map.put(PWD_SET_UUID, readPwdSet());
         map.put(KEYSTORE_SET_UUID, readSafeValueStr(() -> String.valueOf(user.getKeystoreDate() == null ? "" : user.getKeystoreDate().getTime())));
+        map.put(PWD_SET_UUID, readPwdSet());
 
         return map;
     }
@@ -245,14 +245,14 @@ public class BluetoothService implements BundleContext {
     }
 
     private byte[] readSafeValue(Supplier<String> supplier) {
-        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
+        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isTestApplication()) {
             return supplier.get().getBytes();
         }
         return new byte[0];
     }
 
     private String readSafeValueStr(Supplier<String> supplier) {
-        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
+        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isTestApplication()) {
             return supplier.get();
         }
         return "";

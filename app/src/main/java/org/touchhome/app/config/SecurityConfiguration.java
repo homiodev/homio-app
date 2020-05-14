@@ -11,15 +11,11 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.touchhome.app.auth.DoubleCheckPasswordAuthenticationProvider;
 import org.touchhome.app.auth.JwtTokenFilterConfigurer;
 import org.touchhome.app.auth.JwtTokenProvider;
 import org.touchhome.app.auth.UserEntityDetailsService;
-
-import java.util.Collections;
+import org.touchhome.bundle.api.repository.impl.UserRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -53,9 +49,6 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
         // Apply JWT
         http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider));
-
-        // Optional, if you want to test the API from a browser
-        // http.httpBasic();
     }
 
     @Override
@@ -65,8 +58,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DoubleCheckPasswordAuthenticationProvider authProvider = new DoubleCheckPasswordAuthenticationProvider();
+    public DaoAuthenticationProvider authenticationProvider(UserRepository userRepository) {
+        DoubleCheckPasswordAuthenticationProvider authProvider = new DoubleCheckPasswordAuthenticationProvider(userRepository);
         authProvider.setUserDetailsService(userEntityDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
@@ -74,18 +67,6 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) {
-        auth.authenticationProvider(authenticationProvider());
+        auth.authenticationProvider(authenticationProvider(null));
     }
-
- /*   @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Collections.singletonList("*"));
-        configuration.setAllowedMethods(Collections.singletonList("*"));
-        configuration.setAllowedHeaders(Collections.singletonList("*"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }*/
 }
