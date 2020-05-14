@@ -6,7 +6,6 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang.StringUtils;
 import org.hibernate.annotations.Type;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.touchhome.bundle.api.util.SslUtil;
 
 import javax.persistence.Entity;
@@ -15,6 +14,7 @@ import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 @Setter
 @Entity
@@ -58,13 +58,12 @@ public class UserEntity extends BaseEntity<UserEntity> {
         return this.password != null && this.password.equals(encodedPassword);
     }
 
-    public UserDetails createUserDetails() {
-        return new org.springframework.security.core.userdetails.User(userId, password, true,
-                true, true, true, Collections.emptyList());
-    }
-
     public boolean isPasswordNotSet() {
         return StringUtils.isEmpty(password);
+    }
+
+    public List<Role> getRoles() {
+        return Collections.singletonList(Role.ROLE_ADMIN);
     }
 
     public enum UserType {

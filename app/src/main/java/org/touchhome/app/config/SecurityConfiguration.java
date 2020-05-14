@@ -9,14 +9,15 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.session.web.http.CookieSerializer;
-import org.springframework.session.web.http.DefaultCookieSerializer;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.touchhome.app.auth.DoubleCheckPasswordAuthenticationProvider;
-import org.touchhome.app.auth.UserSecurityService;
+import org.touchhome.app.auth.JwtTokenFilterConfigurer;
+import org.touchhome.app.auth.JwtTokenProvider;
+import org.touchhome.app.auth.UserEntityDetailsService;
 
 import java.util.Collections;
 
@@ -26,20 +27,35 @@ import java.util.Collections;
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     private final PasswordEncoder passwordEncoder;
-    private final UserSecurityService userSecurityService;
+    private final UserEntityDetailsService userEntityDetailsService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http
-                .httpBasic()
-                .and()
-                .authorizeRequests()
-                .antMatchers("/rest/health",
+        // Disable CSRF (cross site request forgery)
+        http.csrf().disable();
+
+        // No session will be created or used by spring security
+        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+
+        // Entry points
+        http.authorizeRequests()//
+                .antMatchers(
+                        "/rest/auth/status",
                         "/rest/auth/login",
                         "/rest/device/characteristic/*",
                         "/rest/device/*").permitAll()
-                .anyRequest().authenticated()
-                .and().csrf().disable();
+                // Disallow everything else..
+                .anyRequest().authenticated();
+
+        // If a user try to access a resource without having enough permissions
+        http.exceptionHandling().accessDeniedPage("/login");
+
+        // Apply JWT
+        http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider));
+
+        // Optional, if you want to test the API from a browser
+        // http.httpBasic();
     }
 
     @Override
@@ -51,7 +67,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DoubleCheckPasswordAuthenticationProvider authProvider = new DoubleCheckPasswordAuthenticationProvider();
-        authProvider.setUserDetailsService(userSecurityService);
+        authProvider.setUserDetailsService(userEntityDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
@@ -61,7 +77,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         auth.authenticationProvider(authenticationProvider());
     }
 
-    @Bean
+ /*   @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Collections.singletonList("*"));
@@ -71,5 +87,5 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
-    }
+    }*/
 }

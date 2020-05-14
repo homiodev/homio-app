@@ -66,11 +66,17 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
     @Transactional
     public void postConstruct(Collection<BundleSettingPlugin> settingPlugins) {
         List<SettingEntity> entities = listAll();
+        deleteRemovedSettings(entities);
         for (BundleSettingPlugin settingPlugin : settingPlugins) {
             if (!settingPlugin.transientState()) {
                 createOrUpdateSetting(entities, settingPlugin);
             }
         }
+    }
+
+    @Override
+    public void updateEntityAfterFetch(SettingEntity entity) {
+        fulfillEntityFromPlugin(entity);
     }
 
     private void createOrUpdateSetting(List<SettingEntity> entities, BundleSettingPlugin settingPlugin) {
@@ -85,8 +91,12 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         entityContext.save(settingEntity);
     }
 
-    @Override
-    public void updateEntityAfterFetch(SettingEntity entity) {
-        fulfillEntityFromPlugin(entity);
+    private void deleteRemovedSettings(List<SettingEntity> entities) {
+        for (SettingEntity entity : entities) {
+            BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(entity.getEntityID());
+            if(plugin == null) {
+                this.deleteByEntityID(entity.getEntityID());
+            }
+        }
     }
 }

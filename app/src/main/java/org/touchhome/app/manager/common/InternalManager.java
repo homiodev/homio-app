@@ -367,7 +367,7 @@ public class InternalManager implements EntityContext {
         AbstractRepository repository = getRepository(clazz);
         return entityManager.getEntityIDsByEntityClassFullName((Class<BaseEntity>) clazz).stream()
                 .map(entityID -> {
-                    T entity = (T) entityManager.getEntityWithFetchLazy(entityID);
+                    T entity = entityManager.getEntityWithFetchLazy(entityID);
                     repository.updateEntityAfterFetch(entity);
                     return entity;
                 }).collect(Collectors.toList());

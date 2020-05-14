@@ -3,25 +3,25 @@ package org.touchhome.app.auth;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
+import org.touchhome.bundle.api.repository.impl.UserRepository;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.security.Principal;
 
+@Log4j2
 @RestController
 @RequestMapping("/rest/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
+    private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
 
     @GetMapping("status")
     public int getStatus(Principal user) {
@@ -29,21 +29,14 @@ public class AuthController {
     }
 
     @PostMapping("login")
-    public void login(@RequestBody Credentials user) {
+    public String login(@RequestBody Credentials credentials) {
+        log.info("Login <{}>", credentials.getEmail());
         try {
-            UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(user.email, user.password);
-            Authentication authentication = this.authenticationManager.authenticate(token);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-        } catch (BadCredentialsException ex) {
-            throw new UsernameNotFoundException("LOGIN.USER_NOT_EXISTS_OR_WRONG_PASSWORD");
-        }
-    }
-
-    @PostMapping("logout")
-    public void logout(HttpServletRequest request, HttpServletResponse response) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null) {
-            new SecurityContextLogoutHandler().logout(request, response, auth);
+            String username = credentials.getEmail();
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, credentials.getPassword()));
+            return jwtTokenProvider.createToken(username, userRepository.getUser(username).getRoles());
+        } catch (AuthenticationException e) {
+            throw new BadCredentialsException("Invalid username/password supplied");
         }
     }
 

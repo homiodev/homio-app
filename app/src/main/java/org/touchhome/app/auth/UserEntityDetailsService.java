@@ -10,7 +10,7 @@ import org.touchhome.bundle.api.repository.impl.UserRepository;
 
 @Service
 @AllArgsConstructor
-public class UserSecurityService implements UserDetailsService {
+public class UserEntityDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
@@ -23,6 +23,14 @@ public class UserSecurityService implements UserDetailsService {
         if (user == null) {
             throw new UsernameNotFoundException("User with email: " + email + " not found");
         }
-        return user.createUserDetails();
+        return org.springframework.security.core.userdetails.User
+                .withUsername(email)
+                .password(user.getPassword())
+                .authorities(user.getRoles())
+                .accountExpired(false)
+                .accountLocked(false)
+                .credentialsExpired(false)
+                .disabled(false)
+                .build();
     }
 }

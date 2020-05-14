@@ -30,10 +30,5 @@ spring:
 
 server:
   servlet:
-    session:
-      timeout: 60m
-      cookie:
-        http-only: true
-        secure: false
-        name: DSESSIONID
+    context-path: /
   port: 9111
