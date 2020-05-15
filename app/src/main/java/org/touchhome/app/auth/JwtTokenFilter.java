@@ -30,7 +30,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
         } catch (BadCredentialsException ex) {
             SecurityContextHolder.clearContext();
-            response.sendError(500, ex.getMessage());
+            response.sendError(419, ex.getMessage());
         }
     }
 }

@@ -72,10 +72,10 @@ public class BluetoothService implements BundleContext {
         map.put(IP_ADDRESS_UUID, readSafeValueStr(linuxHardwareRepository::getIpAddress));
         map.put(WRITE_BAN_UUID, gatherWriteBan());
         map.put(DEVICE_MODEL_UUID, readSafeValueStr(linuxHardwareRepository::getDeviceModel));
-        map.put(SERVER_CONNECTED_UUID, readSafeValueStr(this::readServerConnected));
+        map.put(SERVER_CONNECTED_UUID, readSafeValueStrIT(this::readServerConnected));
         map.put(WIFI_LIST_UUID, readSafeValueStr(this::readWifiList));
         map.put(WIFI_NAME_UUID, readSafeValueStr(linuxHardwareRepository::getWifiName));
-        map.put(KEYSTORE_SET_UUID, readSafeValueStr(() -> String.valueOf(user.getKeystoreDate() == null ? "" : user.getKeystoreDate().getTime())));
+        map.put(KEYSTORE_SET_UUID, readSafeValueStrIT(() -> String.valueOf(user.getKeystoreDate() == null ? "" : user.getKeystoreDate().getTime())));
         map.put(PWD_SET_UUID, readPwdSet());
 
         return map;
@@ -252,7 +252,11 @@ public class BluetoothService implements BundleContext {
     }
 
     private String readSafeValueStr(Supplier<String> supplier) {
-        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isTestApplication()) {
+        return EntityContext.isTestApplication() ? "" : readSafeValueStrIT(supplier);
+    }
+
+    private String readSafeValueStrIT(Supplier<String> supplier) {
+        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
             return supplier.get();
         }
         return "";
