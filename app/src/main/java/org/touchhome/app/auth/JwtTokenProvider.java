@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.model.Role;
 
 import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletRequest;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -54,7 +53,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    Authentication getAuthentication(String token) {
+    public Authentication getAuthentication(String token) {
         UserDetails userDetails = userEntityDetailsService.loadUserByUsername(getUsername(token));
         return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
     }
@@ -63,15 +62,14 @@ public class JwtTokenProvider {
         return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
     }
 
-    String resolveToken(HttpServletRequest req) {
-        String bearerToken = req.getHeader("Authorization");
+    public String resolveToken(String bearerToken) {
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
         return null;
     }
 
-    boolean validateToken(String token) {
+    public boolean validateToken(String token) {
         try {
             Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
             return true;
