@@ -30,7 +30,7 @@ public class Scratch3ArduinoBlocks extends Scratch3ExtensionBlocks {
         this.pwmPinMenu = MenuBlock.ofStaticList("pwmPinMenu", "3", "5", "6", "9", "10", "11");
         this.allPinMenu = MenuBlock.ofStaticList("allPinMenu", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19");
 
-        this.arduinoIdMenu = MenuBlock.ofServer("arduinoIdMenu", "/rest/item/type/ArduinoDeviceEntity",
+        this.arduinoIdMenu = MenuBlock.ofServer("arduinoIdMenu", "rest/item/type/ArduinoDeviceEntity",
                 "Select Arduino", "-");
         this.onOffMenu = MenuBlock.ofStaticList("onOffMenu", "0", "1");
 

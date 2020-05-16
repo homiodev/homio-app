@@ -37,6 +37,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         // Entry points
         http.authorizeRequests()//
                 .antMatchers(
+                        WebSocketConfig.ENDPOINT,
                         "/rest/auth/status",
                         "/rest/auth/login",
                         "/rest/device/characteristic/*",

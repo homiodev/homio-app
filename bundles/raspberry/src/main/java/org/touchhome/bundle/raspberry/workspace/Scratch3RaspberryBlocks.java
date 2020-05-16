@@ -43,13 +43,13 @@ public class Scratch3RaspberryBlocks extends Scratch3ExtensionBlocks {
         // List<String> items = Stream.of(PinProvider.allPins()).map(Pin::getName).collect(Collectors.toList());
         this.allPinMenu = MenuBlock.ofStatic("allPinMenu", RaspberryGpioPin.class);
 
-        this.rpiIdMenu = MenuBlock.ofServer("rpiIdMenu", "/rest/item/type/RaspberryDeviceEntity",
+        this.rpiIdMenu = MenuBlock.ofServer("rpiIdMenu", "rest/item/type/RaspberryDeviceEntity",
                 "Select RPI", "-");
         this.hiloMenu = MenuBlock.ofStatic("hiloMenu", Hilo.class);
 
         this.pullMenu = MenuBlock.ofStatic("pullMenu", PinPullResistance.class);
 
-        this.ds18b20Menu = MenuBlock.ofServer("ds18b20Menu", "/rest/item/raspberry/DS18B20", "Select DS18B20", "-");
+        this.ds18b20Menu = MenuBlock.ofServer("ds18b20Menu", "rest/item/raspberry/DS18B20", "Select DS18B20", "-");
 
         String item = RaspberryGpioPin.PIN3.name();
 

@@ -27,7 +27,7 @@ import java.util.function.Consumer;
 @Scratch3Extension("zigbee")
 public class Scratch3ZigBeeBlocks extends Scratch3ZigbeeExtensionBlocks {
 
-    public static final String ZIGBEE__BASE_URL = "/rest/zigbee/option/";
+    public static final String ZIGBEE__BASE_URL = "rest/zigbee/option/";
 
     public static final String ZIGBEE_CLUSTER_ID_URL = ZIGBEE__BASE_URL + "zcl/";
     public static final String ZIGBEE_CLUSTER_NAME_URL = ZIGBEE__BASE_URL + "clusterName/";
