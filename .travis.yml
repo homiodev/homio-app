@@ -24,3 +24,8 @@ deploy:
   file: 'bintray.json'
   on:
     tags: true
+-provider: script
+  script: bash app/docker-push.sh $USER
+  on:
+    branch: 1.1
+

@@ -1,4 +1,4 @@
-# touchHome backend application
+git tag -a release-0.1.5 -m "release 0.1.5"# touchHome backend application
 
 [![Build Status](https://travis-ci.com/touchhome/touchhome-core.svg)](https://travis-ci.com/github/touchhome/touchhome-core)
 
