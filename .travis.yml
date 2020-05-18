@@ -26,7 +26,7 @@ deploy:
     tags: true
 - provider: script
   skip_cleanup: true
-  script: bash app/docker-push.sh $USER
+  script: bash docker-push.sh $USER
   on:
     branch: 1.2
 
