@@ -1,6 +1,7 @@
 package org.touchhome.bundle.nrf24i01.rf24.command;
 
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
@@ -15,7 +16,7 @@ import static org.touchhome.bundle.nrf24i01.rf24.Command.REGISTER_COMMAND;
 
 @Log4j2
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class RF24RegisterCommand implements RF24CommandPlugin {
 
     private final EntityContext entityContext;

@@ -8,7 +8,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.PrintStream;
 import java.util.Date;
@@ -35,6 +35,7 @@ public abstract class BackgroundProcessService<ReturnType> implements Comparable
 
     public BackgroundProcessService(String id) {
         this.id = id;
+        log.info("Create BGP service: <{}>", id);
     }
 
     protected abstract ReturnType runInternal() throws Exception;
@@ -97,7 +98,7 @@ public abstract class BackgroundProcessService<ReturnType> implements Comparable
         try {
             return canWork();
         } catch (Exception ex) {
-            logWarning("Error while call canWork: " + SmartUtils.getErrorMessage(ex));
+            logWarning("Error while call canWork: " + TouchHomeUtils.getErrorMessage(ex));
             return false;
         }
     }

@@ -1,7 +1,7 @@
 package org.touchhome.app.js.assistant.impl;
 
 import io.swagger.annotations.ApiParam;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.js.assistant.model.Completion;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class CodeParser {
 
     private final ClassFinder classFinder;
@@ -34,10 +34,12 @@ public class CodeParser {
                 splitted.add(result.toString().trim());
                 result.setLength(0);// clean buffer
             } else {
-                if (c == '(')
+                if (c == '(') {
                     nextingLevel++;
-                if (c == ')')
+                }
+                if (c == ')') {
                     nextingLevel--;
+                }
                 result.append(c);
             }
         }

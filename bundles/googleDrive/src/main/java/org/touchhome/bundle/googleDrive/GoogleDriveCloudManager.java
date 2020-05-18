@@ -25,7 +25,7 @@ public class GoogleDriveCloudManager {
 
     private synchronized GoogleDriveFileSystem.Folder getFolder(String folder) throws IOException, GoogleDriveFileSystem.CodeExchangeException {
         //try {
-        //   GoogleDriveFileSystem.Folder userFolder = googleDriveFileSystem.getRootFolder().getChildFolder(UserRepository.DEFAULT_USER_ID, true);
+        //   GoogleDriveFileSystem.Folder userFolder = googleDriveFileSystem.getRootFolder().getChildFolder(UserRepository.ADMIN_USER, true);
         //   return userFolder.getChildFolder(folder, true);
         return null;
         /*} catch (Exception ex) {
@@ -85,14 +85,14 @@ public class GoogleDriveCloudManager {
             //    getFolder(entity.getCloudFolder()).addOrUpdateFile(entity.getTitle(), entity.getTitle(), fetchPropertiesFromObject(entity));
             }
         } catch (Exception ex) {
-            log.error(SmartUtils.getErrorMessage(ex)
+            log.error(TouchHomeUtils.getErrorMessage(ex)
                     , ex);
         } finally {
             if (tempFile != null) {
                 try {
                     Files.deleteIfExists(tempFile);
                 } catch (IOException ex) {
-                    log.error(SmartUtils.getErrorMessage(ex), ex);
+                    log.error(TouchHomeUtils.getErrorMessage(ex), ex);
                 }
             }
         }

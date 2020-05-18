@@ -17,6 +17,7 @@ import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.hardware.WirelessManager;
 import org.touchhome.bundle.api.util.UpdatableValue;
 import org.touchhome.bundle.raspberry.settings.RaspberryOneWireIntervalSetting;
 
@@ -30,40 +31,50 @@ import java.util.stream.Collectors;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class RaspberryManager {
-    private static final int PI_SPI_BAUD_125KHZ = 125000;
-    private static final int PI_SPI_BAUD_250KHZ = PI_SPI_BAUD_125KHZ * 2;
-    private static final int PI_SPI_BAUD_500KHZ = PI_SPI_BAUD_250KHZ * 2;
-    private static final int PI_SPI_BAUD_1MHZ = PI_SPI_BAUD_500KHZ * 2;
-    private static final int PI_SPI_BAUD_2MHZ = PI_SPI_BAUD_1MHZ * 2;
-    private static final int PI_SPI_BAUD_4MHZ = PI_SPI_BAUD_2MHZ * 2;
-    public static final int PI_SPI_BAUD_8MHZ = PI_SPI_BAUD_4MHZ * 2;
-    private static GpioController gpio;
-    private static Boolean available;
+public class RaspberryGPIOService {
+    private final EntityContext entityContext;
+    private final WirelessManager wirelessManager;
+
+    private GpioController gpio;
+    private Boolean available;
     private final Map<String, DefaultKeyValue<Long, Float>> ds18B20Values = new HashMap<>();
     private final Map<RaspberryGpioPin, UpdatableValue<PinState>> gpioDigitalListeners = new ConcurrentHashMap<>();
-
-    private final EntityContext entityContext;
 
     @Value("${w1BaseDir:/sys/devices/w1_bus_master1}")
     private Path w1BaseDir;
 
+    @SneakyThrows
+    void init() {
+        if (isGPIOAvailable()) {
+            addGpioListenerDigital(RaspberryGpioPin.PIN40, PinMode.DIGITAL_INPUT, event -> {
+                log.info("Fired HotSpot creation on GPIO event state: <{}>", event.getState().isHigh());
+                if (event.getState().isHigh()) {
+                    wirelessManager.enableHotspot(60);
+                }
+            });
+        }
+    }
+
 //    private Map<HasTriggersEntity, List<ActiveTrigger>> activeTriggers = new HashMap<>();
 
-    public static GpioController getGpio() {
+    private GpioController getGpio() {
         if (gpio == null) {
             gpio = GpioFactory.getInstance();
         }
         return gpio;
     }
 
-    public boolean isAvailable() {
+    private boolean isGPIOAvailable() {
         if (available == null) {
-            try {
-                getGpio();
-                available = true;
-            } catch (Throwable ignore) {
+            if (EntityContext.isTestApplication()) {
                 available = false;
+            } else {
+                try {
+                    getGpio();
+                    available = true;
+                } catch (Throwable ignore) {
+                    available = false;
+                }
             }
         }
         return available;
@@ -279,7 +290,6 @@ public class RaspberryManager {
                 .filter(sensorID -> sensorID != null && sensorID.startsWith("28-"))
                 .collect(Collectors.toList());
     }
-
 
 /*    private class ActiveTrigger {
         private HasTriggersEntity hasTriggersEntity;

@@ -2,7 +2,7 @@ package org.touchhome.app.setting.system;
 
 import org.touchhome.app.setting.SettingPlugin;
 
-public class SystemClearCacheButtonSetting implements SettingPlugin {
+public class SystemClearCacheButtonSetting implements SettingPlugin<Void> {
 
     @Override
     public GroupKey getGroupKey() {

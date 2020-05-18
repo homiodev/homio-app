@@ -26,7 +26,7 @@ class ZigBeeIsAliveTracker {
     }
 
     synchronized void resetTimer(ZigBeeDevice zigBeeDevice) {
-        if(handlerIntervalMapping.containsKey(zigBeeDevice)) {
+        if (handlerIntervalMapping.containsKey(zigBeeDevice)) {
             zigBeeDevice.getZigBeeNodeDescription().setExpectedUpdateIntervalTimer(System.currentTimeMillis());
             log.debug("{}: Reset timeout for handler with zigBeeDevice", zigBeeDevice.getNodeIeeeAddress());
             cancelTask(zigBeeDevice);

@@ -1,6 +1,6 @@
 package org.touchhome.app.rest;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.springframework.core.io.InputStreamResource;
@@ -15,7 +15,7 @@ import org.touchhome.bundle.api.model.ImageEntity;
 
 @RestController
 @RequestMapping("/rest/image")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ImageController {
 
     private final ImageManager imageManager;

@@ -3,13 +3,14 @@ package org.touchhome.bundle.api.scratch;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Getter
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class MenuBlock {
     @JsonIgnore
     private final String name;
@@ -49,7 +50,7 @@ public class MenuBlock {
         }
 
         @Getter
-        @AllArgsConstructor
+        @RequiredArgsConstructor
         static class MenuBlockFunction {
             private final String url;
             private final String keyName;

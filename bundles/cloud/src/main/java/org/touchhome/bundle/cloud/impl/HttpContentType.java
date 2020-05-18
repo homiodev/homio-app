@@ -1,13 +1,13 @@
 package org.touchhome.bundle.cloud.impl;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 public enum HttpContentType {
     Json(MediaType.APPLICATION_JSON_VALUE),
     JsonUtf8(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8"),

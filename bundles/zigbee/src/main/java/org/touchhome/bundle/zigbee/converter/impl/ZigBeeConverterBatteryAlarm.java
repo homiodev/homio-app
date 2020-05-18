@@ -36,12 +36,11 @@ import static java.time.Duration.ofMinutes;
 @ZigBeeConverter(name = "zigbee:battery_alarm", clientClusters = {ZclPowerConfigurationCluster.CLUSTER_ID})
 public class ZigBeeConverterBatteryAlarm extends ZigBeeBaseChannelConverter implements ZclAttributeListener {
 
-    private static final String STATE_OPTION_BATTERY_MIN_THRESHOLD = "minThreshold";
     public static final String STATE_OPTION_BATTERY_THRESHOLD_1 = "threshold1";
     public static final String STATE_OPTION_BATTERY_THRESHOLD_2 = "threshold2";
     public static final String STATE_OPTION_BATTERY_THRESHOLD_3 = "threshold3";
     public static final String STATE_OPTION_BATTERY_NO_THRESHOLD = "noThreshold";
-
+    private static final String STATE_OPTION_BATTERY_MIN_THRESHOLD = "minThreshold";
     private static final int ALARMSTATE_MIN_REPORTING_INTERVAL = (int) ofMinutes(10).getSeconds();
     private static final int ALARMSTATE_MAX_REPORTING_INTERVAL = (int) ofHours(2).getSeconds();
 

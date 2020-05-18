@@ -3,7 +3,7 @@ package org.touchhome.bundle.zigbee.requireEndpoint;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.zigbee.converter.impl.ZigBeeConverter;
 import org.touchhome.bundle.zigbee.converter.impl.ZigBeeConverterEndpoint;
 
@@ -16,7 +16,7 @@ public class RequireEndpoint {
     private String typeId;
 
     public boolean match(ZigBeeConverter zigBeeConverter) {
-        return zigBeeConverter.name().equals(typeId) && SmartUtils.containsAny(zigBeeConverter.clientClusters(), inputCluster);
+        return zigBeeConverter.name().equals(typeId) && TouchHomeUtils.containsAny(zigBeeConverter.clientClusters(), inputCluster);
     }
 
     public boolean match(ZigBeeConverterEndpoint converter) {

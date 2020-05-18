@@ -13,7 +13,9 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.stereotype.Component;
 import org.thavam.util.concurrent.blockingMap.BlockingHashMap;
 import org.thavam.util.concurrent.blockingMap.BlockingMap;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.api.*;
+import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.util.ClassFinder;
 
 import java.io.BufferedReader;
@@ -42,7 +44,6 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     private static final BlockingQueue<PrintContext> printLogsJobs = new LinkedBlockingQueue<>(10);
     private static final BlockingMap<Process, List<String>> inputResponse = new BlockingHashMap<>();
     private static final Constructor<MethodHandles.Lookup> lookupConstructor;
-
     private static Thread logThread = new Thread(() -> {
         while (!Thread.currentThread().isInterrupted()) {
             try {
@@ -77,6 +78,8 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         logThread.start();
     }
 
+    private String pm;
+
     @Override
     @SneakyThrows
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
@@ -94,7 +97,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                     }
                     return null;
                 }
-                if (method.isAnnotationPresent(HardwareQuery.class)) {
+                if (method.isAnnotationPresent(HardwareQuery.class)) { // TODO: badddddddddddddddddddddddd
                     HardwareQuery hardwareQuery = method.getAnnotation(HardwareQuery.class);
                     return handleHardwareQuery(hardwareQuery, args, method);
                 }
@@ -107,6 +110,11 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 }
                 throw new RuntimeException("Unable to execute hardware method without implementation");
             }));
+        }
+
+        if (!EntityContext.isTestApplication()) {
+            LinuxHardwareRepository repository = beanFactory.getBean(LinuxHardwareRepository.class);
+            this.pm = repository.getOs().getPackageManager();
         }
 
         HardwareUtils.prepareHardware(beanFactory);
@@ -130,8 +138,18 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
 
     private Object handleHardwareQuery(HardwareQuery hardwareQuery, Object[] args, Method method) throws InstantiationException, IllegalAccessException {
         ErrorsHandler errorsHandler = method.getAnnotation(ErrorsHandler.class);
-        String command = replaceStringWithArgs(hardwareQuery.value(), args, method);
-        log.info("Hardware execute command: <{}>", command);
+        List<String> parts = new ArrayList<>();
+        for (String cmd : hardwareQuery.value()) {
+            String rcmd = replaceStringWithArgs(cmd, args, method);
+            parts.add(rcmd.contains("$PM") ? rcmd.replace("$PM", pm) : rcmd);
+        }
+        String[] cmdParts = parts.toArray(new String[0]);
+        String command = String.join(", ", parts);
+        if (StringUtils.isNotEmpty(hardwareQuery.echo())) {
+            log.info("Execute: <{}>. Command: <{}>", hardwareQuery.echo(), command);
+        } else {
+            log.info("Execute command: <{}>", command);
+        }
 
         int retValue;
         List<String> errors;
@@ -140,9 +158,11 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             Process process;
             if (StringUtils.isNotEmpty(hardwareQuery.dir())) {
                 File dir = new File(replaceStringWithArgs(hardwareQuery.dir(), args, method));
-                process = Runtime.getRuntime().exec(command, null, dir);
+                process = Runtime.getRuntime().exec(cmdParts, null, dir);
+            } else if (cmdParts.length == 1) {
+                process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", cmdParts[0]});
             } else {
-                process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", command});
+                process = Runtime.getRuntime().exec(cmdParts);
             }
 
             if (hardwareQuery.printOutput()) {
@@ -158,6 +178,18 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             errors = Collections.singletonList(ex.getMessage());
         }
 
+        Class<?> returnType = method.getReturnType();
+
+        // in case we expect return num we ignore any errors
+        if (returnType.isPrimitive()) {
+            switch (returnType.getName()) {
+                case "int":
+                    return retValue;
+                case "boolean":
+                    return retValue == 0;
+            }
+        }
+
         if (retValue != 0) {
             throwErrors(errorsHandler, errors);
             if (errorsHandler != null) {
@@ -169,13 +201,16 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                     throw new IllegalStateException(error);
                 }
             } else {
-                // throw error anyway
-                log.error("Error while execute command. Code: <{}>, Msg: <{}>", retValue, String.join(", ", errors));
-                throw new HardwareException(errors, retValue);
+                log.error("Error while execute command <{}>. Code: <{}>, Msg: <{}>", command, retValue, String.join(", ", errors));
+                if (!hardwareQuery.ignoreOnError()) {
+                    throw new HardwareException(errors, retValue);
+                }
             }
         } else {
             for (String error : errors) {
-                if (!error.isEmpty()) log.warn("Error execute hardware process <{}>", error);
+                if (!error.isEmpty()) {
+                    log.warn("Error <{}>", error);
+                }
             }
             inputs = inputs.stream().map(String::trim).collect(Collectors.toList());
             ListParse listParse = method.getAnnotation(ListParse.class);
@@ -199,7 +234,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 Class<?> genericClass = listParse.clazz();
                 List result = new ArrayList();
                 for (List<String> bucket : buckets) {
-                    result.add(handleBucket(bucket, genericClass, retValue));
+                    result.add(handleBucket(bucket, genericClass));
                 }
                 return result;
             } else if (lineParse != null) {
@@ -209,19 +244,15 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             } else if (booleanParse != null) {
                 return handleBucket(inputs, booleanParse);
             } else {
-                return handleBucket(inputs, method.getReturnType(), retValue);
+                return handleBucket(inputs, returnType);
             }
         }
         return null;
     }
 
-    private Object handleBucket(List<String> input, Class<?> genericClass, int retValue) throws IllegalAccessException, InstantiationException {
+    private Object handleBucket(List<String> input, Class<?> genericClass) throws IllegalAccessException, InstantiationException {
         if (genericClass.isPrimitive()) {
             switch (genericClass.getName()) {
-                case "int":
-                    return retValue;
-                case "boolean":
-                    return retValue == 0;
                 case "void":
                     return null;
             }

@@ -2,7 +2,7 @@ package org.touchhome.bundle.cloud.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
 
-public class CloudServerRestartSetting implements BundleSettingPlugin<String> {
+public class CloudServerRestartSetting implements BundleSettingPlugin<Void> {
 
     @Override
     public SettingType getSettingType() {

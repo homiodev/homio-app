@@ -40,19 +40,6 @@ public class ZigBeeNodeDescription {
     @Setter
     @JsonIgnore
     private Long expectedUpdateIntervalTimer;
-
-    public String getMaxTimeoutBeforeOfflineNode() {
-        return expectedUpdateInterval == null ? "Not set" : TimeUnit.SECONDS.toMinutes(expectedUpdateInterval) + "min";
-    }
-
-    public String getTimeoutBeforeOfflineNode() {
-        if (expectedUpdateIntervalTimer == null) {
-            return "Not set";
-        }
-        String min = String.valueOf(TimeUnit.SECONDS.toMinutes(expectedUpdateInterval - (System.currentTimeMillis() - expectedUpdateIntervalTimer) / 1000));
-        return "Expired in: " + min + "min";
-    }
-
     private NodeDescriptor.LogicalType logicalType;
     private Integer networkAddress;
     private NodeDescriptor nodeDescription;
@@ -70,31 +57,31 @@ public class ZigBeeNodeDescription {
     private Integer appVersion;
     private String manufacturer;
     private String firmwareVersion;
-
     @Setter
     private String deviceStatusMessage;
     @Setter
     private DeviceStatus deviceStatus = DeviceStatus.UNKNOWN;
     private FetchInfoStatus fetchInfoStatus = FetchInfoStatus.UNKNOWN;
-
     private Collection<ChannelDescription> channels;
-
     @Setter
     private boolean nodeInitialized;
-
     @Setter
     private NodeInitializationStatus nodeInitializationStatus;
 
-    public enum NodeInitializationStatus {
-        WaitForStart, Started, Finished;
-
-        public boolean finished() {
-            return this == Finished;
-        }
-    }
-
     ZigBeeNodeDescription(IeeeAddress ieeeAddress) {
         this.ieeeAddress = ieeeAddress.toString();
+    }
+
+    public String getMaxTimeoutBeforeOfflineNode() {
+        return expectedUpdateInterval == null ? "Not set" : TimeUnit.SECONDS.toMinutes(expectedUpdateInterval) + "min";
+    }
+
+    public String getTimeoutBeforeOfflineNode() {
+        if (expectedUpdateIntervalTimer == null) {
+            return "Not set";
+        }
+        String min = String.valueOf(TimeUnit.SECONDS.toMinutes(expectedUpdateInterval - (System.currentTimeMillis() - expectedUpdateIntervalTimer) / 1000));
+        return "Expired in: " + min + "min";
     }
 
     @SneakyThrows
@@ -160,6 +147,14 @@ public class ZigBeeNodeDescription {
 
     void setChannels(Map<ZigBeeConverterEndpoint, ZigBeeBaseChannelConverter> zigBeeConverterEndpoints) {
         this.channels = zigBeeConverterEndpoints.entrySet().stream().map(e -> new ChannelDescription(e.getKey(), e.getValue())).collect(Collectors.toList());
+    }
+
+    public enum NodeInitializationStatus {
+        WaitForStart, Started, Finished;
+
+        public boolean finished() {
+            return this == Finished;
+        }
     }
 
     public enum FetchInfoStatus {

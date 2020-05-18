@@ -1,6 +1,6 @@
 package org.touchhome.app.manager;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.utils.color.ColorThief;
@@ -22,10 +22,11 @@ import java.util.stream.Collectors;
 
 @Log4j2
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class BundleManager {
-    private final Map<String, String> bundleColorMap = new HashMap<>();
     private final List<BundleContext> bundleContexts;
+
+    private final Map<String, String> bundleColorMap = new HashMap<>();
     private Map<String, BundleContext> bundleMap;
 
     @PostConstruct

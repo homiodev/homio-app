@@ -5,8 +5,8 @@ import com.zsmartsystems.zigbee.zcl.clusters.onoff.OffCommand;
 import com.zsmartsystems.zigbee.zcl.clusters.onoff.OnCommand;
 import com.zsmartsystems.zigbee.zcl.clusters.onoff.ToggleCommand;
 import com.zsmartsystems.zigbee.zcl.clusters.onoff.ZclOnOffCommand;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
@@ -235,7 +235,7 @@ final class Scratch3ZigBeeButtonsBlocks {
         });
     }
 
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     private enum ButtonFireSignal {
         on(OnCommand.class), off(OffCommand.class), Toggle(ToggleCommand.class);
 
@@ -246,7 +246,7 @@ final class Scratch3ZigBeeButtonsBlocks {
         }
     }
 
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     private enum ButtonEndpoint {
         Left(1), Right(2), Both(null);
         private final Integer value;
@@ -261,7 +261,7 @@ final class Scratch3ZigBeeButtonsBlocks {
         }
     }
 
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     private enum ButtonEndpointGetter {
         Left(1), Right(2), Any(null);
         private final Integer value;

@@ -102,9 +102,11 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         WorkspaceBlock refWorkspaceBlock = allBlocks.get(menuId);
         String fieldValue = refWorkspaceBlock.getField(menuBlock.getName());
         if (Enum.class.isAssignableFrom(type)) {
-            for (P p : type.getEnumConstants())
-                if (((Enum<?>) p).name().equals(fieldValue))
+            for (P p : type.getEnumConstants()) {
+                if (((Enum<?>) p).name().equals(fieldValue)) {
                     return p;
+                }
+            }
         } else if (String.class.isAssignableFrom(type)) {
             return (P) fieldValue;
         } else if (BaseEntity.class.isAssignableFrom(type)) {

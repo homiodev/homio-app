@@ -1,5 +1,6 @@
 package org.touchhome.bundle.cloud.setting;
 
+import org.apache.commons.lang.StringUtils;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
@@ -16,6 +17,11 @@ public class CloudServerConnectionStatusSetting implements BundleSettingPlugin<S
     @Override
     public int order() {
         return 20;
+    }
+
+    @Override
+    public ServerConnectionStatus parseValue(String value) {
+        return StringUtils.isEmpty(value) ? null : ServerConnectionStatus.valueOf(value);
     }
 
     @Override

@@ -22,7 +22,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.touchhome.app.LogService;
 import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSONJSON;
-import org.touchhome.app.manager.BackgroundProcessManager;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.WidgetManager;
 import org.touchhome.app.manager.scripting.ScriptManager;
@@ -55,7 +54,7 @@ import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.ClassFinder;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
 import org.touchhome.bundle.cloud.impl.NettyClientService;
@@ -69,7 +68,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.repository.impl.UserRepository.DEFAULT_USER_ID;
+import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID;
 
 @Log4j2
@@ -130,7 +129,6 @@ public class InternalManager implements EntityContext {
 
         applicationContext.getBean(UserRepository.class).postConstruct();
         applicationContext.getBean(NettyClientService.class).postConstruct();
-        applicationContext.getBean(BackgroundProcessManager.class).postConstruct();
         applicationContext.getBean(ScriptManager.class).postConstruct();
         applicationContext.getBean(ConsoleController.class).postConstruct();
         applicationContext.getBean(SettingController.class).postConstruct(settingPluginsByPluginKey);
@@ -138,6 +136,7 @@ public class InternalManager implements EntityContext {
         listenSettingValue(SystemClearCacheButtonSetting.class, cacheService::clearCache);
 
         // init modules
+        log.info("Initialize bundles");
         for (BundleContext bundleContext : applicationContext.getBeansOfType(BundleContext.class).values()) {
             bundleContext.init();
         }
@@ -276,7 +275,7 @@ public class InternalManager implements EntityContext {
             return pluginFor.parseValue(StringUtils.defaultIfEmpty(settingTransientState.get(pluginFor), pluginFor.getDefaultValue()));
         } else {
             SettingEntity settingEntity = getEntity(SettingRepository.getKey(pluginFor));
-            return pluginFor.parseValue(StringUtils.defaultIfEmpty(settingEntity.getValue(), pluginFor.getDefaultValue()));
+            return pluginFor.parseValue(StringUtils.defaultIfEmpty(settingEntity == null ? null : settingEntity.getValue(), pluginFor.getDefaultValue()));
         }
     }
 
@@ -287,28 +286,10 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public void listenSettingValue(Class<? extends BundleSettingPlugin> bundleSettingPluginClazz, Runnable listener) {
-        settingListeners.putIfAbsent(bundleSettingPluginClazz, new ArrayList<>());
-        settingListeners.get(bundleSettingPluginClazz).add(o -> listener.run());
-    }
-
-    @Override
     public <T> void setSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value) {
         BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
         setSettingValueSilence(settingPluginClazz, value);
         fireNotifySettingHandlers(settingPluginClazz, value, pluginFor);
-    }
-
-    @Override
-    public <K, V> void updateSettingValue(Class<? extends BundleSettingPlugin<Map<K, V>>> settingPluginClazz, @NotNull K key, V value) {
-        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
-        log.debug("Update setting <{}> value <{}>", SettingRepository.getKey(pluginFor), value);
-        Map<K, V> settingValue = this.getSettingValue(settingPluginClazz);
-        settingValue.put(key, value);
-
-        String serValue = pluginFor.writeValue(settingValue);
-        this.setSettingValueRaw(settingPluginClazz, serValue);
-        fireNotifySettingHandlers(settingPluginClazz, settingValue, pluginFor);
     }
 
     @Override
@@ -377,7 +358,7 @@ public class InternalManager implements EntityContext {
     @Override
     public void sendErrorMessage(String message, Exception ex) {
         sendNotification(new NotificationEntityJSON("error-" + message.hashCode())
-                .setName(message + ". Cause: " + SmartUtils.getErrorMessage(ex))
+                .setName(message + ". Cause: " + TouchHomeUtils.getErrorMessage(ex))
                 .setNotificationType(NotificationType.danger));
     }
 
@@ -386,7 +367,7 @@ public class InternalManager implements EntityContext {
         AbstractRepository repository = getRepository(clazz);
         return entityManager.getEntityIDsByEntityClassFullName((Class<BaseEntity>) clazz).stream()
                 .map(entityID -> {
-                    T entity = (T) entityManager.getEntityWithFetchLazy(entityID);
+                    T entity = entityManager.getEntityWithFetchLazy(entityID);
                     repository.updateEntityAfterFetch(entity);
                     return entity;
                 }).collect(Collectors.toList());
@@ -444,16 +425,10 @@ public class InternalManager implements EntityContext {
     }
 
     private void createUser() {
-        UserEntity userEntity = getEntity(DEFAULT_USER_ID);
+        UserEntity userEntity = getEntity(ADMIN_USER);
         if (userEntity == null) {
-            userEntity = save(new UserEntity().computeEntityID(() -> DEFAULT_USER_ID));
+            save(new UserEntity().computeEntityID(() -> ADMIN_USER));
         }
-        UserEntity.set(userEntity);
-        addEntityUpdateListener(UserEntity.class, user -> {
-            if (user.getUserType() == UserEntity.UserType.REGULAR) {
-                UserEntity.set(user);
-            }
-        });
     }
 
     private void createRaspberryDevice() {

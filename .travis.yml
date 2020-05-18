@@ -11,7 +11,7 @@ deploy:
   file_glob: true
   draft: true
   file:
-    - "app/target/touchHome.jar"
-    - "app/target/touchHome.jar.md5"
+  - "app/target/touchHome.jar"
+  - "app/target/touchHome.jar.md5"
   on:
     tags: true

@@ -1,13 +1,13 @@
 package org.touchhome.bundle.nrf24i01.rf24;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.DeviceStatus;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
 import org.touchhome.bundle.arduino.repository.ArduinoDeviceRepository;
 import org.touchhome.bundle.nrf24i01.rf24.communication.RF24Message;
@@ -15,26 +15,23 @@ import org.touchhome.bundle.nrf24i01.rf24.communication.ReadListener;
 import org.touchhome.bundle.nrf24i01.rf24.communication.Rf24Communicator;
 import org.touchhome.bundle.nrf24i01.rf24.communication.SendCommand;
 import org.touchhome.bundle.nrf24i01.rf24.options.*;
+import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01EnableButtonsSetting;
 import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01StatusMessageSetting;
 import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01StatusSetting;
 import pl.grzeslowski.smarthome.rf24.helpers.Pipe;
 
 @Log4j2
 @Component
+@RequiredArgsConstructor
 public class RF24Service implements BundleContext {
+    private final Rf24Communicator rf24Communicator;
+    private final EntityContext entityContext;
+
+    private static final String libName = "/librf24bcmjava.so";
     private static final Pipe GLOBAL_WRITE_PIPE = new Pipe("2Node");
     private static byte messageID = 0;
     private static String errorLoadingLibrary = null;
-
-    static {
-        String libName = "/librf24bcmjava.so";
-        try {
-            SmartUtils.loadLibraryFromJar(libName);
-        } catch (Throwable ex) {
-            errorLoadingLibrary = SmartUtils.getErrorMessage(ex);
-            log.error("Error while load library <{}>", libName);
-        }
-    }
+    private boolean libLoaded = false;
 
     @Value("${rf24RetryDelay:15}")
     private short rf24RetryDelay;
@@ -48,24 +45,36 @@ public class RF24Service implements BundleContext {
     @Value("${rf24AutoAck:false}")
     private boolean rf24AutoAck;
 
-    @Autowired
-    private Rf24Communicator rf24Communicator;
-
-    @Autowired
-    private EntityContext entityContext;
-
     public boolean isNrf24L01Works() {
-        return errorLoadingLibrary == null && rf24Communicator.getNRF24L01() != null;
+        return libLoaded && errorLoadingLibrary == null && rf24Communicator.getNRF24L01() != null;
+    }
+
+    private void loadLibrary() {
+        if (!libLoaded) {
+            try {
+                TouchHomeUtils.loadLibraryFromJar(libName);
+            } catch (Throwable ex) {
+                log.error("Error while load library <{}>", libName);
+                errorLoadingLibrary = TouchHomeUtils.getErrorMessage(ex);
+                entityContext.setSettingValue(Nrf24i01StatusMessageSetting.class, errorLoadingLibrary);
+                entityContext.setSettingValue(Nrf24i01StatusSetting.class, DeviceStatus.OFFLINE);
+            }
+        }
     }
 
     public void init() {
-        if (isNrf24L01Works()) {
-            rf24Communicator.runPipeReadWrite();
-        }
-        if (errorLoadingLibrary != null) {
-            entityContext.setSettingValue(Nrf24i01StatusMessageSetting.class, errorLoadingLibrary);
-            entityContext.setSettingValue(Nrf24i01StatusSetting.class, DeviceStatus.OFFLINE);
-        }
+        entityContext.listenSettingValue(Nrf24i01EnableButtonsSetting.class, enable -> {
+            if (enable) {
+                loadLibrary();
+                if (isNrf24L01Works()) {
+                    rf24Communicator.runPipeReadWrite();
+                }
+            } else {
+                if (!rf24Communicator.stopRunPipeReadWrite()) {
+                    log.error("Unable to stop read/write threads");
+                }
+            }
+        });
     }
 
     @Override

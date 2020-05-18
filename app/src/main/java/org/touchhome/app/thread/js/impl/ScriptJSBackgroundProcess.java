@@ -8,7 +8,7 @@ import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.script.Invocable;
 import java.util.Iterator;
@@ -81,7 +81,7 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
 
             return script.toString();
         } catch (Exception ex) {
-            String msg = SmartUtils.getErrorMessage(ex);
+            String msg = TouchHomeUtils.getErrorMessage(ex);
             setStatus(BackgroundProcessStatus.FAILED, msg);
             logError("Error while call script with id: <{}>. Msg: <{}>", scriptEntity.getEntityID(), msg);
             throw new RuntimeException(ex);

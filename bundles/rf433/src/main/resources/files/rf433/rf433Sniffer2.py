@@ -1,7 +1,8 @@
-import RPi.GPIO as GPIO
 import argparse
 import struct
 from datetime import datetime
+
+import RPi.GPIO as GPIO
 
 parser = argparse.ArgumentParser(
     description='Script to sniffer data from rf433 receiver')

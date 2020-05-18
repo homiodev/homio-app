@@ -23,7 +23,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.touchhome.bundle.api.util.SmartUtils.resolvePath;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.resolvePath;
 
 @Log4j2
 public class ZigBeeDataStore implements ZigBeeNetworkDataStore {

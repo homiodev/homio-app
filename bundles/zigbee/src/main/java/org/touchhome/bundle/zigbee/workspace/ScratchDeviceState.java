@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.touchhome.bundle.zigbee.ZigBeeDevice;
 import org.touchhome.bundle.zigbee.ZigBeeDeviceStateUUID;
-import org.touchhome.bundle.zigbee.converter.impl.ZigBeeConverterEndpoint;
 import org.touchhome.bundle.zigbee.model.State;
 
 @Setter

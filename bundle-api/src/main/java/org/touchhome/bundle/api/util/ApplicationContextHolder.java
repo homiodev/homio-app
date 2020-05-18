@@ -6,6 +6,9 @@ import org.springframework.context.ApplicationContextAware;
 
 import java.util.Collection;
 
+/**
+ * Try remove this
+ */
 @Deprecated
 public class ApplicationContextHolder implements ApplicationContextAware {
 
@@ -21,10 +24,6 @@ public class ApplicationContextHolder implements ApplicationContextAware {
 
     public static <T> T getBean(String beanName, Class<T> clazz) {
         return applicationContext.getBean(beanName, clazz);
-    }
-
-    public static boolean isContextInitialized() {
-        return applicationContext != null;
     }
 
     @Override

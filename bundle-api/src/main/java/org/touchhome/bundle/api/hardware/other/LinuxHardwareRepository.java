@@ -10,7 +10,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 
 @HardwareRepositoryAnnotation
-public interface RaspberryHardwareRepository {
+public interface LinuxHardwareRepository {
 
     @HardwareQuery(" df -m / | sed -e /^Filesystem/d")
     HardwareMemory getSDCardMemory();
@@ -33,8 +33,11 @@ public interface RaspberryHardwareRepository {
     @HardwareQuery("iwgetid -r")
     String getWifiName();
 
-    @HardwareQuery("sudo reboot")
+    @HardwareQuery(echo = "Reboot device", value = "sudo reboot")
     void reboot();
+
+    @HardwareQuery("cat /etc/os-release")
+    HardwareOs getOs();
 
     @SneakyThrows
     default String getIpAddress() {

@@ -34,8 +34,12 @@ public class NotificationEntityJSON {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         NotificationEntityJSON that = (NotificationEntityJSON) o;
         return Objects.equals(entityID, that.entityID);
     }

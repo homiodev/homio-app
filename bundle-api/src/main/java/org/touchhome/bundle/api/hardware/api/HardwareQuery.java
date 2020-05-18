@@ -1,14 +1,12 @@
 package org.touchhome.bundle.api.hardware.api;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
+@Repeatable(HardwareQueries.class)
 public @interface HardwareQuery {
-    String value();
+    String[] value();
 
     int maxSecondsTimeout() default 60;
 
@@ -16,4 +14,8 @@ public @interface HardwareQuery {
     String dir() default "";
 
     boolean printOutput() default false;
+
+    boolean ignoreOnError() default false;
+
+    String echo() default "";
 }

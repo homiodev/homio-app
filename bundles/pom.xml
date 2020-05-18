@@ -25,6 +25,33 @@
         <module>xaomi</module>
     </modules>
 
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <phase>generate-sources</phase>
+                            <goals>
+                                <goal>copy-resources</goal>
+                            </goals>
+
+                            <configuration>
+                                <outputDirectory>../../target/asm_files/</outputDirectory>
+                                <resources>
+                                    <resource>
+                                        <directory>src/main/resources/files</directory>
+                                    </resource>
+                                </resources>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
     <dependencies>
         <dependency>
             <groupId>org.touchhome</groupId>

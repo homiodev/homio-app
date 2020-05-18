@@ -1,30 +1,26 @@
 package org.touchhome.app.manager;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.json.bgp.BackgroundProcessServiceJSON;
 import org.touchhome.bundle.api.thread.BackgroundProcessService;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
-import org.touchhome.bundle.api.util.ClassFinder;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.annotation.PreDestroy;
-import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 import static org.touchhome.bundle.api.thread.BackgroundProcessStatus.*;
 
 @Log4j2
 @Component
-@RequiredArgsConstructor
 public class BackgroundProcessManager {
 
-    private static Set<Class<? extends BackgroundProcessService>> backgroundProcessServices = new Reflections("org.touchhome").getSubTypesOf(BackgroundProcessService.class);
-    private final ClassFinder classFinder;
     @Value("${backgroundProcessThreadsMaxCount:1000}")
     private int backgroundProcessThreadsMaxCount;
 
@@ -32,18 +28,7 @@ public class BackgroundProcessManager {
 
     private Map<String, BackgroundProcessDescriptor> threads = new ConcurrentHashMap<>();
 
-    public void postConstruct() {
-        for (Class<? extends BackgroundProcessService> aClass : backgroundProcessServices) {
-            try {
-                Constructor<? extends BackgroundProcessService> constructor = aClass.getDeclaredConstructor();
-                fireIfNeedRestart(constructor.newInstance());
-            } catch (Exception ignore) {
-
-            }
-        }
-    }
-
-    public ScheduledThreadPoolExecutor getScheduledThreadPoolExecutor() {
+    private ScheduledThreadPoolExecutor getScheduledThreadPoolExecutor() {
         if (scheduledThreadPoolExecutor == null) {
             scheduledThreadPoolExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(backgroundProcessThreadsMaxCount);
             scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
@@ -136,7 +121,7 @@ public class BackgroundProcessManager {
                 try {
                     backgroundProcessService.run();
                 } catch (Exception ex) {
-                    cancelTask(backgroundProcessService, FAILED, SmartUtils.getErrorMessage(ex));
+                    cancelTask(backgroundProcessService, FAILED, TouchHomeUtils.getErrorMessage(ex));
                 }
             };
 

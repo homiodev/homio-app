@@ -3,7 +3,7 @@ package org.touchhome.app.manager;
 import com.github.sarxos.webcam.Webcam;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -33,7 +33,7 @@ public class VideoManager {
             webcam.open();
             BufferedImage image = webcam.getImage();
             // save image to PNG file
-            Path imagePath = imagesDir.resolve("CameraImage_" + SmartUtils.getTimestampString() + ".png");
+            Path imagePath = imagesDir.resolve("CameraImage_" + TouchHomeUtils.getTimestampString() + ".png");
             ImageIO.write(image, "PNG", imagePath.toFile());
             return imagePath;
         } finally {

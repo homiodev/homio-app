@@ -11,11 +11,11 @@ import org.touchhome.bundle.telegram.settings.TelegramBotNameSetting;
 import org.touchhome.bundle.telegram.settings.TelegramBotTokenSetting;
 
 @Log4j2
-public final class SmartTelegramBot extends TelegramLongPollingCommandBot {
+public final class TelegramBot extends TelegramLongPollingCommandBot {
 
     private final EntityContext entityContext;
 
-    SmartTelegramBot(DefaultBotOptions botOptions, EntityContext entityContext) {
+    TelegramBot(DefaultBotOptions botOptions, EntityContext entityContext) {
         super(botOptions, true);
         this.entityContext = entityContext;
 

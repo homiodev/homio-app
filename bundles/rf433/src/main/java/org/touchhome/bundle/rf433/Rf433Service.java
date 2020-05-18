@@ -2,12 +2,13 @@ package org.touchhome.bundle.rf433;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.rf433.dto.Rf433JSON;
 import org.touchhome.bundle.rf433.model.RF433SignalEntity;
 
@@ -18,43 +19,35 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.stream.IntStream;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 @Log4j2
 @Component
 @RequiredArgsConstructor
 public class Rf433Service implements BundleContext {
-    private static Path rf433Dir;
+    private static Path rf433Dir = TouchHomeUtils.resolvePath("rf433");
     private final EntityContext entityContext;
     private Path rf433TransmitterPy;
     private Path rf433ReceiverPy;
     private boolean isTestApplication = false;
 
     public void init() {
-        rf433Dir = SmartUtils.path("rf433");
+        if (EntityContext.isTestApplication()) {
+            return;
+        }
         try {
-            Files.createDirectories(rf433Dir);
-            Files.walkFileTree(rf433Dir, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    if (file.getFileName().toString().endsWith(".getPinRequestType")) {
-                        try {
-                            Files.delete(file);
-                        } catch (Exception ex) {
-                            log.error("Can't delete lock file: " + SmartUtils.getErrorMessage(ex), ex);
-                        }
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-            });
+            FileUtils.cleanDirectory(rf433Dir.toFile());
             rf433TransmitterPy = rf433Dir.resolve("rf433Transmitter.py");
-            SmartUtils.copyResource("rf433/rf433Transmitter.py", rf433TransmitterPy);
+            Files.copy(TouchHomeUtils.getFilesPath().resolve("rf433").resolve("rf433Transmitter.py"), rf433TransmitterPy, REPLACE_EXISTING);
 
             rf433ReceiverPy = rf433Dir.resolve("rf433Sniffer.py");
-            SmartUtils.copyResource("rf433/rf433Sniffer.py", rf433ReceiverPy);
+            Files.copy(TouchHomeUtils.getFilesPath().resolve("rf433").resolve("rf433Sniffer.py"), rf433ReceiverPy, REPLACE_EXISTING);
         } catch (IOException e) {
             log.error(e.getMessage(), e);
             throw new RuntimeException(e);
@@ -106,14 +99,14 @@ public class Rf433Service implements BundleContext {
                 signal.values[i++] = value == '1' ? 1 : 0;
             }
         } else {
-            signal.times = SmartUtils.readFile("test/RECEIVED_SIGNAL_0_CONVERTED")
+            signal.times = TouchHomeUtils.readFile("test/RECEIVED_SIGNAL_0_CONVERTED")
                     .stream()
                     .map(line -> {
                         BigDecimal value = new BigDecimal(line);
                         value = value.setScale(rf433JSON.getSignalAccuracy(), RoundingMode.HALF_EVEN);
                         return value.floatValue();
                     }).toArray(Float[]::new);
-            signal.values = SmartUtils.readFile("test/RECEIVED_SIGNAL_1")
+            signal.values = TouchHomeUtils.readFile("test/RECEIVED_SIGNAL_1")
                     .stream()
                     .map(v -> v.equals("1") ? 1 : 0).toArray(Integer[]::new);
         }
@@ -149,7 +142,7 @@ public class Rf433Service implements BundleContext {
         Path path = rf433Dir.resolve("testWave.getPinRequestType");
         Path entityPath = rf433Dir.resolve(entity.getEntityID());
         entity.setPath(entityPath.toString());
-        Files.move(path, entityPath, StandardCopyOption.REPLACE_EXISTING);
+        Files.move(path, entityPath, REPLACE_EXISTING);
 
         return entityContext.save(entity);
     }
@@ -291,11 +284,15 @@ public class Rf433Service implements BundleContext {
                         IntStream.rangeClosed(secondBucket.getKey(), secondBucket.getValue()).forEach(blockedIndexes::add);
                         // now first index is last index of second bucket + 1
                         fromIndex = secondBucket.getValue() + 1;
-                        while (blockedIndexes.contains(fromIndex)) fromIndex++;
+                        while (blockedIndexes.contains(fromIndex)) {
+                            fromIndex++;
+                        }
                     } else {
                         // try figure out next index to find
                         fromIndex = secondBucket.getValue() - fromIndex > maxTime ? secondBucket.getValue() + 1 : fromIndex + 1;
-                        while (blockedIndexes.contains(fromIndex)) fromIndex++;
+                        while (blockedIndexes.contains(fromIndex)) {
+                            fromIndex++;
+                        }
                     }
                     secondBucket = findTimeBucketStartFrom(fromIndex, maxTime, blockedIndexes);
                 }
@@ -346,11 +343,15 @@ public class Rf433Service implements BundleContext {
                         IntStream.rangeClosed(secondBucket.getKey(), secondBucket.getValue()).forEach(blockedIndexes::add);
                         // now first index is last index of second bucket + 1
                         fromIndex = secondBucket.getValue() + 1;
-                        while (blockedIndexes.contains(fromIndex)) fromIndex++;
+                        while (blockedIndexes.contains(fromIndex)) {
+                            fromIndex++;
+                        }
                     } else {
                         // try figure out next index to find
                         fromIndex = secondBucket.getValue() - fromIndex > maxTime ? secondBucket.getValue() + 1 : fromIndex + 1;
-                        while (blockedIndexes.contains(fromIndex)) fromIndex++;
+                        while (blockedIndexes.contains(fromIndex)) {
+                            fromIndex++;
+                        }
                     }
                     secondBucket = findTimeBucketStartFrom(fromIndex, maxTime, blockedIndexes);
                 }
@@ -390,7 +391,9 @@ public class Rf433Service implements BundleContext {
             while (times[toIndex] - times[fromIndex] < maxTime) {
                 toIndex++;
                 if (blockedIndexes.contains(toIndex)) {
-                    while (blockedIndexes.contains(toIndex)) toIndex++;
+                    while (blockedIndexes.contains(toIndex)) {
+                        toIndex++;
+                    }
                     return findTimeBucketStartFrom(toIndex, maxTime, blockedIndexes);
                 }
                 if (toIndex >= times.length) {

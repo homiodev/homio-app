@@ -2,20 +2,20 @@ package org.touchhome.bundle.cloud.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
 
-public class CloudHomeIpAddressSetting implements BundleSettingPlugin<String> {
+public class CloudServerPortSetting implements BundleSettingPlugin<Integer> {
 
     @Override
     public SettingType getSettingType() {
-        return SettingType.Text;
+        return SettingType.Integer;
     }
 
     @Override
     public String getDefaultValue() {
-        return "http://localhost:8090";
+        return "8888";
     }
 
     @Override
     public int order() {
-        return 40;
+        return 45;
     }
 }

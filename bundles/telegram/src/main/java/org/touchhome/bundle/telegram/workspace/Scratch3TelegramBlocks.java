@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @Component
 @Scratch3Extension("telegram")
 public class Scratch3TelegramBlocks extends Scratch3ExtensionBlocks {
-    public static final String URL = "/rest/v2/telegram/";
+    public static final String URL = "rest/v2/telegram/";
 
     private static final String USER = "USER";
     private static final String MESSAGE = "MESSAGE";

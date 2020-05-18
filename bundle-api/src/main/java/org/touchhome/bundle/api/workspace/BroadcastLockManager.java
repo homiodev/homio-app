@@ -32,8 +32,9 @@ public class BroadcastLockManager {
 
     public void signalAll(String key) {
         for (Holder holder : warehouse.values()) {
-            if (holder.broadcastListeners.containsKey(key))
+            if (holder.broadcastListeners.containsKey(key)) {
                 holder.broadcastListeners.get(key).signalAll();
+            }
         }
     }
 

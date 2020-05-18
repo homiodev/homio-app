@@ -8,10 +8,8 @@ import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 @HardwareRepositoryAnnotation
 public interface StartupHardwareRepository {
 
-    @HardwareQueries({
-            @HardwareQuery("sudo sed -i 's/\"exit 0\"/\"Hi, my mate\"/' /etc/rc.local"),
-            @HardwareQuery("grep -xF ':cmd' /etc/rc.local && echo '1' || sudo sed -i '/exit 0/i :cmd' /etc/rc.local"),
-    })
+    @HardwareQuery("sudo sed -i 's/\"exit 0\"/\"Hi, my mate\"/' /etc/rc.local")
+    @HardwareQuery("grep -xF ':cmd' /etc/rc.local && echo '1' || sudo sed -i '/exit 0/i :cmd' /etc/rc.local")
     String addStartupCommand(@ApiParam("cmd") String cmd);
 
     @HardwareQuery("sudo ./update.sh :version")

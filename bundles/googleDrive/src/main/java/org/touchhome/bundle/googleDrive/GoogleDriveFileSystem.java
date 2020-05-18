@@ -30,7 +30,7 @@ import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.util.*;
 
-import static org.touchhome.bundle.api.repository.impl.UserRepository.DEFAULT_USER_ID;
+import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 
 @Component
 @RequiredArgsConstructor
@@ -149,14 +149,14 @@ public class GoogleDriveFileSystem implements BundleContext {
     public Drive getDrive(String code) throws IOException, CodeExchangeException {
         if (drive == null) {
             if (code == null) {
-                Credential storedCredentials = getStoredCredentials(UserRepository.DEFAULT_USER_ID);
+                Credential storedCredentials = getStoredCredentials(ADMIN_USER);
                 if (storedCredentials != null) {
                     drive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, storedCredentials).setApplicationName(APPLICATION_NAME).build();
                 } else {
-                    throw new CodeExchangeException(getAuthorizationUrl(UserRepository.DEFAULT_USER_ID/*userManager.getSharedEmail()*/));
+                    throw new CodeExchangeException(getAuthorizationUrl(ADMIN_USER/*userManager.getSharedEmail()*/));
                 }
             } else {
-                UserEntity userEntity = entityContext.getEntity(UserRepository.DEFAULT_USER_ID);
+                UserEntity userEntity = entityContext.getEntity(ADMIN_USER);
                 Credential credentials = getCredentials(code, userEntity == null ? null : userEntity.getUserId());
                 drive = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials).setApplicationName(APPLICATION_NAME).build();
             }
@@ -193,7 +193,7 @@ public class GoogleDriveFileSystem implements BundleContext {
     }
 
     void storeCredentials(String userId, Credential credentials) {
-        UserEntity userEntity = entityContext.getEntity(DEFAULT_USER_ID);
+        UserEntity userEntity = entityContext.getEntity(ADMIN_USER);
         userEntity.setUserId(userId);
         userEntity.setGoogleDriveAccessToken(credentials.getAccessToken());
         userEntity.setGoogleDriveRefreshToken(credentials.getRefreshToken());

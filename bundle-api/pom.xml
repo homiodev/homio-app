@@ -14,11 +14,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.reflections</groupId>
-            <artifactId>reflections</artifactId>
-            <version>0.9.12</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
-
         <dependency>
             <groupId>tec.uom</groupId>
             <artifactId>uom-se</artifactId>

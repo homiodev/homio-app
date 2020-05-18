@@ -10,6 +10,6 @@ public class Nrf24i01StatusMessageSetting implements BundleSettingPlugin<String>
 
     @Override
     public int order() {
-        return 0;
+        return 3;
     }
 }

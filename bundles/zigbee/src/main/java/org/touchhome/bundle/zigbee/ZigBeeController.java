@@ -2,12 +2,12 @@ package org.touchhome.bundle.zigbee;
 
 import com.zsmartsystems.zigbee.zcl.clusters.ZclIasZoneCluster;
 import com.zsmartsystems.zigbee.zcl.clusters.ZclOnOffCluster;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.zigbee.converter.impl.ZigBeeConverterEndpoint;
 import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
 
@@ -17,7 +17,7 @@ import java.util.List;
 @Log4j2
 @RestController
 @RequestMapping("/rest/zigbee")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ZigBeeController {
     private final EntityContext entityContext;
     private final ZigBeeBundleContext zigbeeBundleContext;
@@ -94,7 +94,7 @@ public class ZigBeeController {
     private List<ZigBeeConverterEndpoint> getZigBeeConverterEndpointsByClusterId(ZigBeeDevice zigBeeDevice, Integer clusterId) {
         List<ZigBeeConverterEndpoint> endpoints = new ArrayList<>();
         for (ZigBeeConverterEndpoint zigBeeConverterEndpoint : zigBeeDevice.getZigBeeConverterEndpoints().keySet()) {
-            if (SmartUtils.containsAny(zigBeeConverterEndpoint.getZigBeeConverter().clientClusters(), clusterId)) {
+            if (TouchHomeUtils.containsAny(zigBeeConverterEndpoint.getZigBeeConverter().clientClusters(), clusterId)) {
                 endpoints.add(zigBeeConverterEndpoint);
             }
         }

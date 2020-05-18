@@ -1,13 +1,13 @@
 package org.touchhome.bundle.googleDrive;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -15,7 +15,7 @@ import java.io.IOException;
 @Log4j2
 @RestController
 @RequestMapping("/rest/googleDrive")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class GoogleDriveController {
 
     private final GoogleDriveCloudManager googleDriveCloudManager;
@@ -47,13 +47,13 @@ public class GoogleDriveController {
         try {
             googleDriveFileSystem.login(code);
         } catch (GoogleDriveFileSystem.CodeExchangeException ex) {
-            log.error(SmartUtils.getErrorMessage(ex), ex);
+            log.error(TouchHomeUtils.getErrorMessage(ex), ex);
             throw ex;
         }
         try {
             response.sendRedirect("/");
         } catch (IOException ex) {
-            log.error(SmartUtils.getErrorMessage(ex), ex);
+            log.error(TouchHomeUtils.getErrorMessage(ex), ex);
         }
     }
 

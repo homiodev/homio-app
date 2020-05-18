@@ -11,7 +11,7 @@ public class CloudServerUrlSetting implements BundleSettingPlugin<String> {
 
     @Override
     public String getDefaultValue() {
-        return "http://event-home.com";
+        return "http://touchhome.org";
     }
 
     @Override

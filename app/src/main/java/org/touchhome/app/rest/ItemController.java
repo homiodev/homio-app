@@ -1,8 +1,8 @@
 package org.touchhome.app.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
@@ -34,8 +34,8 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
 import org.touchhome.bundle.api.ui.method.UIMethodAction;
 import org.touchhome.bundle.api.util.ClassFinder;
-import org.touchhome.bundle.api.util.SmartUtils;
-import org.touchhome.bundle.raspberry.RaspberryManager;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.raspberry.RaspberryGPIOService;
 
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
@@ -52,17 +52,18 @@ import static org.touchhome.app.rest.UtilsController.fillEntityUIMetadataList;
 @Log4j2
 @RestController
 @RequestMapping("/rest/item")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ItemController {
 
     private static Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
     private final ObjectMapper objectMapper;
-    private final RaspberryManager raspberryManager;
+    private final RaspberryGPIOService raspberryGPIOService;
     private final EntityContext entityContext;
     private final EntityManager entityManager;
     private final ClassFinder classFinder;
     private final ImageManager imageManager;
     private final ApplicationContext applicationContext;
+    private final Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
 
     @SneakyThrows
     static Object executeAction(UIActionDescription uiActionDescription, Object actionHolder, ApplicationContext applicationContext, BaseEntity actionEntity) {
@@ -243,13 +244,12 @@ public class ItemController {
     private void putTypeToEntityIfNotExists(String type) {
         if (!typeToEntityClassNames.containsKey(type)) {
             typeToEntityClassNames.put(type, new ArrayList<>());
-            Optional<Class<? extends BaseEntity>> baseEntityByName = classFinder.getBaseEntityByName(type);
-            if (baseEntityByName.isPresent()) {
-                Class<? extends BaseEntity> aClass = baseEntityByName.get();
-                if (Modifier.isAbstract(aClass.getModifiers())) {
-                    typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(aClass));
+            Class<? extends BaseEntity> baseEntityByName = baseEntitySimpleClasses.get(type);
+            if (baseEntityByName != null) {
+                if (Modifier.isAbstract(baseEntityByName.getModifiers())) {
+                    typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(baseEntityByName));
                 } else {
-                    typeToEntityClassNames.get(type).add(aClass);
+                    typeToEntityClassNames.get(type).add(baseEntityByName);
                 }
             }
         }
@@ -319,7 +319,7 @@ public class ItemController {
 
     @GetMapping("raspberry/DS18B20")
     public List<BaseEntity> getRaspberryDS18B20() {
-        return raspberryManager.getDS18B20()
+        return raspberryGPIOService.getDS18B20()
                 .stream().map(s -> BaseEntity.of(s, s)).collect(Collectors.toList());
     }
 
@@ -343,7 +343,7 @@ public class ItemController {
             entity = getInstanceByClass(entityID); // i.e in case we load Widget
         }
         if (StringUtils.isNotEmpty(selectOptionMethod)) {
-            Method method = SmartUtils.findRequreMethod(entity.getClass(), selectOptionMethod);
+            Method method = TouchHomeUtils.findRequreMethod(entity.getClass(), selectOptionMethod);
             return (List) executeMethodAction(method, entity, applicationContext, entity);
         }
 

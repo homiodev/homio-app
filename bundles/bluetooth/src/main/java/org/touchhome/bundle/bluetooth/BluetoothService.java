@@ -2,6 +2,7 @@ package org.touchhome.bundle.bluetooth;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang.StringUtils;
 import org.ble.BleApplicationListener;
 import org.ble.BluetoothApplication;
 import org.dbus.InterfacesAddedSignal.InterfacesAdded;
@@ -10,19 +11,23 @@ import org.freedesktop.dbus.Variant;
 import org.springframework.stereotype.Controller;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.hardware.other.RaspberryHardwareRepository;
+import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
+import org.touchhome.bundle.api.hardware.wifi.Network;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.cloud.impl.ServerConnectionStatus;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerRestartSetting;
+import org.touchhome.bundle.cloud.setting.CloudServerUrlSetting;
 
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.repository.impl.UserRepository.DEFAULT_USER_ID;
-import static org.touchhome.bundle.api.util.SmartUtils.distinctByKey;
+import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.distinctByKey;
 
 @Log4j2
 @Controller
@@ -45,20 +50,72 @@ public class BluetoothService implements BundleContext {
     private static final String WRITE_BAN_UUID = PREFIX + "12";
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
 
-    private static final int TIME_REFRESH_PASSWORD = 10 * 60 * 1000; // 10min
+    public static final int MIN_WRITE_TIMEOUT = 60000;
+    private static final int TIME_REFRESH_PASSWORD = 5 * 60000; // 5 minute for session
     private static long timeSinceLastCheckPassword = -1;
-    private final EntityContext entityContext;
-    private final RaspberryHardwareRepository raspberryHardwareRepository;
-    private final WirelessHardwareRepository wirelessHardwareRepository;
+
     private BluetoothApplication bluetoothApplication;
     private UserEntity user;
 
+    private final EntityContext entityContext;
+    private final LinuxHardwareRepository linuxHardwareRepository;
+    private final WirelessHardwareRepository wirelessHardwareRepository;
+    private final Map<String, Long> wifiWriteProtect = new ConcurrentHashMap<>();
+
+    public Map<String, String> getDeviceCharacteristics() {
+        Map<String, String> map = new HashMap<>();
+        map.put(CPU_LOAD_UUID, readSafeValueStr(linuxHardwareRepository::getCpuLoad));
+        map.put(CPU_TEMP_UUID, readSafeValueStr(linuxHardwareRepository::getCpuTemp));
+        map.put(MEMORY_UUID, readSafeValueStr(linuxHardwareRepository::getMemory));
+        map.put(SD_MEMORY_UUID, readSafeValueStr(() -> linuxHardwareRepository.getSDCardMemory().toFineString()));
+        map.put(UPTIME_UUID, readSafeValueStr(linuxHardwareRepository::getUptime));
+        map.put(IP_ADDRESS_UUID, readSafeValueStr(linuxHardwareRepository::getIpAddress));
+        map.put(WRITE_BAN_UUID, gatherWriteBan());
+        map.put(DEVICE_MODEL_UUID, readSafeValueStr(linuxHardwareRepository::getDeviceModel));
+        map.put(SERVER_CONNECTED_UUID, readSafeValueStrIT(this::readServerConnected));
+        map.put(WIFI_LIST_UUID, readSafeValueStr(this::readWifiList));
+        map.put(WIFI_NAME_UUID, readSafeValueStr(linuxHardwareRepository::getWifiName));
+        map.put(KEYSTORE_SET_UUID, readSafeValueStrIT(() -> String.valueOf(user.getKeystoreDate() == null ? "" : user.getKeystoreDate().getTime())));
+        map.put(PWD_SET_UUID, readPwdSet());
+
+        return map;
+    }
+
+    private String gatherWriteBan() {
+        List<String> status = new ArrayList<>();
+        for (Map.Entry<String, Long> entry : wifiWriteProtect.entrySet()) {
+            if (System.currentTimeMillis() - entry.getValue() < MIN_WRITE_TIMEOUT) {
+                status.add(entry.getKey() + "%&%" + ((MIN_WRITE_TIMEOUT - (System.currentTimeMillis() - entry.getValue())) / 1000));
+            }
+        }
+        return String.join("%#%", status);
+    }
+
+    public void setDeviceCharacteristic(String uuid, byte[] value) {
+        if (value != null && (!wifiWriteProtect.containsKey(uuid) || System.currentTimeMillis() - wifiWriteProtect.get(uuid) > MIN_WRITE_TIMEOUT)) {
+            wifiWriteProtect.put(uuid, System.currentTimeMillis());
+            switch (uuid) {
+                case DEVICE_MODEL_UUID:
+                    rebootDevice(null);
+                    return;
+                case WIFI_NAME_UUID:
+                    writeWifiSSID(value);
+                    return;
+                case PWD_SET_UUID:
+                    writePwd(value);
+                    return;
+                case KEYSTORE_SET_UUID:
+                    writeKeystore(value);
+            }
+        }
+    }
+
     public void init() {
+        this.user = entityContext.getEntity(ADMIN_USER);
         if (EntityContext.isTestApplication()) {
             log.info("Bluetooth skipped in test applications");
             return;
         }
-        this.user = entityContext.getEntity(DEFAULT_USER_ID);
 
         log.info("Starting bluetooth...");
 
@@ -76,65 +133,19 @@ public class BluetoothService implements BundleContext {
             }
         });
 
-        bluetoothApplication.newReadCharacteristic("cpu_load", CPU_LOAD_UUID, () -> readSafeValue(raspberryHardwareRepository::getCpuLoad));
-        bluetoothApplication.newReadCharacteristic("cpu_temp", CPU_TEMP_UUID, () -> readSafeValue(raspberryHardwareRepository::getCpuTemp));
-        bluetoothApplication.newReadCharacteristic("memory", MEMORY_UUID, () -> readSafeValue(raspberryHardwareRepository::getMemory));
-        bluetoothApplication.newReadCharacteristic("sd_memory", SD_MEMORY_UUID, () -> readSafeValue(() -> raspberryHardwareRepository.getSDCardMemory().toFineString()));
-        bluetoothApplication.newReadCharacteristic("uptime", UPTIME_UUID, () -> readSafeValue(raspberryHardwareRepository::getUptime));
-        bluetoothApplication.newReadCharacteristic("ip", IP_ADDRESS_UUID, () -> readSafeValue(raspberryHardwareRepository::getIpAddress));
+        bluetoothApplication.newReadCharacteristic("cpu_load", CPU_LOAD_UUID, () -> readSafeValue(linuxHardwareRepository::getCpuLoad));
+        bluetoothApplication.newReadCharacteristic("cpu_temp", CPU_TEMP_UUID, () -> readSafeValue(linuxHardwareRepository::getCpuTemp));
+        bluetoothApplication.newReadCharacteristic("memory", MEMORY_UUID, () -> readSafeValue(linuxHardwareRepository::getMemory));
+        bluetoothApplication.newReadCharacteristic("sd_memory", SD_MEMORY_UUID, () -> readSafeValue(() -> linuxHardwareRepository.getSDCardMemory().toFineString()));
+        bluetoothApplication.newReadCharacteristic("uptime", UPTIME_UUID, () -> readSafeValue(linuxHardwareRepository::getUptime));
+        bluetoothApplication.newReadCharacteristic("ip", IP_ADDRESS_UUID, () -> readSafeValue(linuxHardwareRepository::getIpAddress));
         bluetoothApplication.newReadCharacteristic("write_ban", WRITE_BAN_UUID, () -> bluetoothApplication.gatherWriteBan().getBytes());
-        bluetoothApplication.newReadWriteCharacteristic("device_model", DEVICE_MODEL_UUID, bytes -> writeSafeValue(() -> {
-            if (user.getPassword().equals(new String(bytes))) {
-                raspberryHardwareRepository.reboot();
-            }
-        }), () -> readSafeValue(raspberryHardwareRepository::getDeviceModel));
-
-        bluetoothApplication.newReadCharacteristic("server_connected", SERVER_CONNECTED_UUID, () ->
-                readSafeValue(() -> {
-                    String error = entityContext.getSettingValue(CloudServerConnectionMessageSetting.class);
-                    ServerConnectionStatus status = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
-                    return status.name() + "%&%" + error;
-                }));
-
-        bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, () -> readSafeValue(() ->
-                wirelessHardwareRepository.scan().stream().filter(distinctByKey(network -> network.ssid)).map(n -> n.ssid + "%&%" + n.strength).collect(Collectors.joining("%#%"))));
-
-        // for set wifi we set wifi/pwd
-        bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, bytes ->
-                writeSafeValue(() -> {
-                    String[] split = new String(bytes).split("%&%");
-                    if (split.length == 2 && split[1].length() >= 8) {
-                        wirelessHardwareRepository.setWifiPassword(split[0], split[1]);
-                        wirelessHardwareRepository.restartNetworkInterface();
-                    }
-                }), () -> readSafeValue(raspberryHardwareRepository::getWifiName));
-
-        // we may set pwd only once for now
-        bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, bytes -> {
-            String pwd = new String(bytes);
-            if (user.getPassword() == null) {
-                entityContext.save(user.setPassword(pwd));
-                timeSinceLastCheckPassword = System.currentTimeMillis();
-            } else {
-                // refresh time
-                if (user.getPassword().equals(pwd)) {
-                    timeSinceLastCheckPassword = System.currentTimeMillis();
-                }
-            }
-        }, () -> {
-            if (user.getPassword() == null) {
-                return "none".getBytes();
-            } else if (System.currentTimeMillis() - timeSinceLastCheckPassword > TIME_REFRESH_PASSWORD) {
-                return "required".getBytes();
-            }
-            return "ok".getBytes();
-        });
-
-        bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, bytes ->
-                        writeSafeValue(() -> {
-                            entityContext.save(user.setKeystore(bytes));
-                            entityContext.setSettingValue(CloudServerRestartSetting.class, "");
-                        }),
+        bluetoothApplication.newReadWriteCharacteristic("device_model", DEVICE_MODEL_UUID, this::rebootDevice, () -> readSafeValue(linuxHardwareRepository::getDeviceModel));
+        bluetoothApplication.newReadCharacteristic("server_connected", SERVER_CONNECTED_UUID, () -> readSafeValue(this::readServerConnected));
+        bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, () -> readSafeValue(this::readWifiList));
+        bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, this::writeWifiSSID, () -> readSafeValue(linuxHardwareRepository::getWifiName));
+        bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, this::writePwd, () -> readPwdSet().getBytes());
+        bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, this::writeKeystore,
                 () -> readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
 
         // start ble
@@ -144,6 +155,58 @@ public class BluetoothService implements BundleContext {
         } catch (Exception ex) {
             log.error("Unable to start bluetooth service", ex);
         }
+    }
+
+    private String readTimeToReleaseSession() {
+        return Long.toString((TIME_REFRESH_PASSWORD - (System.currentTimeMillis() - timeSinceLastCheckPassword)) / 1000);
+    }
+
+    private void writeKeystore(byte[] bytes) {
+        writeSafeValue(() -> {
+            log.warn("Writing keystore");
+            entityContext.save(user.setKeystore(bytes));
+            entityContext.setSettingValue(CloudServerRestartSetting.class, null);
+        });
+    }
+
+    /**
+     * We may set password only once. If user wants update password, he need pass old password hash
+     */
+    private void writePwd(byte[] bytes) {
+        String[] split = new String(bytes).split("%&%");
+        String email = split[0];
+        String encodedPassword = split[1];
+        String encodedPreviousPassword = split.length > 2 ? split[2] : "";
+        if (user.isPasswordNotSet()) {
+            log.warn("Set primary admin password for user: <{}>", email);
+            entityContext.save(user.setUserId(email).setPassword(encodedPassword));
+            this.entityContext.setSettingValue(CloudServerRestartSetting.class, null);
+        } else if (StringUtils.isNotEmpty(encodedPreviousPassword) &&
+                Objects.equals(user.getUserId(), email) &&
+                user.matchPassword(encodedPreviousPassword)) {
+            log.warn("Reset primary admin password for user: <{}>", email);
+            entityContext.save(user.setPassword(encodedPassword));
+            this.entityContext.setSettingValue(CloudServerRestartSetting.class, null);
+        }
+
+        if (user.matchPassword(encodedPassword)) {
+            timeSinceLastCheckPassword = System.currentTimeMillis();
+        }
+    }
+
+    private void writeWifiSSID(byte[] bytes) {
+        writeSafeValue(() -> {
+            log.info("Writing wifi credentials");
+            String[] split = new String(bytes).split("%&%");
+            if (split.length == 2 && split[1].length() >= 8) {
+                wirelessHardwareRepository.setWifiCredentials(split[0], split[1]);
+                wirelessHardwareRepository.restartNetworkInterface();
+            }
+        });
+    }
+
+    private void rebootDevice(byte[] ignore) {
+        writeSafeValue(linuxHardwareRepository::reboot);
     }
 
     @Override
@@ -156,6 +219,25 @@ public class BluetoothService implements BundleContext {
         return Integer.MAX_VALUE;
     }
 
+    private String readPwdSet() {
+        if (user.isPasswordNotSet()) {
+            return "none";
+        } else if (System.currentTimeMillis() - timeSinceLastCheckPassword > TIME_REFRESH_PASSWORD) {
+            return "required";
+        }
+        return "ok:" + readTimeToReleaseSession();
+    }
+
+    private String readWifiList() {
+        return wirelessHardwareRepository.scan().stream().filter(distinctByKey(Network::getSsid)).map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"));
+    }
+
+    private String readServerConnected() {
+        String error = entityContext.getSettingValue(CloudServerConnectionMessageSetting.class);
+        ServerConnectionStatus status = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
+        return status.name() + "%&%" + error + "%&%" + entityContext.getSettingValue(CloudServerUrlSetting.class);
+    }
+
     private void writeSafeValue(Runnable runnable) {
         if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
             runnable.run();
@@ -163,9 +245,20 @@ public class BluetoothService implements BundleContext {
     }
 
     private byte[] readSafeValue(Supplier<String> supplier) {
-        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
+        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isTestApplication()) {
             return supplier.get().getBytes();
         }
         return new byte[0];
+    }
+
+    private String readSafeValueStr(Supplier<String> supplier) {
+        return EntityContext.isTestApplication() ? "" : readSafeValueStrIT(supplier);
+    }
+
+    private String readSafeValueStrIT(Supplier<String> supplier) {
+        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
+            return supplier.get();
+        }
+        return "";
     }
 }

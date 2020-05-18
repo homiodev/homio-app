@@ -29,4 +29,6 @@ spring:
     show-sql: false
 
 server:
-  port: 8090
+  servlet:
+    context-path: /
+  port: 9111

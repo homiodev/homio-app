@@ -11,11 +11,13 @@ import org.freedesktop.dbus.Path;
 import org.freedesktop.dbus.UInt16;
 import org.freedesktop.dbus.Variant;
 import org.freedesktop.dbus.exceptions.DBusException;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import static org.touchhome.bundle.bluetooth.BluetoothService.MIN_WRITE_TIMEOUT;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -39,9 +41,6 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
 
     @Setter
     private int minReadTimeout = 5000;
-
-    @Setter
-    private int minWriteTimeout = 60000;
 
     private long lastReadTime = -1;
     private long lastWriteTime = -1;
@@ -132,7 +131,7 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
             try {
                 value = readListener.get();
             } catch (Exception ex) {
-                log.error("Error while read from ble: <{}>", SmartUtils.getErrorMessage(ex));
+                log.error("Error while read from ble: <{}>", TouchHomeUtils.getErrorMessage(ex));
                 value = new byte[0];
             }
         }
@@ -230,12 +229,10 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
     }
 
     boolean isBanOnWrite() {
-        return System.currentTimeMillis() - lastWriteTime < minWriteTimeout;
+        return System.currentTimeMillis() - lastWriteTime < MIN_WRITE_TIMEOUT;
     }
 
     int secToReleaseBan() {
-        return (int) ((minWriteTimeout - (System.currentTimeMillis() - lastWriteTime)) / 1000);
+        return (int) ((MIN_WRITE_TIMEOUT - (System.currentTimeMillis() - lastWriteTime)) / 1000);
     }
-
-
 }

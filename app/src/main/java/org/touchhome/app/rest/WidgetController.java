@@ -324,7 +324,7 @@ public class WidgetController {
                             Class<?> clazz = abstractRepository.getEntityClass();
                             String href = SidebarMenuItem.getHref(clazz);
                             legendBuilder.withData(href);
-                            seriesBuilder.withData(abstractRepository.size().intValue(), href).withItemStyleColor(SmartUtils.randomColor());
+                            seriesBuilder.withData(abstractRepository.size().intValue(), href).withItemStyleColor(TouchHomeUtils.randomColor());
                         });
         }
         return chartBuilder.build();
@@ -353,7 +353,7 @@ public class WidgetController {
     }
 
     @Getter
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     private static class AvailableWidget {
         private final String className;
         private final String image;

@@ -36,7 +36,8 @@ import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.method.UIFieldCreateWorkspaceVariableOnEmpty;
 import org.touchhome.bundle.api.ui.method.UIFieldSelectValueOnEmpty;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.bluetooth.BluetoothService;
 
 import javax.persistence.OneToMany;
 import java.beans.Introspector;
@@ -60,6 +61,7 @@ import static org.apache.commons.lang.StringUtils.trimToNull;
 @RequiredArgsConstructor
 public class UtilsController {
 
+    private final BluetoothService bluetoothService;
     private final InternalManager entityContext;
     private final ScriptManager scriptManager;
     private final CodeParser codeParser;
@@ -181,7 +183,7 @@ public class UtilsController {
 
             UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty = field.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
             if (uiFieldSelectValueOnEmpty != null) {
-                SmartUtils.findRequreMethod(instance.getClass(), uiFieldSelectValueOnEmpty.method());
+                TouchHomeUtils.findRequreMethod(instance.getClass(), uiFieldSelectValueOnEmpty.method());
                 jsonTypeMetadata.put("sveColor", uiFieldSelectValueOnEmpty.color());
                 jsonTypeMetadata.put("sveLabel", uiFieldSelectValueOnEmpty.label());
                 jsonTypeMetadata.put("selectOptionMethod", uiFieldSelectValueOnEmpty.method());
@@ -203,7 +205,7 @@ public class UtilsController {
 
                 UIFieldTextWithSelection uiFieldTextWithSelection = field.getDeclaredAnnotation(UIFieldTextWithSelection.class);
                 if (uiFieldTextWithSelection != null) {
-                    SmartUtils.findRequreMethod(instance.getClass(), uiFieldTextWithSelection.method());
+                    TouchHomeUtils.findRequreMethod(instance.getClass(), uiFieldTextWithSelection.method());
                     jsonTypeMetadata.put("selectOptionMethod", uiFieldTextWithSelection.method());
                     entityUIMetaData.setType("TextSelectBoxDynamic");
                 }
@@ -248,9 +250,14 @@ public class UtilsController {
         return entityContext.getNotifications();
     }
 
-    @GetMapping("status")
-    public String getStatus() {
-        return "ok";
+    @GetMapping("device/characteristic")
+    public Map<String, String> getDeviceCharacteristics() {
+        return bluetoothService.getDeviceCharacteristics();
+    }
+
+    @PutMapping("device/characteristic/{uuid}")
+    public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
+        bluetoothService.setDeviceCharacteristic(uuid, value);
     }
 
     @PostMapping("getCompletions")
@@ -265,7 +272,7 @@ public class UtilsController {
 
     @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
     public ResponseEntity<StreamingResponseBody> downloadFile(@PathVariable("fileName") String fileName) {
-        Path outputPath = SmartUtils.fromTmpFile(fileName);
+        Path outputPath = TouchHomeUtils.fromTmpFile(fileName);
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, String.format("attachment; filename=\"%s\"", outputPath.getFileName()));
         headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
@@ -291,7 +298,7 @@ public class UtilsController {
         }
         int size = outputStream.size();
         if (size > 50000) {
-            runScriptOnceJSON.logUrl = SmartUtils.toTmpFile(scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___", ".log", outputStream);
+            runScriptOnceJSON.logUrl = TouchHomeUtils.toTmpFile(scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___", ".log", outputStream);
         } else {
             runScriptOnceJSON.log = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
         }

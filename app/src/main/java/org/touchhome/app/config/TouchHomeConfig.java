@@ -24,6 +24,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.core.Ordered;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.http.MediaType;
@@ -31,13 +32,12 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
@@ -65,6 +65,7 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -82,13 +83,31 @@ import java.util.stream.Collectors;
 @Import(value = {
         WebSocketConfig.class
 })
-@EnableWebSecurity
 @EnableJpaRepositories(basePackages = "org.touchhome.app.repository.crud", repositoryFactoryBeanClass = CrudRepositoryFactoryBean.class)
 @EnableTransactionManagement(proxyTargetClass = true)
-public class SmartConfig extends WebSecurityConfigurerAdapter implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
+public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
 
     @Autowired
     private ApplicationContext applicationContext;
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**");
+    }
+
+    @Bean
+    public FilterRegistrationBean corsFilter() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true);
+        config.addAllowedOrigin("*");
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+        source.registerCorsConfiguration("/**", config);
+        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(source));
+        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return bean;
+    }
 
     @Bean
     public Map<String, Scratch3ExtensionBlocks> scratch3Blocks(List<Scratch3ExtensionBlocks> scratch3Blocks) {
@@ -100,21 +119,19 @@ public class SmartConfig extends WebSecurityConfigurerAdapter implements WebMvcC
         return ClassFinder.createClassesWithParent(WidgetBaseEntity.class, classFinder);
     }
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.cors().and().csrf().disable();
+    @Bean
+    public Map<String, Class<? extends BaseEntity>> baseEntityClasses(ClassFinder classFinder) {
+        return classFinder.getClassesWithParent(BaseEntity.class, null).stream().collect(Collectors.toMap(Class::getName, s -> s));
     }
 
     @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Collections.singletonList("*"));
-        configuration.setAllowedMethods(Collections.singletonList("*"));
-        configuration.setAllowedHeaders(Collections.singletonList("*"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
+    public Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses(ClassFinder classFinder) {
+        return classFinder.getClassesWithParent(BaseEntity.class, null).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(5);
     }
 
     @Bean
@@ -133,13 +150,6 @@ public class SmartConfig extends WebSecurityConfigurerAdapter implements WebMvcC
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         taskRegistrar.setScheduler(Executors.newScheduledThreadPool(4));
-    }
-
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedMethods("*")
-                .allowedOrigins("http://localhost:8090");
     }
 
     @Bean
@@ -246,7 +256,7 @@ public class SmartConfig extends WebSecurityConfigurerAdapter implements WebMvcC
      * After spring context initialization
      */
     @Override
-    public void onApplicationEvent(ApplicationEvent event) {
+    public void onApplicationEvent(@NotNull ApplicationEvent event) {
         if (event instanceof ContextRefreshedEvent) {
             ApplicationContext applicationContext = ((ContextRefreshedEvent) event).getApplicationContext();
             applicationContext.getBean(InternalManager.class).afterContextStart(applicationContext);

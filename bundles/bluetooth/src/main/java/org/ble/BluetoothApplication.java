@@ -36,23 +36,11 @@ public class BluetoothApplication {
         return value -> characteristic.setValue(value.getBytes());
     }
 
-    public ValueNotifyConsumer newReadWriteNotifyCharacteristic(String name, String uuid, Consumer<byte[]> readValueListener) {
-        final BleCharacteristic characteristic = new BleCharacteristic(uuid, bleApplication.path + "/" + bleApplication, bleApplication.bleService, C_READ_WRITE_NOTIFY);
-        characteristic.setWriteListener(readValueListener);
-        bleApplication.bleService.getCharacteristics().add(characteristic);
-        return createSetValueNotify(characteristic);
-    }
-
-    public ValueConsumer newWriteCharacteristic(String name, String uuid) {
-        final BleCharacteristic characteristic = new BleCharacteristic(uuid, bleApplication.path + "/" + bleApplication, bleApplication.bleService, C_WRITE);
+    public ValueConsumer newWriteCharacteristic(String name, String uuid, Consumer<byte[]> writeValueListener) {
+        final BleCharacteristic characteristic = new BleCharacteristic(uuid, bleApplication.path + "/" + name, bleApplication.bleService, C_WRITE);
+        characteristic.setWriteListener(writeValueListener);
         bleApplication.bleService.getCharacteristics().add(characteristic);
         return value -> characteristic.setValue(value.getBytes());
-    }
-
-    public ValueNotifyConsumer newWriteNotifyCharacteristic(String name, String uuid) {
-        final BleCharacteristic characteristic = new BleCharacteristic(uuid, bleApplication.path + "/" + name, bleApplication.bleService, C_READ_NOTIFY);
-        bleApplication.bleService.getCharacteristics().add(characteristic);
-        return createSetValueNotify(characteristic);
     }
 
     private ValueNotifyConsumer createSetValueNotify(BleCharacteristic characteristic) {

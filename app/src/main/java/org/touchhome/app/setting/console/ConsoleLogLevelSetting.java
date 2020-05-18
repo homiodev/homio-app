@@ -1,7 +1,7 @@
 package org.touchhome.app.setting.console;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Level;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.json.Option;
@@ -40,7 +40,7 @@ public class ConsoleLogLevelSetting implements BundleSettingPlugin<ConsoleLogLev
         return 700;
     }
 
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     public enum LogLevel {
         Debug(Level.DEBUG),
         Info(Level.INFO),

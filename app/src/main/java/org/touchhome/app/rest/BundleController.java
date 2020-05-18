@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.BundleManager;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.util.SmartUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.validation.constraints.NotNull;
 import java.io.InputStream;
@@ -51,7 +51,7 @@ public class BundleController {
         if (imageStream == null) {
             throw new NotFoundException("Unable to find bundle image: " + bundleImage + " of bundle: " + bundleID);
         }
-        return SmartUtils.inputStreamToResource(imageStream, MediaType.IMAGE_PNG);
+        return TouchHomeUtils.inputStreamToResource(imageStream, MediaType.IMAGE_PNG);
     }
 
     @GetMapping
