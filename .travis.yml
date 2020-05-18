@@ -21,5 +21,6 @@ deploy:
   skip_cleanup: true
   user: $BINTRAY_USER
   key:  $BINTRAY_KEY
-  file:
-  - "app/target/touchHome.jar"
+  file: 'bintray.json'
+  on:
+    branch: 1.1
