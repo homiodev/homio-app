@@ -12,7 +12,7 @@ public interface GPIOHardwareRepository {
     @HardwareQuery(echo = "Printing wiring PI info", value = "gpio readall", printOutput = true)
     boolean printWiringPiInfo();
 
-    @HardwareQuery(echo = "Install GPIO", value = "sudo $PM install wiringpi", printOutput = true, ignoreOnError = true)
+    @HardwareQuery(echo = "Install GPIO", value = "$PM install wiringpi", printOutput = true, ignoreOnError = true)
     void installWiringPiAuto();
 
     @HardwareQuery("mkdir buildWiringPi")

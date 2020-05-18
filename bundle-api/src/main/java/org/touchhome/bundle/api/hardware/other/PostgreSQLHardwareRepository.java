@@ -8,7 +8,7 @@ import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 @HardwareRepositoryAnnotation
 public interface PostgreSQLHardwareRepository {
 
-    @HardwareQuery(value = "sudo $PM install -y postgresql", printOutput = true, maxSecondsTimeout = 300)
+    @HardwareQuery(value = "$PM install -y postgresql", printOutput = true, maxSecondsTimeout = 300)
     void installPostgreSQL();
 
     @HardwareQuery("psql --version")
@@ -17,10 +17,10 @@ public interface PostgreSQLHardwareRepository {
     @HardwareQuery(value = {"/sbin/service", "postgresql", "status"})
     boolean isPostgreSQLRunning();
 
-    @HardwareQuery("sudo -u postgres psql -c \"ALTER USER postgres PASSWORD ':pwd';\"")
+    @HardwareQuery("-u postgres psql -c \"ALTER USER postgres PASSWORD ':pwd';\"")
     void changePostgresPassword(@ApiParam("pwd") String pwd);
 
-    @HardwareQuery(value = "sudo service postgresql start", printOutput = true)
+    @HardwareQuery(value = "service postgresql start", printOutput = true)
     void startPostgreSQLService();
 
 }
