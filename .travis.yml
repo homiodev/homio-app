@@ -27,5 +27,6 @@ deploy:
 -provider: script
   script: bash app/docker-push.sh $TRAVIS_TAG
   on:
+    branch: 1.2
     tags: true
 
