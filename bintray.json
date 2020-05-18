@@ -10,12 +10,12 @@
     "public_download_numbers": true
   },
   "version": {
-    "name": "1.0"
+    "name": "latest"
   },
   "files": [
     {
       "includePattern": "app/target/touchHome.jar",
-      "uploadPattern": "release/$1"
+      "uploadPattern": "release/touchHome.jar"
     }
   ],
   "publish": true
