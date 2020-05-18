@@ -1,6 +1,6 @@
 FROM openjdk:8-jdk-alpine
 
-LABEL maintainer "Ruslan Masiuk <ruslan.masuk@gmail.com>"
+LABEL maintainer "Ruslan Masuk <ruslan.masuk@gmail.com>"
 LABEL image.application.name=touchHome-core
 
 COPY target/touchHome.jar touchHome.jar
