@@ -1,0 +1,22 @@
+{
+  "package": {
+    "name": "touchhome",
+    "repo": "touchhome",
+    "subject": "touchhome",
+    "vcs_url": "https://github.com/touchhome/touchhome-core.git",
+    "licenses": [
+      "MIT"
+    ],
+    "public_download_numbers": true
+  },
+  "version": {
+    "name": "0.1.5"
+  },
+  "files": [
+    {
+      "includePattern": "app/target/touchHome.jar",
+      "uploadPattern": "release/touchHome.jar"
+    }
+  ],
+  "publish": true
+}
