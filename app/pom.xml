@@ -221,6 +221,7 @@
                 <configuration>
                     <fork>true</fork>
                     <skip>false</skip>
+                    <executable>true</executable>
                 </configuration>
                 <executions>
                     <execution>

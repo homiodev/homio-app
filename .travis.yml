@@ -5,13 +5,21 @@ cache:
   directories:
   - $HOME/.m2
 deploy:
-  provider: releases
+- provider: releases
   skip_cleanup: true
   api_key: $GITHUB_OAUTH_API_KEY
   file_glob: true
   draft: true
   file:
-  - "app/target/touchHome.jar"
+  - "app/target/classes/asm_files/update.sh"
   - "app/target/touchHome.jar.md5"
+  - "app/target/touchHome.jar"
   on:
     tags: true
+
+- provider: bintray
+  skip_cleanup: true
+  user: $BINTRAY_USER
+  key:  $BINTRAY_KEY
+  file:
+  - "app/target/touchHome.jar"
