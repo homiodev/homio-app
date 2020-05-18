@@ -2,7 +2,7 @@
   "package": {
     "name": "TouchHome",
     "repo": "touchHome-core",
-    "subject": "TouchHome",
+    "subject": "touchHome",
     "vcs_url": "https://github.com/touchhome/touchhome-core.git",
     "licenses": [
       "MIT"
