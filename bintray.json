@@ -14,7 +14,8 @@
   },
   "files": [
     {
-      "includePattern": "app/target/touchHome.jar"
+      "includePattern": "app/target/touchHome.jar",
+      "uploadPattern": "release/$1"
     }
   ],
   "publish": true
