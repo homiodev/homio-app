@@ -10,6 +10,7 @@ import org.touchhome.bundle.api.ui.PublicJsMethod;
 
 import javax.validation.constraints.NotNull;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -149,9 +150,17 @@ public interface EntityContext {
 
     <T extends BaseEntity> void addEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
 
+    Map<DeviceFeature, Boolean> getDeviceFeatures();
+
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, Consumer<T> listener);
 
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener);
 
     <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
+
+    void disableFeature(DeviceFeature deviceFeature);
+
+    enum DeviceFeature {
+        Bluetooth, HotSpot, GPIO
+    }
 }

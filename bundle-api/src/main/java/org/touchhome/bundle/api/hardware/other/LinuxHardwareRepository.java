@@ -12,7 +12,7 @@ import java.util.Enumeration;
 @HardwareRepositoryAnnotation
 public interface LinuxHardwareRepository {
 
-    @HardwareQuery(" df -m / | sed -e /^Filesystem/d")
+    @HardwareQuery("df -m / | sed -e /^Filesystem/d")
     HardwareMemory getSDCardMemory();
 
     @HardwareQuery("vcgencmd measure_temp | cut -d = -f 2 | awk '{printf \"%s \", $1}'")

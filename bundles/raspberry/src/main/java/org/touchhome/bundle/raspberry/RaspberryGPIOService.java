@@ -76,6 +76,9 @@ public class RaspberryGPIOService {
                     available = false;
                 }
             }
+            if (!available) {
+                entityContext.disableFeature(EntityContext.DeviceFeature.GPIO);
+            }
         }
         return available;
     }

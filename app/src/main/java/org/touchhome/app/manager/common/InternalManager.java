@@ -67,6 +67,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID;
@@ -83,8 +84,13 @@ public class InternalManager implements EntityContext {
     private static EntityManager entityManager;
     private static Map<String, AbstractRepository> repositoriesByPrefix;
     private static Map<String, PureRepository> pureRepositories;
+
     private final Map<String, List<BiConsumer>> entityUpdateListeners = new HashMap<>();
     private final Map<Class<? extends BaseEntity>, List<BiConsumer>> entityClassUpdateListeners = new HashMap<>();
+    private final Map<DeviceFeature, Boolean> deviceFeatures = Stream.of(DeviceFeature.values()).collect(Collectors.toMap(f -> f, f -> Boolean.TRUE));
+    private final Set<NotificationEntityJSON> notifications = new HashSet<>();
+    private Map<Class<? extends BundleSettingPlugin>, List<Consumer<?>>> settingListeners = new HashMap<>();
+
     private final ClassFinder classFinder;
     private final CacheService cacheService;
     private final AllDeviceRepository allDeviceRepository;
@@ -92,10 +98,8 @@ public class InternalManager implements EntityContext {
     private final EntityManagerFactory entityManagerFactory;
     private final PlatformTransactionManager transactionManager;
     private final BroadcastLockManager broadcastLockManager;
-    private final Set<NotificationEntityJSON> notifications = new HashSet<>();
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
-    private Map<Class<? extends BundleSettingPlugin>, List<Consumer<?>>> settingListeners = new HashMap<>();
 
     public Set<NotificationEntityJSON> getNotifications() {
         long time = System.currentTimeMillis();
@@ -106,6 +110,7 @@ public class InternalManager implements EntityContext {
 
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
+        this.updateDeviceFeatures();
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         for (Class<? extends BundleSettingPlugin> settingPlugin : classFinder.getClassesWithParent(BundleSettingPlugin.class)) {
             BundleSettingPlugin bundleSettingPlugin = settingPlugin.newInstance();
@@ -167,6 +172,12 @@ public class InternalManager implements EntityContext {
         notifications.add(new NotificationEntityJSON("app-status")
                 .setName("App started")
                 .setNotificationType(NotificationType.info));
+    }
+
+    private void updateDeviceFeatures() {
+        if (EntityContext.isTestApplication() || EntityContext.isDockerEnvironment()) {
+            disableFeature(DeviceFeature.HotSpot);
+        }
     }
 
     @Override
@@ -411,6 +422,16 @@ public class InternalManager implements EntityContext {
     public <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener) {
         this.entityUpdateListeners.putIfAbsent(entityID, new ArrayList<>());
         this.entityUpdateListeners.get(entityID).remove(listener);
+    }
+
+    @Override
+    public void disableFeature(DeviceFeature deviceFeature) {
+        deviceFeatures.put(deviceFeature, false);
+    }
+
+    @Override
+    public Map<DeviceFeature, Boolean> getDeviceFeatures() {
+        return deviceFeatures;
     }
 
     @Override
