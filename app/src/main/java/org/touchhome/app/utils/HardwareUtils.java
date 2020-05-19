@@ -73,7 +73,6 @@ public final class HardwareUtils {
 
     private static void checkWiringPi(ConfigurableListableBeanFactory beanFactory) {
         GPIOHardwareRepository repository = beanFactory.getBean(GPIOHardwareRepository.class);
-        repository.printWiringPiVersion();
         if (!repository.printWiringPiInfo()) {
             log.warn("Unable to get wiring PI info");
             repository.installWiringPiAuto();
@@ -95,7 +94,7 @@ public final class HardwareUtils {
             dataSource.getConnection();
             log.info("Db check connection success");
         } catch (Exception ex) {
-            log.warn("Db connection not alive. url: <{}>", url, ex);
+            log.warn("Db connection not alive. url: <{}>. Msg: <{}>", url, TouchHomeUtils.getErrorMessage(ex));
 
             if (Objects.requireNonNull(url).startsWith("jdbc:postgresql://localhost:5432")) {
                 log.debug("Database url require local postgres. Trying start/install it");
