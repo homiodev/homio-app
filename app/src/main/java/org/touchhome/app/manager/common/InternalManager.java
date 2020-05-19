@@ -127,7 +127,7 @@ public class InternalManager implements EntityContext {
         createRaspberryDevice();
         createArduinoDevice();
 
-        applicationContext.getBean(UserRepository.class).postConstruct();
+        applicationContext.getBean(UserRepository.class).postConstruct(this);
         applicationContext.getBean(NettyClientService.class).postConstruct();
         applicationContext.getBean(ScriptManager.class).postConstruct();
         applicationContext.getBean(ConsoleController.class).postConstruct();

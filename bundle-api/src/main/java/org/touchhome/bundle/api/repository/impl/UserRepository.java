@@ -11,14 +11,11 @@ import static org.touchhome.bundle.api.model.UserEntity.PREFIX;
 @Repository
 public class UserRepository extends AbstractRepository<UserEntity> {
 
-    private final EntityContext entityContext;
-
-    public UserRepository(EntityContext entityContext) {
+    public UserRepository() {
         super(UserEntity.class, PREFIX);
-        this.entityContext = entityContext;
     }
 
-    public void postConstruct() {
+    public void postConstruct(EntityContext entityContext) {
         UserEntity entity = entityContext.getEntity(ADMIN_USER);
         if (entity == null) {
             entity = new UserEntity();
