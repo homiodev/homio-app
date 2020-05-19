@@ -26,7 +26,7 @@ deploy:
     tags: true
 - provider: script
   skip_cleanup: true
-  script: bash docker-push.sh $USER
+  script: bash docker-push.sh $TRAVIS_TAG
   on:
     tags: true
 
