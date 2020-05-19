@@ -14,10 +14,10 @@ public interface PostgreSQLHardwareRepository {
     @HardwareQuery("psql --version")
     String getPostgreSQLVersion();
 
-    @HardwareQuery(value = {"/sbin/service", "postgresql", "status"})
+    @HardwareQuery(value = {"service", "postgresql", "status"}, printOutput = true)
     boolean isPostgreSQLRunning();
 
-    @HardwareQuery(echo = "Alter postgres password", value = "-u postgres psql -c \"ALTER USER postgres PASSWORD ':pwd';\"")
+    @HardwareQuery(echo = "Alter postgres password", value = "su - postgres -c \"psql -c \\\"ALTER USER postgres PASSWORD 'postgres';\\\"\"")
     void changePostgresPassword(@ApiParam("pwd") String pwd);
 
     @HardwareQuery(echo = "Start postgresql", value = "service postgresql start", printOutput = true)

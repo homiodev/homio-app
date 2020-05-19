@@ -1,11 +1,7 @@
-FROM postgres:11
+FROM debian:10.3-slim
 
 LABEL maintainer="Ruslan Masiuk <ruslan.masuk@gmail.com>"
 LABEL image.application.name=touchHome-core
-
-ENV POSTGRES_USER=postgres
-ENV POSTGRES_PASSWORD=postgres
-ENV POSTGRES_DB=postgres
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -15,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     zip \
     git \
+    postgresql \
     python \
     python-dev \
     python-pip \
@@ -54,8 +51,11 @@ RUN git clone https://github.com/technion/lol_dht22
 RUN cd lol_dht22 && ./configure && make && cd ..
 
 # Configure postgres
-#USER postgres
-#RUN psql --command "ALTER USER postgres PASSWORD 'postgres';"
+USER postgres
+RUN service postgresql start && sleep 1 && service postgresql status && psql --command "ALTER ROLE postgres WITH PASSWORD 'postgres';"
+
+USER root
+#RUN psql --command "ALTER ROLE postgres WITH PASSWORD 'postgres';"
 #RUN echo "listen_addresses='*'" >> /etc/postgresql/11/main/postgresql.conf && /etc/init.d/postgresql start
 #RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/9.3/main/pg_hba.conf
 VOLUME  ["/var/lib/postgresql/data"]

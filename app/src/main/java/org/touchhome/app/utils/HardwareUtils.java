@@ -103,8 +103,8 @@ public final class HardwareUtils {
                     log.info("PostgreSQL already installed <{}>", repository.getPostgreSQLVersion());
                     if (!repository.isPostgreSQLRunning()) {
                         repository.startPostgreSQLService();
-                        repository.changePostgresPassword(pwd);
                     }
+                    repository.changePostgresPassword(pwd);
                 } catch (HardwareException he) {
                     log.warn("PostgreSQL not installed. Installing it...");
                     repository.installPostgreSQL();
