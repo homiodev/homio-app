@@ -1,7 +1,11 @@
-FROM debian:10.3-slim
+FROM postgres:11
 
 LABEL maintainer="Ruslan Masiuk <ruslan.masuk@gmail.com>"
 LABEL image.application.name=touchHome-core
+
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=postgres
+ENV POSTGRES_DB=postgres
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -11,7 +15,6 @@ RUN apt-get update && apt-get install -y \
     wget \
     zip \
     git \
-    postgresql \
     python \
     python-dev \
     python-pip \
