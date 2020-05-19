@@ -86,9 +86,10 @@ public final class HardwareUtils {
         PostgreSQLHardwareRepository repository = beanFactory.getBean(PostgreSQLHardwareRepository.class);
         Environment env = beanFactory.getBean(Environment.class);
         String url = env.getProperty("spring.datasource.url");
+        String pwd = env.getProperty("spring.datasource.password");
         DataSource dataSource = DataSourceBuilder.create().url(url)
                 .driverClassName(env.getProperty("spring.datasource.driver-class-name"))
-                .username(env.getProperty("spring.datasource.username")).password(env.getProperty("spring.datasource.password")).build();
+                .username(env.getProperty("spring.datasource.username")).password(pwd).build();
         try {
             log.debug("Check db connection");
             dataSource.getConnection();
@@ -102,13 +103,13 @@ public final class HardwareUtils {
                     log.info("PostgreSQL already installed <{}>", repository.getPostgreSQLVersion());
                     if (!repository.isPostgreSQLRunning()) {
                         repository.startPostgreSQLService();
+                        repository.changePostgresPassword(pwd);
                     }
                 } catch (HardwareException he) {
                     log.warn("PostgreSQL not installed. Installing it...");
                     repository.installPostgreSQL();
                     log.info("PostgreSQL installed successfully.");
                     repository.startPostgreSQLService();
-                    String pwd = env.getProperty("spring.datasource.password");
                     repository.changePostgresPassword(pwd);
                 }
             }
