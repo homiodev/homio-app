@@ -51,8 +51,8 @@ RUN git clone https://github.com/technion/lol_dht22
 RUN cd lol_dht22 && ./configure && make && cd ..
 
 # Configure postgres
-USER postgres
-RUN service postgresql start && sleep 1 && service postgresql status && psql --command "ALTER ROLE postgres WITH PASSWORD 'postgres';"
+#USER postgres
+#RUN service postgresql start && sleep 1 && service postgresql status && psql --command "ALTER ROLE postgres WITH PASSWORD 'postgres';"
 
 USER root
 #RUN psql --command "ALTER ROLE postgres WITH PASSWORD 'postgres';"
