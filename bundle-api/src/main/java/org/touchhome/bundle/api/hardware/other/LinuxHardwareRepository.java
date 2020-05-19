@@ -12,7 +12,7 @@ import java.util.Enumeration;
 @HardwareRepositoryAnnotation
 public interface LinuxHardwareRepository {
 
-    @HardwareQuery(" df -m / | sed -e /^Filesystem/d")
+    @HardwareQuery("df -m / | sed -e /^Filesystem/d")
     HardwareMemory getSDCardMemory();
 
     @HardwareQuery("vcgencmd measure_temp | cut -d = -f 2 | awk '{printf \"%s \", $1}'")
@@ -33,7 +33,7 @@ public interface LinuxHardwareRepository {
     @HardwareQuery("iwgetid -r")
     String getWifiName();
 
-    @HardwareQuery(echo = "Reboot device", value = "sudo reboot")
+    @HardwareQuery(echo = "Reboot device", value = "reboot")
     void reboot();
 
     @HardwareQuery("cat /etc/os-release")

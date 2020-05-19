@@ -86,21 +86,25 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         List<Class<?>> classes = ClassFinder.getClassesWithAnnotation(HardwareRepositoryAnnotation.class, true);
         for (Class<?> aClass : classes) {
             beanFactory.registerSingleton(aClass.getSimpleName(), Proxy.newProxyInstance(this.getClass().getClassLoader(), new Class[]{aClass}, (proxy, method, args) -> {
-                if (method.isAnnotationPresent(HardwareQueries.class)) {
-                    HardwareQueries queries = method.getAnnotation(HardwareQueries.class);
-                    List<Object> results = new ArrayList<>();
-                    for (HardwareQuery hardwareQuery : queries.value()) {
-                        results.add(handleHardwareQuery(hardwareQuery, args, method));
+                List<Object> results = null;
+                for (HardwareQuery hardwareQuery : method.getDeclaredAnnotationsByType(HardwareQuery.class)) {
+                    if (results == null) {
+                        results = new ArrayList<>();
                     }
-                    if (method.getReturnType().isAssignableFrom(List.class)) {
+                    results.add(handleHardwareQuery(hardwareQuery, args, method));
+                }
+                if (results != null) {
+                    if (results.isEmpty()) {
+                        return null;
+                    } else if (results.size() == 1) {
+                        return results.iterator().next();
+                    } else if (method.getReturnType().isAssignableFrom(List.class)) {
                         return results;
+                    } else {
+                        return null;
                     }
-                    return null;
                 }
-                if (method.isAnnotationPresent(HardwareQuery.class)) { // TODO: badddddddddddddddddddddddd
-                    HardwareQuery hardwareQuery = method.getAnnotation(HardwareQuery.class);
-                    return handleHardwareQuery(hardwareQuery, args, method);
-                }
+
                 if (method.isDefault()) {
                     return lookupConstructor.newInstance(aClass)
                             .in(aClass)

@@ -25,6 +25,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.distinctByKey;
@@ -49,6 +50,7 @@ public class BluetoothService implements BundleContext {
     private static final String SD_MEMORY_UUID = PREFIX + "11";
     private static final String WRITE_BAN_UUID = PREFIX + "12";
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
+    private static final String FEATURES = PREFIX + "20";
 
     public static final int MIN_WRITE_TIMEOUT = 60000;
     private static final int TIME_REFRESH_PASSWORD = 5 * 60000; // 5 minute for session
@@ -65,18 +67,19 @@ public class BluetoothService implements BundleContext {
     public Map<String, String> getDeviceCharacteristics() {
         Map<String, String> map = new HashMap<>();
         map.put(CPU_LOAD_UUID, readSafeValueStr(linuxHardwareRepository::getCpuLoad));
-        map.put(CPU_TEMP_UUID, readSafeValueStr(linuxHardwareRepository::getCpuTemp));
+        map.put(CPU_TEMP_UUID, readSafeValueStr(this::getCpuTemp));
         map.put(MEMORY_UUID, readSafeValueStr(linuxHardwareRepository::getMemory));
         map.put(SD_MEMORY_UUID, readSafeValueStr(() -> linuxHardwareRepository.getSDCardMemory().toFineString()));
         map.put(UPTIME_UUID, readSafeValueStr(linuxHardwareRepository::getUptime));
         map.put(IP_ADDRESS_UUID, readSafeValueStr(linuxHardwareRepository::getIpAddress));
         map.put(WRITE_BAN_UUID, gatherWriteBan());
-        map.put(DEVICE_MODEL_UUID, readSafeValueStr(linuxHardwareRepository::getDeviceModel));
+        map.put(DEVICE_MODEL_UUID, readSafeValueStr(this::getDeviceModel));
         map.put(SERVER_CONNECTED_UUID, readSafeValueStrIT(this::readServerConnected));
         map.put(WIFI_LIST_UUID, readSafeValueStr(this::readWifiList));
-        map.put(WIFI_NAME_UUID, readSafeValueStr(linuxHardwareRepository::getWifiName));
+        map.put(WIFI_NAME_UUID, readSafeValueStr(this::getWifiName));
         map.put(KEYSTORE_SET_UUID, readSafeValueStrIT(() -> String.valueOf(user.getKeystoreDate() == null ? "" : user.getKeystoreDate().getTime())));
         map.put(PWD_SET_UUID, readPwdSet());
+        map.put(FEATURES, readSafeValueStr(this::getFeatures));
 
         return map;
     }
@@ -134,17 +137,19 @@ public class BluetoothService implements BundleContext {
         });
 
         bluetoothApplication.newReadCharacteristic("cpu_load", CPU_LOAD_UUID, () -> readSafeValue(linuxHardwareRepository::getCpuLoad));
-        bluetoothApplication.newReadCharacteristic("cpu_temp", CPU_TEMP_UUID, () -> readSafeValue(linuxHardwareRepository::getCpuTemp));
+        bluetoothApplication.newReadCharacteristic("cpu_temp", CPU_TEMP_UUID, () -> readSafeValue(this::getCpuTemp));
         bluetoothApplication.newReadCharacteristic("memory", MEMORY_UUID, () -> readSafeValue(linuxHardwareRepository::getMemory));
         bluetoothApplication.newReadCharacteristic("sd_memory", SD_MEMORY_UUID, () -> readSafeValue(() -> linuxHardwareRepository.getSDCardMemory().toFineString()));
         bluetoothApplication.newReadCharacteristic("uptime", UPTIME_UUID, () -> readSafeValue(linuxHardwareRepository::getUptime));
         bluetoothApplication.newReadCharacteristic("ip", IP_ADDRESS_UUID, () -> readSafeValue(linuxHardwareRepository::getIpAddress));
         bluetoothApplication.newReadCharacteristic("write_ban", WRITE_BAN_UUID, () -> bluetoothApplication.gatherWriteBan().getBytes());
-        bluetoothApplication.newReadWriteCharacteristic("device_model", DEVICE_MODEL_UUID, this::rebootDevice, () -> readSafeValue(linuxHardwareRepository::getDeviceModel));
+        bluetoothApplication.newReadWriteCharacteristic("device_model", DEVICE_MODEL_UUID, this::rebootDevice, () -> readSafeValue(this::getDeviceModel));
         bluetoothApplication.newReadCharacteristic("server_connected", SERVER_CONNECTED_UUID, () -> readSafeValue(this::readServerConnected));
         bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, () -> readSafeValue(this::readWifiList));
-        bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, this::writeWifiSSID, () -> readSafeValue(linuxHardwareRepository::getWifiName));
+        bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, this::writeWifiSSID, () -> readSafeValue(this::getWifiName));
         bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, this::writePwd, () -> readPwdSet().getBytes());
+        bluetoothApplication.newReadCharacteristic("features", FEATURES, () -> readSafeValue(this::getFeatures));
+
         bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, this::writeKeystore,
                 () -> readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
 
@@ -153,6 +158,7 @@ public class BluetoothService implements BundleContext {
             bluetoothApplication.start();
             log.info("Bluetooth successfully started");
         } catch (Exception ex) {
+            entityContext.disableFeature(EntityContext.DeviceFeature.Bluetooth);
             log.error("Unable to start bluetooth service", ex);
         }
     }
@@ -260,5 +266,21 @@ public class BluetoothService implements BundleContext {
             return supplier.get();
         }
         return "";
+    }
+
+    private String getFeatures() {
+        return Stream.of(EntityContext.DeviceFeature.values()).map(deviceFeature -> entityContext.getDeviceFeatures().get(deviceFeature) ? "1" : "0").collect(Collectors.joining());
+    }
+
+    private String getWifiName() {
+        return EntityContext.isDockerEnvironment() ? "" : linuxHardwareRepository.getWifiName();
+    }
+
+    private String getDeviceModel() {
+        return EntityContext.isDockerEnvironment() ? "" : linuxHardwareRepository.getDeviceModel();
+    }
+
+    private String getCpuTemp() {
+        return EntityContext.isDockerEnvironment() ? "" : linuxHardwareRepository.getCpuTemp();
     }
 }

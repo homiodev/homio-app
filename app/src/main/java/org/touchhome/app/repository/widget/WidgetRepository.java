@@ -11,7 +11,6 @@ import java.util.List;
 
 @Log4j2
 @Repository
-@Deprecated
 public class WidgetRepository extends AbstractRepository<WidgetBaseEntity> {
 
     private EntityContext entityContext;

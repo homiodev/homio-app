@@ -1,7 +1,6 @@
 package org.touchhome.bundle.api;
 
 import io.swagger.annotations.ApiParam;
-import org.apache.commons.lang3.SystemUtils;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.PureEntity;
@@ -11,6 +10,7 @@ import org.touchhome.bundle.api.ui.PublicJsMethod;
 
 import javax.validation.constraints.NotNull;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -18,7 +18,11 @@ import java.util.function.Consumer;
 public interface EntityContext {
 
     static boolean isTestApplication() {
-        return SystemUtils.IS_OS_WINDOWS;
+        return "true".equals(System.getProperty("development"));
+    }
+
+    static boolean isDockerEnvironment() {
+        return "true".equals(System.getProperty("docker"));
     }
 
     @PublicJsMethod
@@ -146,9 +150,17 @@ public interface EntityContext {
 
     <T extends BaseEntity> void addEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
 
+    Map<DeviceFeature, Boolean> getDeviceFeatures();
+
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, Consumer<T> listener);
 
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener);
 
     <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
+
+    void disableFeature(DeviceFeature deviceFeature);
+
+    enum DeviceFeature {
+        Bluetooth, HotSpot, GPIO
+    }
 }

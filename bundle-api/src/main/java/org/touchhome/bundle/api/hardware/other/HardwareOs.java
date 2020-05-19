@@ -2,6 +2,7 @@ package org.touchhome.bundle.api.hardware.other;
 
 import lombok.Getter;
 import lombok.ToString;
+import org.apache.commons.lang.StringUtils;
 import org.touchhome.bundle.api.hardware.api.ListParse;
 
 @Getter
@@ -21,7 +22,7 @@ public class HardwareOs {
     private String version;
 
     public String getPackageManager() {
-        switch (idLike) {
+        switch (StringUtils.defaultString(idLike, id)) {
             case "debian":
                 return "apt-get";
             case "rhel fedora":

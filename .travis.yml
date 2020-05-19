@@ -24,8 +24,9 @@ deploy:
   file: 'bintray.json'
   on:
     tags: true
--provider: script
-  script: bash app/docker-push.sh $TRAVIS_TAG
+- provider: script
+  skip_cleanup: true
+  script: bash docker-push.sh $USER
   on:
     tags: true
 
