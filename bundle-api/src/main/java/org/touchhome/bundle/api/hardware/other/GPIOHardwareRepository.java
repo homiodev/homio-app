@@ -6,9 +6,6 @@ import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 
 @HardwareRepositoryAnnotation
 public interface GPIOHardwareRepository {
-    @HardwareQuery(echo = "Printing wiring PI version", value = "gpio -v", printOutput = true)
-    void printWiringPiVersion();
-
     @HardwareQuery(echo = "Printing wiring PI info", value = "gpio readall", printOutput = true)
     boolean printWiringPiInfo();
 

@@ -51,13 +51,6 @@ RUN git clone https://github.com/technion/lol_dht22
 RUN cd lol_dht22 && ./configure && make && cd ..
 
 # Configure postgres
-#USER postgres
-#RUN service postgresql start && sleep 1 && service postgresql status && psql --command "ALTER ROLE postgres WITH PASSWORD 'postgres';"
-
-USER root
-#RUN psql --command "ALTER ROLE postgres WITH PASSWORD 'postgres';"
-#RUN echo "listen_addresses='*'" >> /etc/postgresql/11/main/postgresql.conf && /etc/init.d/postgresql start
-#RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/9.3/main/pg_hba.conf
 VOLUME  ["/var/lib/postgresql/data"]
 
 COPY app/target/touchHome.jar touchHome.jar
