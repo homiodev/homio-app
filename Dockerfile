@@ -3,7 +3,8 @@ FROM adoptopenjdk/openjdk8:debian-slim
 LABEL maintainer="Ruslan Masiuk <ruslan.masuk@gmail.com>"
 LABEL image.application.name=touchHome-core
 
-RUN apt-get update && apt-get upgrade && apt-get install -y postgresql && /etc/init.d/postgresql start
+RUN apt-get update && apt-get upgrade && apt-get install -y postgresql
+RUN echo "listen_addresses='*'" >> /etc/postgresql/11/main/postgresql.conf && /etc/init.d/postgresql start
 VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
 COPY app/target/touchHome.jar touchHome.jar
