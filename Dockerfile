@@ -54,6 +54,6 @@ RUN cd lol_dht22 && ./configure && make && cd ..
 VOLUME  ["/var/lib/postgresql/data"]
 
 COPY app/target/touchHome.jar touchHome.jar
-ENTRYPOINT ["java","-jar","touchHome.jar"]
+ENTRYPOINT ["java", "-jar", "-Ddocker=true", "touchHome.jar"]
 
 EXPOSE 9111
