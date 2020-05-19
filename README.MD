@@ -22,3 +22,12 @@ To debug code on rpi: Install plugin 'Embedded Linux JVM' (https://medium.com/@m
 If you want to change the bluetooth device name permanently, you have to create a file called /etc/machine-info which should have the following content:
 PRETTY_HOSTNAME=device-name
 Then issue "service bluetooth restart" after that
+
+
+# Local development
+## Pre-requirements
+1.Install PostgreSql server with default user/password and default port
+
+# Run from IDE
+Application starts as spring boot application with main class TouchHomeApplication.java
+To avoid errors with installing linux packages when starts application you need setup env variable -Ddev=true

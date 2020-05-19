@@ -5,6 +5,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.core.env.Environment;
 import org.touchhome.app.hardware.HotSpotHardwareRepository;
 import org.touchhome.bundle.api.EntityContext;
@@ -15,11 +16,13 @@ import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
+import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.Collections;
+import java.util.Objects;
 
 @Log4j2
 public final class HardwareUtils {
@@ -34,9 +37,9 @@ public final class HardwareUtils {
             return;
         }
         hardwareChecked = true;
+        checkDatabaseInstalled(beanFactory);
         if (!EntityContext.isTestApplication()) {
             copyResources();
-            checkDatabaseInstalled(beanFactory);
             checkWiringPi(beanFactory);
             checkHotSpotAndWifi(beanFactory);
             checkInternetConnection(beanFactory);
@@ -82,18 +85,34 @@ public final class HardwareUtils {
 
     private static void checkDatabaseInstalled(BeanFactory beanFactory) {
         PostgreSQLHardwareRepository repository = beanFactory.getBean(PostgreSQLHardwareRepository.class);
+        Environment env = beanFactory.getBean(Environment.class);
+        String url = env.getProperty("spring.datasource.url");
+        DataSource dataSource = DataSourceBuilder.create().url(url)
+                .driverClassName(env.getProperty("spring.datasource.driver-class-name"))
+                .username(env.getProperty("spring.datasource.username")).password(env.getProperty("spring.datasource.password")).build();
         try {
-            log.info("PostgreSQL already installed <{}>", repository.getPostgreSQLVersion());
-            if (!repository.isPostgreSQLRunning()) {
-                repository.startPostgreSQLService();
+            log.debug("Check db connection");
+            dataSource.getConnection();
+            log.info("Db check connection success");
+        } catch (Exception ex) {
+            log.warn("Db connection not alive. url: <{}>", url, ex);
+
+            if (Objects.requireNonNull(url).startsWith("jdbc:postgresql://localhost:5432")) {
+                log.debug("Database url require local postgres. Trying start/install it");
+                try {
+                    log.info("PostgreSQL already installed <{}>", repository.getPostgreSQLVersion());
+                    if (!repository.isPostgreSQLRunning()) {
+                        repository.startPostgreSQLService();
+                    }
+                } catch (HardwareException he) {
+                    log.warn("PostgreSQL not installed. Installing it...");
+                    repository.installPostgreSQL();
+                    log.info("PostgreSQL installed successfully.");
+                    repository.startPostgreSQLService();
+                    String pwd = env.getProperty("spring.datasource.password");
+                    repository.changePostgresPassword(pwd);
+                }
             }
-        } catch (HardwareException ex) {
-            log.warn("PostgreSQL not installed. Installing it...");
-            repository.installPostgreSQL();
-            log.info("PostgreSQL installed successfully.");
-            repository.startPostgreSQLService();
-            String pwd = beanFactory.getBean(Environment.class).getProperty("spring.datasource.password");
-            repository.changePostgresPassword(pwd);
         }
     }
 

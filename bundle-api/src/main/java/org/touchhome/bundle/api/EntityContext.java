@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 public interface EntityContext {
 
     static boolean isTestApplication() {
-        return SystemUtils.IS_OS_WINDOWS;
+        return "true".equals(System.getProperty("dev"));
     }
 
     @PublicJsMethod
