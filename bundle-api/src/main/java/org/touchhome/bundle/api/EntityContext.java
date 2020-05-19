@@ -1,7 +1,6 @@
 package org.touchhome.bundle.api;
 
 import io.swagger.annotations.ApiParam;
-import org.apache.commons.lang3.SystemUtils;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.PureEntity;
@@ -19,6 +18,10 @@ public interface EntityContext {
 
     static boolean isTestApplication() {
         return "true".equals(System.getProperty("dev"));
+    }
+
+    static boolean isDockerEnvironment() {
+        return "true".equals(System.getProperty("docker"));
     }
 
     @PublicJsMethod

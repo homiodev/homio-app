@@ -41,9 +41,11 @@ public final class HardwareUtils {
         if (!EntityContext.isTestApplication()) {
             copyResources();
             checkWiringPi(beanFactory);
-            checkHotSpotAndWifi(beanFactory);
             checkInternetConnection(beanFactory);
-            startupCheck(beanFactory);
+            if (!EntityContext.isDockerEnvironment()) {
+                checkHotSpotAndWifi(beanFactory);
+                startupCheck(beanFactory);
+            }
         }
     }
 
