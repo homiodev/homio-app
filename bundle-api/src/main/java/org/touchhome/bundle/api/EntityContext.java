@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 public interface EntityContext {
 
     static boolean isTestApplication() {
-        return "true".equals(System.getProperty("dev"));
+        return "true".equals(System.getProperty("development"));
     }
 
     static boolean isDockerEnvironment() {
