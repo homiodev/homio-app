@@ -1,13 +1,18 @@
 package org.touchhome.bundle.api.hardware.wifi;
 
 import io.swagger.annotations.ApiParam;
+import lombok.SneakyThrows;
 import org.touchhome.bundle.api.hardware.api.ErrorsHandler;
 import org.touchhome.bundle.api.hardware.api.HardwareQuery;
 import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 import org.touchhome.bundle.api.hardware.api.ListParse;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 
 @HardwareRepositoryAnnotation
@@ -61,8 +66,14 @@ public interface WirelessHardwareRepository {
     @HardwareQuery("grep -r 'psk=' /etc/wpa_supplicant/wpa_supplicant.conf | cut -d = -f 2 | cut -d \\\" -f 2")
     String getWifiPassword();
 
-    @HardwareQuery(echo = "Set WIFI credentials", value = "wpa_passphrase \":ssid\" \":password\" > /etc/wpa_supplicant/wpa_supplicant.conf")
-    void setWifiCredentials(@ApiParam("ssid") String ssid, @ApiParam("password") String password);
+    @SneakyThrows
+    default void setWifiCredentials(String ssid, String password, String country) {
+        String value = TouchHomeUtils.templateBuilder("wpa_supplicant.conf")
+                .set("SSID", ssid).set("PASSWORD", password).set("COUNTRY", country)
+                .build();
+
+        Files.write(Paths.get("/etc/wpa_supplicant/wpa_supplicant.conf"), value.getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
+    }
 
     @HardwareQuery("ip addr | awk '/state UP/ {print $2}' | sed 's/.$//'")
     String getActiveNetworkInterface();

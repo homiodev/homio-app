@@ -204,8 +204,8 @@ public class BluetoothService implements BundleContext {
         writeSafeValue(() -> {
             log.info("Writing wifi credentials");
             String[] split = new String(bytes).split("%&%");
-            if (split.length == 2 && split[1].length() >= 8) {
-                wirelessHardwareRepository.setWifiCredentials(split[0], split[1]);
+            if (split.length > 1 && split[1].length() >= 8) {
+                wirelessHardwareRepository.setWifiCredentials(split[0], split[1], split.length > 2 ? split[2] : "US");
                 wirelessHardwareRepository.restartNetworkInterface();
             }
         });

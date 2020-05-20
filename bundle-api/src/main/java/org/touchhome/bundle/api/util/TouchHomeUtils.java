@@ -11,6 +11,10 @@ import org.apache.commons.lang3.SystemUtils;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.templatemode.TemplateMode;
+import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 import org.touchhome.bundle.api.exception.NotFoundException;
 
 import java.io.*;
@@ -267,5 +271,34 @@ public class TouchHomeUtils {
             }
         }
         return false;
+    }
+
+    public static TemplateBuilder templateBuilder(String templateName) {
+        return new TemplateBuilder(templateName);
+    }
+
+    public static class TemplateBuilder {
+        private final Context context = new Context();
+        private final TemplateEngine templateEngine;
+        private final String templateName;
+
+        public TemplateBuilder(String templateName) {
+            this.templateName = templateName;
+            this.templateEngine = new TemplateEngine();
+            ClassLoaderTemplateResolver templateResolver = new ClassLoaderTemplateResolver();
+            templateResolver.setTemplateMode(TemplateMode.HTML);
+            templateEngine.setTemplateResolver(templateResolver);
+        }
+
+        public TemplateBuilder set(String key, Object value) {
+            context.setVariable(key, value);
+            return this;
+        }
+
+        public String build() {
+            StringWriter stringWriter = new StringWriter();
+            templateEngine.process("templates/" + templateName, context, stringWriter);
+            return stringWriter.toString();
+        }
     }
 }
