@@ -15,7 +15,10 @@
   "files": [
     {
       "includePattern": "app/target/touchHome.jar",
-      "uploadPattern": "release/touchHome.jar"
+      "uploadPattern": "touchHome.jar",
+      "matrixParams": {
+        "override": 1
+      }
     }
   ],
   "publish": true
