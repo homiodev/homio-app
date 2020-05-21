@@ -51,7 +51,7 @@ public final class HardwareUtils {
 
     private static void startupCheck(ConfigurableListableBeanFactory beanFactory) {
         StartupHardwareRepository repository = beanFactory.getBean(StartupHardwareRepository.class);
-        repository.addStartupCommand("sudo java -jar /root/touchHome.jar&");
+        repository.addStartupCommand("nohup sudo java -jar /opt/touchHome.jar &>/dev/null &");
     }
 
     private static void checkInternetConnection(ConfigurableListableBeanFactory beanFactory) {

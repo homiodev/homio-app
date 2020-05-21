@@ -44,10 +44,13 @@ print_info "Latest app version: $VERSION"
 PROGRAM_NAME="touchHome"
 PROGRAM_PATH=/opt/${PROGRAM_NAME}.jar
 EXPECTED_CHECKSUM="`wget -qO- https://github.com/touchhome/touchHome-core/releases/download/${VERSION}/touchHome.jar.md5`"
-RELEASE_PROGRAM_URL="https://bintray.com/touchhome/touchhome/download_file?file_path=release%2FtouchHome.jar"
+RELEASE_PROGRAM_URL="https://bintray.com/touchhome/touchhome/download_file?file_path=touchHome.jar"
 
 PROGRAM_NAME="touchHome"
 PID=`ps aux | grep -v -e 'grep ' | grep ${PROGRAM_NAME} | tr -s " " | cut -d " " -f 2`
+
+PROGRAM_RELEASE_PATH=/opt/${PROGRAM_NAME}.tmp
+rm -f ${PROGRAM_RELEASE_PATH}
 
 if [ -f "$PROGRAM_PATH" ]; then
     ACTUAL_CHECKSUM=`md5sum ${PROGRAM_PATH} | awk '{ print $1 }'`
@@ -60,21 +63,20 @@ if [ -f "$PROGRAM_PATH" ]; then
           nohup sudo java -jar ${PROGRAM_PATH} &>/dev/null &
        fi
        exit 0
+    else
+       print_warn "Files checksum not equals. Expected: $EXPECTED_CHECKSUM, but actual is $ACTUAL_CHECKSUM"
     fi
 fi
 
 
-PROGRAM_RELEASE_PATH=/opt/${PROGRAM_NAME}.tmp
-rm -f ${PROGRAM_RELEASE_PATH}
 print_warn "Downloading release: ${RELEASE_PROGRAM_URL}"
-wget -q ${RELEASE_PROGRAM_URL} -O ${PROGRAM_RELEASE_PATH}
+wget ${RELEASE_PROGRAM_URL} -O ${PROGRAM_RELEASE_PATH}
 
 ACTUAL_CHECKSUM=`md5sum ${PROGRAM_RELEASE_PATH} | awk '{ print $1 }'`
 if [ "$ACTUAL_CHECKSUM" != "$EXPECTED_CHECKSUM" ]; then
     print_warn "Files checksum not equals. Expected: $EXPECTED_CHECKSUM, but actual is $ACTUAL_CHECKSUM"
     exit 2
 fi
-
 
 if ! [ -z "${PID}" ]; then
    print_warn "Killing old program '${PID}'"
