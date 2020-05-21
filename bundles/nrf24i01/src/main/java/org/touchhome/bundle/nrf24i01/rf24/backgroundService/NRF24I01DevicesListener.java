@@ -30,7 +30,7 @@ public class NRF24I01DevicesListener extends BackgroundProcessService<Void> {
         rf24Service = ApplicationContextHolder.getBean(RF24Service.class);
         rf24CommandPlugins = ApplicationContextHolder.getBean("rf24CommandPlugins", Map.class);
 
-        if (EntityContext.isTestApplication()) {
+        if (EntityContext.isTestEnvironment()) {
             Timer timer = new Timer();
 
             timer.schedule(new TimerTask() {
@@ -118,7 +118,7 @@ public class NRF24I01DevicesListener extends BackgroundProcessService<Void> {
 
     @Override
     public boolean canWork() {
-        return rf24Service.isNrf24L01Works() || EntityContext.isTestApplication();
+        return rf24Service.isNrf24L01Works() || EntityContext.isTestEnvironment();
     }
 
     @Override

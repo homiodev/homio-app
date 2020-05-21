@@ -115,14 +115,9 @@ public class BluetoothService implements BundleContext {
 
     public void init() {
         this.user = entityContext.getEntity(ADMIN_USER);
-        if (EntityContext.isTestApplication()) {
-            log.info("Bluetooth skipped in test applications");
-            return;
-        }
-
         log.info("Starting bluetooth...");
 
-        bluetoothApplication = new BluetoothApplication("tango", SERVICE_UUID, new BleApplicationListener() {
+        bluetoothApplication = new BluetoothApplication("touchHome", SERVICE_UUID, new BleApplicationListener() {
             @Override
             public void deviceConnected(Variant<String> address, InterfacesAdded signal) {
                 log.info("Device connected. Address: <{}>. Path: <{}>", address.getValue(), signal.getObjectPath());
@@ -251,14 +246,14 @@ public class BluetoothService implements BundleContext {
     }
 
     private byte[] readSafeValue(Supplier<String> supplier) {
-        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isTestApplication()) {
+        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isTestEnvironment()) {
             return supplier.get().getBytes();
         }
         return new byte[0];
     }
 
     private String readSafeValueStr(Supplier<String> supplier) {
-        return EntityContext.isTestApplication() ? "" : readSafeValueStrIT(supplier);
+        return EntityContext.isTestEnvironment() ? "" : readSafeValueStrIT(supplier);
     }
 
     private String readSafeValueStrIT(Supplier<String> supplier) {

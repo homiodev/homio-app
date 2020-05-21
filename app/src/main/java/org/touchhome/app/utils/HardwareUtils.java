@@ -38,11 +38,11 @@ public final class HardwareUtils {
         }
         hardwareChecked = true;
         checkDatabaseInstalled(beanFactory);
-        if (!EntityContext.isTestApplication()) {
+        checkInternetConnection(beanFactory);
+        if (!EntityContext.isTestEnvironment()) {
             copyResources();
-            checkWiringPi(beanFactory);
-            checkInternetConnection(beanFactory);
-            if (!EntityContext.isDockerEnvironment()) {
+            if (EntityContext.isLinuxEnvironment()) {
+                checkWiringPi(beanFactory);
                 checkHotSpotAndWifi(beanFactory);
                 startupCheck(beanFactory);
             }
@@ -94,11 +94,13 @@ public final class HardwareUtils {
                 .username(env.getProperty("spring.datasource.username")).password(pwd).build();
         try {
             log.debug("Check db connection");
+            // check that we able connect to target db
             dataSource.getConnection();
             log.info("Db check connection success");
         } catch (Exception ex) {
             log.warn("Db connection not alive. url: <{}>. Msg: <{}>", url, TouchHomeUtils.getErrorMessage(ex));
 
+            // try install postgresql if url points to localhost
             if (Objects.requireNonNull(url).startsWith("jdbc:postgresql://localhost:5432")) {
                 log.debug("Database url require local postgres. Trying start/install it");
                 try {
