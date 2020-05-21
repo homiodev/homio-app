@@ -39,11 +39,9 @@ if [ $? -ne 0 ]; then
    sudo service postgresql restart
 fi
 
-VERSION=$(curl https://api.github.com/repos/touchhome/touchHome-core/releases/latest | python -c "import sys,json; print json.load(sys.stdin)['tag_name']")
-print_info "Latest app version: $VERSION"
 PROGRAM_NAME="touchHome"
 PROGRAM_PATH=/opt/${PROGRAM_NAME}.jar
-EXPECTED_CHECKSUM="`wget -qO- https://github.com/touchhome/touchHome-core/releases/download/${VERSION}/touchHome.jar.md5`"
+EXPECTED_CHECKSUM="`wget -qO- https://bintray.com/touchhome/touchhome/download_file?file_path=touchHome.jar.md5`"
 RELEASE_PROGRAM_URL="https://bintray.com/touchhome/touchhome/download_file?file_path=touchHome.jar"
 
 PROGRAM_NAME="touchHome"
