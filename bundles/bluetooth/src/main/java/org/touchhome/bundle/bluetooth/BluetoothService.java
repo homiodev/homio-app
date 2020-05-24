@@ -50,7 +50,7 @@ public class BluetoothService implements BundleContext {
     private static final String SD_MEMORY_UUID = PREFIX + "11";
     private static final String WRITE_BAN_UUID = PREFIX + "12";
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
-    private static final String FEATURES = PREFIX + "20";
+    private static final String FEATURES_UUID = PREFIX + "14";
 
     public static final int MIN_WRITE_TIMEOUT = 60000;
     private static final int TIME_REFRESH_PASSWORD = 5 * 60000; // 5 minute for session
@@ -79,7 +79,7 @@ public class BluetoothService implements BundleContext {
         map.put(WIFI_NAME_UUID, readSafeValueStr(this::getWifiName));
         map.put(KEYSTORE_SET_UUID, readSafeValueStrIT(() -> String.valueOf(user.getKeystoreDate() == null ? "" : user.getKeystoreDate().getTime())));
         map.put(PWD_SET_UUID, readPwdSet());
-        map.put(FEATURES, readSafeValueStr(this::getFeatures));
+        map.put(FEATURES_UUID, readSafeValueStr(this::getFeatures));
 
         return map;
     }
@@ -115,6 +115,10 @@ public class BluetoothService implements BundleContext {
 
     public void init() {
         this.user = entityContext.getEntity(ADMIN_USER);
+        if (!EntityContext.isLinuxOrDockerEnvironment()) {
+            log.info("Bluetooth skipped for non linux env. Require unix sockets");
+            return;
+        }
         log.info("Starting bluetooth...");
 
         bluetoothApplication = new BluetoothApplication("touchHome", SERVICE_UUID, new BleApplicationListener() {
@@ -143,7 +147,7 @@ public class BluetoothService implements BundleContext {
         bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, () -> readSafeValue(this::readWifiList));
         bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, this::writeWifiSSID, () -> readSafeValue(this::getWifiName));
         bluetoothApplication.newReadWriteCharacteristic("pwd", PWD_SET_UUID, this::writePwd, () -> readPwdSet().getBytes());
-        bluetoothApplication.newReadCharacteristic("features", FEATURES, () -> readSafeValue(this::getFeatures));
+        bluetoothApplication.newReadCharacteristic("features", FEATURES_UUID, () -> readSafeValue(this::getFeatures));
 
         bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, this::writeKeystore,
                 () -> readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
@@ -197,10 +201,10 @@ public class BluetoothService implements BundleContext {
 
     private void writeWifiSSID(byte[] bytes) {
         writeSafeValue(() -> {
-            log.info("Writing wifi credentials");
             String[] split = new String(bytes).split("%&%");
-            if (split.length > 1 && split[1].length() >= 8) {
-                wirelessHardwareRepository.setWifiCredentials(split[0], split[1], split.length > 2 ? split[2] : "US");
+            if (split.length == 3 && split[1].length() >= 8) {
+                log.info("Writing wifi credentials");
+                wirelessHardwareRepository.setWifiCredentials(split[0], split[1], split[2]);
                 wirelessHardwareRepository.restartNetworkInterface();
             }
         });

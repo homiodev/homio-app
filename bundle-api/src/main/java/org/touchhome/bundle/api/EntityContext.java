@@ -27,7 +27,11 @@ public interface EntityContext {
     }
 
     static boolean isLinuxEnvironment() {
-        return SystemUtils.IS_OS_LINUX && ! isDockerEnvironment() && !isTestEnvironment();
+        return SystemUtils.IS_OS_LINUX && !isDockerEnvironment() && !isTestEnvironment();
+    }
+
+    static boolean isLinuxOrDockerEnvironment() {
+        return SystemUtils.IS_OS_LINUX && !isTestEnvironment();
     }
 
     @PublicJsMethod

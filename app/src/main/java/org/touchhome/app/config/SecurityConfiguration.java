@@ -40,8 +40,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                         WebSocketConfig.ENDPOINT,
                         "/rest/auth/status",
                         "/rest/auth/login",
-                        "/rest/device/characteristic/*",
-                        "/rest/device/*").permitAll()
+                        "/rest/bundle/*/icon",
+                        "/rest/device/**").permitAll()
                 // Disallow everything else..
                 .anyRequest().authenticated();
 

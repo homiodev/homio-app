@@ -116,7 +116,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             }));
         }
 
-        if (EntityContext.isLinuxEnvironment() || EntityContext.isDockerEnvironment()) {
+        if (EntityContext.isLinuxOrDockerEnvironment()) {
             LinuxHardwareRepository repository = beanFactory.getBean(LinuxHardwareRepository.class);
             this.pm = repository.getOs().getPackageManager();
         }

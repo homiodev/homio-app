@@ -30,7 +30,25 @@ function check_install {
         fi
 }
 
-#sudo apt update
+function stop_app {
+   print_warn "stop program"
+   if test -f "/etc/systemd/system/touchhome.service"; then
+      systemctl stop touchhome
+   else
+      sudo kill ${PID}
+   fi
+}
+
+function start_app {
+   print_info "Running program"
+   if test -f "/etc/systemd/system/touchhome.service"; then
+      systemctl start touchhome
+   else
+      nohup sudo java -jar ${PROGRAM_PATH} &>/dev/null &
+   fi
+}
+
+sudo apt update
 
 check_install psql postgresql
 if [ $? -ne 0 ]; then
@@ -57,15 +75,13 @@ if [ -f "$PROGRAM_PATH" ]; then
        if ! [ -z "${PID}" ]; then
           print_info "App already started"
        else
-          print_warn "Starting app..."
-          nohup sudo java -jar ${PROGRAM_PATH} &>/dev/null &
+          start_app
        fi
        exit 0
     else
        print_warn "Files checksum not equals. Expected: $EXPECTED_CHECKSUM, but actual is $ACTUAL_CHECKSUM"
     fi
 fi
-
 
 print_warn "Downloading release: ${RELEASE_PROGRAM_URL}"
 wget ${RELEASE_PROGRAM_URL} -O ${PROGRAM_RELEASE_PATH}
@@ -81,8 +97,10 @@ if ! [ -z "${PID}" ]; then
    sudo kill ${PID}
 fi
 
+stop_app
+
 print_info "Replace program"
 mv ${PROGRAM_RELEASE_PATH} ${PROGRAM_PATH}
 
-print_info "Running program"
-nohup sudo java -jar ${PROGRAM_PATH} &>/dev/null &
+start_app
+

@@ -12,7 +12,6 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.api.HardwareException;
 import org.touchhome.bundle.api.hardware.other.GPIOHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.PostgreSQLHardwareRepository;
-import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -44,14 +43,8 @@ public final class HardwareUtils {
             if (EntityContext.isLinuxEnvironment()) {
                 checkWiringPi(beanFactory);
                 checkHotSpotAndWifi(beanFactory);
-                startupCheck(beanFactory);
             }
         }
-    }
-
-    private static void startupCheck(ConfigurableListableBeanFactory beanFactory) {
-        StartupHardwareRepository repository = beanFactory.getBean(StartupHardwareRepository.class);
-        repository.addStartupCommand("nohup sudo java -jar /opt/touchHome.jar &>/dev/null &");
     }
 
     private static void checkInternetConnection(ConfigurableListableBeanFactory beanFactory) {
