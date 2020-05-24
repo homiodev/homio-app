@@ -11,7 +11,6 @@ deploy:
   file_glob: true
   draft: true
   file:
-  - "app/target/classes/asm_files/update.sh"
   - "app/target/touchHome.jar.md5"
   - "app/target/touchHome.jar"
   on:

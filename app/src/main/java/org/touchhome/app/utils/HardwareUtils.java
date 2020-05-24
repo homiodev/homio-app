@@ -12,7 +12,6 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.api.HardwareException;
 import org.touchhome.bundle.api.hardware.other.GPIOHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.PostgreSQLHardwareRepository;
-import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -38,20 +37,14 @@ public final class HardwareUtils {
         }
         hardwareChecked = true;
         checkDatabaseInstalled(beanFactory);
-        if (!EntityContext.isTestApplication()) {
+        checkInternetConnection(beanFactory);
+        if (!EntityContext.isTestEnvironment()) {
             copyResources();
-            checkWiringPi(beanFactory);
-            checkInternetConnection(beanFactory);
-            if (!EntityContext.isDockerEnvironment()) {
+            if (EntityContext.isLinuxEnvironment()) {
+                checkWiringPi(beanFactory);
                 checkHotSpotAndWifi(beanFactory);
-                startupCheck(beanFactory);
             }
         }
-    }
-
-    private static void startupCheck(ConfigurableListableBeanFactory beanFactory) {
-        StartupHardwareRepository repository = beanFactory.getBean(StartupHardwareRepository.class);
-        repository.addStartupCommand("nohup sudo java -jar /opt/touchHome.jar &>/dev/null &");
     }
 
     private static void checkInternetConnection(ConfigurableListableBeanFactory beanFactory) {
@@ -94,11 +87,13 @@ public final class HardwareUtils {
                 .username(env.getProperty("spring.datasource.username")).password(pwd).build();
         try {
             log.debug("Check db connection");
+            // check that we able connect to target db
             dataSource.getConnection();
             log.info("Db check connection success");
         } catch (Exception ex) {
             log.warn("Db connection not alive. url: <{}>. Msg: <{}>", url, TouchHomeUtils.getErrorMessage(ex));
 
+            // try install postgresql if url points to localhost
             if (Objects.requireNonNull(url).startsWith("jdbc:postgresql://localhost:5432")) {
                 log.debug("Database url require local postgres. Trying start/install it");
                 try {

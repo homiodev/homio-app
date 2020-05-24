@@ -66,7 +66,7 @@ public class RaspberryGPIOService {
 
     private boolean isGPIOAvailable() {
         if (available == null) {
-            if (EntityContext.isTestApplication()) {
+            if (EntityContext.isTestEnvironment()) {
                 available = false;
             } else {
                 try {
@@ -270,7 +270,7 @@ public class RaspberryGPIOService {
     }
 
     private List<String> getRawDataAsLines(String sensorID) {
-        if (EntityContext.isTestApplication()) {
+        if (EntityContext.isTestEnvironment()) {
             Random r = new Random(System.currentTimeMillis());
             return Arrays.asList("", "sd sd sd sd ff zz cc vv aa t=" + (10000 + r.nextInt(40000)));
         }
@@ -286,7 +286,7 @@ public class RaspberryGPIOService {
 
     @SneakyThrows
     public List<String> getDS18B20() {
-        if (EntityContext.isTestApplication()) {
+        if (EntityContext.isTestEnvironment()) {
             return Collections.singletonList("28-test000011");
         }
         return Files.readAllLines(w1BaseDir.resolve("w1_master_slaves")).stream()

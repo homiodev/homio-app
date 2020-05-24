@@ -1,6 +1,7 @@
 package org.touchhome.bundle.api;
 
 import io.swagger.annotations.ApiParam;
+import org.apache.commons.lang3.SystemUtils;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.PureEntity;
@@ -17,12 +18,20 @@ import java.util.function.Consumer;
 
 public interface EntityContext {
 
-    static boolean isTestApplication() {
+    static boolean isTestEnvironment() {
         return "true".equals(System.getProperty("development"));
     }
 
     static boolean isDockerEnvironment() {
         return "true".equals(System.getProperty("docker"));
+    }
+
+    static boolean isLinuxEnvironment() {
+        return SystemUtils.IS_OS_LINUX && !isDockerEnvironment() && !isTestEnvironment();
+    }
+
+    static boolean isLinuxOrDockerEnvironment() {
+        return SystemUtils.IS_OS_LINUX && !isTestEnvironment();
     }
 
     @PublicJsMethod

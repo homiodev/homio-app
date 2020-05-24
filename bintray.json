@@ -19,6 +19,20 @@
       "matrixParams": {
         "override": 1
       }
+    },
+    {
+      "includePattern": "app/target/classes/asm_files/update.sh",
+      "uploadPattern": "update.sh",
+      "matrixParams": {
+        "override": 1
+      }
+    },
+    {
+      "includePattern": "app/target/touchHome.jar.md5",
+      "uploadPattern": "touchHome.jar.md5",
+      "matrixParams": {
+        "override": 1
+      }
     }
   ],
   "publish": true

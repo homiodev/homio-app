@@ -2,6 +2,7 @@ package org.touchhome.bundle.api.hardware.wifi;
 
 import io.swagger.annotations.ApiParam;
 import lombok.SneakyThrows;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.api.ErrorsHandler;
 import org.touchhome.bundle.api.hardware.api.HardwareQuery;
 import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
@@ -90,7 +91,7 @@ public interface WirelessHardwareRepository {
     }
 
     default NetworkDescription getNetworkDescription() {
-        String activeNetworkInterface = getActiveNetworkInterface();
-        return getNetworkDescription(activeNetworkInterface);
+        return !EntityContext.isLinuxEnvironment() ? null :
+                getNetworkDescription(getActiveNetworkInterface());
     }
 }

@@ -30,7 +30,25 @@ function check_install {
         fi
 }
 
-#sudo apt update
+function stop_app {
+   print_warn "stop program"
+   if test -f "/etc/systemd/system/touchhome.service"; then
+      systemctl stop touchhome
+   else
+      sudo kill ${PID}
+   fi
+}
+
+function start_app {
+   print_info "Running program"
+   if test -f "/etc/systemd/system/touchhome.service"; then
+      systemctl start touchhome
+   else
+      nohup sudo java -jar ${PROGRAM_PATH} &>/dev/null &
+   fi
+}
+
+sudo apt update
 
 check_install psql postgresql
 if [ $? -ne 0 ]; then
@@ -39,11 +57,9 @@ if [ $? -ne 0 ]; then
    sudo service postgresql restart
 fi
 
-VERSION=$(curl https://api.github.com/repos/touchhome/touchHome-core/releases/latest | python -c "import sys,json; print json.load(sys.stdin)['tag_name']")
-print_info "Latest app version: $VERSION"
 PROGRAM_NAME="touchHome"
 PROGRAM_PATH=/opt/${PROGRAM_NAME}.jar
-EXPECTED_CHECKSUM="`wget -qO- https://github.com/touchhome/touchHome-core/releases/download/${VERSION}/touchHome.jar.md5`"
+EXPECTED_CHECKSUM="`wget -qO- https://bintray.com/touchhome/touchhome/download_file?file_path=touchHome.jar.md5`"
 RELEASE_PROGRAM_URL="https://bintray.com/touchhome/touchhome/download_file?file_path=touchHome.jar"
 
 PROGRAM_NAME="touchHome"
@@ -59,15 +75,13 @@ if [ -f "$PROGRAM_PATH" ]; then
        if ! [ -z "${PID}" ]; then
           print_info "App already started"
        else
-          print_warn "Starting app..."
-          nohup sudo java -jar ${PROGRAM_PATH} &>/dev/null &
+          start_app
        fi
        exit 0
     else
        print_warn "Files checksum not equals. Expected: $EXPECTED_CHECKSUM, but actual is $ACTUAL_CHECKSUM"
     fi
 fi
-
 
 print_warn "Downloading release: ${RELEASE_PROGRAM_URL}"
 wget ${RELEASE_PROGRAM_URL} -O ${PROGRAM_RELEASE_PATH}
@@ -83,8 +97,10 @@ if ! [ -z "${PID}" ]; then
    sudo kill ${PID}
 fi
 
+stop_app
+
 print_info "Replace program"
 mv ${PROGRAM_RELEASE_PATH} ${PROGRAM_PATH}
 
-print_info "Running program"
-nohup sudo java -jar ${PROGRAM_PATH} &>/dev/null &
+start_app
+

@@ -38,7 +38,7 @@ public class Rf433Service implements BundleContext {
     private boolean isTestApplication = false;
 
     public void init() {
-        if (EntityContext.isTestApplication()) {
+        if (EntityContext.isTestEnvironment()) {
             return;
         }
         try {
