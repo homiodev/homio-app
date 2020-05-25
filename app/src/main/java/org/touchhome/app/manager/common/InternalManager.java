@@ -324,8 +324,12 @@ public class InternalManager implements EntityContext {
             settingTransientState.put(pluginFor, value);
         } else {
             SettingEntity settingEntity = getEntity(SettingRepository.getKey(pluginFor));
-            settingEntity.setValue(value);
-            save(settingEntity);
+            if (!Objects.equals(value, settingEntity.getValue())) {
+                if (settingEntity.getDefaultValue().equals(value)) {
+                    value = null;
+                }
+                save(settingEntity.setValue(value));
+            }
         }
     }
 

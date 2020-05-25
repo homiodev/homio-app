@@ -19,9 +19,6 @@ public interface HotSpotHardwareRepository {
 
     @HardwareQuery("test -f /usr/bin/autohotspot")
     boolean isAutoHotSpotServiceExists();
-
-    @HardwareQuery("iw dev wlan0 set power_save off")
-    void fixLooseWifi();
 }
 
 

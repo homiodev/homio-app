@@ -21,7 +21,7 @@ public interface WirelessHardwareRepository {
     @HardwareQuery(echo = "Switch hotspot", value = "autohotspot swipe", printOutput = true)
     void switchHotSpot();
 
-    @HardwareQuery("iwlist wlan0 scan")
+    @HardwareQuery("iwlist :iface scan")
     @ErrorsHandler(onRetCodeError = "Got some major errors from our scan command",
             notRecognizeError = "Got some errors from our scan command",
             errorHandlers = {
@@ -29,11 +29,11 @@ public interface WirelessHardwareRepository {
                     @ErrorsHandler.ErrorHandler(onError = "Allocation failed", throwError = "Too many networks for iwlist to handle")
             })
     @ListParse(delimiter = ".*Cell \\d\\d.*", clazz = Network.class)
-    List<Network> scan();
+    List<Network> scan(@ApiParam("iface") String iface);
 
-    @HardwareQuery("iwconfig wlan0")
+    @HardwareQuery("iwconfig :iface")
     @ErrorsHandler(onRetCodeError = "Error getting wireless devices information", errorHandlers = {})
-    NetworkStat stat();
+    NetworkStat stat(@ApiParam("iface") String iface);
 
     @HardwareQuery("ifconfig wlan0 down")
     @ErrorsHandler(onRetCodeError = "There was an unknown error disabling the interface", notRecognizeError = "There was an error disabling the interface", errorHandlers = {})
@@ -78,6 +78,9 @@ public interface WirelessHardwareRepository {
 
     @HardwareQuery("ip addr | awk '/state UP/ {print $2}' | sed 's/.$//'")
     String getActiveNetworkInterface();
+
+    @HardwareQuery("iw :iface set power_save off")
+    void setWifiPowerSaveOff(@ApiParam("iface") String iface);
 
     default boolean hasInternetAccess(String spec) {
         try {

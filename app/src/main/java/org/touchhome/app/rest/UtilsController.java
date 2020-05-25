@@ -28,6 +28,7 @@ import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.manager.scripting.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
+import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.manager.En;
 import org.touchhome.bundle.api.model.BaseEntity;
@@ -52,6 +53,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.stream.Stream;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static org.apache.commons.lang.StringUtils.trimToNull;
@@ -74,7 +76,8 @@ public class UtilsController {
 
     @SneakyThrows
     static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType, Set<EntityUIMetaData> entityUIMetaDataSet) {
-        Constructor constructor = entityClassByType.getConstructor();
+        Constructor constructor = Stream.of(entityClassByType.getDeclaredConstructors()).filter(c -> c.getParameterCount() == 0).findAny()
+                .orElseThrow(() -> new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName()));
         constructor.setAccessible(true);
         Object instance = constructor.newInstance();
 

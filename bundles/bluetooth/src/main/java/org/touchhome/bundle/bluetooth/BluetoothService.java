@@ -73,11 +73,11 @@ public class BluetoothService implements BundleContext {
         map.put(UPTIME_UUID, readSafeValueStr(linuxHardwareRepository::getUptime));
         map.put(IP_ADDRESS_UUID, readSafeValueStr(linuxHardwareRepository::getIpAddress));
         map.put(WRITE_BAN_UUID, gatherWriteBan());
-        map.put(DEVICE_MODEL_UUID, readSafeValueStr(this::getDeviceModel));
+        map.put(DEVICE_MODEL_UUID, readSafeValueStr(linuxHardwareRepository::getDeviceModel));
         map.put(SERVER_CONNECTED_UUID, readSafeValueStrIT(this::readServerConnected));
         map.put(WIFI_LIST_UUID, readSafeValueStr(this::readWifiList));
         map.put(WIFI_NAME_UUID, readSafeValueStr(this::getWifiName));
-        map.put(KEYSTORE_SET_UUID, readSafeValueStrIT(() -> String.valueOf(user.getKeystoreDate() == null ? "" : user.getKeystoreDate().getTime())));
+        map.put(KEYSTORE_SET_UUID, readSafeValueStrIT(this::getKeystore));
         map.put(PWD_SET_UUID, readPwdSet());
         map.put(FEATURES_UUID, readSafeValueStr(this::getFeatures));
 
@@ -142,7 +142,7 @@ public class BluetoothService implements BundleContext {
         bluetoothApplication.newReadCharacteristic("uptime", UPTIME_UUID, () -> readSafeValue(linuxHardwareRepository::getUptime));
         bluetoothApplication.newReadCharacteristic("ip", IP_ADDRESS_UUID, () -> readSafeValue(linuxHardwareRepository::getIpAddress));
         bluetoothApplication.newReadCharacteristic("write_ban", WRITE_BAN_UUID, () -> bluetoothApplication.gatherWriteBan().getBytes());
-        bluetoothApplication.newReadWriteCharacteristic("device_model", DEVICE_MODEL_UUID, this::rebootDevice, () -> readSafeValue(this::getDeviceModel));
+        bluetoothApplication.newReadWriteCharacteristic("device_model", DEVICE_MODEL_UUID, this::rebootDevice, () -> readSafeValue(linuxHardwareRepository::getDeviceModel));
         bluetoothApplication.newReadCharacteristic("server_connected", SERVER_CONNECTED_UUID, () -> readSafeValue(this::readServerConnected));
         bluetoothApplication.newReadCharacteristic("wifi_list", WIFI_LIST_UUID, () -> readSafeValue(this::readWifiList));
         bluetoothApplication.newReadWriteCharacteristic("wifi_name", WIFI_NAME_UUID, this::writeWifiSSID, () -> readSafeValue(this::getWifiName));
@@ -150,7 +150,7 @@ public class BluetoothService implements BundleContext {
         bluetoothApplication.newReadCharacteristic("features", FEATURES_UUID, () -> readSafeValue(this::getFeatures));
 
         bluetoothApplication.newReadWriteCharacteristic("keystore", KEYSTORE_SET_UUID, this::writeKeystore,
-                () -> readSafeValue(() -> String.valueOf(user.getKeystore() != null)));
+                () -> readSafeValue(this::getKeystore));
 
         // start ble
         try {
@@ -234,7 +234,9 @@ public class BluetoothService implements BundleContext {
     }
 
     private String readWifiList() {
-        return wirelessHardwareRepository.scan().stream().filter(distinctByKey(Network::getSsid)).map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"));
+        return wirelessHardwareRepository.scan(wirelessHardwareRepository.getActiveNetworkInterface()).stream()
+                .filter(distinctByKey(Network::getSsid))
+                .map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"));
     }
 
     private String readServerConnected() {
@@ -275,11 +277,11 @@ public class BluetoothService implements BundleContext {
         return EntityContext.isDockerEnvironment() ? "" : linuxHardwareRepository.getWifiName();
     }
 
-    private String getDeviceModel() {
-        return EntityContext.isDockerEnvironment() ? "" : linuxHardwareRepository.getDeviceModel();
-    }
-
     private String getCpuTemp() {
         return EntityContext.isDockerEnvironment() ? "" : linuxHardwareRepository.getCpuTemp();
+    }
+
+    private String getKeystore() {
+        return String.valueOf(user.getKeystoreDate() == null ? "" : user.getKeystoreDate().getTime());
     }
 }

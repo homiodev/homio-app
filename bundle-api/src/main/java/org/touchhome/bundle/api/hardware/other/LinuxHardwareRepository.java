@@ -1,6 +1,8 @@
 package org.touchhome.bundle.api.hardware.other;
 
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.SystemUtils;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.api.HardwareQuery;
 import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
 
@@ -28,7 +30,7 @@ public interface LinuxHardwareRepository {
     String getUptime();
 
     @HardwareQuery("cat /proc/device-tree/model")
-    String getDeviceModel();
+    String catDeviceModel();
 
     @HardwareQuery("iwgetid -r")
     String getWifiName();
@@ -38,6 +40,10 @@ public interface LinuxHardwareRepository {
 
     @HardwareQuery("cat /etc/os-release")
     HardwareOs getOs();
+
+    default String getDeviceModel() {
+        return EntityContext.isLinuxEnvironment() ? catDeviceModel() : SystemUtils.OS_NAME;
+    }
 
     @SneakyThrows
     default String getIpAddress() {

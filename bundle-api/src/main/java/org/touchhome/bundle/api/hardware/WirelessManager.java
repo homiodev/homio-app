@@ -3,14 +3,10 @@ package org.touchhome.bundle.api.hardware;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
-import org.touchhome.bundle.api.hardware.wifi.Network;
-import org.touchhome.bundle.api.hardware.wifi.NetworkStat;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 
-import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.function.Function;
 
 @Log4j2
 @Component
@@ -20,7 +16,7 @@ public class WirelessManager {
     private final WirelessHardwareRepository wirelessHardwareRepository;
     private Timer hotspotCancelTimer;
 
-    public NetworkStat connectToWPANetwork(String apSSID, String password) {
+    /*public NetworkStat connectToWPANetwork(String apSSID, String password) {
         return connectToNetworkInternal(apSSID, network -> {
             if (network.isEncryption_wpa2()) {
                 wirelessHardwareRepository.connect_wpa(apSSID, password);
@@ -42,9 +38,9 @@ public class WirelessManager {
             }
             return false;
         });
-    }
+    }*/
 
-    private NetworkStat connectToNetworkInternal(String apSSID, Function<Network, Boolean> connector) {
+    /*private NetworkStat connectToNetworkInternal(String apSSID, Function<Network, Boolean> connector) {
         NetworkStat networkStat = wirelessHardwareRepository.stat();
         if (networkStat.getSsid().equals(apSSID)) {
             log.info("Already connected to ssid: <{}>", apSSID);
@@ -70,7 +66,7 @@ public class WirelessManager {
             log.error("Unable find network with ssid <{}>", apSSID);
         }
         return null;
-    }
+    }*/
 
     public void enableHotspot(int hotSpotEnableTimeout) {
         if (hotspotCancelTimer == null) {

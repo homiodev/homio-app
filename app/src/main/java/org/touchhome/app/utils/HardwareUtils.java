@@ -60,6 +60,11 @@ public final class HardwareUtils {
 
     private static void checkHotSpotAndWifi(ConfigurableListableBeanFactory beanFactory) {
         HotSpotHardwareRepository repository = beanFactory.getBean(HotSpotHardwareRepository.class);
+        WirelessHardwareRepository wifiRepository = beanFactory.getBean(WirelessHardwareRepository.class);
+        String iface = wifiRepository.getActiveNetworkInterface();
+        if (iface != null) {
+            wifiRepository.setWifiPowerSaveOff(iface);
+        }
 
         if (!repository.isAutoHotSpotServiceExists()) {
             repository.installAutoHotSpot(TouchHomeUtils.getFilesPath().resolve("hotspot").toAbsolutePath().toString());

@@ -21,7 +21,6 @@ RUN apt-get update && apt-get install -y \
 
 # Install java
 ENV JAVA_HOME='/usr/lib/jvm/default-jvm' JAVA_VERSION="8"
-
 RUN mkdir -p "${JAVA_HOME}" && \
     zulu8_amd64_url='https://cdn.azul.com/zulu/bin/zulu8.42.0.23-ca-jdk8.0.232-linux_x64.tar.gz' && \
     zulu8_armhf_url='https://cdn.azul.com/zulu-embedded/bin/zulu8.42.0.195-ca-jdk1.8.0_232-linux_aarch32hf.tar.gz' && \
