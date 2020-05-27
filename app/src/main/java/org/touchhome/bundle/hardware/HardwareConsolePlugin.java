@@ -43,10 +43,11 @@ public class HardwareConsolePlugin implements ConsolePlugin {
         if (EntityContext.isLinuxOrDockerEnvironment()) {
             list.add(new HardwarePluginEntity("Cpu load", linuxHardwareRepository.getCpuLoad()));
             list.add(new HardwarePluginEntity("Cpu temperature", linuxHardwareRepository.getCpuTemp()));
-            list.add(new HardwarePluginEntity("Memory", linuxHardwareRepository.getMemory()));
+            list.add(new HardwarePluginEntity("Ram memory", linuxHardwareRepository.getMemory()));
             list.add(new HardwarePluginEntity("SD memory", linuxHardwareRepository.getSDCardMemory().toFineString()));
             list.add(new HardwarePluginEntity("Uptime", linuxHardwareRepository.getUptime()));
             String activeNetworkInterface = wirelessHardwareRepository.getActiveNetworkInterface();
+            list.add(new HardwarePluginEntity("Network interface", activeNetworkInterface));
             list.add(new HardwarePluginEntity("Internet stat", wirelessHardwareRepository.stat(activeNetworkInterface).toString()));
             list.add(new HardwarePluginEntity("Internet description", wirelessHardwareRepository.getNetworkDescription(activeNetworkInterface).toString()));
         }

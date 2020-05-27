@@ -82,6 +82,12 @@ public interface WirelessHardwareRepository {
     @HardwareQuery("iw :iface set power_save off")
     void setWifiPowerSaveOff(@ApiParam("iface") String iface);
 
+    @HardwareQuery("test -f ~/.ssh/id_rsa")
+    boolean isSshGenerated();
+
+    @HardwareQuery("cat /dev/zero | ssh-keygen -q -N \"\"")
+    void generateSSHKeys();
+
     default boolean hasInternetAccess(String spec) {
         try {
             URL url = new URL(spec);
