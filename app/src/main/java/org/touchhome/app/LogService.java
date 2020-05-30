@@ -14,7 +14,7 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
-import org.touchhome.app.setting.console.ConsoleLogLevelSetting;
+import org.touchhome.app.setting.console.log.ConsoleLogLevelSetting;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 

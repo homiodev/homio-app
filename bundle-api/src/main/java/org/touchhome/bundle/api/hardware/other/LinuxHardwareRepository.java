@@ -41,6 +41,9 @@ public interface LinuxHardwareRepository {
     @HardwareQuery("cat /etc/os-release")
     HardwareOs getOs();
 
+    @HardwareQuery("lscpu | sed 's/ //g'")
+    CpuInfo getCpuInfo();
+
     default String getDeviceModel() {
         return EntityContext.isLinuxEnvironment() ? catDeviceModel() : SystemUtils.OS_NAME;
     }

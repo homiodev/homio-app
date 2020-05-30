@@ -135,7 +135,7 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
                 value = new byte[0];
             }
         }
-        log.info("Request value from characteristic: <{}>, value: <{}>", path, new String(value));
+        log.debug("Request value from characteristic: <{}>, value: <{}>", path, new String(value));
         return Arrays.copyOfRange(value, offset, value.length);
     }
 

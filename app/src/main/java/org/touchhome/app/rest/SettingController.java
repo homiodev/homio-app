@@ -43,7 +43,7 @@ public class SettingController {
 
     @GetMapping("{entityID}/options")
     public List<Option> getSettingsAvailableItems(@PathVariable("entityID") String entityID) {
-        return settingPlugins.get(entityID).loadAvailableValues();
+        return settingPlugins.get(entityID).loadAvailableValues(entityContext);
     }
 
     @PostMapping(value = "{entityID}", consumes = "text/plain")

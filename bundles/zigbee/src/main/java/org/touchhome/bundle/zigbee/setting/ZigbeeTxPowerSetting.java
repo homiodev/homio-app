@@ -1,6 +1,7 @@
 package org.touchhome.bundle.zigbee.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 
 import java.util.List;
@@ -22,12 +23,12 @@ public class ZigbeeTxPowerSetting implements BundleSettingPlugin<Integer> {
     }
 
     @Override
-    public List<Option> loadAvailableValues() {
+    public List<Option> loadAvailableValues(EntityContext entityContext) {
         return Option.range(0, 8);
     }
 
     @Override
-    public Integer parseValue(String value) {
+    public Integer parseValue(EntityContext entityContext, String value) {
         return Integer.parseInt(value);
     }
 

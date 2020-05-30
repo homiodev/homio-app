@@ -19,7 +19,7 @@ public class ZigbeeStatusSetting implements BundleSettingPlugin<DeviceStatus> {
     }
 
     @Override
-    public DeviceStatus parseValue(String value) {
+    public DeviceStatus parseValue(EntityContext entityContext, String value) {
         return value == null ? DeviceStatus.UNKNOWN : DeviceStatus.valueOf(value);
     }
 

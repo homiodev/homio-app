@@ -1,8 +1,8 @@
-package org.touchhome.app.setting.console;
+package org.touchhome.app.setting.console.log;
 
 import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
 
-public class ConsoleFitContentSetting implements BundleConsoleSettingPlugin<Boolean> {
+public class ConsoleFetchLogsOnOpenSetting implements BundleConsoleSettingPlugin<Boolean> {
 
     @Override
     public SettingType getSettingType() {
@@ -11,11 +11,11 @@ public class ConsoleFitContentSetting implements BundleConsoleSettingPlugin<Bool
 
     @Override
     public int order() {
-        return 700;
+        return 600;
     }
 
     @Override
     public String[] pages() {
-        return new String[]{"log", "hardware", "processes", "zigbee"};
+        return new String[]{"log"};
     }
 }

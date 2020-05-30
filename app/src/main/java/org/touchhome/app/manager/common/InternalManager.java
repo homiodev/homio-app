@@ -100,6 +100,7 @@ public class InternalManager implements EntityContext {
     private final BroadcastLockManager broadcastLockManager;
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
+    private ApplicationContext applicationContext;
 
     public Set<NotificationEntityJSON> getNotifications() {
         long time = System.currentTimeMillis();
@@ -110,6 +111,7 @@ public class InternalManager implements EntityContext {
 
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
         this.updateDeviceFeatures();
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         for (Class<? extends BundleSettingPlugin> settingPlugin : classFinder.getClassesWithParent(BundleSettingPlugin.class)) {
@@ -283,10 +285,10 @@ public class InternalManager implements EntityContext {
     public <T> T getSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
         BundleSettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
         if (pluginFor.transientState()) {
-            return pluginFor.parseValue(StringUtils.defaultIfEmpty(settingTransientState.get(pluginFor), pluginFor.getDefaultValue()));
+            return pluginFor.parseValue(this, StringUtils.defaultIfEmpty(settingTransientState.get(pluginFor), pluginFor.getDefaultValue()));
         } else {
             SettingEntity settingEntity = getEntity(SettingRepository.getKey(pluginFor));
-            return pluginFor.parseValue(StringUtils.defaultIfEmpty(settingEntity == null ? null : settingEntity.getValue(), pluginFor.getDefaultValue()));
+            return pluginFor.parseValue(this, StringUtils.defaultIfEmpty(settingEntity == null ? null : settingEntity.getValue(), pluginFor.getDefaultValue()));
         }
     }
 
@@ -306,7 +308,7 @@ public class InternalManager implements EntityContext {
     @Override
     public <T> void setSettingValueRaw(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull String value) {
         BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
-        setSettingValue(settingPluginClazz, (T) pluginFor.parseValue(value));
+        setSettingValue(settingPluginClazz, (T) pluginFor.parseValue(this, value));
     }
 
     @Override
@@ -431,6 +433,16 @@ public class InternalManager implements EntityContext {
     @Override
     public void disableFeature(DeviceFeature deviceFeature) {
         deviceFeatures.put(deviceFeature, false);
+    }
+
+    @Override
+    public <T> T getBean(String beanName, Class<T> clazz) {
+        return applicationContext.getBean(beanName, clazz);
+    }
+
+    @Override
+    public <T> Collection<T> getBeansOfType(Class<T> clazz) {
+        return applicationContext.getBeansOfType(clazz).values();
     }
 
     @Override

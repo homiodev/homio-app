@@ -2,8 +2,8 @@ package org.touchhome.bundle.nrf24i01.rf24.setting;
 
 import org.apache.commons.lang.StringUtils;
 import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.nrf24i01.rf24.options.CRCSize;
 import org.touchhome.bundle.nrf24i01.rf24.options.PALevel;
 
 import java.util.List;
@@ -21,7 +21,7 @@ public class Nrf24i01PALevelSetting implements BundleSettingPlugin<PALevel> {
     }
 
     @Override
-    public PALevel parseValue(String value) {
+    public PALevel parseValue(EntityContext entityContext, String value) {
         return StringUtils.isEmpty(value) ? null : PALevel.valueOf(value);
     }
 
@@ -31,7 +31,7 @@ public class Nrf24i01PALevelSetting implements BundleSettingPlugin<PALevel> {
     }
 
     @Override
-    public List<Option> loadAvailableValues() {
+    public List<Option> loadAvailableValues(EntityContext entityContext) {
         return Option.list(PALevel.class);
     }
 }

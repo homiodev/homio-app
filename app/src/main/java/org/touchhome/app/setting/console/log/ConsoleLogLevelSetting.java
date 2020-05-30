@@ -1,14 +1,15 @@
-package org.touchhome.app.setting.console;
+package org.touchhome.app.setting.console.log;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Level;
-import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 
 import java.util.List;
 
-public class ConsoleLogLevelSetting implements BundleSettingPlugin<ConsoleLogLevelSetting.LogLevel> {
+public class ConsoleLogLevelSetting implements BundleConsoleSettingPlugin<ConsoleLogLevelSetting.LogLevel> {
 
     @Override
     public SettingType getSettingType() {
@@ -16,7 +17,7 @@ public class ConsoleLogLevelSetting implements BundleSettingPlugin<ConsoleLogLev
     }
 
     @Override
-    public LogLevel parseValue(String value) {
+    public LogLevel parseValue(EntityContext entityContext, String value) {
         return LogLevel.valueOf(value);
     }
 
@@ -31,7 +32,7 @@ public class ConsoleLogLevelSetting implements BundleSettingPlugin<ConsoleLogLev
     }
 
     @Override
-    public List<Option> loadAvailableValues() {
+    public List<Option> loadAvailableValues(EntityContext entityContext) {
         return Option.list(LogLevel.class);
     }
 
@@ -49,5 +50,10 @@ public class ConsoleLogLevelSetting implements BundleSettingPlugin<ConsoleLogLev
 
         @Getter
         private final Level level;
+    }
+
+    @Override
+    public String[] pages() {
+        return new String[]{"log"};
     }
 }

@@ -20,7 +20,7 @@ public class CloudServerConnectionStatusSetting implements BundleSettingPlugin<S
     }
 
     @Override
-    public ServerConnectionStatus parseValue(String value) {
+    public ServerConnectionStatus parseValue(EntityContext entityContext, String value) {
         return StringUtils.isEmpty(value) ? null : ServerConnectionStatus.valueOf(value);
     }
 

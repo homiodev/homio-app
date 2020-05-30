@@ -1,6 +1,7 @@
 package org.touchhome.bundle.zigbee.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 
 import java.util.ArrayList;
@@ -16,7 +17,7 @@ public class ZigbeeChannelIdSetting implements BundleSettingPlugin<Integer> {
     }
 
     @Override
-    public Integer parseValue(String value) {
+    public Integer parseValue(EntityContext entityContext, String value) {
         return Integer.parseInt(value);
     }
 
@@ -26,7 +27,7 @@ public class ZigbeeChannelIdSetting implements BundleSettingPlugin<Integer> {
     }
 
     @Override
-    public List<Option> loadAvailableValues() {
+    public List<Option> loadAvailableValues(EntityContext entityContext) {
         List<Option> options = new ArrayList<>();
         options.add(Option.of("0", "AUTO"));
         options.addAll(IntStream.range(11, 25)

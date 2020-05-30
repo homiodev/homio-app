@@ -38,7 +38,7 @@ public interface BundleSettingPlugin<T> {
 
     SettingType getSettingType();
 
-    default T parseValue(String value) {
+    default T parseValue(EntityContext entityContext, String value) {
         switch (getSettingType()) {
             case Float:
                 return (T) Float.valueOf(value);
@@ -51,7 +51,7 @@ public interface BundleSettingPlugin<T> {
         return (T) value;
     }
 
-    default List<Option> loadAvailableValues() {
+    default List<Option> loadAvailableValues(EntityContext entityContext) {
         throw new IllegalStateException("Must be implemented in sub-classes");
     }
 

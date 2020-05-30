@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.LogService;
 import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.model.rest.EntityUIMetaData;
+import org.touchhome.app.service.ssh.SshProvider;
+import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
@@ -116,6 +118,11 @@ public class ConsoleController {
         return "";
     }
 
+    @PostMapping("ssh")
+    public SshProvider.SshSession openSshSession() {
+        SshProvider sshProvider = this.entityContext.getSettingValue(ConsoleSshProviderSetting.class);
+        return sshProvider.openSshSession();
+    }
 
     @Getter
     @Setter

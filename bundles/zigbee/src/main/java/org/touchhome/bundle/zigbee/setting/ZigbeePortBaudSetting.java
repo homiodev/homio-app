@@ -1,6 +1,7 @@
 package org.touchhome.bundle.zigbee.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 
 import java.util.ArrayList;
@@ -20,12 +21,12 @@ public class ZigbeePortBaudSetting implements BundleSettingPlugin<Integer> {
     }
 
     @Override
-    public List<Option> loadAvailableValues() {
+    public List<Option> loadAvailableValues(EntityContext entityContext) {
         return new ArrayList<>(Arrays.asList(Option.key("38400"), Option.key("57600"), Option.key("115200")));
     }
 
     @Override
-    public Integer parseValue(String value) {
+    public Integer parseValue(EntityContext entityContext, String value) {
         return Integer.parseInt(value);
     }
 
