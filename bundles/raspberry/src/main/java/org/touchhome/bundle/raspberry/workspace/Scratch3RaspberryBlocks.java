@@ -11,7 +11,7 @@ import org.touchhome.bundle.api.scratch.*;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
-import org.touchhome.bundle.raspberry.RaspberryGpioPin;
+import org.touchhome.bundle.api.util.RaspberryGpioPin;
 
 import java.util.function.Predicate;
 

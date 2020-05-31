@@ -14,7 +14,7 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
-import org.touchhome.bundle.raspberry.RaspberryGpioPin;
+import org.touchhome.bundle.api.util.RaspberryGpioPin;
 
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
@@ -35,7 +35,7 @@ public class GpioConsolePlugin implements ConsolePlugin {
         for (RaspberryGpioPin gpioPin : RaspberryGpioPin.values()) {
             GpioPin pin = raspberryGPIOService.getGpioPin(gpioPin);
             list.add(new GpioPluginEntity(gpioPin.name(), gpioPin.getName(), gpioPin.getPin().getName(),
-                    gpioPin.getBcmPin().getName(), pin.getPullResistance(), pin.getMode(),
+                    gpioPin.getBcmPin().getName(), pin.getPullResistance(), pin.getMode(), gpioPin.getOccupied(),
                     pin instanceof GpioPinDigital ? ((GpioPinDigital) pin).getState() : null));
         }
 
@@ -76,6 +76,9 @@ public class GpioConsolePlugin implements ConsolePlugin {
         private PinMode mode;
 
         @UIField(order = 7)
+        private String occupied;
+
+        @UIField(order = 8)
         private Object value;
 
         @Override

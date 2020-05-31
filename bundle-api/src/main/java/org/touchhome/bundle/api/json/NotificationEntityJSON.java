@@ -3,7 +3,7 @@ package org.touchhome.bundle.api.json;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.notification.NotificationType;
+import org.touchhome.bundle.api.util.NotificationType;
 
 import java.util.Date;
 import java.util.Objects;

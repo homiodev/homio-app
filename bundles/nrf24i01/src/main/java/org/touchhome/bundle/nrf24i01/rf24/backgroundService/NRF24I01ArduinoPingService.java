@@ -7,7 +7,7 @@ import org.touchhome.bundle.api.util.UpdatableValue;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
 import org.touchhome.bundle.arduino.repository.ArduinoDeviceRepository;
 import org.touchhome.bundle.nrf24i01.rf24.Command;
-import org.touchhome.bundle.nrf24i01.rf24.RF24Service;
+import org.touchhome.bundle.nrf24i01.rf24.NRF24I01Bundle;
 import org.touchhome.bundle.nrf24i01.rf24.communication.RF24Message;
 import org.touchhome.bundle.nrf24i01.rf24.communication.ReadListener;
 import org.touchhome.bundle.nrf24i01.rf24.communication.SendCommand;
@@ -21,14 +21,14 @@ import static org.touchhome.bundle.nrf24i01.rf24.Nrf224i01Config.ARDUINO_PING_IN
 
 public class NRF24I01ArduinoPingService extends BackgroundProcessService<Void> {
 
-    private final RF24Service rf24Service;
+    private final NRF24I01Bundle NRF24I01Bundle;
     private final EntityContext entityContext;
     private final ArduinoDeviceRepository arduinoDeviceRepository;
     private final Map<String, UpdatableValue<Integer>> missedPings = new HashMap<>();
 
     public NRF24I01ArduinoPingService() {
         super(NRF24I01ArduinoPingService.class.getSimpleName());
-        rf24Service = ApplicationContextHolder.getBean(RF24Service.class);
+        NRF24I01Bundle = ApplicationContextHolder.getBean(NRF24I01Bundle.class);
         entityContext = ApplicationContextHolder.getBean(EntityContext.class);
         arduinoDeviceRepository = ApplicationContextHolder.getBean(ArduinoDeviceRepository.class);
     }
@@ -37,10 +37,10 @@ public class NRF24I01ArduinoPingService extends BackgroundProcessService<Void> {
     public Void runInternal() {
         for (ArduinoDeviceEntity arduinoEntity : entityContext.findAll(ArduinoDeviceEntity.class)) {
             try {
-                RF24Message pingMessage = rf24Service.createPingCommand(arduinoEntity);
+                RF24Message pingMessage = NRF24I01Bundle.createPingCommand(arduinoEntity);
                 SendCommand sendCommand = SendCommand.sendPayload(Command.PING);
 
-                rf24Service.subscribeForReading(new ReadListener() {
+                NRF24I01Bundle.subscribeForReading(new ReadListener() {
                     @Override
                     public boolean canReceive(RF24Message rf24Message) {
                         return rf24Message.getMessageID() == pingMessage.getMessageID()
@@ -76,7 +76,7 @@ public class NRF24I01ArduinoPingService extends BackgroundProcessService<Void> {
                         return "Ping for " + arduinoEntity.getEntityID();
                     }
                 });
-                rf24Service.scheduleSend(sendCommand, pingMessage, new Pipe(arduinoEntity.getPipe()));
+                NRF24I01Bundle.scheduleSend(sendCommand, pingMessage, new Pipe(arduinoEntity.getPipe()));
 
             } catch (Exception ex) {
                 removeArduino(arduinoEntity, ex.getMessage());
@@ -101,7 +101,7 @@ public class NRF24I01ArduinoPingService extends BackgroundProcessService<Void> {
 
     @Override
     public boolean canWork() {
-        return rf24Service.isNrf24L01Works();
+        return NRF24I01Bundle.isNrf24L01Works();
     }
 
     @Override

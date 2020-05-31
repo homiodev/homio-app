@@ -3,10 +3,12 @@ package org.touchhome.bundle.nrf24i01.rf24;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.DeviceStatus;
+import org.touchhome.bundle.api.util.RaspberryGpioPin;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
 import org.touchhome.bundle.arduino.repository.ArduinoDeviceRepository;
@@ -20,10 +22,12 @@ import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01StatusMessageSetting;
 import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01StatusSetting;
 import pl.grzeslowski.smarthome.rf24.helpers.Pipe;
 
+import static org.touchhome.bundle.api.util.RaspberryGpioPin.*;
+
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class RF24Service implements BundleContext {
+public class NRF24I01Bundle implements BundleContext {
     private final Rf24Communicator rf24Communicator;
     private final EntityContext entityContext;
 
@@ -63,9 +67,14 @@ public class RF24Service implements BundleContext {
     }
 
     public void init() {
+        loadLibrary();
+        if (!isNrf24L01Works()) {
+            entityContext.disableFeature(EntityContext.DeviceFeature.NRF21I01);
+        } else {
+            RaspberryGpioPin.occupyPins("NRF21I01", PIN19, PIN21, PIN22, PIN23, PIN24);
+        }
         entityContext.listenSettingValue(Nrf24i01EnableButtonsSetting.class, enable -> {
             if (enable) {
-                loadLibrary();
                 if (isNrf24L01Works()) {
                     rf24Communicator.runPipeReadWrite();
                 }
@@ -84,7 +93,7 @@ public class RF24Service implements BundleContext {
 
     @Override
     public int order() {
-        return Integer.MAX_VALUE;
+        return 1000;
     }
 
     public synchronized void subscribeForReading(ReadListener readListener) {

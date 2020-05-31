@@ -17,9 +17,6 @@ public interface LinuxHardwareRepository {
     @HardwareQuery("df -m / | sed -e /^Filesystem/d")
     HardwareMemory getSDCardMemory();
 
-    @HardwareQuery("vcgencmd measure_temp | cut -d = -f 2 | awk '{printf \"%s \", $1}'")
-    String getCpuTemp();
-
     @HardwareQuery("top -bn1 | grep load | awk '{printf \"%.2f%%\", $(NF-2)}'")
     String getCpuLoad();
 
@@ -40,9 +37,6 @@ public interface LinuxHardwareRepository {
 
     @HardwareQuery(value = "cat /etc/os-release", cache = true)
     HardwareOs getOs();
-
-    @HardwareQuery("lscpu | sed 's/ //g'")
-    CpuInfo getCpuInfo();
 
     default String getDeviceModel() {
         return EntityContext.isLinuxEnvironment() ? catDeviceModel() : SystemUtils.OS_NAME;

@@ -1,4 +1,4 @@
-package org.touchhome.bundle.raspberry;
+package org.touchhome.bundle.api.util;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -7,14 +7,14 @@ import com.pi4j.io.gpio.Pin;
 import com.pi4j.io.gpio.PinMode;
 import com.pi4j.io.gpio.RaspiBcmPin;
 import com.pi4j.io.gpio.RaspiPin;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import java.util.stream.Stream;
 
 @Getter
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
-@AllArgsConstructor
+@RequiredArgsConstructor
 public enum RaspberryGpioPin {
     PIN3(3, "SDA.1", RaspiPin.GPIO_08, RaspiBcmPin.GPIO_02, "#D0BC7F", null),
     PIN5(5, "SCL.1", RaspiPin.GPIO_09, RaspiBcmPin.GPIO_03, "#D0BC7F", null),
@@ -50,11 +50,18 @@ public enum RaspberryGpioPin {
     private final Pin pin;
     private final Pin bcmPin;
     private final String color;
-    private PinMode pinMode;
+    private final PinMode pinMode;
+    private String occupied;
 
     @JsonCreator
     public static RaspberryGpioPin fromValue(String value) {
         return Stream.of(RaspberryGpioPin.values()).filter(dp -> dp.pin.getName().equals(value)).findFirst().orElse(null);
+    }
+
+    public static void occupyPins(String device, RaspberryGpioPin... pins) {
+        for (RaspberryGpioPin pin : pins) {
+            pin.occupied = device;
+        }
     }
 
     @JsonValue

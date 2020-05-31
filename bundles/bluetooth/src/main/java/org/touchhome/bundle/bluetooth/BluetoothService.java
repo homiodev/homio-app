@@ -1,6 +1,8 @@
 package org.touchhome.bundle.bluetooth;
 
+import com.pi4j.system.SystemInfo;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
 import org.ble.BleApplicationListener;
@@ -277,8 +279,9 @@ public class BluetoothService implements BundleContext {
         return EntityContext.isDockerEnvironment() ? "" : linuxHardwareRepository.getWifiName();
     }
 
+    @SneakyThrows
     private String getCpuTemp() {
-        return EntityContext.isDockerEnvironment() ? "" : linuxHardwareRepository.getCpuTemp();
+        return EntityContext.isDockerEnvironment() ? "" : String.valueOf(SystemInfo.getCpuTemperature());
     }
 
     private String getKeystore() {

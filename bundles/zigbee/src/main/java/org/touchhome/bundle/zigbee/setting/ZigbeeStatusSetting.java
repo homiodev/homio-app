@@ -4,7 +4,7 @@ import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.DeviceStatus;
-import org.touchhome.bundle.api.notification.NotificationType;
+import org.touchhome.bundle.api.util.NotificationType;
 
 public class ZigbeeStatusSetting implements BundleSettingPlugin<DeviceStatus> {
 

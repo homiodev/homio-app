@@ -1,6 +1,9 @@
 package org.touchhome.app.service.ssh.impl;
 
+import com.pi4j.system.SystemInfo;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Component;
@@ -49,10 +52,10 @@ public class TmateSshProvider implements SshProvider {
         }
     }
 
+    @SneakyThrows
     private void checkHardware() {
         if (sshHardwareRepository.getTmateVersion() == null) {
-            String cpuArch = linuxHardwareRepository.getCpuInfo().getCpuArch();
-            if ("armv7l".equals(cpuArch)) {
+            if ("7".equals(SystemInfo.getCpuArchitecture())) {
                 sshHardwareRepository.installTmate("arm32v7");
             }
 

@@ -47,13 +47,13 @@ import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
-import org.touchhome.bundle.api.notification.NotificationType;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.ClassFinder;
+import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
@@ -144,7 +144,9 @@ public class InternalManager implements EntityContext {
 
         // init modules
         log.info("Initialize bundles");
-        for (BundleContext bundleContext : applicationContext.getBeansOfType(BundleContext.class).values()) {
+        List<BundleContext> values = new ArrayList<>(applicationContext.getBeansOfType(BundleContext.class).values());
+        Collections.sort(values);
+        for (BundleContext bundleContext : values) {
             bundleContext.init();
         }
 

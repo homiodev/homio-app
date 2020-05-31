@@ -61,7 +61,7 @@ public class Rf433Service implements BundleContext {
 
     @Override
     public int order() {
-        return Integer.MAX_VALUE;
+        return 5000;
     }
 
     public RF433Signal readSignal(int rf433ReceiverPinAddress, Rf433JSON rf433JSON) throws IOException, InterruptedException {

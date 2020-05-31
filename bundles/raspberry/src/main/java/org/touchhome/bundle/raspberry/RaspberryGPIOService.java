@@ -11,9 +11,11 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.keyvalue.DefaultKeyValue;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.WirelessManager;
+import org.touchhome.bundle.api.util.RaspberryGpioPin;
 import org.touchhome.bundle.api.util.UpdatableValue;
 import org.touchhome.bundle.raspberry.settings.RaspberryOneWireIntervalSetting;
 
@@ -46,7 +48,7 @@ public class RaspberryGPIOService {
     void init() {
         if (isGPIOAvailable()) {
             for (RaspberryGpioPin pin : RaspberryGpioPin.values()) {
-                if (pin.getPinMode() == PinMode.DIGITAL_INPUT) {
+                if (pin.getPinMode() == PinMode.DIGITAL_INPUT && pin.getOccupied() == null) {
                     digitalListeners.put(pin, new ArrayList<>());
                     setValue(pin, PinState.LOW);
                     GpioPinDigital gpioPinDigital = getDigitalInput(pin, PinPullResistance.PULL_DOWN);
@@ -106,6 +108,9 @@ public class RaspberryGPIOService {
     }
 
     private GpioPinDigital gpioPinDigital(RaspberryGpioPin pin, PinMode pinMode, PinPullResistance pinPullResistance) {
+        if (pin.getOccupied() != null) {
+            throw new IllegalArgumentException("Unable to get GpioPinDigital for occupied pin by: " + pin.getOccupied());
+        }
         if (pin.getPinMode() != PinMode.DIGITAL_INPUT) {
             throw new IllegalArgumentException("Unable to get GpioPinDigital for pin: " + pin.name());
         }

@@ -4,7 +4,7 @@ import org.apache.commons.lang.StringUtils;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
-import org.touchhome.bundle.api.notification.NotificationType;
+import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.cloud.impl.ServerConnectionStatus;
 
 public class CloudServerConnectionStatusSetting implements BundleSettingPlugin<ServerConnectionStatus> {

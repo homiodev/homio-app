@@ -5,7 +5,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.PureEntity;
-import org.touchhome.bundle.api.notification.NotificationType;
+import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.PublicJsMethod;
 
@@ -174,6 +174,6 @@ public interface EntityContext {
     <T> Collection<T> getBeansOfType(Class<T> clazz);
 
     enum DeviceFeature {
-        Bluetooth, HotSpot, GPIO
+        Bluetooth, HotSpot, GPIO, NRF21I01
     }
 }

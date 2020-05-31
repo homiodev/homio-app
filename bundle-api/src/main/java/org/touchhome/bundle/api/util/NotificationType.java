@@ -1,4 +1,4 @@
-package org.touchhome.bundle.api.notification;
+package org.touchhome.bundle.api.util;
 
 public enum NotificationType {
     success, info, danger, warn

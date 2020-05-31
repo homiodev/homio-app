@@ -11,7 +11,7 @@ import org.json.JSONArray;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.notification.NotificationType;
+import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.scratch.*;
 
 import java.util.HashMap;
@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static org.touchhome.bundle.api.notification.NotificationType.danger;
+import static org.touchhome.bundle.api.util.NotificationType.danger;
 
 @Setter
 @Log4j2
