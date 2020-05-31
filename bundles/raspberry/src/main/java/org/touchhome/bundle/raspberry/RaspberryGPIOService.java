@@ -50,8 +50,13 @@ public class RaspberryGPIOService {
             for (RaspberryGpioPin pin : RaspberryGpioPin.values()) {
                 if (pin.getPinMode() == PinMode.DIGITAL_INPUT && pin.getOccupied() == null) {
                     digitalListeners.put(pin, new ArrayList<>());
-                    setValue(pin, PinState.LOW);
                     GpioPinDigital gpioPinDigital = getDigitalInput(pin, PinPullResistance.PULL_DOWN);
+                    if (gpioPinDigital.isHigh()) {
+                        gpioPinDigital.setMode(PinMode.DIGITAL_OUTPUT);
+                        ((GpioPinDigitalOutput) gpioPinDigital).setState(PinState.LOW);
+                        gpioPinDigital.setMode(PinMode.DIGITAL_INPUT);
+                    }
+                    gpioPinDigital.setShutdownOptions(true, PinState.LOW, PinPullResistance.OFF);
                     inputGpioValues.put(pin, UpdatableValue.wrap(gpioPinDigital.isHigh(), pin.name()));
                     gpioPinDigital.addListener((GpioPinListenerDigital) event -> digitalListeners.get(pin).forEach(t -> t.accept(event)));
                     digitalListeners.get(pin).add(event -> inputGpioValues.get(pin).update(event.getState().isHigh()));

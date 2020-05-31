@@ -4,10 +4,9 @@ import com.pi4j.io.gpio.GpioPin;
 import com.pi4j.io.gpio.GpioPinDigital;
 import com.pi4j.io.gpio.PinMode;
 import com.pi4j.io.gpio.PinPullResistance;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
@@ -37,12 +36,21 @@ public class GpioConsolePlugin implements ConsolePlugin {
 
         for (RaspberryGpioPin gpioPin : RaspberryGpioPin.values()) {
             GpioPin pin = raspberryGPIOService.getGpioPin(gpioPin);
-            list.add(new GpioPluginEntity(gpioPin.name(), gpioPin.getName(), gpioPin.getPin().getName(),
-                    gpioPin.getBcmPin().getName(), pin.getPullResistance(), pin.getMode(), gpioPin.getOccupied(),
-                    pin.getPin().getSupportedPinModes(),
-                    pin.getPin().getSupportedPinPullResistance(),
-                    pin instanceof GpioPinDigital ? ((GpioPinDigital) pin).getState() : null,
-                    gpioPin.getColor()));
+            GpioPluginEntity gpioPluginEntity = new GpioPluginEntity();
+            gpioPluginEntity.setName(gpioPin.name());
+            gpioPluginEntity.setDescription(gpioPin.getName());
+            gpioPluginEntity.setRaspiPin(gpioPin.getPin().getName());
+            gpioPluginEntity.setBcmPin(gpioPin.getBcmPin() == null ? null : gpioPin.getBcmPin().getName());
+            gpioPluginEntity.setSupportedPinModes(gpioPin.getPin().getSupportedPinModes());
+            gpioPluginEntity.setOccupied(gpioPin.getOccupied());
+            gpioPluginEntity.setColor(gpioPin.getColor());
+            gpioPluginEntity.setSupportedPinPullResistance(gpioPin.getPin().getSupportedPinPullResistance());
+            if (pin != null) {
+                gpioPluginEntity.setValue(pin instanceof GpioPinDigital ? ((GpioPinDigital) pin).getState() : null);
+                gpioPluginEntity.setMode(pin.getMode());
+                gpioPluginEntity.setPinPullResistance(pin.getPullResistance());
+            }
+            list.add(gpioPluginEntity);
         }
 
         Collections.sort(list);
@@ -60,8 +68,7 @@ public class GpioConsolePlugin implements ConsolePlugin {
     }
 
     @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Setter
     private static class GpioPluginEntity implements HasEntityIdentifier, Comparable<GpioPluginEntity> {
         @UIField(order = 1)
         @UIFieldColorRef("color")
