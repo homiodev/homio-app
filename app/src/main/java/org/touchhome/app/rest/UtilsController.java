@@ -172,6 +172,14 @@ public class UtilsController {
                 jsonTypeMetadata.put("valueColor", colors);
             }
 
+            UIFieldColorRef uiFieldColorRef = field.getDeclaredAnnotation(UIFieldColorRef.class);
+            if (uiFieldColorRef != null) {
+                if (instance.getClass().getDeclaredField(uiFieldColorRef.value()) == null) {
+                    throw new RuntimeException("Unable to find field <" + uiFieldColorRef.value() + "> declared in UIFieldColorRef");
+                }
+                jsonTypeMetadata.put("colorRef", uiFieldColorRef.value());
+            }
+
             UIFieldExpand uiFieldExpand = field.getDeclaredAnnotation(UIFieldExpand.class);
             if (uiFieldExpand != null && field.getType().isAssignableFrom(List.class)) {
                 jsonTypeMetadata.put("expand", "true");

@@ -11,7 +11,6 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.keyvalue.DefaultKeyValue;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.WirelessManager;
@@ -47,6 +46,7 @@ public class RaspberryGPIOService {
     @SneakyThrows
     void init() {
         if (isGPIOAvailable()) {
+            RaspberryGpioPin.occupyPins("1-Wire", RaspberryGpioPin.PIN7);
             for (RaspberryGpioPin pin : RaspberryGpioPin.values()) {
                 if (pin.getPinMode() == PinMode.DIGITAL_INPUT && pin.getOccupied() == null) {
                     digitalListeners.put(pin, new ArrayList<>());
@@ -121,7 +121,7 @@ public class RaspberryGPIOService {
         if (provisionedPin.getMode() != pinMode) {
             provisionedPin.setMode(pinMode);
         }
-        if (provisionedPin.getPullResistance() != pinPullResistance) {
+        if (pinPullResistance != null && pin.getPin().supportsPinPullResistance() && provisionedPin.getPullResistance() != pinPullResistance) {
             provisionedPin.setPullResistance(pinPullResistance);
         }
         return provisionedPin;
