@@ -10,6 +10,7 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.thavam.util.concurrent.blockingMap.BlockingHashMap;
 import org.thavam.util.concurrent.blockingMap.BlockingMap;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -41,9 +43,14 @@ import java.util.stream.Collectors;
 @Component
 public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostProcessor {
 
+    private static final Pattern PATTERN = Pattern.compile("\\$\\{.*?}");
+    private static final int VALUE_PREFIX_LENGTH = "${".length();
+    private static final int VALUE_SUFFIX_LENGTH = "}".length();
+
     private static final BlockingQueue<PrintContext> printLogsJobs = new LinkedBlockingQueue<>(10);
     private static final BlockingMap<Process, List<String>> inputResponse = new BlockingHashMap<>();
     private static final Constructor<MethodHandles.Lookup> lookupConstructor;
+
     private static Thread logThread = new Thread(() -> {
         while (!Thread.currentThread().isInterrupted()) {
             try {
@@ -83,6 +90,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     @Override
     @SneakyThrows
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        Environment env = beanFactory.getBean(Environment.class);
         List<Class<?>> classes = ClassFinder.getClassesWithAnnotation(HardwareRepositoryAnnotation.class, true);
         for (Class<?> aClass : classes) {
             beanFactory.registerSingleton(aClass.getSimpleName(), Proxy.newProxyInstance(this.getClass().getClassLoader(), new Class[]{aClass}, (proxy, method, args) -> {
@@ -91,7 +99,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                     if (results == null) {
                         results = new ArrayList<>();
                     }
-                    results.add(handleHardwareQuery(hardwareQuery, args, method));
+                    results.add(handleHardwareQuery(hardwareQuery, args, method, env));
                 }
                 if (results != null) {
                     if (results.isEmpty()) {
@@ -140,12 +148,14 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         return str;
     }
 
-    private Object handleHardwareQuery(HardwareQuery hardwareQuery, Object[] args, Method method) throws InstantiationException, IllegalAccessException {
+    private Object handleHardwareQuery(HardwareQuery hardwareQuery, Object[] args, Method method, Environment env) throws InstantiationException, IllegalAccessException {
         ErrorsHandler errorsHandler = method.getAnnotation(ErrorsHandler.class);
         List<String> parts = new ArrayList<>();
         for (String cmd : hardwareQuery.value()) {
-            String rcmd = replaceStringWithArgs(cmd, args, method);
-            parts.add(rcmd.contains("$PM") ? rcmd.replace("$PM", pm) : rcmd);
+            String argCmd = replaceStringWithArgs(cmd, args, method);
+            String envCmd = replaceEnvValues(argCmd, env::getProperty);
+            String partCmd = envCmd.contains("$PM") ? envCmd.replace("$PM", pm) : envCmd;
+            parts.add(partCmd);
         }
         String[] cmdParts = parts.toArray(new String[0]);
         String command = String.join(", ", parts);
@@ -158,8 +168,8 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         int retValue;
         List<String> errors;
         List<String> inputs = Collections.emptyList();
+        Process process;
         try {
-            Process process;
             if (StringUtils.isNotEmpty(hardwareQuery.dir())) {
                 File dir = new File(replaceStringWithArgs(hardwareQuery.dir(), args, method));
                 process = Runtime.getRuntime().exec(cmdParts, null, dir);
@@ -374,6 +384,27 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 }
             }
         }
+    }
+
+    private String replaceEnvValues(String notes, BiFunction<String, String, String> propertyGetter) {
+        Matcher matcher = PATTERN.matcher(notes);
+        StringBuffer noteBuffer = new StringBuffer();
+        while (matcher.find()) {
+            String group = matcher.group();
+            matcher.appendReplacement(noteBuffer, getEnvProperty(group, propertyGetter));
+        }
+        matcher.appendTail(noteBuffer);
+        return noteBuffer.length() == 0 ? notes : noteBuffer.toString();
+    }
+
+    private String getEnvProperty(String value, BiFunction<String, String, String> propertyGetter) {
+        String[] array = getSpringValuesPattern(value);
+        return propertyGetter.apply(array[0], array[1]);
+    }
+
+    private String[] getSpringValuesPattern(String value) {
+        String valuePattern = value.substring(VALUE_PREFIX_LENGTH, value.length() - VALUE_SUFFIX_LENGTH);
+        return valuePattern.contains(":") ? valuePattern.split(":") : new String[]{valuePattern, ""};
     }
 
     @AllArgsConstructor

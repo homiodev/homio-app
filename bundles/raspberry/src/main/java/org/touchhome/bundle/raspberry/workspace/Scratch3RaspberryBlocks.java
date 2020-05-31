@@ -96,11 +96,7 @@ public class Scratch3RaspberryBlocks extends Scratch3ExtensionBlocks {
         Hilo state = getHilo(workspaceBlock);
         BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock.getId());
 
-        raspberryGPIOService.addGpioListenerDigital(pin, PinMode.DIGITAL_INPUT, event -> {
-            if (state.match(event.getState())) {
-                lock.signalAll();
-            }
-        });
+        raspberryGPIOService.addGpioListener(pin, state.pinState, lock::signalAll);
 
         WorkspaceBlock substack = workspaceBlock.getNext();
         if (substack != null) {
@@ -114,14 +110,13 @@ public class Scratch3RaspberryBlocks extends Scratch3ExtensionBlocks {
 
     private Boolean isGpioInStateHandler(WorkspaceBlock workspaceBlock) {
         RaspberryGpioPin pin = getPin(workspaceBlock);
-        return raspberryGPIOService.getState(pin).isHigh();
+        return raspberryGPIOService.getValue(pin);
     }
 
     private void writePin(WorkspaceBlock workspaceBlock) {
         RaspberryGpioPin pin = getPin(workspaceBlock);
         Hilo state = getHilo(workspaceBlock);
-
-        raspberryGPIOService.setState(pin, state.pinState);
+        raspberryGPIOService.setValue(pin, state.pinState);
     }
 
     private Hilo getHilo(WorkspaceBlock workspaceBlock) {

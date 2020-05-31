@@ -8,6 +8,7 @@ import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.touchhome.app.LogService;
 import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.model.rest.EntityUIMetaData;
@@ -17,6 +18,7 @@ import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -31,11 +33,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ConsoleController {
 
+    private final WirelessHardwareRepository wirelessHardwareRepository;
     private final List<ConsolePlugin> consolePlugins;
     private final LogService logService;
     private final EntityContext entityContext;
     private final ApplicationContext applicationContext;
     private final Set<Option> tabs = new ArraySet<>();
+    private final RestTemplate restTemplate = new RestTemplate();
 
     private Map<String, ConsolePlugin> consolePluginsMap = new HashMap<>();
 
@@ -45,7 +49,6 @@ public class ConsoleController {
         for (ConsolePlugin consolePlugin : consolePlugins) {
             String bundleName = BundleContext.getBundleName(consolePlugin.getClass());
             this.consolePluginsMap.put(bundleName, consolePlugin);
-            this.tabs.add(Option.key(bundleName).setType("bundle"));
         }
     }
 
@@ -110,7 +113,13 @@ public class ConsoleController {
     @GetMapping("tab")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Set<Option> getTabs() {
-        return this.tabs;
+        Set<Option> options = new LinkedHashSet<>(this.tabs);
+        for (Map.Entry<String, ConsolePlugin> entry : this.consolePluginsMap.entrySet()) {
+            if(entry.getValue().isEnabled()) {
+                options.add(Option.key(entry.getKey()).setType("bundle"));
+            }
+        }
+        return options;
     }
 
     @GetMapping("ssh")
@@ -118,10 +127,24 @@ public class ConsoleController {
         return "";
     }
 
-    @PostMapping("ssh")
+    @PostMapping("ssh/open")
     public SshProvider.SshSession openSshSession() {
+        if (!wirelessHardwareRepository.isSshGenerated()) {
+            wirelessHardwareRepository.generateSSHKeys();
+        }
         SshProvider sshProvider = this.entityContext.getSettingValue(ConsoleSshProviderSetting.class);
         return sshProvider.openSshSession();
+    }
+
+    @PostMapping("ssh/close")
+    public void closeSshSession() {
+        SshProvider sshProvider = this.entityContext.getSettingValue(ConsoleSshProviderSetting.class);
+        sshProvider.closeSshSession();
+    }
+
+    @GetMapping("ssh/{token}")
+    public SessionStatusModel startSSH(@PathVariable("token") String token) {
+        return restTemplate.getForObject("https://tmate.io/api/t/" + token, SessionStatusModel.class);
     }
 
     @Getter
@@ -132,5 +155,16 @@ public class ConsoleController {
         List<EntityUIMetaData> uiFields;
         List<UIActionDescription> headerActions;
         List<UIActionDescription> actions;
+    }
+
+    @Getter
+    @Setter
+    private static class SessionStatusModel {
+        private boolean closed;
+        private String closed_at;
+        private String created_at;
+        private String disconnected_at;
+        private String ssh_cmd_fmt;
+        private String ws_url_fmt;
     }
 }

@@ -30,14 +30,14 @@ public class ZigBeeBundleContext implements BundleContext {
 
     private ZigBeeDiscoveryService zigBeeDiscoveryService;
     @Getter
-    private ZigBeeCoordinatorHandler coordinatorHandlers;
+    private ZigBeeCoordinatorHandler coordinatorHandler;
 
     @Override
     public void init() {
         this.entityContext.setSettingValueSilence(ZigbeeStatusSetting.class, DeviceStatus.UNKNOWN);
-        this.coordinatorHandlers = entityContext.getSettingValue(ZigbeeCoordinatorHandlerSetting.class);
+        this.coordinatorHandler = entityContext.getSettingValue(ZigbeeCoordinatorHandlerSetting.class);
         this.zigBeeDiscoveryService = new ZigBeeDiscoveryService(
-                entityContext, coordinatorHandlers,
+                entityContext, coordinatorHandler,
                 zigBeeIsAliveTracker,
                 zigBeeChannelConverterFactory,
                 scheduler,
@@ -52,12 +52,12 @@ public class ZigBeeBundleContext implements BundleContext {
             }
         });
 
-        coordinatorHandlers.initialize();
+        coordinatorHandler.initialize();
     }
 
     @Override
     public void destroy() {
-        this.coordinatorHandlers.dispose();
+        this.coordinatorHandler.dispose();
     }
 
     @Override

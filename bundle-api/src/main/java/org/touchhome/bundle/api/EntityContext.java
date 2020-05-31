@@ -157,8 +157,6 @@ public interface EntityContext {
 
     <T extends BaseEntity> void addEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
 
-    Map<DeviceFeature, Boolean> getDeviceFeatures();
-
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, Consumer<T> listener);
 
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener);
@@ -166,6 +164,10 @@ public interface EntityContext {
     <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
 
     void disableFeature(DeviceFeature deviceFeature);
+
+    boolean isFeatureEnabled(DeviceFeature deviceFeature);
+
+    Map<DeviceFeature, Boolean> getDeviceFeatures();
 
     <T> T getBean(String beanName, Class<T> clazz);
 

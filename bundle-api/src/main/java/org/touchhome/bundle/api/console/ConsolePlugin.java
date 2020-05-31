@@ -23,4 +23,8 @@ public interface ConsolePlugin extends Comparable<ConsolePlugin> {
     default int compareTo(@NotNull ConsolePlugin consolePlugin) {
         return Integer.compare(order(), consolePlugin.order());
     }
+
+    default boolean isEnabled() {
+        return true;
+    }
 }

@@ -32,7 +32,7 @@ public class ZigBeeController {
     public List<Option> filterByClusterName(@PathVariable("clusterName") String clusterName,
                                             @RequestParam(value = "includeClusterName", required = false) boolean includeClusterName) {
         List<Option> list = new ArrayList<>();
-        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandlers().getZigBeeDevices().values()) {
+        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandler().getZigBeeDevices().values()) {
             ZigBeeConverterEndpoint zigBeeConverterEndpoint = zigBeeDevice.getZigBeeConverterEndpoints().keySet()
                     .stream().filter(f -> f.getClusterName().equals(clusterName)).findAny().orElse(null);
             // add zigBeeDevice
@@ -47,7 +47,7 @@ public class ZigBeeController {
 
     private List<Option> filterByClusterIdAndEndpointCount(Integer clusterId, Integer endpointCount, boolean includeClusterName) {
         List<Option> list = new ArrayList<>();
-        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandlers().getZigBeeDevices().values()) {
+        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandler().getZigBeeDevices().values()) {
             List<ZigBeeConverterEndpoint> endpoints = getZigBeeConverterEndpointsByClusterId(zigBeeDevice, clusterId);
 
             if (!endpoints.isEmpty()) {
@@ -80,7 +80,7 @@ public class ZigBeeController {
     @GetMapping("option/model/{modelIdentifier}")
     public List<Option> filterByModelIdentifier(@PathVariable("modelIdentifier") String modelIdentifier) {
         List<Option> list = new ArrayList<>();
-        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandlers().getZigBeeDevices().values()) {
+        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandler().getZigBeeDevices().values()) {
             String deviceMI = zigBeeDevice.getZigBeeNodeDescription().getModelIdentifier();
             if (deviceMI != null && deviceMI.startsWith(modelIdentifier)) {
                 list.add(Option.of(zigBeeDevice.getZigBeeNodeDescription().getIeeeAddress(),

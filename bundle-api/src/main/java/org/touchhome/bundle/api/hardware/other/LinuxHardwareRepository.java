@@ -29,7 +29,7 @@ public interface LinuxHardwareRepository {
     @HardwareQuery("uptime -p | cut -d 'p' -f 2 | awk '{ printf \"%s\", $0 }'")
     String getUptime();
 
-    @HardwareQuery("cat /proc/device-tree/model")
+    @HardwareQuery(value = "cat /proc/device-tree/model", cache = true)
     String catDeviceModel();
 
     @HardwareQuery("iwgetid -r")
@@ -38,7 +38,7 @@ public interface LinuxHardwareRepository {
     @HardwareQuery(echo = "Reboot device", value = "reboot")
     void reboot();
 
-    @HardwareQuery("cat /etc/os-release")
+    @HardwareQuery(value = "cat /etc/os-release", cache = true)
     HardwareOs getOs();
 
     @HardwareQuery("lscpu | sed 's/ //g'")

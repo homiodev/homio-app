@@ -4,6 +4,7 @@ keepGoogleCloudCacheTime: 300000
 scheduledAppPingTime: 60000
 minScriptThreadSleep: 100
 scriptEngineName: nashorn
+rootDir: /opt/touchhome
 
 management:
   endpoints:

@@ -4,6 +4,7 @@ import org.touchhome.app.service.ssh.SshProvider;
 import org.touchhome.app.service.ssh.impl.TmateSshProvider;
 import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
 
 import java.util.List;
@@ -39,6 +40,7 @@ public class ConsoleSshProviderSetting implements BundleConsoleSettingPlugin<Ssh
 
     @Override
     public SshProvider parseValue(EntityContext entityContext, String value) {
-        return entityContext.getBean(value, SshProvider.class);
+        return entityContext.getBeansOfType(SshProvider.class).stream().filter(p -> p.getClass().getSimpleName().equals(value)).findAny()
+                .orElseThrow(() -> new NotFoundException("Unable to find ssh provider with name: " + value));
     }
 }

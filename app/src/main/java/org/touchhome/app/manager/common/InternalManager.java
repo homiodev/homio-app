@@ -436,6 +436,11 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
+    public boolean isFeatureEnabled(DeviceFeature deviceFeature) {
+        return deviceFeatures.get(deviceFeature);
+    }
+
+    @Override
     public <T> T getBean(String beanName, Class<T> clazz) {
         return applicationContext.getBean(beanName, clazz);
     }

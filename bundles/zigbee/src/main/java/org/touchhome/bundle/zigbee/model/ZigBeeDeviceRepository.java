@@ -55,7 +55,7 @@ public class ZigBeeDeviceRepository extends AbstractRepository<ZigBeeDeviceEntit
 
     @Override
     public void updateEntityAfterFetch(ZigBeeDeviceEntity entity) {
-        ZigBeeDevice device = zigbeeBundleContext.getCoordinatorHandlers().getZigBeeDevices().get(entity.getIeeeAddress());
+        ZigBeeDevice device = zigbeeBundleContext.getCoordinatorHandler().getZigBeeDevices().get(entity.getIeeeAddress());
         entity.setZigBeeDevice(device);
         if (device != null) {
             ZigBeeNodeDescription zigBeeNodeDescription = device.getZigBeeNodeDescription();
