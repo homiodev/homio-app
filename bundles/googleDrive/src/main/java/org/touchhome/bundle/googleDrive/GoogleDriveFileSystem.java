@@ -415,7 +415,7 @@ public class GoogleDriveFileSystem implements BundleContext {
             try {
                 List<File> files = new ArrayList<>();
                 for (ChildReference childReference : getChildReferences()) {
-                    files.addEnum(getFileByFieldID(childReference.getId()));
+                    files.add(getFileByFieldID(childReference.getId()));
                 }
                 return files;
             } catch (Exception ex) {

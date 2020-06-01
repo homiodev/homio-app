@@ -16,7 +16,7 @@ public class WidgetJsRepository extends AbstractRepository<WidgetJsEntity> {
         WidgetLineChartEntity widgetLineChartEntity = super.save(entity);
         if (widgetLineChartEntity.getLineChartSeries() == null) {
             widgetLineChartEntity.setChartSeries(new ArrayList<>());
-            widgetLineChartEntity.getLineChartSeries().addEnum(createListItem(widgetLineChartEntity, 0));
+            widgetLineChartEntity.getLineChartSeries().add(createListItem(widgetLineChartEntity, 0));
         }
         return widgetLineChartEntity;
     }*/

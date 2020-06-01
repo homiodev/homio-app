@@ -30,22 +30,22 @@ public class ZclOnOffSwitchConfig implements ZclClusterConfigHandler {
         /*List<ParameterOption> options = new ArrayList<>();
 
         if (onoffCluster.isAttributeSupported(ZclOnOffCluster.ATTR_OFFWAITTIME)) {
-            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_OFFWAITTIME, Type.INTEGER)
+            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_OFFWAITTIME, Type.INTEGER)
                     .withLabel("Off Wait Time")
                     .withDescription("Time in 100ms steps to ignore ON commands after an OFF command").withDefault("0")
                     .withMinimum(new BigDecimal(0)).withMaximum(new BigDecimal(60000)).build());
         }
         if (onoffCluster.isAttributeSupported(ZclOnOffCluster.ATTR_ONTIME)) {
-            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_ONTIME, Type.INTEGER)
+            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_ONTIME, Type.INTEGER)
                     .withLabel("Auto OFF Time")
                     .withDescription("Time in 100ms steps to automatically turn off when sent with timed command")
                     .withDefault("65535").withMinimum(new BigDecimal(0)).withMaximum(new BigDecimal(60000)).build());
         }
         if (onoffCluster.isAttributeSupported(ZclOnOffCluster.ATTR_STARTUPONOFF)) {
             options = new ArrayList<ParameterOption>();
-            options.addEnum(new ParameterOption("0", "OFF"));
-            options.addEnum(new ParameterOption("1", "ON"));
-            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_STARTUPONOFF, Type.INTEGER)
+            options.add(new ParameterOption("0", "OFF"));
+            options.add(new ParameterOption("1", "ON"));
+            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_STARTUPONOFF, Type.INTEGER)
                     .withLabel("Power on state").withDescription("The state to set after powering on").withDefault("0")
                     .withMinimum(new BigDecimal(0)).withMaximum(new BigDecimal(1)).withOptions(options)
                     .withLimitToOptions(true).build());

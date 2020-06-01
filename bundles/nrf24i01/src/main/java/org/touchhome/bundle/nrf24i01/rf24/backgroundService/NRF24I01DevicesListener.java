@@ -40,7 +40,7 @@ public class NRF24I01DevicesListener extends BackgroundProcessService<Void> {
                         /*ReportAttributesCommand command = new ReportAttributesCommand();
                         command.setReports(new ArrayList<>());
                         AttributeReport attributeReport = new AttributeReport();
-                        command.getReports().addEnum(attributeReport);
+                        command.getReports().add(attributeReport);
                         command.setClusterId(ZclClusterType.ILLUMINANCE_MEASUREMENT.getId());
                         attributeReport.setAttributeDataType(1);
                         attributeReport.setAttributeValue((int) (Math.random() * 100));

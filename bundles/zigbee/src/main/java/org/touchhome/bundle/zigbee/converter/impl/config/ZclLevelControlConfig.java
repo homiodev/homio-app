@@ -45,8 +45,8 @@ public class ZclLevelControlConfig implements ZclClusterConfigHandler {
         initCluster(levelControlCluster.discoverAttributes(false), log, levelControlCluster.getZigBeeAddress(), levelControlCluster.getClusterName());
 
         /*List<ParameterOption> options = new ArrayList<>();
-        options.addEnum(new ParameterOption("65535", "Use On/Off times"));
-        parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_DEFAULTTRANSITIONTIME, Type.INTEGER)
+        options.add(new ParameterOption("65535", "Use On/Off times"));
+        parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_DEFAULTTRANSITIONTIME, Type.INTEGER)
                 .withLabel("Default Transition Time")
                 .withDescription("Default time in 100ms intervals to transition between ON and OFF").withDefault("0")
                 .withMinimum(new BigDecimal(0)).withMaximum(new BigDecimal(60000)).withOptions(options)
@@ -54,7 +54,7 @@ public class ZclLevelControlConfig implements ZclClusterConfigHandler {
 
         if (levelControlCluster.isAttributeSupported(ZclLevelControlCluster.ATTR_ONOFFTRANSITIONTIME)) {
             options = new ArrayList<ParameterOption>();
-            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_ONOFFTRANSITIONTIME, Type.INTEGER)
+            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_ONOFFTRANSITIONTIME, Type.INTEGER)
                     .withLabel("On/Off Transition Time")
                     .withDescription("Time in 100ms intervals to transition between ON and OFF").withDefault("0")
                     .withMinimum(new BigDecimal(0)).withMaximum(new BigDecimal(60000)).withOptions(options)
@@ -62,8 +62,8 @@ public class ZclLevelControlConfig implements ZclClusterConfigHandler {
         }
         if (levelControlCluster.isAttributeSupported(ZclLevelControlCluster.ATTR_ONTRANSITIONTIME)) {
             options = new ArrayList<ParameterOption>();
-            options.addEnum(new ParameterOption("65535", "Use On/Off transition time"));
-            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_ONTRANSITIONTIME, Type.INTEGER)
+            options.add(new ParameterOption("65535", "Use On/Off transition time"));
+            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_ONTRANSITIONTIME, Type.INTEGER)
                     .withLabel("On Transition Time")
                     .withDescription("Time in 100ms intervals to transition from OFF to ON").withDefault("65535")
                     .withMinimum(new BigDecimal(0)).withMaximum(new BigDecimal(60000)).withOptions(options)
@@ -71,8 +71,8 @@ public class ZclLevelControlConfig implements ZclClusterConfigHandler {
         }
         if (levelControlCluster.isAttributeSupported(ZclLevelControlCluster.ATTR_OFFTRANSITIONTIME)) {
             options = new ArrayList<ParameterOption>();
-            options.addEnum(new ParameterOption("65535", "Use On/Off transition time"));
-            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_OFFTRANSITIONTIME, Type.INTEGER)
+            options.add(new ParameterOption("65535", "Use On/Off transition time"));
+            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_OFFTRANSITIONTIME, Type.INTEGER)
                     .withLabel("Off Transition Time")
                     .withDescription("Time in 100ms intervals to transition from ON to OFF").withDefault("65535")
                     .withMinimum(new BigDecimal(0)).withMaximum(new BigDecimal(60000)).withOptions(options)
@@ -80,15 +80,15 @@ public class ZclLevelControlConfig implements ZclClusterConfigHandler {
         }
         if (levelControlCluster.isAttributeSupported(ZclLevelControlCluster.ATTR_ONLEVEL)) {
             options = new ArrayList<ParameterOption>();
-            options.addEnum(new ParameterOption("255", "Not Set"));
-            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_ONLEVEL, Type.INTEGER).withLabel("On Level")
+            options.add(new ParameterOption("255", "Not Set"));
+            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_ONLEVEL, Type.INTEGER).withLabel("On Level")
                     .withDescription("Default On level").withDefault("255").withMinimum(new BigDecimal(0))
                     .withMaximum(new BigDecimal(60000)).withOptions(options).withLimitToOptions(false).build());
         }
         if (levelControlCluster.isAttributeSupported(ZclLevelControlCluster.ATTR_DEFAULTMOVERATE)) {
             options = new ArrayList<ParameterOption>();
-            options.addEnum(new ParameterOption("255", "Not Set"));
-            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_DEFAULTMOVERATE, Type.INTEGER)
+            options.add(new ParameterOption("255", "Not Set"));
+            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_DEFAULTMOVERATE, Type.INTEGER)
                     .withLabel("Default move rate").withDescription("Move rate in steps per second").withDefault("255")
                     .withMinimum(new BigDecimal(0)).withMaximum(new BigDecimal(60000)).withOptions(options)
                     .withLimitToOptions(false).build());

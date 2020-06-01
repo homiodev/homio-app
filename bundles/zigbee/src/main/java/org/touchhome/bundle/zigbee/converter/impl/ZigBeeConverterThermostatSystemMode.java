@@ -73,19 +73,19 @@ public class ZigBeeConverterThermostatSystemMode extends ZigBeeBaseChannelConver
         ZclAttribute attribute = cluster.getAttribute(ZclThermostatCluster.ATTR_CONTROLSEQUENCEOFOPERATION);
         Integer states = (Integer) attribute.readValue(Long.MAX_VALUE);
         /*List<StateOption> options = new ArrayList<>();
-        options.addEnum(new StateOption("0", "Off"));
-        options.addEnum(new StateOption("1", "Auto"));
+        options.add(new StateOption("0", "Off"));
+        options.add(new StateOption("1", "Auto"));
         if (states != null && states != 0 && states != 1) {
-            options.addEnum(new StateOption("4", "Heat"));
-            options.addEnum(new StateOption("5", "Emergency Heating"));
+            options.add(new StateOption("4", "Heat"));
+            options.add(new StateOption("5", "Emergency Heating"));
         }
         if (states != null && states != 3 && states != 6) {
-            options.addEnum(new StateOption("3", "Cool"));
-            options.addEnum(new StateOption("6", "Precooling"));
+            options.add(new StateOption("3", "Cool"));
+            options.add(new StateOption("6", "Precooling"));
         }
-        options.addEnum(new StateOption("7", "Fan Only"));
-        options.addEnum(new StateOption("8", "Dry"));
-        options.addEnum(new StateOption("9", "Sleep"));
+        options.add(new StateOption("7", "Fan Only"));
+        options.add(new StateOption("8", "Dry"));
+        options.add(new StateOption("9", "Sleep"));
 
         stateDescription = new StateDescription(BigDecimal.ZERO, BigDecimal.valueOf(9), BigDecimal.valueOf(1), "", true,
                 options);*/

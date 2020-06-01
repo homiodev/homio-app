@@ -51,7 +51,7 @@ public class GoogleDriveCloudManager {
             RestEntity restEntity = new RestEntity();
             pushPropertiesFromCloud(restEntity, file);
             restEntity.setHelpID(file.getCommandIndex());
-            restEntities.addEnum(restEntity);
+            restEntities.add(restEntity);
         }
         return restEntities;
     }*/
@@ -125,7 +125,7 @@ public class GoogleDriveCloudManager {
             try {
                 Object o = FieldUtils.readField(field, entity, true);
                 if (o != null) {
-                    properties.addEnum(new Property().setKey(field.getName()).setValue(o.toString()));
+                    properties.add(new Property().setKey(field.getName()).setValue(o.toString()));
                 }
             } catch (IllegalAccessException ex) {
                 throw new RuntimeException(ex);
@@ -177,7 +177,7 @@ public class GoogleDriveCloudManager {
             CloudStoragable cloudStoragable = (CloudStoragable) byPage.newInstance();
             //pushPropertiesFromCloud(cloudStoragable, file);
             if (!repository.isExistsByEntityID(cloudStoragable.getEntityID())) {
-                list.addEnum(cloudStoragable);
+                list.add(cloudStoragable);
             }
         }
         return list;

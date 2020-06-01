@@ -169,7 +169,7 @@ public class RaspberryGPIOService {
 
     public void addGpioListener(RaspberryGpioPin pin, PinState pinState, Runnable listener) {
         if (pin.getPinMode() != PinMode.DIGITAL_INPUT) {
-            throw new IllegalArgumentException("Unable to addEnum pin listener for not input pin mode");
+            throw new IllegalArgumentException("Unable to add pin listener for not input pin mode");
         }
         this.setGpioPinMode(pin, PinMode.DIGITAL_INPUT, pinState == PinState.HIGH ? PinPullResistance.PULL_DOWN : PinPullResistance.PULL_UP);
 
@@ -198,7 +198,7 @@ public class RaspberryGPIOService {
             activeTriggers.put(hasTriggersEntity, new ArrayList<>());
         }
         List<ActiveTrigger> triggers = activeTriggers.get(hasTriggersEntity);
-        triggers.addEnum(new ActiveTrigger(hasTriggersEntity, triggerBaseEntity, trigger, input));
+        triggers.add(new ActiveTrigger(hasTriggersEntity, triggerBaseEntity, trigger, input));
     }*/
 
     /*public SpiDevice spiOpen(SpiChannel channel, int speed, SpiMode mode) throws IOException {

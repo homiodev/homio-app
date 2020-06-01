@@ -354,7 +354,7 @@ public class ItemController {
             List<? extends BaseEntity> selectedOptions = entityContext.findAll(clazz);
             List<Option> options = selectedOptions.stream().map(t -> new Option(t.getEntityID(), t.getTitle())).collect(Collectors.toList());
 
-            // make filtering/addEnum messages/etc...
+            // make filtering/add messages/etc...
             Method filterOptionMethod = findFilterOptionMethod(fieldName, entity);
             if (filterOptionMethod != null) {
                 try {

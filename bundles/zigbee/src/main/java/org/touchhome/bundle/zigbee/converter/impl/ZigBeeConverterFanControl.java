@@ -72,27 +72,27 @@ public class ZigBeeConverterFanControl extends ZigBeeBaseChannelConverter implem
             List<StateOption> options = new ArrayList<>();
             switch (sequence) {
                 case 0:
-                    options.addEnum(new StateOption("1", "Low"));
-                    options.addEnum(new StateOption("2", "Medium"));
-                    options.addEnum(new StateOption("3", "High"));
+                    options.add(new StateOption("1", "Low"));
+                    options.add(new StateOption("2", "Medium"));
+                    options.add(new StateOption("3", "High"));
                 case 1:
-                    options.addEnum(new StateOption("1", "Low"));
-                    options.addEnum(new StateOption("3", "High"));
+                    options.add(new StateOption("1", "Low"));
+                    options.add(new StateOption("3", "High"));
                     break;
                 case 2:
-                    options.addEnum(new StateOption("1", "Low"));
-                    options.addEnum(new StateOption("2", "Medium"));
-                    options.addEnum(new StateOption("3", "High"));
-                    options.addEnum(new StateOption("5", "Auto"));
+                    options.add(new StateOption("1", "Low"));
+                    options.add(new StateOption("2", "Medium"));
+                    options.add(new StateOption("3", "High"));
+                    options.add(new StateOption("5", "Auto"));
                     break;
                 case 3:
-                    options.addEnum(new StateOption("1", "Low"));
-                    options.addEnum(new StateOption("3", "High"));
-                    options.addEnum(new StateOption("5", "Auto"));
+                    options.add(new StateOption("1", "Low"));
+                    options.add(new StateOption("3", "High"));
+                    options.add(new StateOption("5", "Auto"));
                     break;
                 case 4:
-                    options.addEnum(new StateOption("4", "On"));
-                    options.addEnum(new StateOption("5", "Auto"));
+                    options.add(new StateOption("4", "On"));
+                    options.add(new StateOption("5", "Auto"));
                     break;
                 default:
                     log.error("{}/{}: Unknown fan mode sequence {}", endpoint.getIeeeAddress(),endpoint.getEndpointId(), sequence);

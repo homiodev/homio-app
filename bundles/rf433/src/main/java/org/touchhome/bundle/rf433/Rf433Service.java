@@ -279,7 +279,7 @@ public class Rf433Service implements BundleContext {
                         }
                         sliceSignals.add(sliceOf(secondBucket.getKey(), secondBucket.getValue()));
                         addToSignals(secondBucket, signals1, grouId);
-                        // addEnum indexes to blockedSet
+                        // add indexes to blockedSet
                         IntStream.rangeClosed(firstBucket.getKey(), firstBucket.getValue()).forEach(blockedIndexes::add);
                         IntStream.rangeClosed(secondBucket.getKey(), secondBucket.getValue()).forEach(blockedIndexes::add);
                         // now first index is last index of second bucket + 1
@@ -338,7 +338,7 @@ public class Rf433Service implements BundleContext {
                         groupSignals.add(new GroupSignal(secondBucket.getKey(), secondBucket.getValue(), grouId));
 
                         addToSignals(secondBucket, signals1, grouId);
-                        // addEnum indexes to blockedSet
+                        // add indexes to blockedSet
                         IntStream.rangeClosed(firstBucket.getKey(), firstBucket.getValue()).forEach(blockedIndexes::add);
                         IntStream.rangeClosed(secondBucket.getKey(), secondBucket.getValue()).forEach(blockedIndexes::add);
                         // now first index is last index of second bucket + 1

@@ -403,7 +403,7 @@ public abstract class ZigBeeCoordinatorHandler
     /**
      * Adds a {@link ZigBeeNetworkNodeListener} to receive updates on node status
      *
-     * @param listener the {@link ZigBeeNetworkNodeListener} to addEnum
+     * @param listener the {@link ZigBeeNetworkNodeListener} to add
      */
     public void addNetworkNodeListener(ZigBeeNetworkNodeListener listener) {
         // Save the listeners until the network is initialised
@@ -432,7 +432,7 @@ public abstract class ZigBeeCoordinatorHandler
     /**
      * Adds a {@link ZigBeeAnnounceListener} to receive node announce messages
      *
-     * @param listener the {@link ZigBeeAnnounceListener} to addEnum
+     * @param listener the {@link ZigBeeAnnounceListener} to add
      */
     public void addAnnounceListener(ZigBeeAnnounceListener listener) {
         // Save the listeners until the network is initialised
