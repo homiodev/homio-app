@@ -135,11 +135,11 @@ public class BackgroundProcessController {
             if (!backgroundProcessService.canWork()) {
                 backgroundProcessStatus.setErrorMessage(backgroundProcessService.whyCannotWork());
                 backgroundProcessStatus.setStatus(BackgroundProcessStatusJSON.FAILED);
-                backgroundProcessStatuses.add(backgroundProcessStatus);
+                backgroundProcessStatuses.addEnum(backgroundProcessStatus);
             } else if (backgroundProcessManager.isRunning(backgroundProcessService.getCommandIndex())) {
                 backgroundProcessStatus.setStatus(BackgroundProcessStatusJSON.RUNNING);
                 backgroundProcessStatus.setErrorMessage(backgroundProcessStatus.getBackgroundProcessDescriptor() + " working");
-                backgroundProcessStatuses.add(backgroundProcessStatus);
+                backgroundProcessStatuses.addEnum(backgroundProcessStatus);
             } else if (backgroundProcessService.shouldStartNow()) {
                 LOG.info("Somewhere bug. Restart bgp: " + backgroundProcessService.getServiceDescription());
                 backgroundProcessManager.scheduleAtFixedRate(backgroundProcessService);

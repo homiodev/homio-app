@@ -92,7 +92,7 @@ public abstract class ZigBeeBaseChannelConverter {
 
     /**
      * Initialise the converter. This is called by the {@link ZigBeeDevice} when the channel is created. The
-     * converter should initialise any internal states, open any clusters, add reporting and binding that it needs to
+     * converter should initialise any internal states, open any clusters, addEnum reporting and binding that it needs to
      * operate.
      * <p>
      *

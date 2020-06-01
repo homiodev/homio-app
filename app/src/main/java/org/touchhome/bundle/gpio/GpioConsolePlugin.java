@@ -20,8 +20,9 @@ import org.touchhome.bundle.raspberry.RaspberryGPIOService;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -41,10 +42,10 @@ public class GpioConsolePlugin implements ConsolePlugin {
             gpioPluginEntity.setDescription(gpioPin.getName());
             gpioPluginEntity.setRaspiPin(gpioPin.getPin().getName());
             gpioPluginEntity.setBcmPin(gpioPin.getBcmPin() == null ? null : gpioPin.getBcmPin().getName());
-            gpioPluginEntity.setSupportedPinModes(gpioPin.getPin().getSupportedPinModes());
+            gpioPluginEntity.setSupportedPinModes(gpioPin.getPin().getSupportedPinModes().stream().map(p -> p.getName().toUpperCase()).collect(Collectors.toSet()));
             gpioPluginEntity.setOccupied(gpioPin.getOccupied());
             gpioPluginEntity.setColor(gpioPin.getColor());
-            gpioPluginEntity.setSupportedPinPullResistance(gpioPin.getPin().getSupportedPinPullResistance());
+            gpioPluginEntity.setSupportedPinPullResistance(gpioPin.getPin().getSupportedPinPullResistance().stream().map(p -> p.getName().toUpperCase()).collect(Collectors.toSet()));
             if (pin != null) {
                 gpioPluginEntity.setValue(pin instanceof GpioPinDigital ? ((GpioPinDigital) pin).getState() : null);
                 gpioPluginEntity.setMode(pin.getMode());
@@ -83,7 +84,7 @@ public class GpioConsolePlugin implements ConsolePlugin {
         @UIField(order = 4, label = "BCM Pin")
         private String bcmPin;
 
-        @UIField(order = 5, label = "PinPullResistance")
+        @UIField(order = 5, label = "Pull Resistance")
         private PinPullResistance pinPullResistance;
 
         @UIField(order = 6, label = "Mode")
@@ -92,11 +93,11 @@ public class GpioConsolePlugin implements ConsolePlugin {
         @UIField(order = 7, label = "Occupied")
         private String occupied;
 
-        @UIField(order = 8, label = "Supported PinModes")
-        private EnumSet<PinMode> supportedPinModes;
+        @UIField(order = 8, label = "Supported modes")
+        private Set<String> supportedPinModes;
 
-        @UIField(order = 9, label = "Supported PinPullResistance")
-        private EnumSet<PinPullResistance> supportedPinPullResistance;
+        @UIField(order = 9, label = "Supported Pull Resistance")
+        private Set<String> supportedPinPullResistance;
 
         @UIField(order = 10)
         @UIFieldColorMatch(value = "true", color = "#1F8D2D")

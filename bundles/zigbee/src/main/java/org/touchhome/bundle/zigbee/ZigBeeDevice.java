@@ -117,7 +117,7 @@ public class ZigBeeDevice implements ZigBeeNetworkNodeListener, ZigBeeAnnounceLi
 
             List<ZigBeeConverterEndpoint> zigBeeConverterEndpoints = new ArrayList<>();
             // Dynamically create the zigBeeConverterEndpoints from the device
-            // Process all the endpoints for this device and add all zigBeeConverterEndpoints as derived from the supported clusters
+            // Process all the endpoints for this device and addEnum all zigBeeConverterEndpoints as derived from the supported clusters
             for (ZigBeeEndpoint endpoint : this.discoveryService.getCoordinatorHandlers().getNodeEndpoints(nodeIeeeAddress)) {
                 log.debug("{}: Checking endpoint {} zigBeeConverterEndpoints", nodeIeeeAddress, endpoint.getEndpointId());
                 zigBeeConverterEndpoints.addAll(discoveryService.getZigBeeChannelConverterFactory().getZigBeeConverterEndpoints(endpoint));

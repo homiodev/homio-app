@@ -3,7 +3,6 @@ package org.touchhome.bundle.nrf24i01.rf24;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
@@ -31,7 +30,6 @@ public class NRF24I01Bundle implements BundleContext {
     private final Rf24Communicator rf24Communicator;
     private final EntityContext entityContext;
 
-    private static final String libName = "/librf24bcmjava.so";
     private static final Pipe GLOBAL_WRITE_PIPE = new Pipe("2Node");
     private static byte messageID = 0;
     private static String errorLoadingLibrary = null;
@@ -56,9 +54,9 @@ public class NRF24I01Bundle implements BundleContext {
     private void loadLibrary() {
         if (!libLoaded) {
             try {
-                TouchHomeUtils.loadLibraryFromJar(libName);
+                System.load(TouchHomeUtils.getFilesPath().resolve("nrf24i01/librf24bcmjava.so").toAbsolutePath().toString());
             } catch (Throwable ex) {
-                log.error("Error while load library <{}>", libName);
+                log.error("Error while load nrf24i01 library");
                 errorLoadingLibrary = TouchHomeUtils.getErrorMessage(ex);
                 entityContext.setSettingValue(Nrf24i01StatusMessageSetting.class, errorLoadingLibrary);
                 entityContext.setSettingValue(Nrf24i01StatusSetting.class, DeviceStatus.OFFLINE);

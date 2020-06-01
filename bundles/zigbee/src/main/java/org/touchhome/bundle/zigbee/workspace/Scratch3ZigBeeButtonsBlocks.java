@@ -89,7 +89,7 @@ final class Scratch3ZigBeeButtonsBlocks {
             ButtonEndpointGetter buttonEndpoint = ButtonEndpointGetter.valueOf(endpointRef);
             zigBeeDeviceUpdateValueListener.addListener(ZigBeeDeviceStateUUID.require(ieeeAddress, ZclOnOffCluster.CLUSTER_ID, buttonEndpoint.value, null), consumer);
         });
-        // add link boolean value
+        // addEnum link boolean value
         this.button2XStatus.allowLinkBoolean((varId, workspaceBlock) -> {
             ZigBeeDeviceEntity zigBeeDevice = getZigBeeDevice(workspaceBlock, DOUBLE_BUTTON_SENSOR, doubleButtonSensorMenu);
             ButtonEndpoint buttonEndpoint = workspaceBlock.getMenuValue(BUTTON_ENDPOINT, this.buttonEndpointGetterValueMenu, ButtonEndpoint.class);
@@ -109,7 +109,7 @@ final class Scratch3ZigBeeButtonsBlocks {
         this.turnOnOf2XButtonCommand.appendSpace();
         this.turnOnOf2XButtonCommand.overrideColor("#A70F1D");
 
-        // add descriptions
+        // addEnum descriptions
         this.addDescriptions(zigBeeDeviceUpdateValueListener);
     }
 

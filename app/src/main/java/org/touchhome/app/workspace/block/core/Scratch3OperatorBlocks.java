@@ -54,7 +54,7 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
         super("operator", null, entityContext);
 
         // Blocks
-        this.addBlock = Scratch3Block.ofEvaluate("add", BlockType.reporter, this::addEvaluateEvaluate);
+        this.addBlock = Scratch3Block.ofEvaluate("addEnum", BlockType.reporter, this::addEvaluateEvaluate);
         this.subtractBlock = Scratch3Block.ofEvaluate("subtract", BlockType.reporter, this::subtractEvaluateEvaluate);
         this.multiplyBlock = Scratch3Block.ofEvaluate("multiply", BlockType.reporter, this::multiplyEvaluateEvaluate);
         this.divideBlock = Scratch3Block.ofEvaluate("divide", BlockType.reporter, this::divideEvaluateEvaluate);

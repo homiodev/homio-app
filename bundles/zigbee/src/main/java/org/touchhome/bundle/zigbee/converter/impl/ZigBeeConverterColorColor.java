@@ -77,7 +77,7 @@ public class ZigBeeConverterColorColor extends ZigBeeBaseChannelConverter implem
             return false;
         }
 
-        // Bind to attribute reports, add listeners, then request the status
+        // Bind to attribute reports, addEnum listeners, then request the status
         // Configure reporting - no faster than once per second - no slower than 10 minutes.
         try {
             CommandResult bindResponse = bind(serverClusterColorControl).get();

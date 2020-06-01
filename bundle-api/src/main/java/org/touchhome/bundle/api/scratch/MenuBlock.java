@@ -5,7 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,10 +28,14 @@ public class MenuBlock {
     }
 
     public static StaticMenuBlock ofStatic(String name, Class<? extends Enum> enumClass) {
-        return new StaticMenuBlock(name, null).add(enumClass);
+        return new StaticMenuBlock(name, null).addEnum(enumClass);
     }
 
-    public static StaticMenuBlock ofStaticList(String name, String... items) {
+    public static <T extends Enum> StaticMenuBlock ofStatic(String name, Class<T> enumClass, Predicate<T> filter) {
+        return new StaticMenuBlock(name, null).addEnum(enumClass, filter);
+    }
+
+    public static StaticMenuBlock ofStaticList(String name, Map<String, String> items) {
         return new StaticMenuBlock(name, items);
     }
 
@@ -62,13 +70,15 @@ public class MenuBlock {
     @Getter
     public static class StaticMenuBlock extends MenuBlock {
         private boolean acceptReporters = true;
-        private List items = new ArrayList<>();
+        private List<StaticMenuItem> items = new ArrayList<>();
         private Map<String, List> subMenu;
 
-        StaticMenuBlock(String name, String[] list) {
+        StaticMenuBlock(String name, Map<String, String> map) {
             super(name);
-            if (list != null) {
-                Collections.addAll(this.items, list);
+            if (map != null) {
+                for (Map.Entry<String, String> entry : map.entrySet()) {
+                    this.items.add(new StaticMenuItem(entry.getKey(), entry.getValue()));
+                }
             }
         }
 
@@ -77,9 +87,18 @@ public class MenuBlock {
             return this;
         }
 
-        public StaticMenuBlock add(Class<? extends Enum> enumClass) {
+        public StaticMenuBlock addEnum(Class<? extends Enum> enumClass) {
             for (Enum item : enumClass.getEnumConstants()) {
                 this.items.add(new StaticMenuItem(item.name(), item.toString()));
+            }
+            return this;
+        }
+
+        public <T extends Enum> StaticMenuBlock addEnum(Class<T> enumClass, Predicate<T> filter) {
+            for (T item : enumClass.getEnumConstants()) {
+                if (filter.test(item)) {
+                    this.items.add(new StaticMenuItem(item.name(), item.toString()));
+                }
             }
             return this;
         }
@@ -90,6 +109,10 @@ public class MenuBlock {
             }
             this.subMenu.put(key.name(), Stream.of(subMenu.getEnumConstants()).map(Enum::name).collect(Collectors.toList()));
 
+        }
+
+        public String getFirstValue() {
+            return this.items.isEmpty() ? null : this.items.get(0).getText();
         }
 
         @Getter

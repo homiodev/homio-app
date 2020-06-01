@@ -35,7 +35,7 @@ public class ZigBeeController {
         for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandler().getZigBeeDevices().values()) {
             ZigBeeConverterEndpoint zigBeeConverterEndpoint = zigBeeDevice.getZigBeeConverterEndpoints().keySet()
                     .stream().filter(f -> f.getClusterName().equals(clusterName)).findAny().orElse(null);
-            // add zigBeeDevice
+            // addEnum zigBeeDevice
             if (zigBeeConverterEndpoint != null) {
                 String key = zigBeeDevice.getNodeIeeeAddress() + (includeClusterName ? "/" + zigBeeConverterEndpoint.getClusterName() : "");
                 list.add(Option.of(key, zigBeeConverterEndpoint.getClusterDescription() + " - " +

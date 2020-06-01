@@ -65,7 +65,7 @@ public class RaspberryGPIOService {
 
             addGpioListener(RaspberryGpioPin.PIN40, PinState.HIGH, () -> {
                 log.info("Fire switch HotSpot on Gpio event");
-                // TODO: wirelessManager.enableHotspot(60);
+                wirelessManager.enableHotspot(60);
             });
         }
     }
@@ -102,6 +102,18 @@ public class RaspberryGPIOService {
 
     public void setValue(RaspberryGpioPin pin, PinState pinState) {
         getDigitalOutput(pin).setState(pinState);
+    }
+
+    public void setPwmValue(RaspberryGpioPin pin, int value) {
+        if (!pin.getPin().getSupportedPinModes().contains(PinMode.PWM_OUTPUT)) {
+            throw new IllegalArgumentException("Unable to set pwm output for pin: " + pin.name());
+        }
+        if (value < 0 || value > 255) {
+            throw new IllegalArgumentException("Unable to set pwm value: " + value + ".");
+        }
+        GpioPinPwmOutput gpioPinPwmOutput = (GpioPinPwmOutput) gpioPinDigital(pin, PinMode.PWM_OUTPUT, null);
+        gpioPinPwmOutput.setPwmRange(255);
+        gpioPinPwmOutput.setPwm(value);
     }
 
     private GpioPinDigitalInput getDigitalInput(RaspberryGpioPin pin, PinPullResistance pinPullResistance) {
@@ -157,7 +169,7 @@ public class RaspberryGPIOService {
 
     public void addGpioListener(RaspberryGpioPin pin, PinState pinState, Runnable listener) {
         if (pin.getPinMode() != PinMode.DIGITAL_INPUT) {
-            throw new IllegalArgumentException("Unable to add pin listener for not input pin mode");
+            throw new IllegalArgumentException("Unable to addEnum pin listener for not input pin mode");
         }
         this.setGpioPinMode(pin, PinMode.DIGITAL_INPUT, pinState == PinState.HIGH ? PinPullResistance.PULL_DOWN : PinPullResistance.PULL_UP);
 
@@ -166,6 +178,10 @@ public class RaspberryGPIOService {
                 listener.run();
             }
         });
+    }
+
+    public void setPullResistance(RaspberryGpioPin pin, PinPullResistance pullResistance) {
+        getDigitalInput(pin, pullResistance);
     }
 
     public void setGpioPinMode(RaspberryGpioPin pin, PinMode pinMode, PinPullResistance pinPullResistance) {
@@ -182,7 +198,7 @@ public class RaspberryGPIOService {
             activeTriggers.put(hasTriggersEntity, new ArrayList<>());
         }
         List<ActiveTrigger> triggers = activeTriggers.get(hasTriggersEntity);
-        triggers.add(new ActiveTrigger(hasTriggersEntity, triggerBaseEntity, trigger, input));
+        triggers.addEnum(new ActiveTrigger(hasTriggersEntity, triggerBaseEntity, trigger, input));
     }*/
 
     /*public SpiDevice spiOpen(SpiChannel channel, int speed, SpiMode mode) throws IOException {

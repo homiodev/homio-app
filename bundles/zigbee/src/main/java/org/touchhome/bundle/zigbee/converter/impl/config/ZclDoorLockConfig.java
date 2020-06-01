@@ -28,26 +28,26 @@ public class ZclDoorLockConfig implements ZclClusterConfigHandler {
 
         if (doorLockCluster.isAttributeSupported(ZclDoorLockCluster.ATTR_SOUNDVOLUME)) {
             options = new ArrayList<>();
-            options.add(new ParameterOption("0", "Silent"));
-            options.add(new ParameterOption("1", "Low"));
-            options.add(new ParameterOption("2", "High"));
-            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_SOUNDVOLUME, Type.INTEGER)
+            options.addEnum(new ParameterOption("0", "Silent"));
+            options.addEnum(new ParameterOption("1", "Low"));
+            options.addEnum(new ParameterOption("2", "High"));
+            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_SOUNDVOLUME, Type.INTEGER)
                     .withLabel("The sound volume of the door lock").withDescription("").withDefault("0")
                     .withOptions(options).build());
         }
         if (doorLockCluster.isAttributeSupported(ZclDoorLockCluster.ATTR_AUTORELOCKTIME)) {
             options = new ArrayList<>();
-            options.add(new ParameterOption("0", "Disabled"));
-            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_AUTORELOCKTIME, Type.INTEGER)
+            options.addEnum(new ParameterOption("0", "Disabled"));
+            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_AUTORELOCKTIME, Type.INTEGER)
                     .withLabel("Enable one touch locking").withDescription("").withMinimum(BigDecimal.ZERO)
                     .withMaximum(new BigDecimal(3600)).withDefault("0").withOptions(options).build());
         }
         if (doorLockCluster.isAttributeSupported(ZclDoorLockCluster.ATTR_ENABLEONETOUCHLOCKING)) {
-            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_ENABLEONETOUCHLOCKING, Type.BOOLEAN)
+            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_ENABLEONETOUCHLOCKING, Type.BOOLEAN)
                     .withLabel("Set auto relock time").withDescription("").withDefault("false").build());
         }
         if (doorLockCluster.isAttributeSupported(ZclDoorLockCluster.ATTR_ENABLELOCALPROGRAMMING)) {
-            parameters.add(ConfigDescriptionParameterBuilder.create(CONFIG_ENABLELOCALPROGRAMMING, Type.BOOLEAN)
+            parameters.addEnum(ConfigDescriptionParameterBuilder.create(CONFIG_ENABLELOCALPROGRAMMING, Type.BOOLEAN)
                     .withLabel("Enable local programming").withDescription("").withDefault("false").build());
         }
 
