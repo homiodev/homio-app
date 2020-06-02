@@ -2,15 +2,19 @@ package org.touchhome.bundle.raspberry.workspace;
 
 import com.pi4j.io.gpio.PinMode;
 import com.pi4j.io.gpio.PinPullResistance;
+import com.pi4j.io.gpio.PinState;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.Hilo;
+import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.scratch.*;
 import org.touchhome.bundle.api.util.RaspberryGpioPin;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
+
+import java.util.function.Consumer;
 
 @Getter
 @Component
@@ -69,6 +73,20 @@ public class Scratch3RaspberryBlocks extends Scratch3ExtensionBlocks {
         this.isGpioInState = Scratch3Block.ofEvaluate(2, "get_gpio", BlockType.reporter, "[PIN] of [RPI]", this::isGpioInStateHandler);
         this.isGpioInState.addArgument("PIN", ArgumentType.string, pin, this.allPinMenu);
         this.isGpioInState.addArgumentServerSelection("RPI", this.rpiIdMenu);
+        this.isGpioInState.allowLinkBoolean((varId, workspaceBlock) -> {
+            RaspberryGpioPin raspberryGpioPin = getPin(workspaceBlock);
+            WorkspaceBooleanEntity workspaceBooleanEntity = workspaceBlock.getEntityContext().getEntity(WorkspaceBooleanEntity.PREFIX + varId);
+            // listen from device and write to variable
+            raspberryGPIOService.addGpioListener(raspberryGpioPin, (state) -> {
+                if (workspaceBooleanEntity.getValue() != (state.getValue() == 1)) {
+                    workspaceBlock.getEntityContext().save(workspaceBooleanEntity.inverseValue());
+                }
+            });
+            // listen boolean variable and fire events to device
+            workspaceBlock.getEntityContext().addEntityUpdateListener(WorkspaceBooleanEntity.PREFIX + varId, (Consumer<WorkspaceBooleanEntity>) wbe -> {
+                raspberryGPIOService.setValue(raspberryGpioPin, PinState.getState(wbe.getValue()));
+            });
+        });
 
         this.whenGpioInState = Scratch3Block.ofHandler(3, "when_gpio", BlockType.hat, "when [PIN] of [RPI] is [HILO]", this::whenGpioInState);
         this.whenGpioInState.addArgument("PIN", ArgumentType.string, pin, this.allPinMenu);
@@ -93,10 +111,10 @@ public class Scratch3RaspberryBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void setPullStateHandler(WorkspaceBlock workspaceBlock) {
-        PinPullResistance pullResistence = workspaceBlock.getMenuValue("PULL", pullMenu, PinPullResistance.class);
+        PinPullResistance pullResistance = workspaceBlock.getMenuValue("PULL", pullMenu, PinPullResistance.class);
         RaspberryGpioPin pin = getPin(workspaceBlock);
 
-        raspberryGPIOService.setPullResistance(pin, pullResistence);
+        raspberryGPIOService.setPullResistance(pin, pullResistance);
     }
 
     private void whenGpioInState(WorkspaceBlock workspaceBlock) {

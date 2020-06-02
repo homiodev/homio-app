@@ -168,6 +168,9 @@ public class RaspberryGPIOService {
     }*/
 
     public void addGpioListener(RaspberryGpioPin pin, PinState pinState, Runnable listener) {
+        if (pinState == null) {
+            throw new IllegalArgumentException("PinState must be not null");
+        }
         if (pin.getPinMode() != PinMode.DIGITAL_INPUT) {
             throw new IllegalArgumentException("Unable to add pin listener for not input pin mode");
         }
@@ -177,6 +180,17 @@ public class RaspberryGPIOService {
             if (event.getState() == pinState) {
                 listener.run();
             }
+        });
+    }
+
+    public void addGpioListener(RaspberryGpioPin pin, Consumer<PinState> listener) {
+        if (pin.getPinMode() != PinMode.DIGITAL_INPUT) {
+            throw new IllegalArgumentException("Unable to add pin listener for not input pin mode");
+        }
+        this.setGpioPinMode(pin, PinMode.DIGITAL_INPUT, null);
+
+        this.digitalListeners.get(pin).add(event -> {
+            listener.accept(event.getState());
         });
     }
 
