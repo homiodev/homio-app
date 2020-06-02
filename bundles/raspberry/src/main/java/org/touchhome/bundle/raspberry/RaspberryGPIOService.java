@@ -63,10 +63,10 @@ public class RaspberryGPIOService {
                 }
             }
 
-            addGpioListener(RaspberryGpioPin.PIN40, PinState.HIGH, () -> {
+            /*addGpioListener(RaspberryGpioPin.PIN40, PinState.HIGH, () -> {
                 log.info("Fire switch HotSpot on Gpio event");
                 wirelessManager.enableHotspot(60);
-            });
+            });*/
         }
     }
 
@@ -198,7 +198,7 @@ public class RaspberryGPIOService {
             activeTriggers.put(hasTriggersEntity, new ArrayList<>());
         }
         List<ActiveTrigger> triggers = activeTriggers.get(hasTriggersEntity);
-        triggers.add(new ActiveTrigger(hasTriggersEntity, triggerBaseEntity, trigger, input));
+        triggers.addEnum(new ActiveTrigger(hasTriggersEntity, triggerBaseEntity, trigger, input));
     }*/
 
     /*public SpiDevice spiOpen(SpiChannel channel, int speed, SpiMode mode) throws IOException {

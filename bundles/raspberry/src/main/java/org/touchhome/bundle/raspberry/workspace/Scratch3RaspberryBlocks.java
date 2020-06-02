@@ -39,11 +39,9 @@ public class Scratch3RaspberryBlocks extends Scratch3ExtensionBlocks {
         this.raspberryGPIOService = raspberryGPIOService;
         this.broadcastLockManager = broadcastLockManager;
 
-        // List<String> items = Stream.of(PinProvider.allPins()).map(Pin::getName).collect(Collectors.toList());
         this.allPinMenu = MenuBlock.ofStatic("allPinMenu", RaspberryGpioPin.class, p ->
                 p.getPin().getSupportedPinModes().contains(PinMode.DIGITAL_INPUT));
-        this.pwmPinMenu = MenuBlock.ofStatic("allPinMenu", RaspberryGpioPin.class, p ->
-                p.getPin().getSupportedPinModes().contains(PinMode.PWM_OUTPUT));
+        this.pwmPinMenu = MenuBlock.ofStatic("pwmPinMenu", RaspberryGpioPin.class, p -> p.name().equals("PIN12"));
 
         this.rpiIdMenu = MenuBlock.ofServer("rpiIdMenu", "rest/item/type/RaspberryDeviceEntity",
                 "Select RPI", "-");
@@ -68,7 +66,7 @@ public class Scratch3RaspberryBlocks extends Scratch3ExtensionBlocks {
             this.writePwmPin.addArgumentServerSelection("RPI", this.rpiIdMenu);
         }
 
-        this.isGpioInState = Scratch3Block.ofEvaluate(2, "get_gpio", BlockType.Boolean, "[PIN] of [RPI]", this::isGpioInStateHandler);
+        this.isGpioInState = Scratch3Block.ofEvaluate(2, "get_gpio", BlockType.reporter, "[PIN] of [RPI]", this::isGpioInStateHandler);
         this.isGpioInState.addArgument("PIN", ArgumentType.string, pin, this.allPinMenu);
         this.isGpioInState.addArgumentServerSelection("RPI", this.rpiIdMenu);
 
@@ -118,7 +116,7 @@ public class Scratch3RaspberryBlocks extends Scratch3ExtensionBlocks {
         }
     }
 
-    private Boolean isGpioInStateHandler(WorkspaceBlock workspaceBlock) {
+    private boolean isGpioInStateHandler(WorkspaceBlock workspaceBlock) {
         RaspberryGpioPin pin = getPin(workspaceBlock);
         return raspberryGPIOService.getValue(pin);
     }
