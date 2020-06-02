@@ -11,8 +11,9 @@ import org.json.JSONArray;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.scratch.*;
+import org.touchhome.bundle.api.util.NotificationType;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -306,7 +307,11 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         if (scratch3Block.getAllowLinkBoolean() == null) {
             logErrorAndThrow("Unable to link boolean variable to scratch block: " + scratch3Block.getOpcode());
         }
-        scratch3Block.getAllowLinkBoolean().accept(variableId, this);
+        try {
+            scratch3Block.getAllowLinkBoolean().accept(variableId, this);
+        } catch (Exception ex) {
+            logErrorAndThrow("Error when linking boolean variable to scratch block: " + scratch3Block.getOpcode() + TouchHomeUtils.getErrorMessage(ex));
+        }
     }
 
     public void linkVariable(String variableId) {
