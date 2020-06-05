@@ -110,7 +110,7 @@ public class ZigBeeDeviceRepository extends AbstractRepository<ZigBeeDeviceEntit
             if (scratch3Block instanceof Scratch3ZigbeeBlock) {
                 Scratch3ZigbeeBlock scratch3ZigbeeBlock = (Scratch3ZigbeeBlock) scratch3Block;
                 if (scratch3ZigbeeBlock.matchLink(zigBeeConverterEndpoint, zigBeeDevice)) {
-                    scratch3ZigbeeBlock.getLinkGenerator().handle(zigBeeConverterEndpoint, zigBeeDevice, varGroup, varName);
+                    scratch3ZigbeeBlock.getZigBeeLinkGenerator().handle(zigBeeConverterEndpoint, zigBeeDevice, varGroup, varName);
                     return;
                 }
             }

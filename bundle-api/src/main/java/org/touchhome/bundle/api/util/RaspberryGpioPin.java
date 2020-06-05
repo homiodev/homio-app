@@ -10,6 +10,8 @@ import com.pi4j.io.gpio.RaspiPin;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Getter
@@ -62,6 +64,10 @@ public enum RaspberryGpioPin {
         for (RaspberryGpioPin pin : pins) {
             pin.occupied = device;
         }
+    }
+
+    public static List<RaspberryGpioPin> values(PinMode pinMode) {
+        return Stream.of(RaspberryGpioPin.values()).filter(p -> p.getPin().getSupportedPinModes().contains(pinMode)).collect(Collectors.toList());
     }
 
     @JsonValue

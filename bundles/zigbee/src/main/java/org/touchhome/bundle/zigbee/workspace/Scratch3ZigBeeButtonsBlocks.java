@@ -69,7 +69,7 @@ final class Scratch3ZigBeeButtonsBlocks {
             ZigBeeDeviceEntity zigBeeDevice = getZigBeeDevice(workspaceBlock, BUTTON_SENSOR, buttonSensorMenu);
             allowButtonLinkBoolean(zigBeeDeviceUpdateValueListener, varId, workspaceBlock, zigBeeDevice.getIeeeAddress(), null);
         });
-        this.buttonStatus.setLinkGenerator((endpoint, zigBeeDevice, varGroup, varName) ->
+        this.buttonStatus.setZigBeeLinkGenerator((endpoint, zigBeeDevice, varGroup, varName) ->
                 this.buttonStatus.codeGenerator("zigbee")
                         .setMenu(this.buttonSensorMenu, zigBeeDevice.getNodeIeeeAddress())
                         .generateBooleanLink(varGroup, varName, entityContext), ZclOnOffCluster.CLUSTER_ID, 1);
@@ -95,7 +95,7 @@ final class Scratch3ZigBeeButtonsBlocks {
             ButtonEndpoint buttonEndpoint = workspaceBlock.getMenuValue(BUTTON_ENDPOINT, this.buttonEndpointGetterValueMenu, ButtonEndpoint.class);
             allowButtonLinkBoolean(zigBeeDeviceUpdateValueListener, varId, workspaceBlock, zigBeeDevice.getIeeeAddress(), buttonEndpoint);
         });
-        this.button2XStatus.setLinkGenerator((endpoint, zigBeeDevice, varGroup, varName) ->
+        this.button2XStatus.setZigBeeLinkGenerator((endpoint, zigBeeDevice, varGroup, varName) ->
                 this.button2XStatus.codeGenerator("zigbee")
                         .setMenu(this.buttonEndpointGetterValueMenu, ButtonEndpoint.of(endpoint.getEndpointId()))
                         .setMenu(this.doubleButtonSensorMenu, zigBeeDevice.getNodeIeeeAddress())

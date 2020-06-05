@@ -187,11 +187,17 @@ public class WorkspaceManager {
 
     private void createSupplier(Supplier<BaseEntity> entitySupplier, JSONArray array, String prefix) {
         JSONArray jsonArray = array.optJSONArray(2);
+        AbstractRepository<? extends BaseEntity> repository = entityContext.getRepositoryByPrefix(prefix);
+        List<String> existedEntities = repository.listAll().stream().map(BaseEntity::getEntityID).collect(Collectors.toList());
         if (jsonArray != null) {
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject jsonObject1 = jsonArray.getJSONObject(i);
                 saveOrUpdateEntity(entitySupplier, jsonObject1.getString("id"), jsonObject1.getString("name"), prefix);
+                existedEntities.remove(prefix + jsonObject1.getString("id"));
             }
+        }
+        for (String existedEntity : existedEntities) {
+            entityContext.delete(existedEntity);
         }
     }
 

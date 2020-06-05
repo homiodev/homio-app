@@ -15,6 +15,7 @@ import org.touchhome.bundle.api.scratch.BlockType;
 import org.touchhome.bundle.api.scratch.Scratch3Block;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.scratch.WorkspaceBlock;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
@@ -77,13 +78,23 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void variableGroupLinkHandler(WorkspaceBlock workspaceBlock) {
-        WorkspaceBlock source = getWorkspaceBlockToLink(workspaceBlock);
-        ((WorkspaceBlockImpl) source).linkVariable(workspaceBlock.getFieldId("group_variables_group"));
+        try {
+            WorkspaceBlock source = getWorkspaceBlockToLink(workspaceBlock);
+            ((WorkspaceBlockImpl) source).linkVariable(workspaceBlock.getFieldId("group_variables_group"));
+        } catch (Exception ex) {
+            workspaceBlock.logError("Unable to link variable to wb: <{}>", workspaceBlock.getOpcode() +
+                    TouchHomeUtils.getErrorMessage(ex));
+        }
     }
 
     private void booleanLinkHandler(WorkspaceBlock workspaceBlock) {
-        WorkspaceBlock source = getWorkspaceBlockToLink(workspaceBlock);
-        ((WorkspaceBlockImpl) source).linkBoolean(workspaceBlock.getFieldId("bool_variables_group"));
+        try {
+            WorkspaceBlock source = getWorkspaceBlockToLink(workspaceBlock);
+            ((WorkspaceBlockImpl) source).linkBoolean(workspaceBlock.getFieldId("bool_variables_group"));
+        } catch (Exception ex) {
+            workspaceBlock.logError("Unable to link bool variable to wb: <{}>", workspaceBlock.getOpcode() +
+                    TouchHomeUtils.getErrorMessage(ex));
+        }
     }
 
     private WorkspaceBlock getWorkspaceBlockToLink(WorkspaceBlock workspaceBlock) {
