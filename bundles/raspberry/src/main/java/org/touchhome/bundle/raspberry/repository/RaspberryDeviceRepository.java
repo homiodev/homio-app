@@ -7,6 +7,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.link.HasWorkspaceVariableLinkAbility;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
+import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanGroupEntity;
 import org.touchhome.bundle.api.repository.AbstractDeviceRepository;
 import org.touchhome.bundle.api.util.RaspberryGpioPin;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
@@ -42,7 +43,9 @@ public class RaspberryDeviceRepository extends AbstractDeviceRepository<Raspberr
         List<Map<Option, String>> links = new ArrayList<>();
         for (RaspberryGpioPin gpioPin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT)) {
             Map<Option, String> map = new HashMap<>();
-            map.put(Option.key(gpioPin.name()).setType("boolean"), getLinkedWorkspaceBooleanVariable(gpioPin));
+            map.put(Option.key(gpioPin.name())
+                    .addJson("group", WorkspaceBooleanGroupEntity.PREFIX)
+                    .addJson("var", WorkspaceBooleanEntity.PREFIX), getLinkedWorkspaceBooleanVariable(gpioPin));
             links.add(map);
         }
         entity.setAvailableLinks(links);

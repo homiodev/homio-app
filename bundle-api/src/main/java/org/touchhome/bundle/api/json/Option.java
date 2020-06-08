@@ -7,9 +7,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang.StringUtils;
+import org.touchhome.bundle.api.model.BaseEntity;
 
 import javax.validation.constraints.NotNull;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -31,7 +35,7 @@ public class Option implements Comparable<Option> {
     private String imageRef;
 
     @Setter
-    private String type;
+    private String json;
 
     public Option(Object key, Object title) {
         this.key = String.valueOf(key);
@@ -69,6 +73,10 @@ public class Option implements Comparable<Option> {
         return IntStream.range(min, max).mapToObj(value -> Option.key(String.valueOf(value))).collect(Collectors.toList());
     }
 
+    public static <T extends BaseEntity> List<Option> list(List<T> list) {
+        return list.stream().map(e -> Option.of(e.getEntityID(), StringUtils.defaultIfEmpty(e.getName(), e.getTitle()))).collect(Collectors.toList());
+    }
+
     @Override
     @SneakyThrows
     public String toString() {
@@ -95,5 +103,18 @@ public class Option implements Comparable<Option> {
     @Override
     public int hashCode() {
         return Objects.hash(key);
+    }
+
+    @SneakyThrows
+    public Option addJson(String key, String value) {
+        Map<String, Object> jsonObject;
+        if (json == null) {
+            jsonObject = new HashMap<>();
+        } else {
+            jsonObject = OBJECT_MAPPER.readValue(json, HashMap.class);
+        }
+        jsonObject.put(key, value);
+        json = OBJECT_MAPPER.writeValueAsString(jsonObject);
+        return this;
     }
 }

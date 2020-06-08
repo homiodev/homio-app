@@ -104,6 +104,11 @@ public class WorkspaceController {
         return entity.getContent();
     }
 
+    @GetMapping("variable/{type}")
+    public List<Option> getWorkspaceVariables(@PathVariable("type") String type) {
+        return Option.list(entityContext.findAllByPrefix(type));
+    }
+
     @SneakyThrows
     @PostMapping("{entityID}")
     public void saveWorkspace(@PathVariable("entityID") String entityID, @RequestBody String json) {
@@ -136,7 +141,7 @@ public class WorkspaceController {
 
     @GetMapping("tab")
     public List<Option> getWorkspaceTabs() {
-        return entityContext.findAll(WorkspaceEntity.class).stream().sorted().map(e -> Option.of(e.getEntityID(), e.getTitle())).collect(Collectors.toList());
+        return Option.list(entityContext.findAll(WorkspaceEntity.class));
     }
 
     @SneakyThrows

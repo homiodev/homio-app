@@ -383,13 +383,13 @@ public class InternalManager implements EntityContext {
 
     @Override
     public <T extends BaseEntity> List<T> findAll(Class<T> clazz) {
-        AbstractRepository repository = getRepository(clazz);
-        return entityManager.getEntityIDsByEntityClassFullName((Class<BaseEntity>) clazz).stream()
-                .map(entityID -> {
-                    T entity = entityManager.getEntityWithFetchLazy(entityID);
-                    repository.updateEntityAfterFetch(entity);
-                    return entity;
-                }).collect(Collectors.toList());
+        return findAllByRepository((Class<BaseEntity>) clazz, getRepository(clazz));
+    }
+
+    @Override
+    public <T extends BaseEntity> List<T> findAllByPrefix(String prefix) {
+        AbstractRepository<? extends BaseEntity> repository = getRepositoryByPrefix(prefix);
+        return findAllByRepository((Class<BaseEntity>) repository.getEntityClass(), repository);
     }
 
     @Override
@@ -466,6 +466,15 @@ public class InternalManager implements EntityContext {
     public <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener) {
         this.entityClassUpdateListeners.putIfAbsent(entityClass, new ArrayList<>());
         this.entityClassUpdateListeners.get(entityClass).add(listener);
+    }
+
+    private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz, AbstractRepository repository) {
+        return entityManager.getEntityIDsByEntityClassFullName(clazz).stream()
+                .map(entityID -> {
+                    T entity = entityManager.getEntityWithFetchLazy(entityID);
+                    repository.updateEntityAfterFetch(entity);
+                    return entity;
+                }).collect(Collectors.toList());
     }
 
     private void createUser() {

@@ -241,7 +241,7 @@ public class ItemController {
         putTypeToEntityIfNotExists(type);
         List<Option> list = new ArrayList<>();
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-            list.addAll(entityContext.findAll(aClass).stream().map(e -> Option.of(e.getEntityID(), e.getTitle())).collect(Collectors.toList()));
+            list.addAll(Option.list(entityContext.findAll(aClass)));
         }
         Collections.sort(list);
 

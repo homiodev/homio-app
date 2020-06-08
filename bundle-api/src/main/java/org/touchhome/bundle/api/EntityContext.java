@@ -5,12 +5,15 @@ import org.apache.commons.lang3.SystemUtils;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.PureEntity;
-import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.PublicJsMethod;
+import org.touchhome.bundle.api.util.NotificationType;
 
 import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -135,6 +138,9 @@ public interface EntityContext {
 
     @PublicJsMethod
     <T extends BaseEntity> List<T> findAll(Class<T> clazz);
+
+    @PublicJsMethod
+    <T extends BaseEntity> List<T> findAllByPrefix(String prefix);
 
     @PublicJsMethod
     default <T extends BaseEntity> List<T> findAll(T baseEntity) {

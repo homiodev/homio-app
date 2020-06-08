@@ -44,7 +44,7 @@ public class ConsoleController {
     private Map<String, ConsolePlugin> consolePluginsMap = new HashMap<>();
 
     public void postConstruct() {
-        this.tabs.addAll(logService.getTabs().stream().map(l -> Option.key(l).setType("log")).collect(Collectors.toList()));
+        this.tabs.addAll(logService.getTabs().stream().map(l -> Option.key(l).addJson("type", "log")).collect(Collectors.toList()));
         Collections.sort(consolePlugins);
         for (ConsolePlugin consolePlugin : consolePlugins) {
             String bundleName = BundleContext.getBundleName(consolePlugin.getClass());
@@ -115,8 +115,8 @@ public class ConsoleController {
     public Set<Option> getTabs() {
         Set<Option> options = new LinkedHashSet<>(this.tabs);
         for (Map.Entry<String, ConsolePlugin> entry : this.consolePluginsMap.entrySet()) {
-            if(entry.getValue().isEnabled()) {
-                options.add(Option.key(entry.getKey()).setType("bundle"));
+            if (entry.getValue().isEnabled()) {
+                options.add(Option.key(entry.getKey()).addJson("type", "bundle"));
             }
         }
         return options;
