@@ -12,6 +12,6 @@ public interface SshHardwareRepository {
     @HardwareQuery(value = "mv ${rootDir}/tmate-2.4.0-static-linux-:armv/tmate ${rootDir}/ssh/tmate && rm -rf ${rootDir}/tmate-2.4.0-static-linux-:armv && chmod +x ${rootDir}/ssh/tmate", printOutput = true)
     void installTmate(@ApiParam("armv") String armv);
 
-    @HardwareQuery(value = "${rootDir}/ssh/tmate -V", ignoreOnError = true)
+    @HardwareQuery(value = "${rootDir}/ssh/tmate -V", ignoreOnError = true, cache = true)
     String getTmateVersion();
 }

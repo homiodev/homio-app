@@ -49,13 +49,13 @@ public class RaspberryGPIOService {
 
     @SneakyThrows
     void init() {
-        for (RaspberryGpioPin pin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT)) {
+        for (RaspberryGpioPin pin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT, null)) {
             digitalListeners.put(pin, new CopyOnWriteArrayList<>());
         }
 
         if (isGPIOAvailable()) {
             RaspberryGpioPin.occupyPins("1-Wire", RaspberryGpioPin.PIN7);
-            for (RaspberryGpioPin pin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT)) {
+            for (RaspberryGpioPin pin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT, PinPullResistance.PULL_DOWN)) {
                 if (pin.getOccupied() == null) {
                     GpioPinDigital gpioPinDigital = getDigitalInput(pin, PinPullResistance.PULL_DOWN);
                     if (gpioPinDigital.isHigh()) {

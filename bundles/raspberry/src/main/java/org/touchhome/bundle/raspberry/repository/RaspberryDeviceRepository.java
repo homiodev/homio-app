@@ -41,7 +41,7 @@ public class RaspberryDeviceRepository extends AbstractDeviceRepository<Raspberr
 
     private void gatherAvailableLinks(RaspberryDeviceEntity entity) {
         List<Map<Option, String>> links = new ArrayList<>();
-        for (RaspberryGpioPin gpioPin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT)) {
+        for (RaspberryGpioPin gpioPin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT, null)) {
             Map<Option, String> map = new HashMap<>();
             map.put(Option.key(gpioPin.name())
                     .addJson("group", WorkspaceBooleanGroupEntity.PREFIX)
@@ -68,7 +68,7 @@ public class RaspberryDeviceRepository extends AbstractDeviceRepository<Raspberr
 
     @Override
     public void createVariable(String entityID, String varGroup, String varName, String key) {
-        RaspberryGpioPin raspberryGpioPin = RaspberryGpioPin.values(PinMode.DIGITAL_INPUT).stream().filter(p -> p.name().equals(key)).findAny().orElse(null);
+        RaspberryGpioPin raspberryGpioPin = RaspberryGpioPin.values(PinMode.DIGITAL_INPUT, null).stream().filter(p -> p.name().equals(key)).findAny().orElse(null);
         if (raspberryGpioPin != null) {
             JSONObject parameter = new JSONObject().put("pin", raspberryGpioPin).put("entityID", entityID);
             scratch3RaspberryBlocks.getIsGpioInState().getLinkGenerator().handle(varGroup, varName, parameter);

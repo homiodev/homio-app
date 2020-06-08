@@ -14,6 +14,7 @@ import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorMatch;
 import org.touchhome.bundle.api.ui.field.UIFieldColorRef;
+import org.touchhome.bundle.api.ui.field.UIFieldRowColor;
 import org.touchhome.bundle.api.util.RaspberryGpioPin;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
 
@@ -100,10 +101,11 @@ public class GpioConsolePlugin implements ConsolePlugin {
         private Set<String> supportedPinPullResistance;
 
         @UIField(order = 10)
-        @UIFieldColorMatch(value = "true", color = "#1F8D2D")
-        @UIFieldColorMatch(value = "false", color = "#B22020")
+        @UIFieldColorMatch(value = "HIGH", color = "#1F8D2D")
+        @UIFieldColorMatch(value = "LOW", color = "#B22020")
         private Object value;
 
+        @UIFieldRowColor
         private String color;
 
         @Override

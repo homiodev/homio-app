@@ -3,10 +3,7 @@ package org.touchhome.bundle.api.util;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.pi4j.io.gpio.Pin;
-import com.pi4j.io.gpio.PinMode;
-import com.pi4j.io.gpio.RaspiBcmPin;
-import com.pi4j.io.gpio.RaspiPin;
+import com.pi4j.io.gpio.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -66,8 +63,12 @@ public enum RaspberryGpioPin {
         }
     }
 
-    public static List<RaspberryGpioPin> values(PinMode pinMode) {
-        return Stream.of(RaspberryGpioPin.values()).filter(p -> p.getPin().getSupportedPinModes().contains(pinMode)).collect(Collectors.toList());
+    public static List<RaspberryGpioPin> values(PinMode pinMode, PinPullResistance pinPullResistance) {
+        return Stream.of(RaspberryGpioPin.values())
+                .filter(p ->
+                        p.getPin().getSupportedPinModes().contains(pinMode) &&
+                                (pinPullResistance == null || p.getPin().getSupportedPinPullResistance().contains(pinPullResistance)))
+                .collect(Collectors.toList());
     }
 
     @JsonValue

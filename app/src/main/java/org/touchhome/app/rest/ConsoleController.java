@@ -18,7 +18,6 @@ import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -33,13 +32,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ConsoleController {
 
-    private final WirelessHardwareRepository wirelessHardwareRepository;
     private final List<ConsolePlugin> consolePlugins;
     private final LogService logService;
     private final EntityContext entityContext;
     private final ApplicationContext applicationContext;
     private final Set<Option> tabs = new ArraySet<>();
-    private final RestTemplate restTemplate = new RestTemplate();
 
     private Map<String, ConsolePlugin> consolePluginsMap = new HashMap<>();
 
@@ -127,24 +124,19 @@ public class ConsoleController {
         return "";
     }
 
-    @PostMapping("ssh/open")
+    @PostMapping("ssh")
     public SshProvider.SshSession openSshSession() {
-        if (!wirelessHardwareRepository.isSshGenerated()) {
-            wirelessHardwareRepository.generateSSHKeys();
-        }
-        SshProvider sshProvider = this.entityContext.getSettingValue(ConsoleSshProviderSetting.class);
-        return sshProvider.openSshSession();
+        return this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).openSshSession();
     }
 
-    @PostMapping("ssh/close")
+    @DeleteMapping("ssh")
     public void closeSshSession() {
-        SshProvider sshProvider = this.entityContext.getSettingValue(ConsoleSshProviderSetting.class);
-        sshProvider.closeSshSession();
+        this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).closeSshSession();
     }
 
     @GetMapping("ssh/{token}")
-    public SessionStatusModel startSSH(@PathVariable("token") String token) {
-        return restTemplate.getForObject("https://tmate.io/api/t/" + token, SessionStatusModel.class);
+    public SessionStatusModel getSshStatus(@PathVariable("token") String token) {
+        return this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).getSshStatus(token);
     }
 
     @Getter
@@ -159,7 +151,7 @@ public class ConsoleController {
 
     @Getter
     @Setter
-    private static class SessionStatusModel {
+    public static class SessionStatusModel {
         private boolean closed;
         private String closed_at;
         private String created_at;

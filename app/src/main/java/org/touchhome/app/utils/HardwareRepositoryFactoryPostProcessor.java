@@ -28,9 +28,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +48,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     private static final BlockingQueue<PrintContext> printLogsJobs = new LinkedBlockingQueue<>(10);
     private static final BlockingMap<Process, List<String>> inputResponse = new BlockingHashMap<>();
     private static final Constructor<MethodHandles.Lookup> lookupConstructor;
+    private static final Map<String, ProcessCache> cache = new HashMap<>();
 
     private static Thread logThread = new Thread(() -> {
         while (!Thread.currentThread().isInterrupted()) {
@@ -148,6 +147,12 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         return str;
     }
 
+    private static class ProcessCache {
+        int retValue;
+        List<String> errors;
+        List<String> inputs;
+    }
+
     private Object handleHardwareQuery(HardwareQuery hardwareQuery, Object[] args, Method method, Environment env) throws InstantiationException, IllegalAccessException {
         ErrorsHandler errorsHandler = method.getAnnotation(ErrorsHandler.class);
         List<String> parts = new ArrayList<>();
@@ -159,39 +164,49 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         }
         String[] cmdParts = parts.toArray(new String[0]);
         String command = String.join(", ", parts);
-        if (StringUtils.isNotEmpty(hardwareQuery.echo())) {
-            log.info("Execute: <{}>. Command: <{}>", hardwareQuery.echo(), command);
+        ProcessCache processCache;
+        if (hardwareQuery.cache() && cache.containsKey(command)) {
+            processCache = cache.get(command);
         } else {
-            log.info("Execute command: <{}>", command);
-        }
-
-        int retValue;
-        List<String> errors;
-        List<String> inputs = Collections.emptyList();
-        Process process;
-        try {
-            if (StringUtils.isNotEmpty(hardwareQuery.dir())) {
-                File dir = new File(replaceStringWithArgs(hardwareQuery.dir(), args, method));
-                process = Runtime.getRuntime().exec(cmdParts, null, dir);
-            } else if (cmdParts.length == 1) {
-                process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", cmdParts[0]});
+            processCache = new ProcessCache();
+            if (StringUtils.isNotEmpty(hardwareQuery.echo())) {
+                log.info("Execute: <{}>. Command: <{}>", hardwareQuery.echo(), command);
             } else {
-                process = Runtime.getRuntime().exec(cmdParts);
+                log.info("Execute command: <{}>", command);
             }
+            Process process;
+            try {
+                if (StringUtils.isNotEmpty(hardwareQuery.dir())) {
+                    File dir = new File(replaceStringWithArgs(hardwareQuery.dir(), args, method));
+                    process = Runtime.getRuntime().exec(cmdParts, null, dir);
+                } else if (cmdParts.length == 1) {
+                    process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", cmdParts[0]});
+                } else {
+                    process = Runtime.getRuntime().exec(cmdParts);
+                }
 
-            if (hardwareQuery.printOutput()) {
-                printLogsJobs.add(new PrintContext(process));
+                if (hardwareQuery.printOutput()) {
+                    printLogsJobs.add(new PrintContext(process));
+                }
+
+                process.waitFor(hardwareQuery.maxSecondsTimeout(), TimeUnit.SECONDS);
+                processCache.retValue = process.exitValue();
+                processCache.errors = IOUtils.readLines(process.getErrorStream());
+                processCache.inputs = hardwareQuery.printOutput() ? inputResponse.take(process) : IOUtils.readLines(process.getInputStream());
+            } catch (Exception ex) {
+                processCache.retValue = 1;
+                processCache.errors = Collections.singletonList(ex.getMessage());
+            } finally {
+                if (hardwareQuery.cache()) {
+                    cache.put(command, processCache);
+                }
             }
-
-            process.waitFor(hardwareQuery.maxSecondsTimeout(), TimeUnit.SECONDS);
-            retValue = process.exitValue();
-            errors = IOUtils.readLines(process.getErrorStream());
-            inputs = hardwareQuery.printOutput() ? inputResponse.take(process) : IOUtils.readLines(process.getInputStream());
-        } catch (Exception ex) {
-            retValue = 1;
-            errors = Collections.singletonList(ex.getMessage());
         }
 
+        return handleCommandResult(hardwareQuery, method, errorsHandler, command, processCache.retValue, processCache.inputs, processCache.errors);
+    }
+
+    private Object handleCommandResult(HardwareQuery hardwareQuery, Method method, ErrorsHandler errorsHandler, String command, int retValue, List<String> inputs, List<String> errors) throws IllegalAccessException, InstantiationException {
         Class<?> returnType = method.getReturnType();
 
         // in case we expect return num we ignore any errors
@@ -246,7 +261,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                     }
                 }
                 Class<?> genericClass = listParse.clazz();
-                List result = new ArrayList();
+                List<Object> result = new ArrayList<>();
                 for (List<String> bucket : buckets) {
                     result.add(handleBucket(bucket, genericClass));
                 }

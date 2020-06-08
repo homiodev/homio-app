@@ -180,6 +180,6 @@ public interface EntityContext {
     <T> Collection<T> getBeansOfType(Class<T> clazz);
 
     enum DeviceFeature {
-        Bluetooth, HotSpot, GPIO, NRF21I01
+        Bluetooth, HotSpot, GPIO, NRF21I01, SSH
     }
 }

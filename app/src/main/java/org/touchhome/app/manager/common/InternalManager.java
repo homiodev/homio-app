@@ -182,6 +182,9 @@ public class InternalManager implements EntityContext {
         if (EntityContext.isTestEnvironment() || EntityContext.isDockerEnvironment()) {
             disableFeature(DeviceFeature.HotSpot);
         }
+        if (!EntityContext.isLinuxOrDockerEnvironment()) {
+            disableFeature(DeviceFeature.SSH);
+        }
     }
 
     @Override

@@ -185,6 +185,11 @@ public class UtilsController {
                 jsonTypeMetadata.put("expand", "true");
             }
 
+            UIFieldRowColor uiFieldRowColor = field.getDeclaredAnnotation(UIFieldRowColor.class);
+            if (uiFieldRowColor != null) {
+                jsonTypeMetadata.put("rc", field.getName());
+            }
+
             UIFieldCreateWorkspaceVariableOnEmpty uiFieldCreateWorkspaceVariable = field.getDeclaredAnnotation(UIFieldCreateWorkspaceVariableOnEmpty.class);
             if (uiFieldCreateWorkspaceVariable != null) {
                 jsonTypeMetadata.put("cwvoe", "true");
