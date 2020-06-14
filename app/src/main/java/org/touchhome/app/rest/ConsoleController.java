@@ -129,9 +129,9 @@ public class ConsoleController {
         return this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).openSshSession();
     }
 
-    @DeleteMapping("ssh")
-    public void closeSshSession() {
-        this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).closeSshSession();
+    @DeleteMapping("ssh/{token}")
+    public void closeSshSession(@PathVariable("token") String token) {
+        this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).closeSshSession(token);
     }
 
     @GetMapping("ssh/{token}")

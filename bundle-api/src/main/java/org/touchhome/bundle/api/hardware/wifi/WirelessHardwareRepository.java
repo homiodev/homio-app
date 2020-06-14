@@ -82,7 +82,7 @@ public interface WirelessHardwareRepository {
     @HardwareQuery(echo = "Set wifi power save off", value = "iw :iface set power_save off")
     void setWifiPowerSaveOff(@ApiParam("iface") String iface);
 
-    @HardwareQuery("test -f ~/.ssh/id_rsa")
+    @HardwareQuery(echo = "Check ssh keys exists", value = "test -f ~/.ssh/id_rsa", cache = true)
     boolean isSshGenerated();
 
     @HardwareQuery(echo = "Generate ssh keys", value = "cat /dev/zero | ssh-keygen -q -N \"\"")

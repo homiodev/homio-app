@@ -39,6 +39,7 @@ public class TmateSshProvider implements SshProvider {
             CountDownLatch countDownLatch = new CountDownLatch(1);
             tmateThread = new Thread(() -> {
                 try {
+                    log.info("Open ssh session using tmate provider");
                     Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "/opt/touchhome/ssh/tmate -F"});
                     process.waitFor(10, TimeUnit.SECONDS);
                     InputStream inputStream = process.getInputStream();
@@ -49,10 +50,11 @@ public class TmateSshProvider implements SshProvider {
 
                     process.waitFor();
                 } catch (InterruptedException ie) {
-                    log.info("Close tmate ssh session");
+                    log.info("Close ssh session using tmate provider");
                 } catch (Exception e) {
                     log.error("Error while running tmate");
                 }
+                sshSession = null;
                 tmateThread = null;
             });
             tmateThread.start();
@@ -62,8 +64,8 @@ public class TmateSshProvider implements SshProvider {
     }
 
     @Override
-    public void closeSshSession() {
-        if (tmateThread != null) {
+    public void closeSshSession(String token) {
+        if (this.sshSession != null && token.equals(this.sshSession.getToken())) {
             tmateThread.interrupt();
         }
     }

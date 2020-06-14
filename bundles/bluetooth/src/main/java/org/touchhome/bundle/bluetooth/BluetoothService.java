@@ -4,6 +4,7 @@ import com.pi4j.system.SystemInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.ble.BleApplicationListener;
 import org.ble.BluetoothApplication;
@@ -17,6 +18,7 @@ import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.Network;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.UserEntity;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.cloud.impl.ServerConnectionStatus;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
@@ -168,11 +170,24 @@ public class BluetoothService implements BundleContext {
         return Long.toString((TIME_REFRESH_PASSWORD - (System.currentTimeMillis() - timeSinceLastCheckPassword)) / 1000);
     }
 
+    @SneakyThrows
     private void writeKeystore(byte[] bytes) {
         writeSafeValue(() -> {
-            log.warn("Writing keystore");
-            entityContext.save(user.setKeystore(bytes));
-            entityContext.setSettingValue(CloudServerRestartSetting.class, null);
+            byte type = bytes[0];
+            byte[] content = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
+            switch (type) {
+                case 3:
+                    log.warn("Writing keystore");
+                    entityContext.save(user.setKeystore(content));
+                    entityContext.setSettingValue(CloudServerRestartSetting.class, null);
+                    return;
+                case 5:
+                    log.warn("Writing private key");
+                    FileUtils.writeByteArrayToFile(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome").toFile(), content);
+                case 7:
+                    log.warn("Writing public key");
+                    FileUtils.writeByteArrayToFile(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome.pub").toFile(), content);
+            }
         });
     }
 

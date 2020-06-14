@@ -7,7 +7,7 @@ import org.touchhome.app.rest.ConsoleController;
 public interface SshProvider {
     SshSession openSshSession();
 
-    void closeSshSession();
+    void closeSshSession(String token);
 
     ConsoleController.SessionStatusModel getSshStatus(String token);
 

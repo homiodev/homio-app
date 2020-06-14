@@ -17,11 +17,13 @@ import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 import org.touchhome.bundle.api.exception.NotFoundException;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -37,7 +39,10 @@ public class TouchHomeUtils {
     public static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
     private static Path rootPath;
     @Getter
-    private static Path filesPath;
+    private static final Path filesPath;
+
+    @Getter
+    private static final Path sshPath;
 
     static {
         if (SystemUtils.IS_OS_WINDOWS) {
@@ -46,7 +51,9 @@ public class TouchHomeUtils {
             rootPath = Paths.get("/opt/touchhome");
         }
         filesPath = rootPath.resolve("asm_files");
+        sshPath = rootPath.resolve("ssh");
         TouchHomeUtils.createDirectoriesIfNotExists(filesPath);
+        TouchHomeUtils.createDirectoriesIfNotExists(sshPath);
     }
 
     @SneakyThrows

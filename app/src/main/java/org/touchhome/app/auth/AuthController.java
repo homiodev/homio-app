@@ -1,8 +1,6 @@
 package org.touchhome.app.auth;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -10,7 +8,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.repository.impl.UserRepository;
 
