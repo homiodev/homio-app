@@ -39,6 +39,9 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     private String subGroupKey;
 
     @Transient
+    private String[] pages;
+
+    @Transient
     private int order;
 
     @Transient

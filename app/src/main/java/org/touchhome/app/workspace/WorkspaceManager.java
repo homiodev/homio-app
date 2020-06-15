@@ -22,7 +22,6 @@ import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanGroupEntity;
 import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableGroupEntity;
-import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.scratch.WorkspaceBlock;
 import org.touchhome.bundle.api.scratch.WorkspaceEventListener;
@@ -32,7 +31,7 @@ import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
-import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -125,26 +124,23 @@ public class WorkspaceManager {
         JSONObject target = new JSONObject(StringUtils.defaultIfEmpty(entity.getContent(), "{}"));
 
         // single variables
-        updateWorkspaceObjects(target.optJSONObject("variables"), WorkspaceStandaloneVariableEntity.PREFIX, WorkspaceStandaloneVariableEntity::new, null);
+        updateWorkspaceObjects(target.optJSONObject("variables"), WorkspaceStandaloneVariableEntity.PREFIX, WorkspaceStandaloneVariableEntity::new);
 
         // broadcasts
-        updateWorkspaceObjects(target.optJSONObject("broadcasts"), WorkspaceBroadcastRepository.PREFIX, WorkspaceBroadcastEntity::new, null);
+        updateWorkspaceObjects(target.optJSONObject("broadcasts"), WorkspaceBroadcastRepository.PREFIX, WorkspaceBroadcastEntity::new);
 
         // backup
-        updateWorkspaceObjects(target.optJSONObject("backup_lists"), WorkspaceBackupGroupEntity.PREFIX, WorkspaceBackupGroupEntity::new, (baseEntity, array) ->
-                createSupplier(() -> new WorkspaceBackupEntity().setWorkspaceBackupGroupEntity((WorkspaceBackupGroupEntity) baseEntity),
-                        array, WorkspaceBackupEntity.PREFIX));
+        Map<BaseEntity, JSONArray> values = updateWorkspaceObjects(target.optJSONObject("backup_lists"), WorkspaceBackupGroupEntity.PREFIX, WorkspaceBackupGroupEntity::new);
+        createSupplier(values, (baseEntity) -> new WorkspaceBackupEntity().setWorkspaceBackupGroupEntity((WorkspaceBackupGroupEntity) baseEntity), WorkspaceBackupEntity.PREFIX);
 
 
         // bool
-        updateWorkspaceObjects(target.optJSONObject("bool_variables"), WorkspaceBooleanGroupEntity.PREFIX, WorkspaceBooleanGroupEntity::new, (baseEntity, array) ->
-                createSupplier(() -> new WorkspaceBooleanEntity().setWorkspaceBooleanGroupEntity((WorkspaceBooleanGroupEntity) baseEntity),
-                        array, WorkspaceBooleanEntity.PREFIX));
+        values = updateWorkspaceObjects(target.optJSONObject("bool_variables"), WorkspaceBooleanGroupEntity.PREFIX, WorkspaceBooleanGroupEntity::new);
+        createSupplier(values, (baseEntity) -> new WorkspaceBooleanEntity().setWorkspaceBooleanGroupEntity((WorkspaceBooleanGroupEntity) baseEntity), WorkspaceBooleanEntity.PREFIX);
 
         // group variables
-        updateWorkspaceObjects(target.optJSONObject("group_variables"), WorkspaceVariableGroupEntity.PREFIX, WorkspaceVariableGroupEntity::new, (baseEntity, array) ->
-                createSupplier(() -> new WorkspaceVariableEntity().setWorkspaceVariableGroupEntity((WorkspaceVariableGroupEntity) baseEntity),
-                        array, WorkspaceVariableEntity.PREFIX));
+        values = updateWorkspaceObjects(target.optJSONObject("group_variables"), WorkspaceVariableGroupEntity.PREFIX, WorkspaceVariableGroupEntity::new);
+        createSupplier(values, (baseEntity) -> new WorkspaceVariableEntity().setWorkspaceVariableGroupEntity((WorkspaceVariableGroupEntity) baseEntity), WorkspaceVariableEntity.PREFIX);
     }
 
     private Map<String, WorkspaceBlock> parseWorkspace(WorkspaceEntity workspaceEntity) {
@@ -185,38 +181,44 @@ public class WorkspaceManager {
         return workspaceMap;
     }
 
-    private void createSupplier(Supplier<BaseEntity> entitySupplier, JSONArray array, String prefix) {
-        JSONArray jsonArray = array.optJSONArray(2);
-        if (jsonArray != null) {
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
-                saveOrUpdateEntity(entitySupplier, jsonObject1.getString("id"), jsonObject1.getString("name"), prefix);
+    private void createSupplier(Map<BaseEntity, JSONArray> res, Function<BaseEntity, BaseEntity> entitySupplier, String prefix) {
+        List<String> existedEntities = entityContext.findAllByPrefix(prefix).stream().map(BaseEntity::getEntityID).collect(Collectors.toList());
+        for (Map.Entry<BaseEntity, JSONArray> entry : res.entrySet()) {
+            JSONArray jsonArray = entry.getValue().optJSONArray(2);
+            if (jsonArray != null) {
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                    saveOrUpdateEntity(() -> entitySupplier.apply(entry.getKey()), jsonObject1.getString("id"), jsonObject1.getString("name"), prefix);
+                    existedEntities.remove(prefix + jsonObject1.getString("id"));
+                }
             }
+        }
+        for (String existedEntity : existedEntities) {
+            entityContext.delete(existedEntity);
         }
     }
 
-    private void updateWorkspaceObjects(JSONObject list, String repositoryPrefix, Supplier<BaseEntity> entitySupplier, BiConsumer<BaseEntity, JSONArray> consumer) {
+    private Map<BaseEntity, JSONArray> updateWorkspaceObjects(JSONObject list, String repositoryPrefix, Supplier<BaseEntity> entitySupplier) {
         Set<String> entities = new HashSet<>();
+        Map<BaseEntity, JSONArray> res = new HashMap<>();
         if (list != null) {
             for (String id : list.keySet()) {
                 JSONArray array = list.optJSONArray(id);
                 String name = array == null ? list.getString(id) : array.getString(0);
                 if (!name.isEmpty()) {
                     BaseEntity entity = saveOrUpdateEntity(entitySupplier, id, name, repositoryPrefix);
-                    if (consumer != null) {
-                        consumer.accept(entity, array);
-                    }
+                    res.put(entity, array);
                     entities.add(repositoryPrefix + id);
                 }
             }
         }
         // remove deleted items
-        AbstractRepository<? extends BaseEntity> repository = entityContext.getRepositoryByPrefix(repositoryPrefix);
-        for (BaseEntity entity : repository.listAll()) {
+        for (BaseEntity entity : entityContext.findAllByPrefix(repositoryPrefix)) {
             if (!entities.contains(entity.getEntityID())) {
                 entityContext.delete(entity);
             }
         }
+        return res;
     }
 
     private BaseEntity saveOrUpdateEntity(Supplier<BaseEntity> entitySupplier, String id, String name, String repositoryPrefix) {

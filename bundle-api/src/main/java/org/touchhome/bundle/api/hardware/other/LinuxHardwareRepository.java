@@ -17,9 +17,6 @@ public interface LinuxHardwareRepository {
     @HardwareQuery("df -m / | sed -e /^Filesystem/d")
     HardwareMemory getSDCardMemory();
 
-    @HardwareQuery("vcgencmd measure_temp | cut -d = -f 2 | awk '{printf \"%s \", $1}'")
-    String getCpuTemp();
-
     @HardwareQuery("top -bn1 | grep load | awk '{printf \"%.2f%%\", $(NF-2)}'")
     String getCpuLoad();
 
@@ -29,7 +26,7 @@ public interface LinuxHardwareRepository {
     @HardwareQuery("uptime -p | cut -d 'p' -f 2 | awk '{ printf \"%s\", $0 }'")
     String getUptime();
 
-    @HardwareQuery("cat /proc/device-tree/model")
+    @HardwareQuery(value = "cat /proc/device-tree/model", cache = true)
     String catDeviceModel();
 
     @HardwareQuery("iwgetid -r")
@@ -38,7 +35,7 @@ public interface LinuxHardwareRepository {
     @HardwareQuery(echo = "Reboot device", value = "reboot")
     void reboot();
 
-    @HardwareQuery("cat /etc/os-release")
+    @HardwareQuery(value = "cat /etc/os-release", cache = true)
     HardwareOs getOs();
 
     default String getDeviceModel() {

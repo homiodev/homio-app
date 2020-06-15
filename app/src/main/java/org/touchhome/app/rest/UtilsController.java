@@ -38,7 +38,6 @@ import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.method.UIFieldCreateWorkspaceVariableOnEmpty;
 import org.touchhome.bundle.api.ui.method.UIFieldSelectValueOnEmpty;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.bluetooth.BluetoothService;
 
 import javax.persistence.OneToMany;
 import java.beans.Introspector;
@@ -63,7 +62,6 @@ import static org.apache.commons.lang.StringUtils.trimToNull;
 @RequiredArgsConstructor
 public class UtilsController {
 
-    private final BluetoothService bluetoothService;
     private final InternalManager entityContext;
     private final ScriptManager scriptManager;
     private final CodeParser codeParser;
@@ -174,9 +172,22 @@ public class UtilsController {
                 jsonTypeMetadata.put("valueColor", colors);
             }
 
+            UIFieldColorRef uiFieldColorRef = field.getDeclaredAnnotation(UIFieldColorRef.class);
+            if (uiFieldColorRef != null) {
+                if (instance.getClass().getDeclaredField(uiFieldColorRef.value()) == null) {
+                    throw new RuntimeException("Unable to find field <" + uiFieldColorRef.value() + "> declared in UIFieldColorRef");
+                }
+                jsonTypeMetadata.put("colorRef", uiFieldColorRef.value());
+            }
+
             UIFieldExpand uiFieldExpand = field.getDeclaredAnnotation(UIFieldExpand.class);
             if (uiFieldExpand != null && field.getType().isAssignableFrom(List.class)) {
                 jsonTypeMetadata.put("expand", "true");
+            }
+
+            UIFieldRowColor uiFieldRowColor = field.getDeclaredAnnotation(UIFieldRowColor.class);
+            if (uiFieldRowColor != null) {
+                jsonTypeMetadata.put("rc", field.getName());
             }
 
             UIFieldCreateWorkspaceVariableOnEmpty uiFieldCreateWorkspaceVariable = field.getDeclaredAnnotation(UIFieldCreateWorkspaceVariableOnEmpty.class);
@@ -251,16 +262,6 @@ public class UtilsController {
     @GetMapping("notifications")
     public Set<NotificationEntityJSON> getNotifications() {
         return entityContext.getNotifications();
-    }
-
-    @GetMapping("device/characteristic")
-    public Map<String, String> getDeviceCharacteristics() {
-        return bluetoothService.getDeviceCharacteristics();
-    }
-
-    @PutMapping("device/characteristic/{uuid}")
-    public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
-        bluetoothService.setDeviceCharacteristic(uuid, value);
     }
 
     @PostMapping("getCompletions")

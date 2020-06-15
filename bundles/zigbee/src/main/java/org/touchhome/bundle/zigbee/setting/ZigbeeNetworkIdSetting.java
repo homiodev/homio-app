@@ -2,6 +2,7 @@ package org.touchhome.bundle.zigbee.setting;
 
 import lombok.extern.log4j.Log4j2;
 import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -24,7 +25,7 @@ public class ZigbeeNetworkIdSetting implements BundleSettingPlugin<String> {
     }
 
     @Override
-    public List<Option> loadAvailableValues() {
+    public List<Option> loadAvailableValues(EntityContext entityContext) {
         try {
             return Files.walk(TouchHomeUtils.resolvePath("zigbee"), 1)
                     .filter(f -> Files.isDirectory(f) && !f.getFileName().toString().equals("zigbee"))

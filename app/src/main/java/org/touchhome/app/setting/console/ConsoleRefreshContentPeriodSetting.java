@@ -1,13 +1,14 @@
 package org.touchhome.app.setting.console;
 
-import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class ConsoleRefreshContentPeriodSetting implements BundleSettingPlugin<Integer> {
+public class ConsoleRefreshContentPeriodSetting implements BundleConsoleSettingPlugin<Integer> {
 
     @Override
     public SettingType getSettingType() {
@@ -25,7 +26,7 @@ public class ConsoleRefreshContentPeriodSetting implements BundleSettingPlugin<I
     }
 
     @Override
-    public List<Option> loadAvailableValues() {
+    public List<Option> loadAvailableValues(EntityContext entityContext) {
         return new ArrayList<>(Arrays.asList(
                 Option.of("0", "time.NEVER"),
                 Option.of("5", "time.SEC_5"),
@@ -37,5 +38,10 @@ public class ConsoleRefreshContentPeriodSetting implements BundleSettingPlugin<I
     @Override
     public int order() {
         return 700;
+    }
+
+    @Override
+    public String[] pages() {
+        return new String[]{"hardware", "processes", "zigbee"};
     }
 }

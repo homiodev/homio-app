@@ -2,6 +2,7 @@ package org.touchhome.bundle.zigbee.setting;
 
 import com.zsmartsystems.zigbee.ExtendedPanId;
 import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 
 public class ZigbeeExtendedPanIdSetting implements BundleSettingPlugin<ExtendedPanId> {
 
@@ -16,7 +17,7 @@ public class ZigbeeExtendedPanIdSetting implements BundleSettingPlugin<ExtendedP
     }
 
     @Override
-    public ExtendedPanId parseValue(String value) {
+    public ExtendedPanId parseValue(EntityContext entityContext, String value) {
         return new ExtendedPanId(value);
     }
 

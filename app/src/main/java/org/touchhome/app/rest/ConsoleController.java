@@ -8,9 +8,12 @@ import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.touchhome.app.LogService;
 import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.model.rest.EntityUIMetaData;
+import org.touchhome.app.service.ssh.SshProvider;
+import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
@@ -38,12 +41,11 @@ public class ConsoleController {
     private Map<String, ConsolePlugin> consolePluginsMap = new HashMap<>();
 
     public void postConstruct() {
-        this.tabs.addAll(logService.getTabs().stream().map(l -> Option.key(l).setType("log")).collect(Collectors.toList()));
+        this.tabs.addAll(logService.getTabs().stream().map(l -> Option.key(l).addJson("type", "log")).collect(Collectors.toList()));
         Collections.sort(consolePlugins);
         for (ConsolePlugin consolePlugin : consolePlugins) {
             String bundleName = BundleContext.getBundleName(consolePlugin.getClass());
             this.consolePluginsMap.put(bundleName, consolePlugin);
-            this.tabs.add(Option.key(bundleName).setType("bundle"));
         }
     }
 
@@ -108,7 +110,13 @@ public class ConsoleController {
     @GetMapping("tab")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Set<Option> getTabs() {
-        return this.tabs;
+        Set<Option> options = new LinkedHashSet<>(this.tabs);
+        for (Map.Entry<String, ConsolePlugin> entry : this.consolePluginsMap.entrySet()) {
+            if (entry.getValue().isEnabled()) {
+                options.add(Option.key(entry.getKey()).addJson("type", "bundle"));
+            }
+        }
+        return options;
     }
 
     @GetMapping("ssh")
@@ -116,6 +124,20 @@ public class ConsoleController {
         return "";
     }
 
+    @PostMapping("ssh")
+    public SshProvider.SshSession openSshSession() {
+        return this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).openSshSession();
+    }
+
+    @DeleteMapping("ssh/{token}")
+    public void closeSshSession(@PathVariable("token") String token) {
+        this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).closeSshSession(token);
+    }
+
+    @GetMapping("ssh/{token}")
+    public SessionStatusModel getSshStatus(@PathVariable("token") String token) {
+        return this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).getSshStatus(token);
+    }
 
     @Getter
     @Setter
@@ -125,5 +147,16 @@ public class ConsoleController {
         List<EntityUIMetaData> uiFields;
         List<UIActionDescription> headerActions;
         List<UIActionDescription> actions;
+    }
+
+    @Getter
+    @Setter
+    public static class SessionStatusModel {
+        private boolean closed;
+        private String closed_at;
+        private String created_at;
+        private String disconnected_at;
+        private String ssh_cmd_fmt;
+        private String ws_url_fmt;
     }
 }

@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
-import org.touchhome.bundle.api.notification.NotificationType;
+import org.touchhome.bundle.api.util.NotificationType;
 
 @Getter
 @Accessors(chain = true)
@@ -20,10 +20,6 @@ public class AlwaysOnTopNotificationEntityJSONJSON extends NotificationEntityJSO
 
     @Setter
     private Boolean remove = false;
-
-    public AlwaysOnTopNotificationEntityJSONJSON(String entityID) {
-        super(entityID);
-    }
 
     public AlwaysOnTopNotificationEntityJSONJSON(NotificationEntityJSON notificationEntityJSON) {
         super(notificationEntityJSON.getEntityID());

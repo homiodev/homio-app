@@ -23,7 +23,7 @@ public class RaspberryBundle implements BundleContext {
 
     @Override
     public int order() {
-        return 100;
+        return 3000;
     }
 
     @Override

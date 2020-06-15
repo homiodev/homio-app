@@ -4,6 +4,7 @@ keepGoogleCloudCacheTime: 300000
 scheduledAppPingTime: 60000
 minScriptThreadSleep: 100
 scriptEngineName: nashorn
+rootDir: /opt/touchhome
 
 management:
   endpoints:
@@ -18,6 +19,7 @@ spring:
     username: postgres
     password: postgres
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     properties:

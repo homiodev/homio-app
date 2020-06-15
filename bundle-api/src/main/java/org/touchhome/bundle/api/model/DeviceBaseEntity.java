@@ -15,7 +15,6 @@ import org.touchhome.bundle.api.ui.method.UIFieldSelectValueOnEmpty;
 import javax.persistence.*;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
@@ -46,8 +45,7 @@ public abstract class DeviceBaseEntity<T extends DeviceBaseEntity> extends BaseE
     }
 
     public List<Option> selectPlace(EntityContext entityContext) {
-        List<PlaceEntity> entities = entityContext.findAll(PlaceEntity.class);
-        return entities.stream().map(p -> Option.of(p.getEntityID(), p.getTitle())).collect(Collectors.toList());
+        return Option.list(entityContext.findAll(PlaceEntity.class));
     }
 
     @Override

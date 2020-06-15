@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
-import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.util.SslUtil;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.cloud.setting.*;
@@ -84,7 +83,7 @@ public class NettyClientService {
                     connectLoop();
                     updateConnectionStatus(ServerConnectionStatus.DISCONNECTED, "");
                 } catch (Exception ex) {
-                    log.error("Netty client finished with error", ex);
+                    log.error("Netty client finished with error: <{}>", TouchHomeUtils.getErrorMessage(ex));
                     updateConnectionStatus(ServerConnectionStatus.DISCONNECTED_WIDTH_ERRORS, TouchHomeUtils.getErrorMessage(ex));
                 }
                 try {

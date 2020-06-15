@@ -2,6 +2,7 @@ package org.touchhome.bundle.nrf24i01.rf24.setting;
 
 import org.apache.commons.lang.StringUtils;
 import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.nrf24i01.rf24.options.CRCSize;
 
@@ -20,7 +21,7 @@ public class Nrf24i01CrcSizeSetting implements BundleSettingPlugin<CRCSize> {
     }
 
     @Override
-    public CRCSize parseValue(String value) {
+    public CRCSize parseValue(EntityContext entityContext, String value) {
         return StringUtils.isEmpty(value) ? null : CRCSize.valueOf(value);
     }
 
@@ -30,7 +31,7 @@ public class Nrf24i01CrcSizeSetting implements BundleSettingPlugin<CRCSize> {
     }
 
     @Override
-    public List<Option> loadAvailableValues() {
+    public List<Option> loadAvailableValues(EntityContext entityContext) {
         return Option.list(CRCSize.class);
     }
 }

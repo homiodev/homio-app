@@ -47,13 +47,13 @@ import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
-import org.touchhome.bundle.api.notification.NotificationType;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.ClassFinder;
+import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
@@ -100,6 +100,7 @@ public class InternalManager implements EntityContext {
     private final BroadcastLockManager broadcastLockManager;
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
+    private ApplicationContext applicationContext;
 
     public Set<NotificationEntityJSON> getNotifications() {
         long time = System.currentTimeMillis();
@@ -110,6 +111,7 @@ public class InternalManager implements EntityContext {
 
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
         this.updateDeviceFeatures();
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         for (Class<? extends BundleSettingPlugin> settingPlugin : classFinder.getClassesWithParent(BundleSettingPlugin.class)) {
@@ -142,7 +144,9 @@ public class InternalManager implements EntityContext {
 
         // init modules
         log.info("Initialize bundles");
-        for (BundleContext bundleContext : applicationContext.getBeansOfType(BundleContext.class).values()) {
+        List<BundleContext> values = new ArrayList<>(applicationContext.getBeansOfType(BundleContext.class).values());
+        Collections.sort(values);
+        for (BundleContext bundleContext : values) {
             bundleContext.init();
         }
 
@@ -177,6 +181,9 @@ public class InternalManager implements EntityContext {
     private void updateDeviceFeatures() {
         if (EntityContext.isTestEnvironment() || EntityContext.isDockerEnvironment()) {
             disableFeature(DeviceFeature.HotSpot);
+        }
+        if (!EntityContext.isLinuxOrDockerEnvironment()) {
+            disableFeature(DeviceFeature.SSH);
         }
     }
 
@@ -283,10 +290,10 @@ public class InternalManager implements EntityContext {
     public <T> T getSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
         BundleSettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
         if (pluginFor.transientState()) {
-            return pluginFor.parseValue(StringUtils.defaultIfEmpty(settingTransientState.get(pluginFor), pluginFor.getDefaultValue()));
+            return pluginFor.parseValue(this, StringUtils.defaultIfEmpty(settingTransientState.get(pluginFor), pluginFor.getDefaultValue()));
         } else {
             SettingEntity settingEntity = getEntity(SettingRepository.getKey(pluginFor));
-            return pluginFor.parseValue(StringUtils.defaultIfEmpty(settingEntity == null ? null : settingEntity.getValue(), pluginFor.getDefaultValue()));
+            return pluginFor.parseValue(this, StringUtils.defaultIfEmpty(settingEntity == null ? null : settingEntity.getValue(), pluginFor.getDefaultValue()));
         }
     }
 
@@ -306,7 +313,7 @@ public class InternalManager implements EntityContext {
     @Override
     public <T> void setSettingValueRaw(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull String value) {
         BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
-        setSettingValue(settingPluginClazz, (T) pluginFor.parseValue(value));
+        setSettingValue(settingPluginClazz, (T) pluginFor.parseValue(this, value));
     }
 
     @Override
@@ -379,13 +386,13 @@ public class InternalManager implements EntityContext {
 
     @Override
     public <T extends BaseEntity> List<T> findAll(Class<T> clazz) {
-        AbstractRepository repository = getRepository(clazz);
-        return entityManager.getEntityIDsByEntityClassFullName((Class<BaseEntity>) clazz).stream()
-                .map(entityID -> {
-                    T entity = entityManager.getEntityWithFetchLazy(entityID);
-                    repository.updateEntityAfterFetch(entity);
-                    return entity;
-                }).collect(Collectors.toList());
+        return findAllByRepository((Class<BaseEntity>) clazz, getRepository(clazz));
+    }
+
+    @Override
+    public <T extends BaseEntity> List<T> findAllByPrefix(String prefix) {
+        AbstractRepository<? extends BaseEntity> repository = getRepositoryByPrefix(prefix);
+        return findAllByRepository((Class<BaseEntity>) repository.getEntityClass(), repository);
     }
 
     @Override
@@ -434,6 +441,21 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
+    public boolean isFeatureEnabled(DeviceFeature deviceFeature) {
+        return deviceFeatures.get(deviceFeature);
+    }
+
+    @Override
+    public <T> T getBean(String beanName, Class<T> clazz) {
+        return applicationContext.getBean(beanName, clazz);
+    }
+
+    @Override
+    public <T> Collection<T> getBeansOfType(Class<T> clazz) {
+        return applicationContext.getBeansOfType(clazz).values();
+    }
+
+    @Override
     public Map<DeviceFeature, Boolean> getDeviceFeatures() {
         return deviceFeatures;
     }
@@ -447,6 +469,15 @@ public class InternalManager implements EntityContext {
     public <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener) {
         this.entityClassUpdateListeners.putIfAbsent(entityClass, new ArrayList<>());
         this.entityClassUpdateListeners.get(entityClass).add(listener);
+    }
+
+    private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz, AbstractRepository repository) {
+        return entityManager.getEntityIDsByEntityClassFullName(clazz).stream()
+                .map(entityID -> {
+                    T entity = entityManager.getEntityWithFetchLazy(entityID);
+                    repository.updateEntityAfterFetch(entity);
+                    return entity;
+                }).collect(Collectors.toList());
     }
 
     private void createUser() {

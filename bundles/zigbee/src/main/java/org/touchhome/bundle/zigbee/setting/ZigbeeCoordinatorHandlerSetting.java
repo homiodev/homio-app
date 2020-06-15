@@ -1,6 +1,7 @@
 package org.touchhome.bundle.zigbee.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.zigbee.ZigBeeCoordinatorHandler;
@@ -22,8 +23,8 @@ public class ZigbeeCoordinatorHandlerSetting implements BundleSettingPlugin<ZigB
     }
 
     @Override
-    public List<Option> loadAvailableValues() {
-        return ApplicationContextHolder.getBeansOfType(ZigBeeCoordinatorHandler.class)
+    public List<Option> loadAvailableValues(EntityContext entityContext) {
+        return entityContext.getBeansOfType(ZigBeeCoordinatorHandler.class)
                 .stream().map(zb -> Option.key(zb.getClass().getSimpleName())).collect(Collectors.toList());
     }
 
@@ -33,7 +34,7 @@ public class ZigbeeCoordinatorHandlerSetting implements BundleSettingPlugin<ZigB
     }
 
     @Override
-    public ZigBeeCoordinatorHandler parseValue(String value) {
-        return ApplicationContextHolder.getBean(value, ZigBeeCoordinatorHandler.class);
+    public ZigBeeCoordinatorHandler parseValue(EntityContext entityContext, String value) {
+        return entityContext.getBean(value, ZigBeeCoordinatorHandler.class);
     }
 }

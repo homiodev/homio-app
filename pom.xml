@@ -25,6 +25,7 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <jackson.version>2.10.3</jackson.version>
         <maven-checkstyle-plugin.version>3.1.1</maven-checkstyle-plugin.version>
+        <pi4j.version>1.2</pi4j.version>
     </properties>
 
     <dependencies>

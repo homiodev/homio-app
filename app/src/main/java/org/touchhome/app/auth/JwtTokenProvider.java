@@ -26,8 +26,8 @@ public class JwtTokenProvider {
     @Value("${security.jwt.token.secret-key:raspberry-pi}")
     private String secretKey;
 
-    @Value("${security.jwt.token.expire-length:3600000}")
-    private long validityInMilliseconds; // 1h
+    @Value("${security.jwt.token.expire-length:1800000}")
+    private long validityInMilliseconds; // 30min
 
     @Autowired
     private UserEntityDetailsService userEntityDetailsService;

@@ -9,20 +9,10 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <properties>
-        <pi4j.version>1.2</pi4j.version>
-    </properties>
-
     <artifactId>raspberry</artifactId>
     <packaging>jar</packaging>
 
     <dependencies>
-        <dependency>
-            <groupId>com.pi4j</groupId>
-            <artifactId>pi4j-core</artifactId>
-            <version>${pi4j.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>com.pi4j</groupId>
             <artifactId>pi4j-device</artifactId>

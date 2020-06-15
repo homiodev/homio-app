@@ -18,4 +18,6 @@ public @interface HardwareQuery {
     boolean ignoreOnError() default false;
 
     String echo() default "";
+
+    boolean cache() default false;
 }

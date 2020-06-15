@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.DeviceStatus;
+import org.touchhome.bundle.api.util.RaspberryGpioPin;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
 import org.touchhome.bundle.arduino.repository.ArduinoDeviceRepository;
@@ -20,14 +21,15 @@ import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01StatusMessageSetting;
 import org.touchhome.bundle.nrf24i01.rf24.setting.Nrf24i01StatusSetting;
 import pl.grzeslowski.smarthome.rf24.helpers.Pipe;
 
+import static org.touchhome.bundle.api.util.RaspberryGpioPin.*;
+
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class RF24Service implements BundleContext {
+public class NRF24I01Bundle implements BundleContext {
     private final Rf24Communicator rf24Communicator;
     private final EntityContext entityContext;
 
-    private static final String libName = "/librf24bcmjava.so";
     private static final Pipe GLOBAL_WRITE_PIPE = new Pipe("2Node");
     private static byte messageID = 0;
     private static String errorLoadingLibrary = null;
@@ -52,9 +54,9 @@ public class RF24Service implements BundleContext {
     private void loadLibrary() {
         if (!libLoaded) {
             try {
-                TouchHomeUtils.loadLibraryFromJar(libName);
+                System.load(TouchHomeUtils.getFilesPath().resolve("nrf24i01/librf24bcmjava.so").toAbsolutePath().toString());
             } catch (Throwable ex) {
-                log.error("Error while load library <{}>", libName);
+                log.error("Error while load nrf24i01 library");
                 errorLoadingLibrary = TouchHomeUtils.getErrorMessage(ex);
                 entityContext.setSettingValue(Nrf24i01StatusMessageSetting.class, errorLoadingLibrary);
                 entityContext.setSettingValue(Nrf24i01StatusSetting.class, DeviceStatus.OFFLINE);
@@ -63,9 +65,14 @@ public class RF24Service implements BundleContext {
     }
 
     public void init() {
+        loadLibrary();
+        if (!isNrf24L01Works()) {
+            entityContext.disableFeature(EntityContext.DeviceFeature.NRF21I01);
+        } else {
+            RaspberryGpioPin.occupyPins("NRF21I01", PIN19, PIN21, PIN22, PIN23, PIN24);
+        }
         entityContext.listenSettingValue(Nrf24i01EnableButtonsSetting.class, enable -> {
             if (enable) {
-                loadLibrary();
                 if (isNrf24L01Works()) {
                     rf24Communicator.runPipeReadWrite();
                 }
@@ -84,7 +91,7 @@ public class RF24Service implements BundleContext {
 
     @Override
     public int order() {
-        return Integer.MAX_VALUE;
+        return 1000;
     }
 
     public synchronized void subscribeForReading(ReadListener readListener) {

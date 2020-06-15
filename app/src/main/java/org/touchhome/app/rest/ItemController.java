@@ -23,6 +23,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.model.DeviceBaseEntity;
 import org.touchhome.bundle.api.model.ImageEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
@@ -37,6 +38,7 @@ import org.touchhome.bundle.api.util.ClassFinder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
 
+import javax.annotation.PostConstruct;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
@@ -64,6 +66,11 @@ public class ItemController {
     private final ImageManager imageManager;
     private final ApplicationContext applicationContext;
     private final Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
+
+    @PostConstruct
+    public void init() {
+        this.baseEntitySimpleClasses.put(DeviceBaseEntity.class.getSimpleName(), DeviceBaseEntity.class);
+    }
 
     @SneakyThrows
     static Object executeAction(UIActionDescription uiActionDescription, Object actionHolder, ApplicationContext applicationContext, BaseEntity actionEntity) {
@@ -234,7 +241,7 @@ public class ItemController {
         putTypeToEntityIfNotExists(type);
         List<Option> list = new ArrayList<>();
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-            list.addAll(entityContext.findAll(aClass).stream().map(e -> Option.of(e.getEntityID(), e.getTitle())).collect(Collectors.toList()));
+            list.addAll(Option.list(entityContext.findAll(aClass)));
         }
         Collections.sort(list);
 

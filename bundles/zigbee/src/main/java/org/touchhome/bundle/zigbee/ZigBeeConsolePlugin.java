@@ -20,6 +20,7 @@ import org.touchhome.bundle.zigbee.model.State;
 import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
 import org.touchhome.bundle.zigbee.requireEndpoint.ZigbeeRequireEndpoints;
 import org.touchhome.bundle.zigbee.setting.ZigbeeDiscoveryButtonSetting;
+import org.touchhome.bundle.zigbee.setting.ZigbeeStatusSetting;
 import org.touchhome.bundle.zigbee.workspace.ZigBeeDeviceUpdateValueListener;
 
 import java.util.ArrayList;
@@ -40,9 +41,14 @@ public class ZigBeeConsolePlugin implements ConsolePlugin {
     }
 
     @Override
+    public boolean isEnabled() {
+        return entityContext.getSettingValue(ZigbeeStatusSetting.class) == DeviceStatus.ONLINE;
+    }
+
+    @Override
     public List<? extends HasEntityIdentifier> drawEntity() {
         List<ZigbeeConsoleDescription> res = new ArrayList<>();
-        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandlers().getZigBeeDevices().values()) {
+        for (ZigBeeDevice zigBeeDevice : zigbeeBundleContext.getCoordinatorHandler().getZigBeeDevices().values()) {
             ZigBeeNodeDescription desc = zigBeeDevice.getZigBeeNodeDescription();
             BaseEntity entity = entityContext.getEntity(ZigBeeDeviceEntity.PREFIX + zigBeeDevice.getNodeIeeeAddress().toString());
             res.add(new ZigbeeConsoleDescription(

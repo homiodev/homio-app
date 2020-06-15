@@ -1,6 +1,7 @@
 package org.touchhome.bundle.zigbee.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 
 import java.util.ArrayList;
@@ -20,7 +21,7 @@ public class ZigbeeMeshUpdatePeriodSetting implements BundleSettingPlugin<Intege
     }
 
     @Override
-    public List<Option> loadAvailableValues() {
+    public List<Option> loadAvailableValues(EntityContext entityContext) {
         return new ArrayList<>(Arrays.asList(
                 Option.of("0", "NEVER"),
                 Option.of("300", "5 Minutes"),
@@ -42,7 +43,7 @@ public class ZigbeeMeshUpdatePeriodSetting implements BundleSettingPlugin<Intege
     }
 
     @Override
-    public Integer parseValue(String value) {
+    public Integer parseValue(EntityContext entityContext, String value) {
         return Integer.parseInt(value);
     }
 }

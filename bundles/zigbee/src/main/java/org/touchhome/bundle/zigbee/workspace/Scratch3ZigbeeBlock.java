@@ -17,7 +17,7 @@ public class Scratch3ZigbeeBlock extends Scratch3Block {
 
     @Getter
     @JsonIgnore
-    private LinkGeneratorHandler linkGenerator;
+    private LinkGeneratorHandler zigBeeLinkGenerator;
 
     @Getter
     @JsonIgnore
@@ -39,20 +39,20 @@ public class Scratch3ZigbeeBlock extends Scratch3Block {
         super(order, opcode, blockType, text, handler, evaluateHandler);
     }
 
-    void setLinkGenerator(LinkGeneratorHandler linkGenerator, int clusterID) {
-        setLinkGenerator(linkGenerator, clusterID, null, null);
+    void setZigBeeLinkGenerator(LinkGeneratorHandler linkGenerator, int clusterID) {
+        setZigBeeLinkGenerator(linkGenerator, clusterID, null, null);
     }
 
-    void setLinkGenerator(LinkGeneratorHandler linkGenerator, int clusterID, String clusterName) {
-        setLinkGenerator(linkGenerator, clusterID, null, clusterName);
+    void setZigBeeLinkGenerator(LinkGeneratorHandler linkGenerator, int clusterID, String clusterName) {
+        setZigBeeLinkGenerator(linkGenerator, clusterID, null, clusterName);
     }
 
-    void setLinkGenerator(LinkGeneratorHandler linkGenerator, int clusterID, int clusterCount) {
-        setLinkGenerator(linkGenerator, clusterID, clusterCount, null);
+    void setZigBeeLinkGenerator(LinkGeneratorHandler linkGenerator, int clusterID, int clusterCount) {
+        setZigBeeLinkGenerator(linkGenerator, clusterID, clusterCount, null);
     }
 
-    void setLinkGenerator(LinkGeneratorHandler linkGenerator, int clusterID, Integer clusterCount, String linkClusterName) {
-        this.linkGenerator = linkGenerator;
+    void setZigBeeLinkGenerator(LinkGeneratorHandler linkGenerator, int clusterID, Integer clusterCount, String linkClusterName) {
+        this.zigBeeLinkGenerator = linkGenerator;
         this.linkClusterID = clusterID;
         this.linkClusterName = linkClusterName;
         this.linkClusterCount = clusterCount;
@@ -63,7 +63,7 @@ public class Scratch3ZigbeeBlock extends Scratch3Block {
     }
 
     public boolean matchLink(ZigBeeConverterEndpoint zigBeeConverterEndpoint, ZigBeeDevice zigBeeDevice) {
-        return this.linkGenerator != null && zigBeeConverterEndpoint.getClusterId() == this.linkClusterID &&
+        return this.zigBeeLinkGenerator != null && zigBeeConverterEndpoint.getClusterId() == this.linkClusterID &&
                 (this.linkClusterCount == null || this.linkClusterCount == zigBeeDevice.getChannelCount(this.linkClusterID)) &&
                 (this.linkClusterName == null || this.linkClusterName.equals(zigBeeConverterEndpoint.getClusterName()));
     }
@@ -72,7 +72,7 @@ public class Scratch3ZigbeeBlock extends Scratch3Block {
                                       int clusterId, String clusterName, String extensionId) {
         this.allowLinkBoolean((varId, workspaceBlock) ->
                 Scratch3ZigBeeBlocks.linkVariable(zigBeeDeviceUpdateValueListener, varId, sensorDescription, workspaceBlock, sensorName, sensorMenu, clusterId, clusterName));
-        this.setLinkGenerator((endpoint, zigBeeDevice, varGroup, varName) ->
+        this.setZigBeeLinkGenerator((endpoint, zigBeeDevice, varGroup, varName) ->
                         codeGenerator(extensionId)
                                 .setMenu(sensorMenu, zigBeeDevice.getNodeIeeeAddress())
                                 .generateBooleanLink(varGroup, varName, entityContext),
@@ -84,7 +84,7 @@ public class Scratch3ZigbeeBlock extends Scratch3Block {
                                     String description, String sensorName, MenuBlock.ServerMenuBlock sensorMenu, int clusterId, String clusterName, String extensionId) {
         this.allowLinkFloatVariable((varId, workspaceBlock) ->
                 Scratch3ZigBeeBlocks.linkVariable(zigBeeDeviceUpdateValueListener, varId, description, workspaceBlock, sensorName, sensorMenu));
-        this.setLinkGenerator((endpoint, zigBeeDevice, varGroup, varName) ->
+        this.setZigBeeLinkGenerator((endpoint, zigBeeDevice, varGroup, varName) ->
                 this.codeGenerator(extensionId)
                         .setMenu(sensorMenu, zigBeeDevice.getNodeIeeeAddress())
                         .generateFloatLink(varGroup, varName, entityContext), clusterId, clusterName);

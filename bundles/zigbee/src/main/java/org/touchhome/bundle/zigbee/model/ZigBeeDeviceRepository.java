@@ -55,7 +55,7 @@ public class ZigBeeDeviceRepository extends AbstractRepository<ZigBeeDeviceEntit
 
     @Override
     public void updateEntityAfterFetch(ZigBeeDeviceEntity entity) {
-        ZigBeeDevice device = zigbeeBundleContext.getCoordinatorHandlers().getZigBeeDevices().get(entity.getIeeeAddress());
+        ZigBeeDevice device = zigbeeBundleContext.getCoordinatorHandler().getZigBeeDevices().get(entity.getIeeeAddress());
         entity.setZigBeeDevice(device);
         if (device != null) {
             ZigBeeNodeDescription zigBeeNodeDescription = device.getZigBeeNodeDescription();
@@ -110,7 +110,7 @@ public class ZigBeeDeviceRepository extends AbstractRepository<ZigBeeDeviceEntit
             if (scratch3Block instanceof Scratch3ZigbeeBlock) {
                 Scratch3ZigbeeBlock scratch3ZigbeeBlock = (Scratch3ZigbeeBlock) scratch3Block;
                 if (scratch3ZigbeeBlock.matchLink(zigBeeConverterEndpoint, zigBeeDevice)) {
-                    scratch3ZigbeeBlock.getLinkGenerator().handle(zigBeeConverterEndpoint, zigBeeDevice, varGroup, varName);
+                    scratch3ZigbeeBlock.getZigBeeLinkGenerator().handle(zigBeeConverterEndpoint, zigBeeDevice, varGroup, varName);
                     return;
                 }
             }

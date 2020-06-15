@@ -5,11 +5,12 @@ import org.apache.commons.lang3.SystemUtils;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.PureEntity;
-import org.touchhome.bundle.api.notification.NotificationType;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.PublicJsMethod;
+import org.touchhome.bundle.api.util.NotificationType;
 
 import javax.validation.constraints.NotNull;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -139,6 +140,9 @@ public interface EntityContext {
     <T extends BaseEntity> List<T> findAll(Class<T> clazz);
 
     @PublicJsMethod
+    <T extends BaseEntity> List<T> findAllByPrefix(String prefix);
+
+    @PublicJsMethod
     default <T extends BaseEntity> List<T> findAll(T baseEntity) {
         return (List<T>) findAll(baseEntity.getClass());
     }
@@ -159,8 +163,6 @@ public interface EntityContext {
 
     <T extends BaseEntity> void addEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
 
-    Map<DeviceFeature, Boolean> getDeviceFeatures();
-
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, Consumer<T> listener);
 
     <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener);
@@ -169,7 +171,15 @@ public interface EntityContext {
 
     void disableFeature(DeviceFeature deviceFeature);
 
+    boolean isFeatureEnabled(DeviceFeature deviceFeature);
+
+    Map<DeviceFeature, Boolean> getDeviceFeatures();
+
+    <T> T getBean(String beanName, Class<T> clazz);
+
+    <T> Collection<T> getBeansOfType(Class<T> clazz);
+
     enum DeviceFeature {
-        Bluetooth, HotSpot, GPIO
+        Bluetooth, HotSpot, GPIO, NRF21I01, SSH
     }
 }

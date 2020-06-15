@@ -1,14 +1,12 @@
 package org.touchhome.bundle.raspberry;
 
 import com.pi4j.io.gpio.*;
+import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
-import com.pi4j.io.gpio.trigger.GpioSetStateTrigger;
-import com.pi4j.io.gpio.trigger.GpioTrigger;
-import com.pi4j.io.spi.SpiChannel;
 import com.pi4j.io.spi.SpiDevice;
-import com.pi4j.io.spi.SpiFactory;
-import com.pi4j.io.spi.SpiMode;
 import com.pi4j.wiringpi.Gpio;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -18,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.WirelessManager;
+import org.touchhome.bundle.api.util.RaspberryGpioPin;
 import org.touchhome.bundle.api.util.UpdatableValue;
 import org.touchhome.bundle.raspberry.settings.RaspberryOneWireIntervalSetting;
 
@@ -26,6 +25,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -38,24 +39,43 @@ public class RaspberryGPIOService {
     private GpioController gpio;
     private Boolean available;
     private final Map<String, DefaultKeyValue<Long, Float>> ds18B20Values = new HashMap<>();
-    private final Map<RaspberryGpioPin, UpdatableValue<PinState>> gpioDigitalListeners = new ConcurrentHashMap<>();
+
+    @Getter
+    private final Map<RaspberryGpioPin, List<PinListener>> digitalListeners = new ConcurrentHashMap<>();
+    private final Map<RaspberryGpioPin, UpdatableValue<Boolean>> inputGpioValues = new ConcurrentHashMap<>();
 
     @Value("${w1BaseDir:/sys/devices/w1_bus_master1}")
     private Path w1BaseDir;
 
     @SneakyThrows
     void init() {
+        for (RaspberryGpioPin pin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT, null)) {
+            digitalListeners.put(pin, new CopyOnWriteArrayList<>());
+        }
+
         if (isGPIOAvailable()) {
-            addGpioListenerDigital(RaspberryGpioPin.PIN40, PinMode.DIGITAL_INPUT, event -> {
-                log.info("Fired HotSpot creation on GPIO event state: <{}>", event.getState().isHigh());
-                if (event.getState().isHigh()) {
-                    wirelessManager.enableHotspot(60);
+            RaspberryGpioPin.occupyPins("1-Wire", RaspberryGpioPin.PIN7);
+            for (RaspberryGpioPin pin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT, PinPullResistance.PULL_DOWN)) {
+                if (pin.getOccupied() == null) {
+                    GpioPinDigital gpioPinDigital = getDigitalInput(pin, PinPullResistance.PULL_DOWN);
+                    if (gpioPinDigital.isHigh()) {
+                        gpioPinDigital.setMode(PinMode.DIGITAL_OUTPUT);
+                        ((GpioPinDigitalOutput) gpioPinDigital).setState(PinState.LOW);
+                        gpioPinDigital.setMode(PinMode.DIGITAL_INPUT);
+                    }
+                    gpioPinDigital.setShutdownOptions(true, PinState.LOW, PinPullResistance.OFF);
+                    inputGpioValues.put(pin, UpdatableValue.wrap(gpioPinDigital.isHigh(), pin.name()));
+                    gpioPinDigital.addListener((GpioPinListenerDigital) event -> digitalListeners.get(pin).forEach(t -> t.consumer.accept(event)));
+                    digitalListeners.get(pin).add(new PinListener("INPUT_VALUE_LISTENER", event -> inputGpioValues.get(pin).update(event.getState().isHigh())));
                 }
-            });
+            }
+
+            /*addGpioListener(RaspberryGpioPin.PIN40, PinState.HIGH, () -> {
+                log.info("Fire switch HotSpot on Gpio event");
+                wirelessManager.enableHotspot(60);
+            });*/
         }
     }
-
-//    private Map<HasTriggersEntity, List<ActiveTrigger>> activeTriggers = new HashMap<>();
 
     private GpioController getGpio() {
         if (gpio == null) {
@@ -64,7 +84,7 @@ public class RaspberryGPIOService {
         return gpio;
     }
 
-    private boolean isGPIOAvailable() {
+    public boolean isGPIOAvailable() {
         if (available == null) {
             if (EntityContext.isTestEnvironment()) {
                 available = false;
@@ -83,55 +103,54 @@ public class RaspberryGPIOService {
         return available;
     }
 
-    public PinState getState(RaspberryGpioPin pin) {
-        UpdatableValue<PinState> pinStateUpdatableValue = gpioDigitalListeners.get(pin);
-        if (pinStateUpdatableValue == null) {
-            GpioPinDigital gpioPinDigital = getGpioPinDigital(pin.getPin(), PinMode.DIGITAL_OUTPUT);
-            pinStateUpdatableValue = UpdatableValue.wrap(gpioPinDigital.getState(), pin.name());
-            gpioPinDigital.addListener((GpioPinListenerDigital) event -> gpioDigitalListeners.get(pin).update(event.getState()));
-            gpioDigitalListeners.put(pin, pinStateUpdatableValue);
-        }
-
-        return pinStateUpdatableValue.getValue();
+    public boolean getValue(RaspberryGpioPin pin) {
+        return inputGpioValues.get(pin).getValue();
     }
 
-    private GpioPin getGpioPin(Pin pin, PinMode pinMode) {
-        GpioPin provisionedPin = getGpio().getProvisionedPin(pin);
-        if (provisionedPin != null) {
-            return provisionedPin;
+    public void setValue(RaspberryGpioPin pin, PinState pinState) {
+        if (available) {
+            log.info("Set pin <{}> value <{}>", pin.name(), pinState.name());
+            getDigitalOutput(pin).setState(pinState);
         }
-        return getGpio().provisionPin(pin, pinMode);
     }
 
-    private GpioPinDigital getGpioPinDigital(Pin pin, PinMode pinMode) {
-        GpioPin provisionedPin = getGpio().getProvisionedPin(pin);
-        if (provisionedPin != null) {
-            return (GpioPinDigital) provisionedPin;
+    public void setPwmValue(RaspberryGpioPin pin, int value) {
+        if (available) {
+            assertDigitalInputPin(pin, PinMode.PWM_OUTPUT, "Unable to set pwm output for pin: " + pin.name());
+            if (value < 0 || value > 255) {
+                throw new IllegalArgumentException("Unable to set pwm value: " + value + ".");
+            }
+            log.info("Set pwm pin <{}> value <{}>", pin.name(), value);
+            GpioPinPwmOutput gpioPinPwmOutput = (GpioPinPwmOutput) gpioPinDigital(pin, PinMode.PWM_OUTPUT, null);
+            gpioPinPwmOutput.setPwmRange(255);
+            gpioPinPwmOutput.setPwm(value);
         }
-        return (GpioPinDigital) getGpio().provisionPin(pin, pinMode);
     }
 
-  /*  public GpioPinDigitalInput getDigitalInput(RaspberryGpioPin raspberryGpioPin, PinPullResistance pinPullResistance) {
-        return getDigitalInput(raspberryGpioPin.getPin(), pinPullResistance);
-    }*/
-
-    private GpioPinDigitalInput getDigitalInput(RaspberryGpioPin raspberryGpioPin, PinPullResistance pinPullResistance) {
-        Pin pin = raspberryGpioPin.getPin();
-        GpioPinDigitalInput input = (GpioPinDigitalInput) getGpio().getProvisionedPin(pin);
-        if (input == null) {
-            log.info("Acquire Gpio input pin: " + pin.getName() + ". PullResistance: " + pinPullResistance.getName());
-            input = getGpio().provisionDigitalInputPin(pin, pin.getName(), pinPullResistance);
-        }
-        return input;
+    private GpioPinDigitalInput getDigitalInput(RaspberryGpioPin pin, PinPullResistance pinPullResistance) {
+        return (GpioPinDigitalInput) gpioPinDigital(pin, PinMode.DIGITAL_INPUT, pinPullResistance);
     }
 
-    private GpioPinDigitalOutput getDigitalOutput(RaspberryGpioPin raspberryGpioPin) {
-        Pin pin = raspberryGpioPin.getPin();
-        GpioPinDigitalOutput output = (GpioPinDigitalOutput) getGpio().getProvisionedPin(pin);
-        if (output == null) {
-            // output = getGpio().provisionDigitalOutputPin(pin, getPINName(pin.getName()), PinState.LOW);
+    private GpioPinDigitalOutput getDigitalOutput(RaspberryGpioPin pin) {
+        return (GpioPinDigitalOutput) gpioPinDigital(pin, PinMode.DIGITAL_OUTPUT, null);
+    }
+
+    private GpioPinDigital gpioPinDigital(RaspberryGpioPin pin, PinMode pinMode, PinPullResistance pinPullResistance) {
+        if (pin.getOccupied() != null) {
+            throw new IllegalArgumentException("Unable to get GpioPinDigital for occupied pin by: " + pin.getOccupied());
         }
-        return output;
+        assertDigitalInputPin(pin, PinMode.DIGITAL_INPUT, "Unable to get GpioPinDigital for pin: " + pin.name());
+        GpioPinDigital provisionedPin = (GpioPinDigital) getGpio().getProvisionedPin(pin.getPin());
+        if (provisionedPin == null) {
+            provisionedPin = (GpioPinDigital) getGpio().provisionPin(pin.getPin(), pin.name(), pinMode);
+        }
+        if (provisionedPin.getMode() != pinMode) {
+            provisionedPin.setMode(pinMode);
+        }
+        if (pinPullResistance != null && pin.getPin().supportsPinPullResistance() && provisionedPin.getPullResistance() != pinPullResistance) {
+            provisionedPin.setPullResistance(pinPullResistance);
+        }
+        return provisionedPin;
     }
 
     /*public void removeAllTriggersAndPinsFor(HasTriggersEntity hasTriggersEntity) {
@@ -157,18 +176,45 @@ public class RaspberryGPIOService {
         }
     }*/
 
-    public void addGpioListenerDigital(RaspberryGpioPin pin, PinMode pinMode, GpioPinListenerDigital gpioPinListenerDigital) {
-        log.info("Request adding listener for GPIO pin: <{}>. Mode: <{}>", pin.getPin().getName(), pinMode.getName());
-        GpioPin input = getGpioPin(pin.getPin(), pinMode);
-        input.setPullResistance(PinPullResistance.PULL_DOWN);
-        input.addListener(gpioPinListenerDigital);
-        log.info("Successes request adding listener for GPIO pin: <{}>. Mode: <{}>", pin.getPin().getName(), pinMode.getName());
+    public void addGpioListener(String name, RaspberryGpioPin pin, PinState pinState, Runnable listener) {
+        if (pinState == null) {
+            throw new IllegalArgumentException("PinState must be not null");
+        }
+        assertDigitalInputPin(pin, PinMode.DIGITAL_INPUT, "Unable to add pin listener for not input pin mode");
+        this.setGpioPinMode(pin, PinMode.DIGITAL_INPUT, pinState == PinState.HIGH ? PinPullResistance.PULL_DOWN : PinPullResistance.PULL_UP);
+
+        this.digitalListeners.get(pin).add(new PinListener(name, event -> {
+            if (event.getState() == pinState) {
+                listener.run();
+            }
+        }));
+    }
+
+    public void addGpioListener(String name, RaspberryGpioPin pin, Consumer<PinState> listener) {
+        assertDigitalInputPin(pin, PinMode.DIGITAL_INPUT, "Unable to add pin listener for not input pin mode");
+        this.setGpioPinMode(pin, PinMode.DIGITAL_INPUT, null);
+        this.digitalListeners.get(pin).add(new PinListener(name, event -> {
+            listener.accept(event.getState());
+        }));
+    }
+
+    private void assertDigitalInputPin(RaspberryGpioPin pin, PinMode digitalInput, String s) {
+        if (!pin.getPin().getSupportedPinModes().contains(digitalInput)) {
+            throw new IllegalArgumentException(s);
+        }
+    }
+
+    public void setPullResistance(RaspberryGpioPin pin, PinPullResistance pullResistance) {
+        getDigitalInput(pin, pullResistance);
     }
 
     public void setGpioPinMode(RaspberryGpioPin pin, PinMode pinMode, PinPullResistance pinPullResistance) {
-        log.info("Set Mode <{}> for GPIO pin <{}>", pinMode.getName(), pin.getPin().getName());
-        GpioPin input = getGpioPin(pin.getPin(), pinMode);
-        input.setPullResistance(pinPullResistance);
+        if (available) {
+            GpioPin input = getDigitalInput(pin, pinPullResistance);
+            if (input.getMode() != pinMode) {
+                input.setMode(pinMode);
+            }
+        }
     }
 
   /*  public void addTrigger(HasTriggersEntity hasTriggersEntity, TriggerBaseEntity triggerBaseEntity, GpioPinDigitalInput input, GpioTrigger trigger) {
@@ -178,48 +224,12 @@ public class RaspberryGPIOService {
             activeTriggers.put(hasTriggersEntity, new ArrayList<>());
         }
         List<ActiveTrigger> triggers = activeTriggers.get(hasTriggersEntity);
-        triggers.add(new ActiveTrigger(hasTriggersEntity, triggerBaseEntity, trigger, input));
+        triggers.addEnum(new ActiveTrigger(hasTriggersEntity, triggerBaseEntity, trigger, input));
     }*/
 
-    private String getTriggerName(GpioTrigger trigger) {
-        if (trigger instanceof GpioSetStateTrigger) {
-            return "GpioSetStateTrigger for PIN: " + ((GpioSetStateTrigger) trigger).getTargetPin().getName(); // targetPIN - output
-        }
-        return trigger.toString();
-    }
-
-    private void resetAndUnprovisePin(GpioPin gpioPin) {
-        if (gpioPin instanceof GpioPinDigitalOutput) {
-            log.info("Reset pin: " + gpioPin.getName());
-            try {
-                getGpio().setState(PinState.HIGH, (GpioPinDigitalOutput) gpioPin);
-            } catch (Exception ex) {
-                log.warn("Unable reset state pin: " + gpioPin.getName(), ex);
-            }
-        }
-        try {
-            log.info("Unprovise pin: " + gpioPin.getName());
-            getGpio().unprovisionPin(gpioPin);
-        } catch (Exception ex) {
-            log.warn("Unable unprovise pin: " + gpioPin.getName(), ex);
-        }
-    }
-
-    public void setState(RaspberryGpioPin raspberryGpioPin, PinState pinState) {
-        getDigitalOutput(raspberryGpioPin).setState(pinState);
-        //getGpio().setState(pinState, getDigitalOutput(raspberryGpioPin.getPin()));
-    }
-
-    public void assertMode(GpioPin gpioPin, PinMode pinMode) {
-        if (!getGpio().isMode(PinMode.DIGITAL_OUTPUT, gpioPin)) {
-            throw new IllegalStateException("Assert fail. Gpio pin: " + gpioPin.getName() + " has not: " +
-                    pinMode.getName() + " but has: " + getGpio().getMode(gpioPin));
-        }
-    }
-
-    public SpiDevice spiOpen(SpiChannel channel, int speed, SpiMode mode) throws IOException {
+    /*public SpiDevice spiOpen(SpiChannel channel, int speed, SpiMode mode) throws IOException {
         return SpiFactory.getInstance(channel, speed, mode);
-    }
+    }*/
 
     public void delay(int howLong) {
         Gpio.delay(howLong);
@@ -294,17 +304,14 @@ public class RaspberryGPIOService {
                 .collect(Collectors.toList());
     }
 
-/*    private class ActiveTrigger {
-        private HasTriggersEntity hasTriggersEntity;
-        private TriggerBaseEntity triggerBaseEntity;
-        private GpioTrigger gpioTrigger;
-        private GpioPinDigitalInput gpioPIN;
+    public GpioPin getGpioPin(RaspberryGpioPin gpioPin) {
+        return getGpio().getProvisionedPin(gpioPin.getPin());
+    }
 
-        public ActiveTrigger(HasTriggersEntity hasTriggersEntity, TriggerBaseEntity triggerBaseEntity, GpioTrigger gpioTrigger, GpioPinDigitalInput gpioPIN) {
-            this.hasTriggersEntity = hasTriggersEntity;
-            this.triggerBaseEntity = triggerBaseEntity;
-            this.gpioTrigger = gpioTrigger;
-            this.gpioPIN = gpioPIN;
-        }
-    }*/
+    @AllArgsConstructor
+    public static class PinListener {
+        @Getter
+        private String name;
+        private Consumer<GpioPinDigitalStateChangeEvent> consumer;
+    }
 }

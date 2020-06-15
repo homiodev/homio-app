@@ -3,7 +3,7 @@ package org.touchhome.bundle.nrf24i01.rf24.backgroundService;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.thread.BackgroundProcessService;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
-import org.touchhome.bundle.nrf24i01.rf24.RF24Service;
+import org.touchhome.bundle.nrf24i01.rf24.NRF24I01Bundle;
 import org.touchhome.bundle.nrf24i01.rf24.command.RF24CommandPlugin;
 import org.touchhome.bundle.nrf24i01.rf24.communication.RF24Message;
 import org.touchhome.bundle.nrf24i01.rf24.communication.ReadListener;
@@ -22,12 +22,12 @@ import static org.touchhome.bundle.nrf24i01.rf24.Command.SET_PIN_VALUE_ON_HANDLE
  */
 public class NRF24I01DevicesListener extends BackgroundProcessService<Void> {
 
-    private final RF24Service rf24Service;
+    private final NRF24I01Bundle rf24Service;
     private final Map<Byte, RF24CommandPlugin> rf24CommandPlugins;
 
     public NRF24I01DevicesListener() {
         super(NRF24I01DevicesListener.class.getSimpleName());
-        rf24Service = ApplicationContextHolder.getBean(RF24Service.class);
+        rf24Service = ApplicationContextHolder.getBean(NRF24I01Bundle.class);
         rf24CommandPlugins = ApplicationContextHolder.getBean("rf24CommandPlugins", Map.class);
 
         if (EntityContext.isTestEnvironment()) {

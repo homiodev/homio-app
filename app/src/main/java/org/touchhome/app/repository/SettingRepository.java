@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.setting.SettingPlugin;
+import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.repository.AbstractRepository;
@@ -57,6 +58,10 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             entity.setGroupIcon(settingPlugin.getGroupKey().getIcon());
             entity.setSubGroupKey(settingPlugin.getSubGroupKey());
         }
+
+        if (plugin instanceof BundleConsoleSettingPlugin) {
+            entity.setPages(((BundleConsoleSettingPlugin) plugin).pages());
+        }
     }
 
     public static String getKey(BundleSettingPlugin settingPlugin) {
@@ -94,7 +99,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
     private void deleteRemovedSettings(List<SettingEntity> entities) {
         for (SettingEntity entity : entities) {
             BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(entity.getEntityID());
-            if(plugin == null) {
+            if (plugin == null) {
                 this.deleteByEntityID(entity.getEntityID());
             }
         }

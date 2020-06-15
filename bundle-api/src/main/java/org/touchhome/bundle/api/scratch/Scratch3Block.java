@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.tuple.Pair;
+import org.json.JSONObject;
 import org.touchhome.bundle.api.EntityContext;
 
 import javax.validation.constraints.NotNull;
@@ -36,6 +37,9 @@ public class Scratch3Block implements Comparable<Scratch3Block> {
 
     private BiConsumer<String, WorkspaceBlock> allowLinkBoolean;
     private BiConsumer<String, WorkspaceBlock> allowLinkVariable;
+
+    @JsonIgnore
+    private LinkGeneratorHandler linkGenerator;
 
     protected Scratch3Block(int order, String opcode, BlockType blockType, String text, Scratch3BlockHandler handler, Scratch3BlockEvaluateHandler evaluateHandler) {
         this.order = order;
@@ -123,6 +127,14 @@ public class Scratch3Block implements Comparable<Scratch3Block> {
 
     public void allowLinkBoolean(BiConsumer<String, WorkspaceBlock> allowLinkBoolean) {
         this.allowLinkBoolean = allowLinkBoolean;
+    }
+
+    public void setLinkGenerator(LinkGeneratorHandler linkGenerator) {
+        this.linkGenerator = linkGenerator;
+    }
+
+    public interface LinkGeneratorHandler {
+        void handle(String varGroup, String varName, JSONObject parameter);
     }
 
     public void allowLinkFloatVariable(BiConsumer<String, WorkspaceBlock> allowLinkVariable) {

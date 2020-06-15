@@ -3,7 +3,10 @@ package org.touchhome.bundle.arduino.workspace;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.model.Hilo;
 import org.touchhome.bundle.api.scratch.*;
+
+import static com.pi4j.io.gpio.PinMode.DIGITAL_INPUT;
 
 @Getter
 @Component
@@ -26,13 +29,13 @@ public class Scratch3ArduinoBlocks extends Scratch3ExtensionBlocks {
         super("#3cb6cd", entityContext);
 
         // Menu
-        this.digitalPinMenu = MenuBlock.ofStaticList("digitalPinMenu", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19");
-        this.pwmPinMenu = MenuBlock.ofStaticList("pwmPinMenu", "3", "5", "6", "9", "10", "11");
-        this.allPinMenu = MenuBlock.ofStaticList("allPinMenu", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19");
+        this.digitalPinMenu = MenuBlock.ofStatic("digitalPinMenu", ArduinoGpioPin.class, p -> p.getPinModes().contains(DIGITAL_INPUT));
+        this.pwmPinMenu = MenuBlock.ofStatic("pwmPinMenu", ArduinoGpioPin.class, p -> p.getPinModes().contains(DIGITAL_INPUT));
+        this.allPinMenu = MenuBlock.ofStatic("allPinMenu", ArduinoGpioPin.class);
 
         this.arduinoIdMenu = MenuBlock.ofServer("arduinoIdMenu", "rest/item/type/ArduinoDeviceEntity",
                 "Select Arduino", "-");
-        this.onOffMenu = MenuBlock.ofStaticList("onOffMenu", "0", "1");
+        this.onOffMenu = MenuBlock.ofStatic("onOffMenu", Hilo.class);
 
         // Blocks
         this.invertPin = Scratch3Block.ofHandler(0, "invertPin", BlockType.command, "Invert Pin [PIN] on [ARDUINO]", this::invertPinHandler);

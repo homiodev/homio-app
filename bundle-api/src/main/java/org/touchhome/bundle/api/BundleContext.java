@@ -1,6 +1,8 @@
 package org.touchhome.bundle.api;
 
-public interface BundleContext {
+import javax.validation.constraints.NotNull;
+
+public interface BundleContext extends Comparable<BundleContext> {
     String BUNDLE_PREFIX = "org.touchhome.bundle.";
 
     static String getBundleName(Class clazz) {
@@ -31,5 +33,10 @@ public interface BundleContext {
 
     enum BundleImageColorIndex {
         ZERO, ONE, TWO, THREE, FOUR
+    }
+
+    @Override
+    default int compareTo(@NotNull BundleContext o) {
+        return Integer.compare(this.order(), o.order());
     }
 }

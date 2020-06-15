@@ -79,8 +79,14 @@ public interface WirelessHardwareRepository {
     @HardwareQuery("ip addr | awk '/state UP/ {print $2}' | sed 's/.$//'")
     String getActiveNetworkInterface();
 
-    @HardwareQuery("iw :iface set power_save off")
+    @HardwareQuery(echo = "Set wifi power save off", value = "iw :iface set power_save off")
     void setWifiPowerSaveOff(@ApiParam("iface") String iface);
+
+    @HardwareQuery(echo = "Check ssh keys exists", value = "test -f ~/.ssh/id_rsa", cache = true)
+    boolean isSshGenerated();
+
+    @HardwareQuery(echo = "Generate ssh keys", value = "cat /dev/zero | ssh-keygen -q -N \"\"")
+    void generateSSHKeys();
 
     default boolean hasInternetAccess(String spec) {
         try {
