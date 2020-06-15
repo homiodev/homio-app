@@ -262,6 +262,7 @@ public class BluetoothService implements BundleContext {
         return status.name() + "%&%" + error + "%&%" + entityContext.getSettingValue(CloudServerUrlSetting.class);
     }
 
+    @SneakyThrows
     private void writeSafeValue(Runnable runnable) {
         if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
             runnable.run();
