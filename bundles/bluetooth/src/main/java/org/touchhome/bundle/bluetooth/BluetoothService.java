@@ -175,7 +175,7 @@ public class BluetoothService implements BundleContext {
     private void writeKeystore(byte[] bytes) {
         writeSafeValue(() -> {
             byte type = bytes[0];
-            byte[] content = Arrays.copyOfRange(bytes, 1, bytes.length - 1);
+            byte[] content = Arrays.copyOfRange(bytes, 1, bytes.length);
             switch (type) {
                 case 3:
                     log.warn("Writing keystore");
