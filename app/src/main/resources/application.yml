@@ -31,6 +31,12 @@ spring:
     show-sql: false
 
 server:
+  ssl:
+    enabled: true
+    key-store-type: PKCS12
+    key-store: classpath:keystore/touchhome.p12
+    key-store-password: password
+    key-alias: touchhome
   servlet:
     context-path: /
   port: 9111
