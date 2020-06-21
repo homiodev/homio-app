@@ -1,8 +1,11 @@
 package org.touchhome.app.config;
 
 import lombok.AllArgsConstructor;
+import org.apache.catalina.filters.RemoteAddrFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -69,5 +72,20 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(AuthenticationManagerBuilder auth) {
         auth.authenticationProvider(authenticationProvider(null));
+    }
+
+    @Bean
+    public FilterRegistrationBean remoteAddressFilter() {
+        FilterRegistrationBean<RemoteAddrFilter> filterRegistrationBean = new FilterRegistrationBean<>();
+        RemoteAddrFilter filter = new RemoteAddrFilter();
+
+        filter.setAllow("0:0:0:0:0:0:0:1");
+        filter.setDenyStatus(HttpStatus.FORBIDDEN.value());
+
+        filterRegistrationBean.setFilter(filter);
+        filterRegistrationBean.addUrlPatterns("/*");
+
+        return filterRegistrationBean;
+
     }
 }
