@@ -1,7 +1,9 @@
 package org.touchhome.app.config;
 
 import lombok.AllArgsConstructor;
-import org.apache.catalina.filters.RemoteAddrFilter;
+import org.apache.catalina.filters.RequestFilter;
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +22,12 @@ import org.touchhome.app.auth.JwtTokenProvider;
 import org.touchhome.app.auth.UserEntityDetailsService;
 import org.touchhome.bundle.api.repository.impl.UserRepository;
 
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import java.io.IOException;
+
 @Configuration
 @EnableWebSecurity
 @AllArgsConstructor
@@ -28,6 +36,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     private final PasswordEncoder passwordEncoder;
     private final UserEntityDetailsService userEntityDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final Log log = LogFactory.getLog(RequestFilter.class);
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
@@ -76,8 +85,23 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Bean
     public FilterRegistrationBean remoteAddressFilter() {
-        FilterRegistrationBean<RemoteAddrFilter> filterRegistrationBean = new FilterRegistrationBean<>();
-        RemoteAddrFilter filter = new RemoteAddrFilter();
+        FilterRegistrationBean<RequestFilter> filterRegistrationBean = new FilterRegistrationBean<>();
+        RequestFilter filter = new RequestFilter() {
+
+            @Override
+            protected Log getLogger() {
+                return log;
+            }
+
+            @Override
+            public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+                if (!"https".equals(request.getScheme())) {
+                    process(request.getRemoteAddr(), request, response, chain);
+                } else {
+                    chain.doFilter(request, response);
+                }
+            }
+        };
 
         filter.setAllow("0:0:0:0:0:0:0:1");
         filter.setDenyStatus(HttpStatus.FORBIDDEN.value());

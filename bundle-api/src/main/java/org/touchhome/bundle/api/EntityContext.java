@@ -177,6 +177,8 @@ public interface EntityContext {
 
     <T> T getBean(String beanName, Class<T> clazz);
 
+    <T> T getBean(Class<T> clazz);
+
     <T> Collection<T> getBeansOfType(Class<T> clazz);
 
     enum DeviceFeature {

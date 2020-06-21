@@ -41,11 +41,12 @@ public class NettyClientService {
     private ServerConnectionStatus serverConnectionStatus;
 
     public void postConstruct() {
-        updateConnectionStatus(ServerConnectionStatus.NOT_CONNECTED, "");
+        // TODO: remove service for now
+        /*updateConnectionStatus(ServerConnectionStatus.NOT_CONNECTED, "");
         connectToServer();
         this.entityContext.listenSettingValueAsync(CloudServerRestartSetting.class, this::restart);
         this.entityContext.listenSettingValueAsync(CloudServerUrlSetting.class, this::restart);
-        this.entityContext.listenSettingValueAsync(CloudServerPortSetting.class, this::restart);
+        this.entityContext.listenSettingValueAsync(CloudServerPortSetting.class, this::restart);*/
     }
 
     private void restart() {

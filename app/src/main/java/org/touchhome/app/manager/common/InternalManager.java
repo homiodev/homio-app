@@ -101,6 +101,7 @@ public class InternalManager implements EntityContext {
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
     private ApplicationContext applicationContext;
+    private ArrayList<BundleContext> bundles;
 
     public Set<NotificationEntityJSON> getNotifications() {
         long time = System.currentTimeMillis();
@@ -144,9 +145,9 @@ public class InternalManager implements EntityContext {
 
         // init modules
         log.info("Initialize bundles");
-        List<BundleContext> values = new ArrayList<>(applicationContext.getBeansOfType(BundleContext.class).values());
-        Collections.sort(values);
-        for (BundleContext bundleContext : values) {
+        this.bundles = new ArrayList<>(applicationContext.getBeansOfType(BundleContext.class).values());
+        Collections.sort(bundles);
+        for (BundleContext bundleContext : bundles) {
             bundleContext.init();
         }
 
@@ -173,9 +174,8 @@ public class InternalManager implements EntityContext {
             }
         });
 
-        notifications.add(new NotificationEntityJSON("app-status")
-                .setName("App started")
-                .setNotificationType(NotificationType.info));
+        notifications.add(NotificationEntityJSON.info("app-status")
+                .setName("App started"));
     }
 
     private void updateDeviceFeatures() {
@@ -372,16 +372,14 @@ public class InternalManager implements EntityContext {
 
     @Override
     public void sendInfoMessage(String message) {
-        sendNotification(new NotificationEntityJSON("info-" + message.hashCode())
-                .setName(message)
-                .setNotificationType(NotificationType.info));
+        sendNotification(NotificationEntityJSON.info("info-" + message.hashCode())
+                .setName(message));
     }
 
     @Override
     public void sendErrorMessage(String message, Exception ex) {
-        sendNotification(new NotificationEntityJSON("error-" + message.hashCode())
-                .setName(message + ". Cause: " + TouchHomeUtils.getErrorMessage(ex))
-                .setNotificationType(NotificationType.danger));
+        sendNotification(NotificationEntityJSON.danger("error-" + message.hashCode())
+                .setName(message + ". Cause: " + TouchHomeUtils.getErrorMessage(ex)));
     }
 
     @Override
@@ -451,6 +449,11 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
+    public <T> T getBean(Class<T> clazz) {
+        return applicationContext.getBean(clazz);
+    }
+
+    @Override
     public <T> Collection<T> getBeansOfType(Class<T> clazz) {
         return applicationContext.getBeansOfType(clazz).values();
     }
@@ -505,10 +508,12 @@ public class InternalManager implements EntityContext {
                 consumer.accept(value);
             }
         }
-        NotificationEntityJSON notificationEntityJSON = pluginFor.buildHeaderNotificationEntity(value, this);
+        List<NotificationEntityJSON> notificationEntityJSON = pluginFor.buildHeaderNotificationEntity(value, this);
         if (notificationEntityJSON != null) {
-            notifications.remove(notificationEntityJSON); // remove previous one
-            notifications.add(notificationEntityJSON);
+            for (NotificationEntityJSON entityJSON : notificationEntityJSON) {
+                notifications.remove(entityJSON); // remove previous one
+                notifications.add(entityJSON);
+            }
         }
 
         this.sendNotification(pluginFor.buildToastrNotificationEntity(value, this));
