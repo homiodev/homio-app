@@ -4,7 +4,13 @@
     "setting": {
       "label": "NRF24I01 settings",
       "st_Nrf24i01StatusSetting": "Device status",
-      "st_Nrf24i01StatusMessageSetting": "Device msg"
+      "st_Nrf24i01StatusMessageSetting": "Device msg",
+      "st_Nrf24i01CrcSizeSetting": "Crc size",
+      "st_Nrf24i01DataRateSetting": "Data rate",
+      "st_Nrf24i01PALevelSetting": "PA level",
+      "st_Nrf24i01RetryCountSetting": "Retry count",
+      "st_Nrf24i01RetryDelaySetting": "Retry delay",
+      "st_Nrf24i01EnableButtonsSetting": "Enable NRF24I01"
     }
   }
 }

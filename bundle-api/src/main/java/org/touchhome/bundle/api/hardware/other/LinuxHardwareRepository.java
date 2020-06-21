@@ -34,7 +34,7 @@ public interface LinuxHardwareRepository {
     String getWifiName();
 
     @HardwareQuery("systemctl is-active :serviceName")
-    String getServiceStatus(@ApiParam("serviceName") String serviceName);
+    int getServiceStatus(@ApiParam("serviceName") String serviceName);
 
     @HardwareQuery(echo = "Reboot device", value = "reboot")
     void reboot();
