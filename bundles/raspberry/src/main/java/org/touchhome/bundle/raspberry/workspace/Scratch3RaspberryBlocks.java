@@ -33,10 +33,9 @@ public class Scratch3RaspberryBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block whenGpioInState;
     private final Scratch3Block set_pull;
     private final Scratch3Block ds18b20Value;
-    private Scratch3Block writePwmPin;
-
     private final RaspberryGPIOService raspberryGPIOService;
     private final BroadcastLockManager broadcastLockManager;
+    private Scratch3Block writePwmPin;
 
     public Scratch3RaspberryBlocks(RaspberryGPIOService raspberryGPIOService, BroadcastLockManager broadcastLockManager, EntityContext entityContext) {
         super("#83be41", entityContext);

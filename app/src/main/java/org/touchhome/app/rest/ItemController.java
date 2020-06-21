@@ -67,11 +67,6 @@ public class ItemController {
     private final ApplicationContext applicationContext;
     private final Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
 
-    @PostConstruct
-    public void init() {
-        this.baseEntitySimpleClasses.put(DeviceBaseEntity.class.getSimpleName(), DeviceBaseEntity.class);
-    }
-
     @SneakyThrows
     static Object executeAction(UIActionDescription uiActionDescription, Object actionHolder, ApplicationContext applicationContext, BaseEntity actionEntity) {
         if (UIActionDescription.Type.method.equals(uiActionDescription.getType())) {
@@ -129,6 +124,11 @@ public class ItemController {
             }
         }
         return actions;
+    }
+
+    @PostConstruct
+    public void init() {
+        this.baseEntitySimpleClasses.put(DeviceBaseEntity.class.getSimpleName(), DeviceBaseEntity.class);
     }
 
     @GetMapping("{type}/fields")

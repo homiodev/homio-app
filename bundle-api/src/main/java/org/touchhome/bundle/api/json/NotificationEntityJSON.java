@@ -25,19 +25,19 @@ public class NotificationEntityJSON {
 
     private Date creationTime = new Date();
 
+    public NotificationEntityJSON(String entityID) {
+        if (entityID == null) {
+            throw new IllegalArgumentException("entityId is null");
+        }
+        this.entityID = entityID;
+    }
+
     public static NotificationEntityJSON danger(String entityID) {
         return new NotificationEntityJSON(entityID).setNotificationType(NotificationType.danger);
     }
 
     public static NotificationEntityJSON info(String entityID) {
         return new NotificationEntityJSON(entityID).setNotificationType(NotificationType.info);
-    }
-
-    public NotificationEntityJSON(String entityID) {
-        if (entityID == null) {
-            throw new IllegalArgumentException("entityId is null");
-        }
-        this.entityID = entityID;
     }
 
     @Override

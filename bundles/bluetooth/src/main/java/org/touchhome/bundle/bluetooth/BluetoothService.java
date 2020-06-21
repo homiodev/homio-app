@@ -40,6 +40,7 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.distinctByKey;
 @RequiredArgsConstructor
 public class BluetoothService implements BundleContext {
 
+    public static final int MIN_WRITE_TIMEOUT = 60000;
     private static final String PREFIX = "13333333-3333-3333-3333-3333333330";
     private static final String SERVICE_UUID = PREFIX + "00";
     private static final String CPU_LOAD_UUID = PREFIX + "01";
@@ -56,18 +57,14 @@ public class BluetoothService implements BundleContext {
     private static final String WRITE_BAN_UUID = PREFIX + "12";
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
     private static final String FEATURES_UUID = PREFIX + "14";
-
-    public static final int MIN_WRITE_TIMEOUT = 60000;
     private static final int TIME_REFRESH_PASSWORD = 5 * 60000; // 5 minute for session
     private static long timeSinceLastCheckPassword = -1;
-
-    private BluetoothApplication bluetoothApplication;
-    private UserEntity user;
-
     private final EntityContext entityContext;
     private final LinuxHardwareRepository linuxHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
     private final Map<String, Long> wifiWriteProtect = new ConcurrentHashMap<>();
+    private BluetoothApplication bluetoothApplication;
+    private UserEntity user;
 
     public Map<String, String> getDeviceCharacteristics() {
         Map<String, String> map = new HashMap<>();

@@ -8,8 +8,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static com.pi4j.io.gpio.PinMode.*;
-import static com.pi4j.io.gpio.PinMode.ANALOG_INPUT;
-import static com.pi4j.io.gpio.PinMode.ANALOG_OUTPUT;
 
 public enum ArduinoGpioPin {
     TX1("0", DIGITAL_INPUT, DIGITAL_OUTPUT),

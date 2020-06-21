@@ -133,16 +133,16 @@ public class Scratch3Block implements Comparable<Scratch3Block> {
         this.linkGenerator = linkGenerator;
     }
 
-    public interface LinkGeneratorHandler {
-        void handle(String varGroup, String varName, JSONObject parameter);
-    }
-
     public void allowLinkFloatVariable(BiConsumer<String, WorkspaceBlock> allowLinkVariable) {
         this.allowLinkVariable = allowLinkVariable;
     }
 
     public WorkspaceCodeGenerator codeGenerator(String extension) {
         return new WorkspaceCodeGenerator(extension);
+    }
+
+    public interface LinkGeneratorHandler {
+        void handle(String varGroup, String varName, JSONObject parameter);
     }
 
     @FunctionalInterface

@@ -31,12 +31,12 @@ public interface BundleContext extends Comparable<BundleContext> {
         return BundleImageColorIndex.ZERO;
     }
 
-    enum BundleImageColorIndex {
-        ZERO, ONE, TWO, THREE, FOUR
-    }
-
     @Override
     default int compareTo(@NotNull BundleContext o) {
         return Integer.compare(this.order(), o.order());
+    }
+
+    enum BundleImageColorIndex {
+        ZERO, ONE, TWO, THREE, FOUR
     }
 }

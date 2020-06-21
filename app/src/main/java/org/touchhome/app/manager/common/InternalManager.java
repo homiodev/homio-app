@@ -53,7 +53,6 @@ import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.ClassFinder;
-import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
@@ -89,8 +88,6 @@ public class InternalManager implements EntityContext {
     private final Map<Class<? extends BaseEntity>, List<BiConsumer>> entityClassUpdateListeners = new HashMap<>();
     private final Map<DeviceFeature, Boolean> deviceFeatures = Stream.of(DeviceFeature.values()).collect(Collectors.toMap(f -> f, f -> Boolean.TRUE));
     private final Set<NotificationEntityJSON> notifications = new HashSet<>();
-    private Map<Class<? extends BundleSettingPlugin>, List<Consumer<?>>> settingListeners = new HashMap<>();
-
     private final ClassFinder classFinder;
     private final CacheService cacheService;
     private final AllDeviceRepository allDeviceRepository;
@@ -98,6 +95,7 @@ public class InternalManager implements EntityContext {
     private final EntityManagerFactory entityManagerFactory;
     private final PlatformTransactionManager transactionManager;
     private final BroadcastLockManager broadcastLockManager;
+    private Map<Class<? extends BundleSettingPlugin>, List<Consumer<?>>> settingListeners = new HashMap<>();
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
     private ApplicationContext applicationContext;

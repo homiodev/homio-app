@@ -35,15 +35,12 @@ import java.util.stream.Collectors;
 public class RaspberryGPIOService {
     private final EntityContext entityContext;
     private final WirelessManager wirelessManager;
-
-    private GpioController gpio;
-    private Boolean available;
     private final Map<String, DefaultKeyValue<Long, Float>> ds18B20Values = new HashMap<>();
-
     @Getter
     private final Map<RaspberryGpioPin, List<PinListener>> digitalListeners = new ConcurrentHashMap<>();
     private final Map<RaspberryGpioPin, UpdatableValue<Boolean>> inputGpioValues = new ConcurrentHashMap<>();
-
+    private GpioController gpio;
+    private Boolean available;
     @Value("${w1BaseDir:/sys/devices/w1_bus_master1}")
     private Path w1BaseDir;
 

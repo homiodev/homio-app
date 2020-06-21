@@ -41,6 +41,11 @@ public class ConsoleLogLevelSetting implements BundleConsoleSettingPlugin<Consol
         return 700;
     }
 
+    @Override
+    public String[] pages() {
+        return new String[]{"log"};
+    }
+
     @RequiredArgsConstructor
     public enum LogLevel {
         Debug(Level.DEBUG),
@@ -50,10 +55,5 @@ public class ConsoleLogLevelSetting implements BundleConsoleSettingPlugin<Consol
 
         @Getter
         private final Level level;
-    }
-
-    @Override
-    public String[] pages() {
-        return new String[]{"log"};
     }
 }

@@ -15,7 +15,10 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.util.SslUtil;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.cloud.setting.*;
+import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
+import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
+import org.touchhome.bundle.cloud.setting.CloudServerPortSetting;
+import org.touchhome.bundle.cloud.setting.CloudServerUrlSetting;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
