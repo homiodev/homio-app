@@ -28,16 +28,16 @@ public class SshCloudProvider implements CloudProvider {
     public Set<NotificationEntityJSON> getNotifications() {
         Set<NotificationEntityJSON> notifications = new HashSet<>();
         if (!Files.exists(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome"))) {
-            notifications.add(NotificationEntityJSON.danger("private-key").setName("Private Key").setDescription("Private key not found"));
+            notifications.add(NotificationEntityJSON.danger("private-key").setName("Private Key not found"));
         }
         if (!Files.exists(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome.pub"))) {
-            notifications.add(NotificationEntityJSON.danger("public-key").setName("Public Key").setDescription("Public key not found"));
+            notifications.add(NotificationEntityJSON.danger("public-key").setName("Public key not found"));
         }
         int serviceStatus = linuxHardwareRepository.getServiceStatus("touchhome-tunnel");
         if (serviceStatus == 0) {
-            notifications.add(NotificationEntityJSON.info("cloud-status").setName("Cloud status").setDescription("cloud connected"));
+            notifications.add(NotificationEntityJSON.info("cloud-status").setName("Cloud connected"));
         } else {
-            notifications.add(NotificationEntityJSON.danger("cloud-status").setName("Cloud status").setDescription("cloud connection not active: " + serviceStatus));
+            notifications.add(NotificationEntityJSON.danger("cloud-status").setName("Cloud connection status not active " + serviceStatus));
         }
         return notifications;
     }

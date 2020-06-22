@@ -200,7 +200,7 @@ public class RaspberryGPIOService {
         getDigitalInput(pin, pullResistance);
     }
 
-    public void setGpioPinMode(RaspberryGpioPin pin, PinMode pinMode, PinPullResistance pinPullResistance) {
+    private void setGpioPinMode(RaspberryGpioPin pin, PinMode pinMode, PinPullResistance pinPullResistance) {
         if (available) {
             GpioPin input = getDigitalInput(pin, pinPullResistance);
             if (input.getMode() != pinMode) {

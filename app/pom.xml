@@ -5,7 +5,7 @@
     <parent>
         <artifactId>touchhomeBackend</artifactId>
         <groupId>org.touchhome</groupId>
-        <version>0.1.5</version>
+        <version>0.1.7-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -190,8 +190,16 @@
 
         <resources>
             <resource>
-                <filtering>false</filtering>
                 <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>application.yml</include>
+                </includes>
+            </resource>
+
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
                 <includes>
                     <include>**/*</include>
                 </includes>

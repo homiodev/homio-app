@@ -7,6 +7,9 @@ scriptEngineName: nashorn
 rootDir: /opt/touchhome
 http_port: 9119
 
+touchhome:
+  version: @project.version@
+
 management:
   endpoints:
     web:

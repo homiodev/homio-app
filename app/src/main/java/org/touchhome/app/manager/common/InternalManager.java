@@ -16,12 +16,15 @@ import org.hibernate.internal.SessionFactoryImpl;
 import org.json.JSONObject;
 import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.client.RestTemplate;
 import org.touchhome.app.LogService;
+import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSONJSON;
 import org.touchhome.app.manager.CacheService;
@@ -63,6 +66,7 @@ import org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity;
 
 import javax.persistence.EntityManagerFactory;
 import javax.validation.constraints.NotNull;
+import java.text.DateFormat;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -78,6 +82,9 @@ import static org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity.DEFAULT
 @RequiredArgsConstructor
 public class InternalManager implements EntityContext {
 
+    private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchHome-core";
+
+    private final RestTemplate restTemplate = new RestTemplate();
     private static final Map<BundleSettingPlugin, String> settingTransientState = new HashMap<>();
     public static Map<String, BundleSettingPlugin> settingPluginsByPluginKey = new HashMap<>();
     static Map<String, AbstractRepository> repositories;
@@ -97,11 +104,14 @@ public class InternalManager implements EntityContext {
     private final EntityManagerFactory entityManagerFactory;
     private final PlatformTransactionManager transactionManager;
     private final BroadcastLockManager broadcastLockManager;
+    private final TouchHomeProperties touchHomeProperties;
+
     private Map<Class<? extends BundleSettingPlugin>, List<Consumer<?>>> settingListeners = new HashMap<>();
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
     private ApplicationContext applicationContext;
     private ArrayList<BundleContext> bundles;
+    private String latestVersion;
 
     public Set<NotificationEntityJSON> getNotifications() {
         long time = System.currentTimeMillis();
@@ -184,7 +194,24 @@ public class InternalManager implements EntityContext {
         });
 
         notifications.add(NotificationEntityJSON.info("app-status")
-                .setName("App started"));
+                .setName("App started at " + DateFormat.getDateTimeInstance().format(new Date())));
+
+        this.fetchReleaseVersion();
+    }
+
+    @Scheduled(fixedDelay = 86400000)
+    private void fetchReleaseVersion() {
+        try {
+            notifications.add(NotificationEntityJSON.info("version").setName("App version: " + touchHomeProperties.getVersion()));
+            this.latestVersion = Objects.requireNonNull(restTemplate.getForObject(GIT_HUB_URL + "/releases/latest", Map.class)).get("tag_name").toString();
+
+            if (!touchHomeProperties.getVersion().equals(this.latestVersion)) {
+                notifications.add(NotificationEntityJSON.danger("version")
+                        .setName("Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion));
+            }
+        } catch (Exception ex) {
+            log.warn("Unable to fetch latest version");
+        }
     }
 
     private void updateDeviceFeatures() {
