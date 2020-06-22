@@ -54,12 +54,7 @@ public class RaspberryGPIOService {
             RaspberryGpioPin.occupyPins("1-Wire", RaspberryGpioPin.PIN7);
             for (RaspberryGpioPin pin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT, PinPullResistance.PULL_DOWN)) {
                 if (pin.getOccupied() == null) {
-                    GpioPinDigital gpioPinDigital = getDigitalInput(pin, PinPullResistance.PULL_DOWN);
-                    if (gpioPinDigital.isHigh()) {
-                        gpioPinDigital.setMode(PinMode.DIGITAL_OUTPUT);
-                        ((GpioPinDigitalOutput) gpioPinDigital).setState(PinState.LOW);
-                        gpioPinDigital.setMode(PinMode.DIGITAL_INPUT);
-                    }
+                    GpioPinDigital gpioPinDigital = getDigitalInput(pin, null);
                     gpioPinDigital.setShutdownOptions(true, PinState.LOW, PinPullResistance.OFF);
                     inputGpioValues.put(pin, UpdatableValue.wrap(gpioPinDigital.isHigh(), pin.name()));
                     gpioPinDigital.addListener((GpioPinListenerDigital) event -> digitalListeners.get(pin).forEach(t -> t.consumer.accept(event)));

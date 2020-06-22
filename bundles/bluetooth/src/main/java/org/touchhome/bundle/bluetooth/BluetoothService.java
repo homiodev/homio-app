@@ -20,7 +20,7 @@ import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.throwable.TRunnable;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.cloud.impl.ServerConnectionStatus;
+import org.touchhome.bundle.cloud.netty.impl.ServerConnectionStatus;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerRestartSetting;

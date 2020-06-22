@@ -2,9 +2,11 @@ package org.touchhome.bundle.api;
 
 import io.swagger.annotations.ApiParam;
 import org.apache.commons.lang3.SystemUtils;
+import org.springframework.security.core.userdetails.User;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.PureEntity;
+import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.PublicJsMethod;
 import org.touchhome.bundle.api.util.NotificationType;
@@ -180,6 +182,8 @@ public interface EntityContext {
     <T> T getBean(Class<T> clazz);
 
     <T> Collection<T> getBeansOfType(Class<T> clazz);
+
+    UserEntity getUser();
 
     enum DeviceFeature {
         Bluetooth, HotSpot, GPIO, NRF21I01, SSH

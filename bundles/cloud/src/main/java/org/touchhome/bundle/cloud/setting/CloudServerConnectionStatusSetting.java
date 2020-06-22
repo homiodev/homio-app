@@ -5,7 +5,7 @@ import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.util.NotificationType;
-import org.touchhome.bundle.cloud.impl.ServerConnectionStatus;
+import org.touchhome.bundle.cloud.netty.impl.ServerConnectionStatus;
 
 import java.util.Collections;
 import java.util.List;

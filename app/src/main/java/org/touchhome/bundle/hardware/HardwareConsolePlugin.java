@@ -3,6 +3,7 @@ package org.touchhome.bundle.hardware;
 import com.pi4j.system.SystemInfo;
 import lombok.*;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
@@ -10,7 +11,8 @@ import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.cloud.impl.ServerConnectionStatus;
+import org.touchhome.bundle.cloud.netty.impl.ServerConnectionStatus;
+import org.touchhome.bundle.cloud.setting.CloudProviderSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerUrlSetting;
@@ -56,7 +58,7 @@ public class HardwareConsolePlugin implements ConsolePlugin {
         }
         list.add(new HardwarePluginEntity("Ip address", linuxHardwareRepository.getIpAddress()));
         list.add(new HardwarePluginEntity("Device model", linuxHardwareRepository.getDeviceModel()));
-        list.add(new HardwarePluginEntity("Cloud status", readCloudStatus()));
+        list.add(new HardwarePluginEntity("Cloud status", this.entityContext.getSettingValue(CloudProviderSetting.class).getStatus()));
         list.add(new HardwarePluginEntity("Cloud keystore", user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));
         list.add(new HardwarePluginEntity("Features", getFeatures()));
         Collections.sort(list);
@@ -68,12 +70,6 @@ public class HardwareConsolePlugin implements ConsolePlugin {
         return Stream.of(EntityContext.DeviceFeature.values())
                 .map(f -> f + ": " + entityContext.getDeviceFeatures().get(f))
                 .collect(Collectors.joining("; "));
-    }
-
-    private String readCloudStatus() {
-        String error = entityContext.getSettingValue(CloudServerConnectionMessageSetting.class);
-        ServerConnectionStatus status = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
-        return status.name() + ". Errors: " + error + ". Url: " + entityContext.getSettingValue(CloudServerUrlSetting.class);
     }
 
     @Override

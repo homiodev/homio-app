@@ -8,7 +8,6 @@ import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ConsoleSshProviderSetting implements BundleConsoleSettingPlugin<SshProvider> {
 
@@ -34,8 +33,7 @@ public class ConsoleSshProviderSetting implements BundleConsoleSettingPlugin<Ssh
 
     @Override
     public List<Option> loadAvailableValues(EntityContext entityContext) {
-        return entityContext.getBeansOfType(SshProvider.class)
-                .stream().map(zb -> Option.key(zb.getClass().getSimpleName())).collect(Collectors.toList());
+        return Option.simpleNamelist(entityContext.getBeansOfType(SshProvider.class));
     }
 
     @Override

@@ -16,6 +16,8 @@ import org.hibernate.internal.SessionFactoryImpl;
 import org.json.JSONObject;
 import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -38,7 +40,6 @@ import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.model.BaseEntity;
@@ -57,12 +58,11 @@ import org.touchhome.bundle.api.util.ClassFinder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
-import org.touchhome.bundle.cloud.impl.NettyClientService;
+import org.touchhome.bundle.cloud.netty.impl.NettyClientService;
 import org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity;
 
 import javax.persistence.EntityManagerFactory;
 import javax.validation.constraints.NotNull;
-import java.nio.file.Files;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -108,9 +108,15 @@ public class InternalManager implements EntityContext {
         notifications.removeIf(entity -> entity instanceof AlwaysOnTopNotificationEntityJSONJSON
                 && time - entity.getCreationTime().getTime() > ((AlwaysOnTopNotificationEntityJSONJSON) entity).getDuration() * 1000);
 
-        Set<NotificationEntityJSON> systemNotifications = getSystemNotifications();
-        systemNotifications.addAll(notifications);
-        return systemNotifications;
+        Set<NotificationEntityJSON> set = new HashSet<>(notifications);
+        for (BundleContext bundle : this.bundles) {
+            Set<NotificationEntityJSON> notifications = bundle.getNotifications();
+            if (notifications != null) {
+                set.addAll(notifications);
+            }
+        }
+
+        return set;
     }
 
     @SneakyThrows
@@ -462,6 +468,15 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
+    public UserEntity getUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null) {
+            return getEntity(UserEntity.PREFIX + authentication.getCredentials());
+        }
+        return null;
+    }
+
+    @Override
     public Map<DeviceFeature, Boolean> getDeviceFeatures() {
         return deviceFeatures;
     }
@@ -567,22 +582,5 @@ public class InternalManager implements EntityContext {
         } catch (Exception ex) {
             log.error("Unable to update cache entity <{}> for entity: <{}>", type, entity);
         }
-    }
-
-    private Set<NotificationEntityJSON> getSystemNotifications() {
-        Set<NotificationEntityJSON> notifications = new HashSet<>();
-        if (!Files.exists(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome"))) {
-            notifications.add(NotificationEntityJSON.danger("private-key").setName("Private Key").setDescription("Private key not found"));
-        }
-        if (!Files.exists(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome.pub"))) {
-            notifications.add(NotificationEntityJSON.danger("public-key").setName("Public Key").setDescription("Public key not found"));
-        }
-        int serviceStatus = getBean(LinuxHardwareRepository.class).getServiceStatus("touchhome-tunnel");
-        if (serviceStatus == 0) {
-            notifications.add(NotificationEntityJSON.info("cloud-status").setName("Cloud status").setDescription("cloud connected"));
-        } else {
-            notifications.add(NotificationEntityJSON.danger("cloud-status").setName("Cloud status").setDescription("cloud connection not active: " + serviceStatus));
-        }
-        return notifications;
     }
 }

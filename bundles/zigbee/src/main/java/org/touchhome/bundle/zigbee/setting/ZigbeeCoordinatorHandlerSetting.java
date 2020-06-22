@@ -23,8 +23,7 @@ public class ZigbeeCoordinatorHandlerSetting implements BundleSettingPlugin<ZigB
 
     @Override
     public List<Option> loadAvailableValues(EntityContext entityContext) {
-        return entityContext.getBeansOfType(ZigBeeCoordinatorHandler.class)
-                .stream().map(zb -> Option.key(zb.getClass().getSimpleName())).collect(Collectors.toList());
+        return Option.simpleNamelist(entityContext.getBeansOfType(ZigBeeCoordinatorHandler.class));
     }
 
     @Override
