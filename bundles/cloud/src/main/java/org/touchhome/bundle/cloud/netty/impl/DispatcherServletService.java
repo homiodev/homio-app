@@ -1,4 +1,4 @@
-package org.touchhome.bundle.cloud.impl;
+package org.touchhome.bundle.cloud.netty.impl;
 
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.BeanFactoryUtils;

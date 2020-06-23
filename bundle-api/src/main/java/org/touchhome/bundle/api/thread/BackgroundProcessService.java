@@ -6,8 +6,8 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.manager.LoggerManager;
-import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.PrintStream;
@@ -19,6 +19,8 @@ public abstract class BackgroundProcessService<ReturnType> implements Comparable
 
     protected final Logger log = LogManager.getLogger(getClass());
     protected final String id;
+    protected final EntityContext entityContext;
+    protected final LoggerManager loggerManager;
     @Getter
     private final Date creationTime = new Date();
     protected PrintStream printStream;
@@ -33,8 +35,10 @@ public abstract class BackgroundProcessService<ReturnType> implements Comparable
     @Getter
     private String state;
 
-    public BackgroundProcessService(String id) {
+    public BackgroundProcessService(String id, EntityContext entityContext) {
         this.id = id;
+        this.entityContext = entityContext;
+        this.loggerManager = entityContext.getBean(LoggerManager.class);
         log.info("Create BGP service: <{}>", id);
     }
 
@@ -69,19 +73,6 @@ public abstract class BackgroundProcessService<ReturnType> implements Comparable
 
     public abstract boolean shouldStartNow();
 
-    /**
-     * Fixed rate:
-     * 00:00: Start making coffee
-     * 00:10: Finish making coffee
-     * 01:00: Start making coffee
-     * 01:10: Finish making coffee
-     * <p>
-     * Fixed delay:
-     * 00:00: Start making coffee
-     * 00:10: Finish making coffee
-     * 01:10: Start making coffee
-     * 01:20: Finish making coffee
-     */
     public ScheduleType getScheduleType() {
         return ScheduleType.Delay;
     }
@@ -180,7 +171,6 @@ public abstract class BackgroundProcessService<ReturnType> implements Comparable
     }
 
     public Logger createLogger() {
-        LoggerManager loggerManager = ApplicationContextHolder.getBean(LoggerManager.class);
         if (printStream == null) {
             return loggerManager.getLogger(getClass().getSimpleName(), getClass().getSimpleName());
         } else {

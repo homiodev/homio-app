@@ -1,6 +1,5 @@
 package org.touchhome.bundle.nrf24i01.rf24.options;
 
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import pl.grzeslowski.smarthome.rf24.generated.rf24_pa_dbm_e;
 

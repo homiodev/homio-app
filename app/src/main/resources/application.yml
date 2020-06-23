@@ -6,11 +6,9 @@ minScriptThreadSleep: 100
 scriptEngineName: nashorn
 rootDir: /opt/touchhome
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
+touchhome:
+  version: @project.version@
+  httpPort: 9119
 
 spring:
   datasource:

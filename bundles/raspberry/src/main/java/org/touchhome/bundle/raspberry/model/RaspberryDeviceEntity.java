@@ -22,6 +22,14 @@ import java.util.Map;
 public class RaspberryDeviceEntity extends DeviceBaseEntity<RaspberryDeviceEntity> {
 
     public static final String DEFAULT_DEVICE_ENTITY_ID = RaspberryDeviceRepository.PREFIX + "LocalRaspberry";
+    @Getter
+    @Setter
+    @Transient
+    @UIField(order = 40, type = UIFieldType.Selection, readOnly = true, color = "#7FBBCC")
+    @UIFieldExpand
+    @UIFieldCreateWorkspaceVariableOnEmpty
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private List<Map<Option, String>> availableLinks;
 
     @Override
     public String getShortTitle() {
@@ -32,14 +40,5 @@ public class RaspberryDeviceEntity extends DeviceBaseEntity<RaspberryDeviceEntit
     public int getOrder() {
         return 10;
     }
-
-    @Getter
-    @Setter
-    @Transient
-    @UIField(order = 40, type = UIFieldType.Selection, readOnly = true, color = "#7FBBCC")
-    @UIFieldExpand
-    @UIFieldCreateWorkspaceVariableOnEmpty
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private List<Map<Option, String>> availableLinks;
 
 }

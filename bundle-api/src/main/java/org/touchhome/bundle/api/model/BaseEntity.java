@@ -21,7 +21,7 @@ import static org.touchhome.bundle.api.ui.field.UIFieldType.StaticDate;
 
 @Log4j2
 @MappedSuperclass
-public abstract class BaseEntity<T extends BaseEntity> implements PureEntity, HasEntityIdentifier, Serializable {
+public abstract class BaseEntity<T extends BaseEntity> implements HasIdIdentifier, HasEntityIdentifier, Serializable {
 
     @Id
     @GeneratedValue

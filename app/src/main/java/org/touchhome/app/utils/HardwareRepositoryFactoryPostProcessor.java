@@ -147,12 +147,6 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         return str;
     }
 
-    private static class ProcessCache {
-        int retValue;
-        List<String> errors;
-        List<String> inputs;
-    }
-
     private Object handleHardwareQuery(HardwareQuery hardwareQuery, Object[] args, Method method, Environment env) throws InstantiationException, IllegalAccessException {
         ErrorsHandler errorsHandler = method.getAnnotation(ErrorsHandler.class);
         List<String> parts = new ArrayList<>();
@@ -420,6 +414,12 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     private String[] getSpringValuesPattern(String value) {
         String valuePattern = value.substring(VALUE_PREFIX_LENGTH, value.length() - VALUE_SUFFIX_LENGTH);
         return valuePattern.contains(":") ? valuePattern.split(":") : new String[]{valuePattern, ""};
+    }
+
+    private static class ProcessCache {
+        int retValue;
+        List<String> errors;
+        List<String> inputs;
     }
 
     @AllArgsConstructor

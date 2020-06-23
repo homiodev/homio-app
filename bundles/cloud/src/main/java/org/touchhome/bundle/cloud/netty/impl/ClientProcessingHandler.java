@@ -1,4 +1,4 @@
-package org.touchhome.bundle.cloud.impl;
+package org.touchhome.bundle.cloud.netty.impl;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;

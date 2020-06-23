@@ -31,6 +31,15 @@ public class TmateSshProvider implements SshProvider {
     private Thread tmateThread;
     private SshSession sshSession;
 
+    private static SshSession parse(String[] lines) {
+        SshSession sshSession = new SshSession();
+        sshSession.setToken(TmateSessions.WebSession.find(lines));
+        sshSession.setTokenReadOnly(TmateSessions.WebSessionReadOnly.find(lines));
+        sshSession.setSsh(TmateSessions.SshSession.find(lines));
+        sshSession.setSshReadOnly(TmateSessions.SshSessionReadOnly.find(lines));
+        return sshSession;
+    }
+
     @Override
     @SneakyThrows
     public SshSession openSshSession() {
@@ -92,15 +101,6 @@ public class TmateSshProvider implements SshProvider {
                 log.warn("Tmate installed version: {}" + tmateVersion);
             }
         }
-    }
-
-    private static SshSession parse(String[] lines) {
-        SshSession sshSession = new SshSession();
-        sshSession.setToken(TmateSessions.WebSession.find(lines));
-        sshSession.setTokenReadOnly(TmateSessions.WebSessionReadOnly.find(lines));
-        sshSession.setSsh(TmateSessions.SshSession.find(lines));
-        sshSession.setSshReadOnly(TmateSessions.SshSessionReadOnly.find(lines));
-        return sshSession;
     }
 
     @AllArgsConstructor

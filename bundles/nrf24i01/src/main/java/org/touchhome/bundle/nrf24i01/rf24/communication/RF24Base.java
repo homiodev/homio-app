@@ -24,9 +24,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public abstract class RF24Base {
 
-    final EntityContext entityContext;
-
     private static boolean initialized = false;
+    final EntityContext entityContext;
     final ByteBuffer readBuffer = ByteBuffer.allocate(32);
     private final ByteBuffer sendBuffer = ByteBuffer.allocate(32);
     RF24 radio;

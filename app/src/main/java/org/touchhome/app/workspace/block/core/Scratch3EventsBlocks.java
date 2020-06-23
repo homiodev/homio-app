@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
-import org.touchhome.app.model.workspace.WorkspaceBroadcastValueEntity;
+import org.touchhome.app.model.workspace.WorkspaceBroadcastValueCrudEntity;
 import org.touchhome.app.repository.workspace.WorkspaceBroadcastRepository;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.scratch.BlockType;
@@ -62,7 +62,7 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
 
     private void fireBroadcastEvent(String broadcastRefEntityID) {
         WorkspaceBroadcastEntity entity = entityContext.getEntity(WorkspaceBroadcastRepository.PREFIX + broadcastRefEntityID);
-        entityContext.save(new WorkspaceBroadcastValueEntity().setCreationTime(new Date()).setWorkspaceBroadcastEntity(entity));
+        entityContext.save(new WorkspaceBroadcastValueCrudEntity().setCreationTime(new Date()).setWorkspaceBroadcastEntity(entity));
 
         broadcastLockManager.signalAll(broadcastRefEntityID);
     }

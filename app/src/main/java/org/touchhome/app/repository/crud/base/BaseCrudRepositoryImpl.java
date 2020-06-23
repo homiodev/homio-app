@@ -2,13 +2,13 @@ package org.touchhome.app.repository.crud.base;
 
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
-import org.touchhome.bundle.api.model.PureEntity;
+import org.touchhome.bundle.api.model.HasIdIdentifier;
 
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
 @NoRepositoryBean
-public class BaseCrudRepositoryImpl<T extends PureEntity> extends SimpleJpaRepository<T, Integer> implements BaseCrudRepository<T> {
+public class BaseCrudRepositoryImpl<T extends HasIdIdentifier> extends SimpleJpaRepository<T, Integer> implements BaseCrudRepository<T> {
 
     private EntityManager entityManager;
 

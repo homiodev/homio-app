@@ -1,4 +1,4 @@
-package org.touchhome.bundle.cloud.impl;
+package org.touchhome.bundle.cloud.netty.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;

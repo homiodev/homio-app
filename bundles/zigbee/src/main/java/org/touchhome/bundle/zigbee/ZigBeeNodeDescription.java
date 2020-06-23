@@ -21,6 +21,7 @@ import org.touchhome.bundle.zigbee.converter.ZigBeeBaseChannelConverter;
 import org.touchhome.bundle.zigbee.converter.impl.ZigBeeConverterEndpoint;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -109,8 +110,18 @@ public class ZigBeeNodeDescription {
             return;
         }
 
-        basicCluster.readAttributes(Arrays.asList(ATTR_MANUFACTURERNAME, ATTR_MODELIDENTIFIER, ATTR_HWVERSION,
-                ATTR_APPLICATIONVERSION, ATTR_STACKVERSION, ATTR_ZCLVERSION, ATTR_DATECODE)).get();
+        // Attempt to read all properties with a single command.
+        // If successful, this updates the cache with the property values.
+        try {
+            // Try to get the supported attributes so we can reduce the number of attribute read requests
+            basicCluster.discoverAttributes(false).get();
+
+            basicCluster.readAttributes(Arrays.asList(ATTR_MANUFACTURERNAME, ATTR_MODELIDENTIFIER, ATTR_HWVERSION,
+                    ATTR_APPLICATIONVERSION, ATTR_STACKVERSION, ATTR_ZCLVERSION, ATTR_DATECODE)).get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.info("{}: There was an error when trying to read all properties with a single command.",
+                    node.getIeeeAddress(), e);
+        }
 
         this.manufacturer = (String) basicCluster.getAttribute(ATTR_MANUFACTURERNAME).readValue(Long.MAX_VALUE);
         this.modelIdentifier = (String) basicCluster.getAttribute(ATTR_MODELIDENTIFIER).readValue(Long.MAX_VALUE);

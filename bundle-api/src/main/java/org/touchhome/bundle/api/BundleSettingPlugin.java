@@ -67,7 +67,7 @@ public interface BundleSettingPlugin<T> {
         return false;
     }
 
-    default NotificationEntityJSON buildHeaderNotificationEntity(T value, EntityContext entityContext) {
+    default List<NotificationEntityJSON> buildHeaderNotificationEntity(T value, EntityContext entityContext) {
         return null;
     }
 

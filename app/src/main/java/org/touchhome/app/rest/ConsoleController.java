@@ -8,7 +8,6 @@ import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 import org.touchhome.app.LogService;
 import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.model.rest.EntityUIMetaData;

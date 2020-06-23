@@ -7,11 +7,11 @@ import org.springframework.data.jpa.repository.support.JpaRepositoryImplementati
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
-import org.touchhome.bundle.api.model.PureEntity;
+import org.touchhome.bundle.api.model.HasIdIdentifier;
 
 import javax.persistence.EntityManager;
 
-public class CrudRepositoryFactoryBean<R extends JpaRepository<T, Integer>, T extends PureEntity> extends JpaRepositoryFactoryBean<R, T, Integer> {
+public class CrudRepositoryFactoryBean<R extends JpaRepository<T, Integer>, T extends HasIdIdentifier> extends JpaRepositoryFactoryBean<R, T, Integer> {
 
     /**
      * Creates a new {@link JpaRepositoryFactoryBean} for the given repository interface.
@@ -26,7 +26,7 @@ public class CrudRepositoryFactoryBean<R extends JpaRepository<T, Integer>, T ex
         return new MyRepositoryFactory(entityManager);
     }
 
-    private static class MyRepositoryFactory<T extends PureEntity> extends JpaRepositoryFactory {
+    private static class MyRepositoryFactory<T extends HasIdIdentifier> extends JpaRepositoryFactory {
 
         MyRepositoryFactory(EntityManager entityManager) {
             super(entityManager);

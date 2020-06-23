@@ -25,7 +25,7 @@ public class WorkspaceVariableEntity extends BaseEntity<WorkspaceVariableEntity>
 
     @Setter
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "workspaceVariableEntity", cascade = CascadeType.REMOVE)
-    private Set<WorkspaceVariableBackupValueEntity> values;
+    private Set<WorkspaceVariableBackupValueCrudEntity> values;
 
     @Override
     public String getTitle() {

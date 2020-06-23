@@ -1,4 +1,4 @@
-package org.touchhome.bundle.cloud.impl;
+package org.touchhome.bundle.cloud.netty.impl;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -15,7 +15,10 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.util.SslUtil;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.cloud.setting.*;
+import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
+import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
+import org.touchhome.bundle.cloud.setting.CloudServerPortSetting;
+import org.touchhome.bundle.cloud.setting.CloudServerUrlSetting;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -41,11 +44,12 @@ public class NettyClientService {
     private ServerConnectionStatus serverConnectionStatus;
 
     public void postConstruct() {
-        updateConnectionStatus(ServerConnectionStatus.NOT_CONNECTED, "");
+        // TODO: remove service for now
+        /*updateConnectionStatus(ServerConnectionStatus.NOT_CONNECTED, "");
         connectToServer();
         this.entityContext.listenSettingValueAsync(CloudServerRestartSetting.class, this::restart);
         this.entityContext.listenSettingValueAsync(CloudServerUrlSetting.class, this::restart);
-        this.entityContext.listenSettingValueAsync(CloudServerPortSetting.class, this::restart);
+        this.entityContext.listenSettingValueAsync(CloudServerPortSetting.class, this::restart);*/
     }
 
     private void restart() {

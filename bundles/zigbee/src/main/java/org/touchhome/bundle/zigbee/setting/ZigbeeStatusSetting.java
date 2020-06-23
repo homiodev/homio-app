@@ -6,6 +6,9 @@ import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.DeviceStatus;
 import org.touchhome.bundle.api.util.NotificationType;
 
+import java.util.Collections;
+import java.util.List;
+
 public class ZigbeeStatusSetting implements BundleSettingPlugin<DeviceStatus> {
 
     @Override
@@ -29,10 +32,10 @@ public class ZigbeeStatusSetting implements BundleSettingPlugin<DeviceStatus> {
     }
 
     @Override
-    public NotificationEntityJSON buildHeaderNotificationEntity(DeviceStatus deviceStatus, EntityContext entityContext) {
-        return new NotificationEntityJSON("zigbee-status")
+    public List<NotificationEntityJSON> buildHeaderNotificationEntity(DeviceStatus deviceStatus, EntityContext entityContext) {
+        return Collections.singletonList(new NotificationEntityJSON("zigbee-status")
                 .setName("Zigbee status: " + deviceStatus)
                 .setDescription(entityContext.getSettingValue(ZigbeeStatusMessageSetting.class))
-                .setNotificationType(deviceStatus == DeviceStatus.ONLINE ? NotificationType.info : NotificationType.danger);
+                .setNotificationType(deviceStatus == DeviceStatus.ONLINE ? NotificationType.info : NotificationType.danger));
     }
 }

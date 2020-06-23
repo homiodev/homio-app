@@ -1,6 +1,5 @@
 package org.touchhome.bundle.nrf24i01.rf24.command;
 
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;

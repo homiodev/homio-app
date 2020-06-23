@@ -1,5 +1,6 @@
 package org.touchhome.bundle.api.hardware.other;
 
+import io.swagger.annotations.ApiParam;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.SystemUtils;
 import org.touchhome.bundle.api.EntityContext;
@@ -31,6 +32,9 @@ public interface LinuxHardwareRepository {
 
     @HardwareQuery("iwgetid -r")
     String getWifiName();
+
+    @HardwareQuery("systemctl is-active :serviceName")
+    int getServiceStatus(@ApiParam("serviceName") String serviceName);
 
     @HardwareQuery(echo = "Reboot device", value = "reboot")
     void reboot();

@@ -58,7 +58,7 @@ import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.api.util.ClassFinder;
-import org.touchhome.bundle.cloud.impl.DispatcherServletService;
+import org.touchhome.bundle.cloud.netty.impl.DispatcherServletService;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;

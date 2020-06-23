@@ -27,12 +27,11 @@ import static org.touchhome.bundle.api.util.RaspberryGpioPin.*;
 @Component
 @RequiredArgsConstructor
 public class NRF24I01Bundle implements BundleContext {
-    private final Rf24Communicator rf24Communicator;
-    private final EntityContext entityContext;
-
     private static final Pipe GLOBAL_WRITE_PIPE = new Pipe("2Node");
     private static byte messageID = 0;
     private static String errorLoadingLibrary = null;
+    private final Rf24Communicator rf24Communicator;
+    private final EntityContext entityContext;
     private boolean libLoaded = false;
 
     @Value("${rf24RetryDelay:15}")

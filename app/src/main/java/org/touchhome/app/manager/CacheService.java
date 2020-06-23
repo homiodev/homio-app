@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.utils.CollectionUtils;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.DeviceBaseEntity;
-import org.touchhome.bundle.api.model.PureEntity;
+import org.touchhome.bundle.api.model.HasIdIdentifier;
 import org.touchhome.bundle.api.repository.PureRepository;
 
 import java.util.HashMap;
@@ -82,7 +82,7 @@ public class CacheService {
         }
     }
 
-    public <T extends PureEntity> void putToCache(PureRepository<T> repository, T entity) {
+    public <T extends HasIdIdentifier> void putToCache(PureRepository<T> repository, T entity) {
         String identifier = entity.getIdentifier();
         if (identifier == null) {
             throw new IllegalStateException("Unable update state without id" + entity);
@@ -116,7 +116,7 @@ public class CacheService {
 
     @AllArgsConstructor
     private static class UpdateStatement {
-        PureEntity baseEntity;
+        HasIdIdentifier baseEntity;
         PureRepository pureRepository;
     }
 }
