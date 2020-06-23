@@ -1,21 +1,21 @@
 package org.touchhome.app.config;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.catalina.connector.Connector;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class TomcatHttpConnector implements WebServerFactoryCustomizer<TomcatServletWebServerFactory> {
 
-    @Value("${http_port}")
-    private int httpPort;
+    private final TouchHomeProperties touchHomeProperties;
 
     @Override
     public void customize(TomcatServletWebServerFactory factory) {
         Connector connector = new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
-        connector.setPort(httpPort);
+        connector.setPort(touchHomeProperties.getHttpPort());
         factory.addAdditionalTomcatConnectors(connector);
     }
 }

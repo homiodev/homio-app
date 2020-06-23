@@ -20,7 +20,6 @@ import java.util.Map;
 public class SettingController {
 
     private final EntityContext entityContext;
-    private final StartupHardwareRepository startupHardwareRepository;
     private final Map<Class<? extends BundleSettingPlugin>, SettingEntity> transientSettings;
 
     private Map<String, BundleSettingPlugin> settingPlugins;
@@ -56,10 +55,5 @@ public class SettingController {
         }
         Collections.sort(result);
         return result;
-    }
-
-    @PostMapping("/release/latest")
-    public void updateApp() {
-        startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath().toAbsolutePath().toString());
     }
 }

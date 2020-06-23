@@ -85,7 +85,7 @@ public class WorkspaceManager {
                             if (ONCE_EXECUTION_BLOCKS.contains(workspaceBlock.getOpcode())) {
                                 executeOnce(workspaceBlock);
                             } else {
-                                WorkspaceBlockProcessService service = new WorkspaceBlockProcessService(workspaceBlock, workspaceEntity);
+                                WorkspaceBlockProcessService service = new WorkspaceBlockProcessService(workspaceBlock, workspaceEntity, entityContext);
                                 tabHolder.tab2Services.add(service);
                                 backgroundProcessManager.fireIfNeedRestart(service);
                             }

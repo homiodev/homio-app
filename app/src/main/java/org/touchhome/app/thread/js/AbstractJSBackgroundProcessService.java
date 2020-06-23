@@ -4,10 +4,8 @@ import org.apache.logging.log4j.Logger;
 import org.touchhome.app.manager.scripting.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.thread.BackgroundProcessService;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
-import org.touchhome.bundle.api.util.ApplicationContextHolder;
 
 import javax.script.CompiledScript;
 
@@ -16,19 +14,15 @@ import static org.touchhome.bundle.api.thread.BackgroundProcessStatus.*;
 public abstract class AbstractJSBackgroundProcessService<ReturnType> extends BackgroundProcessService<ReturnType> {
 
     protected final ScriptEntity scriptEntity;
-    protected final EntityContext entityContext;
-    private final LoggerManager loggerManager;
     private final ScriptManager scriptManager;
 
     private CompiledScript compiled;
 
-    public AbstractJSBackgroundProcessService(ScriptEntity scriptEntity) {
-        super(scriptEntity.getBackgroundProcessServiceID());
+    public AbstractJSBackgroundProcessService(ScriptEntity scriptEntity, EntityContext entityContext) {
+        super(scriptEntity.getBackgroundProcessServiceID(), entityContext);
 
         this.scriptEntity = scriptEntity;
-        this.entityContext = ApplicationContextHolder.getBean(EntityContext.class);
-        this.loggerManager = ApplicationContextHolder.getBean(LoggerManager.class);
-        this.scriptManager = ApplicationContextHolder.getBean(ScriptManager.class);
+        this.scriptManager = entityContext.getBean(ScriptManager.class);
     }
 
     @Override

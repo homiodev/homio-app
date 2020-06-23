@@ -2,7 +2,6 @@ package org.touchhome.bundle.nrf24i01.rf24.backgroundService;
 
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.thread.BackgroundProcessService;
-import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.api.util.UpdatableValue;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
 import org.touchhome.bundle.arduino.repository.ArduinoDeviceRepository;
@@ -22,15 +21,13 @@ import static org.touchhome.bundle.nrf24i01.rf24.Nrf224i01Config.ARDUINO_PING_IN
 public class NRF24I01ArduinoPingService extends BackgroundProcessService<Void> {
 
     private final NRF24I01Bundle NRF24I01Bundle;
-    private final EntityContext entityContext;
     private final ArduinoDeviceRepository arduinoDeviceRepository;
     private final Map<String, UpdatableValue<Integer>> missedPings = new HashMap<>();
 
-    public NRF24I01ArduinoPingService() {
-        super(NRF24I01ArduinoPingService.class.getSimpleName());
-        NRF24I01Bundle = ApplicationContextHolder.getBean(NRF24I01Bundle.class);
-        entityContext = ApplicationContextHolder.getBean(EntityContext.class);
-        arduinoDeviceRepository = ApplicationContextHolder.getBean(ArduinoDeviceRepository.class);
+    public NRF24I01ArduinoPingService(EntityContext entityContext) {
+        super(NRF24I01ArduinoPingService.class.getSimpleName(), entityContext);
+        NRF24I01Bundle = entityContext.getBean(NRF24I01Bundle.class);
+        arduinoDeviceRepository = entityContext.getBean(ArduinoDeviceRepository.class);
     }
 
     @Override

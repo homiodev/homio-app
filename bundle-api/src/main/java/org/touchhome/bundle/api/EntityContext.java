@@ -2,10 +2,9 @@ package org.touchhome.bundle.api;
 
 import io.swagger.annotations.ApiParam;
 import org.apache.commons.lang3.SystemUtils;
-import org.springframework.security.core.userdetails.User;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.PureEntity;
+import org.touchhome.bundle.api.model.HasIdIdentifier;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.PublicJsMethod;
@@ -118,13 +117,13 @@ public interface EntityContext {
     <T extends BaseEntity> T getEntity(T entity);
 
     @PublicJsMethod
-    <T extends PureEntity> void saveDelayed(T entity);
+    <T extends HasIdIdentifier> void saveDelayed(T entity);
 
     @PublicJsMethod
     <T extends BaseEntity> void saveDelayed(T entity);
 
     @PublicJsMethod
-    <T extends PureEntity> void save(T entity);
+    <T extends HasIdIdentifier> void save(T entity);
 
     @PublicJsMethod
     <T extends BaseEntity> T save(T entity);

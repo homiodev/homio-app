@@ -2,7 +2,7 @@ package org.touchhome.bundle.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-public interface PureEntity {
+public interface HasIdIdentifier {
     @JsonIgnore
     Integer getId();
 

@@ -25,10 +25,10 @@ public class NRF24I01DevicesListener extends BackgroundProcessService<Void> {
     private final NRF24I01Bundle rf24Service;
     private final Map<Byte, RF24CommandPlugin> rf24CommandPlugins;
 
-    public NRF24I01DevicesListener() {
-        super(NRF24I01DevicesListener.class.getSimpleName());
-        rf24Service = ApplicationContextHolder.getBean(NRF24I01Bundle.class);
-        rf24CommandPlugins = ApplicationContextHolder.getBean("rf24CommandPlugins", Map.class);
+    public NRF24I01DevicesListener(EntityContext entityContext) {
+        super(NRF24I01DevicesListener.class.getSimpleName(), entityContext);
+        rf24Service = entityContext.getBean(NRF24I01Bundle.class);
+        rf24CommandPlugins = entityContext.getBean("rf24CommandPlugins", Map.class);
 
         if (EntityContext.isTestEnvironment()) {
             Timer timer = new Timer();

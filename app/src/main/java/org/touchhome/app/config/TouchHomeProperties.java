@@ -11,4 +11,5 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "touchhome")
 public class TouchHomeProperties {
     private String version;
+    private int httpPort;
 }

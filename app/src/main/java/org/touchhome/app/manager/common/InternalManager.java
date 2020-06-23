@@ -47,7 +47,7 @@ import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.DeviceBaseEntity;
-import org.touchhome.bundle.api.model.PureEntity;
+import org.touchhome.bundle.api.model.HasIdIdentifier;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
@@ -268,7 +268,7 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public <T extends PureEntity> void saveDelayed(T entity) {
+    public <T extends HasIdIdentifier> void saveDelayed(T entity) {
         PureRepository pureRepository = pureRepositories.get(entity.getClass().getSimpleName());
         cacheService.putToCache(pureRepository, entity);
     }
@@ -280,7 +280,7 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public <T extends PureEntity> void save(T entity) {
+    public <T extends HasIdIdentifier> void save(T entity) {
         BaseCrudRepository pureRepository = (BaseCrudRepository) pureRepositories.get(entity.getClass().getSimpleName());
         pureRepository.save(entity);
     }
