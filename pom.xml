@@ -1,12 +1,11 @@
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <artifactId>touchhomeBackend</artifactId>
     <groupId>org.touchhome</groupId>
     <url>https://touchhome.org</url>
 
     <packaging>pom</packaging>
-    <version>0.1.7-SNAPSHOT</version>
+    <version>0.1.7</version>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -24,7 +23,7 @@
         <connection>scm:git:git://github.com/github.com/touchhome/touchhome-core.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/touchhome/touchhome-core.git</developerConnection>
         <url>https://github.com/touchhome/touchhome-core</url>
-        <tag>HEAD</tag>
+        <tag>0.1.7</tag>
     </scm>
 
     <properties>
@@ -204,17 +203,16 @@
                                 <module name="Checker">
                                     <!-- Checks for whitespace. -->
                                     <module name="FileTabCharacter">
-                                        <property name="severity" value="error"/>
-                                        <property name="eachLine" value="true"/>
+                                        <property name="severity" value="error" />
+                                        <property name="eachLine" value="true" />
                                     </module>
                                     <module name="TreeWalker">
                                         <!-- Import settings: getting rid of redundant import, forbid star notation, defined order of imports. -->
-                                        <module name="RedundantImport"/>
+                                        <module name="RedundantImport" />
                                         <module name="NeedBraces">
-                                            <property name="tokens"
-                                                      value="LITERAL_IF, LITERAL_ELSE, LITERAL_FOR, LITERAL_WHILE, LITERAL_DO"/>
+                                            <property name="tokens" value="LITERAL_IF, LITERAL_ELSE, LITERAL_FOR, LITERAL_WHILE, LITERAL_DO" />
                                         </module>
-                                        <module name="EqualsHashCode"/>
+                                        <module name="EqualsHashCode" />
                                     </module>
                                 </module>
                             </checkstyleRules>
