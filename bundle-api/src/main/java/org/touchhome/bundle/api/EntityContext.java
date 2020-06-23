@@ -20,7 +20,7 @@ import java.util.function.Consumer;
 
 public interface EntityContext {
 
-    static boolean isTestEnvironment() {
+    static boolean isDevEnvironment() {
         return "true".equals(System.getProperty("development"));
     }
 
@@ -29,11 +29,11 @@ public interface EntityContext {
     }
 
     static boolean isLinuxEnvironment() {
-        return SystemUtils.IS_OS_LINUX && !isDockerEnvironment() && !isTestEnvironment();
+        return SystemUtils.IS_OS_LINUX && !isDockerEnvironment() && !isDevEnvironment();
     }
 
     static boolean isLinuxOrDockerEnvironment() {
-        return SystemUtils.IS_OS_LINUX && !isTestEnvironment();
+        return SystemUtils.IS_OS_LINUX && !isDevEnvironment();
     }
 
     @PublicJsMethod

@@ -215,7 +215,7 @@ public class InternalManager implements EntityContext {
     }
 
     private void updateDeviceFeatures() {
-        if (EntityContext.isTestEnvironment() || EntityContext.isDockerEnvironment()) {
+        if (EntityContext.isDevEnvironment() || EntityContext.isDockerEnvironment()) {
             disableFeature(DeviceFeature.HotSpot);
         }
         if (!EntityContext.isLinuxOrDockerEnvironment()) {
@@ -542,7 +542,7 @@ public class InternalManager implements EntityContext {
     }
 
     private void createArduinoDevice() {
-        if (EntityContext.isTestEnvironment() && getEntity("ad_TestArduinoDevice") == null) {
+        if (EntityContext.isDevEnvironment() && getEntity("ad_TestArduinoDevice") == null) {
             save(new ArduinoDeviceEntity().computeEntityID(() -> "TestArduinoDevice").setPipe(111L));
         }
     }

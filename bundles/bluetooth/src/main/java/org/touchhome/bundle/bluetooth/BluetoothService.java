@@ -268,14 +268,14 @@ public class BluetoothService implements BundleContext {
     }
 
     private byte[] readSafeValue(Supplier<String> supplier) {
-        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isTestEnvironment()) {
+        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isDevEnvironment()) {
             return supplier.get().getBytes();
         }
         return new byte[0];
     }
 
     private String readSafeValueStr(Supplier<String> supplier) {
-        return EntityContext.isTestEnvironment() ? "" : readSafeValueStrIT(supplier);
+        return EntityContext.isDevEnvironment() ? "" : readSafeValueStrIT(supplier);
     }
 
     private String readSafeValueStrIT(Supplier<String> supplier) {
