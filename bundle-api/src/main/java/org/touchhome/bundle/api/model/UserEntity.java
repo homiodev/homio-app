@@ -68,14 +68,14 @@ public class UserEntity extends BaseEntity<UserEntity> {
         return Collections.singletonList(Role.ROLE_ADMIN);
     }
 
-    public enum UserType {
-        REGULAR, TELEGRAM
-    }
-
     public UserEntity setKeystore(byte[] keystore) {
         this.keystore = keystore;
         SslUtil.validateKeyStore(keystore, password);
         this.keystoreDate = new Date();
         return this;
+    }
+
+    public enum UserType {
+        REGULAR, TELEGRAM
     }
 }

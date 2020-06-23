@@ -13,15 +13,15 @@ import java.util.List;
 @Accessors(chain = true)
 @NamedQueries({
         @NamedQuery(name = "WorkspaceBackupEntity.fetchLastValue",
-                query = "SELECT e.value FROM WorkspaceBackupValueEntity e WHERE e.workspaceBackupEntity = :source ORDER BY e.creationTime DESC"),
+                query = "SELECT e.value FROM WorkspaceBackupValueCrudEntity e WHERE e.workspaceBackupEntity = :source ORDER BY e.creationTime DESC"),
         @NamedQuery(name = "WorkspaceBackupEntity.fetchValues",
-                query = "SELECT e.creationTime, e.value FROM WorkspaceBackupValueEntity e WHERE e.workspaceBackupEntity = :source AND e.creationTime >= :from AND e.creationTime <= :to ORDER BY e.creationTime"),
+                query = "SELECT e.creationTime, e.value FROM WorkspaceBackupValueCrudEntity e WHERE e.workspaceBackupEntity = :source AND e.creationTime >= :from AND e.creationTime <= :to ORDER BY e.creationTime"),
         @NamedQuery(name = "WorkspaceBackupEntity.fetchSum",
-                query = "SELECT SUM(e.value) FROM WorkspaceBackupValueEntity e WHERE e.workspaceBackupEntity = :source AND e.creationTime >= :from AND e.creationTime <= :to"),
+                query = "SELECT SUM(e.value) FROM WorkspaceBackupValueCrudEntity e WHERE e.workspaceBackupEntity = :source AND e.creationTime >= :from AND e.creationTime <= :to"),
         @NamedQuery(name = "WorkspaceBackupEntity.fetchCount",
-                query = "SELECT COUNT(e) FROM WorkspaceBackupValueEntity e WHERE e.workspaceBackupEntity = :source AND e.creationTime >= :from AND e.creationTime <= :to"),
+                query = "SELECT COUNT(e) FROM WorkspaceBackupValueCrudEntity e WHERE e.workspaceBackupEntity = :source AND e.creationTime >= :from AND e.creationTime <= :to"),
         @NamedQuery(name = "WorkspaceBackupEntity.fetchMinDate",
-                query = "SELECT MIN(e.creationTime) FROM WorkspaceBackupValueEntity e WHERE e.workspaceBackupEntity = :source GROUP BY e.workspaceBackupEntity")
+                query = "SELECT MIN(e.creationTime) FROM WorkspaceBackupValueCrudEntity e WHERE e.workspaceBackupEntity = :source GROUP BY e.workspaceBackupEntity")
 })
 public class WorkspaceBackupEntity extends BaseEntity<WorkspaceBackupEntity> {
 
@@ -33,7 +33,7 @@ public class WorkspaceBackupEntity extends BaseEntity<WorkspaceBackupEntity> {
 
     @Setter
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "workspaceBackupEntity", cascade = CascadeType.REMOVE)
-    private List<WorkspaceBackupValueEntity> values;
+    private List<WorkspaceBackupValueCrudEntity> values;
 
     @Override
     public String getTitle() {

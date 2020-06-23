@@ -29,7 +29,6 @@ import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Log4j2
 @RestController

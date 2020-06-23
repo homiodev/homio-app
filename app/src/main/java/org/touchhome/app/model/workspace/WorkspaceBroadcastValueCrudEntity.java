@@ -3,7 +3,7 @@ package org.touchhome.app.model.workspace;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.model.PureCrudEntity;
+import org.touchhome.bundle.api.model.CrudEntity;
 
 import javax.persistence.Entity;
 import javax.persistence.Index;
@@ -15,7 +15,7 @@ import javax.persistence.Table;
 @Entity
 @Accessors(chain = true)
 @Table(indexes = {@Index(columnList = "creationTime")})
-public class WorkspaceBroadcastValueEntity extends PureCrudEntity<WorkspaceBroadcastValueEntity> {
+public class WorkspaceBroadcastValueCrudEntity extends CrudEntity<WorkspaceBroadcastValueCrudEntity> {
 
     @ManyToOne
     private WorkspaceBroadcastEntity workspaceBroadcastEntity;

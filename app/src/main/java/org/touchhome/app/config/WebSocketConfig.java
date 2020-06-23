@@ -14,8 +14,8 @@ import java.util.List;
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    static final String ENDPOINT = "/smart-websocket";
     public static final String DESTINATION_PREFIX = "/smart-dest-ws";
+    static final String ENDPOINT = "/smart-websocket";
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {

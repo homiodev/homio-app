@@ -16,10 +16,15 @@ import org.hibernate.internal.SessionFactoryImpl;
 import org.json.JSONObject;
 import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.client.RestTemplate;
 import org.touchhome.app.LogService;
+import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSONJSON;
 import org.touchhome.app.manager.CacheService;
@@ -42,7 +47,7 @@ import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.DeviceBaseEntity;
-import org.touchhome.bundle.api.model.PureEntity;
+import org.touchhome.bundle.api.model.HasIdIdentifier;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
@@ -53,15 +58,15 @@ import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.ClassFinder;
-import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
-import org.touchhome.bundle.cloud.impl.NettyClientService;
+import org.touchhome.bundle.cloud.netty.impl.NettyClientService;
 import org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity;
 
 import javax.persistence.EntityManagerFactory;
 import javax.validation.constraints.NotNull;
+import java.text.DateFormat;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -77,6 +82,9 @@ import static org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity.DEFAULT
 @RequiredArgsConstructor
 public class InternalManager implements EntityContext {
 
+    private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchHome-core";
+
+    private final RestTemplate restTemplate = new RestTemplate();
     private static final Map<BundleSettingPlugin, String> settingTransientState = new HashMap<>();
     public static Map<String, BundleSettingPlugin> settingPluginsByPluginKey = new HashMap<>();
     static Map<String, AbstractRepository> repositories;
@@ -89,8 +97,6 @@ public class InternalManager implements EntityContext {
     private final Map<Class<? extends BaseEntity>, List<BiConsumer>> entityClassUpdateListeners = new HashMap<>();
     private final Map<DeviceFeature, Boolean> deviceFeatures = Stream.of(DeviceFeature.values()).collect(Collectors.toMap(f -> f, f -> Boolean.TRUE));
     private final Set<NotificationEntityJSON> notifications = new HashSet<>();
-    private Map<Class<? extends BundleSettingPlugin>, List<Consumer<?>>> settingListeners = new HashMap<>();
-
     private final ClassFinder classFinder;
     private final CacheService cacheService;
     private final AllDeviceRepository allDeviceRepository;
@@ -98,15 +104,29 @@ public class InternalManager implements EntityContext {
     private final EntityManagerFactory entityManagerFactory;
     private final PlatformTransactionManager transactionManager;
     private final BroadcastLockManager broadcastLockManager;
+    private final TouchHomeProperties touchHomeProperties;
+
+    private Map<Class<? extends BundleSettingPlugin>, List<Consumer<?>>> settingListeners = new HashMap<>();
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
     private ApplicationContext applicationContext;
+    private ArrayList<BundleContext> bundles;
+    private String latestVersion;
 
     public Set<NotificationEntityJSON> getNotifications() {
         long time = System.currentTimeMillis();
         notifications.removeIf(entity -> entity instanceof AlwaysOnTopNotificationEntityJSONJSON
                 && time - entity.getCreationTime().getTime() > ((AlwaysOnTopNotificationEntityJSONJSON) entity).getDuration() * 1000);
-        return notifications;
+
+        Set<NotificationEntityJSON> set = new HashSet<>(notifications);
+        for (BundleContext bundle : this.bundles) {
+            Set<NotificationEntityJSON> notifications = bundle.getNotifications();
+            if (notifications != null) {
+                set.addAll(notifications);
+            }
+        }
+
+        return set;
     }
 
     @SneakyThrows
@@ -144,9 +164,9 @@ public class InternalManager implements EntityContext {
 
         // init modules
         log.info("Initialize bundles");
-        List<BundleContext> values = new ArrayList<>(applicationContext.getBeansOfType(BundleContext.class).values());
-        Collections.sort(values);
-        for (BundleContext bundleContext : values) {
+        this.bundles = new ArrayList<>(applicationContext.getBeansOfType(BundleContext.class).values());
+        Collections.sort(bundles);
+        for (BundleContext bundleContext : bundles) {
             bundleContext.init();
         }
 
@@ -173,13 +193,29 @@ public class InternalManager implements EntityContext {
             }
         });
 
-        notifications.add(new NotificationEntityJSON("app-status")
-                .setName("App started")
-                .setNotificationType(NotificationType.info));
+        notifications.add(NotificationEntityJSON.info("app-status")
+                .setName("App started at " + DateFormat.getDateTimeInstance().format(new Date())));
+
+        this.fetchReleaseVersion();
+    }
+
+    @Scheduled(fixedDelay = 86400000)
+    private void fetchReleaseVersion() {
+        try {
+            notifications.add(NotificationEntityJSON.info("version").setName("App version: " + touchHomeProperties.getVersion()));
+            this.latestVersion = Objects.requireNonNull(restTemplate.getForObject(GIT_HUB_URL + "/releases/latest", Map.class)).get("tag_name").toString();
+
+            if (!touchHomeProperties.getVersion().equals(this.latestVersion)) {
+                notifications.add(NotificationEntityJSON.danger("version")
+                        .setName("Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion));
+            }
+        } catch (Exception ex) {
+            log.warn("Unable to fetch latest version");
+        }
     }
 
     private void updateDeviceFeatures() {
-        if (EntityContext.isTestEnvironment() || EntityContext.isDockerEnvironment()) {
+        if (EntityContext.isDevEnvironment() || EntityContext.isDockerEnvironment()) {
             disableFeature(DeviceFeature.HotSpot);
         }
         if (!EntityContext.isLinuxOrDockerEnvironment()) {
@@ -232,7 +268,7 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public <T extends PureEntity> void saveDelayed(T entity) {
+    public <T extends HasIdIdentifier> void saveDelayed(T entity) {
         PureRepository pureRepository = pureRepositories.get(entity.getClass().getSimpleName());
         cacheService.putToCache(pureRepository, entity);
     }
@@ -244,7 +280,7 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public <T extends PureEntity> void save(T entity) {
+    public <T extends HasIdIdentifier> void save(T entity) {
         BaseCrudRepository pureRepository = (BaseCrudRepository) pureRepositories.get(entity.getClass().getSimpleName());
         pureRepository.save(entity);
     }
@@ -372,16 +408,14 @@ public class InternalManager implements EntityContext {
 
     @Override
     public void sendInfoMessage(String message) {
-        sendNotification(new NotificationEntityJSON("info-" + message.hashCode())
-                .setName(message)
-                .setNotificationType(NotificationType.info));
+        sendNotification(NotificationEntityJSON.info("info-" + message.hashCode())
+                .setName(message));
     }
 
     @Override
     public void sendErrorMessage(String message, Exception ex) {
-        sendNotification(new NotificationEntityJSON("error-" + message.hashCode())
-                .setName(message + ". Cause: " + TouchHomeUtils.getErrorMessage(ex))
-                .setNotificationType(NotificationType.danger));
+        sendNotification(NotificationEntityJSON.danger("error-" + message.hashCode())
+                .setName(message + ". Cause: " + TouchHomeUtils.getErrorMessage(ex)));
     }
 
     @Override
@@ -451,8 +485,22 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
+    public <T> T getBean(Class<T> clazz) {
+        return applicationContext.getBean(clazz);
+    }
+
+    @Override
     public <T> Collection<T> getBeansOfType(Class<T> clazz) {
         return applicationContext.getBeansOfType(clazz).values();
+    }
+
+    @Override
+    public UserEntity getUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null) {
+            return getEntity(UserEntity.PREFIX + authentication.getCredentials());
+        }
+        return null;
     }
 
     @Override
@@ -494,7 +542,7 @@ public class InternalManager implements EntityContext {
     }
 
     private void createArduinoDevice() {
-        if (EntityContext.isTestEnvironment() && getEntity("ad_TestArduinoDevice") == null) {
+        if (EntityContext.isDevEnvironment() && getEntity("ad_TestArduinoDevice") == null) {
             save(new ArduinoDeviceEntity().computeEntityID(() -> "TestArduinoDevice").setPipe(111L));
         }
     }
@@ -505,10 +553,12 @@ public class InternalManager implements EntityContext {
                 consumer.accept(value);
             }
         }
-        NotificationEntityJSON notificationEntityJSON = pluginFor.buildHeaderNotificationEntity(value, this);
+        List<NotificationEntityJSON> notificationEntityJSON = pluginFor.buildHeaderNotificationEntity(value, this);
         if (notificationEntityJSON != null) {
-            notifications.remove(notificationEntityJSON); // remove previous one
-            notifications.add(notificationEntityJSON);
+            for (NotificationEntityJSON entityJSON : notificationEntityJSON) {
+                notifications.remove(entityJSON); // remove previous one
+                notifications.add(entityJSON);
+            }
         }
 
         this.sendNotification(pluginFor.buildToastrNotificationEntity(value, this));

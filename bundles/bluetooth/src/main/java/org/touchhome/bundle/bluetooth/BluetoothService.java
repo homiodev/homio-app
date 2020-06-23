@@ -20,7 +20,7 @@ import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.throwable.TRunnable;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.cloud.impl.ServerConnectionStatus;
+import org.touchhome.bundle.cloud.netty.impl.ServerConnectionStatus;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
 import org.touchhome.bundle.cloud.setting.CloudServerRestartSetting;
@@ -40,6 +40,7 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.distinctByKey;
 @RequiredArgsConstructor
 public class BluetoothService implements BundleContext {
 
+    public static final int MIN_WRITE_TIMEOUT = 60000;
     private static final String PREFIX = "13333333-3333-3333-3333-3333333330";
     private static final String SERVICE_UUID = PREFIX + "00";
     private static final String CPU_LOAD_UUID = PREFIX + "01";
@@ -56,18 +57,14 @@ public class BluetoothService implements BundleContext {
     private static final String WRITE_BAN_UUID = PREFIX + "12";
     private static final String SERVER_CONNECTED_UUID = PREFIX + "13";
     private static final String FEATURES_UUID = PREFIX + "14";
-
-    public static final int MIN_WRITE_TIMEOUT = 60000;
     private static final int TIME_REFRESH_PASSWORD = 5 * 60000; // 5 minute for session
     private static long timeSinceLastCheckPassword = -1;
-
-    private BluetoothApplication bluetoothApplication;
-    private UserEntity user;
-
     private final EntityContext entityContext;
     private final LinuxHardwareRepository linuxHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
     private final Map<String, Long> wifiWriteProtect = new ConcurrentHashMap<>();
+    private BluetoothApplication bluetoothApplication;
+    private UserEntity user;
 
     public Map<String, String> getDeviceCharacteristics() {
         Map<String, String> map = new HashMap<>();
@@ -271,14 +268,14 @@ public class BluetoothService implements BundleContext {
     }
 
     private byte[] readSafeValue(Supplier<String> supplier) {
-        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isTestEnvironment()) {
+        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isDevEnvironment()) {
             return supplier.get().getBytes();
         }
         return new byte[0];
     }
 
     private String readSafeValueStr(Supplier<String> supplier) {
-        return EntityContext.isTestEnvironment() ? "" : readSafeValueStrIT(supplier);
+        return EntityContext.isDevEnvironment() ? "" : readSafeValueStrIT(supplier);
     }
 
     private String readSafeValueStrIT(Supplier<String> supplier) {

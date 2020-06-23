@@ -3,7 +3,7 @@ package org.touchhome.bundle.api.model.workspace.backup;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.model.PureCrudEntity;
+import org.touchhome.bundle.api.model.CrudEntity;
 
 import javax.persistence.*;
 
@@ -12,7 +12,7 @@ import javax.persistence.*;
 @Entity
 @Accessors(chain = true)
 @Table(indexes = {@Index(columnList = "creationTime")})
-public class WorkspaceBackupValueEntity extends PureCrudEntity<WorkspaceBackupValueEntity> {
+public class WorkspaceBackupValueCrudEntity extends CrudEntity<WorkspaceBackupValueCrudEntity> {
 
     @Column(nullable = false)
     private float value;

@@ -18,10 +18,6 @@ public class ApplicationContextHolder implements ApplicationContextAware {
         return applicationContext.getBean(clazz);
     }
 
-    public static <T> Collection<T> getBeansOfType(Class<T> clazz) {
-        return applicationContext.getBeansOfType(clazz).values();
-    }
-
     public static <T> T getBean(String beanName, Class<T> clazz) {
         return applicationContext.getBean(beanName, clazz);
     }

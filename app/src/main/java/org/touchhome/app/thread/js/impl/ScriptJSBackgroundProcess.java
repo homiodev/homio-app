@@ -6,8 +6,8 @@ import org.json.JSONObject;
 import org.touchhome.app.manager.scripting.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
-import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.script.Invocable;
@@ -24,9 +24,9 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
     private final ScriptManager scriptManager;
     private JSONObject jsonObj;
 
-    public ScriptJSBackgroundProcess(ScriptEntity scriptEntity) {
-        super(scriptEntity);
-        this.scriptManager = ApplicationContextHolder.getBean(ScriptManager.class);
+    public ScriptJSBackgroundProcess(ScriptEntity scriptEntity, EntityContext entityContext) {
+        super(scriptEntity, entityContext);
+        this.scriptManager = entityContext.getBean(ScriptManager.class);
     }
 
     private JSONObject getJsonObj() {

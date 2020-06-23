@@ -1,6 +1,9 @@
 package org.touchhome.bundle.api;
 
+import org.touchhome.bundle.api.json.NotificationEntityJSON;
+
 import javax.validation.constraints.NotNull;
+import java.util.Set;
 
 public interface BundleContext extends Comparable<BundleContext> {
     String BUNDLE_PREFIX = "org.touchhome.bundle.";
@@ -31,12 +34,16 @@ public interface BundleContext extends Comparable<BundleContext> {
         return BundleImageColorIndex.ZERO;
     }
 
-    enum BundleImageColorIndex {
-        ZERO, ONE, TWO, THREE, FOUR
-    }
-
     @Override
     default int compareTo(@NotNull BundleContext o) {
         return Integer.compare(this.order(), o.order());
+    }
+
+    default Set<NotificationEntityJSON> getNotifications() {
+        return null;
+    }
+
+    enum BundleImageColorIndex {
+        ZERO, ONE, TWO, THREE, FOUR
     }
 }

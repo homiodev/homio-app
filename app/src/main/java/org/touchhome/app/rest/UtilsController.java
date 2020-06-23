@@ -29,6 +29,7 @@ import org.touchhome.app.manager.scripting.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.manager.En;
 import org.touchhome.bundle.api.model.BaseEntity;
@@ -62,6 +63,7 @@ import static org.apache.commons.lang.StringUtils.trimToNull;
 @RequiredArgsConstructor
 public class UtilsController {
 
+    private final StartupHardwareRepository startupHardwareRepository;
     private final InternalManager entityContext;
     private final ScriptManager scriptManager;
     private final CodeParser codeParser;
@@ -341,6 +343,11 @@ public class UtilsController {
             comPorts.add(comPort);
         }
         return comPorts;
+    }
+
+    @PostMapping("app/update")
+    public void updateApp() {
+        startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath().toAbsolutePath().toString());
     }
 
     @GetMapping("i18n/{lang}.json")

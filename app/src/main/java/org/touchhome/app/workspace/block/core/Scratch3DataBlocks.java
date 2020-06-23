@@ -7,9 +7,9 @@ import org.touchhome.app.workspace.WorkspaceBlockImpl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupEntity;
-import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupValueEntity;
+import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupValueCrudEntity;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
-import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableBackupValueEntity;
+import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableBackupValueCrudEntity;
 import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.scratch.BlockType;
 import org.touchhome.bundle.api.scratch.Scratch3Block;
@@ -128,7 +128,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         WorkspaceVariableEntity entity = this.setGroupVariableHandler(workspaceBlock);
         if (entity != null) {
             // backup
-            entityContext.save(new WorkspaceVariableBackupValueEntity()
+            entityContext.save(new WorkspaceVariableBackupValueCrudEntity()
                     .setCreationTime(new Date())
                     .setWorkspaceVariableEntity(entity)
                     .setValue(entity.getValue()));
@@ -190,7 +190,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
             String backupId = workspaceBlock.getFieldId("backup_list_group");
 
             WorkspaceBackupEntity entity = entityContext.getEntity(WorkspaceBackupEntity.PREFIX + backupId);
-            entityContext.save(new WorkspaceBackupValueEntity()
+            entityContext.save(new WorkspaceBackupValueCrudEntity()
                     .setCreationTime(new Date())
                     .setWorkspaceBackupEntity(entity)
                     .setValue(value));

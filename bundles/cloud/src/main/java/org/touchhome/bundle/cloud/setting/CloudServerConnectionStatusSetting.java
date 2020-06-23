@@ -5,7 +5,10 @@ import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.util.NotificationType;
-import org.touchhome.bundle.cloud.impl.ServerConnectionStatus;
+import org.touchhome.bundle.cloud.netty.impl.ServerConnectionStatus;
+
+import java.util.Collections;
+import java.util.List;
 
 public class CloudServerConnectionStatusSetting implements BundleSettingPlugin<ServerConnectionStatus> {
 
@@ -25,10 +28,10 @@ public class CloudServerConnectionStatusSetting implements BundleSettingPlugin<S
     }
 
     @Override
-    public NotificationEntityJSON buildHeaderNotificationEntity(ServerConnectionStatus serverConnectionStatus, EntityContext entityContext) {
-        return new NotificationEntityJSON("cloud-status")
+    public List<NotificationEntityJSON> buildHeaderNotificationEntity(ServerConnectionStatus serverConnectionStatus, EntityContext entityContext) {
+        return Collections.singletonList(new NotificationEntityJSON("cloud-status")
                 .setName("Cloud status")
                 .setDescription(entityContext.getSettingValue(CloudServerConnectionMessageSetting.class))
-                .setNotificationType(serverConnectionStatus == ServerConnectionStatus.CONNECTED ? NotificationType.info : NotificationType.danger);
+                .setNotificationType(serverConnectionStatus == ServerConnectionStatus.CONNECTED ? NotificationType.info : NotificationType.danger));
     }
 }

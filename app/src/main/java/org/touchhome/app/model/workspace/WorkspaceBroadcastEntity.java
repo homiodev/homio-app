@@ -10,13 +10,13 @@ import java.util.Set;
 @Getter
 @Entity
 @NamedQueries({
-        @NamedQuery(name = "WorkspaceBroadcastEntity.fetchValues", query = "SELECT e.creationTime FROM WorkspaceBroadcastValueEntity e WHERE e.workspaceBroadcastEntity = :source AND e.creationTime >= :from AND e.creationTime <= :to ORDER BY e.creationTime"),
-        @NamedQuery(name = "WorkspaceBroadcastEntity.fetchCount", query = "SELECT COUNT(e) FROM WorkspaceBroadcastValueEntity e WHERE e.workspaceBroadcastEntity = :source AND e.creationTime >= :from AND e.creationTime <= :to")
+        @NamedQuery(name = "WorkspaceBroadcastEntity.fetchValues", query = "SELECT e.creationTime FROM WorkspaceBroadcastValueCrudEntity e WHERE e.workspaceBroadcastEntity = :source AND e.creationTime >= :from AND e.creationTime <= :to ORDER BY e.creationTime"),
+        @NamedQuery(name = "WorkspaceBroadcastEntity.fetchCount", query = "SELECT COUNT(e) FROM WorkspaceBroadcastValueCrudEntity e WHERE e.workspaceBroadcastEntity = :source AND e.creationTime >= :from AND e.creationTime <= :to")
 })
 public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntity> {
     @Setter
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "workspaceBroadcastEntity", cascade = CascadeType.REMOVE)
-    private Set<WorkspaceBroadcastValueEntity> values;
+    private Set<WorkspaceBroadcastValueCrudEntity> values;
 
     @Override
     public String getTitle() {

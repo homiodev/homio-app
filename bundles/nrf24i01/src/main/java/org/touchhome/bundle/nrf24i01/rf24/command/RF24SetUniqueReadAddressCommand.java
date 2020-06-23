@@ -1,6 +1,5 @@
 package org.touchhome.bundle.nrf24i01.rf24.command;
 
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;

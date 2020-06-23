@@ -32,6 +32,14 @@ public class NotificationEntityJSON {
         this.entityID = entityID;
     }
 
+    public static NotificationEntityJSON danger(String entityID) {
+        return new NotificationEntityJSON(entityID).setNotificationType(NotificationType.danger);
+    }
+
+    public static NotificationEntityJSON info(String entityID) {
+        return new NotificationEntityJSON(entityID).setNotificationType(NotificationType.info);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

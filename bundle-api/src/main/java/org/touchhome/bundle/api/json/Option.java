@@ -11,10 +11,7 @@ import org.apache.commons.lang.StringUtils;
 import org.touchhome.bundle.api.model.BaseEntity;
 
 import javax.validation.constraints.NotNull;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -75,6 +72,14 @@ public class Option implements Comparable<Option> {
 
     public static <T extends BaseEntity> List<Option> list(List<T> list) {
         return list.stream().map(e -> Option.of(e.getEntityID(), StringUtils.defaultIfEmpty(e.getName(), e.getTitle()))).collect(Collectors.toList());
+    }
+
+    public static List<Option> simpleNamelist(Collection list) {
+        List<Option> options = new ArrayList<>();
+        for (Object o : list) {
+            options.add(Option.key(o.getClass().getSimpleName()));
+        }
+        return options;
     }
 
     @Override

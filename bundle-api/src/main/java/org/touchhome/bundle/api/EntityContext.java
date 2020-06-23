@@ -4,7 +4,8 @@ import io.swagger.annotations.ApiParam;
 import org.apache.commons.lang3.SystemUtils;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.PureEntity;
+import org.touchhome.bundle.api.model.HasIdIdentifier;
+import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.PublicJsMethod;
 import org.touchhome.bundle.api.util.NotificationType;
@@ -19,7 +20,7 @@ import java.util.function.Consumer;
 
 public interface EntityContext {
 
-    static boolean isTestEnvironment() {
+    static boolean isDevEnvironment() {
         return "true".equals(System.getProperty("development"));
     }
 
@@ -28,11 +29,11 @@ public interface EntityContext {
     }
 
     static boolean isLinuxEnvironment() {
-        return SystemUtils.IS_OS_LINUX && !isDockerEnvironment() && !isTestEnvironment();
+        return SystemUtils.IS_OS_LINUX && !isDockerEnvironment() && !isDevEnvironment();
     }
 
     static boolean isLinuxOrDockerEnvironment() {
-        return SystemUtils.IS_OS_LINUX && !isTestEnvironment();
+        return SystemUtils.IS_OS_LINUX && !isDevEnvironment();
     }
 
     @PublicJsMethod
@@ -116,13 +117,13 @@ public interface EntityContext {
     <T extends BaseEntity> T getEntity(T entity);
 
     @PublicJsMethod
-    <T extends PureEntity> void saveDelayed(T entity);
+    <T extends HasIdIdentifier> void saveDelayed(T entity);
 
     @PublicJsMethod
     <T extends BaseEntity> void saveDelayed(T entity);
 
     @PublicJsMethod
-    <T extends PureEntity> void save(T entity);
+    <T extends HasIdIdentifier> void save(T entity);
 
     @PublicJsMethod
     <T extends BaseEntity> T save(T entity);
@@ -177,7 +178,11 @@ public interface EntityContext {
 
     <T> T getBean(String beanName, Class<T> clazz);
 
+    <T> T getBean(Class<T> clazz);
+
     <T> Collection<T> getBeansOfType(Class<T> clazz);
+
+    UserEntity getUser();
 
     enum DeviceFeature {
         Bluetooth, HotSpot, GPIO, NRF21I01, SSH

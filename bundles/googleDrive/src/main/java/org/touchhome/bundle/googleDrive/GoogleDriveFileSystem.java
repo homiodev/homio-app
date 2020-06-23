@@ -20,7 +20,6 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
-import org.touchhome.bundle.api.repository.impl.UserRepository;
 
 import javax.management.ObjectName;
 import javax.management.Query;

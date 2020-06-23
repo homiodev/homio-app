@@ -38,7 +38,7 @@ public final class HardwareUtils {
         hardwareChecked = true;
         checkDatabaseInstalled(beanFactory);
         checkInternetConnection(beanFactory);
-        if (!EntityContext.isTestEnvironment()) {
+        if (!EntityContext.isDevEnvironment()) {
             copyResources();
             if (EntityContext.isLinuxEnvironment()) {
                 checkWiringPi(beanFactory);

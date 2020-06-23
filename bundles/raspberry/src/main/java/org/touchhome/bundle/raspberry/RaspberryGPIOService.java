@@ -35,15 +35,12 @@ import java.util.stream.Collectors;
 public class RaspberryGPIOService {
     private final EntityContext entityContext;
     private final WirelessManager wirelessManager;
-
-    private GpioController gpio;
-    private Boolean available;
     private final Map<String, DefaultKeyValue<Long, Float>> ds18B20Values = new HashMap<>();
-
     @Getter
     private final Map<RaspberryGpioPin, List<PinListener>> digitalListeners = new ConcurrentHashMap<>();
     private final Map<RaspberryGpioPin, UpdatableValue<Boolean>> inputGpioValues = new ConcurrentHashMap<>();
-
+    private GpioController gpio;
+    private Boolean available;
     @Value("${w1BaseDir:/sys/devices/w1_bus_master1}")
     private Path w1BaseDir;
 
@@ -57,12 +54,7 @@ public class RaspberryGPIOService {
             RaspberryGpioPin.occupyPins("1-Wire", RaspberryGpioPin.PIN7);
             for (RaspberryGpioPin pin : RaspberryGpioPin.values(PinMode.DIGITAL_INPUT, PinPullResistance.PULL_DOWN)) {
                 if (pin.getOccupied() == null) {
-                    GpioPinDigital gpioPinDigital = getDigitalInput(pin, PinPullResistance.PULL_DOWN);
-                    if (gpioPinDigital.isHigh()) {
-                        gpioPinDigital.setMode(PinMode.DIGITAL_OUTPUT);
-                        ((GpioPinDigitalOutput) gpioPinDigital).setState(PinState.LOW);
-                        gpioPinDigital.setMode(PinMode.DIGITAL_INPUT);
-                    }
+                    GpioPinDigital gpioPinDigital = getDigitalInput(pin, null);
                     gpioPinDigital.setShutdownOptions(true, PinState.LOW, PinPullResistance.OFF);
                     inputGpioValues.put(pin, UpdatableValue.wrap(gpioPinDigital.isHigh(), pin.name()));
                     gpioPinDigital.addListener((GpioPinListenerDigital) event -> digitalListeners.get(pin).forEach(t -> t.consumer.accept(event)));
@@ -86,7 +78,7 @@ public class RaspberryGPIOService {
 
     public boolean isGPIOAvailable() {
         if (available == null) {
-            if (EntityContext.isTestEnvironment()) {
+            if (EntityContext.isDevEnvironment()) {
                 available = false;
             } else {
                 try {
@@ -208,7 +200,7 @@ public class RaspberryGPIOService {
         getDigitalInput(pin, pullResistance);
     }
 
-    public void setGpioPinMode(RaspberryGpioPin pin, PinMode pinMode, PinPullResistance pinPullResistance) {
+    private void setGpioPinMode(RaspberryGpioPin pin, PinMode pinMode, PinPullResistance pinPullResistance) {
         if (available) {
             GpioPin input = getDigitalInput(pin, pinPullResistance);
             if (input.getMode() != pinMode) {
@@ -280,7 +272,7 @@ public class RaspberryGPIOService {
     }
 
     private List<String> getRawDataAsLines(String sensorID) {
-        if (EntityContext.isTestEnvironment()) {
+        if (EntityContext.isDevEnvironment()) {
             Random r = new Random(System.currentTimeMillis());
             return Arrays.asList("", "sd sd sd sd ff zz cc vv aa t=" + (10000 + r.nextInt(40000)));
         }
@@ -296,7 +288,7 @@ public class RaspberryGPIOService {
 
     @SneakyThrows
     public List<String> getDS18B20() {
-        if (EntityContext.isTestEnvironment()) {
+        if (EntityContext.isDevEnvironment()) {
             return Collections.singletonList("28-test000011");
         }
         return Files.readAllLines(w1BaseDir.resolve("w1_master_slaves")).stream()

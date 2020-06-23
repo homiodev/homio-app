@@ -2,7 +2,6 @@ package org.touchhome.bundle.nrf24i01.rf24.backgroundService;
 
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.thread.BackgroundProcessService;
-import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.nrf24i01.rf24.NRF24I01Bundle;
 import org.touchhome.bundle.nrf24i01.rf24.command.RF24CommandPlugin;
 import org.touchhome.bundle.nrf24i01.rf24.communication.RF24Message;
@@ -25,12 +24,12 @@ public class NRF24I01DevicesListener extends BackgroundProcessService<Void> {
     private final NRF24I01Bundle rf24Service;
     private final Map<Byte, RF24CommandPlugin> rf24CommandPlugins;
 
-    public NRF24I01DevicesListener() {
-        super(NRF24I01DevicesListener.class.getSimpleName());
-        rf24Service = ApplicationContextHolder.getBean(NRF24I01Bundle.class);
-        rf24CommandPlugins = ApplicationContextHolder.getBean("rf24CommandPlugins", Map.class);
+    public NRF24I01DevicesListener(EntityContext entityContext) {
+        super(NRF24I01DevicesListener.class.getSimpleName(), entityContext);
+        rf24Service = entityContext.getBean(NRF24I01Bundle.class);
+        rf24CommandPlugins = entityContext.getBean("rf24CommandPlugins", Map.class);
 
-        if (EntityContext.isTestEnvironment()) {
+        if (EntityContext.isDevEnvironment()) {
             Timer timer = new Timer();
 
             timer.schedule(new TimerTask() {
@@ -118,7 +117,7 @@ public class NRF24I01DevicesListener extends BackgroundProcessService<Void> {
 
     @Override
     public boolean canWork() {
-        return rf24Service.isNrf24L01Works() || EntityContext.isTestEnvironment();
+        return rf24Service.isNrf24L01Works() || EntityContext.isDevEnvironment();
     }
 
     @Override

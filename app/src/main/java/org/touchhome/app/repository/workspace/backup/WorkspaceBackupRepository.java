@@ -45,7 +45,7 @@ public class WorkspaceBackupRepository extends AbstractRepository<WorkspaceBacku
     @Override
     public Date getMinDate(BaseEntity source) {
         return null;
-        //em.createNamedQuery("WorkspaceBackupValueEntity.fetchMinDate", Date.class)
+        //em.createNamedQuery("WorkspaceBackupValueCrudEntity.fetchMinDate", Date.class)
         //       .setParameter("source", source).getSingleResult();
     }
 }
