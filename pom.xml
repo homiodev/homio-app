@@ -5,7 +5,7 @@
     <url>https://touchhome.org</url>
 
     <packaging>pom</packaging>
-    <version>0.1.7</version>
+    <version>0.1.8-SNAPSHOT</version>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -23,7 +23,7 @@
         <connection>scm:git:git://github.com/github.com/touchhome/touchhome-core.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/touchhome/touchhome-core.git</developerConnection>
         <url>https://github.com/touchhome/touchhome-core</url>
-        <tag>0.1.7</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
