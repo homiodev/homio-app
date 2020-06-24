@@ -38,7 +38,7 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.distinctByKey;
 @RequiredArgsConstructor
 public class BluetoothService implements BundleContext {
 
-    public static final int MIN_WRITE_TIMEOUT = 60000;
+    public static final int MIN_WRITE_TIMEOUT = 5000;
     private static final String PREFIX = "13333333-3333-3333-3333-3333333330";
     private static final String SERVICE_UUID = PREFIX + "00";
     private static final String CPU_LOAD_UUID = PREFIX + "01";
