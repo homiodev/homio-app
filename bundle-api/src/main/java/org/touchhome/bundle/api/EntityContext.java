@@ -1,7 +1,7 @@
 package org.touchhome.bundle.api;
 
-import io.swagger.annotations.ApiParam;
 import org.apache.commons.lang3.SystemUtils;
+import org.touchhome.bundle.api.hquery.api.HQueryParam;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.HasIdIdentifier;
@@ -47,7 +47,7 @@ public interface EntityContext {
     }
 
     @PublicJsMethod
-    void showAlwaysOnViewNotification(NotificationEntityJSON notificationEntityJSON, @ApiParam("color (in secs.)") int duration, @ApiParam("color") String color);
+    void showAlwaysOnViewNotification(NotificationEntityJSON notificationEntityJSON, @HQueryParam("color (in secs.)") int duration, @HQueryParam("color") String color);
 
     @PublicJsMethod
     void hideAlwaysOnViewNotification(NotificationEntityJSON notificationEntityJSON);

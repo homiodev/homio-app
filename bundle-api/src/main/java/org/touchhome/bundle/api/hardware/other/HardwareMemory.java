@@ -1,7 +1,7 @@
 package org.touchhome.bundle.api.hardware.other;
 
 import lombok.ToString;
-import org.touchhome.bundle.api.hardware.api.SplitParse;
+import org.touchhome.bundle.api.hquery.api.SplitParse;
 
 @ToString
 @SplitParse("\\s+")

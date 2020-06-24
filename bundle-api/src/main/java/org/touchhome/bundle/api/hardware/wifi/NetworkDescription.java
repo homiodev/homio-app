@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.hardware.api.ListParse;
+import org.touchhome.bundle.api.hquery.api.ListParse;
 
 @Getter
 @Setter

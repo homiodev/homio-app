@@ -13,18 +13,15 @@ import org.dbus.InterfacesRomovedSignal.InterfacesRemoved;
 import org.freedesktop.dbus.Variant;
 import org.springframework.stereotype.Controller;
 import org.touchhome.bundle.api.BundleContext;
-import org.touchhome.bundle.api.function.CheckedRunnable;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.function.CheckedRunnable;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.Network;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.cloud.netty.impl.ServerConnectionStatus;
-import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
-import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
-import org.touchhome.bundle.cloud.setting.CloudServerRestartSetting;
-import org.touchhome.bundle.cloud.setting.CloudServerUrlSetting;
+import org.touchhome.bundle.cloud.netty.setting.CloudServerRestartSetting;
+import org.touchhome.bundle.cloud.setting.CloudProviderSetting;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -73,7 +70,7 @@ public class BluetoothService implements BundleContext {
         map.put(MEMORY_UUID, readSafeValueStr(linuxHardwareRepository::getMemory));
         map.put(SD_MEMORY_UUID, readSafeValueStr(() -> linuxHardwareRepository.getSDCardMemory().toFineString()));
         map.put(UPTIME_UUID, readSafeValueStr(linuxHardwareRepository::getUptime));
-        map.put(IP_ADDRESS_UUID, readSafeValueStr(linuxHardwareRepository::getIpAddress));
+        map.put(IP_ADDRESS_UUID, readSafeValueStrIT(linuxHardwareRepository::getIpAddress));
         map.put(WRITE_BAN_UUID, gatherWriteBan());
         map.put(DEVICE_MODEL_UUID, readSafeValueStr(linuxHardwareRepository::getDeviceModel));
         map.put(SERVER_CONNECTED_UUID, readSafeValueStrIT(this::readServerConnected));
@@ -255,9 +252,7 @@ public class BluetoothService implements BundleContext {
     }
 
     private String readServerConnected() {
-        String error = entityContext.getSettingValue(CloudServerConnectionMessageSetting.class);
-        ServerConnectionStatus status = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
-        return status.name() + "%&%" + error + "%&%" + entityContext.getSettingValue(CloudServerUrlSetting.class);
+        return entityContext.getSettingValue(CloudProviderSetting.class).getStatus();
     }
 
     @SneakyThrows

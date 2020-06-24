@@ -5,12 +5,13 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.touchhome.bundle.api.util.NotificationType;
 
+import javax.validation.constraints.NotNull;
 import java.util.Date;
 import java.util.Objects;
 
 @Getter
 @Accessors(chain = true)
-public class NotificationEntityJSON {
+public class NotificationEntityJSON implements Comparable<NotificationEntityJSON> {
 
     private final String entityID;
 
@@ -37,7 +38,7 @@ public class NotificationEntityJSON {
     }
 
     public static NotificationEntityJSON warn(String entityID) {
-        return new NotificationEntityJSON(entityID).setNotificationType(NotificationType.warn);
+        return new NotificationEntityJSON(entityID).setNotificationType(NotificationType.warning);
     }
 
     public static NotificationEntityJSON info(String entityID) {
@@ -59,5 +60,11 @@ public class NotificationEntityJSON {
     @Override
     public int hashCode() {
         return Objects.hash(entityID);
+    }
+
+    @Override
+    public int compareTo(@NotNull NotificationEntityJSON other) {
+        int i = this.notificationType.name().compareTo(other.notificationType.name());
+        return i == 0 ? this.name.compareTo(other.name) : i;
     }
 }

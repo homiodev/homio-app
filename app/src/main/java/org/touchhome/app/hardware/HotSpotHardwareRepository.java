@@ -1,8 +1,8 @@
 package org.touchhome.app.hardware;
 
-import io.swagger.annotations.ApiParam;
-import org.touchhome.bundle.api.hardware.api.HardwareQuery;
-import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
+import org.touchhome.bundle.api.hquery.api.HQueryParam;
+import org.touchhome.bundle.api.hquery.api.HardwareQuery;
+import org.touchhome.bundle.api.hquery.api.HardwareRepositoryAnnotation;
 
 @HardwareRepositoryAnnotation
 public interface HotSpotHardwareRepository {
@@ -15,7 +15,7 @@ public interface HotSpotHardwareRepository {
             "cp -n :sysDir/autohotspot /usr/bin/autohotspot")
     @HardwareQuery(echo = "Enable AutoHotSpot Service", value = "systemctl enable autohotspot.service", printOutput = true, ignoreOnError = true)
     @HardwareQuery(echo = "Set AutoHotSpot executable", value = "chmod +x /usr/bin/autohotspot", printOutput = true, ignoreOnError = true)
-    void installAutoHotSpot(@ApiParam("sysDir") String sysDir);
+    void installAutoHotSpot(@HQueryParam("sysDir") String sysDir);
 
     @HardwareQuery("test -f /usr/bin/autohotspot")
     boolean isAutoHotSpotServiceExists();

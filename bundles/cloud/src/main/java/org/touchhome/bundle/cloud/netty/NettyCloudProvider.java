@@ -8,9 +8,9 @@ import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.cloud.CloudProvider;
 import org.touchhome.bundle.cloud.netty.impl.ServerConnectionStatus;
-import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
-import org.touchhome.bundle.cloud.setting.CloudServerConnectionStatusSetting;
-import org.touchhome.bundle.cloud.setting.CloudServerUrlSetting;
+import org.touchhome.bundle.cloud.netty.setting.CloudServerConnectionMessageSetting;
+import org.touchhome.bundle.cloud.netty.setting.CloudServerConnectionStatusSetting;
+import org.touchhome.bundle.cloud.netty.setting.CloudServerUrlSetting;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -25,7 +25,7 @@ public class NettyCloudProvider implements CloudProvider {
     public String getStatus() {
         String error = entityContext.getSettingValue(CloudServerConnectionMessageSetting.class);
         ServerConnectionStatus status = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
-        return status.name() + ". Errors: " + error + ". Url: " + entityContext.getSettingValue(CloudServerUrlSetting.class);
+        return (status == null ? "Unknown" : status.name()) + ". Errors: " + error + ". Url: " + entityContext.getSettingValue(CloudServerUrlSetting.class);
     }
 
     @Override
@@ -39,7 +39,7 @@ public class NettyCloudProvider implements CloudProvider {
         notifications.add(new NotificationEntityJSON("cloud-status")
                 .setName("Cloud status")
                 .setDescription(entityContext.getSettingValue(CloudServerConnectionMessageSetting.class))
-                .setNotificationType(serverConnectionStatus == ServerConnectionStatus.CONNECTED ? NotificationType.info : NotificationType.warn));
+                .setNotificationType(serverConnectionStatus == ServerConnectionStatus.CONNECTED ? NotificationType.info : NotificationType.warning));
 
         return notifications;
     }

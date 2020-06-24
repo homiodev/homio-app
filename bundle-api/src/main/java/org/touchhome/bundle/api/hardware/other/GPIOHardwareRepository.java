@@ -1,8 +1,8 @@
 package org.touchhome.bundle.api.hardware.other;
 
-import io.swagger.annotations.ApiParam;
-import org.touchhome.bundle.api.hardware.api.HardwareQuery;
-import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
+import org.touchhome.bundle.api.hquery.api.HQueryParam;
+import org.touchhome.bundle.api.hquery.api.HardwareQuery;
+import org.touchhome.bundle.api.hquery.api.HardwareRepositoryAnnotation;
 
 @HardwareRepositoryAnnotation
 public interface GPIOHardwareRepository {
@@ -17,5 +17,5 @@ public interface GPIOHardwareRepository {
     @HardwareQuery("unzip buildWiringPi/WiringPi-master.zip -d buildWiringPi/")
     @HardwareQuery(value = "./build", dir = ":tomcatDir/buildWiringPi/WiringPi-master")
     @HardwareQuery("rm -rf buildWiringPi")
-    void installWiringPiManually(@ApiParam("sysDir") String sysDir, @ApiParam("tomcatDir") String tomcatDir);
+    void installWiringPiManually(@HQueryParam("sysDir") String sysDir, @HQueryParam("tomcatDir") String tomcatDir);
 }

@@ -5,7 +5,9 @@ import org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConf
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.touchhome.app.config.TouchHomeConfig;
+import org.touchhome.bundle.api.hquery.EnableHQuery;
 
+@EnableHQuery(scanBaseClassesPackage = "org.touchhome")
 @SpringBootApplication(exclude = {ErrorMvcAutoConfiguration.class})
 public class TouchHomeApplication implements WebMvcConfigurer {
 

@@ -1,21 +1,21 @@
-package org.touchhome.bundle.cloud.setting;
+package org.touchhome.bundle.cloud.netty.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
 
-public class CloudServerPortSetting implements BundleSettingPlugin<Integer> {
+public class CloudServerUrlSetting implements BundleSettingPlugin<String> {
 
     @Override
     public SettingType getSettingType() {
-        return SettingType.Integer;
+        return SettingType.Text;
     }
 
     @Override
     public String getDefaultValue() {
-        return "8888";
+        return "https://touchhome.org";
     }
 
     @Override
     public int order() {
-        return 45;
+        return 40;
     }
 }

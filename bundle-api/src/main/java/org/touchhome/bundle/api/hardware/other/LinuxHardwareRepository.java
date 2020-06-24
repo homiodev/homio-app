@@ -1,11 +1,11 @@
 package org.touchhome.bundle.api.hardware.other;
 
-import io.swagger.annotations.ApiParam;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.SystemUtils;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.hardware.api.HardwareQuery;
-import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
+import org.touchhome.bundle.api.hquery.api.HQueryParam;
+import org.touchhome.bundle.api.hquery.api.HardwareQuery;
+import org.touchhome.bundle.api.hquery.api.HardwareRepositoryAnnotation;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -34,7 +34,7 @@ public interface LinuxHardwareRepository {
     String getWifiName();
 
     @HardwareQuery("systemctl is-active :serviceName")
-    int getServiceStatus(@ApiParam("serviceName") String serviceName);
+    int getServiceStatus(@HQueryParam("serviceName") String serviceName);
 
     @HardwareQuery(echo = "Reboot device", value = "reboot")
     void reboot();
@@ -48,6 +48,9 @@ public interface LinuxHardwareRepository {
 
     @SneakyThrows
     default String getIpAddress() {
+        if (EntityContext.isDevEnvironment()) {
+            return "127.0.0.1";
+        }
         Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
         StringBuilder address = new StringBuilder();
         for (NetworkInterface networkInterface : Collections.list(nets)) {

@@ -5,6 +5,7 @@ import lombok.Setter;
 import org.apache.commons.lang3.ClassUtils;
 import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
 import org.touchhome.app.thread.js.impl.ScriptJSBackgroundProcess;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
@@ -70,9 +71,9 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
         return backgroundProcessClass.substring(backgroundProcessClass.lastIndexOf(".") + 1) + getEntityID();
     }
 
-    public AbstractJSBackgroundProcessService createBackgroundProcessService() throws Exception {
+    public AbstractJSBackgroundProcessService createBackgroundProcessService(EntityContext entityContext) throws Exception {
         Class<? extends AbstractJSBackgroundProcessService> aClass = (Class<? extends AbstractJSBackgroundProcessService>) ClassUtils.getClass(backgroundProcessClass);
-        return aClass.getConstructor(getClass()).newInstance(this);
+        return aClass.getConstructor(getClass(), EntityContext.class).newInstance(this, entityContext);
     }
 
     public Set<String> getFunctionsWithPrefix(String prefix) {

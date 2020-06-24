@@ -3,7 +3,7 @@ package org.touchhome.bundle.api.hardware.other;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.commons.lang.StringUtils;
-import org.touchhome.bundle.api.hardware.api.ListParse;
+import org.touchhome.bundle.api.hquery.api.ListParse;
 
 @Getter
 @ToString

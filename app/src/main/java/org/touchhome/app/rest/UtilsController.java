@@ -347,7 +347,7 @@ public class UtilsController {
 
     @PostMapping("app/update")
     public void updateApp() {
-        startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath().toAbsolutePath().toString());
+        startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath());
     }
 
     @GetMapping("i18n/{lang}.json")

@@ -54,7 +54,7 @@ public class ScriptManager {
     public void postConstruct() {
         for (ScriptEntity scriptEntity : entityContext.findAll(ScriptEntity.class)) {
             try {
-                backgroundProcessManager.fireIfNeedRestart(scriptEntity.createBackgroundProcessService());
+                backgroundProcessManager.fireIfNeedRestart(scriptEntity.createBackgroundProcessService(entityContext));
             } catch (Exception ex) {
                 scriptEntity.setScriptStatus(BackgroundProcessStatus.FAILED);
                 scriptEntity.setError(TouchHomeUtils.getErrorMessage(ex));
@@ -124,7 +124,7 @@ public class ScriptManager {
      * @param forceBackground - if force - execute javascript in background without check if process has period or not
      */
     public Object startThread(ScriptEntity scriptEntity, String json, boolean allowRepeat, PrintStream logPrintStream, boolean forceBackground) throws Exception {
-        AbstractJSBackgroundProcessService abstractJSBackgroundProcessService = scriptEntity.createBackgroundProcessService();
+        AbstractJSBackgroundProcessService abstractJSBackgroundProcessService = scriptEntity.createBackgroundProcessService(entityContext);
         abstractJSBackgroundProcessService.setPrintStream(logPrintStream);
         long period = abstractJSBackgroundProcessService.getPeriod();
 

@@ -9,10 +9,12 @@ import org.touchhome.app.manager.BackgroundProcessManager;
 import org.touchhome.app.model.entity.HasBackgroundProcesses;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
+import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.api.util.ClassFinder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -98,7 +100,7 @@ public class EntityManager {
         try {
             AbstractJSBackgroundProcessService service = null;
             try {
-                service = scriptEntity.createBackgroundProcessService();
+                service = scriptEntity.createBackgroundProcessService(ApplicationContextHolder.getBean(EntityContext.class));
             } catch (Exception ex) { // when we delete item we may got this exception
                 log.error(ex.getMessage());
             }

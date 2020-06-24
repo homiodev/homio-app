@@ -7,7 +7,6 @@ import org.touchhome.bundle.zigbee.ZigBeeCoordinatorHandler;
 import org.touchhome.bundle.zigbee.handler.CC2531Handler;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ZigbeeCoordinatorHandlerSetting implements BundleSettingPlugin<ZigBeeCoordinatorHandler> {
 

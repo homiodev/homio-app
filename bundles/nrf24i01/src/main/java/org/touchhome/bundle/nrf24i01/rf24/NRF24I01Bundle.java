@@ -277,7 +277,7 @@ public class NRF24I01Bundle implements BundleContext {
         return Collections.singleton(new NotificationEntityJSON("nrf24i01-status")
                 .setName("NRF24I01 status")
                 .setDescription(entityContext.getSettingValue(Nrf24i01StatusMessageSetting.class))
-                .setNotificationType(deviceStatus == DeviceStatus.ONLINE ? NotificationType.info : NotificationType.warn));
+                .setNotificationType(deviceStatus == DeviceStatus.ONLINE ? NotificationType.info : NotificationType.warning));
     }
 }
 

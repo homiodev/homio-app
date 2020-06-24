@@ -1,6 +1,5 @@
-package org.touchhome.app.utils;
+package org.touchhome.bundle.api.hquery;
 
-import io.swagger.annotations.ApiParam;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -8,16 +7,17 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.env.Environment;
+import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.stereotype.Component;
 import org.thavam.util.concurrent.blockingMap.BlockingHashMap;
 import org.thavam.util.concurrent.blockingMap.BlockingMap;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.hardware.api.*;
-import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
-import org.touchhome.bundle.api.util.ClassFinder;
+import org.touchhome.bundle.api.hquery.api.*;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -38,18 +38,15 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Log4j2
-@Component
 public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostProcessor {
 
     private static final Pattern PATTERN = Pattern.compile("\\$\\{.*?}");
     private static final int VALUE_PREFIX_LENGTH = "${".length();
     private static final int VALUE_SUFFIX_LENGTH = "}".length();
-
     private static final BlockingQueue<PrintContext> printLogsJobs = new LinkedBlockingQueue<>(10);
     private static final BlockingMap<Process, List<String>> inputResponse = new BlockingHashMap<>();
     private static final Constructor<MethodHandles.Lookup> lookupConstructor;
     private static final Map<String, ProcessCache> cache = new HashMap<>();
-
     private static Thread logThread = new Thread(() -> {
         while (!Thread.currentThread().isInterrupted()) {
             try {
@@ -84,13 +81,18 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         logThread.start();
     }
 
-    private String pm;
+    private final String basePackages;
+    private String pm = "apt";
+
+    HardwareRepositoryFactoryPostProcessor(String basePackages) {
+        this.basePackages = basePackages;
+    }
 
     @Override
     @SneakyThrows
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         Environment env = beanFactory.getBean(Environment.class);
-        List<Class<?>> classes = ClassFinder.getClassesWithAnnotation(HardwareRepositoryAnnotation.class, true);
+        List<Class<?>> classes = getClassesWithAnnotation();
         for (Class<?> aClass : classes) {
             beanFactory.registerSingleton(aClass.getSimpleName(), Proxy.newProxyInstance(this.getClass().getClassLoader(), new Class[]{aClass}, (proxy, method, args) -> {
                 List<Object> results = null;
@@ -122,13 +124,6 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 throw new RuntimeException("Unable to execute hardware method without implementation");
             }));
         }
-
-        if (EntityContext.isLinuxOrDockerEnvironment()) {
-            LinuxHardwareRepository repository = beanFactory.getBean(LinuxHardwareRepository.class);
-            this.pm = repository.getOs().getPackageManager();
-        }
-
-        HardwareUtils.prepareHardware(beanFactory);
     }
 
     private String replaceStringWithArgs(String str, Object[] args, Method method) {
@@ -138,7 +133,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 String regexp = null;
                 Object arg = args[i];
                 if (apiParams.length > i) {
-                    regexp = ((ApiParam) apiParams[i][0]).value();
+                    regexp = ((HQueryParam) apiParams[i][0]).value();
                 }
 
                 str = str.replaceAll(regexp == null ? ":([^\\s]+)" : ":" + regexp, String.valueOf(arg));
@@ -163,14 +158,14 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
             processCache = cache.get(command);
         } else {
             processCache = new ProcessCache();
-            if (StringUtils.isNotEmpty(hardwareQuery.echo())) {
+            if (!StringUtils.isEmpty(hardwareQuery.echo())) {
                 log.info("Execute: <{}>. Command: <{}>", hardwareQuery.echo(), command);
             } else {
                 log.info("Execute command: <{}>", command);
             }
             Process process;
             try {
-                if (StringUtils.isNotEmpty(hardwareQuery.dir())) {
+                if (!StringUtils.isEmpty(hardwareQuery.dir())) {
                     File dir = new File(replaceStringWithArgs(hardwareQuery.dir(), args, method));
                     process = Runtime.getRuntime().exec(cmdParts, null, dir);
                 } else if (cmdParts.length == 1) {
@@ -414,6 +409,26 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     private String[] getSpringValuesPattern(String value) {
         String valuePattern = value.substring(VALUE_PREFIX_LENGTH, value.length() - VALUE_SUFFIX_LENGTH);
         return valuePattern.contains(":") ? valuePattern.split(":") : new String[]{valuePattern, ""};
+    }
+
+    private <T> List<Class<? extends T>> getClassesWithAnnotation() {
+        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false) {
+            @Override
+            protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
+                return true;
+            }
+        };
+
+        scanner.addIncludeFilter(new AnnotationTypeFilter(HardwareRepositoryAnnotation.class));
+        List<Class<? extends T>> foundClasses = new ArrayList<>();
+        for (BeanDefinition bd : scanner.findCandidateComponents(basePackages)) {
+            try {
+                foundClasses.add((Class<? extends T>) Class.forName(bd.getBeanClassName()));
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return foundClasses;
     }
 
     private static class ProcessCache {

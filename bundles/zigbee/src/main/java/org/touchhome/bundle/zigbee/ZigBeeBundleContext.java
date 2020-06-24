@@ -81,6 +81,6 @@ public class ZigBeeBundleContext implements BundleContext {
         return Collections.singleton(new NotificationEntityJSON("zigbee-status")
                 .setName("Zigbee status: " + deviceStatus)
                 .setDescription(entityContext.getSettingValue(ZigbeeStatusMessageSetting.class))
-                .setNotificationType(deviceStatus == DeviceStatus.ONLINE ? NotificationType.info : NotificationType.warn));
+                .setNotificationType(deviceStatus == DeviceStatus.ONLINE ? NotificationType.info : NotificationType.warning));
     }
 }

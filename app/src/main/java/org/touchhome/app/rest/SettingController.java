@@ -6,9 +6,7 @@ import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
 import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.Collections;
 import java.util.List;

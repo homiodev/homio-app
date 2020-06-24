@@ -1,12 +1,8 @@
 package org.touchhome.bundle.api.hardware.wifi;
 
-import io.swagger.annotations.ApiParam;
 import lombok.SneakyThrows;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.hardware.api.ErrorsHandler;
-import org.touchhome.bundle.api.hardware.api.HardwareQuery;
-import org.touchhome.bundle.api.hardware.api.HardwareRepositoryAnnotation;
-import org.touchhome.bundle.api.hardware.api.ListParse;
+import org.touchhome.bundle.api.hquery.api.*;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.net.URL;
@@ -29,11 +25,11 @@ public interface WirelessHardwareRepository {
                     @ErrorsHandler.ErrorHandler(onError = "Allocation failed", throwError = "Too many networks for iwlist to handle")
             })
     @ListParse(delimiter = ".*Cell \\d\\d.*", clazz = Network.class)
-    List<Network> scan(@ApiParam("iface") String iface);
+    List<Network> scan(@HQueryParam("iface") String iface);
 
     @HardwareQuery("iwconfig :iface")
     @ErrorsHandler(onRetCodeError = "Error getting wireless devices information", errorHandlers = {})
-    NetworkStat stat(@ApiParam("iface") String iface);
+    NetworkStat stat(@HQueryParam("iface") String iface);
 
     @HardwareQuery("ifconfig wlan0 down")
     @ErrorsHandler(onRetCodeError = "There was an unknown error disabling the interface", notRecognizeError = "There was an error disabling the interface", errorHandlers = {})
@@ -62,7 +58,7 @@ public interface WirelessHardwareRepository {
     void connect_open(String essid);
 
     @HardwareQuery(value = "ifconfig :iface", ignoreOnError = true)
-    NetworkDescription getNetworkDescription(@ApiParam("iface") String iface);
+    NetworkDescription getNetworkDescription(@HQueryParam("iface") String iface);
 
     @HardwareQuery("grep -r 'psk=' /etc/wpa_supplicant/wpa_supplicant.conf | cut -d = -f 2 | cut -d \\\" -f 2")
     String getWifiPassword();
@@ -80,7 +76,7 @@ public interface WirelessHardwareRepository {
     String getActiveNetworkInterface();
 
     @HardwareQuery(echo = "Set wifi power save off", value = "iw :iface set power_save off")
-    void setWifiPowerSaveOff(@ApiParam("iface") String iface);
+    void setWifiPowerSaveOff(@HQueryParam("iface") String iface);
 
     @HardwareQuery(echo = "Check ssh keys exists", value = "test -f ~/.ssh/id_rsa", cache = true)
     boolean isSshGenerated();

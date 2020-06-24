@@ -29,6 +29,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import static org.touchhome.bundle.api.util.NotificationType.warning;
+
 /**
  * The {@link ZigBeeCoordinatorHandler} is responsible for handling commands,
  * which are sent to one of the zigbeeRequireEndpoints.
@@ -667,6 +669,7 @@ public abstract class ZigBeeCoordinatorHandler
 
     public void scanStart(int duration) {
         if (!entityContext.getSettingValue(ZigbeeStatusSetting.class).equals(DeviceStatus.ONLINE)) {
+            entityContext.sendNotification("DEVICE.OFFLINE", "Unable to ", warning);
             log.debug("ZigBee coordinator is offline - aborted scan for");
         } else {
             networkManager.permitJoin(duration);

@@ -2,7 +2,7 @@ package org.touchhome.bundle.api.hardware.wifi;
 
 import lombok.Getter;
 import lombok.ToString;
-import org.touchhome.bundle.api.hardware.api.ListParse;
+import org.touchhome.bundle.api.hquery.api.ListParse;
 
 @Getter
 @ToString

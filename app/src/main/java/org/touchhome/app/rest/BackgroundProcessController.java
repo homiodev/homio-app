@@ -103,7 +103,7 @@ public class BackgroundProcessController {
 
     private void buildBackgroundProcessStatus(BaseEntity item, ScriptEntity scriptEntity, List<BackgroundProcessStatusJSON> backgroundProcessStatusJSONS) {
         try {
-            AbstractJSBackgroundProcessService abstractJSBackgroundProcessService = scriptEntity.createBackgroundProcessService();
+            AbstractJSBackgroundProcessService abstractJSBackgroundProcessService = scriptEntity.createBackgroundProcessService(entityContext);
 
             BackgroundProcessStatusJSON backgroundProcessStatusJSON = new BackgroundProcessStatusJSON();
             backgroundProcessStatusJSON.setEntityID(item.getEntityID());

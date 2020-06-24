@@ -83,9 +83,6 @@ import static org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity.DEFAULT
 @RequiredArgsConstructor
 public class InternalManager implements EntityContext {
 
-    private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchHome-core";
-
-    private final RestTemplate restTemplate = new RestTemplate();
     private static final Map<BundleSettingPlugin, String> settingTransientState = new HashMap<>();
     public static Map<String, BundleSettingPlugin> settingPluginsByPluginKey = new HashMap<>();
     static Map<String, AbstractRepository> repositories;
@@ -93,7 +90,8 @@ public class InternalManager implements EntityContext {
     private static EntityManager entityManager;
     private static Map<String, AbstractRepository> repositoriesByPrefix;
     private static Map<String, PureRepository> pureRepositories;
-
+    private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchHome-core";
+    private final RestTemplate restTemplate = new RestTemplate();
     private final Map<String, List<BiConsumer>> entityUpdateListeners = new HashMap<>();
     private final Map<Class<? extends BaseEntity>, List<BiConsumer>> entityClassUpdateListeners = new HashMap<>();
     private final Map<DeviceFeature, Boolean> deviceFeatures = Stream.of(DeviceFeature.values()).collect(Collectors.toMap(f -> f, f -> Boolean.TRUE));
@@ -119,7 +117,7 @@ public class InternalManager implements EntityContext {
         notifications.removeIf(entity -> entity instanceof AlwaysOnTopNotificationEntityJSONJSON
                 && time - entity.getCreationTime().getTime() > ((AlwaysOnTopNotificationEntityJSONJSON) entity).getDuration() * 1000);
 
-        Set<NotificationEntityJSON> set = new HashSet<>(notifications);
+        Set<NotificationEntityJSON> set = new TreeSet<>(notifications);
         for (BundleContext bundle : this.bundles) {
             Set<NotificationEntityJSON> notifications = bundle.getNotifications();
             if (notifications != null) {

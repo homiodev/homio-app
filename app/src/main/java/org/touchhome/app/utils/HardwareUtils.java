@@ -9,10 +9,10 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.core.env.Environment;
 import org.touchhome.app.hardware.HotSpotHardwareRepository;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.hardware.api.HardwareException;
 import org.touchhome.bundle.api.hardware.other.GPIOHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.PostgreSQLHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
+import org.touchhome.bundle.api.hquery.api.HardwareException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.sql.DataSource;

@@ -1,4 +1,4 @@
-package org.touchhome.bundle.cloud.setting;
+package org.touchhome.bundle.cloud.netty.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
 

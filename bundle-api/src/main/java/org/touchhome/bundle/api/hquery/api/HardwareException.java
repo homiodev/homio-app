@@ -1,4 +1,4 @@
-package org.touchhome.bundle.api.hardware.api;
+package org.touchhome.bundle.api.hquery.api;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
