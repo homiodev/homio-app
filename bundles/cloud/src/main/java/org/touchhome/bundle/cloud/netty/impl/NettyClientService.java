@@ -17,7 +17,6 @@ import org.touchhome.bundle.api.util.SslUtil;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.cloud.netty.setting.CloudServerConnectionMessageSetting;
 import org.touchhome.bundle.cloud.netty.setting.CloudServerConnectionStatusSetting;
-import org.touchhome.bundle.cloud.netty.setting.CloudServerPortSetting;
 import org.touchhome.bundle.cloud.netty.setting.CloudServerUrlSetting;
 
 import javax.net.ssl.SSLContext;
@@ -108,7 +107,7 @@ public class NettyClientService {
         bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
 
         String host = entityContext.getSettingValue(CloudServerUrlSetting.class);
-        Integer port = entityContext.getSettingValue(CloudServerPortSetting.class);
+        Integer port = 8888;
 
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             public void initChannel(SocketChannel socketChannel) throws Exception {

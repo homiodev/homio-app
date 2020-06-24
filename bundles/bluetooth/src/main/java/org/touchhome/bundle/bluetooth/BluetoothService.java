@@ -11,6 +11,7 @@ import org.ble.BluetoothApplication;
 import org.dbus.InterfacesAddedSignal.InterfacesAdded;
 import org.dbus.InterfacesRomovedSignal.InterfacesRemoved;
 import org.freedesktop.dbus.Variant;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
@@ -257,16 +258,20 @@ public class BluetoothService implements BundleContext {
 
     @SneakyThrows
     private void writeSafeValue(CheckedRunnable runnable) {
-        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
+        if (hasAccess()) {
             runnable.run();
         }
     }
 
     private byte[] readSafeValue(Supplier<String> supplier) {
-        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD && !EntityContext.isDevEnvironment()) {
+        if (hasAccess() && !EntityContext.isDevEnvironment()) {
             return supplier.get().getBytes();
         }
         return new byte[0];
+    }
+
+    private boolean hasAccess() {
+        return System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD || SecurityContextHolder.getContext().getAuthentication() != null;
     }
 
     private String readSafeValueStr(Supplier<String> supplier) {
@@ -274,7 +279,7 @@ public class BluetoothService implements BundleContext {
     }
 
     private String readSafeValueStrIT(Supplier<String> supplier) {
-        if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
+        if (hasAccess()) {
             return supplier.get();
         }
         return "";

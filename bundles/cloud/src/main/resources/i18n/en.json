@@ -3,6 +3,7 @@
     "name": "Cloud",
     "setting": {
       "label": "Cloud settings",
+      "st_CloudProviderSetting": "Cloud access provider",
       "st_CloudServerConnectionMessageSetting": "Connection msg",
       "st_CloudServerRestartSetting": "Reconnect",
       "st_CloudServerConnectionStatusSetting": "Connection status",
