@@ -176,13 +176,15 @@ public class BluetoothService implements BundleContext {
                     log.warn("Writing keystore");
                     entityContext.save(user.setKeystore(content));
                     entityContext.setSettingValue(CloudServerRestartSetting.class, null);
-                    return;
+                    break;
                 case 5:
                     log.warn("Writing private key");
                     FileUtils.writeByteArrayToFile(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome").toFile(), content);
+                    break;
                 case 7:
                     log.warn("Writing public key");
                     FileUtils.writeByteArrayToFile(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome.pub").toFile(), content);
+                    break;
             }
         });
     }
