@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.UserEntity;
+import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.cloud.CloudProvider;
 import org.touchhome.bundle.cloud.netty.impl.ServerConnectionStatus;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
@@ -34,6 +35,12 @@ public class NettyCloudProvider implements CloudProvider {
         if (user != null && user.getKeystore() == null) {
             notifications.add(NotificationEntityJSON.danger("keystore").setName("Keystore").setDescription("Keystore not found"));
         }
+        ServerConnectionStatus serverConnectionStatus = entityContext.getSettingValue(CloudServerConnectionStatusSetting.class);
+        notifications.add(new NotificationEntityJSON("cloud-status")
+                .setName("Cloud status")
+                .setDescription(entityContext.getSettingValue(CloudServerConnectionMessageSetting.class))
+                .setNotificationType(serverConnectionStatus == ServerConnectionStatus.CONNECTED ? NotificationType.info : NotificationType.warn));
+
         return notifications;
     }
 }

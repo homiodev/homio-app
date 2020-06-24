@@ -13,12 +13,12 @@ import org.dbus.InterfacesRomovedSignal.InterfacesRemoved;
 import org.freedesktop.dbus.Variant;
 import org.springframework.stereotype.Controller;
 import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.function.CheckedRunnable;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.Network;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.UserEntity;
-import org.touchhome.bundle.api.throwable.TRunnable;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.cloud.netty.impl.ServerConnectionStatus;
 import org.touchhome.bundle.cloud.setting.CloudServerConnectionMessageSetting;
@@ -261,7 +261,7 @@ public class BluetoothService implements BundleContext {
     }
 
     @SneakyThrows
-    private void writeSafeValue(TRunnable runnable) {
+    private void writeSafeValue(CheckedRunnable runnable) {
         if (System.currentTimeMillis() - timeSinceLastCheckPassword < TIME_REFRESH_PASSWORD) {
             runnable.run();
         }

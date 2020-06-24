@@ -37,7 +37,7 @@ public class SshCloudProvider implements CloudProvider {
         if (serviceStatus == 0) {
             notifications.add(NotificationEntityJSON.info("cloud-status").setName("Cloud connected"));
         } else {
-            notifications.add(NotificationEntityJSON.danger("cloud-status").setName("Cloud connection status not active " + serviceStatus));
+            notifications.add(NotificationEntityJSON.warn("cloud-status").setName("Cloud connection status not active " + serviceStatus));
         }
         return notifications;
     }

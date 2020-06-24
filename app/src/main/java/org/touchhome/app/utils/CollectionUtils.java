@@ -6,11 +6,16 @@ import java.util.Set;
 
 public final class CollectionUtils {
 
-    public static <T> Set<T> ignoreNullSet() {
+    /**
+     * Set which skip adding null values, and replace exiting values
+     */
+    public static <T> Set<T> extendedSet() {
         return new HashSet<T>() {
             @Override
             public boolean add(T t) {
-                return t != null && super.add(t);
+                if (t == null) return false;
+                super.remove(t);
+                return super.add(t);
             }
 
             @Override

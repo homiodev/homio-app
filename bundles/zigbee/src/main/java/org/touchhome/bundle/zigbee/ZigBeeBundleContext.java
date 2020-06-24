@@ -6,13 +6,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.DeviceStatus;
+import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.zigbee.converter.impl.ZigBeeChannelConverterFactory;
 import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
 import org.touchhome.bundle.zigbee.setting.ZigbeeCoordinatorHandlerSetting;
+import org.touchhome.bundle.zigbee.setting.ZigbeeStatusMessageSetting;
 import org.touchhome.bundle.zigbee.setting.ZigbeeStatusSetting;
 import org.touchhome.bundle.zigbee.workspace.ZigBeeDeviceUpdateValueListener;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -68,5 +73,14 @@ public class ZigBeeBundleContext implements BundleContext {
     @Override
     public int order() {
         return 300;
+    }
+
+    @Override
+    public Set<NotificationEntityJSON> getNotifications() {
+        DeviceStatus deviceStatus = entityContext.getSettingValue(ZigbeeStatusSetting.class);
+        return Collections.singleton(new NotificationEntityJSON("zigbee-status")
+                .setName("Zigbee status: " + deviceStatus)
+                .setDescription(entityContext.getSettingValue(ZigbeeStatusMessageSetting.class))
+                .setNotificationType(deviceStatus == DeviceStatus.ONLINE ? NotificationType.info : NotificationType.warn));
     }
 }

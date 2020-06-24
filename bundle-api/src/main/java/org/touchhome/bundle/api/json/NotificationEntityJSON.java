@@ -36,6 +36,10 @@ public class NotificationEntityJSON {
         return new NotificationEntityJSON(entityID).setNotificationType(NotificationType.danger);
     }
 
+    public static NotificationEntityJSON warn(String entityID) {
+        return new NotificationEntityJSON(entityID).setNotificationType(NotificationType.warn);
+    }
+
     public static NotificationEntityJSON info(String entityID) {
         return new NotificationEntityJSON(entityID).setNotificationType(NotificationType.info);
     }

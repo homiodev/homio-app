@@ -62,7 +62,7 @@ public class CacheService {
     }
 
     public void entityUpdated(BaseEntity entity) {
-        Set<BaseEntity> relatedEntities = CollectionUtils.ignoreNullSet();
+        Set<BaseEntity> relatedEntities = CollectionUtils.extendedSet();
         entity.getAllRelatedEntities(relatedEntities);
         relatedEntities.add(entity);
         for (BaseEntity relatedEntity : relatedEntities) {

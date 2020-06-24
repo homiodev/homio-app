@@ -2,12 +2,7 @@ package org.touchhome.bundle.zigbee.setting;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.DeviceStatus;
-import org.touchhome.bundle.api.util.NotificationType;
-
-import java.util.Collections;
-import java.util.List;
 
 public class ZigbeeStatusSetting implements BundleSettingPlugin<DeviceStatus> {
 
@@ -29,13 +24,5 @@ public class ZigbeeStatusSetting implements BundleSettingPlugin<DeviceStatus> {
     @Override
     public int order() {
         return 400;
-    }
-
-    @Override
-    public List<NotificationEntityJSON> buildHeaderNotificationEntity(DeviceStatus deviceStatus, EntityContext entityContext) {
-        return Collections.singletonList(new NotificationEntityJSON("zigbee-status")
-                .setName("Zigbee status: " + deviceStatus)
-                .setDescription(entityContext.getSettingValue(ZigbeeStatusMessageSetting.class))
-                .setNotificationType(deviceStatus == DeviceStatus.ONLINE ? NotificationType.info : NotificationType.danger));
     }
 }

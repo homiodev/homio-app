@@ -1,4 +1,4 @@
-package org.touchhome.app.utils.throwableFunctions;
+package org.touchhome.bundle.api.function;
 
 @FunctionalInterface
 public interface CheckedFunction<T, R> {

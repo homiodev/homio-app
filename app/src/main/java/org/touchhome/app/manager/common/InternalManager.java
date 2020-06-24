@@ -38,6 +38,7 @@ import org.touchhome.app.rest.ConsoleController;
 import org.touchhome.app.rest.SettingController;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
+import org.touchhome.app.utils.CollectionUtils;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.BundleSettingPlugin;
@@ -96,7 +97,7 @@ public class InternalManager implements EntityContext {
     private final Map<String, List<BiConsumer>> entityUpdateListeners = new HashMap<>();
     private final Map<Class<? extends BaseEntity>, List<BiConsumer>> entityClassUpdateListeners = new HashMap<>();
     private final Map<DeviceFeature, Boolean> deviceFeatures = Stream.of(DeviceFeature.values()).collect(Collectors.toMap(f -> f, f -> Boolean.TRUE));
-    private final Set<NotificationEntityJSON> notifications = new HashSet<>();
+    private final Set<NotificationEntityJSON> notifications = CollectionUtils.extendedSet();
     private final ClassFinder classFinder;
     private final CacheService cacheService;
     private final AllDeviceRepository allDeviceRepository;
@@ -553,14 +554,6 @@ public class InternalManager implements EntityContext {
                 consumer.accept(value);
             }
         }
-        List<NotificationEntityJSON> notificationEntityJSON = pluginFor.buildHeaderNotificationEntity(value, this);
-        if (notificationEntityJSON != null) {
-            for (NotificationEntityJSON entityJSON : notificationEntityJSON) {
-                notifications.remove(entityJSON); // remove previous one
-                notifications.add(entityJSON);
-            }
-        }
-
         this.sendNotification(pluginFor.buildToastrNotificationEntity(value, this));
     }
 
