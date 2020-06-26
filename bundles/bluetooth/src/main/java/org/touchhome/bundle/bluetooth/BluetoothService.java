@@ -24,6 +24,7 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.cloud.netty.setting.CloudServerRestartSetting;
 import org.touchhome.bundle.cloud.setting.CloudProviderSetting;
 
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -179,11 +180,15 @@ public class BluetoothService implements BundleContext {
                     break;
                 case 5:
                     log.warn("Writing private key");
-                    FileUtils.writeByteArrayToFile(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome").toFile(), content);
+                    Path privateKey = TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome");
+                    FileUtils.writeByteArrayToFile(privateKey.toFile(), content);
+                    linuxHardwareRepository.setPermissions(privateKey, 600);
                     break;
                 case 7:
                     log.warn("Writing public key");
-                    FileUtils.writeByteArrayToFile(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome.pub").toFile(), content);
+                    Path publicKey = TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome.pub");
+                    FileUtils.writeByteArrayToFile(publicKey.toFile(), content);
+                    linuxHardwareRepository.setPermissions(publicKey, 600);
                     break;
             }
         });

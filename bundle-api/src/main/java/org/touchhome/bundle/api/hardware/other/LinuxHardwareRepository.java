@@ -9,6 +9,7 @@ import org.touchhome.bundle.api.hquery.api.HardwareRepositoryAnnotation;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Enumeration;
 
@@ -41,6 +42,9 @@ public interface LinuxHardwareRepository {
 
     @HardwareQuery(value = "cat /etc/os-release", cache = true)
     HardwareOs getOs();
+
+    @HardwareQuery("chmod :mode -R :path")
+    void setPermissions(Path path, int mode);
 
     default String getDeviceModel() {
         return EntityContext.isLinuxEnvironment() ? catDeviceModel() : SystemUtils.OS_NAME;
