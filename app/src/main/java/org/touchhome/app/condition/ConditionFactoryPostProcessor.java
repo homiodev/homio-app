@@ -121,23 +121,21 @@ public class ConditionFactoryPostProcessor implements BeanPostProcessor {
             try {
                 URLConnection connection = new URL("http://www.google.com").openConnection();
                 connection.connect();
-                if (!this.hasInternet) {
-                    this.hasInternet = true;
-                    signal();
-                }
+                updateInternetStatus(true);
             } catch (Exception ex) {
-                if (this.hasInternet) {
-                    this.hasInternet = false;
-                    signal();
-                }
+                updateInternetStatus(false);
             }
         }, 10, 10, TimeUnit.SECONDS);
     }
 
-    private void signal() {
-        this.lock.lock();
-        this.condition.signal();
-        this.lock.unlock();
+    private void updateInternetStatus(boolean hasInternet) {
+        if (this.hasInternet == null || this.hasInternet != hasInternet) {
+            this.hasInternet = hasInternet;
+
+            this.lock.lock();
+            this.condition.signal();
+            this.lock.unlock();
+        }
     }
 
     public static class LinuxCondition implements org.springframework.context.annotation.Condition {
