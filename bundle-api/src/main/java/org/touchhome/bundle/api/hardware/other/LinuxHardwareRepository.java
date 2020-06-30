@@ -44,7 +44,10 @@ public interface LinuxHardwareRepository {
     HardwareOs getOs();
 
     @HardwareQuery("chmod :mode -R :path")
-    void setPermissions(Path path, int mode);
+    void setPermissions(@HQueryParam("path") Path path, @HQueryParam("mode") int mode);
+
+    @HardwareQuery(value = "apt-get install :soft", echo = "Install software")
+    void installSoftware(@HQueryParam("soft") String soft);
 
     default String getDeviceModel() {
         return EntityContext.isLinuxEnvironment() ? catDeviceModel() : SystemUtils.OS_NAME;

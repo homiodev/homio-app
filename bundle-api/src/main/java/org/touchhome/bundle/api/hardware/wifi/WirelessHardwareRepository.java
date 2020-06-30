@@ -48,7 +48,7 @@ public interface WirelessHardwareRepository {
     void enable();
 
     @HardwareQuery("iwconfig wlan0 essid ':essid' key :PASSWORD")
-    void connect_wep(String essid, String password);
+    void connect_wep(@HQueryParam("essid") String essid, @HQueryParam("password") String password);
 
     @ErrorsHandler(onRetCodeError = "Shit is broken TODO", errorHandlers = {})
     @HardwareQuery("wpa_passphrase ':essid' ':password' > wpa-temp.conf && sudo wpa_supplicant -D wext -i wlan0 -c wpa-temp.conf && rm wpa-temp.conf")

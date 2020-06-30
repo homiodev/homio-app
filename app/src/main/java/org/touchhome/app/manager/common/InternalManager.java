@@ -43,7 +43,9 @@ import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.bundle.api.BundleContext;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.condition.ExecuteOnce;
 import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.model.BaseEntity;
@@ -96,6 +98,7 @@ public class InternalManager implements EntityContext {
     private final Map<Class<? extends BaseEntity>, List<BiConsumer>> entityClassUpdateListeners = new HashMap<>();
     private final Map<DeviceFeature, Boolean> deviceFeatures = Stream.of(DeviceFeature.values()).collect(Collectors.toMap(f -> f, f -> Boolean.TRUE));
     private final Set<NotificationEntityJSON> notifications = CollectionUtils.extendedSet();
+
     private final ClassFinder classFinder;
     private final CacheService cacheService;
     private final AllDeviceRepository allDeviceRepository;
@@ -516,6 +519,11 @@ public class InternalManager implements EntityContext {
     public <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener) {
         this.entityClassUpdateListeners.putIfAbsent(entityClass, new ArrayList<>());
         this.entityClassUpdateListeners.get(entityClass).add(listener);
+    }
+
+    @ExecuteOnce(skipIfInstalled = "autossh", requireInternet = true)
+    public void installAutossh() {
+        getBean(LinuxHardwareRepository.class).installSoftware("autossh");
     }
 
     private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz, AbstractRepository repository) {

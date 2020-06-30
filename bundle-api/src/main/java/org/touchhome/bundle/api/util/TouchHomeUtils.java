@@ -122,9 +122,6 @@ public class TouchHomeUtils {
         if (ex.getCause() instanceof NullPointerException) {
             return ex.getStackTrace()[0].toString();
         }
-        if (ex.getCause() instanceof NoSuchFileException) {
-            return "File or directory " + ((NoSuchFileException) ex.getCause()).getFile() + " does not exists.";
-        }
         return ex.getCause() == null ? ex.getMessage() : ex.getCause().getLocalizedMessage();
     }
 
