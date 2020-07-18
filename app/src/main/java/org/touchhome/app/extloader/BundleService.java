@@ -79,14 +79,14 @@ public class BundleService {
         for (String dependencyBundleName : context.getDependencies()) {
             this.loadContext(dependencyBundleName);
         }
-        BundleClassLoader bundleClassLoader = new BundleClassLoader(context.getBaseDir());
+        BundleClassLoader bundleClassLoader = new BundleClassLoader();
 
         // creates configuration builder to find all jar files
         ConfigurationBuilder configurationBuilder = new ConfigurationBuilder()
                 .setScanners(new SubTypesScanner(false), new TypeAnnotationsScanner(), new ResourcesScanner())
                 .addClassLoader(bundleClassLoader);
 
-        bundleClassLoader.register(context.getBundleContextFile().toString());
+        bundleClassLoader.register(context.getBundleContextFile());
         context.load(configurationBuilder, env, bundleClassLoader, parentContext);
 
         return true;

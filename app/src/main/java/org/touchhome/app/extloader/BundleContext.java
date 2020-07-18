@@ -5,13 +5,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.reflections.Reflections;
 import org.reflections.util.ConfigurationBuilder;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +22,8 @@ import org.touchhome.bundle.api.BundleConfiguration;
 import org.touchhome.bundle.api.util.SpringUtils;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
@@ -41,7 +42,6 @@ public class BundleContext {
     private final Model pomFile;
     private final String bundleName;
 
-    private Path baseDir;
     private boolean loaded;
     private boolean internal;
     private boolean installed;
@@ -62,17 +62,6 @@ public class BundleContext {
         this.internal = true;
     }
 
-    /**
-     * Initialize and return baseDir for context (may share same base dir for multiple jars)
-     */
-    Path getBaseDir() throws IOException {
-        if (baseDir == null) {
-            baseDir = ExtUtil.unpack(bundleContextFile);
-        }
-        return baseDir;
-
-    }
-
     private Model readPomFile(ZipFile file) throws IOException, XmlPullParserException {
         for (ZipEntry e : Collections.list(file.entries())) {
             if (e.getName().endsWith("/pom.xml")) {
@@ -87,12 +76,17 @@ public class BundleContext {
                 .map(Dependency::getArtifactId).collect(Collectors.toSet());
     }
 
-    void load(ConfigurationBuilder configurationBuilder, Environment env, BundleClassLoader bundleClassLoader, ApplicationContext parentContext) throws MalformedURLException {
-        Reflections reflections = new Reflections(configurationBuilder.setUrls(baseDir.resolve(bundleContextFile).toUri().toURL()));
+    @SneakyThrows
+    void load(ConfigurationBuilder configurationBuilder, Environment env, BundleClassLoader bundleClassLoader, ApplicationContext parentContext) {
+        URL bundleUrl = bundleContextFile.toUri().toURL();
+        Reflections reflections = new Reflections(configurationBuilder.setUrls(bundleUrl));
 
         BundleSpringContext config = new BundleSpringContext(env);
-        config.configure(reflections, bundleClassLoader, null/*batchProgramEventPublisher*/, parentContext);
-        ExtUtil.addToClasspath(bundleContextFile.toUri().toURL());
+        config.configure(reflections, bundleClassLoader, parentContext);
+
+        URLClassLoader classLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
+        MethodUtils.invokeMethod(classLoader, true, "addURL", bundleUrl);
+
         this.bundleClassLoader = bundleClassLoader;
         this.applicationContext = config.getContext();
         this.loaded = true;
@@ -104,7 +98,7 @@ public class BundleContext {
         private AnnotationConfigApplicationContext ctx;
         private final Environment env;
 
-        void configure(Reflections reflections, BundleClassLoader bundleClassLoader, BeanPostProcessor beanPostProcessor, ApplicationContext parentContext) {
+        void configure(Reflections reflections, BundleClassLoader bundleClassLoader, ApplicationContext parentContext) {
             Class<?> configClass = findBatchConfigurationClass(reflections);
             BundleConfiguration bundleConfiguration = configClass.getDeclaredAnnotation(BundleConfiguration.class);
 
@@ -125,9 +119,7 @@ public class BundleContext {
             // wake up spring context
             ctx.scan(configClass.getPackage().getName());
             ctx.register(configClass);
-            if (beanPostProcessor != null) {
-                ctx.addBeanFactoryPostProcessor(beanFactory -> beanFactory.addBeanPostProcessor(beanPostProcessor));
-            }
+
             bundleClassLoader.prepareForSpring();
             ctx.refresh();
             ctx.start();
@@ -157,6 +149,15 @@ public class BundleContext {
 
         public AnnotationConfigApplicationContext getContext() {
             return ctx;
+        }
+    }
+
+    private void addToClasspath(URL url) {
+        try {
+            URLClassLoader classLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
+            MethodUtils.invokeMethod(classLoader, true, "addURL", url);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected exception", e);
         }
     }
 }
