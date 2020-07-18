@@ -2,6 +2,7 @@ package org.touchhome.app.rest;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.bundle.api.BundleSettingPlugin;
@@ -20,11 +21,9 @@ public class SettingController {
     private final EntityContext entityContext;
     private final Map<Class<? extends BundleSettingPlugin>, SettingEntity> transientSettings;
 
-    private Map<String, BundleSettingPlugin> settingPlugins;
-
-    public void postConstruct(Map<String, BundleSettingPlugin> settingPlugins) {
-        this.settingPlugins = settingPlugins;
-        for (BundleSettingPlugin settingPlugin : settingPlugins.values()) {
+    public void postConstruct() {
+        this.transientSettings.clear();
+        for (BundleSettingPlugin settingPlugin : InternalManager.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {
                 this.transientSettings.put(settingPlugin.getClass(),
                         SettingRepository.createSettingEntityFromPlugin(settingPlugin, new SettingEntity()));
@@ -34,12 +33,12 @@ public class SettingController {
 
     @GetMapping("{entityID}/options")
     public List<Option> getSettingsAvailableItems(@PathVariable("entityID") String entityID) {
-        return settingPlugins.get(entityID).loadAvailableValues(entityContext);
+        return InternalManager.settingPluginsByPluginKey.get(entityID).loadAvailableValues(entityContext);
     }
 
     @PostMapping(value = "{entityID}", consumes = "text/plain")
     public <T> void updateSettings(@PathVariable("entityID") String entityID, @RequestBody String value) {
-        BundleSettingPlugin settingPlugin = settingPlugins.get(entityID);
+        BundleSettingPlugin settingPlugin = InternalManager.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin != null) {
             entityContext.setSettingValueRaw((Class<? extends BundleSettingPlugin<T>>) settingPlugin.getClass(), value);
         }

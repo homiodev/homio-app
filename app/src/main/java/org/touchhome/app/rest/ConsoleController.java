@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ConsoleController {
 
-    private final List<ConsolePlugin> consolePlugins;
     private final LogService logService;
     private final EntityContext entityContext;
     private final ApplicationContext applicationContext;
@@ -40,7 +39,11 @@ public class ConsoleController {
     private Map<String, ConsolePlugin> consolePluginsMap = new HashMap<>();
 
     public void postConstruct() {
+        this.consolePluginsMap.clear();
+        this.tabs.clear();
+
         this.tabs.addAll(logService.getTabs().stream().map(l -> Option.key(l).addJson("type", "log")).collect(Collectors.toList()));
+        List<ConsolePlugin> consolePlugins = new ArrayList<>(entityContext.getBeansOfType(ConsolePlugin.class));
         Collections.sort(consolePlugins);
         for (ConsolePlugin consolePlugin : consolePlugins) {
             String bundleName = BundleEntrypoint.getBundleName(consolePlugin.getClass());

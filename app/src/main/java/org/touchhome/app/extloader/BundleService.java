@@ -42,14 +42,14 @@ public class BundleService {
      * Load context from specific file 'contextFile' and wraps logging info
      */
     @SneakyThrows
-    public void loadContextFromPath(Path contextFileHolder) {
-        for (Path bundleContextFile : findBundleContextFilesFromPath(contextFileHolder)) {
+    public void loadBundlesFromPath(Path bundlePath) {
+        for (Path bundleContextFile : findBundleContextFilesFromPath(bundlePath)) {
             BundleContext context = new BundleContext(bundleContextFile);
             bundleContextMap.put(context.getPomFile().getArtifactId(), context);
         }
         for (String bundleName : bundleContextMap.keySet()) {
             if (!bundleContextMap.get(bundleName).isLoaded() && !bundleContextMap.get(bundleName).isInternal()) {
-                log.info("Try load bundle context <{}> using path <{}>.", bundleName, contextFileHolder);
+                log.info("Try load bundle context <{}> using path <{}>.", bundleName, bundlePath);
                 try {
                     if (loadContext(bundleName)) {
                         log.info("bundle context <{}> registered successfully.", bundleName);
@@ -57,7 +57,7 @@ public class BundleService {
                         log.info("bundle context <{}> already registered before.", bundleName);
                     }
                 } catch (Exception ex) {
-                    log.error("Unable to load bundle context <{}> using path <{}>.", bundleName, contextFileHolder, ex);
+                    log.error("Unable to load bundle context <{}> using path <{}>.", bundleName, bundlePath, ex);
                 }
             }
         }
@@ -79,14 +79,13 @@ public class BundleService {
         for (String dependencyBundleName : context.getDependencies()) {
             this.loadContext(dependencyBundleName);
         }
-        BundleClassLoader bundleClassLoader = new BundleClassLoader();
+        BundleClassLoader bundleClassLoader = new BundleClassLoader(context.getBundleContextFile());
 
         // creates configuration builder to find all jar files
         ConfigurationBuilder configurationBuilder = new ConfigurationBuilder()
                 .setScanners(new SubTypesScanner(false), new TypeAnnotationsScanner(), new ResourcesScanner())
                 .addClassLoader(bundleClassLoader);
 
-        bundleClassLoader.register(context.getBundleContextFile());
         context.load(configurationBuilder, env, bundleClassLoader, parentContext);
 
         return true;

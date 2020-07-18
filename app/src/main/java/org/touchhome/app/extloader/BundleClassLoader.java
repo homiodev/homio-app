@@ -3,10 +3,9 @@ package org.touchhome.app.extloader;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.xeustechnologies.jcl.ClasspathResources;
-import org.xeustechnologies.jcl.Configuration;
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.ProxyClassLoader;
-import sun.misc.URLClassPath;
+import sun.net.www.ParseUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -14,17 +13,16 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.jar.JarFile;
 
 @Log4j2
 public class BundleClassLoader extends JarClassLoader {
 
-    void register(Path jarPath) {
-        if (ExtUtil.isJar(jarPath.toString())) {
-            String jarFileName = jarPath.getFileName().toString();
-            log.info("Adding jar <{}> to classpath", jarFileName);
-            InternalJarClassLoader internalJarClassLoader = new InternalJarClassLoader(jarPath);
-            super.addLoader(internalJarClassLoader);
-        }
+    BundleClassLoader(Path jarPath) {
+        String jarFileName = jarPath.getFileName().toString();
+        log.info("Adding jar <{}> to classpath", jarFileName);
+        InternalJarClassLoader internalJarClassLoader = new InternalJarClassLoader(jarPath);
+        super.addLoader(internalJarClassLoader);
     }
 
     @Override
@@ -32,24 +30,22 @@ public class BundleClassLoader extends JarClassLoader {
         return super.getResource(name);
     }
 
-    void prepareForSpring() {
-        getLocalLoader().setEnabled(false);
-        getSystemLoader().setEnabled(false);
-        getParentLoader().setEnabled(false);
-        getCurrentLoader().setEnabled(false);
-
-        super.addLoader(new SystemLoader(getClass().getClassLoader()));
+    @Override
+    protected URL findResource(String name) {
+        return super.findResource(name);
     }
 
     public class InternalJarClassLoader extends ProxyClassLoader {
-        private final URLClassPath ucp;
+        private final JarFile jarFile;
         private final ClasspathResources classpathResources = new ClasspathResources();
         final Map<String, Class> classes = new HashMap<>();
+        private final URL baseUrl;
 
         @SneakyThrows
-        InternalJarClassLoader(Path pathToClasses) {
-            this.classpathResources.loadResource(pathToClasses.toString());
-            this.ucp = new URLClassPath(new URL[]{pathToClasses.toUri().toURL()});
+        InternalJarClassLoader(Path jarPath) {
+            this.classpathResources.loadResource(jarPath.toString());
+            this.jarFile = new JarFile(jarPath.toFile());
+            this.baseUrl = new URL("jar", "",  jarPath.toUri().toURL().toString() + "!/");
         }
 
         @Override
@@ -91,36 +87,13 @@ public class BundleClassLoader extends JarClassLoader {
             if (url != null) {
                 return url;
             }
-            return ucp.findResource(name, true);
-        }
-    }
-
-    class SystemLoader extends ProxyClassLoader {
-        private ClassLoader appClassLoader;
-
-        SystemLoader(ClassLoader appClassLoader) {
-            this.order = 50;
-            this.enabled = Configuration.isSystemLoaderEnabled();
-            this.appClassLoader = appClassLoader;
-        }
-
-        @Override
-        public Class loadClass(String className, boolean resolveIt) {
             try {
-                return appClassLoader.loadClass(className);
-            } catch (ClassNotFoundException e) {
-                return null;
+                if (this.jarFile.getEntry(name) != null) {
+                    return new URL(this.baseUrl, ParseUtil.encodePath(name, false));
+                }
+            } catch (Exception ignore) {
             }
-        }
-
-        @Override
-        public InputStream loadResource(String name) {
-            return appClassLoader.getResourceAsStream(name);
-        }
-
-        @Override
-        public URL findResource(String name) {
-            return ClassLoader.getSystemResource(name);
+            return null;
         }
     }
 }

@@ -14,6 +14,7 @@ import org.hibernate.event.spi.PostInsertEvent;
 import org.hibernate.event.spi.PostUpdateEvent;
 import org.hibernate.internal.SessionFactoryImpl;
 import org.json.JSONObject;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -91,11 +92,11 @@ public class InternalManager implements EntityContext {
 
     private static final Map<BundleSettingPlugin, String> settingTransientState = new HashMap<>();
     public static Map<String, BundleSettingPlugin> settingPluginsByPluginKey = new HashMap<>();
-    public static Map<String, AbstractRepository> repositories;
-    private static Map<Class<? extends BundleSettingPlugin>, BundleSettingPlugin> settingPluginsByPluginClass = new HashMap<>();
+    public static Map<String, AbstractRepository> repositories = new HashMap<>();
+    private static Map<String, BundleSettingPlugin> settingPluginsByPluginClass = new HashMap<>();
     private static EntityManager entityManager;
     private static Map<String, AbstractRepository> repositoriesByPrefix;
-    private static Map<String, PureRepository> pureRepositories;
+    private static Map<String, PureRepository> pureRepositories = new HashMap<>();
     private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchHome-core";
     private final RestTemplate restTemplate = new RestTemplate();
     private final Map<String, List<BiConsumer>> entityUpdateListeners = new HashMap<>();
@@ -117,8 +118,10 @@ public class InternalManager implements EntityContext {
     private Boolean showEntityState;
     private ApplicationContext applicationContext;
     private ArrayList<BundleEntrypoint> bundles;
-    private Map<String, BundleContext> extraBundles = new HashMap<>();
     private String latestVersion;
+
+    private Map<String, BundleContext> extraBundles = new HashMap<>();
+    private Set<ApplicationContext> allApplicationContexts = new HashSet<>();
 
     public Set<NotificationEntityJSON> getNotifications() {
         long time = System.currentTimeMillis();
@@ -139,20 +142,18 @@ public class InternalManager implements EntityContext {
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
+        this.allApplicationContexts.add(applicationContext);
         this.updateDeviceFeatures();
         this.transactionTemplate = new TransactionTemplate(transactionManager);
 
         this.fetchBundleSettingPlugins();
 
         entityManager = applicationContext.getBean(EntityManager.class);
-        pureRepositories = pureRepositories(applicationContext);
-        repositories = applicationContext.getBeansOfType(AbstractRepository.class);
-        repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
+        updateBeans(applicationContext);
 
         applicationContext.getBean(LoggerManager.class).postConstruct();
         applicationContext.getBean(LogService.class).setEntityContext(this);
 
-        applicationContext.getBean(SettingRepository.class).postConstruct(settingPluginsByPluginKey.values());
         registerEntityListeners();
 
         createUser();
@@ -162,8 +163,6 @@ public class InternalManager implements EntityContext {
         applicationContext.getBean(UserRepository.class).postConstruct(this);
         applicationContext.getBean(NettyClientService.class).postConstruct();
         applicationContext.getBean(ScriptManager.class).postConstruct();
-        applicationContext.getBean(ConsoleController.class).postConstruct();
-        applicationContext.getBean(SettingController.class).postConstruct(settingPluginsByPluginKey);
 
         listenSettingValue(SystemClearCacheButtonSetting.class, cacheService::clearCache);
 
@@ -175,7 +174,7 @@ public class InternalManager implements EntityContext {
             bundleEntrypoint.init();
         }
 
-        applicationContext.getBean(BundleService.class).loadContextFromPath(TouchHomeUtils.getBundlePath());
+        applicationContext.getBean(BundleService.class).loadBundlesFromPath(TouchHomeUtils.getBundlePath());
 
         applicationContext.getBean(WorkspaceManager.class).postConstruct();
         applicationContext.getBean(WidgetManager.class).postConstruct();
@@ -199,6 +198,7 @@ public class InternalManager implements EntityContext {
                 broadcastLockManager.signalAll(source.getEntityID());
             }
         });
+        applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
 
         notifications.add(NotificationEntityJSON.info("app-status")
                 .setName("App started at " + DateFormat.getDateTimeInstance().format(new Date())));
@@ -331,7 +331,7 @@ public class InternalManager implements EntityContext {
 
     @Override
     public <T> T getSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
-        BundleSettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
+        BundleSettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
         if (pluginFor.transientState()) {
             return pluginFor.parseValue(this, StringUtils.defaultIfEmpty(settingTransientState.get(pluginFor), pluginFor.getDefaultValue()));
         } else {
@@ -348,26 +348,26 @@ public class InternalManager implements EntityContext {
 
     @Override
     public <T> void setSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value) {
-        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
+        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
         setSettingValueSilence(settingPluginClazz, value);
         fireNotifySettingHandlers(settingPluginClazz, value, pluginFor);
     }
 
     @Override
     public <T> void setSettingValueRaw(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull String value) {
-        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
+        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
         setSettingValue(settingPluginClazz, (T) pluginFor.parseValue(this, value));
     }
 
     @Override
     public <T> void setSettingValueSilence(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull T value) {
-        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
+        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
         this.setSettingValueSilenceRaw(settingPluginClazz, pluginFor.writeValue(value));
     }
 
     @Override
     public <T> void setSettingValueSilenceRaw(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull String value) {
-        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz);
+        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
         log.debug("Update setting <{}> value <{}>", SettingRepository.getKey(pluginFor), value);
 
         if (pluginFor.transientState()) {
@@ -488,17 +488,28 @@ public class InternalManager implements EntityContext {
 
     @Override
     public <T> T getBean(String beanName, Class<T> clazz) {
-        return applicationContext.getBean(beanName, clazz);
+        return this.allApplicationContexts.stream().filter(c -> c.containsBean(beanName)).map(c -> c.getBean(beanName, clazz))
+                .findAny().orElseThrow(() -> new NoSuchBeanDefinitionException(beanName));
     }
 
     @Override
     public <T> T getBean(Class<T> clazz) {
-        return applicationContext.getBean(clazz);
+        for (ApplicationContext context : allApplicationContexts) {
+            try {
+                return context.getBean(clazz);
+            } catch (Exception ignore) {
+            }
+        }
+        throw new NoSuchBeanDefinitionException(clazz);
     }
 
     @Override
     public <T> Collection<T> getBeansOfType(Class<T> clazz) {
-        return applicationContext.getBeansOfType(clazz).values();
+        List<T> values = new ArrayList<>();
+        for (ApplicationContext context : allApplicationContexts) {
+            values.addAll(context.getBeansOfType(clazz).values());
+        }
+        return values;
     }
 
     @Override
@@ -631,11 +642,48 @@ public class InternalManager implements EntityContext {
         }
     }
 
-    private void addBundle(BundleContext bundleContext, Map<String, BundleContext> batchContexts) {
+    // TODO: fire from API
+    public void removeBundle(Map<String, BundleContext> batchContexts, boolean rest) {
+        for (String bundleName : batchContexts.keySet()) {
+            this.removeBundle(batchContexts.get(bundleName));
+        }
+        if (rest) {
+            applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
+        }
+    }
+
+    private void removeBundle(BundleContext bundleContext) {
+        if (!bundleContext.isInternal() && bundleContext.isInstalled()) {
+            extraBundles.remove(bundleContext.getBundleName());
+            ApplicationContext context = bundleContext.getApplicationContext();
+            context.getBeansOfType(BundleEntrypoint.class).values().forEach(be -> this.bundles.remove(be));
+            this.allApplicationContexts.remove(context);
+
+            TouchHomeUtils.removeClassLoader(bundleContext.getBundleName());
+            this.cacheService.clearCache();
+
+            fetchBundleSettingPlugins();
+            En.get().clear();
+            for (PureRepository repository : context.getBeansOfType(PureRepository.class).values()) {
+                pureRepositories.remove(repository.getEntityClass().getSimpleName());
+            }
+            context.getBeansOfType(AbstractRepository.class).keySet().forEach(ar -> repositories.remove(ar));
+            repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
+
+            applicationContext.getBean(SettingRepository.class).postConstruct();
+            applicationContext.getBean(ConsoleController.class).postConstruct();
+            applicationContext.getBean(SettingController.class).postConstruct();
+            applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
+        }
+    }
+
+    private void addBundle(BundleContext bundleContext, Map<String, BundleContext> bundleContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
+            extraBundles.put(bundleContext.getBundleName(), bundleContext);
+            allApplicationContexts.add(bundleContext.getApplicationContext());
             bundleContext.setInstalled(true);
             for (String bundleDependency : bundleContext.getDependencies()) {
-                addBundle(batchContexts.get(bundleDependency), batchContexts);
+                addBundle(bundleContextMap.get(bundleDependency), bundleContextMap);
             }
             ApplicationContext context = bundleContext.getApplicationContext();
 
@@ -643,9 +691,8 @@ public class InternalManager implements EntityContext {
             this.cacheService.clearCache();
 
             HardwareUtils.copyResources(bundleContext.getBundleClassLoader().getResource("files"), "/files");
-            En.get().clear();
-            pureRepositories.putAll(pureRepositories(context));
-            this.fetchBundleSettingPlugins();
+            fetchBundleSettingPlugins();
+            updateBeans(context);
 
             for (BundleEntrypoint bundleEntrypoint : context.getBeansOfType(BundleEntrypoint.class).values()) {
                 bundleEntrypoint.init();
@@ -654,22 +701,27 @@ public class InternalManager implements EntityContext {
         }
     }
 
-    private Map<String, PureRepository> pureRepositories(ApplicationContext applicationContext) {
-        Map<String, PureRepository> map = new HashMap<>();
-        for (PureRepository repository : applicationContext.getBeansOfType(PureRepository.class).values()) {
-            map.put(repository.getEntityClass().getSimpleName(), repository);
+    private void updateBeans(ApplicationContext context) {
+        En.get().clear();
+        for (PureRepository repository : context.getBeansOfType(PureRepository.class).values()) {
+            pureRepositories.put(repository.getEntityClass().getSimpleName(), repository);
         }
-        return map;
+        repositories.putAll(context.getBeansOfType(AbstractRepository.class));
+        repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
+
+        applicationContext.getBean(SettingRepository.class).postConstruct();
+        applicationContext.getBean(ConsoleController.class).postConstruct();
+        applicationContext.getBean(SettingController.class).postConstruct();
     }
 
     @SneakyThrows
     private void fetchBundleSettingPlugins() {
+        settingPluginsByPluginClass.clear();
+        settingPluginsByPluginKey.clear();
         for (Class<? extends BundleSettingPlugin> settingPlugin : classFinder.getClassesWithParent(BundleSettingPlugin.class)) {
-            if (!settingPluginsByPluginClass.containsKey(settingPlugin)) {
-                BundleSettingPlugin bundleSettingPlugin = settingPlugin.newInstance();
-                settingPluginsByPluginKey.put(SettingRepository.getKey(bundleSettingPlugin), bundleSettingPlugin);
-                settingPluginsByPluginClass.put(settingPlugin, bundleSettingPlugin);
-            }
+            BundleSettingPlugin bundleSettingPlugin = settingPlugin.newInstance();
+            settingPluginsByPluginKey.put(SettingRepository.getKey(bundleSettingPlugin), bundleSettingPlugin);
+            settingPluginsByPluginClass.put(settingPlugin.getName(), bundleSettingPlugin);
         }
     }
 }

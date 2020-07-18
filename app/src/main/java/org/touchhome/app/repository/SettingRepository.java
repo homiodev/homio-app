@@ -69,12 +69,15 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
     }
 
     @Transactional
-    public void postConstruct(Collection<BundleSettingPlugin> settingPlugins) {
-        List<SettingEntity> entities = listAll();
-        deleteRemovedSettings(entities);
-        for (BundleSettingPlugin settingPlugin : settingPlugins) {
+    public void postConstruct() {
+        for (BundleSettingPlugin settingPlugin : InternalManager.settingPluginsByPluginKey.values()) {
             if (!settingPlugin.transientState()) {
-                createOrUpdateSetting(entities, settingPlugin);
+                SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
+                if (settingEntity == null) {
+                    settingEntity = new SettingEntity();
+                    createSettingEntityFromPlugin(settingPlugin, settingEntity);
+                    entityContext.save(settingEntity);
+                }
             }
         }
     }
@@ -84,20 +87,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         fulfillEntityFromPlugin(entity);
     }
 
-    private void createOrUpdateSetting(List<SettingEntity> entities, BundleSettingPlugin settingPlugin) {
-        SettingEntity settingEntity = entityContext.getEntityOrDefault(getKey(settingPlugin), new SettingEntity());
-        settingEntity.computeEntityID(() -> getKey(settingPlugin));
-
-        entities.stream().filter(p -> p.getEntityID().equals(settingEntity.getEntityID())).findAny()
-                .ifPresent(settingEntity1 -> settingEntity.setValue(settingEntity1.getValue()));
-
-        createSettingEntityFromPlugin(settingPlugin, settingEntity);
-
-        entityContext.save(settingEntity);
-    }
-
-    private void deleteRemovedSettings(List<SettingEntity> entities) {
-        for (SettingEntity entity : entities) {
+    @Transactional
+    public void deleteRemovedSettings() {
+        for (SettingEntity entity : listAll()) {
             BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(entity.getEntityID());
             if (plugin == null) {
                 this.deleteByEntityID(entity.getEntityID());

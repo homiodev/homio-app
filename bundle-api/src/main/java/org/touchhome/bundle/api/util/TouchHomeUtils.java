@@ -62,6 +62,10 @@ public class TouchHomeUtils {
         bundleClassLoaders.put(bundleName, classLoader);
     }
 
+    public static void removeClassLoader(String bundleName) {
+        bundleClassLoaders.remove(bundleName);
+    }
+
     @SneakyThrows
     public static <T> T readAndMergeJSON(String resource, T targetObject) {
         ObjectReader updater = OBJECT_MAPPER.readerForUpdating(targetObject);

@@ -78,16 +78,16 @@ public class BundleContext {
 
     @SneakyThrows
     void load(ConfigurationBuilder configurationBuilder, Environment env, BundleClassLoader bundleClassLoader, ApplicationContext parentContext) {
+        this.bundleClassLoader = bundleClassLoader;
         URL bundleUrl = bundleContextFile.toUri().toURL();
         Reflections reflections = new Reflections(configurationBuilder.setUrls(bundleUrl));
 
         BundleSpringContext config = new BundleSpringContext(env);
-        config.configure(reflections, bundleClassLoader, parentContext);
+        config.configureSpringContext(reflections, bundleClassLoader, parentContext);
 
         URLClassLoader classLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
         MethodUtils.invokeMethod(classLoader, true, "addURL", bundleUrl);
 
-        this.bundleClassLoader = bundleClassLoader;
         this.applicationContext = config.getContext();
         this.loaded = true;
     }
@@ -98,7 +98,7 @@ public class BundleContext {
         private AnnotationConfigApplicationContext ctx;
         private final Environment env;
 
-        void configure(Reflections reflections, BundleClassLoader bundleClassLoader, ApplicationContext parentContext) {
+        void configureSpringContext(Reflections reflections, BundleClassLoader bundleClassLoader, ApplicationContext parentContext) {
             Class<?> configClass = findBatchConfigurationClass(reflections);
             BundleConfiguration bundleConfiguration = configClass.getDeclaredAnnotation(BundleConfiguration.class);
 
@@ -120,7 +120,6 @@ public class BundleContext {
             ctx.scan(configClass.getPackage().getName());
             ctx.register(configClass);
 
-            bundleClassLoader.prepareForSpring();
             ctx.refresh();
             ctx.start();
         }
