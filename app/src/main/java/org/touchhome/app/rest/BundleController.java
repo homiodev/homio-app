@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.BundleManager;
-import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -34,20 +34,20 @@ public class BundleController {
     @GetMapping("{bundleID}/icon")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID) {
-        BundleContext bundleContext;
+        BundleEntrypoint bundleEntrypoint;
         String bundleImage;
         try {
-            bundleContext = bundleManager.getBundle(bundleID);
-            bundleImage = bundleContext.getBundleImage();
+            bundleEntrypoint = bundleManager.getBundle(bundleID);
+            bundleImage = bundleEntrypoint.getBundleImage();
         } catch (Exception ex) {
             if (bundleID.contains("-")) {
-                bundleContext = bundleManager.getBundle(bundleID.substring(0, bundleID.indexOf("-")));
+                bundleEntrypoint = bundleManager.getBundle(bundleID.substring(0, bundleID.indexOf("-")));
                 bundleImage = bundleID + ".png";
             } else {
                 throw new IllegalArgumentException("Unable to find bundle with id: " + bundleID);
             }
         }
-        InputStream imageStream = bundleContext.getClass().getClassLoader().getResourceAsStream(bundleImage);
+        InputStream imageStream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream(bundleImage);
         if (imageStream == null) {
             throw new NotFoundException("Unable to find bundle image: " + bundleImage + " of bundle: " + bundleID);
         }
@@ -58,14 +58,14 @@ public class BundleController {
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<BundleJson> getBundles() {
         List<BundleJson> bundles = new ArrayList<>(bundleManager.getBundles().size());
-        for (BundleContext bundle : bundleManager.getBundles()) {
+        for (BundleEntrypoint bundle : bundleManager.getBundles()) {
             bundles.add(new BundleJson(bundle.getBundleId(), bundleManager.getBundleColor(bundle.getBundleId()), bundle.order()));
         }
         Collections.sort(bundles);
         return bundles;
     }
 
-    public BundleContext getBundle(String id) {
+    public BundleEntrypoint getBundle(String id) {
         return bundleManager.getBundles().stream().filter(s -> s.getBundleId().equals(id)).findAny().orElse(null);
     }
 

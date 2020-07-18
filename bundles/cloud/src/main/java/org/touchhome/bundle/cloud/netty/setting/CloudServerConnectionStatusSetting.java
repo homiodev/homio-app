@@ -1,6 +1,6 @@
 package org.touchhome.bundle.cloud.netty.setting;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.cloud.netty.impl.ServerConnectionStatus;

@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.ble.BleApplicationListener;
 import org.ble.BluetoothApplication;
 import org.dbus.InterfacesAddedSignal.InterfacesAdded;
@@ -13,7 +13,7 @@ import org.dbus.InterfacesRomovedSignal.InterfacesRemoved;
 import org.freedesktop.dbus.Variant;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
-import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.function.CheckedRunnable;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
@@ -37,7 +37,7 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.distinctByKey;
 @Log4j2
 @Controller
 @RequiredArgsConstructor
-public class BluetoothService implements BundleContext {
+public class BluetoothService implements BundleEntrypoint {
 
     public static final int MIN_WRITE_TIMEOUT = 5000;
     private static final String PREFIX = "13333333-3333-3333-3333-3333333330";

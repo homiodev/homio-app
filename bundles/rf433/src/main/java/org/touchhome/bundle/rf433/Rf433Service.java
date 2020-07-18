@@ -6,7 +6,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Component;
-import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.rf433.dto.Rf433JSON;
@@ -30,7 +30,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class Rf433Service implements BundleContext {
+public class Rf433Service implements BundleEntrypoint {
     private static Path rf433Dir = TouchHomeUtils.resolvePath("rf433");
     private final EntityContext entityContext;
     private Path rf433TransmitterPy;

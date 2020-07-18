@@ -5,7 +5,7 @@ import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import javax.validation.constraints.NotNull;
 import java.util.Set;
 
-public interface BundleContext extends Comparable<BundleContext> {
+public interface BundleEntrypoint extends Comparable<BundleEntrypoint> {
     String BUNDLE_PREFIX = "org.touchhome.bundle.";
 
     static String getBundleName(Class clazz) {
@@ -35,7 +35,7 @@ public interface BundleContext extends Comparable<BundleContext> {
     }
 
     @Override
-    default int compareTo(@NotNull BundleContext o) {
+    default int compareTo(@NotNull BundleEntrypoint o) {
         return Integer.compare(this.order(), o.order());
     }
 

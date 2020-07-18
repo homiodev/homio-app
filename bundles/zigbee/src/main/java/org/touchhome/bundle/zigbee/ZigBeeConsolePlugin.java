@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ZigBeeConsolePlugin implements ConsolePlugin {
 
-    private final ZigBeeBundleContext zigbeeBundleContext;
+    private final ZigBeeBundleEntrypoint zigbeeBundleContext;
     private final EntityContext entityContext;
 
     @Override

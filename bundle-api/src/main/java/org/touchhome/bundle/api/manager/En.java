@@ -15,6 +15,10 @@ public class En {
         return INSTANCE;
     }
 
+    public void clear() {
+        i18nLang.clear();
+    }
+
     public ObjectNode getLangJson(String lang) {
         if (!i18nLang.containsKey(lang)) {
             i18nLang.put(lang, TouchHomeUtils.readAndMergeJSON("i18n/" + lang + ".json", TouchHomeUtils.OBJECT_MAPPER.createObjectNode()));

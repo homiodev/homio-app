@@ -4,7 +4,7 @@ import com.zsmartsystems.zigbee.IeeeAddress;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.DeviceStatus;
@@ -23,7 +23,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 @Component
 @RequiredArgsConstructor
-public class ZigBeeBundleContext implements BundleContext {
+public class ZigBeeBundleEntrypoint implements BundleEntrypoint {
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
 

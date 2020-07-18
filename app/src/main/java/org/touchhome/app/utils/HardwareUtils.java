@@ -31,19 +31,17 @@ public final class HardwareUtils {
     /**
      * This method fires before ApplicationContext startup to make sure all related dependencies up
      */
-    static void prepareHardware(ConfigurableListableBeanFactory beanFactory) {
+    public static void prepareHardware(ConfigurableListableBeanFactory beanFactory) {
         if (hardwareChecked) {
             return;
         }
         hardwareChecked = true;
         checkDatabaseInstalled(beanFactory);
         checkInternetConnection(beanFactory);
-        if (!EntityContext.isDevEnvironment()) {
-            copyResources();
-            if (EntityContext.isLinuxEnvironment()) {
-                checkWiringPi(beanFactory);
-                checkHotSpotAndWifi(beanFactory);
-            }
+        copyResources();
+        if (EntityContext.isLinuxEnvironment()) {
+            checkWiringPi(beanFactory);
+            checkHotSpotAndWifi(beanFactory);
         }
     }
 
@@ -124,22 +122,28 @@ public final class HardwareUtils {
         if (url == null) {
             throw new IllegalStateException("Unable to find 'asm_files' directory.");
         }
-        Path target = TouchHomeUtils.getFilesPath();
-        if (url.getProtocol().equals("jar")) {
-            try (FileSystem fs = FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
-                String jarFiles = "/BOOT-INF/classes/asm_files";
-                Files.walk(fs.getPath(jarFiles)).filter(f -> Files.isRegularFile(f)).forEach((Path path) -> {
-                    try {
-                        Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
-                        Files.createDirectories(resolve.getParent());
-                        Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+        copyResources(url, "/BOOT-INF/classes/asm_files");
+    }
+
+    @SneakyThrows
+    public static void copyResources(URL url, String jarFiles) {
+        if(url != null) {
+            Path target = TouchHomeUtils.getFilesPath();
+            if (url.getProtocol().equals("jar")) {
+                try (FileSystem fs = FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
+                    Files.walk(fs.getPath(jarFiles)).filter(f -> Files.isRegularFile(f)).forEach((Path path) -> {
+                        try {
+                            Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
+                            Files.createDirectories(resolve.getParent());
+                            Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                }
+            } else {
+                FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
             }
-        } else {
-            FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
         }
     }
 }

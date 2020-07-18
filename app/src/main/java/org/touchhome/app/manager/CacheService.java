@@ -19,8 +19,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.touchhome.bundle.api.util.ClassFinder.CLASSES_WITH_PARENT_CLASS;
-import static org.touchhome.bundle.api.util.ClassFinder.REPOSITORY_BY_CLAZZ;
+import static org.touchhome.app.manager.common.ClassFinder.CLASSES_WITH_PARENT_CLASS;
+import static org.touchhome.app.manager.common.ClassFinder.REPOSITORY_BY_CLAZZ;
 
 @Log4j2
 @Component

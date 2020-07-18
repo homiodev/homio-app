@@ -2,13 +2,13 @@ package org.touchhome.app.js.assistant.impl;
 
 import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.js.assistant.model.Completion;
 import org.touchhome.app.js.assistant.model.CompletionItemKind;
 import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.ui.PublicJsMethod;
-import org.touchhome.bundle.api.util.ClassFinder;
+import org.touchhome.app.manager.common.ClassFinder;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;

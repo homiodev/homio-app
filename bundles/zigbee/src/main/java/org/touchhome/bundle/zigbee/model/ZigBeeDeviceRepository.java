@@ -25,12 +25,12 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 @Repository
 public class ZigBeeDeviceRepository extends AbstractRepository<ZigBeeDeviceEntity> implements HasWorkspaceVariableLinkAbility {
 
-    private final ZigBeeBundleContext zigbeeBundleContext;
+    private final ZigBeeBundleEntrypoint zigbeeBundleContext;
     private final EntityContext entityContext;
     private final ZigBeeDeviceUpdateValueListener zigBeeDeviceUpdateValueListener;
     private final List<Scratch3Block> zigbeeBlocks;
 
-    public ZigBeeDeviceRepository(ZigBeeBundleContext zigbeeBundleContext, EntityContext entityContext,
+    public ZigBeeDeviceRepository(ZigBeeBundleEntrypoint zigbeeBundleContext, EntityContext entityContext,
                                   ZigBeeDeviceUpdateValueListener zigBeeDeviceUpdateValueListener,
                                   List<Scratch3ZigbeeExtensionBlocks> scratch3ZigbeeExtensionBlocks) {
         super(ZigBeeDeviceEntity.class, ZigBeeDeviceEntity.PREFIX);

@@ -15,7 +15,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import static org.touchhome.bundle.api.BundleContext.BUNDLE_PREFIX;
+import static org.touchhome.bundle.api.BundleEntrypoint.BUNDLE_PREFIX;
 
 @Repository
 public class SettingRepository extends AbstractRepository<SettingEntity> {

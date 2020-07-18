@@ -8,7 +8,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -56,7 +56,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
-import static org.apache.commons.lang.StringUtils.trimToNull;
+import static org.apache.commons.lang3.StringUtils.trimToNull;
 
 @RestController
 @RequestMapping("/rest")
@@ -67,7 +67,6 @@ public class UtilsController {
     private final InternalManager entityContext;
     private final ScriptManager scriptManager;
     private final CodeParser codeParser;
-    private final Map<String, AbstractRepository> repositories;
 
     @SneakyThrows
     static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType) {
@@ -316,7 +315,7 @@ public class UtilsController {
     @GetMapping("/getAllItemsForScript")
     public ScriptUiGroupsJSON getAllItemsForScript() {
         ScriptUiGroupsJSON scriptUiGroupsJSON = new ScriptUiGroupsJSON();
-        for (AbstractRepository repository : repositories.values()) {
+        for (AbstractRepository repository : InternalManager.repositories.values()) {
             Class<?> clazz = repository.getEntityClass();
             if (clazz.isAnnotationPresent(UISidebarMenu.class)) {
                 ScriptUiGroupsJSON.Group group = scriptUiGroupsJSON.addGroup(clazz.getSimpleName());

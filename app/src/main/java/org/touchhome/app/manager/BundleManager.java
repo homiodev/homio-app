@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.utils.color.ColorThief;
 import org.touchhome.app.utils.color.MMCQ;
 import org.touchhome.app.utils.color.RGBUtil;
-import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.exception.NotFoundException;
 
 import javax.annotation.PostConstruct;
@@ -24,37 +24,37 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class BundleManager {
-    private final List<BundleContext> bundleContexts;
+    private final List<BundleEntrypoint> bundleEntrypoints;
 
     private final Map<String, String> bundleColorMap = new HashMap<>();
-    private Map<String, BundleContext> bundleMap;
+    private Map<String, BundleEntrypoint> bundleMap;
 
     @PostConstruct
     public void init() throws IOException {
-        this.bundleMap = bundleContexts.stream().collect(Collectors.toMap(BundleContext::getBundleId, s -> s));
-        for (BundleContext bundleContext : bundleContexts) {
-            URL resource = bundleContext.getClass().getClassLoader().getResource(bundleContext.getBundleImage());
+        this.bundleMap = bundleEntrypoints.stream().collect(Collectors.toMap(BundleEntrypoint::getBundleId, s -> s));
+        for (BundleEntrypoint bundleEntrypoint : bundleEntrypoints) {
+            URL resource = bundleEntrypoint.getClass().getClassLoader().getResource(bundleEntrypoint.getBundleImage());
             BufferedImage img = ImageIO.read(Objects.requireNonNull(resource));
             MMCQ.CMap result = ColorThief.getColorMap(img, 5);
-            MMCQ.VBox dominantColor = result.vboxes.get(bundleContext.getBundleImageColorIndex().ordinal());
+            MMCQ.VBox dominantColor = result.vboxes.get(bundleEntrypoint.getBundleImageColorIndex().ordinal());
             int[] rgb = dominantColor.avg(false);
-            bundleColorMap.put(bundleContext.getBundleId(), RGBUtil.toRGBHexString(rgb));
+            bundleColorMap.put(bundleEntrypoint.getBundleId(), RGBUtil.toRGBHexString(rgb));
         }
     }
 
-    public BundleContext getBundle(String bundleID) {
-        BundleContext bundleContext = bundleMap.get(bundleID);
-        if (bundleContext == null) {
+    public BundleEntrypoint getBundle(String bundleID) {
+        BundleEntrypoint bundleEntrypoint = bundleMap.get(bundleID);
+        if (bundleEntrypoint == null) {
             throw new NotFoundException("Unable to find bundle: " + bundleID);
         }
-        return bundleContext;
+        return bundleEntrypoint;
     }
 
     public String getBundleColor(String bundleID) {
         return bundleColorMap.get(bundleID);
     }
 
-    public List<BundleContext> getBundles() {
-        return bundleContexts;
+    public List<BundleEntrypoint> getBundles() {
+        return bundleEntrypoints;
     }
 }

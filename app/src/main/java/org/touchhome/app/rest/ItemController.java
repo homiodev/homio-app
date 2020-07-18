@@ -34,7 +34,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldTargetSelection;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
 import org.touchhome.bundle.api.ui.method.UIMethodAction;
-import org.touchhome.bundle.api.util.ClassFinder;
+import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
 

@@ -20,7 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ZigBeeController {
     private final EntityContext entityContext;
-    private final ZigBeeBundleContext zigbeeBundleContext;
+    private final ZigBeeBundleEntrypoint zigbeeBundleContext;
 
     @GetMapping("option/zcl/{clusterId}")
     public List<Option> filterByClusterId(@PathVariable("clusterId") int clusterId,

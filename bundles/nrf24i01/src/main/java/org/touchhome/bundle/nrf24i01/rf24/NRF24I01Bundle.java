@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.model.DeviceStatus;
@@ -31,7 +31,7 @@ import static org.touchhome.bundle.api.util.RaspberryGpioPin.*;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class NRF24I01Bundle implements BundleContext {
+public class NRF24I01Bundle implements BundleEntrypoint {
     private static final Pipe GLOBAL_WRITE_PIPE = new Pipe("2Node");
     private static byte messageID = 0;
     private static String errorLoadingLibrary = null;

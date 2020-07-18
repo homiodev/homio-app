@@ -11,6 +11,7 @@ import org.touchhome.bundle.api.ui.PublicJsMethod;
 import org.touchhome.bundle.api.util.NotificationType;
 
 import javax.validation.constraints.NotNull;
+import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -183,6 +184,10 @@ public interface EntityContext {
     <T> Collection<T> getBeansOfType(Class<T> clazz);
 
     UserEntity getUser();
+
+    Collection<AbstractRepository> getRepositories();
+
+    <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation);
 
     enum DeviceFeature {
         Bluetooth, HotSpot, GPIO, NRF21I01, SSH

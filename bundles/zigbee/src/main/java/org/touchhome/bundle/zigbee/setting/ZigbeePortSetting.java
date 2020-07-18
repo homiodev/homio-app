@@ -1,7 +1,7 @@
 package org.touchhome.bundle.zigbee.setting;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;

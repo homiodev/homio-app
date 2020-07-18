@@ -3,7 +3,7 @@ package org.touchhome.app.manager.common;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.event.internal.PostDeleteEventListenerStandardImpl;
 import org.hibernate.event.internal.PostInsertEventListenerStandardImpl;
 import org.hibernate.event.internal.PostUpdateEventListenerStandardImpl;
@@ -26,6 +26,8 @@ import org.springframework.web.client.RestTemplate;
 import org.touchhome.app.LogService;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.config.WebSocketConfig;
+import org.touchhome.app.extloader.BundleContext;
+import org.touchhome.app.extloader.BundleService;
 import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSONJSON;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.WidgetManager;
@@ -39,14 +41,16 @@ import org.touchhome.app.rest.SettingController;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
 import org.touchhome.app.utils.CollectionUtils;
+import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.WorkspaceManager;
-import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.condition.ExecuteOnce;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
+import org.touchhome.bundle.api.manager.En;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.DeviceBaseEntity;
@@ -60,7 +64,6 @@ import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
-import org.touchhome.bundle.api.util.ClassFinder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
@@ -69,6 +72,7 @@ import org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity;
 
 import javax.persistence.EntityManagerFactory;
 import javax.validation.constraints.NotNull;
+import java.lang.annotation.Annotation;
 import java.text.DateFormat;
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -87,7 +91,7 @@ public class InternalManager implements EntityContext {
 
     private static final Map<BundleSettingPlugin, String> settingTransientState = new HashMap<>();
     public static Map<String, BundleSettingPlugin> settingPluginsByPluginKey = new HashMap<>();
-    static Map<String, AbstractRepository> repositories;
+    public static Map<String, AbstractRepository> repositories;
     private static Map<Class<? extends BundleSettingPlugin>, BundleSettingPlugin> settingPluginsByPluginClass = new HashMap<>();
     private static EntityManager entityManager;
     private static Map<String, AbstractRepository> repositoriesByPrefix;
@@ -112,7 +116,8 @@ public class InternalManager implements EntityContext {
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
     private ApplicationContext applicationContext;
-    private ArrayList<BundleContext> bundles;
+    private ArrayList<BundleEntrypoint> bundles;
+    private Map<String, BundleContext> extraBundles = new HashMap<>();
     private String latestVersion;
 
     public Set<NotificationEntityJSON> getNotifications() {
@@ -121,7 +126,7 @@ public class InternalManager implements EntityContext {
                 && time - entity.getCreationTime().getTime() > ((AlwaysOnTopNotificationEntityJSONJSON) entity).getDuration() * 1000);
 
         Set<NotificationEntityJSON> set = new TreeSet<>(notifications);
-        for (BundleContext bundle : this.bundles) {
+        for (BundleEntrypoint bundle : this.bundles) {
             Set<NotificationEntityJSON> notifications = bundle.getNotifications();
             if (notifications != null) {
                 set.addAll(notifications);
@@ -136,15 +141,13 @@ public class InternalManager implements EntityContext {
         this.applicationContext = applicationContext;
         this.updateDeviceFeatures();
         this.transactionTemplate = new TransactionTemplate(transactionManager);
-        for (Class<? extends BundleSettingPlugin> settingPlugin : classFinder.getClassesWithParent(BundleSettingPlugin.class)) {
-            BundleSettingPlugin bundleSettingPlugin = settingPlugin.newInstance();
-            settingPluginsByPluginKey.put(SettingRepository.getKey(bundleSettingPlugin), bundleSettingPlugin);
-            settingPluginsByPluginClass.put(settingPlugin, bundleSettingPlugin);
-        }
+
+        this.fetchBundleSettingPlugins();
+
         entityManager = applicationContext.getBean(EntityManager.class);
-        repositoriesByPrefix = applicationContext.getBean("repositoriesByPrefix", Map.class);
-        pureRepositories = applicationContext.getBean("pureRepositories", Map.class);
-        repositories = applicationContext.getBean("repositories", Map.class);
+        pureRepositories = pureRepositories(applicationContext);
+        repositories = applicationContext.getBeansOfType(AbstractRepository.class);
+        repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
 
         applicationContext.getBean(LoggerManager.class).postConstruct();
         applicationContext.getBean(LogService.class).setEntityContext(this);
@@ -166,11 +169,13 @@ public class InternalManager implements EntityContext {
 
         // init modules
         log.info("Initialize bundles");
-        this.bundles = new ArrayList<>(applicationContext.getBeansOfType(BundleContext.class).values());
+        this.bundles = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
         Collections.sort(bundles);
-        for (BundleContext bundleContext : bundles) {
-            bundleContext.init();
+        for (BundleEntrypoint bundleEntrypoint : bundles) {
+            bundleEntrypoint.init();
         }
+
+        applicationContext.getBean(BundleService.class).loadContextFromPath(TouchHomeUtils.getBundlePath());
 
         applicationContext.getBean(WorkspaceManager.class).postConstruct();
         applicationContext.getBean(WidgetManager.class).postConstruct();
@@ -506,6 +511,16 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
+    public Collection<AbstractRepository> getRepositories() {
+        return repositories.values();
+    }
+
+    @Override
+    public <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation) {
+        return classFinder.getClassesWithAnnotation(annotation);
+    }
+
+    @Override
     public Map<DeviceFeature, Boolean> getDeviceFeatures() {
         return deviceFeatures;
     }
@@ -607,6 +622,54 @@ public class InternalManager implements EntityContext {
             }
         } catch (Exception ex) {
             log.error("Unable to update cache entity <{}> for entity: <{}>", type, entity);
+        }
+    }
+
+    public void addBundle(Map<String, BundleContext> batchContexts) {
+        for (String bundleName : batchContexts.keySet()) {
+            this.addBundle(batchContexts.get(bundleName), batchContexts);
+        }
+    }
+
+    private void addBundle(BundleContext bundleContext, Map<String, BundleContext> batchContexts) {
+        if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
+            bundleContext.setInstalled(true);
+            for (String bundleDependency : bundleContext.getDependencies()) {
+                addBundle(batchContexts.get(bundleDependency), batchContexts);
+            }
+            ApplicationContext context = bundleContext.getApplicationContext();
+
+            TouchHomeUtils.addClassLoader(bundleContext.getBundleName(), bundleContext.getBundleClassLoader());
+            this.cacheService.clearCache();
+
+            HardwareUtils.copyResources(bundleContext.getBundleClassLoader().getResource("files"), "/files");
+            En.get().clear();
+            pureRepositories.putAll(pureRepositories(context));
+            this.fetchBundleSettingPlugins();
+
+            for (BundleEntrypoint bundleEntrypoint : context.getBeansOfType(BundleEntrypoint.class).values()) {
+                bundleEntrypoint.init();
+                this.bundles.add(bundleEntrypoint);
+            }
+        }
+    }
+
+    private Map<String, PureRepository> pureRepositories(ApplicationContext applicationContext) {
+        Map<String, PureRepository> map = new HashMap<>();
+        for (PureRepository repository : applicationContext.getBeansOfType(PureRepository.class).values()) {
+            map.put(repository.getEntityClass().getSimpleName(), repository);
+        }
+        return map;
+    }
+
+    @SneakyThrows
+    private void fetchBundleSettingPlugins() {
+        for (Class<? extends BundleSettingPlugin> settingPlugin : classFinder.getClassesWithParent(BundleSettingPlugin.class)) {
+            if (!settingPluginsByPluginClass.containsKey(settingPlugin)) {
+                BundleSettingPlugin bundleSettingPlugin = settingPlugin.newInstance();
+                settingPluginsByPluginKey.put(SettingRepository.getKey(bundleSettingPlugin), bundleSettingPlugin);
+                settingPluginsByPluginClass.put(settingPlugin, bundleSettingPlugin);
+            }
         }
     }
 }

@@ -6,7 +6,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
-import org.touchhome.bundle.api.util.ClassFinder;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.zigbee.ZigBeeCoordinatorHandler;
 import org.touchhome.bundle.zigbee.ZigBeeDevice;
 import org.touchhome.bundle.zigbee.converter.ZigBeeBaseChannelConverter;
@@ -29,8 +29,8 @@ public final class ZigBeeChannelConverterFactory {
 
     private final List<Class<? extends ZigBeeBaseChannelConverter>> converters;
 
-    public ZigBeeChannelConverterFactory(ClassFinder classFinder) {
-        converters = classFinder.getClassesWithAnnotation(ZigBeeConverter.class);
+    public ZigBeeChannelConverterFactory(EntityContext entityContext) {
+        converters = entityContext.getClassesWithAnnotation(ZigBeeConverter.class);
 
         channelMap = converters.stream().collect(Collectors
                 .toMap((Function<Class, ZigBeeConverter>) aClass -> AnnotationUtils.getAnnotation(aClass, ZigBeeConverter.class), c -> c));

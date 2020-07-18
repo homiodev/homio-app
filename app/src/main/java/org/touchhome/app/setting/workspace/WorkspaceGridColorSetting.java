@@ -11,7 +11,7 @@ public class WorkspaceGridColorSetting implements SettingPlugin {
 
     @Override
     public String getDefaultValue() {
-        return "#F9F9F9";
+        return "#E65100";
     }
 
     @Override

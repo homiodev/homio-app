@@ -50,14 +50,14 @@ import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.repository.crud.base.CrudRepositoryFactoryBean;
+import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.block.Scratch3Space;
+import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostHandler;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.DeviceBaseEntity;
-import org.touchhome.bundle.api.repository.AbstractRepository;
-import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
-import org.touchhome.bundle.api.util.ClassFinder;
+import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.bundle.cloud.netty.impl.DispatcherServletService;
 
 import javax.servlet.Filter;
@@ -68,7 +68,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -89,6 +88,8 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
 
     @Autowired
     private ApplicationContext applicationContext;
+
+    private boolean applicationReady;
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -229,25 +230,6 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     }
 
     @Bean
-    public Map<String, AbstractRepository> repositories() {
-        return applicationContext.getBeansOfType(AbstractRepository.class);
-    }
-
-    @Bean
-    public Map<String, AbstractRepository> repositoriesByPrefix() {
-        return repositories().values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
-    }
-
-    @Bean
-    public Map<String, PureRepository> pureRepositories() {
-        Map<String, PureRepository> map = new HashMap<>();
-        for (PureRepository repository : applicationContext.getBeansOfType(PureRepository.class).values()) {
-            map.put(repository.getEntityClass().getSimpleName(), repository);
-        }
-        return map;
-    }
-
-    @Bean
     public ApplicationContextHolder applicationContextHolder() {
         return new ApplicationContextHolder();
     }
@@ -257,7 +239,8 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
      */
     @Override
     public void onApplicationEvent(@NotNull ApplicationEvent event) {
-        if (event instanceof ContextRefreshedEvent) {
+        if (event instanceof ContextRefreshedEvent && !this.applicationReady) {
+            this.applicationReady = true;
             ApplicationContext applicationContext = ((ContextRefreshedEvent) event).getApplicationContext();
             applicationContext.getBean(InternalManager.class).afterContextStart(applicationContext);
         }
@@ -289,6 +272,11 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     @Bean
     public DispatcherServletService dispatcherServletService(ApplicationContext context) {
         return new DispatcherServletService(context);
+    }
+
+    @Bean
+    public HardwareRepositoryFactoryPostHandler hardwareRepositoryFactoryPostHandler() {
+        return HardwareUtils::prepareHardware;
     }
 
     @Override

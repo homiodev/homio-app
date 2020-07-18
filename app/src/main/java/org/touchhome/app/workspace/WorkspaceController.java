@@ -12,7 +12,7 @@ import org.touchhome.app.manager.BundleManager;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.rest.BundleController;
 import org.touchhome.app.workspace.block.Scratch3Space;
-import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
@@ -52,16 +52,16 @@ public class WorkspaceController {
                     throw new IllegalArgumentException("Wrong Scratch3Extension: <" + scratch3Extension.value() + ">. Must contains [a-z] or '-'");
                 }
 
-                BundleContext bundleContext = bundleController.getBundle(scratch3Extension.value());
-                if (bundleContext == null && scratch3Extension.value().contains("-")) {
-                    bundleContext = bundleController.getBundle(scratch3Extension.value().substring(0, scratch3Extension.value().indexOf("-")));
+                BundleEntrypoint bundleEntrypoint = bundleController.getBundle(scratch3Extension.value());
+                if (bundleEntrypoint == null && scratch3Extension.value().contains("-")) {
+                    bundleEntrypoint = bundleController.getBundle(scratch3Extension.value().substring(0, scratch3Extension.value().indexOf("-")));
                 }
-                if (bundleContext == null) {
+                if (bundleEntrypoint == null) {
                     throw new IllegalStateException("Unable to find bundle context with id: " + scratch3Extension.value());
                 }
 
                 insertScratch3Spaces(scratch3ExtensionBlock);
-                extensions.add(new Scratch3ExtensionImpl(scratch3Extension.value(), scratch3ExtensionBlock, bundleContext.order()));
+                extensions.add(new Scratch3ExtensionImpl(scratch3Extension.value(), scratch3ExtensionBlock, bundleEntrypoint.order()));
             }
         }
         Collections.sort(extensions);
@@ -74,10 +74,10 @@ public class WorkspaceController {
 
     @GetMapping("extension/{bundleID}.png")
     public ResponseEntity<InputStreamResource> getExtensionImage(@PathVariable("bundleID") String bundleID) {
-        BundleContext bundleContext = bundleManager.getBundle(bundleID);
-        InputStream stream = bundleContext.getClass().getClassLoader().getResourceAsStream("extensions/" + bundleContext.getBundleId() + ".png");
+        BundleEntrypoint bundleEntrypoint = bundleManager.getBundle(bundleID);
+        InputStream stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream("extensions/" + bundleEntrypoint.getBundleId() + ".png");
         if (stream == null) {
-            stream = bundleContext.getClass().getClassLoader().getResourceAsStream(bundleContext.getBundleImage());
+            stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream(bundleEntrypoint.getBundleImage());
         }
         if (stream == null) {
             throw new NotFoundException("Unable to find workspace extension bundle image for bundle: " + bundleID);
@@ -140,7 +140,9 @@ public class WorkspaceController {
 
     @GetMapping("tab")
     public List<Option> getWorkspaceTabs() {
-        return Option.list(entityContext.findAll(WorkspaceEntity.class));
+        List<WorkspaceEntity> tabs = entityContext.findAll(WorkspaceEntity.class);
+        Collections.sort(tabs);
+        return Option.list(tabs);
     }
 
     @SneakyThrows
@@ -152,6 +154,12 @@ public class WorkspaceController {
             return Option.of(entity.getEntityID(), entity.getTitle());
         }
         throw new IllegalArgumentException("Workspace tab with name <" + name + "> already exists");
+    }
+
+    @SneakyThrows
+    @GetMapping("tab/{name}")
+    public boolean tabExists(@PathVariable("name") String name) {
+        return entityContext.getEntity(WorkspaceEntity.PREFIX + name) != null;
     }
 
     @SneakyThrows

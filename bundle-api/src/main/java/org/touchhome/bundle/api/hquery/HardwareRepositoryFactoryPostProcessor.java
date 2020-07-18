@@ -17,6 +17,7 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.thavam.util.concurrent.blockingMap.BlockingHashMap;
 import org.thavam.util.concurrent.blockingMap.BlockingMap;
 import org.touchhome.bundle.api.hquery.api.*;
+import org.touchhome.bundle.api.util.SpringUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -32,6 +33,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -39,9 +41,6 @@ import java.util.stream.Collectors;
 @Log4j2
 public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostProcessor {
 
-    private static final Pattern PATTERN = Pattern.compile("\\$\\{.*?}");
-    private static final int VALUE_PREFIX_LENGTH = "${".length();
-    private static final int VALUE_SUFFIX_LENGTH = "}".length();
     private static final BlockingQueue<PrintContext> printLogsJobs = new LinkedBlockingQueue<>(10);
     private static final BlockingMap<Process, List<String>> inputResponse = new BlockingHashMap<>();
     private static final Constructor<MethodHandles.Lookup> lookupConstructor;
@@ -81,10 +80,12 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
     }
 
     private final String basePackages;
+    private HardwareRepositoryFactoryPostHandler handler;
     private String pm = "apt";
 
-    HardwareRepositoryFactoryPostProcessor(String basePackages) {
+    HardwareRepositoryFactoryPostProcessor(String basePackages, HardwareRepositoryFactoryPostHandler handler) {
         this.basePackages = basePackages;
+        this.handler = handler;
     }
 
     @Override
@@ -123,6 +124,9 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 throw new RuntimeException("Unable to execute hardware method without implementation");
             }));
         }
+        if(this.handler != null) {
+            this.handler.accept(beanFactory);
+        }
     }
 
     private String replaceStringWithArgs(String str, Object[] args, Method method) {
@@ -146,7 +150,7 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
         List<String> parts = new ArrayList<>();
         for (String cmd : hardwareQuery.value()) {
             String argCmd = replaceStringWithArgs(cmd, args, method);
-            String envCmd = replaceEnvValues(argCmd, env::getProperty);
+            String envCmd = SpringUtils.replaceEnvValues(argCmd, env::getProperty);
             String partCmd = envCmd.contains("$PM") ? envCmd.replace("$PM", pm) : envCmd;
             parts.add(partCmd);
         }
@@ -387,27 +391,6 @@ public class HardwareRepositoryFactoryPostProcessor implements BeanFactoryPostPr
                 }
             }
         }
-    }
-
-    private String replaceEnvValues(String notes, BiFunction<String, String, String> propertyGetter) {
-        Matcher matcher = PATTERN.matcher(notes);
-        StringBuffer noteBuffer = new StringBuffer();
-        while (matcher.find()) {
-            String group = matcher.group();
-            matcher.appendReplacement(noteBuffer, getEnvProperty(group, propertyGetter));
-        }
-        matcher.appendTail(noteBuffer);
-        return noteBuffer.length() == 0 ? notes : noteBuffer.toString();
-    }
-
-    private String getEnvProperty(String value, BiFunction<String, String, String> propertyGetter) {
-        String[] array = getSpringValuesPattern(value);
-        return propertyGetter.apply(array[0], array[1]);
-    }
-
-    private String[] getSpringValuesPattern(String value) {
-        String valuePattern = value.substring(VALUE_PREFIX_LENGTH, value.length() - VALUE_SUFFIX_LENGTH);
-        return valuePattern.contains(":") ? valuePattern.split(":") : new String[]{valuePattern, ""};
     }
 
     private <T> List<Class<? extends T>> getClassesWithAnnotation() {

@@ -35,13 +35,17 @@ import java.util.function.Predicate;
 public class TouchHomeUtils {
 
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    public static final String[] SYSTEM_BUNDLES = {"arduino", "raspberry", "telegram", "zigbee", "cloud", "bluetooth", "xaomi"};
     private static final Path TMP_FOLDER = Paths.get(FileUtils.getTempDirectoryPath());
     @Getter
     private static final Path filesPath;
     @Getter
+    private static final Path bundlePath;
+    @Getter
     private static final Path sshPath;
     public static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
     private static Path rootPath;
+    private static Map<String, ClassLoader> bundleClassLoaders = new HashMap();
 
     static {
         if (SystemUtils.IS_OS_WINDOWS) {
@@ -49,18 +53,25 @@ public class TouchHomeUtils {
         } else {
             rootPath = Paths.get("/opt/touchhome");
         }
-        filesPath = rootPath.resolve("asm_files");
-        sshPath = rootPath.resolve("ssh");
-        TouchHomeUtils.createDirectoriesIfNotExists(filesPath);
-        TouchHomeUtils.createDirectoriesIfNotExists(sshPath);
+        filesPath = getOrCreatePath("asm_files");
+        sshPath = getOrCreatePath("ssh");
+        bundlePath = getOrCreatePath("bundles");
+    }
+
+    public static void addClassLoader(String bundleName, ClassLoader classLoader) {
+        bundleClassLoaders.put(bundleName, classLoader);
     }
 
     @SneakyThrows
     public static <T> T readAndMergeJSON(String resource, T targetObject) {
         ObjectReader updater = OBJECT_MAPPER.readerForUpdating(targetObject);
-        Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources(resource);
-        while (resources.hasMoreElements()) {
-            updater.readValue(resources.nextElement());
+        ArrayList<ClassLoader> classLoaders = new ArrayList<>(bundleClassLoaders.values());
+        classLoaders.add(TouchHomeUtils.class.getClassLoader());
+
+        for (ClassLoader classLoader : classLoaders) {
+            for (URL url : Collections.list(classLoader.getResources(resource))) {
+                updater.readValue(url);
+            }
         }
         return targetObject;
     }
@@ -170,7 +181,7 @@ public class TouchHomeUtils {
     }
 
     @SneakyThrows
-    private static void createDirectoriesIfNotExists(Path path) {
+    private static Path createDirectoriesIfNotExists(Path path) {
         if (Files.notExists(path)) {
             try {
                 Files.createDirectory(path);
@@ -178,6 +189,7 @@ public class TouchHomeUtils {
                 log.error("Unable to create path: <{}>", path.toAbsolutePath().toString());
             }
         }
+        return path;
     }
 
     @SneakyThrows
@@ -188,7 +200,7 @@ public class TouchHomeUtils {
     }
 
     @SneakyThrows
-    public static List<Map<String, String>> readProperties(String path) {
+    private static List<Map<String, String>> readProperties(String path) {
         Enumeration<URL> resources = TouchHomeUtils.class.getClassLoader().getResources(path);
         List<Map<String, String>> properties = new ArrayList<>();
         while (resources.hasMoreElements()) {
@@ -226,12 +238,16 @@ public class TouchHomeUtils {
         return new TemplateBuilder(templateName);
     }
 
+    private static Path getOrCreatePath(String path) {
+        return TouchHomeUtils.createDirectoriesIfNotExists(rootPath.resolve(path));
+    }
+
     public static class TemplateBuilder {
         private final Context context = new Context();
         private final TemplateEngine templateEngine;
         private final String templateName;
 
-        public TemplateBuilder(String templateName) {
+        TemplateBuilder(String templateName) {
             this.templateName = templateName;
             this.templateEngine = new TemplateEngine();
             ClassLoaderTemplateResolver templateResolver = new ClassLoaderTemplateResolver();

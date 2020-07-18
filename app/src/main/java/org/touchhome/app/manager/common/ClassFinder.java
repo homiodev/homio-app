@@ -1,4 +1,4 @@
-package org.touchhome.bundle.api.util;
+package org.touchhome.app.manager.common;
 
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
@@ -8,13 +8,14 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.stereotype.Component;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
+import org.touchhome.bundle.api.util.ApplicationContextHolder;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Component
 public class ClassFinder {
@@ -40,15 +41,15 @@ public class ClassFinder {
                 };
 
         scanner.addIncludeFilter(new AnnotationTypeFilter(annotation));
-        List<Class<? extends T>> findedClasses = new ArrayList<>();
+        List<Class<? extends T>> foundClasses = new ArrayList<>();
         for (BeanDefinition bd : scanner.findCandidateComponents("org.touchhome")) {
             try {
-                findedClasses.add((Class<? extends T>) Class.forName(bd.getBeanClassName()));
+                foundClasses.add((Class<? extends T>) Class.forName(bd.getBeanClassName()));
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         }
-        return findedClasses;
+        return foundClasses;
     }
 
     public <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation) {
@@ -67,22 +68,21 @@ public class ClassFinder {
         ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
 
         scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
-        List<Class<? extends T>> findedClasses = new ArrayList<>();
+        List<Class<? extends T>> foundClasses = new ArrayList<>();
 
-        getClassesWithParentFromPackage("org.touchhome", className, scanner, findedClasses);
-        if (findedClasses.isEmpty()) {
-            getClassesWithParentFromPackage("com.pi4j", className, scanner, findedClasses);
+        getClassesWithParentFromPackage("org.touchhome", className, scanner, foundClasses);
+        if (foundClasses.isEmpty()) {
+            getClassesWithParentFromPackage("com.pi4j", className, scanner, foundClasses);
         }
 
-        return findedClasses;
+        return foundClasses;
     }
 
     @Cacheable(REPOSITORY_BY_CLAZZ)
     public <T extends BaseEntity, R extends AbstractRepository<T>> R getRepositoryByClass(Class<T> clazz) {
         List<R> potentialRepository = new ArrayList<>();
 
-        Map<String, AbstractRepository> repositories = ApplicationContextHolder.getBean("repositories", Map.class);
-        for (AbstractRepository abstractRepository : repositories.values()) {
+        for (AbstractRepository abstractRepository : ApplicationContextHolder.getBean(EntityContext.class).getRepositories()) {
             if (abstractRepository.getEntityClass().equals(clazz)) {
                 return (R) abstractRepository;
             }
@@ -121,18 +121,17 @@ public class ClassFinder {
         throw new IllegalStateException("Unable find repository for entity class: " + clazz);
     }
 
-    private <T> void getClassesWithParentFromPackage(String packageName, String className, ClassPathScanningCandidateComponentProvider scanner, List<Class<? extends T>> findedClasses) {
+    private <T> void getClassesWithParentFromPackage(String packageName, String className, ClassPathScanningCandidateComponentProvider scanner, List<Class<? extends T>> foundClasses) {
         try {
             for (BeanDefinition bd : scanner.findCandidateComponents(packageName)) {
                 if (className == null || bd.getBeanClassName().endsWith("." + className)) {
                     try {
-                        findedClasses.add((Class<? extends T>) Class.forName(bd.getBeanClassName()));
+                        foundClasses.add((Class<? extends T>) Class.forName(bd.getBeanClassName()));
                     } catch (ClassNotFoundException ignore) {
                     }
                 }
             }
-        } catch (Exception ex) {
-            System.out.printf("ex.get");
+        } catch (Exception ignore) {
         }
     }
 }

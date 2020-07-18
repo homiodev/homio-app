@@ -14,10 +14,10 @@ import com.google.api.services.oauth2.Oauth2;
 import com.google.api.services.oauth2.model.Userinfoplus;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
 
@@ -33,7 +33,7 @@ import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 
 @Component
 @RequiredArgsConstructor
-public class GoogleDriveFileSystem implements BundleContext {
+public class GoogleDriveFileSystem implements BundleEntrypoint {
     public static final String MIME_TYPE_AUDIO = "application/vnd.google-apps.audio";
     public static final String MIME_TYPE_GOOGLE_DRAWING = "application/vnd.google-apps.drawing";
     public static final String MIME_TYPE_GOOGLE_DRIVE_FILE = "application/vnd.google-apps.file";

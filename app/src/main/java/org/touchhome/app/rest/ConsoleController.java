@@ -13,7 +13,7 @@ import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.service.ssh.SshProvider;
 import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
-import org.touchhome.bundle.api.BundleContext;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.exception.NotFoundException;
@@ -43,7 +43,7 @@ public class ConsoleController {
         this.tabs.addAll(logService.getTabs().stream().map(l -> Option.key(l).addJson("type", "log")).collect(Collectors.toList()));
         Collections.sort(consolePlugins);
         for (ConsolePlugin consolePlugin : consolePlugins) {
-            String bundleName = BundleContext.getBundleName(consolePlugin.getClass());
+            String bundleName = BundleEntrypoint.getBundleName(consolePlugin.getClass());
             this.consolePluginsMap.put(bundleName, consolePlugin);
         }
     }

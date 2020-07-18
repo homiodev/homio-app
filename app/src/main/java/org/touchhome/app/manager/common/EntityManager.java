@@ -15,7 +15,6 @@ import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
-import org.touchhome.bundle.api.util.ClassFinder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.persistence.Entity;
