@@ -29,7 +29,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.distinctByKey;
@@ -157,8 +156,9 @@ public class BluetoothService implements BundleEntrypoint {
         try {
             bluetoothApplication.start();
             log.info("Bluetooth successfully started");
+            entityContext.setFeatureState("Bluetooth", true);
         } catch (Exception ex) {
-            entityContext.disableFeature(EntityContext.DeviceFeature.Bluetooth);
+            entityContext.setFeatureState("Bluetooth", false);
             log.error("Unable to start bluetooth service", ex);
         }
     }
@@ -293,7 +293,7 @@ public class BluetoothService implements BundleEntrypoint {
     }
 
     private String getFeatures() {
-        return Stream.of(EntityContext.DeviceFeature.values()).map(deviceFeature -> entityContext.getDeviceFeatures().get(deviceFeature) ? "1" : "0").collect(Collectors.joining());
+        return entityContext.getDeviceFeatures().entrySet().stream().map(es -> es.getKey() + "_" + es.getValue()).collect(Collectors.joining(";"));
     }
 
     private String getWifiName() {

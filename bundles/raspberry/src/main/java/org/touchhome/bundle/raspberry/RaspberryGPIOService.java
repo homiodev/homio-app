@@ -88,9 +88,7 @@ public class RaspberryGPIOService {
                     available = false;
                 }
             }
-            if (!available) {
-                entityContext.disableFeature(EntityContext.DeviceFeature.GPIO);
-            }
+            entityContext.setFeatureState("GPIO", available);
         }
         return available;
     }
@@ -185,9 +183,7 @@ public class RaspberryGPIOService {
     public void addGpioListener(String name, RaspberryGpioPin pin, Consumer<PinState> listener) {
         assertDigitalInputPin(pin, PinMode.DIGITAL_INPUT, "Unable to add pin listener for not input pin mode");
         this.setGpioPinMode(pin, PinMode.DIGITAL_INPUT, null);
-        this.digitalListeners.get(pin).add(new PinListener(name, event -> {
-            listener.accept(event.getState());
-        }));
+        this.digitalListeners.get(pin).add(new PinListener(name, event -> listener.accept(event.getState())));
     }
 
     private void assertDigitalInputPin(RaspberryGpioPin pin, PinMode digitalInput, String s) {

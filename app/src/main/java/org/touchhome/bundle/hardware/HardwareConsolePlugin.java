@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 
@@ -62,8 +61,7 @@ public class HardwareConsolePlugin implements ConsolePlugin {
     }
 
     private String getFeatures() {
-        return Stream.of(EntityContext.DeviceFeature.values())
-                .map(f -> f + ": " + entityContext.getDeviceFeatures().get(f))
+        return entityContext.getDeviceFeatures().entrySet().stream().map(f -> f.getKey() + ": " + f.getValue())
                 .collect(Collectors.joining("; "));
     }
 

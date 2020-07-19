@@ -70,11 +70,10 @@ public class NRF24I01Bundle implements BundleEntrypoint {
 
     public void init() {
         loadLibrary();
-        if (!isNrf24L01Works()) {
-            entityContext.disableFeature(EntityContext.DeviceFeature.NRF21I01);
-        } else {
+        if (isNrf24L01Works()) {
             RaspberryGpioPin.occupyPins("NRF21I01", PIN19, PIN21, PIN22, PIN23, PIN24);
         }
+        entityContext.setFeatureState("NRF21I01", isNrf24L01Works());
         entityContext.listenSettingValue(Nrf24i01EnableButtonsSetting.class, enable -> {
             if (enable) {
                 if (isNrf24L01Works()) {

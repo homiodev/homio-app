@@ -80,7 +80,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID;
@@ -101,7 +100,7 @@ public class InternalManager implements EntityContext {
     private final RestTemplate restTemplate = new RestTemplate();
     private final Map<String, List<BiConsumer>> entityUpdateListeners = new HashMap<>();
     private final Map<Class<? extends BaseEntity>, List<BiConsumer>> entityClassUpdateListeners = new HashMap<>();
-    private final Map<DeviceFeature, Boolean> deviceFeatures = Stream.of(DeviceFeature.values()).collect(Collectors.toMap(f -> f, f -> Boolean.TRUE));
+    private final Map<String, Boolean> deviceFeatures = new HashMap<>();
     private final Set<NotificationEntityJSON> notifications = CollectionUtils.extendedSet();
 
     private final ClassFinder classFinder;
@@ -222,11 +221,14 @@ public class InternalManager implements EntityContext {
     }
 
     private void updateDeviceFeatures() {
+        for (String feature : new String[]{"HotSpot", "SSH"}) {
+            deviceFeatures.put(feature, true);
+        }
         if (EntityContext.isDevEnvironment() || EntityContext.isDockerEnvironment()) {
-            disableFeature(DeviceFeature.HotSpot);
+            setFeatureState("HotSpot", false);
         }
         if (!EntityContext.isLinuxOrDockerEnvironment()) {
-            disableFeature(DeviceFeature.SSH);
+            setFeatureState("SSH", false);
         }
     }
 
@@ -477,13 +479,13 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public void disableFeature(DeviceFeature deviceFeature) {
-        deviceFeatures.put(deviceFeature, false);
+    public void setFeatureState(String feature, boolean state) {
+        deviceFeatures.put(feature, state);
     }
 
     @Override
-    public boolean isFeatureEnabled(DeviceFeature deviceFeature) {
-        return deviceFeatures.get(deviceFeature);
+    public boolean isFeatureEnabled(String deviceFeature) {
+        return Boolean.TRUE.equals(deviceFeatures.get(deviceFeature));
     }
 
     @Override
@@ -532,7 +534,7 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public Map<DeviceFeature, Boolean> getDeviceFeatures() {
+    public Map<String, Boolean> getDeviceFeatures() {
         return deviceFeatures;
     }
 

@@ -171,11 +171,11 @@ public interface EntityContext {
 
     <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener);
 
-    void disableFeature(DeviceFeature deviceFeature);
+    void setFeatureState(String feature, boolean state);
 
-    boolean isFeatureEnabled(DeviceFeature deviceFeature);
+    boolean isFeatureEnabled(String deviceFeature);
 
-    Map<DeviceFeature, Boolean> getDeviceFeatures();
+    Map<String, Boolean> getDeviceFeatures();
 
     <T> T getBean(String beanName, Class<T> clazz);
 
@@ -188,8 +188,4 @@ public interface EntityContext {
     Collection<AbstractRepository> getRepositories();
 
     <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation);
-
-    enum DeviceFeature {
-        Bluetooth, HotSpot, GPIO, NRF21I01, SSH
-    }
 }

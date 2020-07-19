@@ -66,7 +66,7 @@ public class GpioConsolePlugin implements ConsolePlugin {
 
     @Override
     public boolean isEnabled() {
-        return entityContext.isFeatureEnabled(EntityContext.DeviceFeature.GPIO);
+        return entityContext.isFeatureEnabled("GPIO");
     }
 
     @Getter
