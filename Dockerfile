@@ -1,7 +1,7 @@
 FROM debian:10.3-slim
 
 LABEL maintainer="Ruslan Masiuk <ruslan.masuk@gmail.com>"
-LABEL image.application.name=touchHome-core
+LABEL image.application.name=touchhome-core
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -52,7 +52,7 @@ RUN cd lol_dht22 && ./configure && make && cd ..
 # Configure postgres
 VOLUME  ["/var/lib/postgresql/data"]
 
-COPY app/target/touchHome.jar touchHome.jar
-ENTRYPOINT ["java", "-jar", "-Ddocker=true", "touchHome.jar"]
+COPY app/target/touchhome.jar touchhome.jar
+ENTRYPOINT ["java", "-jar", "-Ddocker=true", "touchhome.jar"]
 
 EXPOSE 9111
