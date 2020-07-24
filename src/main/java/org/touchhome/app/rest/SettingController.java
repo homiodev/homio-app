@@ -10,6 +10,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,10 +20,10 @@ import java.util.Map;
 public class SettingController {
 
     private final EntityContext entityContext;
-    private final Map<Class<? extends BundleSettingPlugin>, SettingEntity> transientSettings;
+    private Map<Class<? extends BundleSettingPlugin>, SettingEntity> transientSettings;
 
     public void postConstruct() {
-        this.transientSettings.clear();
+        this.transientSettings = new HashMap<>();
         for (BundleSettingPlugin settingPlugin : InternalManager.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {
                 this.transientSettings.put(settingPlugin.getClass(),

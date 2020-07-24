@@ -1,7 +1,7 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>touchhomeBackend</artifactId>
+    <artifactId>touchhome-core</artifactId>
     <groupId>org.touchhome</groupId>
     <url>https://github.com/touchhome/touchhome-core</url>
 
@@ -28,16 +28,21 @@
         <jackson.version>2.10.3</jackson.version>
         <pi4j.version>1.2</pi4j.version>
 
-        <touchhome-bundle-api.version>1.0.4</touchhome-bundle-api.version>
-        <touchhome-bundle.version>1.0.4</touchhome-bundle.version>
-        <touchhome-bundle-extra.version>1.0.0</touchhome-bundle-extra.version>
+        <touchhome-bundle-api.version>1.0.6</touchhome-bundle-api.version>
+        <touchhome-bundle.version>1.0.10-SNAPSHOT</touchhome-bundle.version>
+        <touchhome-bundle-extra.version>1.0.2</touchhome-bundle-extra.version>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>org.touchhome</groupId>
+            <groupId>org.touchhome.bundle.extra</groupId>
             <artifactId>bundle-rf433</artifactId>
             <version>${touchhome-bundle-extra.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
         </dependency>
 
         <dependency>
@@ -138,49 +143,49 @@
         </dependency>
 
         <dependency>
-            <groupId>org.touchhome</groupId>
+            <groupId>org.touchhome.bundle</groupId>
             <artifactId>bundle-cloud</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.touchhome</groupId>
+            <groupId>org.touchhome.bundle</groupId>
             <artifactId>bundle-arduino</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.touchhome</groupId>
+            <groupId>org.touchhome.bundle</groupId>
             <artifactId>bundle-raspberry</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.touchhome</groupId>
+            <groupId>org.touchhome.bundle</groupId>
             <artifactId>bundle-telegram</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.touchhome</groupId>
+            <groupId>org.touchhome.bundle</groupId>
             <artifactId>bundle-zigbee</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.touchhome</groupId>
+            <groupId>org.touchhome.bundle</groupId>
             <artifactId>bundle-xaomi</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.touchhome</groupId>
+            <groupId>org.touchhome.bundle</groupId>
             <artifactId>bundle-bluetooth</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.touchhome</groupId>
+            <groupId>org.touchhome.bundle.extra</groupId>
             <artifactId>bundle-google-drive</artifactId>
             <version>${touchhome-bundle-extra.version}</version>
         </dependency>
@@ -355,6 +360,15 @@
                     <include>**/*</include>
                 </includes>
             </resource>
+
+            <resource>
+                <directory>${basedir}</directory>
+                <targetPath>${basedir}/target</targetPath>
+                <filtering>true</filtering>
+                <includes>
+                    <include>bintray.json</include>
+                </includes>
+            </resource>
         </resources>
 
         <plugins>
@@ -370,6 +384,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -387,20 +402,6 @@
             </plugin>
 
             <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <configuration>
-                    <outputDirectory>${basedir}/target</outputDirectory>
-                    <resources>
-                        <resource>
-                            <directory>${basedir}</directory>
-                            <include>bintray.json</include>
-                            <filtering>true</filtering>
-                        </resource>
-                    </resources>
-                </configuration>
-            </plugin>
-
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
@@ -410,6 +411,7 @@
                 </configuration>
             </plugin>
         </plugins>
+
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -430,6 +432,10 @@
         <repository>
             <id>bintray-touchhome-maven-repo</id>
             <url>https://dl.bintray.com/touchhome/maven-repo</url>
+        </repository>
+        <repository>
+            <id>bintray-touchhome-maven-repo-bundle-extra</id>
+            <url>https://dl.bintray.com/touchhome/maven-repo-extra-bundles</url>
         </repository>
     </repositories>
 </project>

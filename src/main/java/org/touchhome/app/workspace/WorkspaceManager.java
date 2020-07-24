@@ -29,7 +29,6 @@ import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 
-import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -44,16 +43,15 @@ public class WorkspaceManager {
     private final BroadcastLockManager broadcastLockManager;
     private final EntityContext entityContext;
     private final BackgroundProcessManager backgroundProcessManager;
-    private final List<Scratch3ExtensionBlocks> scratch3BlocksList;
-    private final List<WorkspaceEventListener> workspaceEventListeners;
 
+    private Collection<WorkspaceEventListener> workspaceEventListeners;
     private Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
-
     private Map<String, TabHolder> tabs = new HashMap<>();
 
-    @PostConstruct
-    public void init() {
-        scratch3Blocks = scratch3BlocksList.stream().collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
+    public void postConstruct(EntityContext entityContext) {
+        scratch3Blocks = entityContext.getBeansOfType(Scratch3ExtensionBlocks.class).stream()
+                .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
+        workspaceEventListeners = entityContext.getBeansOfType(WorkspaceEventListener.class);
     }
 
     private void reloadWorkspace(WorkspaceEntity workspaceEntity) {
@@ -241,7 +239,7 @@ public class WorkspaceManager {
         return null;
     }
 
-    public void postConstruct() {
+    public void loadWorkspace() {
         try {
             reloadVariables();
             reloadWorkspaces();

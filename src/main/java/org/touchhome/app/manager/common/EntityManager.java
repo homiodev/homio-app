@@ -32,10 +32,14 @@ import static org.touchhome.app.manager.CacheService.*;
 @RequiredArgsConstructor
 public class EntityManager {
 
-    private final Map<String, Class<? extends BaseEntity>> baseEntityClasses;
-
     private final ClassFinder classFinder;
     private final BackgroundProcessManager backgroundProcessManager;
+
+    private Map<String, Class<? extends BaseEntity>> baseEntityClasses;
+
+    public void postConstruct() {
+        baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class, null).stream().collect(Collectors.toMap(Class::getName, s -> s));
+    }
 
     <T extends BaseEntity> T getEntityNoCache(String entityID) {
         return getEntity(entityID);

@@ -47,6 +47,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.touchhome.app.jsog.JSOGGenerator;
 import org.touchhome.app.jsog.JSOGResolver;
 import org.touchhome.app.manager.CacheService;
+import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.repository.crud.base.CrudRepositoryFactoryBean;
@@ -57,8 +58,6 @@ import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.DeviceBaseEntity;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
-import org.touchhome.app.manager.common.ClassFinder;
-import org.touchhome.bundle.cloud.netty.impl.DispatcherServletService;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -69,9 +68,7 @@ import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 @Log4j2
 @Configuration
@@ -111,23 +108,8 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     }
 
     @Bean
-    public Map<String, Scratch3ExtensionBlocks> scratch3Blocks(List<Scratch3ExtensionBlocks> scratch3Blocks) {
-        return scratch3Blocks.stream().collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, p -> p));
-    }
-
-    @Bean
     public List<WidgetBaseEntity> widgetBaseEntities(ClassFinder classFinder) {
         return ClassFinder.createClassesWithParent(WidgetBaseEntity.class, classFinder);
-    }
-
-    @Bean
-    public Map<String, Class<? extends BaseEntity>> baseEntityClasses(ClassFinder classFinder) {
-        return classFinder.getClassesWithParent(BaseEntity.class, null).stream().collect(Collectors.toMap(Class::getName, s -> s));
-    }
-
-    @Bean
-    public Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses(ClassFinder classFinder) {
-        return classFinder.getClassesWithParent(BaseEntity.class, null).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
     }
 
     @Bean
@@ -267,11 +249,6 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
         configurer.favorPathExtension(false);
-    }
-
-    @Bean
-    public DispatcherServletService dispatcherServletService(ApplicationContext context) {
-        return new DispatcherServletService(context);
     }
 
     @Bean

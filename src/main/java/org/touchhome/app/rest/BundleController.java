@@ -57,7 +57,7 @@ public class BundleController {
     @GetMapping
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<BundleJson> getBundles() {
-        List<BundleJson> bundles = new ArrayList<>(bundleManager.getBundles().size());
+        List<BundleJson> bundles = new ArrayList<>();
         for (BundleEntrypoint bundle : bundleManager.getBundles()) {
             bundles.add(new BundleJson(bundle.getBundleId(), bundleManager.getBundleColor(bundle.getBundleId()), bundle.order()));
         }

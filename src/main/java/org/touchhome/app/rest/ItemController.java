@@ -15,6 +15,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.manager.ImageManager;
+import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
@@ -34,11 +35,9 @@ import org.touchhome.bundle.api.ui.field.UIFieldTargetSelection;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
 import org.touchhome.bundle.api.ui.method.UIMethodAction;
-import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
 
-import javax.annotation.PostConstruct;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
@@ -65,7 +64,14 @@ public class ItemController {
     private final ClassFinder classFinder;
     private final ImageManager imageManager;
     private final ApplicationContext applicationContext;
-    private final Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
+
+    private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
+
+    public void postConstruct() {
+        this.baseEntitySimpleClasses = classFinder.getClassesWithParent(BaseEntity.class, null)
+                .stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
+        this.baseEntitySimpleClasses.put(DeviceBaseEntity.class.getSimpleName(), DeviceBaseEntity.class);
+    }
 
     @SneakyThrows
     static Object executeAction(UIActionDescription uiActionDescription, Object actionHolder, ApplicationContext applicationContext, BaseEntity actionEntity) {
@@ -124,11 +130,6 @@ public class ItemController {
             }
         }
         return actions;
-    }
-
-    @PostConstruct
-    public void init() {
-        this.baseEntitySimpleClasses.put(DeviceBaseEntity.class.getSimpleName(), DeviceBaseEntity.class);
     }
 
     @GetMapping("{type}/fields")

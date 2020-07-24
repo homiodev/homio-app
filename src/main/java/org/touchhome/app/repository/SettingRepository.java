@@ -11,9 +11,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.List;
 
 import static org.touchhome.bundle.api.BundleEntrypoint.BUNDLE_PREFIX;
 

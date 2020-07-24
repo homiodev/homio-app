@@ -36,16 +36,15 @@ import java.util.*;
 @RequestMapping("/rest/workspace")
 public class WorkspaceController {
 
-    private final List<Scratch3ExtensionBlocks> scratch3ExtensionBlocks;
     private final BundleController bundleController;
     private final EntityContext entityContext;
     private final BundleManager bundleManager;
     private final WorkspaceManager workspaceManager;
+
     private final List<Scratch3ExtensionImpl> extensions = new ArrayList<>();
 
-    @PostConstruct
-    public void init() {
-        for (Scratch3ExtensionBlocks scratch3ExtensionBlock : scratch3ExtensionBlocks) {
+    public void postConstruct(EntityContext entityContext) {
+        for (Scratch3ExtensionBlocks scratch3ExtensionBlock : entityContext.getBeansOfType(Scratch3ExtensionBlocks.class)) {
             if (scratch3ExtensionBlock.getClass().isAnnotationPresent(Scratch3Extension.class)) {
                 Scratch3Extension scratch3Extension = scratch3ExtensionBlock.getClass().getDeclaredAnnotation(Scratch3Extension.class);
                 if (!Scratch3Extension.ID_PATTERN.matcher(scratch3Extension.value()).matches()) {

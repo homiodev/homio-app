@@ -1,38 +1,35 @@
 package org.touchhome.app.manager;
 
-import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.utils.color.ColorThief;
 import org.touchhome.app.utils.color.MMCQ;
 import org.touchhome.app.utils.color.RGBUtil;
 import org.touchhome.bundle.api.BundleEntrypoint;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 
-import javax.annotation.PostConstruct;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Log4j2
 @Component
-@RequiredArgsConstructor
 public class BundleManager {
-    private final List<BundleEntrypoint> bundleEntrypoints;
-
-    private final Map<String, String> bundleColorMap = new HashMap<>();
+    private Map<String, String> bundleColorMap;
     private Map<String, BundleEntrypoint> bundleMap;
+    private Collection<BundleEntrypoint> bundleEntryPoints;
 
-    @PostConstruct
-    public void init() throws IOException {
-        this.bundleMap = bundleEntrypoints.stream().collect(Collectors.toMap(BundleEntrypoint::getBundleId, s -> s));
-        for (BundleEntrypoint bundleEntrypoint : bundleEntrypoints) {
+    @SneakyThrows
+    public void postConstruct(EntityContext entityContext) {
+        this.bundleEntryPoints = entityContext.getBeansOfType(BundleEntrypoint.class);
+        this.bundleMap = bundleEntryPoints.stream().collect(Collectors.toMap(BundleEntrypoint::getBundleId, s -> s));
+        this.bundleColorMap = new HashMap<>();
+
+        for (BundleEntrypoint bundleEntrypoint : bundleEntryPoints) {
             URL resource = bundleEntrypoint.getClass().getClassLoader().getResource(bundleEntrypoint.getBundleImage());
             BufferedImage img = ImageIO.read(Objects.requireNonNull(resource));
             MMCQ.CMap result = ColorThief.getColorMap(img, 5);
@@ -54,7 +51,7 @@ public class BundleManager {
         return bundleColorMap.get(bundleID);
     }
 
-    public List<BundleEntrypoint> getBundles() {
-        return bundleEntrypoints;
+    public Collection<BundleEntrypoint> getBundles() {
+        return bundleEntryPoints;
     }
 }

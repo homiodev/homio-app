@@ -30,6 +30,7 @@ import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleService;
 import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSONJSON;
+import org.touchhome.app.manager.BundleManager;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.WidgetManager;
 import org.touchhome.app.manager.scripting.ScriptManager;
@@ -38,11 +39,13 @@ import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.repository.crud.base.BaseCrudRepository;
 import org.touchhome.app.repository.device.AllDeviceRepository;
 import org.touchhome.app.rest.ConsoleController;
+import org.touchhome.app.rest.ItemController;
 import org.touchhome.app.rest.SettingController;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
 import org.touchhome.app.utils.CollectionUtils;
 import org.touchhome.app.utils.HardwareUtils;
+import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.BundleSettingPlugin;
@@ -68,7 +71,6 @@ import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
-import org.touchhome.bundle.cloud.netty.impl.NettyClientService;
 import org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity;
 
 import javax.persistence.EntityManagerFactory;
@@ -160,12 +162,11 @@ public class InternalManager implements EntityContext {
         createArduinoDevice();
 
         applicationContext.getBean(UserRepository.class).postConstruct(this);
-        applicationContext.getBean(NettyClientService.class).postConstruct();
         applicationContext.getBean(ScriptManager.class).postConstruct();
 
         listenSettingValue(SystemClearCacheButtonSetting.class, cacheService::clearCache);
 
-        // init modules
+        // loadWorkspace modules
         log.info("Initialize bundles");
         this.bundles = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
         Collections.sort(bundles);
@@ -175,7 +176,9 @@ public class InternalManager implements EntityContext {
 
         applicationContext.getBean(BundleService.class).loadBundlesFromPath(TouchHomeUtils.getBundlePath());
 
-        applicationContext.getBean(WorkspaceManager.class).postConstruct();
+        applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
+        applicationContext.getBean(WorkspaceManager.class).loadWorkspace();
+        applicationContext.getBean(WorkspaceController.class).postConstruct(this);
         applicationContext.getBean(WidgetManager.class).postConstruct();
 
         // trigger handlers when variables changed
@@ -676,6 +679,11 @@ public class InternalManager implements EntityContext {
             applicationContext.getBean(ConsoleController.class).postConstruct();
             applicationContext.getBean(SettingController.class).postConstruct();
             applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
+
+            applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
+            applicationContext.getBean(WorkspaceController.class).postConstruct(this);
+            applicationContext.getBean(EntityManager.class).postConstruct();
+            applicationContext.getBean(ItemController.class).postConstruct();
         }
     }
 
@@ -714,6 +722,7 @@ public class InternalManager implements EntityContext {
         applicationContext.getBean(SettingRepository.class).postConstruct();
         applicationContext.getBean(ConsoleController.class).postConstruct();
         applicationContext.getBean(SettingController.class).postConstruct();
+        applicationContext.getBean(BundleManager.class).postConstruct(this);
     }
 
     @SneakyThrows
