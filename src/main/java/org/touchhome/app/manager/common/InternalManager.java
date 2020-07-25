@@ -150,7 +150,7 @@ public class InternalManager implements EntityContext {
         this.fetchBundleSettingPlugins();
 
         entityManager = applicationContext.getBean(EntityManager.class);
-        updateBeans(applicationContext);
+        updateBeans(applicationContext, true);
 
         applicationContext.getBean(LoggerManager.class).postConstruct();
         applicationContext.getBean(LogService.class).setEntityContext(this);
@@ -674,21 +674,17 @@ public class InternalManager implements EntityContext {
             }
             context.getBeansOfType(AbstractRepository.class).keySet().forEach(ar -> repositories.remove(ar));
             repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
-
-            applicationContext.getBean(SettingRepository.class).postConstruct();
-            applicationContext.getBean(ConsoleController.class).postConstruct();
-            applicationContext.getBean(SettingController.class).postConstruct();
-            applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
-
-            applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
-            applicationContext.getBean(WorkspaceController.class).postConstruct(this);
-            applicationContext.getBean(EntityManager.class).postConstruct();
-            applicationContext.getBean(ItemController.class).postConstruct();
+            updateBeans(bundleContext.getApplicationContext(), false);
         }
     }
 
     private void addBundle(BundleContext bundleContext, Map<String, BundleContext> bundleContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
+            if (!bundleContext.isLoaded()) {
+                notifications.add(NotificationEntityJSON.danger("fail-bundle-" + bundleContext.getBundleName())
+                        .setName("Unable to load bundle <" + bundleContext.getBundleFriendlyName() + ">"));
+                return;
+            }
             extraBundles.put(bundleContext.getBundleName(), bundleContext);
             allApplicationContexts.add(bundleContext.getApplicationContext());
             bundleContext.setInstalled(true);
@@ -702,7 +698,7 @@ public class InternalManager implements EntityContext {
 
             HardwareUtils.copyResources(bundleContext.getBundleClassLoader().getResource("files"), "/files");
             fetchBundleSettingPlugins();
-            updateBeans(context);
+            updateBeans(context, true);
 
             for (BundleEntrypoint bundleEntrypoint : context.getBeansOfType(BundleEntrypoint.class).values()) {
                 bundleEntrypoint.init();
@@ -711,18 +707,25 @@ public class InternalManager implements EntityContext {
         }
     }
 
-    private void updateBeans(ApplicationContext context) {
+    private void updateBeans(ApplicationContext context, boolean addBundle) {
         En.get().clear();
-        for (PureRepository repository : context.getBeansOfType(PureRepository.class).values()) {
-            pureRepositories.put(repository.getEntityClass().getSimpleName(), repository);
-        }
+        context.getBeansOfType(PureRepository.class).values().forEach(repo -> {
+            if (addBundle) {
+                pureRepositories.put(repo.getEntityClass().getSimpleName(), repo);
+            } else {
+                pureRepositories.remove(repo.getEntityClass().getSimpleName());
+            }
+        });
         repositories.putAll(context.getBeansOfType(AbstractRepository.class));
         repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
 
-        applicationContext.getBean(SettingRepository.class).postConstruct();
         applicationContext.getBean(ConsoleController.class).postConstruct();
-        applicationContext.getBean(SettingController.class).postConstruct();
+        applicationContext.getBean(SettingController.class).postConstruct(this);
+        applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
         applicationContext.getBean(BundleManager.class).postConstruct(this);
+        applicationContext.getBean(WorkspaceController.class).postConstruct(this);
+        applicationContext.getBean(EntityManager.class).postConstruct();
+        applicationContext.getBean(ItemController.class).postConstruct();
     }
 
     @SneakyThrows

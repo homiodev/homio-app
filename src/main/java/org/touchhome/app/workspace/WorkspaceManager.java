@@ -97,10 +97,10 @@ public class WorkspaceManager {
 
     private void executeOnce(WorkspaceBlock workspaceBlock) {
         try {
-            log.debug("Execute single block: <{}>", workspaceBlock.getOpcode());
+            log.debug("Execute single block: <{}>", workspaceBlock);
             workspaceBlock.handle();
         } catch (Exception ex) {
-            log.error("Error while execute single block: <{}>", workspaceBlock.getOpcode(), ex);
+            log.error("Error while execute single block: <{}>", workspaceBlock, ex);
         }
     }
 

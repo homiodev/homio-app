@@ -41,9 +41,11 @@ public class WorkspaceController {
     private final BundleManager bundleManager;
     private final WorkspaceManager workspaceManager;
 
-    private final List<Scratch3ExtensionImpl> extensions = new ArrayList<>();
+    private List<Scratch3ExtensionImpl> extensions;
 
     public void postConstruct(EntityContext entityContext) {
+        List<Scratch3ExtensionImpl> oldExtension = this.extensions == null ? Collections.emptyList() : this.extensions;
+        this.extensions = new ArrayList<>();
         for (Scratch3ExtensionBlocks scratch3ExtensionBlock : entityContext.getBeansOfType(Scratch3ExtensionBlocks.class)) {
             if (scratch3ExtensionBlock.getClass().isAnnotationPresent(Scratch3Extension.class)) {
                 Scratch3Extension scratch3Extension = scratch3ExtensionBlock.getClass().getDeclaredAnnotation(Scratch3Extension.class);
@@ -58,9 +60,12 @@ public class WorkspaceController {
                 if (bundleEntrypoint == null) {
                     throw new IllegalStateException("Unable to find bundle context with id: " + scratch3Extension.value());
                 }
+                Scratch3ExtensionImpl scratch3ExtensionImpl = new Scratch3ExtensionImpl(scratch3Extension.value(), scratch3ExtensionBlock, bundleEntrypoint.order());
 
-                insertScratch3Spaces(scratch3ExtensionBlock);
-                extensions.add(new Scratch3ExtensionImpl(scratch3Extension.value(), scratch3ExtensionBlock, bundleEntrypoint.order()));
+                if(!oldExtension.contains(scratch3ExtensionImpl)) {
+                    insertScratch3Spaces(scratch3ExtensionBlock);
+                }
+                extensions.add(scratch3ExtensionImpl);
             }
         }
         Collections.sort(extensions);

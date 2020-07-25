@@ -14,7 +14,6 @@ import org.reflections.Reflections;
 import org.reflections.util.ConfigurationBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -92,6 +91,10 @@ public class BundleContext {
         this.loaded = true;
     }
 
+    public String getBundleFriendlyName() {
+        return StringUtils.defaultString(this.pomFile.getName(), this.bundleName);
+    }
+
     @RequiredArgsConstructor
     private static class BundleSpringContext {
 
@@ -137,9 +140,6 @@ public class BundleContext {
                 throw new RuntimeException("Configuration class with annotation @BundleConfiguration must be unique, but found: " + StringUtils.join(springConfigClasses, ", "));
             }
             Class<?> batchConfigurationClass = springConfigClasses.iterator().next();
-            if (batchConfigurationClass.getDeclaredAnnotation(Configuration.class) == null) {
-                throw new RuntimeException("Configuration class with annotation @BundleConfiguration must have @Configuration annotation");
-            }
             if (batchConfigurationClass.getDeclaredAnnotation(BundleConfiguration.class) == null) {
                 throw new RuntimeException("Loaded batch definition has different ws-service-api.jar version and can not be instantiated");
             }
@@ -148,15 +148,6 @@ public class BundleContext {
 
         public AnnotationConfigApplicationContext getContext() {
             return ctx;
-        }
-    }
-
-    private void addToClasspath(URL url) {
-        try {
-            URLClassLoader classLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
-            MethodUtils.invokeMethod(classLoader, true, "addURL", url);
-        } catch (Exception e) {
-            throw new RuntimeException("Unexpected exception", e);
         }
     }
 }

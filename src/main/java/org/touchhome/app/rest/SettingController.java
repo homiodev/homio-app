@@ -1,6 +1,5 @@
 package org.touchhome.app.rest;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.SettingEntity;
@@ -16,13 +15,16 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/rest/setting")
-@RequiredArgsConstructor
 public class SettingController {
 
-    private final EntityContext entityContext;
+    private EntityContext entityContext;
     private Map<Class<? extends BundleSettingPlugin>, SettingEntity> transientSettings;
 
-    public void postConstruct() {
+    public void postConstruct(EntityContext entityContext) {
+        this.entityContext = entityContext;
+        SettingRepository settingRepository = entityContext.getBean(SettingRepository.class);
+        settingRepository.postConstruct();
+
         this.transientSettings = new HashMap<>();
         for (BundleSettingPlugin settingPlugin : InternalManager.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {
@@ -30,6 +32,7 @@ public class SettingController {
                         SettingRepository.createSettingEntityFromPlugin(settingPlugin, new SettingEntity()));
             }
         }
+        settingRepository.deleteRemovedSettings();
     }
 
     @GetMapping("{entityID}/options")
