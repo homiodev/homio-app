@@ -3,6 +3,7 @@ package org.touchhome.app.workspace;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.scratch.WorkspaceBlock;
 import org.touchhome.bundle.api.thread.BackgroundProcessService;
+import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 
 public class WorkspaceBlockProcessService extends BackgroundProcessService<Void> {
@@ -23,11 +24,13 @@ public class WorkspaceBlockProcessService extends BackgroundProcessService<Void>
         try {
             Thread.currentThread().setName(this.workspaceEntity.getEntityID());
             workspaceBlock.handle();
-            logInfo("Workspace thread finished");
-            return null;
+        } catch (Exception ex) {
+            this.entityContext.sendNotification(ex.getMessage(), "", NotificationType.danger);
         } finally {
             Thread.currentThread().setName(oldName);
         }
+        logInfo("Workspace thread finished");
+        return null;
     }
 
     @Override

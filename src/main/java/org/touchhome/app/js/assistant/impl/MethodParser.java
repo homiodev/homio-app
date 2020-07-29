@@ -1,15 +1,13 @@
 package org.touchhome.app.js.assistant.impl;
 
-import org.touchhome.bundle.api.ui.PublicJsMethod;
-
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Stream;
 
-public final class MethodParser {
+final class MethodParser {
 
-    public static Set<Method> getFitMethods(String finalNext, Class clazz) {
+    static Set<Method> getFitMethods(String finalNext, Class clazz) {
         MethodFitParser methodFitParser = MethodFitParser.getMethodFitParser(finalNext);
         String methodName = methodFitParser.getMethodName(finalNext);
 
@@ -18,10 +16,9 @@ public final class MethodParser {
                 Stream.of(clazz.getMethods());
 
         stream.forEach(method -> {
-            if (method.isAnnotationPresent(PublicJsMethod.class) ||
-                    (!method.getDeclaringClass().getName().startsWith("org.touchhome.smart.") &&
-                            !method.getDeclaringClass().getName().equals("java.lang.Object")
-                            && !method.getDeclaringClass().getName().equals("java.lang.Enum"))) {
+            if (!method.getDeclaringClass().getName().startsWith("org.touchhome.smart.") &&
+                    !method.getDeclaringClass().getName().equals("java.lang.Object")
+                    && !method.getDeclaringClass().getName().equals("java.lang.Enum")) {
                 if (methodFitParser.match(method, methodName)) {
                     methods.add(method);
                 }

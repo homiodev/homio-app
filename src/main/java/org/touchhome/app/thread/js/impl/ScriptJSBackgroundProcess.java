@@ -10,7 +10,9 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
+import javax.script.CompiledScript;
 import javax.script.Invocable;
+import javax.script.ScriptException;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -22,69 +24,60 @@ import static org.touchhome.app.manager.scripting.ScriptManager.REPEAT_EVERY;
 public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessService<Object> {
 
     private final ScriptManager scriptManager;
-    private JSONObject jsonObj;
 
     public ScriptJSBackgroundProcess(ScriptEntity scriptEntity, EntityContext entityContext) {
         super(scriptEntity, entityContext);
         this.scriptManager = entityContext.getBean(ScriptManager.class);
     }
 
-    private JSONObject getJsonObj() {
-        if (jsonObj == null) {
-            jsonObj = scriptManager.assertJsonParams(scriptEntity, scriptEntity.getJavaScriptParameters());
-        }
-        return jsonObj;
-    }
-
     @Override
     public Object runInternal() {
         try {
-            StringBuilder script = new StringBuilder();
-
-            Object cssBlock = scriptManager.invokeFunction(getCompiledScript(), "css_block", null, false);
-            if (cssBlock != null) {
-                script.append("CSS_BLOCK(").append(cssBlock).append(")CSS_BLOCK");
-            }
-
-            Object scopeBlock = scriptManager.invokeFunction(getCompiledScript(), "scope_block", null, false);
-            if (scopeBlock != null) {
-                script.append("SCOPE_BLOCK(").append(scopeBlock).append(")SCOPE_BLOCK");
-            }
-
-            Set<String> functions = scriptEntity.getFunctionsWithPrefix("js_");
-            if (!functions.isEmpty()) {
-                script.append("JS_BLOCK(");
-                for (String function : functions) {
-                    script.append(function);
-                }
-                script.append(")JS_BLOCK");
-            }
-            String onReadyOnClient = scriptEntity.getFunctionWithName("onReadyOnClient");
-            if (onReadyOnClient != null) {
-                script.append("READY_BLOCK(").append(onReadyOnClient).append(")READY_BLOCK");
-            }
-
-            String readVariablesOnServerValues = scriptEntity.getFunctionWithName("readVariablesOnServerValues");
-            if (readVariablesOnServerValues != null) {
-                ScriptObjectMirror serverVariables = (ScriptObjectMirror) ((Invocable) getCompiledScript().getEngine()).invokeFunction("readVariablesOnServerValues", getJsonObj());
-                ScriptObjectMirror serverKeys = (ScriptObjectMirror) ((Invocable) getCompiledScript().getEngine()).invokeFunction("readVariablesOnServerKeys", getJsonObj());
-                script.append("VARIABLE_BLOCK(");
-                Iterator<Object> serverVariablesIterator = serverVariables.values().iterator();
-                for (Object serviceKey : serverKeys.values()) {
-                    script.append(serviceKey).append("=").append(serverVariablesIterator.next()).append(";");
-                }
-                script.append(")VARIABLE_BLOCK");
-            }
-
-            Object value = ((Invocable) getCompiledScript().getEngine()).invokeFunction("run", getJsonObj());
-            script.append(value);
-
-            return script.toString();
+            return runJavaScript(scriptManager, getCompiledScript(), scriptEntity.getFormattedJavaScript(entityContext), params);
         } catch (Exception ex) {
             String msg = TouchHomeUtils.getErrorMessage(ex);
             setStatus(BackgroundProcessStatus.FAILED, msg);
             logError("Error while call script with id: <{}>. Msg: <{}>", scriptEntity.getEntityID(), msg);
             throw new RuntimeException(ex);
+        }
+    }
+
+    public static String runJavaScript(ScriptManager scriptManager, CompiledScript compiledScript, String javaScript, JSONObject params) throws ScriptException, NoSuchMethodException {
+        StringBuilder script = new StringBuilder();
+
+        Set<String> functions = ScriptEntity.getFunctionsWithPrefix(javaScript, "js_");
+        if (!functions.isEmpty()) {
+            script.append("JS_BLOCK(");
+            for (String function : functions) {
+                script.append(function);
+            }
+            script.append(")JS_BLOCK");
+        }
+
+        appendFunc(script, "readyOnClient", "READY_BLOCK", javaScript);
+
+        String readVariablesOnServerValues = ScriptEntity.getFunctionWithName(javaScript, "readVariablesOnServerValues");
+        if (readVariablesOnServerValues != null) {
+            ScriptObjectMirror serverVariables = (ScriptObjectMirror) ((Invocable) compiledScript.getEngine()).invokeFunction("readVariablesOnServerValues", params);
+            ScriptObjectMirror serverKeys = (ScriptObjectMirror) ((Invocable) compiledScript.getEngine()).invokeFunction("readVariablesOnServerKeys", params);
+            script.append("VARIABLE_BLOCK(");
+            Iterator<Object> serverVariablesIterator = serverVariables.values().iterator();
+            for (Object serviceKey : serverKeys.values()) {
+                script.append(serviceKey).append("=").append(serverVariablesIterator.next()).append(";");
+            }
+            script.append(")VARIABLE_BLOCK");
+        }
+
+        Object value = ((Invocable) compiledScript.getEngine()).invokeFunction("run", params);
+        script.append(value);
+
+        return script.toString();
+    }
+
+    private static void appendFunc(StringBuilder script, String funcName, String separator, String javaScript) {
+        String result = ScriptEntity.getFunctionWithName(javaScript, funcName);
+        if (result != null) {
+            script.append(separator).append("(").append(result).append(")").append(separator);
         }
     }
 
@@ -119,11 +112,11 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
 
     @Override
     public void beforeStart() {
-        scriptManager.invokeBeforeFunction(getCompiledScript(), getJsonObj());
+        scriptManager.invokeBeforeFunction(getCompiledScript(), params);
     }
 
     @Override
     public void afterStop() {
-        scriptManager.invokeAfterFunction(getCompiledScript(), getJsonObj());
+        scriptManager.invokeAfterFunction(getCompiledScript(), params);
     }
 }

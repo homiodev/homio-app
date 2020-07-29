@@ -38,7 +38,7 @@ public class EntityManager {
     private Map<String, Class<? extends BaseEntity>> baseEntityClasses;
 
     public void postConstruct() {
-        baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class, null).stream().collect(Collectors.toMap(Class::getName, s -> s));
+        baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream().collect(Collectors.toMap(Class::getName, s -> s));
     }
 
     <T extends BaseEntity> T getEntityNoCache(String entityID) {

@@ -3,13 +3,15 @@ package org.touchhome.app.model.entity;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.json.JSONObject;
 import org.touchhome.app.setting.SettingPlugin;
+import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.BaseEntity;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
-import java.util.LinkedHashSet;
+import java.util.List;
 
 @Getter
 @Setter
@@ -48,7 +50,7 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     private boolean advanced;
 
     @Transient
-    private LinkedHashSet<String> availableValues;
+    private List<Option> availableValues;
 
     @Transient
     private String icon;
@@ -58,6 +60,9 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
 
     @Transient
     private SettingPlugin.SettingType settingType;
+
+    @Transient
+    private JSONObject parameters;
 
     public String getValue() {
         return value == null ? defaultValue : value;

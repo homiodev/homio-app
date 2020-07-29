@@ -1,5 +1,6 @@
 package org.touchhome.app.setting.dashboard;
 
+import org.json.JSONObject;
 import org.touchhome.app.setting.SettingPlugin;
 
 public class DashboardVerticalBlockCountSetting implements SettingPlugin {
@@ -20,8 +21,8 @@ public class DashboardVerticalBlockCountSetting implements SettingPlugin {
     }
 
     @Override
-    public String[] getAvailableValues() {
-        return new String[]{"1", "10", "1"}; // min/max/step
+    public JSONObject getParameters() {
+        return new JSONObject().put("min", 1).put("max", 10).put("step", 1);
     }
 
     @Override

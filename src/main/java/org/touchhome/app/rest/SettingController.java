@@ -1,5 +1,6 @@
 package org.touchhome.app.rest;
 
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.SettingEntity;
@@ -7,6 +8,7 @@ import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,17 +31,17 @@ public class SettingController {
         for (BundleSettingPlugin settingPlugin : InternalManager.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {
                 this.transientSettings.put(settingPlugin.getClass(),
-                        SettingRepository.createSettingEntityFromPlugin(settingPlugin, new SettingEntity()));
+                        SettingRepository.createSettingEntityFromPlugin(settingPlugin, new SettingEntity(), entityContext));
             }
         }
-        settingRepository.deleteRemovedSettings();
     }
 
     @GetMapping("{entityID}/options")
-    public List<Option> getSettingsAvailableItems(@PathVariable("entityID") String entityID) {
+    public List<Option> loadSettingAvailableValues(@PathVariable("entityID") String entityID) {
         return InternalManager.settingPluginsByPluginKey.get(entityID).loadAvailableValues(entityContext);
     }
 
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     @PostMapping(value = "{entityID}", consumes = "text/plain")
     public <T> void updateSettings(@PathVariable("entityID") String entityID, @RequestBody String value) {
         BundleSettingPlugin settingPlugin = InternalManager.settingPluginsByPluginKey.get(entityID);

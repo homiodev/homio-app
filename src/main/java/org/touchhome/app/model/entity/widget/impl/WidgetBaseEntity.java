@@ -2,9 +2,11 @@ package org.touchhome.app.model.entity.widget.impl;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.touchhome.app.model.entity.widget.HasDataSource;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 
@@ -14,13 +16,29 @@ import java.util.Set;
 @Getter
 @Setter
 @Entity
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+@Inheritance(strategy = InheritanceType.JOINED)
 @UISidebarMenu(icon = "fas fa-tachometer-alt", bg = "#107d6b")
-public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity<T> {
+@Accessors(chain = true)
+public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity<T> implements HasPosition<WidgetBaseEntity> {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    // @UIField(order = 11, type = UIFieldType.Selection, typeMetaData = "{'title':'widgetTabEntity.title', 'path':'ownerPlace.entityID'}")
     private WidgetTabEntity widgetTabEntity;
+
+    @Getter
+    private int xb = 0;
+
+    @Getter
+    private int yb = 0;
+
+    @Getter
+    private int bw = 1;
+
+    @Getter
+    private int bh = 1;
+
+    @Getter
+    @UIField(order = 20)
+    private boolean autoScale = false;
 
     @Override
     @UIField(order = 3, transparent = true)

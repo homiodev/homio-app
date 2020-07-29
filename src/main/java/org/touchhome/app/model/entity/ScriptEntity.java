@@ -1,8 +1,13 @@
 package org.touchhome.app.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
+import org.springframework.core.env.Environment;
 import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
 import org.touchhome.app.thread.js.impl.ScriptJSBackgroundProcess;
 import org.touchhome.bundle.api.EntityContext;
@@ -12,25 +17,27 @@ import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
+import org.touchhome.bundle.api.util.SpringUtils;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Lob;
+import javax.persistence.Transient;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-@Getter
-@Setter
 @Entity
 @UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true)
+@Accessors(chain = true)
 public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
-    private String requiredParams;
-
     @Column(nullable = false)
+    @Getter
     private BackgroundProcessStatus backgroundProcessStatus = BackgroundProcessStatus.NEVER_RUN;
 
+    @Getter
+    @Setter
     @UIField(order = 13, type = UIFieldType.Json)
     private String javaScriptParameters = "{}";
 
@@ -39,18 +46,45 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @UIField(order = 16)
     private boolean autoStart = false;
 
+    @Getter
+    @Setter
     private String error;
 
+    @Getter
+    @Setter
     private String backgroundProcessClass = ScriptJSBackgroundProcess.class.getName();
 
     @Lob
     @Column(length = 1048576)
     @UIField(order = 30)
+    @Getter
+    @Setter
     @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript)
-    private String javaScript;
+    private String javaScript = "function before() { };\nfunction run() { };\nfunction after() { };";
 
-    public BackgroundProcessStatus getBackgroundProcessStatus() {
-        return backgroundProcessStatus;
+    @Transient
+    @JsonIgnore
+    private long formattedJavaScriptHash;
+
+    @Transient
+    @JsonIgnore
+    private String formattedJavaScript;
+
+    public String getFormattedJavaScript(EntityContext entityContext) {
+        long hash = StringUtils.defaultIfEmpty(javaScript, "").hashCode() + StringUtils.defaultIfEmpty(javaScriptParameters, "").hashCode();
+        if (this.formattedJavaScriptHash != hash) {
+            this.formattedJavaScriptHash = hash;
+
+            Environment env = entityContext.getBean(Environment.class);
+            JSONObject params = new JSONObject(javaScriptParameters);
+            this.formattedJavaScript = SpringUtils.replaceEnvValues(javaScript, (key, defValue) -> {
+                if (params.has(key)) {
+                    return params.get(key).toString();
+                }
+                return env.getProperty(key, defValue);
+            });
+        }
+        return this.formattedJavaScript;
     }
 
     public boolean setScriptStatus(BackgroundProcessStatus backgroundProcessStatus) {
@@ -76,7 +110,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
         return aClass.getConstructor(getClass(), EntityContext.class).newInstance(this, entityContext);
     }
 
-    public Set<String> getFunctionsWithPrefix(String prefix) {
+    public static Set<String> getFunctionsWithPrefix(String javaScript, String prefix) {
         Set<String> functions = new HashSet<>();
         int i = javaScript.indexOf("function " + prefix, 0);
         while (i >= 0) {
@@ -103,8 +137,8 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
         return functions;
     }
 
-    public String getFunctionWithName(String name) {
-        Set<String> functionsWithPrefix = getFunctionsWithPrefix(name);
+    public static String getFunctionWithName(String javaScript, String name) {
+        Set<String> functionsWithPrefix = getFunctionsWithPrefix(javaScript, name);
         return functionsWithPrefix.isEmpty() ? null : functionsWithPrefix.iterator().next();
     }
 }

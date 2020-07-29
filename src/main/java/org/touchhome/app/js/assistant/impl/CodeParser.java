@@ -1,14 +1,14 @@
 package org.touchhome.app.js.assistant.impl;
 
+import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.js.assistant.model.Completion;
 import org.touchhome.app.js.assistant.model.CompletionItemKind;
-import org.touchhome.app.utils.JavaScriptBinder;
-import org.touchhome.bundle.api.ui.PublicJsMethod;
 import org.touchhome.app.manager.common.ClassFinder;
+import org.touchhome.app.utils.JavaScriptBinder;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
@@ -26,12 +26,12 @@ public class CodeParser {
     private final ClassFinder classFinder;
 
     private static List<String> splitSpecial(String orig) {
-        List<String> splitted = new ArrayList<>();
+        List<String> parts = new ArrayList<>();
         int nextingLevel = 0;
         StringBuilder result = new StringBuilder();
         for (char c : orig.toCharArray()) {
             if (c == '.' && nextingLevel == 0) {
-                splitted.add(result.toString().trim());
+                parts.add(result.toString().trim());
                 result.setLength(0);// clean buffer
             } else {
                 if (c == '(') {
@@ -44,8 +44,8 @@ public class CodeParser {
             }
         }
         // Thanks PoeHah for pointing it out. This adds the last element to it.
-        splitted.add(result.toString().trim());
-        return splitted;
+        parts.add(result.toString().trim());
+        return parts;
     }
 
     public static String removeAllComments(String line) {
@@ -96,7 +96,7 @@ public class CodeParser {
                 stack.add(new Param(from, fromClass));
                 addCompetitionFromStatic(StringUtils.isEmpty(from) ? 0 : 1, items, list, fromClass, stack);
             } else {
-                List<Class<?>> classesWithParent = classFinder.getClassesWithParent(Object.class, firstItem);
+                List<Class<?>> classesWithParent = classFinder.getClassesWithParent(Object.class, firstItem, null);
                 if (classesWithParent.size() == 1) {
                     fromClass = classesWithParent.get(0);
                     stack.add(new Param(from, fromClass));
@@ -146,32 +146,32 @@ public class CodeParser {
     }
 
     private void createClassAndAddToCompletion(Class fromClass, Set<Completion> list) {
-        String content = fromClass.getName() + "()";
+        StringBuilder content = new StringBuilder(fromClass.getName() + "()");
         if (fromClass.isInterface()) {
-            content += "{\n\t";
+            content.append("{\n\t");
             for (Method method : fromClass.getMethods()) {
                 if (!method.isDefault()) {
-                    content += method.getReturnType().getName() + " " + method.getName() + createParametersFromMethod(method, false) + " {\n\t\t\n\t}";
+                    content.append(method.getReturnType().getName()).append(" ").append(method.getName()).append(createParametersFromMethod(method, false)).append(" {\n\t\t\n\t}");
                 }
             }
-            content += "}";
+            content.append("}");
         }
-        content += ";";
-        list.add(new Completion(content, fromClass.getSimpleName(), fromClass, "",
+        content.append(";");
+        list.add(new Completion(content.toString(), fromClass.getSimpleName(), fromClass, "",
                 CompletionItemKind.Method));
     }
 
-    private void addStaticCompletions(String finalNext, Class clazz, Set<Completion> list, int score) {
+    private void addStaticCompletions(String finalNext, Class clazz, Set<Completion> list) {
         if (clazz != null) {
-            list.addAll(getFitStaticMethods(finalNext, clazz).stream().map(method -> convertMethodToCompletion(method)).collect(Collectors.toList()));
-            list.addAll(getFitStaticFields(finalNext, clazz).stream().map(field -> convertFieldToCompletion(field)).collect(Collectors.toList()));
+            list.addAll(getFitStaticMethods(finalNext, clazz).stream().map(this::convertMethodToCompletion).collect(Collectors.toList()));
+            list.addAll(getFitStaticFields(finalNext, clazz).stream().map(this::convertFieldToCompletion).collect(Collectors.toList()));
         }
     }
 
-    private void addCompletionsAtEndFunc(String finalNext, Class clazz, Set<Completion> list, int score, Stack<Param> stack, ParserContext context) throws NoSuchMethodException {
+    private void addCompletionsAtEndFunc(String finalNext, Class clazz, Set<Completion> list, Stack<Param> stack, ParserContext context) throws NoSuchMethodException {
         if (clazz != null) {
             if (!finalNext.contains("(")) {
-                list.addAll(MethodParser.getFitMethods(finalNext, clazz).stream().map(method -> convertMethodToCompletion(method)).collect(Collectors.toList()));
+                list.addAll(MethodParser.getFitMethods(finalNext, clazz).stream().map(this::convertMethodToCompletion).collect(Collectors.toList()));
             } else {
                 String funcParameters = finalNext.substring(finalNext.indexOf("(") + 1);
                 int paramIndex = StringUtils.countMatches(funcParameters, ",");
@@ -219,8 +219,8 @@ public class CodeParser {
             } else {
                 retValue = method.getReturnType().getSimpleName();
             }
-            PublicJsMethod pubDecl = method.getDeclaredAnnotation(PublicJsMethod.class);
-            String help = pubDecl == null ? "" : pubDecl.value();
+            ApiOperation apiOperation = method.getDeclaredAnnotation(ApiOperation.class);
+            String help = apiOperation == null ? "" : apiOperation.value();
 
             return new Completion(method.getName() + parameters, retValue, method.getReturnType(), help,
                     CompletionItemKind.Method);
@@ -271,7 +271,7 @@ public class CodeParser {
     private Set<Method> getFitStaticMethods(String finalNext, Class clazz) {
         Set<Method> methods = new HashSet<>();
         for (Method method : clazz.getMethods()) {
-            if (Modifier.isStatic(method.getModifiers()) && method.isAnnotationPresent(PublicJsMethod.class)) {
+            if (Modifier.isStatic(method.getModifiers())) {
                 String methodPrefix = finalNext.indexOf("(") > 0 ? finalNext.substring(0, finalNext.indexOf("(")) : finalNext;
                 if (method.getName().startsWith(methodPrefix)) {
                     methods.add(method);
@@ -282,7 +282,7 @@ public class CodeParser {
     }
 
     private Method getFitStaticMethod(String finalNext, Class clazz) {
-        return getFitMethod(Stream.of(clazz.getMethods()), finalNext, method -> Modifier.isStatic(method.getModifiers()) && method.isAnnotationPresent(PublicJsMethod.class));
+        return getFitMethod(Stream.of(clazz.getMethods()), finalNext, method -> Modifier.isStatic(method.getModifiers()));
     }
 
     private Method getFitMethod(Stream<Method> stream, String finalNext, Predicate<Method> testPredicate) {
@@ -306,13 +306,13 @@ public class CodeParser {
         Stream<Method> stream = clazz.getSuperclass() != null ? Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
                 Stream.of(clazz.getMethods());
 
-        return getFitMethod(stream, finalNext, method -> method.isAnnotationPresent(PublicJsMethod.class));
+        return getFitMethod(stream, finalNext, method -> true);
     }
 
     private void addCompetitionFromManager2(int i, List<String> items, Set<Completion> list, Class clazz, Stack<Param> stack, ParserContext context) throws NoSuchMethodException {
         if (items.size() == i + 1) {
-            addCompletionsAtEndFunc(items.get(i), clazz, list, 100, stack, context);
-            addCompletionsAtEndFunc(items.get(i), clazz.getSuperclass(), list, 70, stack, context);
+            addCompletionsAtEndFunc(items.get(i), clazz, list, stack, context);
+            addCompletionsAtEndFunc(items.get(i), clazz.getSuperclass(), list, stack, context);
         } else {
             Method methodOptional = getFitMethod(items.get(i), clazz);
             if (methodOptional != null) {
@@ -335,8 +335,8 @@ public class CodeParser {
 
     private void addCompetitionFromStatic(int i, List<String> items, Set<Completion> list, Class clazz, Stack<Param> stack) {
         if (items.size() == i + 1) {
-            addStaticCompletions(items.get(i), clazz, list, 100);
-            addStaticCompletions(items.get(i), clazz.getSuperclass(), list, 70);
+            addStaticCompletions(items.get(i), clazz, list);
+            addStaticCompletions(items.get(i), clazz.getSuperclass(), list);
         } else {
             Method methodOptional = getFitStaticMethod(items.get(i), clazz);
             if (methodOptional != null) {

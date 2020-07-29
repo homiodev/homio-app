@@ -14,19 +14,20 @@ public class UserEntityDetailsService implements UserDetailsService {
     @Autowired
     private UserRepository userRepository;
 
-    /**
-     * For now we may have only one regular user
-     */
+    private UserEntity user;
+
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        UserEntity user = userRepository.getUser(email);
-        if (user == null) {
-            throw new UsernameNotFoundException("User with email: " + email + " not found");
+        if (this.user == null) {
+            this.user = userRepository.getUser(email);
+            if (user == null) {
+                throw new UsernameNotFoundException("User with email: " + email + " not found");
+            }
         }
         return org.springframework.security.core.userdetails.User
                 .withUsername(email)
                 .password(user.getPassword())
-                .authorities(user.getRoles())
+                .authorities(user.getRoles().toArray(new String[0]))
                 .accountExpired(false)
                 .accountLocked(false)
                 .credentialsExpired(false)

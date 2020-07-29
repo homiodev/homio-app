@@ -2,8 +2,14 @@ package org.touchhome.app.rest;
 
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
+import net.rossillo.spring.web.mvc.CacheControl;
+import net.rossillo.spring.web.mvc.CachePolicy;
+import org.json.JSONObject;
 import org.springframework.data.util.Pair;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
+import org.touchhome.app.manager.scripting.ScriptManager;
+import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.WidgetTabEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetButtonSeriesEntity;
@@ -15,12 +21,15 @@ import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartSeries
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
+import org.touchhome.app.model.entity.widget.impl.js.WidgetJsEntity;
 import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.repository.widget.HasFetchChartSeries;
+import org.touchhome.app.thread.js.impl.ScriptJSBackgroundProcess;
+import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
@@ -30,11 +39,15 @@ import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntit
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
+import org.touchhome.bundle.api.widget.WidgetJSBaseTemplate;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import javax.script.CompiledScript;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIVILEGED_USER_ROLE;
 
 @Log4j2
 @RestController
@@ -45,13 +58,28 @@ public class WidgetController {
     private final List<WidgetBaseEntity> widgetBaseEntities;
     private final EntityContext entityContext;
     private final Scratch3EventsBlocks scratch3EventsBlocks;
+    private final ScriptManager scriptManager;
 
     @SneakyThrows
     @GetMapping("plugins")
+    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<AvailableWidget> getAvailableWidgets() {
         List<AvailableWidget> options = new ArrayList<>();
         for (WidgetBaseEntity entity : this.widgetBaseEntities) {
-            options.add(new AvailableWidget(entity.getType(), entity.getImage()));
+            options.add(new AvailableWidget(entity.getType(), entity.getImage(), null));
+        }
+        AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", new ArrayList<>());
+        for (Map.Entry<String, Collection<WidgetBaseTemplate>> entry : entityContext.getBeansOfTypeByBundles(WidgetBaseTemplate.class).entrySet()) {
+            AvailableWidget bundleExtraWidget = new AvailableWidget(entry.getKey(), "http", new ArrayList<>());
+            for (WidgetBaseTemplate widgetBase : entry.getValue()) {
+                bundleExtraWidget.children.add(new AvailableWidget(widgetBase.getClass().getSimpleName(), widgetBase.getIcon(), null));
+            }
+            if (!bundleExtraWidget.children.isEmpty()) {
+                extraWidgets.children.add(bundleExtraWidget);
+            }
+        }
+        if (!extraWidgets.children.isEmpty()) {
+            options.add(extraWidgets);
         }
         return options;
     }
@@ -205,11 +233,32 @@ public class WidgetController {
         if (updated) {
             widgets = entityContext.findAll(WidgetBaseEntity.class);
         }
+        for (WidgetBaseEntity widget : widgets) {
+            if (widget instanceof WidgetJsEntity) {
+                WidgetJsEntity jsEntity = (WidgetJsEntity) widget;
+                try {
+                    jsEntity.setJavaScriptErrorResponse(null);
+                    ScriptEntity scriptEntity = new ScriptEntity()
+                            .setJavaScript(jsEntity.getJavaScript())
+                            .setJavaScriptParameters(jsEntity.getJavaScriptParameters());
+
+                    JSONObject params = new JSONObject(jsEntity.getJavaScriptParameters());
+                    CompiledScript compiledScript = scriptManager.createCompiledScript(scriptEntity, null, params);
+                    jsEntity.setJavaScriptResponse(ScriptJSBackgroundProcess.runJavaScript(scriptManager, compiledScript,
+                            scriptEntity.getFormattedJavaScript(entityContext), params));
+
+                } catch (Exception ex) {
+                    jsEntity.setJavaScriptErrorResponse(TouchHomeUtils.getErrorMessage(ex));
+                }
+            }
+        }
+
         return widgets;
     }
 
-    @PostMapping("save/{tabId}/{type}")
-    public BaseEntity create(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
+    @Secured(PRIVILEGED_USER_ROLE)
+    @PostMapping("create/{tabId}/{type}")
+    public BaseEntity createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
         if (widgetTabEntity == null) {
@@ -222,6 +271,51 @@ public class WidgetController {
         baseEntity.setWidgetTabEntity(widgetTabEntity);
         return entityContext.save(baseEntity);
     }
+
+    @Secured(PRIVILEGED_USER_ROLE)
+    @PostMapping("create/{tabId}/{type}/{bundle}")
+    public BaseEntity createExtraWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type, @PathVariable("bundle") String bundle) throws Exception {
+        log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, bundle: <{}>", type, tabId, bundle);
+        WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
+        if (widgetTabEntity == null) {
+            throw new NotFoundException("Unable to find tab with tabId: " + tabId);
+        }
+
+        Collection<WidgetBaseTemplate> widgets = entityContext.getBeansOfTypeByBundles(WidgetBaseTemplate.class).get(bundle);
+        if (widgets == null) {
+            throw new NotFoundException("Unable to find bundle: " + tabId + " or widgets in bundle");
+        }
+        WidgetBaseTemplate template = widgets.stream().filter(w -> w.getClass().getSimpleName().equals(type)).findAny()
+                .orElseThrow(() -> new NotFoundException("Unable to find widget: " + type + " in bundle: " + bundle));
+
+        String js = template.toJavaScript();
+        String params = "";
+        if (js == null) {
+            if (template instanceof WidgetJSBaseTemplate) {
+                WidgetJSBaseTemplate widgetJSBaseTemplate = (WidgetJSBaseTemplate) template;
+                JavaScriptBuilderImpl javaScriptBuilder = new JavaScriptBuilderImpl(template.getClass());
+                widgetJSBaseTemplate.createWidget(javaScriptBuilder);
+                js = javaScriptBuilder.build();
+                params = javaScriptBuilder.getJsonParams().toString();
+            }
+        }
+
+        WidgetJsEntity widgetJsEntity = new WidgetJsEntity()
+                .setJavaScriptParameters(params)
+                .setJavaScript(js);
+
+        widgetJsEntity.setWidgetTabEntity(widgetTabEntity)
+                .setAutoScale(template.isDefaultAutoScale());
+
+        return entityContext.save(widgetJsEntity);
+    }
+
+    /*private String appendCode(String funcName, String text, Context context) {
+        if (text != null) {
+            return "function " + funcName + "() { " + (context == null ? text : templateEngine.process(text, context)) + " }";
+        }
+        return "";
+    }*/
 
     @GetMapping("tab")
     public List<Option> getWidgetTabs() {
@@ -242,6 +336,7 @@ public class WidgetController {
 
     @SneakyThrows
     @PutMapping("tab/{tabId}/{name}")
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void renameWorkspaceTab(@PathVariable("tabId") String tabId, @PathVariable("name") String name) {
         if (!WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(name)) {
 
@@ -255,6 +350,7 @@ public class WidgetController {
     }
 
     @DeleteMapping("tab/{tabId}")
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void deleteWorkspaceTab(@PathVariable("tabId") String tabId) {
         WidgetTabEntity widgetTabEntity = getWidgetTabEntity(tabId);
         if (!WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(widgetTabEntity.getName())) {
@@ -355,8 +451,9 @@ public class WidgetController {
     @Getter
     @RequiredArgsConstructor
     private static class AvailableWidget {
-        private final String className;
+        private final String key;
         private final String image;
+        private final List<AvailableWidget> children;
     }
 
     @Setter

@@ -13,7 +13,10 @@ import org.touchhome.bundle.api.exception.NotFoundException;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.net.URL;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -30,8 +33,8 @@ public class BundleManager {
         this.bundleColorMap = new HashMap<>();
 
         for (BundleEntrypoint bundleEntrypoint : bundleEntryPoints) {
-            URL resource = bundleEntrypoint.getClass().getClassLoader().getResource(bundleEntrypoint.getBundleImage());
-            BufferedImage img = ImageIO.read(Objects.requireNonNull(resource));
+            URL imageURL = bundleEntrypoint.getBundleImageURL();
+            BufferedImage img = ImageIO.read(Objects.requireNonNull(imageURL));
             MMCQ.CMap result = ColorThief.getColorMap(img, 5);
             MMCQ.VBox dominantColor = result.vboxes.get(bundleEntrypoint.getBundleImageColorIndex().ordinal());
             int[] rgb = dominantColor.avg(false);

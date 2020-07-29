@@ -29,7 +29,7 @@ public class Scratch3DebugBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block runScriptBlock;
 
     public Scratch3DebugBlocks(ObjectMapper objectMapper, EntityContext entityContext, ScriptManager scriptManager) {
-        super("debug", null, entityContext);
+        super("debug", null, entityContext, null);
 
         this.objectMapper = objectMapper;
         this.scriptManager = scriptManager;

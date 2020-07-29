@@ -1,13 +1,14 @@
 package org.touchhome.app.manager.common;
 
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.extloader.BundleClassLoaderHolder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
@@ -18,9 +19,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class ClassFinder {
     public static final String CLASSES_WITH_PARENT_CLASS = "CLASSES_WITH_PARENT_CLASS";
     public static final String REPOSITORY_BY_CLAZZ = "REPOSITORY_BY_CLAZZ";
+    private final BundleClassLoaderHolder bundleClassLoaderHolder;
 
     @SneakyThrows
     public static <T> List<T> createClassesWithParent(Class<T> parentClass, ClassFinder classFinder) {
@@ -31,22 +34,16 @@ public class ClassFinder {
         return list;
     }
 
-    public static <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation, boolean includeInterfaces) {
-        ClassPathScanningCandidateComponentProvider scanner = !includeInterfaces ? new ClassPathScanningCandidateComponentProvider(false) :
-                new ClassPathScanningCandidateComponentProvider(false) {
-                    @Override
-                    protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
-                        return true;
-                    }
-                };
-
-        scanner.addIncludeFilter(new AnnotationTypeFilter(annotation));
+    private <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation, boolean includeInterfaces) {
         List<Class<? extends T>> foundClasses = new ArrayList<>();
-        for (BeanDefinition bd : scanner.findCandidateComponents("org.touchhome")) {
-            try {
-                foundClasses.add((Class<? extends T>) Class.forName(bd.getBeanClassName()));
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException(e);
+        for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(includeInterfaces)) {
+            scanner.addIncludeFilter(new AnnotationTypeFilter(annotation));
+            for (BeanDefinition bd : scanner.findCandidateComponents("org.touchhome")) {
+                try {
+                    foundClasses.add((Class<? extends T>) scanner.getResourceLoader().getClassLoader().loadClass(bd.getBeanClassName()));
+                } catch (ClassNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
         return foundClasses;
@@ -61,18 +58,22 @@ public class ClassFinder {
      */
     @Cacheable(CLASSES_WITH_PARENT_CLASS)
     public <T> List<Class<? extends T>> getClassesWithParent(Class<T> parentClass) {
-        return getClassesWithParent(parentClass, null);
+        return getClassesWithParent(parentClass, null, null);
     }
 
-    public <T> List<Class<? extends T>> getClassesWithParent(Class<T> parentClass, String className) {
-        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
-
-        scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
+    public <T> List<Class<? extends T>> getClassesWithParent(Class<T> parentClass, String className, String basePackage) {
+        if (basePackage == null) {
+            basePackage = "org.touchhome";
+        }
         List<Class<? extends T>> foundClasses = new ArrayList<>();
+        for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(false)) {
+            scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
 
-        getClassesWithParentFromPackage("org.touchhome", className, scanner, foundClasses);
-        if (foundClasses.isEmpty()) {
-            getClassesWithParentFromPackage("com.pi4j", className, scanner, foundClasses);
+            getClassesWithParentFromPackage(basePackage, className, scanner, foundClasses);
+            // TODO: refactor
+            if (foundClasses.isEmpty()) {
+                getClassesWithParentFromPackage("com.pi4j", className, scanner, foundClasses);
+            }
         }
 
         return foundClasses;
@@ -121,12 +122,12 @@ public class ClassFinder {
         throw new IllegalStateException("Unable find repository for entity class: " + clazz);
     }
 
-    private <T> void getClassesWithParentFromPackage(String packageName, String className, ClassPathScanningCandidateComponentProvider scanner, List<Class<? extends T>> foundClasses) {
+    private <T> void getClassesWithParentFromPackage(String basePackage, String className, ClassPathScanningCandidateComponentProvider scanner, List<Class<? extends T>> foundClasses) {
         try {
-            for (BeanDefinition bd : scanner.findCandidateComponents(packageName)) {
+            for (BeanDefinition bd : scanner.findCandidateComponents(basePackage)) {
                 if (className == null || bd.getBeanClassName().endsWith("." + className)) {
                     try {
-                        foundClasses.add((Class<? extends T>) Class.forName(bd.getBeanClassName()));
+                        foundClasses.add((Class<? extends T>) scanner.getResourceLoader().getClassLoader().loadClass(bd.getBeanClassName()));
                     } catch (ClassNotFoundException ignore) {
                     }
                 }

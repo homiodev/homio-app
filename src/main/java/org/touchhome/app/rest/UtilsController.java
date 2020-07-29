@@ -17,6 +17,7 @@ import org.springframework.aop.support.AopUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.touchhome.app.js.assistant.impl.CodeParser;
@@ -57,6 +58,8 @@ import java.util.stream.Stream;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.ADMIN_ROLE;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIVILEGED_USER_ROLE;
 
 @RestController
 @RequestMapping("/rest")
@@ -292,6 +295,7 @@ public class UtilsController {
     }
 
     @PostMapping("code/run")
+    @Secured(PRIVILEGED_USER_ROLE)
     public RunScriptOnceJSON runScriptOnce(@RequestBody ScriptEntity scriptEntity) throws IOException {
         RunScriptOnceJSON runScriptOnceJSON = new RunScriptOnceJSON();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -345,6 +349,7 @@ public class UtilsController {
     }
 
     @PostMapping("app/update")
+    @Secured(ADMIN_ROLE)
     public void updateApp() {
         startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath());
     }

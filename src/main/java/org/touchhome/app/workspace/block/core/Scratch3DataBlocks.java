@@ -51,7 +51,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     private final BroadcastLockManager broadcastLockManager;
 
     public Scratch3DataBlocks(EntityContext entityContext, WorkspaceBackupRepository workspaceBackupRepository, BroadcastLockManager broadcastLockManager) {
-        super("data", null, entityContext);
+        super("data", null, entityContext, null);
         this.workspaceBackupRepository = workspaceBackupRepository;
         this.broadcastLockManager = broadcastLockManager;
 

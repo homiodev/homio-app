@@ -7,11 +7,13 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.manager.BundleManager;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.rest.BundleController;
 import org.touchhome.app.workspace.block.Scratch3Space;
+import org.touchhome.app.workspace.block.core.*;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
@@ -21,20 +23,23 @@ import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceShareVariableEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.scratch.Scratch3Block;
-import org.touchhome.bundle.api.scratch.Scratch3Extension;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 
-import javax.annotation.PostConstruct;
 import java.io.InputStream;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Log4j2
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/rest/workspace")
 public class WorkspaceController {
+
+    private static final Pattern ID_PATTERN = Pattern.compile("[a-z-]*");
+    private static final List<Class> systemScratches = Arrays.asList(Scratch3ControlBlocks.class, Scratch3DebugBlocks.class,
+            Scratch3DataBlocks.class, Scratch3EventsBlocks.class, Scratch3OperatorBlocks.class);
 
     private final BundleController bundleController;
     private final EntityContext entityContext;
@@ -47,22 +52,21 @@ public class WorkspaceController {
         List<Scratch3ExtensionImpl> oldExtension = this.extensions == null ? Collections.emptyList() : this.extensions;
         this.extensions = new ArrayList<>();
         for (Scratch3ExtensionBlocks scratch3ExtensionBlock : entityContext.getBeansOfType(Scratch3ExtensionBlocks.class)) {
-            if (scratch3ExtensionBlock.getClass().isAnnotationPresent(Scratch3Extension.class)) {
-                Scratch3Extension scratch3Extension = scratch3ExtensionBlock.getClass().getDeclaredAnnotation(Scratch3Extension.class);
-                if (!Scratch3Extension.ID_PATTERN.matcher(scratch3Extension.value()).matches()) {
-                    throw new IllegalArgumentException("Wrong Scratch3Extension: <" + scratch3Extension.value() + ">. Must contains [a-z] or '-'");
-                }
+            if (!ID_PATTERN.matcher(scratch3ExtensionBlock.getId()).matches()) {
+                throw new IllegalArgumentException("Wrong Scratch3Extension: <" + scratch3ExtensionBlock.getId() + ">. Must contains [a-z] or '-'");
+            }
 
-                BundleEntrypoint bundleEntrypoint = bundleController.getBundle(scratch3Extension.value());
-                if (bundleEntrypoint == null && scratch3Extension.value().contains("-")) {
-                    bundleEntrypoint = bundleController.getBundle(scratch3Extension.value().substring(0, scratch3Extension.value().indexOf("-")));
+            if(!systemScratches.contains(scratch3ExtensionBlock.getClass())) {
+                BundleEntrypoint bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId());
+                if (bundleEntrypoint == null && scratch3ExtensionBlock.getId().contains("-")) {
+                    bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId().substring(0, scratch3ExtensionBlock.getId().indexOf("-")));
                 }
                 if (bundleEntrypoint == null) {
-                    throw new IllegalStateException("Unable to find bundle context with id: " + scratch3Extension.value());
+                    throw new IllegalStateException("Unable to find bundle context with id: " + scratch3ExtensionBlock.getId());
                 }
-                Scratch3ExtensionImpl scratch3ExtensionImpl = new Scratch3ExtensionImpl(scratch3Extension.value(), scratch3ExtensionBlock, bundleEntrypoint.order());
+                Scratch3ExtensionImpl scratch3ExtensionImpl = new Scratch3ExtensionImpl(scratch3ExtensionBlock.getId(), scratch3ExtensionBlock, bundleEntrypoint.order());
 
-                if(!oldExtension.contains(scratch3ExtensionImpl)) {
+                if (!oldExtension.contains(scratch3ExtensionImpl)) {
                     insertScratch3Spaces(scratch3ExtensionBlock);
                 }
                 extensions.add(scratch3ExtensionImpl);
@@ -168,6 +172,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PutMapping("tab/{entityID}")
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void renameWorkspaceTab(@PathVariable("entityID") String entityID, @RequestBody Option option) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
@@ -188,6 +193,7 @@ public class WorkspaceController {
     }
 
     @DeleteMapping("tab/{entityID}")
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void deleteWorkspaceTab(@PathVariable("entityID") String entityID) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {

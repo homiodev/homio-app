@@ -1,6 +1,7 @@
 package org.touchhome.app.thread.js;
 
 import org.apache.logging.log4j.Logger;
+import org.json.JSONObject;
 import org.touchhome.app.manager.scripting.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContext;
@@ -16,12 +17,15 @@ public abstract class AbstractJSBackgroundProcessService<ReturnType> extends Bac
     protected final ScriptEntity scriptEntity;
     private final ScriptManager scriptManager;
 
+    protected final JSONObject params;
+
     private CompiledScript compiled;
 
     public AbstractJSBackgroundProcessService(ScriptEntity scriptEntity, EntityContext entityContext) {
         super(scriptEntity.getBackgroundProcessServiceID(), entityContext);
 
         this.scriptEntity = scriptEntity;
+        this.params = new JSONObject(scriptEntity.getJavaScriptParameters());
         this.scriptManager = entityContext.getBean(ScriptManager.class);
     }
 
@@ -65,7 +69,7 @@ public abstract class AbstractJSBackgroundProcessService<ReturnType> extends Bac
 
     protected CompiledScript getCompiledScript() {
         if (compiled == null) {
-            compiled = scriptManager.createCompiledScript(scriptEntity, printStream);
+            compiled = scriptManager.createCompiledScript(scriptEntity, printStream, params);
         }
         return compiled;
     }

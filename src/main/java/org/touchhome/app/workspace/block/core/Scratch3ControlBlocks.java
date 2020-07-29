@@ -37,7 +37,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private final BroadcastLockManager broadcastLockManager;
 
     public Scratch3ControlBlocks(BroadcastLockManager broadcastLockManager, EntityContext entityContext) {
-        super("control", null, entityContext);
+        super("control", null, entityContext, null);
         this.broadcastLockManager = broadcastLockManager;
 
         // Blocks
@@ -123,7 +123,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void ifHandler(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasInput(CONDITION)) {
+        if (workspaceBlock.hasInput(CONDITION) && workspaceBlock.hasInput(SUBSTACK)) {
             if (workspaceBlock.getInputBoolean(CONDITION)) {
                 workspaceBlock.getInputWorkspaceBlock(SUBSTACK).handle();
             }
@@ -131,10 +131,12 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void repeatHandler(WorkspaceBlock workspaceBlock) {
-        WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
-        int times = workspaceBlock.getInputInteger("TIMES");
-        for (int i = 0; i < times; i++) {
-            child.handle();
+        if (workspaceBlock.hasInput(SUBSTACK)) {
+            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+            int times = workspaceBlock.getInputInteger("TIMES");
+            for (int i = 0; i < times; i++) {
+                child.handle();
+            }
         }
     }
 
@@ -149,11 +151,13 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     @SneakyThrows
     private void foreverHandler(WorkspaceBlock workspaceBlock) {
-        WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
-        while (!Thread.currentThread().isInterrupted()) {
-            child.handle();
+        if (workspaceBlock.hasInput(SUBSTACK)) {
+            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+            while (!Thread.currentThread().isInterrupted()) {
+                child.handle();
 
-            Thread.sleep(100); // wait at least 100ms for 'clumsy hands'
+                Thread.sleep(100); // wait at least 100ms for 'clumsy hands'
+            }
         }
     }
 }

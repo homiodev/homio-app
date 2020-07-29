@@ -83,6 +83,7 @@ import java.util.concurrent.Executors;
 @EnableTransactionManagement(proxyTargetClass = true)
 public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
 
+    public static final String asd = "asd";
     @Autowired
     private ApplicationContext applicationContext;
 

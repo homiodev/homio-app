@@ -12,6 +12,7 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.json.JSONObject;
 import org.springframework.context.ApplicationContext;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.manager.ImageManager;
@@ -25,6 +26,7 @@ import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.DeviceBaseEntity;
+import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.model.ImageEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
@@ -68,7 +70,7 @@ public class ItemController {
     private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
 
     public void postConstruct() {
-        this.baseEntitySimpleClasses = classFinder.getClassesWithParent(BaseEntity.class, null)
+        this.baseEntitySimpleClasses = classFinder.getClassesWithParent(BaseEntity.class, null, null)
                 .stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
         this.baseEntitySimpleClasses.put(DeviceBaseEntity.class.getSimpleName(), DeviceBaseEntity.class);
     }
@@ -182,6 +184,7 @@ public class ItemController {
     }
 
     @DeleteMapping("{entityID}")
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void removeEntity(@PathVariable("entityID") String entityID) {
         entityContext.delete(entityID);
     }
@@ -268,16 +271,6 @@ public class ItemController {
         return entityManager.getEntityWithFetchLazy(entityID);
     }
 
-    /*@GetMapping("{entityID}/image")
-    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public ImageEntity loadImageEntity(@PathVariable("entityID") String entityID) {
-        BaseEntity entity = entityManager.getEntityWithFetchLazy(entityID);
-        if (entity instanceof DeviceBaseEntity) {
-            return ((DeviceBaseEntity) entity).getImageEntity();
-        }
-        throw new IllegalStateException("Unable find image for entity: " + entityID);
-    }*/
-
     @SneakyThrows
     @PutMapping("{entityID}/mappedBy/{mappedBy}")
     public BaseEntity putToItem(@PathVariable("entityID") String entityID,
@@ -303,6 +296,7 @@ public class ItemController {
     }*/
 
     @SneakyThrows
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     @DeleteMapping("{entityID}/field/{field}/item/{entityToRemove}")
     public BaseEntity removeFromItem(@PathVariable("entityID") String entityID,
                                      @PathVariable("field") String field,
@@ -317,11 +311,16 @@ public class ItemController {
                                     @RequestBody UpdateBlockPosition position) {
         BaseEntity entity = entityContext.getEntity(entityID);
         if (entity != null) {
-            entity.setXb(position.xb);
-            entity.setYb(position.yb);
-            entity.setBw(position.bw);
-            entity.setBh(position.bh);
-            entityContext.save(entity);
+            if(entity instanceof HasPosition) {
+                HasPosition hasPosition = (HasPosition) entity;
+                hasPosition.setXb(position.xb);
+                hasPosition.setYb(position.yb);
+                hasPosition.setBw(position.bw);
+                hasPosition.setBh(position.bh);
+                entityContext.save(entity);
+            } else {
+                throw new IllegalArgumentException("Entity: " + entityID + " has no ability to update position");
+            }
         }
     }
 
@@ -332,6 +331,7 @@ public class ItemController {
     }
 
     @PostMapping("{entityID}/uploadImageBase64")
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     public ImageEntity uploadImageBase64(@PathVariable("entityID") String entityID, @RequestBody BufferedImage bufferedImage) {
         try {
             return imageManager.upload(entityID, bufferedImage);
@@ -460,9 +460,9 @@ public class ItemController {
 
     @Data
     private static class UpdateBlockPosition {
-        private Integer xb;
-        private Integer yb;
-        private Integer bw;
-        private Integer bh;
+        private int xb;
+        private int yb;
+        private int bw;
+        private int bh;
     }
 }

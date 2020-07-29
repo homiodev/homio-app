@@ -2,6 +2,7 @@ package org.touchhome.app.rest;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.json.bgp.BackgroundProcessStatusJSON;
 import org.touchhome.app.manager.BackgroundProcessManager;
@@ -14,6 +15,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.thread.BackgroundProcessService;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +32,8 @@ public class BackgroundProcessController {
     private final ScriptManager scriptManager;
 
     @GetMapping("dynamic/{url}")
-    public Object getDynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws Exception {
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    public Object dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws Exception {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
         if (scriptEntity == null) {
             throw new RuntimeException("Dynamic URL: '" + url + "' not exists.");
@@ -79,6 +82,7 @@ public class BackgroundProcessController {
     }
 
     @GetMapping("dynamic/stop/{url}")
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     public BackgroundProcessStatus stopScriptByName(@PathVariable String url) {
         return scriptManager.stopThread(scriptRepository.getByURL(url));
     }

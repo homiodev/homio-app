@@ -10,9 +10,6 @@ import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-
 import static org.touchhome.bundle.api.BundleEntrypoint.BUNDLE_PREFIX;
 
 @Repository
@@ -25,7 +22,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         this.entityContext = entityContext;
     }
 
-    public static SettingEntity createSettingEntityFromPlugin(BundleSettingPlugin settingPlugin, SettingEntity settingEntity) {
+    public static SettingEntity createSettingEntityFromPlugin(BundleSettingPlugin settingPlugin, SettingEntity settingEntity, EntityContext entityContext) {
         settingEntity.computeEntityID(() -> getKey(settingPlugin));
         String name = settingPlugin.getClass().getName();
         if (name.startsWith(BUNDLE_PREFIX)) {
@@ -34,12 +31,12 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         }
         if (settingPlugin.transientState()) {
             settingEntity.setEntityID(getKey(settingPlugin));
-            fulfillEntityFromPlugin(settingEntity);
+            fulfillEntityFromPlugin(settingEntity, entityContext);
         }
         return settingEntity;
     }
 
-    private static void fulfillEntityFromPlugin(SettingEntity entity) {
+    private static void fulfillEntityFromPlugin(SettingEntity entity, EntityContext entityContext) {
         BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(entity.getEntityID());
         entity.setDefaultValue(plugin.getDefaultValue());
         entity.setOrder(plugin.order());
@@ -48,7 +45,10 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         entity.setIcon(plugin.getIcon());
         entity.setToggleIcon(plugin.getToggleIcon());
         entity.setSettingType(plugin.getSettingType());
-        entity.setAvailableValues(new LinkedHashSet<>(Arrays.asList(plugin.getAvailableValues())));
+        entity.setParameters(plugin.getParameters());
+        if (entity.getSettingType() == BundleSettingPlugin.SettingType.SelectBox) {
+            entity.setAvailableValues(plugin.loadAvailableValues(entityContext));
+        }
 
         if (plugin instanceof SettingPlugin) {
             SettingPlugin settingPlugin = (SettingPlugin) plugin;
@@ -73,7 +73,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
                 SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
                 if (settingEntity == null) {
                     settingEntity = new SettingEntity();
-                    createSettingEntityFromPlugin(settingPlugin, settingEntity);
+                    createSettingEntityFromPlugin(settingPlugin, settingEntity, entityContext);
                     entityContext.save(settingEntity);
                 }
             }
@@ -82,7 +82,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
 
     @Override
     public void updateEntityAfterFetch(SettingEntity entity) {
-        fulfillEntityFromPlugin(entity);
+        fulfillEntityFromPlugin(entity, entityContext);
     }
 
     @Transactional
@@ -90,7 +90,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         for (SettingEntity entity : listAll()) {
             BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(entity.getEntityID());
             if (plugin == null) {
-                this.deleteByEntityID(entity.getEntityID());
+                entityContext.delete(entity);
             }
         }
     }

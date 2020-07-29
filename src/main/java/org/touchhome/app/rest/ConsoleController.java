@@ -7,6 +7,7 @@ import lombok.experimental.Accessors;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.springframework.context.ApplicationContext;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.LogService;
 import org.touchhome.app.json.UIActionDescription;
@@ -77,6 +78,7 @@ public class ConsoleController {
     }
 
     @PostMapping(value = "{tab}/{type}/{entityID}/action")
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     public Object executeAction(@PathVariable("tab") String tab, @PathVariable("type") String type,
                                 @PathVariable("entityID") String entityID,
                                 @RequestBody UIActionDescription uiActionDescription) {
@@ -121,17 +123,14 @@ public class ConsoleController {
         return options;
     }
 
-    @GetMapping("ssh")
-    public String getSshSession() {
-        return "";
-    }
-
     @PostMapping("ssh")
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     public SshProvider.SshSession openSshSession() {
         return this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).openSshSession();
     }
 
     @DeleteMapping("ssh/{token}")
+    @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void closeSshSession(@PathVariable("token") String token) {
         this.entityContext.getSettingValue(ConsoleSshProviderSetting.class).closeSshSession(token);
     }

@@ -57,20 +57,9 @@ public class WorkspaceManager {
     private void reloadWorkspace(WorkspaceEntity workspaceEntity) {
         log.debug("Reloading workspace <{}>...", workspaceEntity.getName());
         tabs.putIfAbsent(workspaceEntity.getEntityID(), new TabHolder());
-        TabHolder tabHolder = tabs.get(workspaceEntity.getEntityID());
 
-        broadcastLockManager.release(workspaceEntity.getEntityID());
+        TabHolder tabHolder = releaseWorkspaceEntity(workspaceEntity);
 
-        for (WorkspaceEventListener workspaceEventListener : workspaceEventListeners) {
-            workspaceEventListener.release(workspaceEntity.getEntityID());
-        }
-
-        for (WorkspaceBlock workspaceBlock : tabHolder.tab2WorkspaceBlocks.values()) {
-            workspaceBlock.release();
-        }
-        for (WorkspaceBlockProcessService tab2Service : tabHolder.tab2Services) {
-            backgroundProcessManager.cancelTask(tab2Service, BackgroundProcessStatus.STOP, null);
-        }
         tabHolder.tab2Services.clear();
         tabHolder.tab2WorkspaceBlocks.clear();
 
@@ -93,6 +82,23 @@ public class WorkspaceManager {
                 entityContext.sendErrorMessage("Unable to initialize workspace: " + ex.getMessage(), ex);
             }
         }
+    }
+
+    private TabHolder releaseWorkspaceEntity(WorkspaceEntity workspaceEntity) {
+        TabHolder tabHolder = tabs.get(workspaceEntity.getEntityID());
+        broadcastLockManager.release(workspaceEntity.getEntityID());
+
+        for (WorkspaceEventListener workspaceEventListener : workspaceEventListeners) {
+            workspaceEventListener.release(workspaceEntity.getEntityID());
+        }
+
+        for (WorkspaceBlock workspaceBlock : tabHolder.tab2WorkspaceBlocks.values()) {
+            workspaceBlock.release();
+        }
+        for (WorkspaceBlockProcessService tab2Service : tabHolder.tab2Services) {
+            backgroundProcessManager.cancelTask(tab2Service, BackgroundProcessStatus.STOP, null);
+        }
+        return tabHolder;
     }
 
     private void executeOnce(WorkspaceBlock workspaceBlock) {
@@ -248,6 +254,7 @@ public class WorkspaceManager {
         }
         entityContext.addEntityUpdateListener(WorkspaceEntity.class, this::reloadWorkspace);
         entityContext.addEntityUpdateListener(WorkspaceShareVariableEntity.class, this::reloadVariable);
+        entityContext.addEntityRemovedListener(WorkspaceEntity.class, entity -> tabs.remove(entity.getEntityID()));
 
         // listen for clear workspace
         entityContext.listenSettingValue(SystemClearWorkspaceButtonSetting.class, () ->

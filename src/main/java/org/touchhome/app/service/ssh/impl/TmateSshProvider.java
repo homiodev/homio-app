@@ -7,10 +7,10 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 import org.touchhome.app.rest.ConsoleController;
 import org.touchhome.app.service.ssh.SshHardwareRepository;
 import org.touchhome.app.service.ssh.SshProvider;
+import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 
 import java.io.InputStream;
@@ -26,7 +26,6 @@ public class TmateSshProvider implements SshProvider {
 
     private final WirelessHardwareRepository wirelessHardwareRepository;
     private final SshHardwareRepository sshHardwareRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
 
     private Thread tmateThread;
     private SshSession sshSession;
@@ -81,7 +80,7 @@ public class TmateSshProvider implements SshProvider {
 
     @Override
     public ConsoleController.SessionStatusModel getSshStatus(String token) {
-        return restTemplate.getForObject("https://tmate.io/api/t/" + token, ConsoleController.SessionStatusModel.class);
+        return Curl.get("https://tmate.io/api/t/" + token, ConsoleController.SessionStatusModel.class);
     }
 
     @SneakyThrows

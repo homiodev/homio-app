@@ -1,9 +1,9 @@
 package org.touchhome.app.manager.scripting;
 
+import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +15,6 @@ import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
-import org.touchhome.bundle.api.ui.PublicJsMethod;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.script.*;
@@ -34,6 +33,7 @@ public class ScriptManager {
     private final LoggerManager loggerManager;
     private final BackgroundProcessManager backgroundProcessManager;
     private final EntityContext entityContext;
+
     private ExecutorService singleCallExecutorService = Executors.newSingleThreadExecutor();
 
     @Value("${checkScriptStatusTimeout}")
@@ -64,7 +64,7 @@ public class ScriptManager {
         }
     }
 
-    @PublicJsMethod("Execute java script")
+    @ApiOperation("Execute java script")
     public Object executeJavaScriptOnce(
             @ApiParam(name = "scriptEntity") ScriptEntity scriptEntity,
             @ApiParam(name = "jsonParameters") String jsonParameters,
@@ -148,19 +148,17 @@ public class ScriptManager {
         return BackgroundProcessStatus.RUNNING;
     }
 
-    public CompiledScript createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream) {
+    public CompiledScript createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream, JSONObject params) {
         ScriptEngine engine = scriptEngineManager.getEngineByName(scriptEngineName);
         if (logPrintStream != null) {
             engine.put(JavaScriptBinder.log.name(), loggerManager.getLogger(logPrintStream));
-        } else {
-            engine.put(JavaScriptBinder.log.name(), loggerManager.getLogger(scriptEntity.getBackgroundProcessServiceID(), scriptEntity));
         }
         engine.put(JavaScriptBinder.context.name(), entityContext);
         engine.put(JavaScriptBinder.script.name(), scriptEntity);
-        engine.put(JavaScriptBinder.params.name(), assertJsonParams(scriptEntity, scriptEntity.getJavaScriptParameters()));
+        engine.put(JavaScriptBinder.params.name(), params == null ? new JSONObject(scriptEntity.getJavaScriptParameters()) : params);
         CompiledScript compiled;
         try {
-            compiled = ((Compilable) engine).compile(new StringReader(scriptEntity.getJavaScript()));
+            compiled = ((Compilable) engine).compile(new StringReader(scriptEntity.getFormattedJavaScript(entityContext)));
             Future<Object> future = singleCallExecutorService.submit((Callable<Object>) compiled::eval);
             try {
                 future.get(maxJavaScriptCompileBeforeInterruptInSec, TimeUnit.SECONDS);
@@ -177,22 +175,10 @@ public class ScriptManager {
         return compiled;
     }
 
-    public JSONObject assertJsonParams(ScriptEntity scriptEntity, String json) {
-        JSONObject jsonObj = json == null ? new JSONObject() : new JSONObject(json);
-        if (StringUtils.isNotEmpty(scriptEntity.getRequiredParams())) {
-            if (!scriptEntity.getRequiredParams().isEmpty()) {
-                for (String param : scriptEntity.getRequiredParams().split(",")) {
-                    jsonObj.get(param);
-                }
-            }
-        }
-        return jsonObj;
-    }
-
     /**
      * Run java script once and interrupt it if too long works
      */
-    private Object callJavaScriptOnce(AbstractJSBackgroundProcessService abstractJSBackgroundProcessService) throws InterruptedException, ExecutionException {
+    public Object callJavaScriptOnce(AbstractJSBackgroundProcessService abstractJSBackgroundProcessService) throws InterruptedException, ExecutionException {
         Future<Object> future = singleCallExecutorService.submit(() -> {
             abstractJSBackgroundProcessService.beforeStart();
             Object retValue = abstractJSBackgroundProcessService.run();

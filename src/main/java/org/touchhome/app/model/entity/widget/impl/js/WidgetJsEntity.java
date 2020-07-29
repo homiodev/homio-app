@@ -2,6 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.js;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -11,10 +12,12 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Lob;
+import javax.persistence.Transient;
 
 @Entity
 @Getter
 @Setter
+@Accessors(chain = true)
 public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
 
     @Lob
@@ -27,6 +30,12 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
     @Column(length = 1048576)
     @UIField(order = 12, type = UIFieldType.Json)
     private String javaScriptParameters;
+
+    @Transient
+    private String javaScriptResponse;
+
+    @Transient
+    private String javaScriptErrorResponse;
 
     @Override
     public String getImage() {

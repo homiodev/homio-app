@@ -25,7 +25,7 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
     private final BroadcastLockManager broadcastLockManager;
 
     public Scratch3EventsBlocks(BroadcastLockManager broadcastLockManager, EntityContext entityContext) {
-        super("event", null, entityContext);
+        super("event", null, entityContext, null);
         this.broadcastLockManager = broadcastLockManager;
 
         // Blocks

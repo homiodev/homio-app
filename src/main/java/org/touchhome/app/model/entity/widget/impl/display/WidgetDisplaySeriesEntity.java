@@ -55,7 +55,7 @@ public class WidgetDisplaySeriesEntity extends BaseEntity<WidgetDisplaySeriesEnt
     private String append = "";
 
     @UIField(order = 24)
-    private Boolean showLastUpdateDate = Boolean.TRUE;
+    private Boolean showLastUpdateDate = Boolean.FALSE;
 
     @Override
     public int compareTo(WidgetDisplaySeriesEntity entity) {

@@ -18,7 +18,9 @@ import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +35,7 @@ public class BundleController {
 
     @GetMapping("{bundleID}/icon")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID) {
+    public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID) throws IOException {
         BundleEntrypoint bundleEntrypoint;
         String bundleImage;
         try {
@@ -47,7 +49,8 @@ public class BundleController {
                 throw new IllegalArgumentException("Unable to find bundle with id: " + bundleID);
             }
         }
-        InputStream imageStream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream(bundleImage);
+        URL imageUrl = bundleEntrypoint.getBundleImageURL();
+        InputStream imageStream = imageUrl == null ? null : imageUrl.openStream();
         if (imageStream == null) {
             throw new NotFoundException("Unable to find bundle image: " + bundleImage + " of bundle: " + bundleID);
         }

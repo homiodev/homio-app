@@ -51,7 +51,7 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
     private Random random = new Random();
 
     public Scratch3OperatorBlocks(EntityContext entityContext) {
-        super("operator", null, entityContext);
+        super("operator", null, entityContext, null);
 
         // Blocks
         this.addBlock = Scratch3Block.ofEvaluate("add", BlockType.reporter, this::addEvaluateEvaluate);
