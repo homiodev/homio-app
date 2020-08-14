@@ -18,10 +18,10 @@ import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.manager.ImageManager;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityManager;
+import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.DynamicOptionLoader;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.BaseEntity;
@@ -38,7 +38,6 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
 import org.touchhome.bundle.api.ui.method.UIMethodAction;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.raspberry.RaspberryGPIOService;
 
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
@@ -58,10 +57,10 @@ import static org.touchhome.app.rest.UtilsController.fillEntityUIMetadataList;
 @RequiredArgsConstructor
 public class ItemController {
 
+    private final Map<String, List<EntityUIMetaData>> fieldsMap = new HashMap<>();
     private static Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
     private final ObjectMapper objectMapper;
-    private final RaspberryGPIOService raspberryGPIOService;
-    private final EntityContext entityContext;
+    private final InternalManager entityContext;
     private final EntityManager entityManager;
     private final ClassFinder classFinder;
     private final ImageManager imageManager;
@@ -136,9 +135,27 @@ public class ItemController {
 
     @GetMapping("{type}/fields")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public List<EntityUIMetaData> getUIFieldsByType(@PathVariable("type") String type) {
-        Class<?> entityClassByType = entityManager.getClassByType(type);
-        return fillEntityUIMetadataList(entityClassByType, new HashSet<>());
+    public List<EntityUIMetaData> getUIFieldsByType(@PathVariable("type") String type,
+                                                    @RequestParam(value = "subType", defaultValue = "") String subType) {
+        String key = type + subType;
+        fieldsMap.computeIfAbsent(key, s -> {
+            Class<?> entityClassByType = entityManager.getClassByType(type);
+            List<EntityUIMetaData> entityUIMetaData = fillEntityUIMetadataList(entityClassByType, new HashSet<>());
+
+            if (subType.length() > 0 && subType.contains(":")) {
+                String[] bundleAndClassName = subType.split(":");
+                Object subClassObject = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]);
+                List<EntityUIMetaData> subTypeFieldMetadata = fillEntityUIMetadataList(subClassObject, new HashSet<>());
+                // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json parameter)
+                for (EntityUIMetaData subTypeFieldMetadatum : subTypeFieldMetadata) {
+                    subTypeFieldMetadatum.setTypeMetaData(new JSONObject(StringUtils.defaultString(subTypeFieldMetadatum.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());
+                }
+                entityUIMetaData.addAll(subTypeFieldMetadata);
+            }
+
+            return entityUIMetaData;
+        });
+        return fieldsMap.get(key);
     }
 
     @GetMapping("/{type}/extended")
@@ -311,7 +328,7 @@ public class ItemController {
                                     @RequestBody UpdateBlockPosition position) {
         BaseEntity entity = entityContext.getEntity(entityID);
         if (entity != null) {
-            if(entity instanceof HasPosition) {
+            if (entity instanceof HasPosition) {
                 HasPosition hasPosition = (HasPosition) entity;
                 hasPosition.setXb(position.xb);
                 hasPosition.setYb(position.yb);
@@ -322,12 +339,6 @@ public class ItemController {
                 throw new IllegalArgumentException("Entity: " + entityID + " has no ability to update position");
             }
         }
-    }
-
-    @GetMapping("raspberry/DS18B20")
-    public List<BaseEntity> getRaspberryDS18B20() {
-        return raspberryGPIOService.getDS18B20()
-                .stream().map(s -> BaseEntity.of(s, s)).collect(Collectors.toList());
     }
 
     @PostMapping("{entityID}/uploadImageBase64")
@@ -345,18 +356,24 @@ public class ItemController {
     @GetMapping("{entityID}/{fieldName}/options")
     public List loadSelectOptions(@PathVariable("entityID") String entityID,
                                   @PathVariable("fieldName") String fieldName,
-                                  @RequestParam("selectOptionMethod") String selectOptionMethod) throws Exception {
+                                  @RequestParam("selectOptionMethod") String selectOptionMethod,
+                                  @RequestParam("fieldFetchType") String fieldFetchType) throws Exception {
         BaseEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
             entity = getInstanceByClass(entityID); // i.e in case we load Widget
         }
+        Class entityClass = entity.getClass();
         if (StringUtils.isNotEmpty(selectOptionMethod)) {
-            Method method = TouchHomeUtils.findRequreMethod(entity.getClass(), selectOptionMethod);
+            Method method = TouchHomeUtils.findRequreMethod(entityClass, selectOptionMethod);
             return (List) executeMethodAction(method, entity, applicationContext, entity);
         }
 
-        Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
+        if (StringUtils.isNotEmpty(fieldFetchType)) {
+            String[] bundleAndClassName = fieldFetchType.split(":");
+            entityClass = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
+        }
 
+        Field field = FieldUtils.getField(entityClass, fieldName, true);
         if (field.getType().getDeclaredAnnotation(Entity.class) != null) {
             Class<BaseEntity> clazz = (Class<BaseEntity>) field.getType();
             List<? extends BaseEntity> selectedOptions = entityContext.findAll(clazz);

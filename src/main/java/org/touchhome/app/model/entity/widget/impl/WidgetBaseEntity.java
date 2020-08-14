@@ -40,6 +40,9 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     @UIField(order = 20)
     private boolean autoScale = false;
 
+    @Getter
+    private String fieldFetchType;
+
     @Override
     @UIField(order = 3, transparent = true)
     public String getDescription() {

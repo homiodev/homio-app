@@ -244,7 +244,7 @@ public class WidgetController {
 
                     JSONObject params = new JSONObject(jsEntity.getJavaScriptParameters());
                     CompiledScript compiledScript = scriptManager.createCompiledScript(scriptEntity, null, params);
-                    jsEntity.setJavaScriptResponse(ScriptJSBackgroundProcess.runJavaScript(scriptManager, compiledScript,
+                    jsEntity.setJavaScriptResponse(ScriptJSBackgroundProcess.runJavaScript(compiledScript,
                             scriptEntity.getFormattedJavaScript(entityContext), params));
 
                 } catch (Exception ex) {
@@ -274,7 +274,7 @@ public class WidgetController {
 
     @Secured(PRIVILEGED_USER_ROLE)
     @PostMapping("create/{tabId}/{type}/{bundle}")
-    public BaseEntity createExtraWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type, @PathVariable("bundle") String bundle) throws Exception {
+    public BaseEntity createExtraWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type, @PathVariable("bundle") String bundle) {
         log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, bundle: <{}>", type, tabId, bundle);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
         if (widgetTabEntity == null) {
@@ -305,17 +305,11 @@ public class WidgetController {
                 .setJavaScript(js);
 
         widgetJsEntity.setWidgetTabEntity(widgetTabEntity)
+                .setFieldFetchType(bundle + ":" + template.getClass().getSimpleName())
                 .setAutoScale(template.isDefaultAutoScale());
 
         return entityContext.save(widgetJsEntity);
     }
-
-    /*private String appendCode(String funcName, String text, Context context) {
-        if (text != null) {
-            return "function " + funcName + "() { " + (context == null ? text : templateEngine.process(text, context)) + " }";
-        }
-        return "";
-    }*/
 
     @GetMapping("tab")
     public List<Option> getWidgetTabs() {

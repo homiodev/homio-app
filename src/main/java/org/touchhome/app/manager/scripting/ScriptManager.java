@@ -1,5 +1,6 @@
 package org.touchhome.app.manager.scripting;
 
+import com.pivovarit.function.ThrowingBinaryOperator;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
@@ -15,11 +16,15 @@ import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
+import org.touchhome.bundle.api.util.SpringUtils;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.script.*;
 import java.io.PrintStream;
 import java.io.StringReader;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 @Log4j2
@@ -153,12 +158,15 @@ public class ScriptManager {
         if (logPrintStream != null) {
             engine.put(JavaScriptBinder.log.name(), loggerManager.getLogger(logPrintStream));
         }
-        engine.put(JavaScriptBinder.context.name(), entityContext);
+        engine.put(JavaScriptBinder.entityContext.name(), entityContext);
         engine.put(JavaScriptBinder.script.name(), scriptEntity);
         engine.put(JavaScriptBinder.params.name(), params == null ? new JSONObject(scriptEntity.getJavaScriptParameters()) : params);
         CompiledScript compiled;
         try {
-            compiled = ((Compilable) engine).compile(new StringReader(scriptEntity.getFormattedJavaScript(entityContext)));
+            String formattedJavaScript = scriptEntity.getFormattedJavaScript(entityContext);
+            formattedJavaScript = detectReplaceableValues(params, (Compilable) engine, formattedJavaScript);
+
+            compiled = ((Compilable) engine).compile(new StringReader(formattedJavaScript));
             Future<Object> future = singleCallExecutorService.submit((Callable<Object>) compiled::eval);
             try {
                 future.get(maxJavaScriptCompileBeforeInterruptInSec, TimeUnit.SECONDS);
@@ -173,6 +181,29 @@ public class ScriptManager {
             throw new RuntimeException(ex);
         }
         return compiled;
+    }
+
+    private String detectReplaceableValues(JSONObject params, Compilable engine, String formattedJavaScript) throws ScriptException {
+        List<String> patternValues = SpringUtils.getPatternValues(SpringUtils.HASH_PATTERN, formattedJavaScript);
+        if (!patternValues.isEmpty()) {
+            StringBuilder sb = new StringBuilder(formattedJavaScript);
+            Map<Integer, String> replaceFunctions = new HashMap<>();
+            for (String patternValue : patternValues) {
+                String fnName = "rpl_" + patternValue.hashCode();
+                replaceFunctions.put(patternValue.hashCode(), "");
+                sb.append("function ").append(fnName).append("() { ").append(patternValue.contains("return ") ? patternValue : "return " + patternValue).append(" }");
+            }
+
+            // fire rpl functions
+            String jsWithRplFunctions = sb.toString();
+            CompiledScript cmpl = engine.compile(new StringReader(jsWithRplFunctions));
+            cmpl.eval();
+            return SpringUtils.replaceHashValues(jsWithRplFunctions, (ThrowingBinaryOperator<String, Exception>) (s, s2) -> {
+                Object ret = ((Invocable) cmpl.getEngine()).invokeFunction("rpl_" + s.hashCode(), params);
+                return ret == null ? "" : ret.toString();
+            });
+        }
+        return formattedJavaScript;
     }
 
     /**

@@ -8,7 +8,7 @@ import org.touchhome.bundle.api.EntityContext;
 public enum JavaScriptBinder {
     script(ScriptEntity.class),
     log(Logger.class),
-    context(EntityContext.class),
+    entityContext(EntityContext.class),
     params(JSONObject.class);
 
     public Class managerClass;

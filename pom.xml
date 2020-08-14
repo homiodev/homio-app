@@ -2,37 +2,36 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <artifactId>touchhome-core</artifactId>
-    <groupId>org.touchhome</groupId>
     <url>https://github.com/touchhome/touchhome-core</url>
 
     <packaging>jar</packaging>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>0.5.0-SNAPSHOT</version>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.3.1.RELEASE</version>
+        <groupId>org.touchhome</groupId>
+        <artifactId>touchhome-dependency</artifactId>
+        <version>2.3.1</version>
     </parent>
 
     <scm>
-        <connection>scm:git:git://github.com/github.com/touchhome/touchhome-core.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/touchhome/touchhome-core.git</developerConnection>
-        <url>https://github.com/touchhome/touchhome-core</url>
+        <url>https://github.com/touchhome/${project.artifactId}</url>
+        <connection>scm:git:git://github.com/github.com/touchhome/${project.artifactId}.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/touchhome/${project.artifactId}.git</developerConnection>
         <tag>HEAD</tag>
     </scm>
 
     <properties>
-        <java.version>8</java.version>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
-        <jackson.version>2.10.3</jackson.version>
-        <pi4j.version>1.2</pi4j.version>
-
         <touchhome-bundle-api.version>1.0.8-SNAPSHOT</touchhome-bundle-api.version>
         <touchhome-bundle.version>1.0.11-SNAPSHOT</touchhome-bundle.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.pivovarit</groupId>
+            <artifactId>throwing-function</artifactId>
+            <version>1.5.1</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-text</artifactId>
@@ -143,43 +142,43 @@
 
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
-            <artifactId>bundle-cloud</artifactId>
+            <artifactId>touchhome-bundle-cloud</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
-            <artifactId>bundle-arduino</artifactId>
+            <artifactId>touchhome-bundle-arduino</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
-            <artifactId>bundle-raspberry</artifactId>
+            <artifactId>touchhome-bundle-raspberry</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
-            <artifactId>bundle-telegram</artifactId>
+            <artifactId>touchhome-bundle-telegram</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
-            <artifactId>bundle-zigbee</artifactId>
+            <artifactId>touchhome-bundle-zigbee</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
-            <artifactId>bundle-xaomi</artifactId>
+            <artifactId>touchhome-bundle-xaomi</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
-            <artifactId>bundle-bluetooth</artifactId>
+            <artifactId>touchhome-bundle-bluetooth</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 
@@ -316,7 +315,7 @@
 
         <dependency>
             <groupId>org.touchhome</groupId>
-            <artifactId>bundle-api</artifactId>
+            <artifactId>touchhome-bundle-api</artifactId>
             <version>${touchhome-bundle-api.version}</version>
         </dependency>
 

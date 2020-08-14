@@ -23,6 +23,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
     private JSContentImpl jsContentImpl;
     private JsMethodImpl beforeFunc;
     private JsServerVariables jsServerVariables = new JsServerVariables();
+    @Getter
+    private boolean jsonReadOnly;
 
     public JavaScriptBuilderImpl(Class<?> aClass) {
         this.aClass = aClass;
@@ -122,6 +124,11 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
     public JavaScriptBuilderImpl css(String className, String... values) {
         this.css.add("." + className + " { " + String.join(";", values) + "}");
         return this;
+    }
+
+    @Override
+    public void setJsonReadOnly() {
+        this.jsonReadOnly = true;
     }
 
     @Override
@@ -389,24 +396,83 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         }
     }*/
 
-    public static class JSWindowImpl implements JSWindow {
-        private final Map<String, Object> parameters = new HashMap<>();
+    public static class JSONParameterContextImpl implements JSONParameterContext {
+        final Map<String, JSONParameter> parameters = new HashMap<>();
+        final Map<String, JSONParameter> arrays = new HashMap<>();
 
         @Override
-        public <T> T parameter(String name, T param) {
-            parameters.putIfAbsent(name, param);
-            return (T) parameters.get(name);
+        public JSONParameter obj(String name) {
+            return parameters.computeIfAbsent(name, key -> new JSONParameterImpl());
         }
+
+        @Override
+        public JSONParameter array(String name) {
+            return arrays.computeIfAbsent(name, key -> new JSONParameterImpl());
+        }
+    }
+
+    public static class JSONParameterImpl implements JSONParameter {
+        JSONObject object = new JSONObject();
+        private Object current = object;
+
+        @Override
+        public String toString() {
+            return object.toString();
+        }
+
+        @Override
+        public JSONParameter obj(String key) {
+            JSONObject jsObject = new JSONObject();
+            if (current instanceof JSONObject) {
+                ((JSONObject) current).put(key, jsObject);
+            } else {
+                ((JSONArray) current).put(jsObject);
+            }
+            current = jsObject;
+            return this;
+        }
+
+        @Override
+        public JSONParameter array(String key) {
+            JSONArray jsonArray = new JSONArray();
+            if (current instanceof JSONObject) {
+                ((JSONObject) current).put(key, jsonArray);
+            } else {
+                ((JSONArray) current).put(jsonArray);
+            }
+            current = jsonArray;
+            return this;
+        }
+
+        @Override
+        public JSONParameterImpl value(String key, String value) {
+            object.put(key, value);
+            return this;
+        }
+
+        @Override
+        public JSONParameterImpl value(String key, Consumer<JSONObject> consumer) {
+            consumer.accept(object);
+            return this;
+        }
+
+        @Override
+        public JSONParameter value(String key, EvaluableValue evaluableValue) {
+            object.put(key, "#{" + evaluableValue.get() + "}");
+            return this;
+        }
+    }
+
+    public static class JSWindowImpl extends JSONParameterContextImpl implements JSWindow {
 
         private String build() {
             StringBuilder builder = new StringBuilder();
-            for (Map.Entry<String, Object> entry : parameters.entrySet()) {
-                if (entry.getValue() instanceof JSONArray) {
-                    builder.append("window.").append(entry.getKey()).append(" = (window.").append(entry.getKey())
-                            .append(" || []).concat(").append(entry.getValue().toString()).append(");");
-                } else {
-                    builder.append("window.").append(entry.getKey()).append(" = ").append(entry.getValue().toString());
-                }
+            for (Map.Entry<String, JSONParameter> entry : arrays.entrySet()) {
+                builder.append("window.").append(entry.getKey()).append(" = (window.").append(entry.getKey())
+                        .append(" || []).concat(").append(entry.getValue().toString()).append(");");
+            }
+            for (Map.Entry<String, JSONParameter> entry : parameters.entrySet()) {
+                builder.append("window.").append(entry.getKey()).append(" = ").append(entry.getValue().toString());
             }
             return builder.toString();
         }

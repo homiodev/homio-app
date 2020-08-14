@@ -1,6 +1,5 @@
 package org.touchhome.app.thread.js.impl;
 
-import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import org.touchhome.app.manager.scripting.ScriptManager;
@@ -13,7 +12,6 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 import javax.script.CompiledScript;
 import javax.script.Invocable;
 import javax.script.ScriptException;
-import java.util.Iterator;
 import java.util.Set;
 
 import static org.touchhome.app.manager.scripting.ScriptManager.REPEAT_EVERY;
@@ -33,7 +31,7 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
     @Override
     public Object runInternal() {
         try {
-            return runJavaScript(scriptManager, getCompiledScript(), scriptEntity.getFormattedJavaScript(entityContext), params);
+            return runJavaScript(getCompiledScript(), scriptEntity.getFormattedJavaScript(entityContext), params);
         } catch (Exception ex) {
             String msg = TouchHomeUtils.getErrorMessage(ex);
             setStatus(BackgroundProcessStatus.FAILED, msg);
@@ -42,7 +40,7 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
         }
     }
 
-    public static String runJavaScript(ScriptManager scriptManager, CompiledScript compiledScript, String javaScript, JSONObject params) throws ScriptException, NoSuchMethodException {
+    public static String runJavaScript(CompiledScript compiledScript, String javaScript, JSONObject params) throws ScriptException, NoSuchMethodException {
         StringBuilder script = new StringBuilder();
 
         Set<String> functions = ScriptEntity.getFunctionsWithPrefix(javaScript, "js_");
@@ -56,7 +54,7 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
 
         appendFunc(script, "readyOnClient", "READY_BLOCK", javaScript);
 
-        String readVariablesOnServerValues = ScriptEntity.getFunctionWithName(javaScript, "readVariablesOnServerValues");
+        /*String readVariablesOnServerValues = ScriptEntity.getFunctionWithName(javaScript, "readVariablesOnServerValues");
         if (readVariablesOnServerValues != null) {
             ScriptObjectMirror serverVariables = (ScriptObjectMirror) ((Invocable) compiledScript.getEngine()).invokeFunction("readVariablesOnServerValues", params);
             ScriptObjectMirror serverKeys = (ScriptObjectMirror) ((Invocable) compiledScript.getEngine()).invokeFunction("readVariablesOnServerKeys", params);
@@ -66,7 +64,7 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
                 script.append(serviceKey).append("=").append(serverVariablesIterator.next()).append(";");
             }
             script.append(")VARIABLE_BLOCK");
-        }
+        }*/
 
         Object value = ((Invocable) compiledScript.getEngine()).invokeFunction("run", params);
         script.append(value);

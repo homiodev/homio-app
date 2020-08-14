@@ -70,6 +70,7 @@ import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
 import org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity;
@@ -122,11 +123,10 @@ public class InternalManager implements EntityContext {
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
     private ApplicationContext applicationContext;
-    private ArrayList<BundleEntrypoint> bundles;
+    @Getter
+    private Map<String, InternalBundleContext> bundles = new LinkedHashMap<>();
     private String latestVersion;
 
-    @Getter
-    private Map<String, BundleContext> extraBundles = new HashMap<>();
     private Set<ApplicationContext> allApplicationContexts = new HashSet<>();
 
     public Set<NotificationEntityJSON> getNotifications() {
@@ -135,8 +135,8 @@ public class InternalManager implements EntityContext {
                 && time - entity.getCreationTime().getTime() > ((AlwaysOnTopNotificationEntityJSONJSON) entity).getDuration() * 1000);
 
         Set<NotificationEntityJSON> set = new TreeSet<>(notifications);
-        for (BundleEntrypoint bundle : this.bundles) {
-            Set<NotificationEntityJSON> notifications = bundle.getNotifications();
+        for (InternalBundleContext bundleContext : this.bundles.values()) {
+            Set<NotificationEntityJSON> notifications = bundleContext.bundleEntrypoint.getNotifications();
             if (notifications != null) {
                 set.addAll(notifications);
             }
@@ -171,9 +171,10 @@ public class InternalManager implements EntityContext {
 
         // loadWorkspace modules
         log.info("Initialize bundles");
-        this.bundles = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
-        Collections.sort(bundles);
-        for (BundleEntrypoint bundleEntrypoint : bundles) {
+        ArrayList<BundleEntrypoint> bundleEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
+        Collections.sort(bundleEntrypoints);
+        for (BundleEntrypoint bundleEntrypoint : bundleEntrypoints) {
+            this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, null));
             bundleEntrypoint.init();
         }
 
@@ -681,21 +682,17 @@ public class InternalManager implements EntityContext {
     }
 
     public void removeBundle(String bundleName) {
-        BundleContext bundleContext = extraBundles.remove(bundleName);
-        if (bundleContext != null) {
-            this.removeBundle(bundleContext);
+        InternalBundleContext internalBundleContext = bundles.remove(bundleName);
+        if (internalBundleContext != null) {
+            this.removeBundle(internalBundleContext.bundleContext);
             applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
         }
     }
 
     private void removeBundle(BundleContext bundleContext) {
         if (!bundleContext.isInternal() && bundleContext.isInstalled()) {
-            extraBundles.remove(bundleContext.getBundleName());
             ApplicationContext context = bundleContext.getApplicationContext();
-            context.getBeansOfType(BundleEntrypoint.class).values().forEach(be -> {
-                be.destroy();
-                this.bundles.remove(be);
-            });
+            context.getBean(BundleEntrypoint.class).destroy();
             this.allApplicationContexts.remove(context);
 
             this.cacheService.clearCache();
@@ -716,7 +713,6 @@ public class InternalManager implements EntityContext {
                         .setName("Unable to load bundle <" + bundleContext.getBundleFriendlyName() + ">"));
                 return;
             }
-            extraBundles.put(bundleContext.getBundleName(), bundleContext);
             allApplicationContexts.add(bundleContext.getApplicationContext());
             bundleContext.setInstalled(true);
             for (String bundleDependency : bundleContext.getDependencies()) {
@@ -731,7 +727,7 @@ public class InternalManager implements EntityContext {
 
             for (BundleEntrypoint bundleEntrypoint : context.getBeansOfType(BundleEntrypoint.class).values()) {
                 bundleEntrypoint.init();
-                this.bundles.add(bundleEntrypoint);
+                this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, bundleContext));
             }
         }
     }
@@ -779,6 +775,35 @@ public class InternalManager implements EntityContext {
                 settingPluginsByPluginKey.remove(key);
                 settingPluginsByPluginClass.remove(settingPlugin.getName());
                 settingListeners.remove(settingPlugin.getName());
+            }
+        }
+    }
+
+    public Object getBeanOfBundleBySimpleName(String bundle, String className) {
+        InternalBundleContext internalBundleContext = this.bundles.get(bundle);
+        if (internalBundleContext == null) {
+            throw new NotFoundException("Unable to find bundle <" + bundle + ">");
+        }
+        Object o = internalBundleContext.fieldTypes.get(className);
+        if (o == null) {
+            throw new NotFoundException("Unable to find class <" + className + "> in bundle <" + bundle + ">");
+        }
+        return o;
+    }
+
+    public static class InternalBundleContext {
+        private final BundleEntrypoint bundleEntrypoint;
+        @Getter
+        private final BundleContext bundleContext;
+        private final Map<String, Object> fieldTypes = new HashMap<>();
+
+        public InternalBundleContext(BundleEntrypoint bundleEntrypoint, BundleContext bundleContext) {
+            this.bundleEntrypoint = bundleEntrypoint;
+            this.bundleContext = bundleContext;
+            if (bundleContext != null) {
+                for (WidgetBaseTemplate widgetBaseTemplate : bundleContext.getApplicationContext().getBeansOfType(WidgetBaseTemplate.class).values()) {
+                    fieldTypes.put(widgetBaseTemplate.getClass().getSimpleName(), widgetBaseTemplate);
+                }
             }
         }
     }

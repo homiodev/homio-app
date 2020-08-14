@@ -49,7 +49,7 @@ public class BundleContext {
         this.bundleContextFile = bundleContextFile;
         String fileName = bundleContextFile.getFileName().toString();
         ZipFile zipFile = new ZipFile(bundleContextFile.toString());
-        this.pomFile = readPomFile(zipFile, "bundle-" + fileName.split("[-|.]")[1]);
+        this.pomFile = readPomFile(zipFile, "bundle-" + fileName.split("[-|.]")[2]);
         zipFile.close();
         this.bundleName = pomFile.getArtifactId();
     }
@@ -63,7 +63,7 @@ public class BundleContext {
 
     private Model readPomFile(ZipFile file, String bundleName) throws IOException, XmlPullParserException {
         for (ZipEntry e : Collections.list(file.entries())) {
-            if (e.getName().endsWith("/" + bundleName + "/pom.xml")) {
+            if (e.getName().endsWith(bundleName + "/pom.xml")) {
                 return pomReader.read(file.getInputStream(e));
             }
         }

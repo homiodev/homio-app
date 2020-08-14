@@ -26,8 +26,8 @@ public class ExtraBundleController {
     @GetMapping
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Set<ExtraBundleJson> getInstalledBundles() {
-        return internalManager.getExtraBundles().values().stream()
-                .map(b -> new ExtraBundleJson(b.getBundleName(), b.getVersion()))
+        return internalManager.getBundles().values().stream()
+                .map(b -> new ExtraBundleJson(b.getBundleContext().getBundleName(), b.getBundleContext().getVersion()))
                 .collect(Collectors.toSet());
     }
 

@@ -82,11 +82,14 @@ public class UtilsController {
                 .orElseThrow(() -> new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName()));
         constructor.setAccessible(true);
         Object instance = constructor.newInstance();
+        return fillEntityUIMetadataList(constructor.newInstance(), entityUIMetaDataSet);
+    }
 
-        FieldUtils.getFieldsListWithAnnotation(entityClassByType, UIField.class).forEach(field ->
+    static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet) {
+        FieldUtils.getFieldsListWithAnnotation(instance.getClass(), UIField.class).forEach(field ->
                 generateUIField(instance, entityUIMetaDataSet, field, StringUtils.defaultIfEmpty(field.getAnnotation(UIField.class).name(), field.getName()), field.getType(), field.getAnnotation(UIField.class)));
 
-        for (Method method : MethodUtils.getMethodsListWithAnnotation(entityClassByType, UIField.class)) {
+        for (Method method : MethodUtils.getMethodsListWithAnnotation(instance.getClass(), UIField.class)) {
             String name = method.getAnnotation(UIField.class).name();
             if (StringUtils.isEmpty(name)) {
                 //not too safe ))
