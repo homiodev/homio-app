@@ -78,6 +78,9 @@ public class UtilsController {
 
     @SneakyThrows
     static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType, Set<EntityUIMetaData> entityUIMetaDataSet) {
+        if (entityClassByType == null) {
+            return Collections.emptyList();
+        }
         Constructor constructor = Stream.of(entityClassByType.getDeclaredConstructors()).filter(c -> c.getParameterCount() == 0).findAny()
                 .orElseThrow(() -> new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName()));
         constructor.setAccessible(true);

@@ -64,15 +64,12 @@ public class ConsoleController {
                     return list;
                 }
                 List<? extends HasEntityIdentifier> baseEntities = consolePlugin.drawEntity();
-                if (baseEntities != null && !baseEntities.isEmpty()) {
-                    Class<? extends HasEntityIdentifier> clazz = baseEntities.get(0).getClass();
-                    return new EntityContent()
-                            .setList(baseEntities)
-                            .setActions(ItemController.fetchUIActionsFromClass(clazz))
-                            .setHeaderActions(ItemController.fetchUIHeaderActions(clazz))
-                            .setUiFields(UtilsController.fillEntityUIMetadataList(clazz));
-                }
-                return Collections.singleton("NO_CONTENT");
+                Class<? extends HasEntityIdentifier> clazz = baseEntities != null && !baseEntities.isEmpty() ? baseEntities.get(0).getClass() : null;
+                return new EntityContent()
+                        .setList(baseEntities)
+                        .setActions(ItemController.fetchUIActionsFromClass(clazz))
+                        .setHeaderActions(ItemController.fetchUIHeaderActions(consolePlugin.getHeaderActions()))
+                        .setUiFields(UtilsController.fillEntityUIMetadataList(clazz));
         }
         return null;
     }

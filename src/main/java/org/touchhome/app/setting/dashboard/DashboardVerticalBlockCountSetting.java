@@ -2,6 +2,7 @@ package org.touchhome.app.setting.dashboard;
 
 import org.json.JSONObject;
 import org.touchhome.app.setting.SettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 
 public class DashboardVerticalBlockCountSetting implements SettingPlugin {
 
@@ -21,7 +22,7 @@ public class DashboardVerticalBlockCountSetting implements SettingPlugin {
     }
 
     @Override
-    public JSONObject getParameters() {
+    public JSONObject getParameters(EntityContext entityContext, String value) {
         return new JSONObject().put("min", 1).put("max", 10).put("step", 1);
     }
 

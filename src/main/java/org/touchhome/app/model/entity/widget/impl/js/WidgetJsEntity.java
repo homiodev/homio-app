@@ -31,6 +31,8 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
     @UIField(order = 12, type = UIFieldType.Json)
     private String javaScriptParameters;
 
+    private boolean javaScriptParametersReadOnly;
+
     @Transient
     private String javaScriptResponse;
 

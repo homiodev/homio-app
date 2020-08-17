@@ -21,6 +21,7 @@ import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
+import org.touchhome.bundle.api.BundleSettingPlugin;
 import org.touchhome.bundle.api.DynamicOptionLoader;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
@@ -30,8 +31,6 @@ import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.model.ImageEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
-import org.touchhome.bundle.api.ui.console.UIHeaderSettingAction;
-import org.touchhome.bundle.api.ui.console.UIHeaderSettingActions;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldTargetSelection;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
@@ -96,21 +95,12 @@ public class ItemController {
         return method.invoke(actionHolder, objects.toArray());
     }
 
-    static List<UIActionDescription> fetchUIHeaderActions(Class<?> clazz) {
+    static List<UIActionDescription> fetchUIHeaderActions(Map<String, Class<? extends BundleSettingPlugin>> actionMap) {
         List<UIActionDescription> actions = new ArrayList<>();
-        if (clazz != null) {
-            if (clazz.isAnnotationPresent(UIHeaderSettingActions.class)) {
-                UIHeaderSettingActions uiHeaderSettingActions = clazz.getDeclaredAnnotation(UIHeaderSettingActions.class);
-                for (UIHeaderSettingAction action : uiHeaderSettingActions.value()) {
-                    actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName(action.name())
-                            .setMetadata(new JSONObject().put("ref", SettingEntity.PREFIX + action.setting().getSimpleName())));
-                }
-            }
-            if (clazz.isAnnotationPresent(UIHeaderSettingAction.class)) {
-                for (UIHeaderSettingAction action : clazz.getDeclaredAnnotationsByType(UIHeaderSettingAction.class)) {
-                    actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName(action.name())
-                            .setMetadata(new JSONObject().put("ref", SettingEntity.PREFIX + action.setting().getSimpleName())));
-                }
+        if (actionMap != null) {
+            for (Map.Entry<String, Class<? extends BundleSettingPlugin>> entry : actionMap.entrySet()) {
+                actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName(entry.getKey())
+                        .setMetadata(new JSONObject().put("ref", SettingEntity.PREFIX + entry.getValue().getSimpleName())));
             }
         }
         return actions;
@@ -231,7 +221,7 @@ public class ItemController {
             // reference fields isn't updatable, we need update them manually
             for (String fieldName : entityFields.keySet()) {
                 Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
-                if (BaseEntity.class.isAssignableFrom(field.getType())) {
+                if (field != null && BaseEntity.class.isAssignableFrom(field.getType())) {
                     BaseEntity refEntity = entityContext.getEntity(entityFields.getString(fieldName));
                     FieldUtils.writeField(field, entity, refEntity);
                 }

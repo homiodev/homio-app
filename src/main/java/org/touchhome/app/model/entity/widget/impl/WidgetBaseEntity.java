@@ -49,6 +49,12 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         return super.getDescription();
     }
 
+    @Override
+    @UIField(order = 3, transparent = true)
+    public String getName() {
+        return super.getName();
+    }
+
     public abstract String getImage();
 
     public abstract boolean updateRelations(EntityContext entityContext);

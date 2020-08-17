@@ -56,7 +56,7 @@ public class WorkspaceController {
                 throw new IllegalArgumentException("Wrong Scratch3Extension: <" + scratch3ExtensionBlock.getId() + ">. Must contains [a-z] or '-'");
             }
 
-            if(!systemScratches.contains(scratch3ExtensionBlock.getClass())) {
+            if (!systemScratches.contains(scratch3ExtensionBlock.getClass())) {
                 BundleEntrypoint bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId());
                 if (bundleEntrypoint == null && scratch3ExtensionBlock.getId().contains("-")) {
                     bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId().substring(0, scratch3ExtensionBlock.getId().indexOf("-")));

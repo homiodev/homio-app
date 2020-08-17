@@ -16,6 +16,6 @@ public class ConsoleFitContentSetting implements BundleConsoleSettingPlugin<Bool
 
     @Override
     public String[] pages() {
-        return new String[]{"log", "hardware", "processes", "zigbee"};
+        return new String[]{"ALL"};
     }
 }

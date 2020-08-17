@@ -2,7 +2,7 @@ package org.touchhome.app.setting.sidebar;
 
 import org.touchhome.bundle.api.BundleSettingPlugin;
 
-public class SidebarFlatMenuSetting implements BundleSettingPlugin<Boolean> {
+public class SideMenuStatusSetting implements BundleSettingPlugin<Boolean> {
 
     @Override
     public SettingType getSettingType() {
@@ -11,6 +11,6 @@ public class SidebarFlatMenuSetting implements BundleSettingPlugin<Boolean> {
 
     @Override
     public int order() {
-        return 1;
+        return 2;
     }
 }

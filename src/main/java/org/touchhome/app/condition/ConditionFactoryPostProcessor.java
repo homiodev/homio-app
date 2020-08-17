@@ -42,56 +42,6 @@ public class ConditionFactoryPostProcessor implements BeanPostProcessor {
 
     private Boolean hasInternet = null;
 
-    private class ExecuteContext {
-        private final ExecuteOnce executeOnce;
-        private final Method method;
-        private Object bean;
-
-        private ExecuteContext(Method method, Object bean) {
-            this.method = method;
-            this.bean = bean;
-            this.executeOnce = method.getDeclaredAnnotation(ExecuteOnce.class);
-        }
-
-        boolean tryExecute() throws InvocationTargetException, IllegalAccessException {
-            if (requireInternet() && hasInternet) {
-                method.invoke(bean);
-                return true;
-            }
-            return false;
-        }
-
-        boolean requireRun() {
-            return !assertSoftware(this.executeOnce.skipIfInstalled(), soft -> conditionHardwareRepository.isSoftwareInstalled(soft));
-        }
-
-        private boolean assertSoftware(String[] software, Predicate<String> predicate) {
-            for (String soft : software) {
-                if (!predicate.test(soft)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        boolean requireInternet() {
-            return this.executeOnce.requireInternet();
-        }
-    }
-
-    @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        if (bean.getClass().getName().startsWith("org.touchhome")) {
-            for (Method method : MethodUtils.getMethodsWithAnnotation(bean.getClass(), ExecuteOnce.class)) {
-                ExecuteContext executeContext = new ExecuteContext(method, bean);
-                if (executeContext.requireRun()) {
-                    executeContexts.add(executeContext);
-                }
-            }
-        }
-        return bean;
-    }
-
     public ConditionFactoryPostProcessor() {
         // thread looking for state changed
         new Thread(() -> {
@@ -128,6 +78,19 @@ public class ConditionFactoryPostProcessor implements BeanPostProcessor {
         }, 10, 10, TimeUnit.SECONDS);
     }
 
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        if (bean.getClass().getName().startsWith("org.touchhome")) {
+            for (Method method : MethodUtils.getMethodsWithAnnotation(bean.getClass(), ExecuteOnce.class)) {
+                ExecuteContext executeContext = new ExecuteContext(method, bean);
+                if (executeContext.requireRun()) {
+                    executeContexts.add(executeContext);
+                }
+            }
+        }
+        return bean;
+    }
+
     private void updateInternetStatus(boolean hasInternet) {
         if (this.hasInternet == null || this.hasInternet != hasInternet) {
             this.hasInternet = hasInternet;
@@ -143,6 +106,43 @@ public class ConditionFactoryPostProcessor implements BeanPostProcessor {
         @Override
         public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
             return isLinuxOrDockerEnvironment();
+        }
+    }
+
+    private class ExecuteContext {
+        private final ExecuteOnce executeOnce;
+        private final Method method;
+        private Object bean;
+
+        private ExecuteContext(Method method, Object bean) {
+            this.method = method;
+            this.bean = bean;
+            this.executeOnce = method.getDeclaredAnnotation(ExecuteOnce.class);
+        }
+
+        boolean tryExecute() throws InvocationTargetException, IllegalAccessException {
+            if (requireInternet() && hasInternet) {
+                method.invoke(bean);
+                return true;
+            }
+            return false;
+        }
+
+        boolean requireRun() {
+            return !assertSoftware(this.executeOnce.skipIfInstalled(), soft -> conditionHardwareRepository.isSoftwareInstalled(soft));
+        }
+
+        private boolean assertSoftware(String[] software, Predicate<String> predicate) {
+            for (String soft : software) {
+                if (!predicate.test(soft)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        boolean requireInternet() {
+            return this.executeOnce.requireInternet();
         }
     }
 }

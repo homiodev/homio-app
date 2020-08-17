@@ -45,7 +45,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         entity.setIcon(plugin.getIcon());
         entity.setToggleIcon(plugin.getToggleIcon());
         entity.setSettingType(plugin.getSettingType());
-        entity.setParameters(plugin.getParameters());
+        entity.setParameters(plugin.getParameters(entityContext, entity.getValue()));
         if (entity.getSettingType() == BundleSettingPlugin.SettingType.SelectBox) {
             entity.setAvailableValues(plugin.loadAvailableValues(entityContext));
         }

@@ -2,6 +2,7 @@ package org.touchhome.app.setting.console.ssh;
 
 import org.json.JSONObject;
 import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.EntityContext;
 
 public class ConsoleSshFontSizeSetting implements BundleConsoleSettingPlugin<Integer> {
 
@@ -11,7 +12,7 @@ public class ConsoleSshFontSizeSetting implements BundleConsoleSettingPlugin<Int
     }
 
     @Override
-    public JSONObject getParameters() {
+    public JSONObject getParameters(EntityContext entityContext, String value) {
         return new JSONObject().put("min", 5).put("max", 24).put("step", 1);
     }
 

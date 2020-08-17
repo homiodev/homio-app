@@ -192,8 +192,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         private Object current = object;
 
         @Override
-        public String toString() {
-            return object.toString();
+        public String toString(int indent) {
+            return object.toString(indent);
         }
 
         @Override
@@ -275,11 +275,11 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
     public static class JSWindowImpl extends JSONParameterContextImpl implements JSWindow {
 
-        private String build() {
+        private String build(String tabs) {
             StringBuilder builder = new StringBuilder();
             for (Map.Entry<String, JSONParameter> entry : arrays.entrySet()) {
                 builder.append("window.").append(entry.getKey()).append(" = (window.").append(entry.getKey())
-                        .append(" || []).concat(").append(entry.getValue().toString()).append(");");
+                        .append(" || []).concat(").append("\n").append(tabs).append(entry.getValue().toString(tabs.length() * 4 + 4)).append(tabs).append(");");
             }
             for (Map.Entry<String, JSONParameter> entry : parameters.entrySet()) {
                 builder.append("window.").append(entry.getKey()).append(" = ").append(entry.getValue().toString());
@@ -753,7 +753,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         public JSCodeContext<T> window(Consumer<JSWindow> jsWindowConsumer) {
             JSWindowImpl jsWindowImpl = new JSWindowImpl();
             jsWindowConsumer.accept(jsWindowImpl);
-            this.addChild(jsWindowImpl::build);
+            this.addChild(() -> jsWindowImpl.build(tabs));
             return this;
         }
 

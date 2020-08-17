@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 @JsonSerialize(using = JSOGRefSerializer.class)
 @JsonDeserialize(using = JSOGRefDeserializer.class)
 public class JSOGRef {
-    /** */
+
     public static final String REF_KEY = "@ref";
 
     /**
@@ -30,12 +30,10 @@ public class JSOGRef {
      */
     public transient boolean used;
 
-    /** */
     public JSOGRef(String val) {
         ref = val;
     }
 
-    /** */
     public JSOGRef(int val) {
         this(Integer.toString(val));
     }

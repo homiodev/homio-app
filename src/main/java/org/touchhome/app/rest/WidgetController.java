@@ -289,18 +289,21 @@ public class WidgetController {
 
         String js = template.toJavaScript();
         String params = "";
+        boolean paramReadOnly = false;
         if (js == null) {
             if (template instanceof WidgetJSBaseTemplate) {
                 WidgetJSBaseTemplate widgetJSBaseTemplate = (WidgetJSBaseTemplate) template;
                 JavaScriptBuilderImpl javaScriptBuilder = new JavaScriptBuilderImpl(template.getClass());
                 widgetJSBaseTemplate.createWidget(javaScriptBuilder);
                 js = javaScriptBuilder.build();
+                paramReadOnly = javaScriptBuilder.isJsonReadOnly();
                 params = javaScriptBuilder.getJsonParams().toString();
             }
         }
 
         WidgetJsEntity widgetJsEntity = new WidgetJsEntity()
                 .setJavaScriptParameters(params)
+                .setJavaScriptParametersReadOnly(paramReadOnly)
                 .setJavaScript(js);
 
         widgetJsEntity.setWidgetTabEntity(widgetTabEntity)
