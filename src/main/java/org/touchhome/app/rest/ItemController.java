@@ -57,8 +57,8 @@ import static org.touchhome.app.rest.UtilsController.fillEntityUIMetadataList;
 @RequiredArgsConstructor
 public class ItemController {
 
-    private final Map<String, List<EntityUIMetaData>> fieldsMap = new HashMap<>();
     private static Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
+    private final Map<String, List<EntityUIMetaData>> fieldsMap = new HashMap<>();
     private final ObjectMapper objectMapper;
     private final InternalManager entityContext;
     private final EntityManager entityManager;
@@ -67,12 +67,6 @@ public class ItemController {
     private final ApplicationContext applicationContext;
 
     private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
-
-    public void postConstruct() {
-        this.baseEntitySimpleClasses = classFinder.getClassesWithParent(BaseEntity.class, null, null)
-                .stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
-        this.baseEntitySimpleClasses.put(DeviceBaseEntity.class.getSimpleName(), DeviceBaseEntity.class);
-    }
 
     @SneakyThrows
     static Object executeAction(UIActionDescription uiActionDescription, Object actionHolder, ApplicationContext applicationContext, BaseEntity actionEntity) {
@@ -131,6 +125,12 @@ public class ItemController {
             }
         }
         return actions;
+    }
+
+    public void postConstruct() {
+        this.baseEntitySimpleClasses = classFinder.getClassesWithParent(BaseEntity.class, null, null)
+                .stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
+        this.baseEntitySimpleClasses.put(DeviceBaseEntity.class.getSimpleName(), DeviceBaseEntity.class);
     }
 
     @GetMapping("{type}/fields")

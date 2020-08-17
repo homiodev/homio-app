@@ -77,6 +77,38 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @JsonIgnore
     private String formattedJavaScript;
 
+    public static Set<String> getFunctionsWithPrefix(String javaScript, String prefix) {
+        Set<String> functions = new HashSet<>();
+        int i = javaScript.indexOf("function " + prefix, 0);
+        while (i >= 0) {
+            int endIndex = i + 1;
+            int countOfBrakets = 0;
+            while (javaScript.length() > endIndex) {
+                char at = javaScript.charAt(endIndex);
+
+                if (at == '}' && countOfBrakets == 1) {
+                    endIndex++;
+                    break;
+                }
+
+                if (at == '{') {
+                    countOfBrakets++;
+                } else if (at == '}') {
+                    countOfBrakets--;
+                }
+                endIndex++;
+            }
+            functions.add(javaScript.substring(i, endIndex));
+            i = javaScript.indexOf("function " + prefix, i + 1);
+        }
+        return functions;
+    }
+
+    public static String getFunctionWithName(String javaScript, String name) {
+        Set<String> functionsWithPrefix = getFunctionsWithPrefix(javaScript, name);
+        return functionsWithPrefix.isEmpty() ? null : functionsWithPrefix.iterator().next();
+    }
+
     public String getFormattedJavaScript(EntityContext entityContext, Compilable engine) {
         long hash = StringUtils.defaultIfEmpty(javaScript, "").hashCode() + StringUtils.defaultIfEmpty(javaScriptParameters, "").hashCode();
         if (this.formattedJavaScriptHash != hash) {
@@ -138,37 +170,5 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     public AbstractJSBackgroundProcessService createBackgroundProcessService(EntityContext entityContext) throws Exception {
         Class<? extends AbstractJSBackgroundProcessService> aClass = (Class<? extends AbstractJSBackgroundProcessService>) ClassUtils.getClass(backgroundProcessClass);
         return aClass.getConstructor(getClass(), EntityContext.class).newInstance(this, entityContext);
-    }
-
-    public static Set<String> getFunctionsWithPrefix(String javaScript, String prefix) {
-        Set<String> functions = new HashSet<>();
-        int i = javaScript.indexOf("function " + prefix, 0);
-        while (i >= 0) {
-            int endIndex = i + 1;
-            int countOfBrakets = 0;
-            while (javaScript.length() > endIndex) {
-                char at = javaScript.charAt(endIndex);
-
-                if (at == '}' && countOfBrakets == 1) {
-                    endIndex++;
-                    break;
-                }
-
-                if (at == '{') {
-                    countOfBrakets++;
-                } else if (at == '}') {
-                    countOfBrakets--;
-                }
-                endIndex++;
-            }
-            functions.add(javaScript.substring(i, endIndex));
-            i = javaScript.indexOf("function " + prefix, i + 1);
-        }
-        return functions;
-    }
-
-    public static String getFunctionWithName(String javaScript, String name) {
-        Set<String> functionsWithPrefix = getFunctionsWithPrefix(javaScript, name);
-        return functionsWithPrefix.isEmpty() ? null : functionsWithPrefix.iterator().next();
     }
 }

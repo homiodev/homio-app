@@ -2,8 +2,8 @@ package org.touchhome.app.thread.js.impl;
 
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
-import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.manager.ScriptManager;
+import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
 import org.touchhome.bundle.api.EntityContext;
@@ -26,18 +26,6 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
     public ScriptJSBackgroundProcess(ScriptEntity scriptEntity, EntityContext entityContext) {
         super(scriptEntity, entityContext);
         this.scriptManager = entityContext.getBean(ScriptManager.class);
-    }
-
-    @Override
-    public Object runInternal() {
-        try {
-            return runJavaScript(getCompiledScript(), params);
-        } catch (Exception ex) {
-            String msg = TouchHomeUtils.getErrorMessage(ex);
-            setStatus(BackgroundProcessStatus.FAILED, msg);
-            logError("Error while call script with id: <{}>. Msg: <{}>", scriptEntity.getEntityID(), msg);
-            throw new RuntimeException(ex);
-        }
     }
 
     public static String runJavaScript(CompileScriptContext compileScriptContext, JSONObject params) throws ScriptException, NoSuchMethodException {
@@ -76,6 +64,18 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
         String result = ScriptEntity.getFunctionWithName(javaScript, funcName);
         if (result != null) {
             script.append(separator).append("(").append(result).append(")").append(separator);
+        }
+    }
+
+    @Override
+    public Object runInternal() {
+        try {
+            return runJavaScript(getCompiledScript(), params);
+        } catch (Exception ex) {
+            String msg = TouchHomeUtils.getErrorMessage(ex);
+            setStatus(BackgroundProcessStatus.FAILED, msg);
+            logError("Error while call script with id: <{}>. Msg: <{}>", scriptEntity.getEntityID(), msg);
+            throw new RuntimeException(ex);
         }
     }
 

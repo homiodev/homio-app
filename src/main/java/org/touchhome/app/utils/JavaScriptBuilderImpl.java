@@ -172,6 +172,279 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         private Map<String, String> variables = new LinkedHashMap<>();
     }
 
+    public static class JSONParameterContextImpl implements JSONParameterContext {
+        final Map<String, JSONParameter> parameters = new HashMap<>();
+        final Map<String, JSONParameter> arrays = new HashMap<>();
+
+        @Override
+        public JSONParameter obj(String name) {
+            return parameters.computeIfAbsent(name, key -> new JSONParameterImpl());
+        }
+
+        @Override
+        public JSONParameter array(String name) {
+            return arrays.computeIfAbsent(name, key -> new JSONParameterImpl());
+        }
+    }
+
+    public static class JSONParameterImpl implements JSONParameter {
+        JSONObject object = new JSONObject();
+        private Object current = object;
+
+        @Override
+        public String toString() {
+            return object.toString();
+        }
+
+        @Override
+        public JSONParameter obj(String key) {
+            JSONObject jsObject = new JSONObject();
+            if (current instanceof JSONObject) {
+                ((JSONObject) current).put(key, jsObject);
+            } else {
+                ((JSONArray) current).put(jsObject);
+            }
+            current = jsObject;
+            return this;
+        }
+
+        @Override
+        public JSONParameter array(String key) {
+            JSONArray jsonArray = new JSONArray();
+            if (current instanceof JSONObject) {
+                ((JSONObject) current).put(key, jsonArray);
+            } else {
+                ((JSONArray) current).put(jsonArray);
+            }
+            current = jsonArray;
+            return this;
+        }
+
+        @Override
+        public JSONParameterImpl value(String key, String value) {
+            object.put(key, value);
+            return this;
+        }
+
+        @Override
+        public JSONParameterImpl value(String key, Consumer<JSONObject> consumer) {
+            consumer.accept(object);
+            return this;
+        }
+
+        @Override
+        public JSONParameter value(String key, EvaluableValue evaluableValue) {
+            object.put(key, "#{" + evaluableValue.get() + "}");
+            return this;
+        }
+
+        @Override
+        public JSONParameter value(String key, ProxyEntityContextValue proxyEntityContextValue) {
+            StringBuilder builder = new StringBuilder("return entityContext");
+            proxyEntityContextValue.apply(createProxyInstance(EntityContext.class, builder));
+            object.put(key, "#{" + builder.append(";") + "}");
+            return this;
+        }
+
+        private <T> T createProxyInstance(Class<T> clazz, StringBuilder builder) {
+            return (T) Enhancer.create(clazz, createProxyHandler(clazz, builder));
+        }
+
+        private MethodInterceptor createProxyHandler(Class proxyHandlerClass, StringBuilder builder) {
+            return new MethodInterceptor() {
+                @Override
+                public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) {
+                    builder.append(".").append(method.getName()).append("(").append(evalProxyArguments(args)).append(")");
+                    return createProxyInstance(method.getReturnType(), builder);
+                }
+            };
+        }
+
+        private String evalProxyArguments(Object[] args) {
+            StringBuilder argBuilder = new StringBuilder();
+            for (Object arg : args) {
+                if (arg instanceof Class) {
+                    argBuilder.append("Java.type('").append(((Class) arg).getName()).append("').class");
+                } else {
+                    argBuilder.append(arg);
+                }
+            }
+            return argBuilder.toString();
+        }
+    }
+
+    public static class JSWindowImpl extends JSONParameterContextImpl implements JSWindow {
+
+        private String build() {
+            StringBuilder builder = new StringBuilder();
+            for (Map.Entry<String, JSONParameter> entry : arrays.entrySet()) {
+                builder.append("window.").append(entry.getKey()).append(" = (window.").append(entry.getKey())
+                        .append(" || []).concat(").append(entry.getValue().toString()).append(");");
+            }
+            for (Map.Entry<String, JSONParameter> entry : parameters.entrySet()) {
+                builder.append("window.").append(entry.getKey()).append(" = ").append(entry.getValue().toString());
+            }
+            return builder.toString();
+        }
+    }
+
+    /*public class JSObject implements Builder {
+        JSONObject object = new JSONObject();
+
+        public JSList array(String name) {
+            JSList jsList = new JSList();
+            object.put(name, jsList.list);
+            return jsList;
+        }
+
+        public JSObject obj(String name) {
+            JSObject jsObject = new JSObject();
+            object.put(name, jsObject);
+            return jsObject;
+        }
+
+        public JSObject add(String key, Object value) {
+            object.put(key, value);
+            return this;
+        }
+
+        @Override
+        public String build() {
+            for (String key : object.keySet()) {
+                if (object.get(key) instanceof JSObject) {
+                    object.put(key, ((JSObject) object.get(key)).object);
+                }
+            }
+            return object.toString();
+        }
+    }*/
+
+   /* public class JSList {
+        JSONArray list = new JSONArray();
+
+        public JSObject obj() {
+            JSObject jsObject = new JSObject();
+            list.put(jsObject.object);
+            return jsObject;
+        }
+
+        public void consumer(Consumer<JSList> jsListConsumer) {
+            jsListConsumer.accept(this);
+        }
+    }*/
+
+    abstract static class CommonBuilder implements Builder {
+        final int level;
+        final String tabs;
+        final String tabsUp;
+        final String tabsDown;
+        @Getter
+        private final List<Builder> children = new ArrayList<>();
+
+        CommonBuilder(int level) {
+            this.level = level;
+            char[] chars = new char[level];
+            Arrays.fill(chars, '\t');
+            tabs = new String(chars);
+
+            chars = new char[level + 1];
+            Arrays.fill(chars, '\t');
+            tabsUp = new String(chars);
+
+            if (level > 0) {
+                chars = new char[level - 1];
+                Arrays.fill(chars, '\t');
+                tabsDown = new String(chars);
+            } else {
+                tabsDown = tabs;
+            }
+        }
+
+        public void addChild(Builder builder) {
+            children.add(() -> tabs + builder.build());
+        }
+
+        public void addChild(Builder builder, int index) {
+            children.add(index, () -> tabs + builder.build());
+        }
+
+        public void addChildNoTab(Builder builder) {
+            children.add(builder);
+        }
+
+        @Override
+        public String build() {
+            StringBuilder builder = new StringBuilder();
+            for (Builder child : this.children) {
+                builder.append(child.build()).append("\n");
+            }
+            builder.append(onEnd());
+            return builder.toString();
+        }
+
+        public String onEnd() {
+            return "";
+        }
+
+        public <T extends Builder> void child(Consumer<T> consumer, T block) {
+            this.children.add(block);
+            consumer.accept(block);
+        }
+    }
+
+    public static class JsCondImpl extends CommonBuilder implements JsCond {
+
+        private JsCondImpl(int level) {
+            super(level);
+            this.addChild(() -> "if(");
+        }
+
+        @Override
+        public String onEnd() {
+            return ")";
+        }
+
+        @Override
+        public JsCond eq(String cond1, String cond2, boolean escapeSecondCondition) {
+            this.addChild(() -> "if(");
+            this.addChild(new JsBlockImpl(cond1 + " === " + (escapeSecondCondition ? "\\'" + cond2 + "\\'" : cond2)));
+            return this;
+        }
+
+        @Override
+        public JsCond bool(String cond) {
+            this.addChildNoTab(new JsBlockImpl(cond));
+            return this;
+        }
+
+        @Override
+        public JsCond and() {
+            this.addChildNoTab(new JsBlockImpl(" && "));
+            return this;
+        }
+    }
+
+    public static class SBuilder implements Builder {
+        private String value;
+
+        private SBuilder(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String build() {
+            return value;
+        }
+    }
+
+    public static class JsBlockImpl extends CommonBuilder {
+
+        private JsBlockImpl(String value) {
+            super(0);
+            this.addChildNoTab(() -> value);
+        }
+    }
+
     @AllArgsConstructor
     public class JSStyleImpl implements JSStyle {
         private final StringBuilder builder = new StringBuilder();
@@ -356,167 +629,6 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         }
     }
 
-    /*public class JSObject implements Builder {
-        JSONObject object = new JSONObject();
-
-        public JSList array(String name) {
-            JSList jsList = new JSList();
-            object.put(name, jsList.list);
-            return jsList;
-        }
-
-        public JSObject obj(String name) {
-            JSObject jsObject = new JSObject();
-            object.put(name, jsObject);
-            return jsObject;
-        }
-
-        public JSObject add(String key, Object value) {
-            object.put(key, value);
-            return this;
-        }
-
-        @Override
-        public String build() {
-            for (String key : object.keySet()) {
-                if (object.get(key) instanceof JSObject) {
-                    object.put(key, ((JSObject) object.get(key)).object);
-                }
-            }
-            return object.toString();
-        }
-    }*/
-
-   /* public class JSList {
-        JSONArray list = new JSONArray();
-
-        public JSObject obj() {
-            JSObject jsObject = new JSObject();
-            list.put(jsObject.object);
-            return jsObject;
-        }
-
-        public void consumer(Consumer<JSList> jsListConsumer) {
-            jsListConsumer.accept(this);
-        }
-    }*/
-
-    public static class JSONParameterContextImpl implements JSONParameterContext {
-        final Map<String, JSONParameter> parameters = new HashMap<>();
-        final Map<String, JSONParameter> arrays = new HashMap<>();
-
-        @Override
-        public JSONParameter obj(String name) {
-            return parameters.computeIfAbsent(name, key -> new JSONParameterImpl());
-        }
-
-        @Override
-        public JSONParameter array(String name) {
-            return arrays.computeIfAbsent(name, key -> new JSONParameterImpl());
-        }
-    }
-
-    public static class JSONParameterImpl implements JSONParameter {
-        JSONObject object = new JSONObject();
-        private Object current = object;
-
-        @Override
-        public String toString() {
-            return object.toString();
-        }
-
-        @Override
-        public JSONParameter obj(String key) {
-            JSONObject jsObject = new JSONObject();
-            if (current instanceof JSONObject) {
-                ((JSONObject) current).put(key, jsObject);
-            } else {
-                ((JSONArray) current).put(jsObject);
-            }
-            current = jsObject;
-            return this;
-        }
-
-        @Override
-        public JSONParameter array(String key) {
-            JSONArray jsonArray = new JSONArray();
-            if (current instanceof JSONObject) {
-                ((JSONObject) current).put(key, jsonArray);
-            } else {
-                ((JSONArray) current).put(jsonArray);
-            }
-            current = jsonArray;
-            return this;
-        }
-
-        @Override
-        public JSONParameterImpl value(String key, String value) {
-            object.put(key, value);
-            return this;
-        }
-
-        @Override
-        public JSONParameterImpl value(String key, Consumer<JSONObject> consumer) {
-            consumer.accept(object);
-            return this;
-        }
-
-        @Override
-        public JSONParameter value(String key, EvaluableValue evaluableValue) {
-            object.put(key, "#{" + evaluableValue.get() + "}");
-            return this;
-        }
-
-        @Override
-        public JSONParameter value(String key, ProxyEntityContextValue proxyEntityContextValue) {
-            StringBuilder builder = new StringBuilder("return entityContext");
-            proxyEntityContextValue.apply(createProxyInstance(EntityContext.class, builder));
-            object.put(key, "#{" + builder.append(";") + "}");
-            return this;
-        }
-
-        private <T> T createProxyInstance(Class<T> clazz, StringBuilder builder) {
-            return (T) Enhancer.create(clazz, createProxyHandler(clazz, builder));
-        }
-
-        private MethodInterceptor createProxyHandler(Class proxyHandlerClass, StringBuilder builder) {
-            return new MethodInterceptor() {
-                @Override
-                public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) {
-                    builder.append(".").append(method.getName()).append("(").append(evalProxyArguments(args)).append(")");
-                    return createProxyInstance(method.getReturnType(), builder);
-                }
-            };
-        }
-
-        private String evalProxyArguments(Object[] args) {
-            StringBuilder argBuilder = new StringBuilder();
-            for (Object arg : args) {
-                if (arg instanceof Class) {
-                    argBuilder.append("Java.type('").append(((Class) arg).getName()).append("').class");
-                } else {
-                    argBuilder.append(arg);
-                }
-            }
-            return argBuilder.toString();
-        }
-    }
-
-    public static class JSWindowImpl extends JSONParameterContextImpl implements JSWindow {
-
-        private String build() {
-            StringBuilder builder = new StringBuilder();
-            for (Map.Entry<String, JSONParameter> entry : arrays.entrySet()) {
-                builder.append("window.").append(entry.getKey()).append(" = (window.").append(entry.getKey())
-                        .append(" || []).concat(").append(entry.getValue().toString()).append(");");
-            }
-            for (Map.Entry<String, JSONParameter> entry : parameters.entrySet()) {
-                builder.append("window.").append(entry.getKey()).append(" = ").append(entry.getValue().toString());
-            }
-            return builder.toString();
-        }
-    }
-
     public class JSContentImpl implements JSContent {
         private StringBuilder builder = new StringBuilder();
         private List<JSInput> jsInputs = new ArrayList<>();
@@ -551,65 +663,6 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         }
     }
 
-    abstract static class CommonBuilder implements Builder {
-        @Getter
-        private final List<Builder> children = new ArrayList<>();
-        final int level;
-        final String tabs;
-        final String tabsUp;
-        final String tabsDown;
-
-        public void addChild(Builder builder) {
-            children.add(() -> tabs + builder.build());
-        }
-
-        public void addChild(Builder builder, int index) {
-            children.add(index, () -> tabs + builder.build());
-        }
-
-        public void addChildNoTab(Builder builder) {
-            children.add(builder);
-        }
-
-        CommonBuilder(int level) {
-            this.level = level;
-            char[] chars = new char[level];
-            Arrays.fill(chars, '\t');
-            tabs = new String(chars);
-
-            chars = new char[level + 1];
-            Arrays.fill(chars, '\t');
-            tabsUp = new String(chars);
-
-            if (level > 0) {
-                chars = new char[level - 1];
-                Arrays.fill(chars, '\t');
-                tabsDown = new String(chars);
-            } else {
-                tabsDown = tabs;
-            }
-        }
-
-        @Override
-        public String build() {
-            StringBuilder builder = new StringBuilder();
-            for (Builder child : this.children) {
-                builder.append(child.build()).append("\n");
-            }
-            builder.append(onEnd());
-            return builder.toString();
-        }
-
-        public String onEnd() {
-            return "";
-        }
-
-        public <T extends Builder> void child(Consumer<T> consumer, T block) {
-            this.children.add(block);
-            consumer.accept(block);
-        }
-    }
-
     public class JsCondBodyImpl extends CommonBuilder implements JsCondBody {
 
         private boolean isTextContext;
@@ -628,38 +681,6 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             this.addChildNoTab(() -> " {");
             child(jsCode, new JSCodeContextImpl<>(level, isTextContext));
             this.addChild(() -> "}");
-        }
-    }
-
-    public static class JsCondImpl extends CommonBuilder implements JsCond {
-
-        private JsCondImpl(int level) {
-            super(level);
-            this.addChild(() -> "if(");
-        }
-
-        @Override
-        public String onEnd() {
-            return ")";
-        }
-
-        @Override
-        public JsCond eq(String cond1, String cond2, boolean escapeSecondCondition) {
-            this.addChild(() -> "if(");
-            this.addChild(new JsBlockImpl(cond1 + " === " + (escapeSecondCondition ? "\\'" + cond2 + "\\'" : cond2)));
-            return this;
-        }
-
-        @Override
-        public JsCond bool(String cond) {
-            this.addChildNoTab(new JsBlockImpl(cond));
-            return this;
-        }
-
-        @Override
-        public JsCond and() {
-            this.addChildNoTab(new JsBlockImpl(" && "));
-            return this;
         }
     }
 
@@ -754,27 +775,6 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         IterContextImpl(String key, String array, boolean isTextContext, int level) {
             super(level, isTextContext);
             this.addChild(() -> tabs + "for(let " + key + " of " + array + ")");
-        }
-    }
-
-    public static class SBuilder implements Builder {
-        private String value;
-
-        private SBuilder(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public String build() {
-            return value;
-        }
-    }
-
-    public static class JsBlockImpl extends CommonBuilder {
-
-        private JsBlockImpl(String value) {
-            super(0);
-            this.addChildNoTab(() -> value);
         }
     }
 }

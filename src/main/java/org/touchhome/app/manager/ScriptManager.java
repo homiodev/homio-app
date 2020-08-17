@@ -10,7 +10,6 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.extloader.BundleClassLoaderHolder;
-import org.touchhome.app.manager.BackgroundProcessManager;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;

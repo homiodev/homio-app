@@ -22,10 +22,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JwtTokenProvider {
 
+    private final UserEntityDetailsService userEntityDetailsService;
     @Value("${security.jwt.token.expire-length:1800000}")
     private long validityInMilliseconds; // 30min
-
-    private final UserEntityDetailsService userEntityDetailsService;
 
     String createToken(String username, Set<String> roles) {
 

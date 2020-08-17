@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.json.RouteJSON;
-import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.app.manager.common.ClassFinder;
+import org.touchhome.bundle.api.ui.UISidebarMenu;
 
 import java.util.*;
 import java.util.stream.Collectors;

@@ -127,7 +127,7 @@ public final class HardwareUtils {
 
     @SneakyThrows
     public static void copyResources(URL url, String jarFiles) {
-        if(url != null) {
+        if (url != null) {
             Path target = TouchHomeUtils.getFilesPath();
             if (url.getProtocol().equals("jar")) {
                 try (FileSystem fs = FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {

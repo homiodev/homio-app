@@ -7,7 +7,6 @@ import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
-import org.touchhome.app.config.TouchHomeConfig;
 import org.touchhome.app.extloader.BundleService;
 import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.bundle.api.util.TouchHomeUtils;

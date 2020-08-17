@@ -127,8 +127,8 @@ public class BundleContext {
     @RequiredArgsConstructor
     private static class BundleSpringContext {
 
-        private AnnotationConfigApplicationContext ctx;
         private final Environment env;
+        private AnnotationConfigApplicationContext ctx;
         private Class<?> configClass;
         private BundleClassLoaderHolder bundleClassLoaderHolder;
 
