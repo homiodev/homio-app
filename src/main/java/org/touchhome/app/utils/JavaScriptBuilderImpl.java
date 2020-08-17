@@ -3,10 +3,15 @@ package org.touchhome.app.utils;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.MethodInterceptor;
+import net.sf.cglib.proxy.MethodProxy;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.widget.JavaScriptBuilder;
 
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -460,6 +465,40 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         public JSONParameter value(String key, EvaluableValue evaluableValue) {
             object.put(key, "#{" + evaluableValue.get() + "}");
             return this;
+        }
+
+        @Override
+        public JSONParameter value(String key, ProxyEntityContextValue proxyEntityContextValue) {
+            StringBuilder builder = new StringBuilder("return entityContext");
+            proxyEntityContextValue.apply(createProxyInstance(EntityContext.class, builder));
+            object.put(key, "#{" + builder.append(";") + "}");
+            return this;
+        }
+
+        private <T> T createProxyInstance(Class<T> clazz, StringBuilder builder) {
+            return (T) Enhancer.create(clazz, createProxyHandler(clazz, builder));
+        }
+
+        private MethodInterceptor createProxyHandler(Class proxyHandlerClass, StringBuilder builder) {
+            return new MethodInterceptor() {
+                @Override
+                public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) {
+                    builder.append(".").append(method.getName()).append("(").append(evalProxyArguments(args)).append(")");
+                    return createProxyInstance(method.getReturnType(), builder);
+                }
+            };
+        }
+
+        private String evalProxyArguments(Object[] args) {
+            StringBuilder argBuilder = new StringBuilder();
+            for (Object arg : args) {
+                if (arg instanceof Class) {
+                    argBuilder.append("Java.type('").append(((Class) arg).getName()).append("').class");
+                } else {
+                    argBuilder.append(arg);
+                }
+            }
+            return argBuilder.toString();
         }
     }
 

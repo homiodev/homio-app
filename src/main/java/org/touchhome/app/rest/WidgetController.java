@@ -8,7 +8,8 @@ import org.json.JSONObject;
 import org.springframework.data.util.Pair;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
-import org.touchhome.app.manager.scripting.ScriptManager;
+import org.touchhome.app.model.CompileScriptContext;
+import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.WidgetTabEntity;
@@ -43,7 +44,6 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.widget.WidgetJSBaseTemplate;
 
-import javax.script.CompiledScript;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -243,9 +243,8 @@ public class WidgetController {
                             .setJavaScriptParameters(jsEntity.getJavaScriptParameters());
 
                     JSONObject params = new JSONObject(jsEntity.getJavaScriptParameters());
-                    CompiledScript compiledScript = scriptManager.createCompiledScript(scriptEntity, null, params);
-                    jsEntity.setJavaScriptResponse(ScriptJSBackgroundProcess.runJavaScript(compiledScript,
-                            scriptEntity.getFormattedJavaScript(entityContext), params));
+                    CompileScriptContext compileScriptContext = scriptManager.createCompiledScript(scriptEntity, null, params);
+                    jsEntity.setJavaScriptResponse(ScriptJSBackgroundProcess.runJavaScript(compileScriptContext, params));
 
                 } catch (Exception ex) {
                     jsEntity.setJavaScriptErrorResponse(TouchHomeUtils.getErrorMessage(ex));

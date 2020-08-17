@@ -2,19 +2,19 @@ package org.touchhome.app.thread.js.impl;
 
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
-import org.touchhome.app.manager.scripting.ScriptManager;
+import org.touchhome.app.model.CompileScriptContext;
+import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
-import javax.script.CompiledScript;
 import javax.script.Invocable;
 import javax.script.ScriptException;
 import java.util.Set;
 
-import static org.touchhome.app.manager.scripting.ScriptManager.REPEAT_EVERY;
+import static org.touchhome.app.manager.ScriptManager.REPEAT_EVERY;
 
 /**
  * Run script once until it finished or exception or stop requested
@@ -31,7 +31,7 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
     @Override
     public Object runInternal() {
         try {
-            return runJavaScript(getCompiledScript(), scriptEntity.getFormattedJavaScript(entityContext), params);
+            return runJavaScript(getCompiledScript(), params);
         } catch (Exception ex) {
             String msg = TouchHomeUtils.getErrorMessage(ex);
             setStatus(BackgroundProcessStatus.FAILED, msg);
@@ -40,10 +40,10 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
         }
     }
 
-    public static String runJavaScript(CompiledScript compiledScript, String javaScript, JSONObject params) throws ScriptException, NoSuchMethodException {
+    public static String runJavaScript(CompileScriptContext compileScriptContext, JSONObject params) throws ScriptException, NoSuchMethodException {
         StringBuilder script = new StringBuilder();
 
-        Set<String> functions = ScriptEntity.getFunctionsWithPrefix(javaScript, "js_");
+        Set<String> functions = ScriptEntity.getFunctionsWithPrefix(compileScriptContext.getFormattedJavaScript(), "js_");
         if (!functions.isEmpty()) {
             script.append("JS_BLOCK(");
             for (String function : functions) {
@@ -52,7 +52,7 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
             script.append(")JS_BLOCK");
         }
 
-        appendFunc(script, "readyOnClient", "READY_BLOCK", javaScript);
+        appendFunc(script, "readyOnClient", "READY_BLOCK", compileScriptContext.getFormattedJavaScript());
 
         /*String readVariablesOnServerValues = ScriptEntity.getFunctionWithName(javaScript, "readVariablesOnServerValues");
         if (readVariablesOnServerValues != null) {
@@ -66,7 +66,7 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
             script.append(")VARIABLE_BLOCK");
         }*/
 
-        Object value = ((Invocable) compiledScript.getEngine()).invokeFunction("run", params);
+        Object value = ((Invocable) compileScriptContext.getCompiledScript().getEngine()).invokeFunction("run", params);
         script.append(value);
 
         return script.toString();

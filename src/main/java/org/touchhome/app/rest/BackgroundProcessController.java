@@ -6,7 +6,7 @@ import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.json.bgp.BackgroundProcessStatusJSON;
 import org.touchhome.app.manager.BackgroundProcessManager;
-import org.touchhome.app.manager.scripting.ScriptManager;
+import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.model.entity.HasBackgroundProcesses;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.repository.ScriptRepository;

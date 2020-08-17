@@ -16,7 +16,7 @@ import java.util.Map;
 
 @Log4j2
 @Component
-public class BundleClassLoaderHolder {
+public class BundleClassLoaderHolder extends ClassLoader {
 
     private Map<String, SingleBundleClassLoader> bundleJarClassLoaders = new HashMap<>();
 
@@ -38,7 +38,7 @@ public class BundleClassLoaderHolder {
         return bundleJarClassLoaders.get(bundleName);
     }
 
-    /*@Override
+    @Override
     public URL getResource(String name) {
         for (SingleBundleClassLoader loader : bundleJarClassLoaders.values()) {
             URL resource = loader.getResource(name);
@@ -63,7 +63,7 @@ public class BundleClassLoaderHolder {
             }
         }
         return null;
-    }*/
+    }
 
     public List<ClassPathScanningCandidateComponentProvider> getResourceScanners(boolean includeInterfaces) {
         List<ClassPathScanningCandidateComponentProvider> scanners = new ArrayList<>();

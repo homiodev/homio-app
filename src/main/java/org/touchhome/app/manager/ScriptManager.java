@@ -1,30 +1,31 @@
-package org.touchhome.app.manager.scripting;
+package org.touchhome.app.manager;
 
-import com.pivovarit.function.ThrowingBinaryOperator;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import jdk.nashorn.api.scripting.NashornScriptEngineFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.extloader.BundleClassLoaderHolder;
 import org.touchhome.app.manager.BackgroundProcessManager;
+import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
 import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
-import org.touchhome.bundle.api.util.SpringUtils;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
-import javax.script.*;
+import javax.script.Compilable;
+import javax.script.CompiledScript;
+import javax.script.Invocable;
+import javax.script.ScriptEngine;
 import java.io.PrintStream;
 import java.io.StringReader;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.*;
 
 @Log4j2
@@ -34,21 +35,16 @@ public class ScriptManager {
     // TODO: deprecated replace this
     public static final String REPEAT_EVERY = "REPEAT_EVERY";
 
-    private final ScriptEngineManager scriptEngineManager = new ScriptEngineManager();
+    private final NashornScriptEngineFactory nashornScriptEngineFactory = new NashornScriptEngineFactory();
     private final LoggerManager loggerManager;
     private final BackgroundProcessManager backgroundProcessManager;
     private final EntityContext entityContext;
+    private final BundleClassLoaderHolder bundleClassLoaderHolder;
 
     private ExecutorService singleCallExecutorService = Executors.newSingleThreadExecutor();
 
-    @Value("${checkScriptStatusTimeout}")
-    private int checkScriptStatusTimeout;
-
-    @Value("${minScriptThreadSleep}")
+    @Value("${minScriptThreadSleep:100}")
     private int minScriptThreadSleep;
-
-    @Value("${scriptEngineName}")
-    private String scriptEngineName;
 
     @Value("${maxJavaScriptOnceCallBeforeInterrupt:60}")
     private Integer maxJavaScriptOnceCallBeforeInterruptInSec;
@@ -100,21 +96,21 @@ public class ScriptManager {
         backgroundProcessManager.cancelTask(backgroundProcessServiceID, BackgroundProcessStatus.STOP, null);
     }
 
-    public void invokeAfterFunction(CompiledScript compiled, Object parameters) {
+    public void invokeAfterFunction(CompileScriptContext compiled, Object parameters) {
         invokeFunction(compiled, "after", parameters, true);
     }
 
-    public void invokeBeforeFunction(CompiledScript compiled, Object parameters) {
+    public void invokeBeforeFunction(CompileScriptContext compiled, Object parameters) {
         invokeFunction(compiled, "before", parameters, true);
     }
 
-    public Object invokeFunction(CompiledScript compiled, String methodName, Object parameters, boolean required) {
-        if (compiled.getEngine().get(methodName) != null) {
+    public Object invokeFunction(CompileScriptContext context, String methodName, Object parameters, boolean required) {
+        if (context.getEngine().get(methodName) != null) {
             try {
-                return ((Invocable) compiled.getEngine()).invokeFunction(methodName, parameters);
+                return ((Invocable) context.getEngine()).invokeFunction(methodName, parameters);
             } catch (Exception ex) {
                 if (required) {
-                    Logger threadLog = (Logger) compiled.getEngine().get("log");
+                    Logger threadLog = (Logger) context.getEngine().get("log");
                     if (threadLog != null) {
                         threadLog.error("Error invokeMethod " + methodName, ex);
                     }
@@ -153,8 +149,8 @@ public class ScriptManager {
         return BackgroundProcessStatus.RUNNING;
     }
 
-    public CompiledScript createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream, JSONObject params) {
-        ScriptEngine engine = scriptEngineManager.getEngineByName(scriptEngineName);
+    public CompileScriptContext createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream, JSONObject params) {
+        ScriptEngine engine = nashornScriptEngineFactory.getScriptEngine(new String[]{"--global-per-engine"}, bundleClassLoaderHolder);
         if (logPrintStream != null) {
             engine.put(JavaScriptBinder.log.name(), loggerManager.getLogger(logPrintStream));
         }
@@ -162,9 +158,9 @@ public class ScriptManager {
         engine.put(JavaScriptBinder.script.name(), scriptEntity);
         engine.put(JavaScriptBinder.params.name(), params == null ? new JSONObject(scriptEntity.getJavaScriptParameters()) : params);
         CompiledScript compiled;
+        String formattedJavaScript;
         try {
-            String formattedJavaScript = scriptEntity.getFormattedJavaScript(entityContext);
-            formattedJavaScript = detectReplaceableValues(params, (Compilable) engine, formattedJavaScript);
+            formattedJavaScript = scriptEntity.getFormattedJavaScript(entityContext, (Compilable) engine);
 
             compiled = ((Compilable) engine).compile(new StringReader(formattedJavaScript));
             Future<Object> future = singleCallExecutorService.submit((Callable<Object>) compiled::eval);
@@ -180,30 +176,7 @@ public class ScriptManager {
             log.error("Can not compile script: " + scriptEntity.getEntityID());
             throw new RuntimeException(ex);
         }
-        return compiled;
-    }
-
-    private String detectReplaceableValues(JSONObject params, Compilable engine, String formattedJavaScript) throws ScriptException {
-        List<String> patternValues = SpringUtils.getPatternValues(SpringUtils.HASH_PATTERN, formattedJavaScript);
-        if (!patternValues.isEmpty()) {
-            StringBuilder sb = new StringBuilder(formattedJavaScript);
-            Map<Integer, String> replaceFunctions = new HashMap<>();
-            for (String patternValue : patternValues) {
-                String fnName = "rpl_" + patternValue.hashCode();
-                replaceFunctions.put(patternValue.hashCode(), "");
-                sb.append("function ").append(fnName).append("() { ").append(patternValue.contains("return ") ? patternValue : "return " + patternValue).append(" }");
-            }
-
-            // fire rpl functions
-            String jsWithRplFunctions = sb.toString();
-            CompiledScript cmpl = engine.compile(new StringReader(jsWithRplFunctions));
-            cmpl.eval();
-            return SpringUtils.replaceHashValues(jsWithRplFunctions, (ThrowingBinaryOperator<String, Exception>) (s, s2) -> {
-                Object ret = ((Invocable) cmpl.getEngine()).invokeFunction("rpl_" + s.hashCode(), params);
-                return ret == null ? "" : ret.toString();
-            });
-        }
-        return formattedJavaScript;
+        return new CompileScriptContext(compiled, formattedJavaScript);
     }
 
     /**

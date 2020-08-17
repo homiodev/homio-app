@@ -1,8 +1,10 @@
 package org.touchhome.app.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.pivovarit.function.ThrowingBinaryOperator;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -23,7 +25,12 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.Transient;
+import javax.script.Compilable;
+import javax.script.CompiledScript;
+import javax.script.Invocable;
+import java.io.StringReader;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -70,21 +77,44 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @JsonIgnore
     private String formattedJavaScript;
 
-    public String getFormattedJavaScript(EntityContext entityContext) {
+    public String getFormattedJavaScript(EntityContext entityContext, Compilable engine) {
         long hash = StringUtils.defaultIfEmpty(javaScript, "").hashCode() + StringUtils.defaultIfEmpty(javaScriptParameters, "").hashCode();
         if (this.formattedJavaScriptHash != hash) {
             this.formattedJavaScriptHash = hash;
 
             Environment env = entityContext.getBean(Environment.class);
             JSONObject params = new JSONObject(javaScriptParameters);
-            this.formattedJavaScript = SpringUtils.replaceEnvValues(javaScript, (key, defValue) -> {
+            String envFormattedJavaScript = SpringUtils.replaceEnvValues(javaScript, (key, defValue) -> {
                 if (params.has(key)) {
                     return params.get(key).toString();
                 }
                 return env.getProperty(key, defValue);
             });
+            this.formattedJavaScript = detectReplaceableValues(params, engine, envFormattedJavaScript);
         }
         return this.formattedJavaScript;
+    }
+
+    @SneakyThrows
+    private String detectReplaceableValues(JSONObject params, Compilable engine, String formattedJavaScript) {
+        List<String> patternValues = SpringUtils.getPatternValues(SpringUtils.HASH_PATTERN, formattedJavaScript);
+        if (!patternValues.isEmpty()) {
+            StringBuilder sb = new StringBuilder(formattedJavaScript);
+            for (String patternValue : patternValues) {
+                String fnName = "rpl_" + Math.abs(patternValue.hashCode());
+                sb.append("\nfunction ").append(fnName).append("() { ").append(patternValue.contains("return ") ? patternValue : "return " + patternValue).append(" }");
+            }
+
+            // fire rpl functions
+            String jsWithRplFunctions = sb.toString();
+            CompiledScript cmpl = engine.compile(new StringReader(jsWithRplFunctions));
+            cmpl.eval();
+            return SpringUtils.replaceHashValues(jsWithRplFunctions, (ThrowingBinaryOperator<String, Exception>) (s, s2) -> {
+                Object ret = ((Invocable) cmpl.getEngine()).invokeFunction("rpl_" + Math.abs(s.hashCode()), params);
+                return ret == null ? "" : ret.toString();
+            });
+        }
+        return formattedJavaScript;
     }
 
     public boolean setScriptStatus(BackgroundProcessStatus backgroundProcessStatus) {

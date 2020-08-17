@@ -26,7 +26,7 @@ import org.touchhome.app.js.assistant.model.Completion;
 import org.touchhome.app.js.assistant.model.CompletionRequest;
 import org.touchhome.app.json.ScriptUiGroupsJSON;
 import org.touchhome.app.manager.common.InternalManager;
-import org.touchhome.app.manager.scripting.ScriptManager;
+import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.exception.NotFoundException;
