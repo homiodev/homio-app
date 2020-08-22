@@ -1,41 +1,48 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>touchhomeBackend</artifactId>
-    <groupId>org.touchhome</groupId>
-    <url>https://touchhome.org</url>
+    <artifactId>touchhome-core</artifactId>
+    <url>https://github.com/touchhome/touchhome-core</url>
 
-    <packaging>pom</packaging>
-    <version>0.1.8-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <version>0.5.0-SNAPSHOT</version>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.3.1.RELEASE</version>
+        <groupId>org.touchhome</groupId>
+        <artifactId>touchhome-dependency</artifactId>
+        <version>2.3.1</version>
     </parent>
 
-    <modules>
-        <module>bundle-api</module>
-        <module>bundles</module>
-        <module>app</module>
-    </modules>
-
     <scm>
-        <connection>scm:git:git://github.com/github.com/touchhome/touchhome-core.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/touchhome/touchhome-core.git</developerConnection>
-        <url>https://github.com/touchhome/touchhome-core</url>
+        <url>https://github.com/touchhome/${project.artifactId}</url>
+        <connection>scm:git:git://github.com/github.com/touchhome/${project.artifactId}.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/touchhome/${project.artifactId}.git</developerConnection>
         <tag>HEAD</tag>
     </scm>
 
     <properties>
-        <java.version>8</java.version>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
-        <jackson.version>2.10.3</jackson.version>
-        <maven-checkstyle-plugin.version>3.1.1</maven-checkstyle-plugin.version>
-        <pi4j.version>1.2</pi4j.version>
+        <touchhome-bundle-api.version>1.0.8</touchhome-bundle-api.version>
+        <touchhome-bundle.version>1.0.11</touchhome-bundle.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.pivovarit</groupId>
+            <artifactId>throwing-function</artifactId>
+            <version>1.5.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+            <version>1.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
@@ -43,8 +50,37 @@
         </dependency>
 
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-log4j2</artifactId>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.sun.jersey.contribs</groupId>
+            <artifactId>jersey-apache-client</artifactId>
+            <version>1.19</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <version>1.5.13</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-json-org</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-websocket</artifactId>
         </dependency>
 
         <dependency>
@@ -64,76 +100,14 @@
         </dependency>
 
         <dependency>
-            <groupId>javax.persistence</groupId>
-            <artifactId>javax.persistence-api</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-core</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>5.4.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
-        </dependency>
-
-        <dependency>
-            <groupId>commons-collections</groupId>
-            <artifactId>commons-collections</artifactId>
-            <version>3.2.2</version>
+            <artifactId>spring-boot-starter-log4j2</artifactId>
         </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
-            <artifactId>commons-collections4</artifactId>
-            <version>4.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.swagger</groupId>
-            <artifactId>swagger-annotations</artifactId>
-            <version>1.5.13</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.sun.jersey.contribs</groupId>
-            <artifactId>jersey-apache-client</artifactId>
-            <version>1.19</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-websocket</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.pivovarit</groupId>
-            <artifactId>throwing-function</artifactId>
-            <version>1.5.0</version>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.11</version>
         </dependency>
 
         <dependency>
@@ -143,41 +117,292 @@
         </dependency>
 
         <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>${jackson.version}</version>
+            <groupId>com.pi4j</groupId>
+            <artifactId>pi4j-core</artifactId>
+            <version>${pi4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>tec.uom</groupId>
+            <artifactId>uom-se</artifactId>
+            <version>1.0.10</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.sarveswaran-m</groupId>
+            <artifactId>util.concurrent.blockingMap</artifactId>
+            <version>0.91</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-cloud</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-arduino</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-raspberry</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-telegram</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-zigbee</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-xaomi</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-bluetooth</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>0.9.12</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.xeustechnologies</groupId>
+            <artifactId>jcl-core</artifactId>
+            <version>2.8</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-model</artifactId>
+            <version>3.3.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+            <version>2.9.8</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt</artifactId>
+            <version>0.9.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.sourceforge.javaflacencoder</groupId>
+            <artifactId>java-flac-encoder</artifactId>
+            <version>0.3.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>uk.co.caprica</groupId>
+            <artifactId>vlcj</artifactId>
+            <version>3.10.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.sarxos</groupId>
+            <artifactId>webcam-capture</artifactId>
+            <version>0.3.11</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cglib</groupId>
+            <artifactId>cglib</artifactId>
+            <version>3.2.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-messaging</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.googlecode.soundlibs</groupId>
+            <artifactId>mp3spi</artifactId>
+            <version>1.9.5-1</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-json-org</artifactId>
-            <version>${jackson.version}</version>
+            <artifactId>jackson-datatype-hibernate5</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-messaging</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.java-websocket</groupId>
+            <artifactId>Java-WebSocket</artifactId>
+            <version>1.5.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-fileupload</groupId>
+            <artifactId>commons-fileupload</artifactId>
+            <version>1.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.rossillo.mvc.cache</groupId>
+            <artifactId>spring-mvc-cache-control</artifactId>
+            <version>1.1.1-RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome</groupId>
+            <artifactId>touchhome-bundle-api</artifactId>
+            <version>${touchhome-bundle-api.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.vaadin.external.google</groupId>
+                    <artifactId>android-json</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.maxmind.geoip2</groupId>
+            <artifactId>geoip2</artifactId>
+            <version>2.8.0</version>
         </dependency>
     </dependencies>
 
     <build>
+        <finalName>touchhome</finalName>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>application.yml</include>
+                </includes>
+            </resource>
+
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+            </resource>
+
+            <resource>
+                <directory>${basedir}</directory>
+                <targetPath>${basedir}/target</targetPath>
+                <filtering>true</filtering>
+                <includes>
+                    <include>bintray.json</include>
+                </includes>
+            </resource>
+        </resources>
+
         <plugins>
+            <plugin>
+                <groupId>net.ju-n.maven.plugins</groupId>
+                <artifactId>checksum-maven-plugin</artifactId>
+                <version>1.2</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>artifacts</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <fork>true</fork>
+                    <skip>false</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -187,47 +412,8 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>${maven-checkstyle-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>validate</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                        <configuration>
-                            <checkstyleRules>
-                                <module name="Checker">
-                                    <!-- Checks for whitespace. -->
-                                    <module name="FileTabCharacter">
-                                        <property name="severity" value="error" />
-                                        <property name="eachLine" value="true" />
-                                    </module>
-                                    <module name="TreeWalker">
-                                        <!-- Import settings: getting rid of redundant import, forbid star notation, defined order of imports. -->
-                                        <module name="RedundantImport" />
-                                        <module name="NeedBraces">
-                                            <property name="tokens" value="LITERAL_IF, LITERAL_ELSE, LITERAL_FOR, LITERAL_WHILE, LITERAL_DO" />
-                                        </module>
-                                        <module name="EqualsHashCode" />
-                                    </module>
-                                </module>
-                            </checkstyleRules>
-                            <outputFile>${project.build.directory}/checkstyle.log</outputFile>
-                            <includeTestSourceDirectory>true</includeTestSourceDirectory>
-                            <includeResources>true</includeResources>
-                            <includeTestResources>true</includeTestResources>
-                            <consoleOutput>true</consoleOutput>
-                            <logViolationsToConsole>true</logViolationsToConsole>
-                            <failsOnError>true</failsOnError>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
+
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -243,4 +429,15 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <repositories>
+        <repository>
+            <id>bintray-touchhome-maven-repo</id>
+            <url>https://dl.bintray.com/touchhome/maven-repo</url>
+        </repository>
+        <repository>
+            <id>bintray-touchhome-maven-repo-bundle-extra</id>
+            <url>https://dl.bintray.com/touchhome/maven-repo-extra-bundles</url>
+        </repository>
+    </repositories>
 </project>

@@ -1,0 +1,37 @@
+flushDelayedUpdatesInterval: 30000
+keepGoogleCloudCacheTime: 300000
+scheduledAppPingTime: 60000
+rootDir: /opt/touchhome
+
+touchhome:
+  version: @project.version@
+  httpPort: 9119
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    show-sql: false
+
+server:
+  ssl:
+    enabled: true
+    key-store-type: PKCS12
+    key-store: classpath:keystore/touchhome.p12
+    key-store-password: password
+    key-alias: touchhome
+  servlet:
+    context-path: /
+  port: 9111

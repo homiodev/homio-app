@@ -1,9 +1,0 @@
-{
-  "setting": {
-    "bundle": {
-      "rf433": {
-        "label": "Rf433 settings"
-      }
-    }
-  }
-}
