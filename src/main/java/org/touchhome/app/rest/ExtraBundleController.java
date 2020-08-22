@@ -26,6 +26,7 @@ public class ExtraBundleController {
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Set<ExtraBundleJson> getInstalledBundles() {
         return internalManager.getBundles().values().stream()
+                .filter(b -> b.getBundleContext() != null)
                 .map(b -> new ExtraBundleJson(b.getBundleContext().getBundleName(), b.getBundleContext().getVersion()))
                 .collect(Collectors.toSet());
     }

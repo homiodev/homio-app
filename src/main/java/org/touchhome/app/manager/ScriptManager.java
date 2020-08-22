@@ -172,7 +172,7 @@ public class ScriptManager {
                 throw new ExecutionException("Script evaluation stuck. Got TimeoutException: " + TouchHomeUtils.getErrorMessage(ex), ex);
             }
         } catch (Exception ex) {
-            log.error("Can not compile script: " + scriptEntity.getEntityID());
+            log.error("Can not compile script: <{}>. Msg: <{}>",scriptEntity.getEntityID(), ex.getMessage());
             throw new RuntimeException(ex);
         }
         return new CompileScriptContext(compiled, formattedJavaScript);

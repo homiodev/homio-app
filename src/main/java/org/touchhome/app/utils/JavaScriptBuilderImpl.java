@@ -247,16 +247,16 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         }
 
         private <T> T createProxyInstance(Class<T> clazz, StringBuilder builder) {
-            return (T) Enhancer.create(clazz, createProxyHandler(clazz, builder));
+            return (T) Enhancer.create(clazz, createProxyHandler(builder));
         }
 
-        private MethodInterceptor createProxyHandler(Class proxyHandlerClass, StringBuilder builder) {
-            return new MethodInterceptor() {
-                @Override
-                public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) {
-                    builder.append(".").append(method.getName()).append("(").append(evalProxyArguments(args)).append(")");
-                    return createProxyInstance(method.getReturnType(), builder);
+        private MethodInterceptor createProxyHandler(StringBuilder builder) {
+            return (obj, method, args, proxy) -> {
+                builder.append(".").append(method.getName()).append("(").append(evalProxyArguments(args)).append(")");
+                if(method.getReturnType().getSimpleName().equals(Object.class.getSimpleName())) {
+                    return null;
                 }
+                return createProxyInstance(method.getReturnType(), builder);
             };
         }
 

@@ -27,6 +27,14 @@ public class SingleBundleClassLoader extends JarClassLoader {
     }
 
     @Override
+    protected void addDefaultLoader() {
+        synchronized (loaders) {
+            loaders.add(getSystemLoader());
+            Collections.sort(loaders);
+        }
+    }
+
+    @Override
     public Enumeration<URL> getResources(String name) {
         URL resource = getResource(name);
         return resource == null ? Collections.emptyEnumeration() : Collections.enumeration(Collections.singletonList(resource));

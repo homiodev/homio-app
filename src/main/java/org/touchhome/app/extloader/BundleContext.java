@@ -71,7 +71,8 @@ public class BundleContext {
     }
 
     public Set<String> getDependencies() {
-        return this.pomFile.getDependencies().stream().filter(d -> d.getGroupId().equals("org.touchhome"))
+        return this.pomFile.getDependencies().stream()
+                .filter(d -> d.getGroupId().equals("org.touchhome") && d.getArtifactId().contains("bundle"))
                 .map(Dependency::getArtifactId).collect(Collectors.toSet());
     }
 

@@ -56,13 +56,16 @@ public class BundleClassLoaderHolder extends ClassLoader {
 
     @Override
     public Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        for (SingleBundleClassLoader loader : bundleJarClassLoaders.values()) {
-            Class loadClass = loader.loadClass(name, resolve);
-            if (loadClass != null) {
-                return loadClass;
+        for (Map.Entry<String, SingleBundleClassLoader> entry : bundleJarClassLoaders.entrySet()) {
+            try {
+                Class loadClass = entry.getValue().loadClass(name, resolve);
+                if (loadClass != null) {
+                    return loadClass;
+                }
+            } catch (ClassNotFoundException ignore) {
             }
         }
-        return null;
+        throw new ClassNotFoundException();
     }
 
     public List<ClassPathScanningCandidateComponentProvider> getResourceScanners(boolean includeInterfaces) {
