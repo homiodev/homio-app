@@ -8,8 +8,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.touchhome.app.setting.console.log.ConsoleLogLevelSetting;
 import org.touchhome.bundle.api.EntityContext;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Mockito.when;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -20,7 +20,7 @@ public class StartupTest {
 
     @Test
     public void testStartup() {
-        when(entityContext.getSettingValue(ConsoleLogLevelSetting.class)).thenCallRealMethod();
         assertNotNull(entityContext);
+        assertEquals(ConsoleLogLevelSetting.LogLevel.Info, entityContext.getSettingValue(ConsoleLogLevelSetting.class));
     }
 }
