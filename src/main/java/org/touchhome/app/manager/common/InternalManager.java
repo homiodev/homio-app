@@ -29,7 +29,7 @@ import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleService;
-import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSONJSON;
+import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSON;
 import org.touchhome.app.manager.BundleManager;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.ScriptManager;
@@ -50,6 +50,7 @@ import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.BundleSettingPluginButton;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.condition.ExecuteOnce;
 import org.touchhome.bundle.api.exception.NotFoundException;
@@ -131,8 +132,13 @@ public class InternalManager implements EntityContext {
 
     public Set<NotificationEntityJSON> getNotifications() {
         long time = System.currentTimeMillis();
-        notifications.removeIf(entity -> entity instanceof AlwaysOnTopNotificationEntityJSONJSON
-                && time - entity.getCreationTime().getTime() > ((AlwaysOnTopNotificationEntityJSONJSON) entity).getDuration() * 1000);
+        notifications.removeIf(entity -> {
+            if (entity instanceof AlwaysOnTopNotificationEntityJSON) {
+                AlwaysOnTopNotificationEntityJSON json = (AlwaysOnTopNotificationEntityJSON) entity;
+                return json.getDuration() != null && time - entity.getCreationTime().getTime() > json.getDuration() * 1000;
+            }
+            return false;
+        });
 
         Set<NotificationEntityJSON> set = new TreeSet<>(notifications);
         for (InternalBundleContext bundleContext : this.bundles.values()) {
@@ -403,7 +409,7 @@ public class InternalManager implements EntityContext {
 
     @Override
     public void showAlwaysOnViewNotification(NotificationEntityJSON notificationEntityJSON, int duration, String color) {
-        AlwaysOnTopNotificationEntityJSONJSON alwaysOnTopNotificationEntityJSON = new AlwaysOnTopNotificationEntityJSONJSON(notificationEntityJSON);
+        AlwaysOnTopNotificationEntityJSON alwaysOnTopNotificationEntityJSON = new AlwaysOnTopNotificationEntityJSON(notificationEntityJSON);
         alwaysOnTopNotificationEntityJSON.setColor(color);
         alwaysOnTopNotificationEntityJSON.setDuration(duration);
         notifications.add(alwaysOnTopNotificationEntityJSON);
@@ -411,8 +417,18 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
+    public void showAlwaysOnViewNotification(NotificationEntityJSON notificationEntityJSON, String icon, String color, Class<? extends BundleSettingPluginButton> stopAction) {
+        AlwaysOnTopNotificationEntityJSON alwaysOnTopNotificationEntityJSON = new AlwaysOnTopNotificationEntityJSON(notificationEntityJSON);
+        alwaysOnTopNotificationEntityJSON.setColor(color);
+        alwaysOnTopNotificationEntityJSON.setIcon(icon);
+        alwaysOnTopNotificationEntityJSON.setStopAction(SettingEntity.PREFIX + stopAction.getSimpleName());
+        notifications.add(alwaysOnTopNotificationEntityJSON);
+        sendNotification(alwaysOnTopNotificationEntityJSON);
+    }
+
+    @Override
     public void hideAlwaysOnViewNotification(NotificationEntityJSON notificationEntityJSON) {
-        AlwaysOnTopNotificationEntityJSONJSON alwaysOnTopNotificationEntityJSON = (AlwaysOnTopNotificationEntityJSONJSON) notifications
+        AlwaysOnTopNotificationEntityJSON alwaysOnTopNotificationEntityJSON = (AlwaysOnTopNotificationEntityJSON) notifications
                 .stream().filter(n -> n.getEntityID().equals(notificationEntityJSON.getEntityID())).findAny().orElse(null);
         if (alwaysOnTopNotificationEntityJSON != null) {
             notifications.remove(alwaysOnTopNotificationEntityJSON);
@@ -622,7 +638,11 @@ public class InternalManager implements EntityContext {
     private <T> void fireNotifySettingHandlers(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value, BundleSettingPlugin pluginFor) {
         if (settingListeners.containsKey(settingPluginClazz.getName())) {
             for (Consumer consumer : settingListeners.get(settingPluginClazz.getName())) {
-                consumer.accept(value);
+                try {
+                    consumer.accept(value);
+                } catch (Exception ex) {
+                    log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value);
+                }
             }
         }
         this.sendNotification(pluginFor.buildToastrNotificationEntity(value, this));

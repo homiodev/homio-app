@@ -2,6 +2,7 @@ package org.touchhome.app.setting.console;
 
 import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.json.Option;
 
 import java.util.ArrayList;
@@ -42,6 +43,11 @@ public class ConsoleRefreshContentPeriodSetting implements BundleConsoleSettingP
 
     @Override
     public String[] pages() {
-        return new String[]{"hardware", "processes", "zigbee"};
+        return new String[0];
+    }
+
+    @Override
+    public boolean acceptConsolePluginPage(ConsolePlugin consolePlugin) {
+        return consolePlugin.hasRefreshIntervalSetting();
     }
 }

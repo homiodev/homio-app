@@ -1,6 +1,7 @@
 package org.touchhome.app.setting.console;
 
 import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.console.ConsolePlugin;
 
 public class ConsoleFitContentSetting implements BundleConsoleSettingPlugin<Boolean> {
 
@@ -16,6 +17,11 @@ public class ConsoleFitContentSetting implements BundleConsoleSettingPlugin<Bool
 
     @Override
     public String[] pages() {
-        return new String[]{"ALL"};
+        return new String[0];
+    }
+
+    @Override
+    public boolean acceptConsolePluginPage(ConsolePlugin consolePlugin) {
+        return consolePlugin.hasFitContentSetting();
     }
 }

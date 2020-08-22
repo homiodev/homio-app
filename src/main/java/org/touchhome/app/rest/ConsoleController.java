@@ -37,6 +37,7 @@ public class ConsoleController {
     private final ApplicationContext applicationContext;
     private final Set<Option> tabs = new ArraySet<>();
 
+    @Getter
     private Map<String, ConsolePlugin> consolePluginsMap = new HashMap<>();
 
     public void postConstruct() {
