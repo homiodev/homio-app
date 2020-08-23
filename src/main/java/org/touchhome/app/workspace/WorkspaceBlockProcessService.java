@@ -4,6 +4,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.scratch.WorkspaceBlock;
 import org.touchhome.bundle.api.thread.BackgroundProcessService;
 import org.touchhome.bundle.api.util.NotificationType;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 
 public class WorkspaceBlockProcessService extends BackgroundProcessService<Void> {
@@ -25,7 +26,7 @@ public class WorkspaceBlockProcessService extends BackgroundProcessService<Void>
             Thread.currentThread().setName(this.workspaceEntity.getEntityID());
             workspaceBlock.handle();
         } catch (Exception ex) {
-            this.entityContext.sendNotification(ex.getMessage(), "", NotificationType.danger);
+            this.entityContext.sendNotification("Error", TouchHomeUtils.getErrorMessage(ex), NotificationType.danger);
         } finally {
             Thread.currentThread().setName(oldName);
         }

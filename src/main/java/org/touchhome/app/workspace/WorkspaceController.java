@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
 public class WorkspaceController {
 
     private static final Pattern ID_PATTERN = Pattern.compile("[a-z-]*");
-    private static final List<Class> systemScratches = Arrays.asList(Scratch3ControlBlocks.class, Scratch3DebugBlocks.class,
+    private static final List<Class> systemScratches = Arrays.asList(Scratch3ControlBlocks.class, Scratch3MiscBlocks.class,
             Scratch3DataBlocks.class, Scratch3EventsBlocks.class, Scratch3OperatorBlocks.class);
 
     private final BundleController bundleController;

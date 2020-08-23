@@ -21,7 +21,7 @@
     </scm>
 
     <properties>
-        <touchhome-bundle-api.version>1.0.8</touchhome-bundle-api.version>
+        <touchhome-bundle-api.version>1.0.9-SNAPSHOT</touchhome-bundle-api.version>
         <touchhome-bundle.version>1.0.11</touchhome-bundle.version>
     </properties>
 

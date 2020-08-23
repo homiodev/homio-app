@@ -140,7 +140,12 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public void handle() {
         this.handleInternal(scratch3Block -> {
-            scratch3Block.getHandler().handle(this);
+            try {
+                scratch3Block.getHandler().handle(this);
+            } catch (Exception ex) {
+                entityContext.sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
+                return null;
+            }
             if (this.next != null && scratch3Block.getBlockType() != BlockType.hat) {
                 this.next.handle();
             }
@@ -150,7 +155,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     @Override
     public Object evaluate() {
-        return this.handleInternal(scratch3Block -> scratch3Block.getEvaluateHandler().handle(this));
+        return this.handleInternal(scratch3Block -> {
+            try {
+                return scratch3Block.getEvaluateHandler().handle(this);
+            } catch (Exception ex) {
+                entityContext.sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
+                throw new RuntimeException(ex);
+            }
+        });
     }
 
     private Object handleInternal(Function<Scratch3Block, Object> function) {

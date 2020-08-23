@@ -14,6 +14,7 @@ import org.touchhome.app.setting.system.SystemClearWorkspaceButtonSetting;
 import org.touchhome.app.setting.system.SystemClearWorkspaceVariablesButtonSetting;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.model.workspace.WorkspaceJsonVariableEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceShareVariableEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupEntity;
@@ -130,13 +131,15 @@ public class WorkspaceManager {
         // single variables
         updateWorkspaceObjects(target.optJSONObject("variables"), WorkspaceStandaloneVariableEntity.PREFIX, WorkspaceStandaloneVariableEntity::new);
 
+        // json variables
+        updateWorkspaceObjects(target.optJSONObject("json_variables"), WorkspaceJsonVariableEntity.PREFIX, WorkspaceJsonVariableEntity::new);
+
         // broadcasts
         updateWorkspaceObjects(target.optJSONObject("broadcasts"), WorkspaceBroadcastRepository.PREFIX, WorkspaceBroadcastEntity::new);
 
         // backup
-        Map<BaseEntity, JSONArray> values = updateWorkspaceObjects(target.optJSONObject("backup_lists"), WorkspaceBackupGroupEntity.PREFIX, WorkspaceBackupGroupEntity::new);
+        Map<BaseEntity, JSONArray> values = updateWorkspaceObjects(target.optJSONObject ("backup_lists"), WorkspaceBackupGroupEntity.PREFIX, WorkspaceBackupGroupEntity::new);
         createSupplier(values, (baseEntity) -> new WorkspaceBackupEntity().setWorkspaceBackupGroupEntity((WorkspaceBackupGroupEntity) baseEntity), WorkspaceBackupEntity.PREFIX);
-
 
         // bool
         values = updateWorkspaceObjects(target.optJSONObject("bool_variables"), WorkspaceBooleanGroupEntity.PREFIX, WorkspaceBooleanGroupEntity::new);

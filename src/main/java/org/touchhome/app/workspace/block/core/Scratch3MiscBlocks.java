@@ -18,7 +18,7 @@ import org.touchhome.bundle.api.util.NotificationType;
 @Log4j2
 @Getter
 @Component
-public class Scratch3DebugBlocks extends Scratch3ExtensionBlocks {
+public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
 
     private final ObjectMapper objectMapper;
     private final ScriptManager scriptManager;
@@ -28,7 +28,7 @@ public class Scratch3DebugBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block runScriptValueBlock;
     private final Scratch3Block runScriptBlock;
 
-    public Scratch3DebugBlocks(ObjectMapper objectMapper, EntityContext entityContext, ScriptManager scriptManager) {
+    public Scratch3MiscBlocks(ObjectMapper objectMapper, EntityContext entityContext, ScriptManager scriptManager) {
         super("debug", null, entityContext, null);
 
         this.objectMapper = objectMapper;
