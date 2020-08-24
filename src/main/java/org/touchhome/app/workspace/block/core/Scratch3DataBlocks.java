@@ -1,7 +1,9 @@
 package org.touchhome.app.workspace.block.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.jayway.jsonpath.JsonPath;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.repository.workspace.backup.WorkspaceBackupRepository;
@@ -23,6 +25,7 @@ import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
 import java.util.Date;
+import java.util.Map;
 
 import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
@@ -92,7 +95,8 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     private Object getJsonVariableToReporter(WorkspaceBlock workspaceBlock) {
         WorkspaceJsonVariableEntity entity = entityContext.getEntity(WorkspaceJsonVariableEntity.PREFIX
                 + workspaceBlock.getFieldId("json_variables"));
-        return entity.getValue();
+        String query = workspaceBlock.getInputString("ITEM");
+        return Scratch3OperatorBlocks.reduceJSON(entity.getValue().toString(), query);
     }
 
     private void variableGroupLinkHandler(WorkspaceBlock workspaceBlock) {

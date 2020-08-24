@@ -3,6 +3,7 @@ package org.touchhome.app.model.entity;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.touchhome.app.setting.SettingPlugin;
 import org.touchhome.bundle.api.json.Option;
@@ -65,7 +66,7 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     private JSONObject parameters;
 
     public String getValue() {
-        return value == null ? defaultValue : value;
+        return StringUtils.defaultIfEmpty(value, defaultValue);
     }
 
     @Override

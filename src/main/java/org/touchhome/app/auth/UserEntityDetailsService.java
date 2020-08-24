@@ -25,7 +25,7 @@ public class UserEntityDetailsService implements UserDetailsService {
             }
         }
         return org.springframework.security.core.userdetails.User
-                .withUsername(email)
+                .withUsername(user.getEntityID())
                 .password(user.getPassword())
                 .authorities(user.getRoles().toArray(new String[0]))
                 .accountExpired(false)

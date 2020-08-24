@@ -3,7 +3,7 @@ package org.touchhome.app.setting.console.log;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Level;
-import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.json.Option;
 

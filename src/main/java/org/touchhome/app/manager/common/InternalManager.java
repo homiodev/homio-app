@@ -49,8 +49,8 @@ import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.bundle.api.BundleEntrypoint;
-import org.touchhome.bundle.api.BundleSettingPlugin;
-import org.touchhome.bundle.api.BundleSettingPluginButton;
+import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPluginButton;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.condition.ExecuteOnce;
 import org.touchhome.bundle.api.exception.NotFoundException;
@@ -553,7 +553,7 @@ public class InternalManager implements EntityContext {
     public UserEntity getUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
-            return getEntity(UserEntity.PREFIX + authentication.getCredentials());
+            return getEntity((String)authentication.getCredentials());
         }
         return null;
     }

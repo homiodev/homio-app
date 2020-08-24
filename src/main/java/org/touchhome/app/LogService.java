@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 @Component
@@ -82,7 +83,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     public static class LogAppenderHandler extends CountingNoOpAppender {
         private final String appenderName;
         private final String fileName;
-        private List<LogEvent> bufferedLogEvents = new ArrayList<>();
+        private List<LogEvent> bufferedLogEvents = new CopyOnWriteArrayList();
         private int intLevel = Level.DEBUG.intLevel();
         private Consumer<LogEvent> logStrategy = event -> bufferedLogEvents.add(event);
 

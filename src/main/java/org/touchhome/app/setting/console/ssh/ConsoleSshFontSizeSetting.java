@@ -1,7 +1,7 @@
 package org.touchhome.app.setting.console.ssh;
 
 import org.json.JSONObject;
-import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 
 public class ConsoleSshFontSizeSetting implements BundleConsoleSettingPlugin<Integer> {

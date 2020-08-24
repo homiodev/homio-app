@@ -29,7 +29,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block runScriptBlock;
 
     public Scratch3MiscBlocks(ObjectMapper objectMapper, EntityContext entityContext, ScriptManager scriptManager) {
-        super("debug", null, entityContext, null);
+        super("misc", null, entityContext, null);
 
         this.objectMapper = objectMapper;
         this.scriptManager = scriptManager;

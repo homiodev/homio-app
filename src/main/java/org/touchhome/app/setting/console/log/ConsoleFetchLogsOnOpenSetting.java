@@ -1,6 +1,6 @@
 package org.touchhome.app.setting.console.log;
 
-import org.touchhome.bundle.api.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
 
 public class ConsoleFetchLogsOnOpenSetting implements BundleConsoleSettingPlugin<Boolean> {
 

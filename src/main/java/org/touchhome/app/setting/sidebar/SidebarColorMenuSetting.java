@@ -1,6 +1,6 @@
 package org.touchhome.app.setting.sidebar;
 
-import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 
 public class SidebarColorMenuSetting implements BundleSettingPlugin<Boolean> {
 

@@ -21,7 +21,7 @@ import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
-import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 import org.touchhome.bundle.api.DynamicOptionLoader;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;

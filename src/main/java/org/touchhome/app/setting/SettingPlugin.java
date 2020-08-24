@@ -2,7 +2,7 @@ package org.touchhome.app.setting;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.touchhome.bundle.api.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 
 public interface SettingPlugin<T> extends BundleSettingPlugin<T> {
 
