@@ -1,24 +1,23 @@
 package org.touchhome.app.setting.console.ssh;
 
-import org.json.JSONObject;
 import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
-import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.setting.BundleSettingPluginSlider;
 
-public class ConsoleSshFontSizeSetting implements BundleConsoleSettingPlugin<Integer> {
+public class ConsoleSshFontSizeSetting implements BundleConsoleSettingPlugin<Integer>, BundleSettingPluginSlider {
 
     @Override
-    public String getDefaultValue() {
-        return "12";
+    public int getMin() {
+        return 5;
     }
 
     @Override
-    public JSONObject getParameters(EntityContext entityContext, String value) {
-        return new JSONObject().put("min", 5).put("max", 24).put("step", 1);
+    public int getMax() {
+        return 24;
     }
 
     @Override
-    public SettingType getSettingType() {
-        return SettingType.Slider;
+    public int defaultValue() {
+        return 12;
     }
 
     @Override

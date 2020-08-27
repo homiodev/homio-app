@@ -23,7 +23,7 @@ public class DashboardHorizontalBlockCountSetting implements SettingPlugin {
 
     @Override
     public JSONObject getParameters(EntityContext entityContext, String value) {
-        return new JSONObject().put("min", 1).put("max", 10).put("step", 1);
+        return new JSONObject().put("min", 1).put("max", 10);
     }
 
     @Override

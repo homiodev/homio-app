@@ -64,24 +64,24 @@
 
     </Appenders>
     <Loggers>
-        <Logger name="org.touchhome" additivity="false" level="debug">
+        <Logger name="org.touchhome" additivity="false" level="info">
             <AppenderRef ref="appLog"/>
             <AppenderRef ref="Console"/>
         </Logger>
 
-        <Logger name="org.touchhome.bundle.zigbee" additivity="false" level="debug">
+        <Logger name="org.touchhome.bundle.zigbee" additivity="false" level="info">
             <AppenderRef ref="appLog"/>
             <AppenderRef ref="zigBeeLog"/>
             <AppenderRef ref="Console"/>
         </Logger>
 
-        <Logger name="org.touchhome.app.workspace" additivity="false" level="debug">
+        <Logger name="org.touchhome.app.workspace" additivity="false" level="info">
             <AppenderRef ref="appLog"/>
             <AppenderRef ref="workspaceLog"/>
             <AppenderRef ref="Console"/>
         </Logger>
 
-        <Logger name="org.touchhome.bundle.api.workspace" additivity="false" level="debug">
+        <Logger name="org.touchhome.bundle.api.workspace" additivity="false" level="info">
             <AppenderRef ref="appLog"/>
             <AppenderRef ref="workspaceLog"/>
             <AppenderRef ref="Console"/>

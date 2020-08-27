@@ -19,13 +19,18 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.touchhome.bundle.api.BundleConfiguration;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.util.SpringUtils;
+import sun.reflect.ReflectionFactory;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.jar.JarInputStream;
+import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -38,7 +43,8 @@ public class BundleContext {
 
     private final Path bundleContextFile; // batch context file associated with this context
     private final Model pomFile;
-    private final String bundleName;
+    private final Manifest manifest;
+    private String bundleID;
 
     private boolean internal;
     private boolean installed;
@@ -49,21 +55,25 @@ public class BundleContext {
         this.bundleContextFile = bundleContextFile;
         String fileName = bundleContextFile.getFileName().toString();
         ZipFile zipFile = new ZipFile(bundleContextFile.toString());
-        this.pomFile = readPomFile(zipFile, "bundle-" + fileName.split("[-|.]")[2]);
+        JarInputStream jarStream = new JarInputStream(new FileInputStream(bundleContextFile.toString()));
+        this.manifest = jarStream.getManifest();
+        this.pomFile = readPomFile(zipFile, fileName);
+        jarStream.close();
         zipFile.close();
-        this.bundleName = pomFile.getArtifactId();
     }
 
-    BundleContext(String bundleName) {
-        this.bundleName = bundleName;
+    BundleContext(String bundleID) {
+        this.bundleID = bundleID;
         this.bundleContextFile = null;
         this.pomFile = null;
+        this.manifest = null;
         this.internal = true;
     }
 
-    private Model readPomFile(ZipFile file, String bundleName) throws IOException, XmlPullParserException {
+    private Model readPomFile(ZipFile file, String fileName) throws IOException, XmlPullParserException {
+        String artifactId = this.manifest.getMainAttributes().getValue("artifactId");
         for (ZipEntry e : Collections.list(file.entries())) {
-            if (e.getName().endsWith(bundleName + "/pom.xml")) {
+            if (e.getName().endsWith(artifactId + "/pom.xml")) {
                 return pomReader.read(file.getInputStream(e));
             }
         }
@@ -77,17 +87,18 @@ public class BundleContext {
     }
 
     @SneakyThrows
-    void load(ConfigurationBuilder configurationBuilder, Environment env, ApplicationContext parentContext) {
+    void load(ConfigurationBuilder configurationBuilder, Environment env, ApplicationContext parentContext, ClassLoader classLoader) {
         URL bundleUrl = bundleContextFile.toUri().toURL();
         Reflections reflections = new Reflections(configurationBuilder.setUrls(bundleUrl));
 
         config = new BundleSpringContext(env);
-        config.configureSpringContext(reflections, parentContext, bundleName);
+        bundleID = config.fetchBundleID(reflections, pomFile.getArtifactId());
+        config.configureSpringContext(reflections, parentContext, bundleID, classLoader);
     }
 
     void destroy() {
         config.destroy();
-        getAllBundleClassLoader().destroy(bundleName);
+        getAllBundleClassLoader().destroy(bundleID);
     }
 
     public boolean isLoaded() {
@@ -95,7 +106,7 @@ public class BundleContext {
     }
 
     public String getBundleFriendlyName() {
-        return StringUtils.defaultString(this.pomFile.getName(), this.bundleName);
+        return StringUtils.defaultString(this.pomFile.getName(), bundleID);
     }
 
     public ApplicationContext getApplicationContext() {
@@ -112,7 +123,7 @@ public class BundleContext {
             version = this.pomFile.getParent().getVersion();
         }
         if (version == null) {
-            throw new IllegalStateException("Unable to find version for bundle: " + this.bundleName);
+            throw new IllegalStateException("Unable to find version for bundle: " + bundleID);
         }
         return version;
     }
@@ -122,7 +133,7 @@ public class BundleContext {
     }
 
     public SingleBundleClassLoader getBundleClassLoader() {
-        return getAllBundleClassLoader().getBundleClassLoader(this.bundleName);
+        return getAllBundleClassLoader().getBundleClassLoader(bundleID);
     }
 
     @RequiredArgsConstructor
@@ -133,16 +144,40 @@ public class BundleContext {
         private Class<?> configClass;
         private BundleClassLoaderHolder bundleClassLoaderHolder;
 
-        void configureSpringContext(Reflections reflections, ApplicationContext parentContext, String bundleName) {
+        @SneakyThrows
+        private static <T> T createClassInstance(Class<T> clazz, Class<? super T> parent) {
+            ReflectionFactory rf = ReflectionFactory.getReflectionFactory();
+            Constructor objDef = parent.getDeclaredConstructor();
+            Constructor intConstr = rf.newConstructorForSerialization(clazz, objDef);
+            return clazz.cast(intConstr.newInstance());
+        }
+
+        public String fetchBundleID(Reflections reflections, String artifactId) {
+            Set<Class<? extends BundleEntrypoint>> bundleEntryPoints = reflections.getSubTypesOf(BundleEntrypoint.class);
+            if (bundleEntryPoints.isEmpty()) {
+                throw new IllegalStateException("Found no BundleEntrypoint in context of bundle: " + artifactId);
+            }
+            if (bundleEntryPoints.size() > 1) {
+                throw new IllegalStateException("Found multiple BundleEntrypoint in context of bundle: " + artifactId);
+            }
+            Class<? extends BundleEntrypoint> bundleEntrypointClass = bundleEntryPoints.iterator().next();
+
+            BundleEntrypoint bundleEntrypoint = createClassInstance(bundleEntrypointClass, Object.class);
+            return bundleEntrypoint.getBundleId();
+        }
+
+        void configureSpringContext(Reflections reflections, ApplicationContext parentContext, String bundleID, ClassLoader classLoader) {
             configClass = findBatchConfigurationClass(reflections);
             bundleClassLoaderHolder = parentContext.getBean(BundleClassLoaderHolder.class);
+            bundleClassLoaderHolder.setClassLoaders(bundleID, classLoader);
             BundleConfiguration bundleConfiguration = configClass.getDeclaredAnnotation(BundleConfiguration.class);
 
             // create spring context
             ctx = new AnnotationConfigApplicationContext();
+            ctx.setId(bundleID);
             ctx.setParent(parentContext);
-            ctx.setClassLoader(bundleClassLoaderHolder.getBundleClassLoader(bundleName));
-            ctx.setResourceLoader(new PathMatchingResourcePatternResolver(bundleClassLoaderHolder.getBundleClassLoader(bundleName)));
+            ctx.setClassLoader(classLoader);
+            ctx.setResourceLoader(new PathMatchingResourcePatternResolver(classLoader));
 
             // set custom environments
             Map<String, Object> customEnv = Stream.of(bundleConfiguration.env()).collect(
@@ -158,9 +193,6 @@ public class BundleContext {
 
             ctx.refresh();
             ctx.start();
-
-            BundleEntrypoint bundleEntrypoint = ctx.getBean(BundleEntrypoint.class);
-            ctx.setId(bundleEntrypoint.getBundleId());
         }
 
         /**

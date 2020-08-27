@@ -30,7 +30,6 @@ import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.manager.En;
 import org.touchhome.bundle.api.model.BaseEntity;
@@ -58,7 +57,6 @@ import java.util.stream.Stream;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.touchhome.bundle.api.util.TouchHomeUtils.ADMIN_ROLE;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIVILEGED_USER_ROLE;
 
 @RestController
@@ -66,7 +64,6 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIVILEGED_USER_ROLE;
 @RequiredArgsConstructor
 public class UtilsController {
 
-    private final StartupHardwareRepository startupHardwareRepository;
     private final InternalManager entityContext;
     private final ScriptManager scriptManager;
     private final CodeParser codeParser;
@@ -341,25 +338,6 @@ public class UtilsController {
         return scriptUiGroupsJSON;
     }
 
-    @GetMapping("/getComPorts")
-    public List<ComPort> getComPorts() {
-        List<ComPort> comPorts = new ArrayList<>();
-        for (SerialPort serialPort : SerialPort.getCommPorts()) {
-            ComPort comPort = new ComPort();
-            comPort.setBaudRate(serialPort.getBaudRate());
-            comPort.setDescriptivePortName(serialPort.getDescriptivePortName());
-            comPort.setSystemPortName(serialPort.getSystemPortName());
-            comPorts.add(comPort);
-        }
-        return comPorts;
-    }
-
-    @PostMapping("app/update")
-    @Secured(ADMIN_ROLE)
-    public void updateApp() {
-        startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath());
-    }
-
     @GetMapping("i18n/{lang}.json")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ObjectNode getI18NFromBundles(@PathVariable("lang") String lang) {
@@ -372,13 +350,5 @@ public class UtilsController {
         private String log;
         private String error;
         private String logUrl;
-    }
-
-    @Getter
-    @Setter
-    private class ComPort {
-        private int baudRate;
-        private String descriptivePortName;
-        private String systemPortName;
     }
 }

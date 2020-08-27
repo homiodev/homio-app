@@ -15,8 +15,11 @@ import org.touchhome.bundle.api.scratch.*;
 import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -57,6 +60,10 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     @Setter
     private Consumer<String> stateHandler;
+
+    private List<BroadcastLockImpl> acquiredLocks;
+
+    private AtomicReference<Object> lastValue;
 
     WorkspaceBlockImpl(String id, Map<String, WorkspaceBlock> allBlocks, Map<String, Scratch3ExtensionBlocks> scratch3Blocks, EntityContext entityContext) {
         this.id = id;
@@ -157,7 +164,9 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     public Object evaluate() {
         return this.handleInternal(scratch3Block -> {
             try {
-                return scratch3Block.getEvaluateHandler().handle(this);
+                Object value = scratch3Block.getEvaluateHandler().handle(this);
+                this.lastValue = new AtomicReference<>(value);
+                return value;
             } catch (Exception ex) {
                 entityContext.sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
                 throw new RuntimeException(ex);
@@ -207,7 +216,11 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     @Override
     public boolean getInputBoolean(String key) {
-        return (boolean) this.allBlocks.get(cast(getInput(key, false))).evaluate();
+        Object input = getInput(key, false);
+        if (input instanceof Boolean) {
+            return (boolean) input;
+        }
+        return (boolean) this.allBlocks.get(cast(input)).evaluate();
     }
 
     @Override
@@ -240,7 +253,12 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                     }
                 } else {
                     ref = objects.getString(1);
-                    return fetchValue ? String.valueOf(this.allBlocks.get(ref).evaluate()) : ref;
+                    if (fetchValue) {
+                        Object evaluateValue = this.allBlocks.get(ref).evaluate();
+                        this.lastValue = new AtomicReference<>(evaluateValue);
+                        return String.valueOf(evaluateValue);
+                    }
+                    return ref;
                 }
             case 1:
                 array = objects.optJSONArray(1);
@@ -334,6 +352,25 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         scratch3Block.getAllowLinkVariable().accept(variableId, this);
     }
 
+    public Object getLastValue() {
+        WorkspaceBlockImpl parentWorkspaceBlock = (WorkspaceBlockImpl) parent;
+        while (parentWorkspaceBlock != null) {
+            if (parentWorkspaceBlock.lastValue != null) {
+                return parentWorkspaceBlock.lastValue.get();
+            }
+            parentWorkspaceBlock = (WorkspaceBlockImpl) parentWorkspaceBlock.parent;
+        }
+        return null;
+    }
+
+    public void addLock(BroadcastLockImpl broadcastLock) {
+        if (acquiredLocks == null) {
+            acquiredLocks = new ArrayList<>();
+        }
+        this.acquiredLocks.add(broadcastLock);
+        broadcastLock.addSignalListener(value -> this.lastValue = new AtomicReference<>(value));
+    }
+
     @AllArgsConstructor
     @NoArgsConstructor
     private enum PrimitiveRef {
@@ -345,7 +382,9 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         POSITIVE_NUM_PRIMITIVE,
         WHOLE_NUM_PRIMITIVE,
         INTEGER_NUM_PRIMITIVE,
-        ANGLE_NUM_PRIMITIVE,
+        CHECKBOX_NUM_PRIMITIVE(array -> array.getBoolean(1), (array, entityContext) -> {
+            return array.get(2);
+        }),
         COLOR_PICKER_PRIMITIVE,
         TEXT_PRIMITIVE,
         BROADCAST_PRIMITIVE(array -> array.get(2), (array, entityContext) -> {

@@ -95,14 +95,16 @@ public class BundleService {
             this.loadContext(dependencyBundleName);
         }
 
-        bundleClassLoaderHolder.addJar(bundleName, context.getBundleContextFile());
+        String jarFileName = context.getBundleContextFile().getFileName().toString();
+        log.info("Adding jar <{}> to classpath", jarFileName);
+        ClassLoader classLoader = new SingleBundleClassLoader(context.getBundleContextFile());
 
         // creates configuration builder to find all jar files
         ConfigurationBuilder configurationBuilder = new ConfigurationBuilder()
                 .setScanners(new SubTypesScanner(false), new TypeAnnotationsScanner(), new ResourcesScanner())
-                .addClassLoader(bundleClassLoaderHolder.getBundleClassLoader(bundleName));
+                .addClassLoader(classLoader);
 
-        context.load(configurationBuilder, env, parentContext);
+        context.load(configurationBuilder, env, parentContext, classLoader);
 
         return true;
     }

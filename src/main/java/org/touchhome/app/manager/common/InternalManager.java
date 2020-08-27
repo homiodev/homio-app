@@ -14,6 +14,8 @@ import org.hibernate.event.spi.PostDeleteEvent;
 import org.hibernate.event.spi.PostInsertEvent;
 import org.hibernate.event.spi.PostUpdateEvent;
 import org.hibernate.internal.SessionFactoryImpl;
+import org.hibernate.metamodel.spi.MetamodelImplementor;
+import org.hibernate.persister.entity.Joinable;
 import org.json.JSONObject;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
@@ -23,18 +25,22 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.touchhome.app.LogService;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleService;
+import org.touchhome.app.hardware.HardwareEventsImpl;
 import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSON;
 import org.touchhome.app.manager.BundleManager;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.manager.WidgetManager;
 import org.touchhome.app.model.entity.SettingEntity;
+import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.repository.crud.base.BaseCrudRepository;
 import org.touchhome.app.repository.device.AllDeviceRepository;
@@ -48,9 +54,8 @@ import org.touchhome.app.utils.Curl;
 import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
+import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
 import org.touchhome.bundle.api.BundleEntrypoint;
-import org.touchhome.bundle.api.setting.BundleSettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPluginButton;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.condition.ExecuteOnce;
 import org.touchhome.bundle.api.exception.NotFoundException;
@@ -69,6 +74,8 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPluginButton;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
@@ -95,6 +102,7 @@ import static org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity.DEFAULT
 @RequiredArgsConstructor
 public class InternalManager implements EntityContext {
 
+    public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
     private static final Map<BundleSettingPlugin, String> settingTransientState = new HashMap<>();
     public static Map<String, BundleSettingPlugin> settingPluginsByPluginKey = new HashMap<>();
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
@@ -129,6 +137,7 @@ public class InternalManager implements EntityContext {
     private String latestVersion;
 
     private Set<ApplicationContext> allApplicationContexts = new HashSet<>();
+    private HardwareEventsImpl hardwareEvents;
 
     public Set<NotificationEntityJSON> getNotifications() {
         long time = System.currentTimeMillis();
@@ -154,6 +163,7 @@ public class InternalManager implements EntityContext {
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
+        this.hardwareEvents = this.applicationContext.getBean(HardwareEventsImpl.class);
         this.allApplicationContexts.add(applicationContext);
         this.updateDeviceFeatures();
         this.transactionTemplate = new TransactionTemplate(transactionManager);
@@ -217,7 +227,11 @@ public class InternalManager implements EntityContext {
         notifications.add(NotificationEntityJSON.info("app-status")
                 .setName("App started at " + DateFormat.getDateTimeInstance().format(new Date())));
 
+        // create indexes on tables
+        this.createTableIndexes();
         this.fetchReleaseVersion();
+        this.hardwareEvents.addEvent("app-release", "Found new app release");
+        this.hardwareEvents.addEventAndFire("app-started", "App started");
     }
 
     @Scheduled(fixedDelay = 360000)
@@ -231,6 +245,7 @@ public class InternalManager implements EntityContext {
                 log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion, touchHomeProperties.getVersion());
                 notifications.add(NotificationEntityJSON.danger("version")
                         .setName("Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion));
+                this.hardwareEvents.fireEvent("app-release", this.latestVersion);
             }
         } catch (Exception ex) {
             log.warn("Unable to fetch latest version");
@@ -368,8 +383,8 @@ public class InternalManager implements EntityContext {
     @Override
     public <T> void setSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value) {
         BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        setSettingValueSilence(settingPluginClazz, value);
-        fireNotifySettingHandlers(settingPluginClazz, value, pluginFor);
+        String strValue = setSettingValueSilence(settingPluginClazz, value);
+        fireNotifySettingHandlers(settingPluginClazz, value, pluginFor, strValue);
     }
 
     @Override
@@ -379,9 +394,11 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public <T> void setSettingValueSilence(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull T value) {
+    public <T> String setSettingValueSilence(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull T value) {
         BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        this.setSettingValueSilenceRaw(settingPluginClazz, pluginFor.writeValue(value));
+        String strValue = pluginFor.writeValue(value);
+        this.setSettingValueSilenceRaw(settingPluginClazz, strValue);
+        return strValue;
     }
 
     @Override
@@ -553,7 +570,7 @@ public class InternalManager implements EntityContext {
     public UserEntity getUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
-            return getEntity((String)authentication.getCredentials());
+            return getEntity((String) authentication.getCredentials());
         }
         return null;
     }
@@ -606,6 +623,32 @@ public class InternalManager implements EntityContext {
         getBean(LinuxHardwareRepository.class).installSoftware("autossh");
     }
 
+    public void addBundle(Map<String, BundleContext> batchContexts) {
+        for (String bundleName : batchContexts.keySet()) {
+            this.addBundle(batchContexts.get(bundleName), batchContexts);
+        }
+    }
+
+    public void removeBundle(String bundleName) {
+        InternalBundleContext internalBundleContext = bundles.remove(bundleName);
+        if (internalBundleContext != null) {
+            this.removeBundle(internalBundleContext.bundleContext);
+            applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
+        }
+    }
+
+    public Object getBeanOfBundleBySimpleName(String bundle, String className) {
+        InternalBundleContext internalBundleContext = this.bundles.get(bundle);
+        if (internalBundleContext == null) {
+            throw new NotFoundException("Unable to find bundle <" + bundle + ">");
+        }
+        Object o = internalBundleContext.fieldTypes.get(className);
+        if (o == null) {
+            throw new NotFoundException("Unable to find class <" + className + "> in bundle <" + bundle + ">");
+        }
+        return o;
+    }
+
     private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz, AbstractRepository repository) {
         return entityManager.getEntityIDsByEntityClassFullName(clazz).stream()
                 .map(entityID -> {
@@ -635,7 +678,8 @@ public class InternalManager implements EntityContext {
         }
     }
 
-    private <T> void fireNotifySettingHandlers(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value, BundleSettingPlugin pluginFor) {
+    private <T> void fireNotifySettingHandlers(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value,
+                                               BundleSettingPlugin pluginFor, String strValue) {
         if (settingListeners.containsKey(settingPluginClazz.getName())) {
             for (Consumer consumer : settingListeners.get(settingPluginClazz.getName())) {
                 try {
@@ -645,6 +689,7 @@ public class InternalManager implements EntityContext {
                 }
             }
         }
+        broadcastLockManager.signalAll(SettingEntity.PREFIX + settingPluginClazz.getSimpleName(), StringUtils.defaultIfEmpty(strValue, pluginFor.getDefaultValue()));
         this.sendNotification(pluginFor.buildToastrNotificationEntity(value, this));
     }
 
@@ -695,20 +740,6 @@ public class InternalManager implements EntityContext {
         }
     }
 
-    public void addBundle(Map<String, BundleContext> batchContexts) {
-        for (String bundleName : batchContexts.keySet()) {
-            this.addBundle(batchContexts.get(bundleName), batchContexts);
-        }
-    }
-
-    public void removeBundle(String bundleName) {
-        InternalBundleContext internalBundleContext = bundles.remove(bundleName);
-        if (internalBundleContext != null) {
-            this.removeBundle(internalBundleContext.bundleContext);
-            applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
-        }
-    }
-
     private void removeBundle(BundleContext bundleContext) {
         if (!bundleContext.isInternal() && bundleContext.isInstalled()) {
             ApplicationContext context = bundleContext.getApplicationContext();
@@ -729,7 +760,7 @@ public class InternalManager implements EntityContext {
     private void addBundle(BundleContext bundleContext, Map<String, BundleContext> bundleContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
             if (!bundleContext.isLoaded()) {
-                notifications.add(NotificationEntityJSON.danger("fail-bundle-" + bundleContext.getBundleName())
+                notifications.add(NotificationEntityJSON.danger("fail-bundle-" + bundleContext.getBundleID())
                         .setName("Unable to load bundle <" + bundleContext.getBundleFriendlyName() + ">"));
                 return;
             }
@@ -770,15 +801,16 @@ public class InternalManager implements EntityContext {
         repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
 
         applicationContext.getBean(ConsoleController.class).postConstruct();
+        applicationContext.getBean(BundleManager.class).postConstruct(this);
         applicationContext.getBean(SettingController.class).postConstruct(this);
         if (!addBundle) {
             applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
         }
         applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
-        applicationContext.getBean(BundleManager.class).postConstruct(this);
         applicationContext.getBean(WorkspaceController.class).postConstruct(this);
         applicationContext.getBean(EntityManager.class).postConstruct();
         applicationContext.getBean(ItemController.class).postConstruct();
+        applicationContext.getBean(Scratch3OtherBlocks.class).postConstruct();
         log.info("Finish update all app bundles");
     }
 
@@ -799,16 +831,24 @@ public class InternalManager implements EntityContext {
         }
     }
 
-    public Object getBeanOfBundleBySimpleName(String bundle, String className) {
-        InternalBundleContext internalBundleContext = this.bundles.get(bundle);
-        if (internalBundleContext == null) {
-            throw new NotFoundException("Unable to find bundle <" + bundle + ">");
-        }
-        Object o = internalBundleContext.fieldTypes.get(className);
-        if (o == null) {
-            throw new NotFoundException("Unable to find class <" + className + "> in bundle <" + bundle + ">");
-        }
-        return o;
+    private void createTableIndexes() {
+        List<Class<? extends BaseEntity>> list = classFinder.getClassesWithParent(BaseEntity.class, null, null)
+                .stream().filter(l -> !WidgetBaseEntity.class.isAssignableFrom(l)).collect(Collectors.toList());
+        javax.persistence.EntityManager em = applicationContext.getBean(javax.persistence.EntityManager.class);
+        MetamodelImplementor meta = (MetamodelImplementor) em.getMetamodel();
+        new TransactionTemplate(transactionManager).execute(new TransactionCallbackWithoutResult() {
+            @Override
+            protected void doInTransactionWithoutResult(TransactionStatus transactionStatus) {
+                for (Class<? extends BaseEntity> aClass : list) {
+                    String tableName = ((Joinable) meta.entityPersister(aClass)).getTableName();
+                    try {
+                        em.createNativeQuery(String.format(CREATE_TABLE_INDEX, aClass.getSimpleName(), tableName)).executeUpdate();
+                    } catch (Exception ex) {
+                        log.error("Error while creating index for table: <{}>", tableName, ex);
+                    }
+                }
+            }
+        });
     }
 
     public static class InternalBundleContext {

@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.net.URL;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,13 +19,9 @@ public class BundleClassLoaderHolder extends ClassLoader {
 
     private Map<String, SingleBundleClassLoader> bundleJarClassLoaders = new HashMap<>();
 
-    void addJar(String bundleName, Path jarPath) {
-        String jarFileName = jarPath.getFileName().toString();
-        log.info("Adding jar <{}> to classpath", jarFileName);
-        SingleBundleClassLoader singleBundleCLassLoader = new SingleBundleClassLoader(jarPath);
-        TouchHomeUtils.addClassLoader(bundleName, singleBundleCLassLoader);
-        bundleJarClassLoaders.put(bundleName, singleBundleCLassLoader);
-        // super.addLoader(internalJarClassLoader);
+    public void setClassLoaders(String bundleId, ClassLoader classLoader) {
+        TouchHomeUtils.addClassLoader(bundleId, classLoader);
+        bundleJarClassLoaders.put(bundleId, (SingleBundleClassLoader) classLoader);
     }
 
     void destroy(String bundleName) {

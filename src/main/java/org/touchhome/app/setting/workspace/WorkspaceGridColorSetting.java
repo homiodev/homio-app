@@ -23,4 +23,9 @@ public class WorkspaceGridColorSetting implements SettingPlugin {
     public int order() {
         return 200;
     }
+
+    @Override
+    public boolean isReverted() {
+        return true;
+    }
 }

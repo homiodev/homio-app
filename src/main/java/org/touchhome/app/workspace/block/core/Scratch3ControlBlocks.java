@@ -37,7 +37,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private final BroadcastLockManager broadcastLockManager;
 
     public Scratch3ControlBlocks(BroadcastLockManager broadcastLockManager, EntityContext entityContext) {
-        super("control", null, entityContext, null);
+        super("control", entityContext);
         this.broadcastLockManager = broadcastLockManager;
 
         // Blocks
@@ -80,7 +80,6 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     private void lockForEvent(WorkspaceBlock workspaceBlock, String inputName, Supplier<Boolean> supplier) {
         if (workspaceBlock.hasInput(inputName) && workspaceBlock.hasInput(SUBSTACK)) {
-
             WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
             BroadcastLock lock = broadcastLockManager.listenEvent(workspaceBlock, supplier);
             while (!Thread.currentThread().isInterrupted()) {

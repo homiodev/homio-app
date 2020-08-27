@@ -1,12 +1,11 @@
 package org.touchhome.app.workspace.block.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.jayway.jsonpath.JsonPath;
 import lombok.Getter;
-import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.repository.workspace.backup.WorkspaceBackupRepository;
+import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.app.workspace.WorkspaceBlockImpl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.workspace.WorkspaceJsonVariableEntity;
@@ -22,10 +21,8 @@ import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.scratch.WorkspaceBlock;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
-import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
 import java.util.Date;
-import java.util.Map;
 
 import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
@@ -60,14 +57,19 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block getJsonVariableToBlock;
 
     private final WorkspaceBackupRepository workspaceBackupRepository;
-    private final BroadcastLockManager broadcastLockManager;
+    private final BroadcastLockManagerImpl broadcastLockManager;
 
-    public Scratch3DataBlocks(EntityContext entityContext, WorkspaceBackupRepository workspaceBackupRepository, BroadcastLockManager broadcastLockManager) {
-        super("data", null, entityContext, null);
+    private final Scratch3Block getPrevVariableBlock;
+    private Object lastValue;
+
+    public Scratch3DataBlocks(EntityContext entityContext, WorkspaceBackupRepository workspaceBackupRepository, BroadcastLockManagerImpl broadcastLockManager) {
+        super("data", entityContext);
         this.workspaceBackupRepository = workspaceBackupRepository;
         this.broadcastLockManager = broadcastLockManager;
 
         // Blocks
+        this.getPrevVariableBlock = Scratch3Block.ofEvaluate("prev_variable", BlockType.reporter, this::getPreviousValue);
+
         this.isBoolVariableTrueBlock = Scratch3Block.ofEvaluate("bool_variables", BlockType.reporter, this::isBoolVariableTrueReporter);
         this.setBooleanBlock = Scratch3Block.ofHandler("set_boolean", BlockType.command, this::setBooleanHandler);
         this.inverseBooleanBlock = Scratch3Block.ofHandler("inverse_boolean", BlockType.command, this::inverseBooleanHandler);
@@ -90,6 +92,11 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         this.variableGroupLink = Scratch3Block.ofHandler("group_variable_link", BlockType.hat, this::variableGroupLinkHandler);
 
         this.postConstruct();
+    }
+
+    private Object getPreviousValue(WorkspaceBlock workspaceBlock) {
+        WorkspaceBlockImpl workspaceBlockImpl = (WorkspaceBlockImpl) workspaceBlock;
+        return workspaceBlockImpl.getLastValue();
     }
 
     private Object getJsonVariableToReporter(WorkspaceBlock workspaceBlock) {
@@ -128,15 +135,11 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void booleanEventChangesHandler(WorkspaceBlock workspaceBlock) {
-        WorkspaceBlock substack = workspaceBlock.getNext();
-        if (substack != null) {
+        if (workspaceBlock.hasNext()) {
             String varRefId = workspaceBlock.getFieldId("bool_variables_group");
-            BroadcastLock lock = broadcastLockManager.getOrCreateLock(WorkspaceBooleanEntity.PREFIX + varRefId);
-            while (!Thread.currentThread().isInterrupted()) {
-                if (lock.await(workspaceBlock)) {
-                    substack.handle();
-                }
-            }
+            BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, WorkspaceBooleanEntity.PREFIX + varRefId);
+
+            workspaceBlock.subscribeToLock(lock);
         }
     }
 

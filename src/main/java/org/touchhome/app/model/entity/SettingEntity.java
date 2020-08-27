@@ -13,6 +13,7 @@ import javax.persistence.Entity;
 import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -23,8 +24,6 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     public static final String PREFIX = "st_";
 
     private String value;
-
-    private String bundle;
 
     @Transient
     private String color;
@@ -42,7 +41,10 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     private String subGroupKey;
 
     @Transient
-    private String[] pages;
+    private String bundle;
+
+    @Transient
+    private Set<String> pages;
 
     @Transient
     private int order;
@@ -61,6 +63,9 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
 
     @Transient
     private SettingPlugin.SettingType settingType;
+
+    @Transient
+    private Boolean isReverted;
 
     @Transient
     private JSONObject parameters;

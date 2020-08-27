@@ -6,13 +6,13 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastValueCrudEntity;
 import org.touchhome.app.repository.workspace.WorkspaceBroadcastRepository;
+import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.scratch.BlockType;
 import org.touchhome.bundle.api.scratch.Scratch3Block;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.scratch.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
-import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
 import java.util.Date;
 
@@ -22,10 +22,10 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
 
     private final Scratch3Block receiveEvent;
     private final Scratch3Block broadcastEvent;
-    private final BroadcastLockManager broadcastLockManager;
+    private final BroadcastLockManagerImpl broadcastLockManager;
 
-    public Scratch3EventsBlocks(BroadcastLockManager broadcastLockManager, EntityContext entityContext) {
-        super("event", null, entityContext, null);
+    public Scratch3EventsBlocks(BroadcastLockManagerImpl broadcastLockManager, EntityContext entityContext) {
+        super("event", entityContext);
         this.broadcastLockManager = broadcastLockManager;
 
         // Blocks
@@ -47,16 +47,11 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
 
     @SneakyThrows
     private void receiveEventHandler(WorkspaceBlock workspaceBlock) {
-        String broadcastRefEntityID = workspaceBlock.getFieldId("BROADCAST_OPTION");
-        BroadcastLock lock = broadcastLockManager.getOrCreateLock(broadcastRefEntityID);
+        if(workspaceBlock.hasNext()) {
+            String broadcastRefEntityID = workspaceBlock.getFieldId("BROADCAST_OPTION");
+            BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, broadcastRefEntityID);
 
-        WorkspaceBlock substack = workspaceBlock.getNext();
-        if (substack != null) {
-            while (!Thread.currentThread().isInterrupted()) {
-                if (lock.await(workspaceBlock)) {
-                    substack.handle();
-                }
-            }
+            workspaceBlock.subscribeToLock(lock);
         }
     }
 

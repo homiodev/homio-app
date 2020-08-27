@@ -1,7 +1,6 @@
 package org.touchhome.app.rest;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.manager.BundleManager;
@@ -12,12 +11,14 @@ import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.json.Option;
+import org.touchhome.bundle.api.manager.En;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/rest/setting")
@@ -26,6 +27,9 @@ public class SettingController {
 
     private final ConsoleController consoleController;
     private final BundleManager bundleManager;
+
+    private Map<String, Set<String>> settingToPages;
+    private Set<SettingEntity> descriptionSettings;
 
     private EntityContext entityContext;
     private Map<Class<? extends BundleSettingPlugin>, SettingEntity> transientSettings;
@@ -58,30 +62,31 @@ public class SettingController {
         }
     }
 
+    @GetMapping("name")
+    public List<Option> getSettingNames() {
+        return Option.list(entityContext.findAll(SettingEntity.class));
+    }
+
     @GetMapping
     public List<SettingEntity> getSettings() {
-        List<SettingEntity> result = entityContext.findAll(SettingEntity.class);
+        List<SettingEntity> settings = entityContext.findAll(SettingEntity.class);
         for (Map.Entry<Class<? extends BundleSettingPlugin>, SettingEntity> entry : transientSettings.entrySet()) {
-            result.add(entry.getValue().setValue(String.valueOf(entityContext.getSettingValue((Class) entry.getKey()))));
+            settings.add(entry.getValue().setValue(String.valueOf(entityContext.getSettingValue((Class) entry.getKey()))));
         }
 
         UserEntity userEntity = entityContext.getUser();
 
-        Set<String> pages = new HashSet<>();
-        for (SettingEntity settingEntity : result) {
+        if (settingToPages == null) {
+            settingToPages = new HashMap<>();
+            this.updateSettingToPages(settings);
+        }
+
+        for (SettingEntity settingEntity : settings) {
             BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(settingEntity.getEntityID());
 
-            // fulfill console pages
-            if (plugin instanceof BundleConsoleSettingPlugin) {
-                for (Map.Entry<String, ConsolePlugin> entry : consoleController.getConsolePluginsMap().entrySet()) {
-                    if (((BundleConsoleSettingPlugin) plugin).acceptConsolePluginPage(entry.getValue())) {
-                        pages.add(entry.getKey());
-                    }
-                }
-                if (!pages.isEmpty()) {
-                    settingEntity.setPages(pages.toArray(new String[0]));
-                    pages.clear();
-                }
+            // fulfill pages
+            if (settingToPages.containsKey(settingEntity.getEntityID())) {
+                settingEntity.setPages(settingToPages.get(settingEntity.getEntityID()));
             }
 
             // hide secured values if requires
@@ -90,17 +95,51 @@ public class SettingController {
             }
         }
 
-        // add setting descriptions
-        for (BundleEntrypoint bundleEntrypoint : bundleManager.getBundles()) {
-            if (StringUtils.isNotEmpty(bundleEntrypoint.getSettingDescription())) {
-                result.add(new SettingEntity().setSettingType(BundleSettingPlugin.SettingType.Description)
-                        .setBundle(bundleEntrypoint.getBundleId())
-                        .setEntityID("st_" + bundleEntrypoint.getBundleId() + "_Description")
-                        .setValue(bundleEntrypoint.getSettingDescription()).setOrder(1));
-            }
+        if (descriptionSettings == null) {
+            descriptionSettings = new HashSet<>();
+            updateSettingDescription(settings);
         }
 
-        Collections.sort(result);
-        return result;
+        settings.addAll(descriptionSettings);
+        Collections.sort(settings);
+        return settings;
+    }
+
+    private void updateSettingToPages(List<SettingEntity> settings) {
+        // fulfill console pages
+        for (SettingEntity settingEntity : settings) {
+            BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(settingEntity.getEntityID());
+            if (plugin instanceof BundleConsoleSettingPlugin) {
+                for (Map.Entry<String, ConsolePlugin> entry : consoleController.getConsolePluginsMap().entrySet()) {
+                    if (((BundleConsoleSettingPlugin) plugin).acceptConsolePluginPage(entry.getValue())) {
+                        settingToPages.computeIfAbsent(settingEntity.getEntityID(), s -> new HashSet<>()).add(entry.getKey());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * add setting descriptions
+     */
+    private void updateSettingDescription(List<SettingEntity> settings) {
+        Set<String> bundleSettings = settings.stream().map(e -> {
+            BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(e.getEntityID());
+            return SettingRepository.getSettingBundleName(entityContext, plugin);
+        }).filter(Objects::nonNull).collect(Collectors.toSet());
+
+        for (BundleEntrypoint bundleEntrypoint : bundleManager.getBundles()) {
+            if (bundleSettings.contains(bundleEntrypoint.getBundleId())) {
+                // find if description exists inside lang.json
+                String descriptionKey = bundleEntrypoint.getBundleId() + ".setting.description";
+                String description = En.get().findPathText(descriptionKey);
+                if (description != null) {
+                    this.descriptionSettings.add(new SettingEntity().setSettingType(BundleSettingPlugin.SettingType.Description)
+                            .setBundle(bundleEntrypoint.getBundleId())
+                            .setEntityID("st_" + bundleEntrypoint.getBundleId() + "_Description")
+                            .setValue(descriptionKey).setOrder(1));
+                }
+            }
+        }
     }
 }

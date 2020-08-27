@@ -1,5 +1,6 @@
 package org.touchhome.app.thread.js.impl;
 
+import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import org.touchhome.app.manager.ScriptManager;
@@ -42,20 +43,17 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
 
         appendFunc(script, "readyOnClient", "READY_BLOCK", compileScriptContext.getFormattedJavaScript());
 
-        /*String readVariablesOnServerValues = ScriptEntity.getFunctionWithName(javaScript, "readVariablesOnServerValues");
-        if (readVariablesOnServerValues != null) {
-            ScriptObjectMirror serverVariables = (ScriptObjectMirror) ((Invocable) compiledScript.getEngine()).invokeFunction("readVariablesOnServerValues", params);
-            ScriptObjectMirror serverKeys = (ScriptObjectMirror) ((Invocable) compiledScript.getEngine()).invokeFunction("readVariablesOnServerKeys", params);
-            script.append("VARIABLE_BLOCK(");
-            Iterator<Object> serverVariablesIterator = serverVariables.values().iterator();
-            for (Object serviceKey : serverKeys.values()) {
-                script.append(serviceKey).append("=").append(serverVariablesIterator.next()).append(";");
-            }
-            script.append(")VARIABLE_BLOCK");
-        }*/
-
         Object value = ((Invocable) compileScriptContext.getCompiledScript().getEngine()).invokeFunction("run", params);
-        script.append(value);
+        if (value instanceof ScriptObjectMirror) {
+            ScriptObjectMirror obj = (ScriptObjectMirror) value;
+            JSONObject jsonObject = new JSONObject();
+            for (String key : obj.keySet()) {
+                jsonObject.put(key, obj.get(key));
+            }
+            script.append(jsonObject);
+        } else {
+            script.append(value);
+        }
 
         return script.toString();
     }

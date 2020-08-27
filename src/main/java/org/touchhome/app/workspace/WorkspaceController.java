@@ -26,6 +26,7 @@ import org.touchhome.bundle.api.scratch.Scratch3Block;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
+import org.touchhome.bundle.hardware.Scratch3HardwareBlocks;
 
 import java.io.InputStream;
 import java.util.*;
@@ -38,8 +39,11 @@ import java.util.regex.Pattern;
 public class WorkspaceController {
 
     private static final Pattern ID_PATTERN = Pattern.compile("[a-z-]*");
+
     private static final List<Class> systemScratches = Arrays.asList(Scratch3ControlBlocks.class, Scratch3MiscBlocks.class,
             Scratch3DataBlocks.class, Scratch3EventsBlocks.class, Scratch3OperatorBlocks.class);
+
+    private static final List<Class> inlineScratches = Arrays.asList(Scratch3OtherBlocks.class, Scratch3HardwareBlocks.class);
 
     private final BundleController bundleController;
     private final EntityContext entityContext;
@@ -53,7 +57,7 @@ public class WorkspaceController {
         this.extensions = new ArrayList<>();
         for (Scratch3ExtensionBlocks scratch3ExtensionBlock : entityContext.getBeansOfType(Scratch3ExtensionBlocks.class)) {
             if (!ID_PATTERN.matcher(scratch3ExtensionBlock.getId()).matches()) {
-                throw new IllegalArgumentException("Wrong Scratch3Extension: <" + scratch3ExtensionBlock.getId() + ">. Must contains [a-z] or '-'");
+                throw new IllegalArgumentException("Wrong Scratch3Extension: <" + scratch3ExtensionBlock.getId() + ">. Must contains [a-z], '-' or '_");
             }
 
             if (!systemScratches.contains(scratch3ExtensionBlock.getClass())) {
@@ -61,10 +65,15 @@ public class WorkspaceController {
                 if (bundleEntrypoint == null && scratch3ExtensionBlock.getId().contains("-")) {
                     bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId().substring(0, scratch3ExtensionBlock.getId().indexOf("-")));
                 }
+                int order = Integer.MAX_VALUE;
                 if (bundleEntrypoint == null) {
-                    throw new IllegalStateException("Unable to find bundle context with id: " + scratch3ExtensionBlock.getId());
+                    if (!inlineScratches.contains(scratch3ExtensionBlock.getClass())) {
+                        throw new IllegalStateException("Unable to find bundle context with id: " + scratch3ExtensionBlock.getId());
+                    }
+                } else {
+                    order = bundleEntrypoint.order();
                 }
-                Scratch3ExtensionImpl scratch3ExtensionImpl = new Scratch3ExtensionImpl(scratch3ExtensionBlock.getId(), scratch3ExtensionBlock, bundleEntrypoint.order());
+                Scratch3ExtensionImpl scratch3ExtensionImpl = new Scratch3ExtensionImpl(scratch3ExtensionBlock.getId(), scratch3ExtensionBlock, order);
 
                 if (!oldExtension.contains(scratch3ExtensionImpl)) {
                     insertScratch3Spaces(scratch3ExtensionBlock);

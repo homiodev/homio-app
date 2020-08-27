@@ -1,5 +1,6 @@
 package org.touchhome.bundle.hardware;
 
+import com.fazecast.jSerialComm.SerialPort;
 import com.pi4j.system.SystemInfo;
 import lombok.*;
 import org.springframework.stereotype.Component;
@@ -55,6 +56,12 @@ public class HardwareConsolePlugin implements ConsolePlugin {
         list.add(new HardwarePluginEntity("Cloud status", this.entityContext.getSettingValue(CloudProviderSetting.class).getStatus()));
         list.add(new HardwarePluginEntity("Cloud keystore", user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));
         list.add(new HardwarePluginEntity("Features", getFeatures()));
+
+        for (SerialPort serialPort : SerialPort.getCommPorts()) {
+            list.add(new HardwarePluginEntity("Com port <" + serialPort.getSystemPortName() + ">", serialPort.getDescriptivePortName() +
+                    " [" + serialPort.getBaudRate() + "/" + serialPort.getPortDescription() + "]"));
+        }
+
         Collections.sort(list);
 
         return list;

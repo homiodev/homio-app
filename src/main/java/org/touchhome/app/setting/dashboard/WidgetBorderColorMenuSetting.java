@@ -28,4 +28,9 @@ public class WidgetBorderColorMenuSetting implements SettingPlugin<String> {
     public int order() {
         return 100;
     }
+
+    @Override
+    public boolean isReverted() {
+        return true;
+    }
 }

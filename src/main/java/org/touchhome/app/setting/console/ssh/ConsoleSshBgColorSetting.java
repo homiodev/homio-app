@@ -23,4 +23,9 @@ public class ConsoleSshBgColorSetting implements BundleConsoleSettingPlugin<Stri
     public String[] pages() {
         return new String[]{"ssh"};
     }
+
+    @Override
+    public boolean isReverted() {
+        return true;
+    }
 }

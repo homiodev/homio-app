@@ -27,7 +27,7 @@ public class ExtraBundleController {
     public Set<ExtraBundleJson> getInstalledBundles() {
         return internalManager.getBundles().values().stream()
                 .filter(b -> b.getBundleContext() != null)
-                .map(b -> new ExtraBundleJson(b.getBundleContext().getBundleName(), b.getBundleContext().getVersion()))
+                .map(b -> new ExtraBundleJson(b.getBundleContext().getBundleID(), b.getBundleContext().getVersion()))
                 .collect(Collectors.toSet());
     }
 

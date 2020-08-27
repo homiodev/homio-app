@@ -23,4 +23,9 @@ public class WorkspaceToolboxColorSetting implements SettingPlugin {
     public int order() {
         return 300;
     }
+
+    @Override
+    public boolean isReverted() {
+        return true;
+    }
 }

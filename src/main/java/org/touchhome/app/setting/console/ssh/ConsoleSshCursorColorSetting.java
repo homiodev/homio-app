@@ -23,4 +23,9 @@ public class ConsoleSshCursorColorSetting implements BundleConsoleSettingPlugin<
     public String[] pages() {
         return new String[]{"ssh"};
     }
+
+    @Override
+    public boolean isReverted() {
+        return true;
+    }
 }

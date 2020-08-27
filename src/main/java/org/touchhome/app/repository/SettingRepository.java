@@ -5,16 +5,23 @@ import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.setting.SettingPlugin;
-import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.repository.AbstractRepository;
+import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 import static org.touchhome.bundle.api.BundleEntrypoint.BUNDLE_PREFIX;
 
 @Repository
 public class SettingRepository extends AbstractRepository<SettingEntity> {
 
+    private final static Map<String, String> settingToBundleMap = new HashMap<>();
     private final EntityContext entityContext;
 
     public SettingRepository(EntityContext entityContext) {
@@ -24,11 +31,6 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
 
     public static SettingEntity createSettingEntityFromPlugin(BundleSettingPlugin settingPlugin, SettingEntity settingEntity, EntityContext entityContext) {
         settingEntity.computeEntityID(() -> getKey(settingPlugin));
-        String name = settingPlugin.getClass().getName();
-        if (name.startsWith(BUNDLE_PREFIX)) {
-            String bundle = name.substring(BUNDLE_PREFIX.length(), name.indexOf('.', BUNDLE_PREFIX.length()));
-            settingEntity.setBundle(bundle);
-        }
         if (settingPlugin.transientState()) {
             settingEntity.setEntityID(getKey(settingPlugin));
             fulfillEntityFromPlugin(settingEntity, entityContext);
@@ -38,6 +40,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
 
     private static void fulfillEntityFromPlugin(SettingEntity entity, EntityContext entityContext) {
         BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(entity.getEntityID());
+        entity.setBundle(getSettingBundleName(entityContext, plugin));
         entity.setDefaultValue(plugin.getDefaultValue());
         entity.setOrder(plugin.order());
         entity.setAdvanced(plugin.isAdvanced());
@@ -45,6 +48,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         entity.setIcon(plugin.getIcon());
         entity.setToggleIcon(plugin.getToggleIcon());
         entity.setSettingType(plugin.getSettingType());
+        entity.setIsReverted(plugin.isReverted() ? true : null);
         entity.setParameters(plugin.getParameters(entityContext, entity.getValue()));
         if (entity.getSettingType() == BundleSettingPlugin.SettingType.SelectBox) {
             entity.setAvailableValues(plugin.loadAvailableValues(entityContext));
@@ -58,7 +62,10 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         }
 
         if (plugin instanceof BundleConsoleSettingPlugin) {
-            entity.setPages(((BundleConsoleSettingPlugin) plugin).pages());
+            String[] pages = ((BundleConsoleSettingPlugin) plugin).pages();
+            if (pages != null && pages.length > 0) {
+                entity.setPages(new HashSet<>(Arrays.asList(pages)));
+            }
         }
     }
 
@@ -93,5 +100,24 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
                 entityContext.delete(entity);
             }
         }
+    }
+
+    /**
+     * Search bundleId for setting.
+     */
+    public static String getSettingBundleName(EntityContext entityContext, BundleSettingPlugin settingPlugin) {
+        String name = settingPlugin.getClass().getName();
+        return settingToBundleMap.computeIfAbsent(name, key -> {
+            if (name.startsWith(BUNDLE_PREFIX)) {
+                String pathName = name.substring(0, BUNDLE_PREFIX.length() + name.substring(BUNDLE_PREFIX.length()).indexOf('.'));
+                BundleEntrypoint bundleEntrypoint = entityContext.getBeansOfType(BundleEntrypoint.class)
+                        .stream().filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
+                if (bundleEntrypoint == null) {
+                    throw new IllegalStateException("Unable find bundle entrypoint for setting: ");
+                }
+                return bundleEntrypoint.getBundleId();
+            }
+            return null;
+        });
     }
 }

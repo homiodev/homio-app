@@ -23,4 +23,9 @@ public class WorkspaceBgColorSetting implements SettingPlugin {
     public int order() {
         return 100;
     }
+
+    @Override
+    public boolean isReverted() {
+        return true;
+    }
 }

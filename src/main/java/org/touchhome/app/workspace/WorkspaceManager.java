@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 public class WorkspaceManager {
 
     private final Set<String> ONCE_EXECUTION_BLOCKS = new HashSet<>(Arrays.asList("boolean_link", "group_variable_link"));
-    private final BroadcastLockManager broadcastLockManager;
+    private final BroadcastLockManagerImpl broadcastLockManager;
     private final EntityContext entityContext;
     private final BackgroundProcessManager backgroundProcessManager;
 

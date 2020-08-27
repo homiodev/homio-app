@@ -59,6 +59,7 @@ import org.touchhome.bundle.api.model.DeviceBaseEntity;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
 
+import javax.persistence.EntityManager;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -66,6 +67,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -83,7 +85,6 @@ import java.util.concurrent.Executors;
 @EnableTransactionManagement(proxyTargetClass = true)
 public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
 
-    public static final String asd = "asd";
     @Autowired
     private ApplicationContext applicationContext;
 
@@ -225,7 +226,8 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
         if (event instanceof ContextRefreshedEvent && !this.applicationReady) {
             this.applicationReady = true;
             ApplicationContext applicationContext = ((ContextRefreshedEvent) event).getApplicationContext();
-            applicationContext.getBean(InternalManager.class).afterContextStart(applicationContext);
+            InternalManager internalManager = applicationContext.getBean(InternalManager.class);
+            internalManager.afterContextStart(applicationContext);
         }
     }
 
