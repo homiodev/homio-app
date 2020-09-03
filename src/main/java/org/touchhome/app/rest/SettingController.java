@@ -71,7 +71,10 @@ public class SettingController {
     public List<SettingEntity> getSettings() {
         List<SettingEntity> settings = entityContext.findAll(SettingEntity.class);
         for (Map.Entry<Class<? extends BundleSettingPlugin>, SettingEntity> entry : transientSettings.entrySet()) {
-            settings.add(entry.getValue().setValue(String.valueOf(entityContext.getSettingValue((Class) entry.getKey()))));
+            SettingEntity settingEntity = entry.getValue();
+            settingEntity.setValue(String.valueOf(entityContext.getSettingValue((Class) entry.getKey())));
+            SettingRepository.fulfillEntityFromPlugin(settingEntity, entityContext);
+            settings.add(settingEntity);
         }
 
         UserEntity userEntity = entityContext.getUser();
@@ -81,17 +84,22 @@ public class SettingController {
             this.updateSettingToPages(settings);
         }
 
-        for (SettingEntity settingEntity : settings) {
+        for (Iterator<SettingEntity> iterator = settings.iterator(); iterator.hasNext(); ) {
+            SettingEntity settingEntity = iterator.next();
             BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(settingEntity.getEntityID());
+            if (plugin != null && plugin.isVisible(entityContext)) {
 
-            // fulfill pages
-            if (settingToPages.containsKey(settingEntity.getEntityID())) {
-                settingEntity.setPages(settingToPages.get(settingEntity.getEntityID()));
-            }
+                // fulfill pages
+                if (settingToPages.containsKey(settingEntity.getEntityID())) {
+                    settingEntity.setPages(settingToPages.get(settingEntity.getEntityID()));
+                }
 
-            // hide secured values if requires
-            if (plugin.isSecuredValue() && !userEntity.isAdmin()) {
-                settingEntity.setValue("********");
+                // hide secured values if requires
+                if (plugin.isSecuredValue() && !userEntity.isAdmin()) {
+                    settingEntity.setValue("********");
+                }
+            } else {
+                iterator.remove();
             }
         }
 
@@ -125,7 +133,7 @@ public class SettingController {
     private void updateSettingDescription(List<SettingEntity> settings) {
         Set<String> bundleSettings = settings.stream().map(e -> {
             BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(e.getEntityID());
-            return SettingRepository.getSettingBundleName(entityContext, plugin);
+            return SettingRepository.getSettingBundleName(entityContext, plugin.getClass());
         }).filter(Objects::nonNull).collect(Collectors.toSet());
 
         for (BundleEntrypoint bundleEntrypoint : bundleManager.getBundles()) {

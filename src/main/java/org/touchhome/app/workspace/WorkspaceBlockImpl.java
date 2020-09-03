@@ -211,7 +211,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     @Override
     public String getInputString(String key) {
-        return String.valueOf(getInput(key, true));
+        Object input = getInput(key, true);
+        return input == null ? null : String.valueOf(input);
     }
 
     @Override
@@ -256,7 +257,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                     if (fetchValue) {
                         Object evaluateValue = this.allBlocks.get(ref).evaluate();
                         this.lastValue = new AtomicReference<>(evaluateValue);
-                        return String.valueOf(evaluateValue);
+                        return evaluateValue;
                     }
                     return ref;
                 }

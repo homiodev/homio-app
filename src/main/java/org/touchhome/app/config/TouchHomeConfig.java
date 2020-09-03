@@ -13,6 +13,7 @@ import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControlHandlerInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -44,6 +45,7 @@ import org.springframework.web.servlet.config.annotation.ContentNegotiationConfi
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import org.touchhome.app.jsog.JSOGGenerator;
 import org.touchhome.app.jsog.JSOGResolver;
 import org.touchhome.app.manager.CacheService;
@@ -89,6 +91,17 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     private ApplicationContext applicationContext;
 
     private boolean applicationReady;
+
+    @Bean
+   public WebMvcRegistrations mvcRegistrations() {
+       return new WebMvcRegistrations() {
+           private ExtRequestMappingHandlerMapping handlerMapping = new ExtRequestMappingHandlerMapping();
+           @Override
+           public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
+               return handlerMapping;
+           }
+       };
+   }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {

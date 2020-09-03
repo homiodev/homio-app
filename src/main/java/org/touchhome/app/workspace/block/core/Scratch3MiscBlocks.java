@@ -66,12 +66,9 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
 
     @SneakyThrows
     private void printHandler(WorkspaceBlock workspaceBlock) {
-        String value = workspaceBlock.getInputString("VALUE");
-        sendWorkspaceBlockChangeValue(workspaceBlock, value);
-    }
-
-    private void sendWorkspaceBlockChangeValue(WorkspaceBlock workspaceBlock, String value) {
-        ObjectNode node = objectMapper.createObjectNode().put("block", workspaceBlock.getId()).put("value", value);
+        Object value = workspaceBlock.getInput("VALUE", true);
+        String str = value == null ? "NULL" : value instanceof byte[] ? new String((byte[]) value) : value.toString();
+        ObjectNode node = objectMapper.createObjectNode().put("block", workspaceBlock.getId()).put("value", str);
         entityContext.sendNotification("-workspace-block-update", node);
     }
 }

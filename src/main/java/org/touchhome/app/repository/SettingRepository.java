@@ -38,33 +38,37 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         return settingEntity;
     }
 
-    private static void fulfillEntityFromPlugin(SettingEntity entity, EntityContext entityContext) {
+    public static void fulfillEntityFromPlugin(SettingEntity entity, EntityContext entityContext) {
         BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(entity.getEntityID());
-        entity.setBundle(getSettingBundleName(entityContext, plugin));
-        entity.setDefaultValue(plugin.getDefaultValue());
-        entity.setOrder(plugin.order());
-        entity.setAdvanced(plugin.isAdvanced());
-        entity.setColor(plugin.getIconColor());
-        entity.setIcon(plugin.getIcon());
-        entity.setToggleIcon(plugin.getToggleIcon());
-        entity.setSettingType(plugin.getSettingType());
-        entity.setIsReverted(plugin.isReverted() ? true : null);
-        entity.setParameters(plugin.getParameters(entityContext, entity.getValue()));
-        if (entity.getSettingType() == BundleSettingPlugin.SettingType.SelectBox) {
-            entity.setAvailableValues(plugin.loadAvailableValues(entityContext));
-        }
+        if (plugin != null) {
+            entity.setBundle(getSettingBundleName(entityContext, plugin.getClass()));
+            entity.setDefaultValue(plugin.getDefaultValue());
+            entity.setOrder(plugin.order());
+            entity.setAdvanced(plugin.isAdvanced());
+            entity.setColor(plugin.getIconColor());
+            entity.setIcon(plugin.getIcon());
+            entity.setToggleIcon(plugin.getToggleIcon());
+            entity.setSettingType(plugin.getSettingType());
+            entity.setReverted(plugin.isReverted() ? true : null);
+            entity.setParameters(plugin.getParameters(entityContext, entity.getValue()));
+            entity.setDisabled(plugin.isDisabled(entityContext) ? true : null);
+            entity.setRequired(plugin.isRequired());
+            if (entity.getSettingType() == BundleSettingPlugin.SettingType.SelectBox) {
+                entity.setAvailableValues(plugin.loadAvailableValues(entityContext));
+            }
 
-        if (plugin instanceof SettingPlugin) {
-            SettingPlugin settingPlugin = (SettingPlugin) plugin;
-            entity.setGroupKey(settingPlugin.getGroupKey().name());
-            entity.setGroupIcon(settingPlugin.getGroupKey().getIcon());
-            entity.setSubGroupKey(settingPlugin.getSubGroupKey());
-        }
+            if (plugin instanceof SettingPlugin) {
+                SettingPlugin settingPlugin = (SettingPlugin) plugin;
+                entity.setGroupKey(settingPlugin.getGroupKey().name());
+                entity.setGroupIcon(settingPlugin.getGroupKey().getIcon());
+                entity.setSubGroupKey(settingPlugin.getSubGroupKey());
+            }
 
-        if (plugin instanceof BundleConsoleSettingPlugin) {
-            String[] pages = ((BundleConsoleSettingPlugin) plugin).pages();
-            if (pages != null && pages.length > 0) {
-                entity.setPages(new HashSet<>(Arrays.asList(pages)));
+            if (plugin instanceof BundleConsoleSettingPlugin) {
+                String[] pages = ((BundleConsoleSettingPlugin) plugin).pages();
+                if (pages != null && pages.length > 0) {
+                    entity.setPages(new HashSet<>(Arrays.asList(pages)));
+                }
             }
         }
     }
@@ -92,7 +96,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         fulfillEntityFromPlugin(entity, entityContext);
     }
 
-    @Transactional
+    /*@Transactional
     public void deleteRemovedSettings() {
         for (SettingEntity entity : listAll()) {
             BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(entity.getEntityID());
@@ -100,13 +104,13 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
                 entityContext.delete(entity);
             }
         }
-    }
+    }*/
 
     /**
      * Search bundleId for setting.
      */
-    public static String getSettingBundleName(EntityContext entityContext, BundleSettingPlugin settingPlugin) {
-        String name = settingPlugin.getClass().getName();
+    public static String getSettingBundleName(EntityContext entityContext, Class<? extends BundleSettingPlugin> settingPluginClass) {
+        String name = settingPluginClass.getName();
         return settingToBundleMap.computeIfAbsent(name, key -> {
             if (name.startsWith(BUNDLE_PREFIX)) {
                 String pathName = name.substring(0, BUNDLE_PREFIX.length() + name.substring(BUNDLE_PREFIX.length()).indexOf('.'));

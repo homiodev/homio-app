@@ -65,7 +65,13 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     private SettingPlugin.SettingType settingType;
 
     @Transient
-    private Boolean isReverted;
+    private Boolean reverted;
+
+    @Transient
+    private Boolean disabled;
+
+    @Transient
+    private Boolean required;
 
     @Transient
     private JSONObject parameters;

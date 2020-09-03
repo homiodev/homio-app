@@ -23,21 +23,22 @@ import java.util.stream.Collectors;
 
 @Log4j2
 @Service
-public class BundleService {
+public class BundleContextService {
 
     private final Environment env;
     private final InternalManager internalManager;
     private final ApplicationContext parentContext;
-    private final BundleClassLoaderHolder bundleClassLoaderHolder;
     private final Map<String, BundleContext> bundleContextMap = new HashMap<>();
+    private final Map<String, BundleContext> artifactIdContextMap = new HashMap<>();
 
-    public BundleService(Environment env, InternalManager internalManager, ApplicationContext parentContext, BundleClassLoaderHolder bundleClassLoaderHolder) {
+    public BundleContextService(Environment env, InternalManager internalManager, ApplicationContext parentContext) {
         this.env = env;
         this.internalManager = internalManager;
         this.parentContext = parentContext;
-        this.bundleClassLoaderHolder = bundleClassLoaderHolder;
         for (String systemBundle : TouchHomeUtils.SYSTEM_BUNDLES) {
-            this.bundleContextMap.put(systemBundle, new BundleContext(systemBundle));
+            BundleContext systemBundleContext = new BundleContext(systemBundle);
+            this.bundleContextMap.put(systemBundle, systemBundleContext);
+            this.artifactIdContextMap.put(systemBundle, systemBundleContext);
         }
     }
 
@@ -48,51 +49,60 @@ public class BundleService {
     public void loadBundlesFromPath() {
         Path bundlePath = TouchHomeUtils.getBundlePath();
         for (Path bundleContextFile : findBundleContextFilesFromPath(bundlePath)) {
-            BundleContext context = new BundleContext(bundleContextFile);
-            bundleContextMap.put(context.getPomFile().getArtifactId(), context);
+            BundleContext bundleContext = new BundleContext(bundleContextFile);
+            artifactIdContextMap.put(bundleContext.getPomFile().getArtifactId(), bundleContext);
         }
-        for (String bundleName : bundleContextMap.keySet()) {
-            loadBundle(bundleName, null);
+        for (BundleContext context : artifactIdContextMap.values()) {
+            loadBundle(context);
         }
-        internalManager.addBundle(bundleContextMap);
+        internalManager.addBundle(artifactIdContextMap);
     }
 
-    private void loadBundle(String bundleName, Path bundleContextFile) {
-        if (bundleName == null) {
-            BundleContext context = new BundleContext(bundleContextFile);
-            bundleName = context.getPomFile().getArtifactId();
-            if (!bundleContextMap.containsKey(bundleName)) {
-                bundleContextMap.put(bundleName, context);
+    private void loadBundlesFromPath(Path bundleContextFile) {
+        BundleContext bundleContext = new BundleContext(bundleContextFile);
+        artifactIdContextMap.put(bundleContext.getPomFile().getArtifactId(), bundleContext);
+        loadBundle(bundleContext);
+        internalManager.addBundle(artifactIdContextMap);
+    }
+
+    private void loadBundle(String bundleId, Path bundleContextFile) {
+        BundleContext context = null;
+        String name = bundleId;
+        if (bundleId == null || !bundleContextMap.containsKey(bundleId)) {
+            context = new BundleContext(bundleContextFile);
+            if (name == null) {
+                name = context.getPomFile().getArtifactId();
             }
         }
-        if (!bundleContextMap.get(bundleName).isLoaded() && !bundleContextMap.get(bundleName).isInternal()) {
-            log.info("Try load bundle context <{}>.", bundleName);
+        loadBundle(context);
+    }
+
+    private void loadBundle(BundleContext context) {
+        if (!context.isLoaded() && !context.isInternal()) {
+            log.info("Try load bundle context <{}>.", context.getPomFile().getArtifactId());
             try {
-                if (loadContext(bundleName)) {
-                    log.info("bundle context <{}> registered successfully.", bundleName);
+                if (loadContext(context)) {
+                    log.info("bundle context <{}> registered successfully.", context.getPomFile().getArtifactId());
                 } else {
-                    log.info("bundle context <{}> already registered before.", bundleName);
+                    log.info("bundle context <{}> already registered before.", context.getPomFile().getArtifactId());
                 }
             } catch (Exception ex) {
-                log.error("Unable to load bundle context <{}>.", bundleName, ex);
+                log.error("Unable to load bundle context <{}>.", context.getPomFile().getArtifactId(), ex);
             }
         }
+        bundleContextMap.put(context.getBundleID(), context);
     }
 
     /**
      * Load bundle file (war/jar) into service. Creates separate spring context for this.
      */
     @SneakyThrows
-    private boolean loadContext(String bundleName) {
-        BundleContext context = this.bundleContextMap.get(bundleName);
-        if (context == null) {
-            throw new IllegalArgumentException("Unable to find bundle context: " + bundleName);
-        }
+    private boolean loadContext(BundleContext context) {
         if (context.isLoaded() || context.isInternal()) {
             return false;
         }
-        for (String dependencyBundleName : context.getDependencies()) {
-            this.loadContext(dependencyBundleName);
+        for (String artifactId : context.getDependencies()) {
+            this.loadContext(artifactIdContextMap.get(artifactId));
         }
 
         String jarFileName = context.getBundleContextFile().getFileName().toString();
@@ -110,15 +120,15 @@ public class BundleService {
     }
 
     @SneakyThrows
-    private void removeBundle(String bundleName) {
-        BundleContext context = this.bundleContextMap.remove(bundleName);
-        if (context != null) {
-            internalManager.removeBundle(bundleName);
+    private void removeBundle(String bundleId) {
+        BundleContext context = this.bundleContextMap.remove(bundleId);
+        if (context != null) { // TODO: gggggggggggggggggg
+            internalManager.removeBundle(bundleId);
             context.destroy();
             Files.delete(context.getBundleContextFile());
-            log.info("Bundle <{}> has been removed successfully", bundleName);
+            log.info("Bundle <{}> has been removed successfully", bundleId);
         } else {
-            log.warn("Unable to find bundle <{}>", bundleName);
+            log.warn("Unable to find bundle <{}>", bundleId);
         }
     }
 
@@ -126,18 +136,17 @@ public class BundleService {
         return Files.list(basePath).filter(path -> path.getFileName().toString().endsWith(".jar")).collect(Collectors.toList());
     }
 
-    public void installBundle(String name, String bundleUrl, String version) {
-        BundleContext context = this.bundleContextMap.get(name);
+    public void installBundle(String bundleId, String bundleUrl, String version) {
+        BundleContext context = this.bundleContextMap.get(bundleId);
         if (context != null) {
             if (context.getVersion().equals(version)) {
                 throw new IllegalStateException("Bundle <{}> already up to date");
             }
-            removeBundle(name);
+            removeBundle(bundleId);
         }
-        Path path = TouchHomeUtils.getBundlePath().resolve(name + ".jar");
+        Path path = TouchHomeUtils.getBundlePath().resolve(bundleId + ".jar");
         Curl.downloadToFile(bundleUrl, path);
-        loadBundle(null, path);
-        internalManager.addBundle(bundleContextMap);
+        loadBundlesFromPath(path);
     }
 
     public void uninstallBundle(String name) {

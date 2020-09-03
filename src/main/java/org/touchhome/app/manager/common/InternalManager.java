@@ -29,10 +29,11 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.touchhome.app.LogService;
+import org.touchhome.app.config.ExtRequestMappingHandlerMapping;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.extloader.BundleContext;
-import org.touchhome.app.extloader.BundleService;
+import org.touchhome.app.extloader.BundleContextService;
 import org.touchhome.app.hardware.HardwareEventsImpl;
 import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSON;
 import org.touchhome.app.manager.BundleManager;
@@ -76,6 +77,7 @@ import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 import org.touchhome.bundle.api.setting.BundleSettingPluginButton;
+import org.touchhome.bundle.api.setting.BundleSettingPluginStatus;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
@@ -155,6 +157,10 @@ public class InternalManager implements EntityContext {
             if (notifications != null) {
                 set.addAll(notifications);
             }
+            Class<? extends BundleSettingPluginStatus> statusSettingClass = bundleContext.bundleEntrypoint.getBundleStatusSetting();
+            if (statusSettingClass != null) {
+                set.add(getSettingValue(statusSettingClass).toNotification(SettingRepository.getSettingBundleName(this, statusSettingClass)));
+            }
         }
 
         return set;
@@ -194,9 +200,9 @@ public class InternalManager implements EntityContext {
             bundleEntrypoint.init();
         }
 
-        applicationContext.getBean(BundleService.class).loadBundlesFromPath();
+        applicationContext.getBean(BundleContextService.class).loadBundlesFromPath();
         // remove unused settings only after full load all external bundles
-        applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
+        // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
 
         applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
         applicationContext.getBean(WorkspaceManager.class).loadWorkspace();
@@ -222,10 +228,10 @@ public class InternalManager implements EntityContext {
                 broadcastLockManager.signalAll(source.getEntityID());
             }
         });
-        applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
+        // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
 
         notifications.add(NotificationEntityJSON.info("app-status")
-                .setName("App started at " + DateFormat.getDateTimeInstance().format(new Date())));
+                .setName("app").setDescription("Started at " + DateFormat.getDateTimeInstance().format(new Date())));
 
         // create indexes on tables
         this.createTableIndexes();
@@ -238,13 +244,13 @@ public class InternalManager implements EntityContext {
     private void fetchReleaseVersion() {
         try {
             log.info("Try fetch latest version from server");
-            notifications.add(NotificationEntityJSON.info("version").setName("App version: " + touchHomeProperties.getVersion()));
+            notifications.add(NotificationEntityJSON.info("version").setName("app").setDescription("version: " + touchHomeProperties.getVersion()));
             this.latestVersion = Curl.get(GIT_HUB_URL + "/releases/latest", Map.class).get("tag_name").toString();
 
             if (!touchHomeProperties.getVersion().equals(this.latestVersion)) {
                 log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion, touchHomeProperties.getVersion());
                 notifications.add(NotificationEntityJSON.danger("version")
-                        .setName("Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion));
+                        .setName("app").setDescription("Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion));
                 this.hardwareEvents.fireEvent("app-release", this.latestVersion);
             }
         } catch (Exception ex) {
@@ -623,17 +629,17 @@ public class InternalManager implements EntityContext {
         getBean(LinuxHardwareRepository.class).installSoftware("autossh");
     }
 
-    public void addBundle(Map<String, BundleContext> batchContexts) {
-        for (String bundleName : batchContexts.keySet()) {
-            this.addBundle(batchContexts.get(bundleName), batchContexts);
+    public void addBundle(Map<String, BundleContext> artifactIdContextMap) {
+        for (String artifactId : artifactIdContextMap.keySet()) {
+            this.addBundle(artifactIdContextMap.get(artifactId), artifactIdContextMap);
         }
     }
 
-    public void removeBundle(String bundleName) {
-        InternalBundleContext internalBundleContext = bundles.remove(bundleName);
+    public void removeBundle(String bundleId) {
+        InternalBundleContext internalBundleContext = bundles.remove(bundleId);
         if (internalBundleContext != null) {
             this.removeBundle(internalBundleContext.bundleContext);
-            applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
+            // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
         }
     }
 
@@ -659,7 +665,7 @@ public class InternalManager implements EntityContext {
     }
 
     private void createUser() {
-        UserEntity userEntity = getEntity(ADMIN_USER);
+        UserEntity userEntity = getEntity(ADMIN_USER, false);
         if (userEntity == null) {
             save(new UserEntity().computeEntityID(() -> ADMIN_USER)
                     .setRoles(new HashSet<>(Arrays.asList(ADMIN_ROLE, PRIVILEGED_USER_ROLE, GUEST_ROLE))));
@@ -757,17 +763,17 @@ public class InternalManager implements EntityContext {
         }
     }
 
-    private void addBundle(BundleContext bundleContext, Map<String, BundleContext> bundleContextMap) {
+    private void addBundle(BundleContext bundleContext, Map<String, BundleContext> artifactIdToContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
             if (!bundleContext.isLoaded()) {
                 notifications.add(NotificationEntityJSON.danger("fail-bundle-" + bundleContext.getBundleID())
-                        .setName("Unable to load bundle <" + bundleContext.getBundleFriendlyName() + ">"));
+                        .setName(bundleContext.getBundleFriendlyName()).setDescription("Unable to load bundle"));
                 return;
             }
             allApplicationContexts.add(bundleContext.getApplicationContext());
             bundleContext.setInstalled(true);
             for (String bundleDependency : bundleContext.getDependencies()) {
-                addBundle(bundleContextMap.get(bundleDependency), bundleContextMap);
+                addBundle(artifactIdToContextMap.get(bundleDependency), artifactIdToContextMap);
             }
             ApplicationContext context = bundleContext.getApplicationContext();
 
@@ -803,14 +809,19 @@ public class InternalManager implements EntityContext {
         applicationContext.getBean(ConsoleController.class).postConstruct();
         applicationContext.getBean(BundleManager.class).postConstruct(this);
         applicationContext.getBean(SettingController.class).postConstruct(this);
-        if (!addBundle) {
+        /*if (!addBundle) {
             applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
-        }
+        }*/
         applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
         applicationContext.getBean(WorkspaceController.class).postConstruct(this);
         applicationContext.getBean(EntityManager.class).postConstruct();
         applicationContext.getBean(ItemController.class).postConstruct();
         applicationContext.getBean(Scratch3OtherBlocks.class).postConstruct();
+
+        if (bundleContext != null) {
+            applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addBundle);
+        }
+
         log.info("Finish update all app bundles");
     }
 

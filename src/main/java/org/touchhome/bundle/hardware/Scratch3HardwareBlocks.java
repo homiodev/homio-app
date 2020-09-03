@@ -2,7 +2,6 @@ package org.touchhome.bundle.hardware;
 
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
@@ -10,6 +9,11 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.scratch.*;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 @Log4j2
 @Getter
@@ -25,6 +29,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block cityGeoLocation;
     private final Scratch3Block ipGeoLocation;
     private final Scratch3Block myIp;
+    private final Scratch3Block serverTime;
     private final Scratch3Block settingChangeCommand;
     private final BroadcastLockManagerImpl broadcastLockManager;
     private final Scratch3Block hardwareEventCommand;
@@ -39,12 +44,14 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
 
         // Blocks
         this.myIp = Scratch3Block.ofEvaluate(50, "my_ip", BlockType.reporter, "my ip", this::getByIP);
+        this.serverTime = Scratch3Block.ofEvaluate(60, "server_time", BlockType.reporter, "server time | format [FORMAT]", this::getServerTime);
+        this.serverTime.addArgument("FORMAT", ArgumentType.string);
 
-        this.cityGeoLocation = Scratch3Block.ofEvaluate(100, "city_geo_location", BlockType.reporter, "City geo [CITY] (json)", this::getCityGeoLocation);
+        this.cityGeoLocation = Scratch3Block.ofEvaluate(100, "city_geo_location", BlockType.reporter, "City geo [CITY] | json", this::getCityGeoLocation);
         this.cityGeoLocation.addArgument("CITY", ArgumentType.string,
                 TouchHomeUtils.getIpGeoLocation(TouchHomeUtils.getOuterIpAddress()).getCity());
 
-        this.ipGeoLocation = Scratch3Block.ofEvaluate(200, "ip_geo_location", BlockType.reporter, "IP geo [IP] (json)", this::getIPGeoLocation);
+        this.ipGeoLocation = Scratch3Block.ofEvaluate(200, "ip_geo_location", BlockType.reporter, "IP geo [IP] | json", this::getIPGeoLocation);
         this.ipGeoLocation.addArgument("IP", ArgumentType.string, getByIP(null));
 
         this.settingChangeCommand = Scratch3Block.ofHandler(300, "setting_change", BlockType.hat, "Setting [SETTING] changed to [VALUE]", this::settingChangeEvent);
@@ -55,6 +62,11 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         this.hardwareEventCommand.addArgumentServerSelection(EVENT, this.hardwareEventsMenu);
 
         this.postConstruct();
+    }
+
+    private Object getServerTime(WorkspaceBlock workspaceBlock) {
+        String format = workspaceBlock.getInputString("FORMAT");
+        return isEmpty(format) ? System.currentTimeMillis() : new SimpleDateFormat(format).format(new Date());
     }
 
     private void hardwareEvent(WorkspaceBlock workspaceBlock) {
@@ -73,7 +85,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
             String value = workspaceBlock.getInputString(VALUE);
 
             BroadcastLock<String> lock = broadcastLockManager.getOrCreateLock(workspaceBlock, settingName);
-            workspaceBlock.subscribeToLock(lock, lockValue -> StringUtils.isEmpty(value) || value.equals(lockValue));
+            workspaceBlock.subscribeToLock(lock, lockValue -> isEmpty(value) || value.equals(lockValue));
         }
     }
 
