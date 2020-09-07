@@ -29,21 +29,11 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
         this.scriptManager = entityContext.getBean(ScriptManager.class);
     }
 
-    public static String runJavaScript(CompileScriptContext compileScriptContext, JSONObject params) throws ScriptException, NoSuchMethodException {
+    public static String runJavaScript(CompileScriptContext compileScriptContext) throws ScriptException, NoSuchMethodException {
         StringBuilder script = new StringBuilder();
-
-        Set<String> functions = ScriptEntity.getFunctionsWithPrefix(compileScriptContext.getFormattedJavaScript(), "js_");
-        if (!functions.isEmpty()) {
-            script.append("JS_BLOCK(");
-            for (String function : functions) {
-                script.append(function);
-            }
-            script.append(")JS_BLOCK");
-        }
-
         appendFunc(script, "readyOnClient", "READY_BLOCK", compileScriptContext.getFormattedJavaScript());
 
-        Object value = ((Invocable) compileScriptContext.getCompiledScript().getEngine()).invokeFunction("run", params);
+        Object value = ((Invocable) compileScriptContext.getCompiledScript().getEngine()).invokeFunction("run", compileScriptContext.getJsonParams());
         if (value instanceof ScriptObjectMirror) {
             ScriptObjectMirror obj = (ScriptObjectMirror) value;
             JSONObject jsonObject = new JSONObject();
@@ -68,7 +58,7 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
     @Override
     public Object runInternal() {
         try {
-            return runJavaScript(getCompiledScript(), params);
+            return runJavaScript(getCompiledScript());
         } catch (Exception ex) {
             String msg = TouchHomeUtils.getErrorMessage(ex);
             setStatus(BackgroundProcessStatus.FAILED, msg);
@@ -108,11 +98,11 @@ public class ScriptJSBackgroundProcess extends AbstractJSBackgroundProcessServic
 
     @Override
     public void beforeStart() {
-        scriptManager.invokeBeforeFunction(getCompiledScript(), params);
+        scriptManager.invokeBeforeFunction(getCompiledScript());
     }
 
     @Override
     public void afterStop() {
-        scriptManager.invokeAfterFunction(getCompiledScript(), params);
+        scriptManager.invokeAfterFunction(getCompiledScript());
     }
 }

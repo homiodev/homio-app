@@ -1,9 +1,6 @@
 package org.touchhome.app.workspace.block.core;
 
-import com.jayway.jsonpath.JsonPath;
 import lombok.Getter;
-import org.apache.commons.lang3.StringUtils;
-import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.scratch.BlockType;
@@ -49,9 +46,7 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block orBlock;
     private final Scratch3Block notBlock;
     private final Scratch3Block mathOpBlock;
-    private final Scratch3Block joinStringBlock;
     private final Scratch3Block boolToNum;
-    private final Scratch3Block jsonReduce;
     private Random random = new Random();
 
     public Scratch3OperatorBlocks(EntityContext entityContext) {
@@ -70,36 +65,13 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
         this.orBlock = Scratch3Block.ofEvaluate("or", BlockType.reporter, this::orEvaluateEvaluate);
         this.notBlock = Scratch3Block.ofEvaluate("not", BlockType.reporter, this::notEvaluateEvaluate);
         this.mathOpBlock = Scratch3Block.ofEvaluate("mathop", BlockType.reporter, this::mathOpEvaluateEvaluate);
-        this.joinStringBlock = Scratch3Block.ofEvaluate("join", BlockType.reporter, this::joinStringEvaluate);
         this.boolToNum = Scratch3Block.ofEvaluate("bool_to_num", BlockType.reporter, this::boolToNumberEvaluate);
-        this.jsonReduce = Scratch3Block.ofEvaluate("json_reduce", BlockType.reporter, this::jsonReduceEvaluate);
 
         this.postConstruct();
     }
 
-    private Object jsonReduceEvaluate(WorkspaceBlock workspaceBlock) {
-        String json = workspaceBlock.getInputString("JSON");
-        String query = workspaceBlock.getInputString("REDUCE");
-        return reduceJSON(json, query);
-    }
-
-    public static Object reduceJSON(String json, String query) {
-        if (StringUtils.isNotEmpty(query)) {
-            Object filteredObject = JsonPath.read(json, query);
-            if (filteredObject instanceof Map) {
-                return new JSONObject((Map) filteredObject);
-            }
-            return filteredObject;
-        }
-        return json;
-    }
-
     private Object boolToNumberEvaluate(WorkspaceBlock workspaceBlock) {
         return workspaceBlock.getInputBoolean("OPERAND");
-    }
-
-    private String joinStringEvaluate(WorkspaceBlock workspaceBlock) {
-        return workspaceBlock.getInputString("STRING1") + workspaceBlock.getInputString("STRING2");
     }
 
     private Number mathOpEvaluateEvaluate(WorkspaceBlock workspaceBlock) {

@@ -41,7 +41,7 @@ public class WorkspaceController {
     private static final Pattern ID_PATTERN = Pattern.compile("[a-z-]*");
 
     private static final List<Class> systemScratches = Arrays.asList(Scratch3ControlBlocks.class, Scratch3MiscBlocks.class,
-            Scratch3DataBlocks.class, Scratch3EventsBlocks.class, Scratch3OperatorBlocks.class);
+            Scratch3DataBlocks.class, Scratch3EventsBlocks.class, Scratch3OperatorBlocks.class, Scratch3MutatorBlocks.class);
 
     private static final List<Class> inlineScratches = Arrays.asList(Scratch3OtherBlocks.class, Scratch3HardwareBlocks.class);
 

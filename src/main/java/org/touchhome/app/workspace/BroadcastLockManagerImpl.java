@@ -17,10 +17,10 @@ import java.util.function.Supplier;
 @Component
 public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
-    private Map<String, Holder> warehouse = new HashMap<>();
+    private Map<String, Holder> workspaceWarehouse = new HashMap<>();
 
     private final Runnable runnable = () -> {
-        Holder listenerHolder = warehouse.get(Thread.currentThread().getName());
+        Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
         while (!Thread.currentThread().isInterrupted()) {
             for (Map.Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item : listenerHolder.broadcastListenersMap.entrySet()) {
                 if (item.getValue().getSecond().get()) {
@@ -36,7 +36,7 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
     @Override
     public void signalAll(String key, Object value) {
-        for (Holder holder : warehouse.values()) {
+        for (Holder holder : workspaceWarehouse.values()) {
             if (holder.broadcastListeners.containsKey(key)) {
                 holder.broadcastListeners.get(key).forEach(a -> a.signalAll(value));
             }
@@ -45,7 +45,7 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
     @Override
     public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key, Object expectedValue) {
-        Holder listenerHolder = warehouse.get(Thread.currentThread().getName());
+        Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
         BroadcastLockImpl lock = new BroadcastLockImpl(key, expectedValue);
         listenerHolder.broadcastListeners.putIfAbsent(key, new ArrayList<>());
         listenerHolder.broadcastListeners.get(key).add(lock);
@@ -65,7 +65,7 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
     @Override
     public BroadcastLockImpl listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
-        Holder listenerHolder = warehouse.get(Thread.currentThread().getName());
+        Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
         BroadcastLockImpl lock = getOrCreateLock(workspaceBlock);
         listenerHolder.broadcastListenersMap.put(workspaceBlock.getId(), Pair.of(lock, supplier));
         if (listenerHolder.thread == null) {
@@ -76,9 +76,9 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     }
 
     public void release(String id) {
-        warehouse.putIfAbsent(id, new Holder());
+        workspaceWarehouse.putIfAbsent(id, new Holder());
 
-        Holder listenerHolder = warehouse.get(id);
+        Holder listenerHolder = workspaceWarehouse.get(id);
 
         for (Pair<BroadcastLockImpl, Supplier<Boolean>> pair : listenerHolder.broadcastListenersMap.values()) {
             pair.getFirst().release();

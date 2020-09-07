@@ -4,7 +4,6 @@ import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
-import org.json.JSONObject;
 import org.springframework.data.util.Pair;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
@@ -242,9 +241,8 @@ public class WidgetController {
                             .setJavaScript(jsEntity.getJavaScript())
                             .setJavaScriptParameters(jsEntity.getJavaScriptParameters());
 
-                    JSONObject params = new JSONObject(jsEntity.getJavaScriptParameters());
-                    CompileScriptContext compileScriptContext = scriptManager.createCompiledScript(scriptEntity, null, params);
-                    jsEntity.setJavaScriptResponse(ScriptJSBackgroundProcess.runJavaScript(compileScriptContext, params));
+                    CompileScriptContext compileScriptContext = scriptManager.createCompiledScript(scriptEntity, null);
+                    jsEntity.setJavaScriptResponse(ScriptJSBackgroundProcess.runJavaScript(compileScriptContext));
 
                 } catch (Exception ex) {
                     jsEntity.setJavaScriptErrorResponse(TouchHomeUtils.getErrorMessage(ex));

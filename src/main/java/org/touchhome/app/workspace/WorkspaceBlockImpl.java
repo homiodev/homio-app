@@ -160,6 +160,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         });
     }
 
+    public void handleOrEvaluate() {
+        if (getScratch3Block().getHandler() != null) {
+            this.handle();
+        } else {
+            this.evaluate();
+        }
+    }
+
     @Override
     public Object evaluate() {
         return this.handleInternal(scratch3Block -> {
@@ -178,7 +186,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         return function.apply(getScratch3Block());
     }
 
-    private Scratch3Block getScratch3Block() {
+    public Scratch3Block getScratch3Block() {
         Scratch3ExtensionBlocks scratch3ExtensionBlocks = scratch3Blocks.get(extensionId);
         if (scratch3ExtensionBlocks == null) {
             logErrorAndThrow(sendScratch3ExtensionNotFound(extensionId));

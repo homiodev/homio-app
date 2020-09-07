@@ -110,12 +110,13 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     }
 
     public String getFormattedJavaScript(EntityContext entityContext, Compilable engine) {
-        long hash = StringUtils.defaultIfEmpty(javaScript, "").hashCode() + StringUtils.defaultIfEmpty(javaScriptParameters, "").hashCode();
+        String jsonParams = StringUtils.defaultIfEmpty(javaScriptParameters, "{}");
+        long hash = StringUtils.defaultIfEmpty(javaScript, "").hashCode() + jsonParams.hashCode();
         if (this.formattedJavaScriptHash != hash) {
             this.formattedJavaScriptHash = hash;
 
             Environment env = entityContext.getBean(Environment.class);
-            JSONObject params = new JSONObject(javaScriptParameters);
+            JSONObject params = new JSONObject(jsonParams);
             String envFormattedJavaScript = SpringUtils.replaceEnvValues(javaScript, (key, defValue) -> {
                 if (params.has(key)) {
                     return params.get(key).toString();

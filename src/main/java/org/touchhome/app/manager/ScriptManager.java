@@ -95,18 +95,18 @@ public class ScriptManager {
         backgroundProcessManager.cancelTask(backgroundProcessServiceID, BackgroundProcessStatus.STOP, null);
     }
 
-    public void invokeAfterFunction(CompileScriptContext compiled, Object parameters) {
-        invokeFunction(compiled, "after", parameters, true);
+    public void invokeAfterFunction(CompileScriptContext compiled) {
+        invokeFunction(compiled, "after", true);
     }
 
-    public void invokeBeforeFunction(CompileScriptContext compiled, Object parameters) {
-        invokeFunction(compiled, "before", parameters, true);
+    public void invokeBeforeFunction(CompileScriptContext compiled) {
+        invokeFunction(compiled, "before", true);
     }
 
-    public Object invokeFunction(CompileScriptContext context, String methodName, Object parameters, boolean required) {
+    public Object invokeFunction(CompileScriptContext context, String methodName, boolean required) {
         if (context.getEngine().get(methodName) != null) {
             try {
-                return ((Invocable) context.getEngine()).invokeFunction(methodName, parameters);
+                return ((Invocable) context.getEngine()).invokeFunction(methodName, context.getJsonParams());
             } catch (Exception ex) {
                 if (required) {
                     Logger threadLog = (Logger) context.getEngine().get("log");
@@ -148,14 +148,17 @@ public class ScriptManager {
         return BackgroundProcessStatus.RUNNING;
     }
 
-    public CompileScriptContext createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream, JSONObject params) {
+    public CompileScriptContext createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream) {
         ScriptEngine engine = nashornScriptEngineFactory.getScriptEngine(new String[]{"--global-per-engine"}, bundleClassLoaderHolder);
         if (logPrintStream != null) {
             engine.put(JavaScriptBinder.log.name(), loggerManager.getLogger(logPrintStream));
         }
         engine.put(JavaScriptBinder.entityContext.name(), entityContext);
         engine.put(JavaScriptBinder.script.name(), scriptEntity);
-        engine.put(JavaScriptBinder.params.name(), params == null ? new JSONObject(scriptEntity.getJavaScriptParameters()) : params);
+
+        JSONObject jsonParams = new JSONObject(scriptEntity.getJavaScriptParameters());
+        engine.put(JavaScriptBinder.params.name(), jsonParams);
+
         CompiledScript compiled;
         String formattedJavaScript;
         try {
@@ -172,10 +175,10 @@ public class ScriptManager {
                 throw new ExecutionException("Script evaluation stuck. Got TimeoutException: " + TouchHomeUtils.getErrorMessage(ex), ex);
             }
         } catch (Exception ex) {
-            log.error("Can not compile script: <{}>. Msg: <{}>",scriptEntity.getEntityID(), ex.getMessage());
+            log.error("Can not compile script: <{}>. Msg: <{}>", scriptEntity.getEntityID(), ex.getMessage());
             throw new RuntimeException(ex);
         }
-        return new CompileScriptContext(compiled, formattedJavaScript);
+        return new CompileScriptContext(compiled, formattedJavaScript, jsonParams);
     }
 
     /**

@@ -103,7 +103,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         WorkspaceJsonVariableEntity entity = entityContext.getEntity(WorkspaceJsonVariableEntity.PREFIX
                 + workspaceBlock.getFieldId("json_variables"));
         String query = workspaceBlock.getInputString("ITEM");
-        return Scratch3OperatorBlocks.reduceJSON(entity.getValue().toString(), query);
+        return Scratch3MutatorBlocks.reduceJSON(entity.getValue().toString(), query);
     }
 
     private void variableGroupLinkHandler(WorkspaceBlock workspaceBlock) {

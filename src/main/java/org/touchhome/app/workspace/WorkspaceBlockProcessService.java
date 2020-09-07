@@ -24,7 +24,7 @@ public class WorkspaceBlockProcessService extends BackgroundProcessService<Void>
         String oldName = Thread.currentThread().getName();
         try {
             Thread.currentThread().setName(this.workspaceEntity.getEntityID());
-            workspaceBlock.handle();
+            ((WorkspaceBlockImpl)workspaceBlock).handleOrEvaluate();
         } catch (Exception ex) {
             this.entityContext.sendNotification("Error", TouchHomeUtils.getErrorMessage(ex), NotificationType.danger);
         } finally {
