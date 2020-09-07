@@ -1,10 +1,8 @@
 package org.touchhome.app.rest;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
@@ -140,7 +138,7 @@ public class UtilsController {
         }
         JSONObject jsonTypeMetadata = new JSONObject();
         if (uiField.type().equals(UIFieldType.AutoDetect)) {
-            if (type.isEnum() || (field != null && field.isAnnotationPresent(UIFieldTargetSelection.class))) {
+            if (type.isEnum() || (field != null && field.isAnnotationPresent(UIFieldSelection.class))) {
                 entityUIMetaData.setType(UIFieldType.Selection.name());
             } else {
                 if (field != null && field.getGenericType() instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
@@ -151,8 +149,6 @@ public class UtilsController {
                         entityUIMetaData.setType("List");
                         jsonTypeMetadata.put("type", ((Class<?>) argument).getSimpleName());
                         jsonTypeMetadata.put("mappedBy", field.getAnnotation(OneToMany.class).mappedBy());
-                    } else {
-                        entityUIMetaData.setType(UIFieldType.PlainList.name());
                     }
                 } else {
                     if (type.equals(boolean.class)) {
@@ -204,10 +200,8 @@ public class UtilsController {
 
             UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty = field.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
             if (uiFieldSelectValueOnEmpty != null) {
-                TouchHomeUtils.findRequreMethod(instance.getClass(), uiFieldSelectValueOnEmpty.method());
                 jsonTypeMetadata.put("sveColor", uiFieldSelectValueOnEmpty.color());
                 jsonTypeMetadata.put("sveLabel", uiFieldSelectValueOnEmpty.label());
-                jsonTypeMetadata.put("selectOptionMethod", uiFieldSelectValueOnEmpty.method());
             }
 
             if (entityUIMetaData.getType().equals(String.class.getSimpleName())) {
@@ -222,13 +216,6 @@ public class UtilsController {
                     jsonTypeMetadata.put("valueFormat", uiKeyValueField.valueFormat());
                     jsonTypeMetadata.put("keyValueType", uiKeyValueField.keyValueType().name());
                     entityUIMetaData.setType("KeyValue");
-                }
-
-                UIFieldTextWithSelection uiFieldTextWithSelection = field.getDeclaredAnnotation(UIFieldTextWithSelection.class);
-                if (uiFieldTextWithSelection != null) {
-                    TouchHomeUtils.findRequreMethod(instance.getClass(), uiFieldTextWithSelection.method());
-                    jsonTypeMetadata.put("selectOptionMethod", uiFieldTextWithSelection.method());
-                    entityUIMetaData.setType("TextSelectBoxDynamic");
                 }
             }
 

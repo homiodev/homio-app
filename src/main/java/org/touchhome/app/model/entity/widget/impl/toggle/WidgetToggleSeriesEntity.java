@@ -12,7 +12,7 @@ import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldTargetSelection;
+import org.touchhome.bundle.api.ui.field.UIFieldSelection;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.Entity;
@@ -30,7 +30,7 @@ public class WidgetToggleSeriesEntity extends BaseEntity<WidgetToggleSeriesEntit
     @UIField(order = 14,
             required = true,
             label = "widget.toggle_dataSource")
-    @UIFieldTargetSelection(target = ToggleSeriesDataSourceDynamicOptionLoader.class)
+    @UIFieldSelection(optionLoader = ToggleSeriesDataSourceDynamicOptionLoader.class)
     private String dataSource;
 
     @UIField(order = 15)

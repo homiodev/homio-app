@@ -15,7 +15,7 @@ import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupEntity;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldTargetSelection;
+import org.touchhome.bundle.api.ui.field.UIFieldSelection;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.Entity;
@@ -33,7 +33,7 @@ public class WidgetDisplaySeriesEntity extends BaseEntity<WidgetDisplaySeriesEnt
     @UIField(order = 14,
             required = true,
             label = "widget.display_dataSource")
-    @UIFieldTargetSelection(target = DisplayDataSourceDynamicOptionLoader.class)
+    @UIFieldSelection(optionLoader = DisplayDataSourceDynamicOptionLoader.class)
     private String dataSource;
 
     @JsonIgnore

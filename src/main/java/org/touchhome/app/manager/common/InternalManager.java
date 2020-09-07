@@ -82,7 +82,6 @@ import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
-import org.touchhome.bundle.arduino.model.ArduinoDeviceEntity;
 import org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity;
 
 import javax.persistence.EntityManagerFactory;
@@ -184,7 +183,6 @@ public class InternalManager implements EntityContext {
 
         createUser();
         createRaspberryDevice();
-        createArduinoDevice();
 
         applicationContext.getBean(UserRepository.class).postConstruct(this);
         applicationContext.getBean(ScriptManager.class).postConstruct();
@@ -675,12 +673,6 @@ public class InternalManager implements EntityContext {
     private void createRaspberryDevice() {
         if (getEntity(DEFAULT_DEVICE_ENTITY_ID) == null) {
             save(new RaspberryDeviceEntity().computeEntityID(() -> DEFAULT_DEVICE_ENTITY_ID));
-        }
-    }
-
-    private void createArduinoDevice() {
-        if (EntityContext.isDevEnvironment() && getEntity("ad_TestArduinoDevice") == null) {
-            save(new ArduinoDeviceEntity().computeEntityID(() -> "TestArduinoDevice").setPipe(111L));
         }
     }
 

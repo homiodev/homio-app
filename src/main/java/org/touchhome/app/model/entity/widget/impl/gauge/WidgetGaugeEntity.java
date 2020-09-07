@@ -25,7 +25,7 @@ import java.util.List;
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> implements HasDataSource {
 
     @UIField(label = "widget.gauge_dataSource", order = 14, required = true)
-    @UIFieldTargetSelection(target = GaugeDataSourceDynamicOptionLoader.class)
+    @UIFieldSelection(optionLoader = GaugeDataSourceDynamicOptionLoader.class)
     private String dataSource;
 
     @UIField(order = 15)

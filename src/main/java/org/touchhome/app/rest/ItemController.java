@@ -21,8 +21,8 @@ import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
-import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 import org.touchhome.bundle.api.DynamicOptionLoader;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.BaseEntity;
@@ -30,11 +30,13 @@ import org.touchhome.bundle.api.model.DeviceBaseEntity;
 import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.model.ImageEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
+import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldTargetSelection;
+import org.touchhome.bundle.api.ui.field.UIFieldSelection;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
+import org.touchhome.bundle.api.ui.method.UIFieldSelectValueOnEmpty;
 import org.touchhome.bundle.api.ui.method.UIMethodAction;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -346,18 +348,12 @@ public class ItemController {
     @GetMapping("{entityID}/{fieldName}/options")
     public List loadSelectOptions(@PathVariable("entityID") String entityID,
                                   @PathVariable("fieldName") String fieldName,
-                                  @RequestParam("selectOptionMethod") String selectOptionMethod,
                                   @RequestParam("fieldFetchType") String fieldFetchType) throws Exception {
         BaseEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
             entity = getInstanceByClass(entityID); // i.e in case we load Widget
         }
         Class entityClass = entity.getClass();
-        if (StringUtils.isNotEmpty(selectOptionMethod)) {
-            Method method = TouchHomeUtils.findRequreMethod(entityClass, selectOptionMethod);
-            return (List) executeMethodAction(method, entity, applicationContext, entity);
-        }
-
         if (StringUtils.isNotEmpty(fieldFetchType)) {
             String[] bundleAndClassName = fieldFetchType.split(":");
             entityClass = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
@@ -380,10 +376,20 @@ public class ItemController {
             }
             return options;
         }
+        return loadOptions(entity, field, entityContext);
+    }
+
+    @SneakyThrows
+    public static List<Option> loadOptions(Object entity, Field field, EntityContext entityContext) {
         Class targetClass = field.getType();
-        UIFieldTargetSelection uiFieldTargetSelection = field.getDeclaredAnnotation(UIFieldTargetSelection.class);
+        UIFieldSelection uiFieldTargetSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
         if (uiFieldTargetSelection != null) {
-            targetClass = uiFieldTargetSelection.target();
+            targetClass = uiFieldTargetSelection.optionLoader();
+        }
+
+        UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty = field.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
+        if (uiFieldSelectValueOnEmpty != null) {
+            targetClass = uiFieldSelectValueOnEmpty.optionLoader();
         }
 
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
