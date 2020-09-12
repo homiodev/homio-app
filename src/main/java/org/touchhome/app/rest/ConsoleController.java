@@ -6,7 +6,6 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +23,6 @@ import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.tritonus.share.ArraySet;
 
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -102,8 +100,7 @@ public class ConsoleController {
             List<? extends HasEntityIdentifier> baseEntities = consolePlugin.drawEntity();
             HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID))
                     .findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-            Field field = FieldUtils.getField(identifier.getClass(), fieldName, true);
-            return ItemController.loadOptions(identifier, field, entityContext);
+            return ItemController.loadOptions(identifier, entityContext, fieldName);
         }
         throw new IllegalStateException("Unable to find handler");
     }

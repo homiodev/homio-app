@@ -3,6 +3,7 @@ package org.touchhome.app.workspace.block.core;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.workspace.WorkspaceBlockImpl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.scratch.BlockType;
 import org.touchhome.bundle.api.scratch.Scratch3Block;
@@ -82,7 +83,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         if (workspaceBlock.hasInput(inputName) && workspaceBlock.hasInput(SUBSTACK)) {
             WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
             BroadcastLock lock = broadcastLockManager.listenEvent(workspaceBlock, supplier);
-            while (!Thread.currentThread().isInterrupted()) {
+            while (!workspaceBlock.isDestroyed()) {
                 if (lock.await(workspaceBlock)) {
                     child.handle();
                 }
@@ -105,10 +106,9 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         lock.await(workspaceBlock);
     }
 
-    private void stopHandler(WorkspaceBlock ignore) {
-        if (Thread.currentThread().getName().startsWith("pool-")) {
-            Thread.currentThread().interrupt();
-        }
+    private void stopHandler(WorkspaceBlock workspaceBlock) {
+        ((WorkspaceBlockImpl) workspaceBlock).release();
+        Thread.currentThread().interrupt();
     }
 
     private void ifElseHandler(WorkspaceBlock workspaceBlock) {
@@ -152,7 +152,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private void foreverHandler(WorkspaceBlock workspaceBlock) {
         if (workspaceBlock.hasInput(SUBSTACK)) {
             WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
-            while (!Thread.currentThread().isInterrupted()) {
+            while (!workspaceBlock.isDestroyed()) {
                 child.handle();
 
                 Thread.sleep(100); // wait at least 100ms for 'clumsy hands'

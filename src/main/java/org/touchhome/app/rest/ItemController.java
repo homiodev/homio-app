@@ -1,6 +1,7 @@
 package org.touchhome.app.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pivovarit.function.ThrowingSupplier;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -17,26 +18,25 @@ import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.manager.ImageManager;
 import org.touchhome.app.manager.common.ClassFinder;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.EntityManager;
-import org.touchhome.app.manager.common.InternalManager;
 import org.touchhome.app.model.entity.SettingEntity;
+import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
+import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.bundle.api.DynamicOptionLoader;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.DeviceBaseEntity;
-import org.touchhome.bundle.api.model.HasPosition;
-import org.touchhome.bundle.api.model.ImageEntity;
+import org.touchhome.bundle.api.model.*;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldSelection;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
-import org.touchhome.bundle.api.ui.method.UIFieldSelectValueOnEmpty;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 import org.touchhome.bundle.api.ui.method.UIMethodAction;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -61,7 +61,7 @@ public class ItemController {
     private static Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
     private final Map<String, List<EntityUIMetaData>> fieldsMap = new HashMap<>();
     private final ObjectMapper objectMapper;
-    private final InternalManager entityContext;
+    private final EntityContextImpl entityContext;
     private final EntityManager entityManager;
     private final ClassFinder classFinder;
     private final ImageManager imageManager;
@@ -122,7 +122,9 @@ public class ItemController {
     public void postConstruct() {
         this.baseEntitySimpleClasses = classFinder.getClassesWithParent(BaseEntity.class, null, null)
                 .stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
+        this.baseEntitySimpleClasses.put(MicroControllerBaseEntity.class.getSimpleName(), MicroControllerBaseEntity.class);
         this.baseEntitySimpleClasses.put(DeviceBaseEntity.class.getSimpleName(), DeviceBaseEntity.class);
+        this.baseEntitySimpleClasses.put(WidgetBaseEntity.class.getSimpleName(), WidgetBaseEntity.class);
     }
 
     @GetMapping("{type}/fields")
@@ -150,18 +152,27 @@ public class ItemController {
         return fieldsMap.get(key);
     }
 
-    @GetMapping("/{type}/extended")
+    @GetMapping("/{type}/types")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public List<Option> getExtendedItemTypes(@PathVariable("type") String type) {
+    public Set<Option> getCreateNewItemOptions(@PathVariable("type") String type) {
         Class<?> entityClassByType = entityManager.getClassByType(type);
-        return classFinder.getClassesWithParent(entityClassByType)
-                .stream()
-                .map(aClass -> {
-                    UISidebarMenu uiSidebarMenu = aClass.getAnnotation(UISidebarMenu.class);
-                    return uiSidebarMenu == null ? Option.key(aClass.getSimpleName()) :
-                            Option.key(aClass.getSimpleName());
-                })
-                .collect(Collectors.toList());
+        Set<Option> list = fetchCreateItemTypes(entityClassByType);
+        for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
+            list.add(getUISideBarMenuOption(aClass));
+        }
+        return list;
+    }
+
+    @GetMapping("type/{type}/options")
+    public List<Option> getItemOptionsByType(@PathVariable("type") String type) {
+        putTypeToEntityIfNotExists(type);
+        List<Option> list = new ArrayList<>();
+        for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
+            list.addAll(Option.list(entityContext.findAll(aClass)));
+        }
+        Collections.sort(list);
+
+        return list;
     }
 
     @PostMapping(value = "{entityID}/action")
@@ -180,8 +191,11 @@ public class ItemController {
     @PostMapping("{type}")
     public BaseEntity create(@PathVariable("type") String type) throws Exception {
         log.debug("Request creating entity by type: <{}>", type);
-        AbstractRepository<BaseEntity> entityRepositoryByType = entityContext.getRepositoryByClass(type);
-        BaseEntity baseEntity = entityRepositoryByType.getEntityClass().getConstructor().newInstance();
+        Class<? extends BaseEntity> typeClass = EntityContextImpl.baseEntityNameToClass.get(type);
+        if (typeClass == null) {
+            throw new IllegalArgumentException("Unable to find base entity with type: " + type);
+        }
+        BaseEntity baseEntity = typeClass.getConstructor().newInstance();
         return entityContext.save(baseEntity);
     }
 
@@ -247,32 +261,6 @@ public class ItemController {
         }
 
         return list;
-    }
-
-    @GetMapping("type/{type}/options")
-    public List<Option> getItemOptionsByType(@PathVariable("type") String type) {
-        putTypeToEntityIfNotExists(type);
-        List<Option> list = new ArrayList<>();
-        for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-            list.addAll(Option.list(entityContext.findAll(aClass)));
-        }
-        Collections.sort(list);
-
-        return list;
-    }
-
-    private void putTypeToEntityIfNotExists(String type) {
-        if (!typeToEntityClassNames.containsKey(type)) {
-            typeToEntityClassNames.put(type, new ArrayList<>());
-            Class<? extends BaseEntity> baseEntityByName = baseEntitySimpleClasses.get(type);
-            if (baseEntityByName != null) {
-                if (Modifier.isAbstract(baseEntityByName.getModifiers())) {
-                    typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(baseEntityByName));
-                } else {
-                    typeToEntityClassNames.get(type).add(baseEntityByName);
-                }
-            }
-        }
     }
 
     @GetMapping("{entityID}")
@@ -359,9 +347,23 @@ public class ItemController {
             entityClass = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
         }
 
+        List<Option> options = getEntityOptions(fieldName, entity, entityClass);
+        if (options != null) {
+            return options;
+        }
+
+        return loadOptions(entity, entityContext, fieldName);
+    }
+
+    private List<Option> getEntityOptions(String fieldName, BaseEntity entity, Class entityClass) {
         Field field = FieldUtils.getField(entityClass, fieldName, true);
-        if (field.getType().getDeclaredAnnotation(Entity.class) != null) {
-            Class<BaseEntity> clazz = (Class<BaseEntity>) field.getType();
+        Class returnType = field == null ? null : field.getType();
+        if (returnType == null) {
+            Method method = MethodUtils.getAccessibleMethod(entityClass, "get" + StringUtils.capitalize(fieldName));
+            returnType = method == null ? null : method.getReturnType();
+        }
+        if (returnType.getDeclaredAnnotation(Entity.class) != null) {
+            Class<BaseEntity> clazz = (Class<BaseEntity>) returnType;
             List<? extends BaseEntity> selectedOptions = entityContext.findAll(clazz);
             List<Option> options = selectedOptions.stream().map(t -> new Option(t.getEntityID(), t.getTitle())).collect(Collectors.toList());
 
@@ -376,20 +378,52 @@ public class ItemController {
             }
             return options;
         }
-        return loadOptions(entity, field, entityContext);
+        return null;
+    }
+
+    public static List<Option> loadOptions(Object entity, EntityContext entityContext, String fieldName) {
+        Method selectionMethodAnnotation = MethodUtils.getMethodsListWithAnnotation(entity.getClass(), UIFieldSelection.class)
+                .stream().filter(m -> InternalUtil.getMethodShortName(m).equals(fieldName)).findAny().orElse(null);
+        if (selectionMethodAnnotation != null) {
+            return loadOptions(selectionMethodAnnotation, entityContext, selectionMethodAnnotation.getReturnType(), () -> selectionMethodAnnotation.invoke(entity));
+        } else {
+            Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
+            return loadOptions(field, entityContext, field.getType(), () -> field.get(entity));
+        }
+    }
+
+    private Set<Option> fetchCreateItemTypes(Class<?> entityClassByType) {
+        return classFinder.getClassesWithParent(entityClassByType)
+                .stream()
+                .map(this::getUISideBarMenuOption)
+                .collect(Collectors.toSet());
+    }
+
+    private Option getUISideBarMenuOption(Class<?> aClass) {
+        UISidebarMenu uiSidebarMenu = aClass.getAnnotation(UISidebarMenu.class);
+        return uiSidebarMenu == null ? Option.key(aClass.getSimpleName()) : Option.key(aClass.getSimpleName());
+    }
+
+    private void putTypeToEntityIfNotExists(String type) {
+        if (!typeToEntityClassNames.containsKey(type)) {
+            typeToEntityClassNames.put(type, new ArrayList<>());
+            Class<? extends BaseEntity> baseEntityByName = baseEntitySimpleClasses.get(type);
+            if (baseEntityByName != null) {
+                if (Modifier.isAbstract(baseEntityByName.getModifiers())) {
+                    typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(baseEntityByName));
+                } else {
+                    typeToEntityClassNames.get(type).add(baseEntityByName);
+                }
+            }
+        }
     }
 
     @SneakyThrows
-    public static List<Option> loadOptions(Object entity, Field field, EntityContext entityContext) {
-        Class targetClass = field.getType();
+    private static List<Option> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass,
+                                            ThrowingSupplier<Object, Exception> directOptionLoaderConsumer) {
         UIFieldSelection uiFieldTargetSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
         if (uiFieldTargetSelection != null) {
-            targetClass = uiFieldTargetSelection.optionLoader();
-        }
-
-        UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty = field.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
-        if (uiFieldSelectValueOnEmpty != null) {
-            targetClass = uiFieldSelectValueOnEmpty.optionLoader();
+            targetClass = uiFieldTargetSelection.value();
         }
 
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
@@ -397,8 +431,8 @@ public class ItemController {
             return dynamicOptionLoader.loadOptions(null, entityContext);
         }
 
-        if (DynamicOptionLoader.class.isAssignableFrom(field.getType())) {
-            DynamicOptionLoader dynamicOptionLoader = (DynamicOptionLoader) field.get(entity);
+        if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
+            DynamicOptionLoader dynamicOptionLoader = (DynamicOptionLoader) directOptionLoaderConsumer.get();
             return dynamicOptionLoader.loadOptions(null, entityContext);
         }
 
@@ -406,18 +440,23 @@ public class ItemController {
             return Stream.of(targetClass.getEnumConstants()).map(e -> Option.key(e.toString())).collect(Collectors.toList());
         }
 
+        if (field.isAnnotationPresent(UIFieldBeanSelection.class)) {
+            return entityContext.getBeansOfTypeWithBeanName(targetClass).keySet()
+                    .stream().map(Option::key).collect(Collectors.toList());
+        }
+
         return Collections.emptyList();
     }
 
     private List<BaseEntity> getUsages(String entityID, AbstractRepository<BaseEntity> repository) {
-        Object baseEntity = repository.getByEntityIDWithFetchLazy(entityID, true);
+        Object baseEntity = repository.getByEntityIDWithFetchLazy(entityID, false);
         List<BaseEntity> usages = new ArrayList<>();
         if (baseEntity != null) {
             FieldUtils.getAllFieldsList(baseEntity.getClass()).forEach(field -> {
                 try {
                     Class<? extends Annotation> aClass = field.isAnnotationPresent(OneToOne.class) ? OneToOne.class :
                             (field.isAnnotationPresent(OneToMany.class) ? OneToMany.class : null);
-                    if (aClass != null/* && !field.isAnnotationPresent(UIDeletableCascade.class)*/) {
+                    if (aClass != null) {
                         Object targetValue = FieldUtils.readField(field, baseEntity, true);
                         if (targetValue instanceof Collection) {
                             if (!((Collection) targetValue).isEmpty()) {

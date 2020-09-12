@@ -64,6 +64,9 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     private List<BroadcastLockImpl> acquiredLocks;
 
     private AtomicReference<Object> lastValue;
+    private AtomicReference<Object> lastChildValue;
+
+    private boolean destroy;
 
     WorkspaceBlockImpl(String id, Map<String, WorkspaceBlock> allBlocks, Map<String, Scratch3ExtensionBlocks> scratch3Blocks, EntityContext entityContext) {
         this.id = id;
@@ -117,6 +120,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             }
         } else if (String.class.isAssignableFrom(type)) {
             return (P) fieldValue;
+        } else if (Long.class.isAssignableFrom(type)) {
+            return (P) Long.valueOf(fieldValue);
         } else if (BaseEntity.class.isAssignableFrom(type)) {
             return (P) entityContext.getEntity(fieldValue);
         }
@@ -264,7 +269,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                     ref = objects.getString(1);
                     if (fetchValue) {
                         Object evaluateValue = this.allBlocks.get(ref).evaluate();
-                        this.lastValue = new AtomicReference<>(evaluateValue);
+                        this.lastChildValue = new AtomicReference<>(evaluateValue);
                         return evaluateValue;
                     }
                     return ref;
@@ -316,8 +321,15 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     }
 
     @Override
-    public void release() {
+    public boolean isDestroyed() {
+        return destroy;
+    }
 
+    public void release() {
+        this.destroy = true;
+        if (this.parent != null) {
+            ((WorkspaceBlockImpl) this.parent).release();
+        }
     }
 
     private String sendScratch3ExtensionNotFound(String extensionId) {
@@ -362,12 +374,12 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     }
 
     public Object getLastValue() {
-        WorkspaceBlockImpl parentWorkspaceBlock = (WorkspaceBlockImpl) parent;
-        while (parentWorkspaceBlock != null) {
-            if (parentWorkspaceBlock.lastValue != null) {
-                return parentWorkspaceBlock.lastValue.get();
+        WorkspaceBlockImpl parent = (WorkspaceBlockImpl) this.parent;
+        while (parent != null) {
+            if (parent.lastValue != null || parent.lastChildValue != null) {
+                return parent.lastValue == null ? parent.lastChildValue.get() : parent.lastValue.get();
             }
-            parentWorkspaceBlock = (WorkspaceBlockImpl) parentWorkspaceBlock.parent;
+            parent = (WorkspaceBlockImpl) parent.parent;
         }
         return null;
     }
@@ -377,7 +389,9 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             acquiredLocks = new ArrayList<>();
         }
         this.acquiredLocks.add(broadcastLock);
-        broadcastLock.addSignalListener(value -> this.lastValue = new AtomicReference<>(value));
+        broadcastLock.addSignalListener(value -> {
+            this.lastValue = new AtomicReference<>(value);
+        });
     }
 
     @AllArgsConstructor

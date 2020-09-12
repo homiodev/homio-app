@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.AssignableTypeFilter;
@@ -12,7 +13,6 @@ import org.touchhome.app.extloader.BundleClassLoaderHolder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
-import org.touchhome.bundle.api.util.ApplicationContextHolder;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -24,6 +24,7 @@ public class ClassFinder {
     public static final String CLASSES_WITH_PARENT_CLASS = "CLASSES_WITH_PARENT_CLASS";
     public static final String REPOSITORY_BY_CLAZZ = "REPOSITORY_BY_CLAZZ";
     private final BundleClassLoaderHolder bundleClassLoaderHolder;
+    private final ApplicationContext applicationContext;
 
     @SneakyThrows
     public static <T> List<T> createClassesWithParent(Class<T> parentClass, ClassFinder classFinder) {
@@ -83,7 +84,7 @@ public class ClassFinder {
     public <T extends BaseEntity, R extends AbstractRepository<T>> R getRepositoryByClass(Class<T> clazz) {
         List<R> potentialRepository = new ArrayList<>();
 
-        for (AbstractRepository abstractRepository : ApplicationContextHolder.getBean(EntityContext.class).getRepositories()) {
+        for (AbstractRepository abstractRepository : applicationContext.getBean(EntityContext.class).getRepositories()) {
             if (abstractRepository.getEntityClass().equals(clazz)) {
                 return (R) abstractRepository;
             }

@@ -1,39 +1,28 @@
 package org.touchhome.app.rest;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
-import org.touchhome.app.json.bgp.BackgroundProcessStatusJSON;
-import org.touchhome.app.manager.BackgroundProcessManager;
 import org.touchhome.app.manager.ScriptManager;
-import org.touchhome.app.model.entity.HasBackgroundProcesses;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.repository.ScriptRepository;
-import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.thread.BackgroundProcessService;
-import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
+// TODO: refactor this !!!!!!!!!!!!!!!!!!!!!!!!!!
+@Log4j2
 @RestController
 @RequestMapping("/rest/background")
 @RequiredArgsConstructor
 public class BackgroundProcessController {
 
     private final ScriptRepository scriptRepository;
-    private final EntityContext entityContext;
-    private final BackgroundProcessManager backgroundProcessManager;
     private final ScriptManager scriptManager;
 
     @GetMapping("dynamic/{url}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
-    public Object dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws Exception {
+    public void dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws Exception {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
         if (scriptEntity == null) {
             throw new RuntimeException("Dynamic URL: '" + url + "' not exists.");
@@ -44,10 +33,10 @@ public class BackgroundProcessController {
         if (StringUtils.isEmpty(scriptEntity.getJavaScript())) {
             throw new RuntimeException("Script not valid for dynamic URL: '" + url + "'.");
         }
-        return scriptManager.startThread(scriptEntity, json, true, null, false);
+        scriptManager.startThread(scriptEntity, json, true, null, false);
     }
 
-    @GetMapping("progress")
+    /*@GetMapping("progress")
     public List<BackgroundProcessStatusJSON> getProgressValue(@RequestParam("values") String values) {
         List<BackgroundProcessStatusJSON> backgroundProcessStatusJSONList = new ArrayList<>();
         for (String entityIDAndKey : values.split(";")) {
@@ -79,54 +68,15 @@ public class BackgroundProcessController {
             }
         }
         return backgroundProcessStatusJSONList;
-    }
+    }*/
 
     @GetMapping("dynamic/stop/{url}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
-    public BackgroundProcessStatus stopScriptByName(@PathVariable String url) {
-        return scriptManager.stopThread(scriptRepository.getByURL(url));
-    }
-
-    @GetMapping("backgroundProcessStatuses")
-    public List<BackgroundProcessStatusJSON> getBackgroundProcessStatuses(@RequestParam("entityID") String entityID) {
-        List<BackgroundProcessStatusJSON> backgroundProcessStatusJSONS = new ArrayList<>();
-
-        BaseEntity item = entityContext.getEntity(entityID);
-        if (item instanceof HasBackgroundProcesses) {
-            HasBackgroundProcesses hasBackgroundProcesses = (HasBackgroundProcesses) item;
-            Set<ScriptEntity> availableBackgroundProcesses = hasBackgroundProcesses.getAvailableProcesses();
-            for (ScriptEntity availableBackgroundProcess : availableBackgroundProcesses) {
-                buildBackgroundProcessStatus(item, availableBackgroundProcess, backgroundProcessStatusJSONS);
-            }
-        }
-
-        //    List<Class<? extends AbstractJSBackgroundProcessService>> classList = ClassFinder.getClassesWithParentAndTypeArgument(AbstractJSBackgroundProcessService.class, item.getClass(), 1);
-        //  classList.forEach(aClass -> buildBackgroundProcessStatus(entityID, backgroundProcessStatusJSONS, item, aClass));
-        return backgroundProcessStatusJSONS;
-    }
-
-    private void buildBackgroundProcessStatus(BaseEntity item, ScriptEntity scriptEntity, List<BackgroundProcessStatusJSON> backgroundProcessStatusJSONS) {
-        try {
-            AbstractJSBackgroundProcessService abstractJSBackgroundProcessService = scriptEntity.createBackgroundProcessService(entityContext);
-
-            BackgroundProcessStatusJSON backgroundProcessStatusJSON = new BackgroundProcessStatusJSON();
-            backgroundProcessStatusJSON.setEntityID(item.getEntityID());
-            backgroundProcessStatusJSON.setBackgroundProcessServiceID(scriptEntity.getBackgroundProcessServiceID());
-            backgroundProcessStatusJSON.setBackgroundProcessDescriptor(scriptEntity.getDescription());
-
-            if (!abstractJSBackgroundProcessService.canWork()) {
-                backgroundProcessStatusJSON.setErrorMessage(abstractJSBackgroundProcessService.whyCannotWork());
-                backgroundProcessStatusJSON.setStatus(BackgroundProcessStatus.FAILED);
-            } else if (backgroundProcessManager.isRunning(scriptEntity.getBackgroundProcessServiceID())) {
-                backgroundProcessStatusJSON.setStatus(BackgroundProcessStatus.RUNNING);
-                backgroundProcessStatusJSON.setErrorMessage(backgroundProcessStatusJSON.getBackgroundProcessDescriptor() + " working");
-            } else {
-                backgroundProcessStatusJSON.setStatus(abstractJSBackgroundProcessService.getStatus());
-                backgroundProcessStatusJSON.setErrorMessage(abstractJSBackgroundProcessService.getErrorMessage());
-            }
-            backgroundProcessStatusJSONS.add(backgroundProcessStatusJSON);
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+    public void stopScriptByName(@PathVariable String url) {
+        ScriptEntity scriptEntity = scriptRepository.getByURL(url);
+        if(scriptEntity != null) {
+            log.info("Stop script: " + scriptEntity.getEntityID());
+            scriptManager.stopThread(scriptEntity);
         }
     }
 

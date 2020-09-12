@@ -5,21 +5,11 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
-import org.touchhome.app.manager.BackgroundProcessManager;
-import org.touchhome.app.model.entity.HasBackgroundProcesses;
-import org.touchhome.app.model.entity.ScriptEntity;
-import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
-import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
-import org.touchhome.bundle.api.util.ApplicationContextHolder;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.persistence.Entity;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -33,16 +23,11 @@ import static org.touchhome.app.manager.CacheService.*;
 public class EntityManager {
 
     private final ClassFinder classFinder;
-    private final BackgroundProcessManager backgroundProcessManager;
-
-    private Map<String, Class<? extends BaseEntity>> baseEntityClasses;
-
-    public void postConstruct() {
-        baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream().collect(Collectors.toMap(Class::getName, s -> s));
-    }
 
     <T extends BaseEntity> T getEntityNoCache(String entityID) {
-        return getEntity(entityID);
+        return (T) getRepositoryByEntityID(entityID)
+                .map(r -> r.getByEntityID(entityID))
+                .orElse(null);
     }
 
     @Cacheable(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI)
@@ -52,28 +37,9 @@ public class EntityManager {
                 .orElse(null);
     }
 
-    @Cacheable(value = ENTITY_BY_ENTITY_ID)
-    public <T extends BaseEntity> T getEntity(String entityID) {
-        return (T) getRepositoryByEntityID(entityID)
-                .map(r -> r.getByEntityID(entityID))
-                .orElse(null);
-    }
-
-    @Cacheable(value = ENTITY_BY_ENTITY_ID, key = "#entityID")
-    public <T> T getEntity(String entityID, Class<T> targetClass) {
-        AbstractRepository<BaseEntity> repository = getRepositoryByEntityID(entityID).
-                orElseThrow(() -> new IllegalArgumentException("Can't find repository for entity: " + entityID));
-
-        BaseEntity<? extends BaseEntity> baseEntity = repository.getByEntityID(entityID);
-        if (!targetClass.isAssignableFrom(baseEntity.getClass())) {
-            throw new NotFoundException("Repository: " + repository.getEntityClass().getSimpleName() + " has no " + targetClass.getSimpleName() + " implementation");
-        }
-        return (T) baseEntity;
-    }
-
     @Cacheable(CACHE_CLASS_BY_TYPE)
     public Class<? extends BaseEntity> getClassByType(String type) {
-        for (Class<? extends BaseEntity> aClass : baseEntityClasses.values()) {
+        for (Class<? extends BaseEntity> aClass : EntityContextImpl.baseEntityNameToClass.values()) {
             Entity entity = aClass.getDeclaredAnnotation(Entity.class);
             if (entity != null && entity.name().equals(type) || aClass.getName().equals(type) || aClass.getSimpleName().equals(type)) {
                 return aClass;
@@ -88,41 +54,10 @@ public class EntityManager {
                 .orElse(null);
     }
 
-    <T extends BaseEntity> void updateBGPProcesses(T entity) {
-        if (entity instanceof HasBackgroundProcesses) {
-            for (ScriptEntity scriptEntity : ((HasBackgroundProcesses) entity).getAvailableProcesses()) {
-                updateBGPProcess(scriptEntity);
-            }
-        }
-        if (entity instanceof ScriptEntity) {
-            updateBGPProcess((ScriptEntity) entity);
-        }
-    }
-
-    private void updateBGPProcess(ScriptEntity scriptEntity) {
-        try {
-            AbstractJSBackgroundProcessService service = null;
-            try {
-                service = scriptEntity.createBackgroundProcessService(ApplicationContextHolder.getBean(EntityContext.class));
-            } catch (Exception ex) { // when we delete item we may got this exception
-                log.error(ex.getMessage());
-            }
-            try {
-                if (service != null) {
-                    backgroundProcessManager.fireIfNeedRestart(service);
-                }
-            } catch (Exception ex) {
-                service.setStatus(BackgroundProcessStatus.FAILED, TouchHomeUtils.getErrorMessage(ex));
-            }
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
     @Cacheable(REPOSITORY_BY_ENTITY_ID)
     public Optional<AbstractRepository> getRepositoryByEntityID(String entityID) {
         if (entityID != null) {
-            for (AbstractRepository abstractRepository : InternalManager.repositories.values()) {
+            for (AbstractRepository abstractRepository : EntityContextImpl.repositories.values()) {
                 if (abstractRepository.isMatch(entityID)) {
                     return Optional.of(abstractRepository);
                 }
@@ -140,7 +75,7 @@ public class EntityManager {
 
         // in case we not found repository, but found potential repository - we should filter
         if (!repositoryByClass.getEntityClass().equals(entityClass)) {
-            filter = baseEntity -> baseEntity.getClass().isAssignableFrom(entityClass);
+            filter = baseEntity -> entityClass.isAssignableFrom(baseEntity.getClass());
         }
 
         list = repositoryByClass.listAll();

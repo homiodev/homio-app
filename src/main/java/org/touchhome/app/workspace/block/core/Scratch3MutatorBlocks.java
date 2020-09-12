@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
-import org.touchhome.app.thread.js.impl.ScriptJSBackgroundProcess;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.scratch.*;
 
@@ -58,7 +57,7 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks implements Wo
             return scriptManager.createCompiledScript(scriptEntity, null);
         });
         compileScriptContext.getEngine().put("input", source);
-        return ScriptJSBackgroundProcess.runJavaScript(compileScriptContext);
+        return scriptManager.runJavaScript(compileScriptContext);
     }
 
     private Object jsonReduceEvaluate(WorkspaceBlock workspaceBlock) {

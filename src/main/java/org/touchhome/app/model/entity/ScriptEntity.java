@@ -6,15 +6,12 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
-import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.core.env.Environment;
-import org.touchhome.app.thread.js.AbstractJSBackgroundProcessService;
-import org.touchhome.app.thread.js.impl.ScriptJSBackgroundProcess;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
+import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
@@ -31,7 +28,6 @@ import javax.script.Invocable;
 import java.io.StringReader;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -39,9 +35,10 @@ import java.util.Set;
 @Accessors(chain = true)
 public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
-    @Column(nullable = false)
     @Getter
-    private BackgroundProcessStatus backgroundProcessStatus = BackgroundProcessStatus.NEVER_RUN;
+    @Setter
+    @Column(nullable = false)
+    private Status status = Status.UNKNOWN;
 
     @Getter
     @Setter
@@ -50,28 +47,29 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
     @Getter
     @Setter
-    @UIField(order = 16)
+    @UIField(order = 16, inlineEdit = true, showInContextMenu = true)
     private boolean autoStart = false;
 
     @Getter
     @Setter
     private String error;
 
-    @Getter
-    @Setter
-    private String backgroundProcessClass = ScriptJSBackgroundProcess.class.getName();
-
     @Lob
-    @Column(length = 1048576)
-    @UIField(order = 30)
     @Getter
     @Setter
+    @UIField(order = 30)
+    @Column(length = 1048576)
     @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript)
     private String javaScript = "function before() { };\nfunction run() { };\nfunction after() { };";
 
     @Transient
     @JsonIgnore
     private long formattedJavaScriptHash;
+
+    @Getter
+    @Setter
+    @UIField(order = 40)
+    private int repeatInterval = 0;
 
     @Transient
     @JsonIgnore
@@ -148,28 +146,5 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
             });
         }
         return formattedJavaScript;
-    }
-
-    public boolean setScriptStatus(BackgroundProcessStatus backgroundProcessStatus) {
-        if (!Objects.equals(backgroundProcessStatus, this.backgroundProcessStatus)) {
-            if (this.backgroundProcessStatus != null) {
-                this.backgroundProcessStatus.assertFollowStatus(backgroundProcessStatus);
-            }
-            this.backgroundProcessStatus = backgroundProcessStatus;
-            return true;
-        }
-        return false;
-    }
-
-    public String getBackgroundProcessServiceID() {
-        if (backgroundProcessClass == null) {
-            return null;
-        }
-        return backgroundProcessClass.substring(backgroundProcessClass.lastIndexOf(".") + 1) + getEntityID();
-    }
-
-    public AbstractJSBackgroundProcessService createBackgroundProcessService(EntityContext entityContext) throws Exception {
-        Class<? extends AbstractJSBackgroundProcessService> aClass = (Class<? extends AbstractJSBackgroundProcessService>) ClassUtils.getClass(backgroundProcessClass);
-        return aClass.getConstructor(getClass(), EntityContext.class).newInstance(this, entityContext);
     }
 }

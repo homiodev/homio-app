@@ -1,10 +1,16 @@
 package org.touchhome.app.manager.common;
 
+import com.pivovarit.function.ThrowingRunnable;
+import com.pivovarit.function.ThrowingSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.MethodInterceptor;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.hibernate.event.internal.PostDeleteEventListenerStandardImpl;
 import org.hibernate.event.internal.PostInsertEventListenerStandardImpl;
 import org.hibernate.event.internal.PostUpdateEventListenerStandardImpl;
@@ -20,15 +26,13 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.touchhome.app.LogService;
+import org.touchhome.app.auth.JwtTokenProvider;
 import org.touchhome.app.config.ExtRequestMappingHandlerMapping;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.config.WebSocketConfig;
@@ -36,10 +40,7 @@ import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleContextService;
 import org.touchhome.app.hardware.HardwareEventsImpl;
 import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSON;
-import org.touchhome.app.manager.BundleManager;
-import org.touchhome.app.manager.CacheService;
-import org.touchhome.app.manager.ScriptManager;
-import org.touchhome.app.manager.WidgetManager;
+import org.touchhome.app.manager.*;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.repository.SettingRepository;
@@ -49,6 +50,7 @@ import org.touchhome.app.rest.ConsoleController;
 import org.touchhome.app.rest.ItemController;
 import org.touchhome.app.rest.SettingController;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
+import org.touchhome.app.setting.system.SystemLanguageSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
 import org.touchhome.app.utils.CollectionUtils;
 import org.touchhome.app.utils.Curl;
@@ -73,66 +75,75 @@ import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
-import org.touchhome.bundle.api.repository.impl.UserRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 import org.touchhome.bundle.api.setting.BundleSettingPluginButton;
 import org.touchhome.bundle.api.setting.BundleSettingPluginStatus;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
-import org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity;
 
 import javax.persistence.EntityManagerFactory;
 import javax.validation.constraints.NotNull;
 import java.lang.annotation.Annotation;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
 import java.text.DateFormat;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.*;
-import static org.touchhome.bundle.raspberry.model.RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID;
 
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class InternalManager implements EntityContext {
+public class EntityContextImpl implements EntityContext {
 
     public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
+    private final ScheduledExecutorService scheduleService = Executors.newScheduledThreadPool(1000, r -> new Thread(r, "entity-manager"));
+
+    @Getter
+    private final Map<String, ThreadContextImpl> schedulers = new HashMap<>();
+
     private static final Map<BundleSettingPlugin, String> settingTransientState = new HashMap<>();
     public static Map<String, BundleSettingPlugin> settingPluginsByPluginKey = new HashMap<>();
-    public static Map<String, AbstractRepository> repositories = new HashMap<>();
     private static Map<String, BundleSettingPlugin> settingPluginsByPluginClass = new HashMap<>();
+
+    public static Map<String, AbstractRepository> repositories = new HashMap<>();
     private static EntityManager entityManager;
     private static Map<String, AbstractRepository> repositoriesByPrefix;
+    public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
     private static Map<String, PureRepository> pureRepositories = new HashMap<>();
     private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchhome-core";
 
     private final Map<String, List<BiConsumer>> entityUpdateListeners = new HashMap<>();
     private final Map<String, List<BiConsumer>> entityClassUpdateListeners = new HashMap<>();
     private final Map<String, List<Consumer>> entityClassRemoveListeners = new HashMap<>();
+    private final Map<String, List<Consumer>> entityIDRemoveListeners = new HashMap<>();
+    private final Map<String, List<BiConsumer<DatagramPacket, String>>> listenUdpMap = new HashMap<>();
 
     private final Map<String, Boolean> deviceFeatures = new HashMap<>();
     private final Set<NotificationEntityJSON> notifications = CollectionUtils.extendedSet();
 
     private final ClassFinder classFinder;
     private final CacheService cacheService;
-    private final AllDeviceRepository allDeviceRepository;
     private final SimpMessagingTemplate messagingTemplate;
-    private final EntityManagerFactory entityManagerFactory;
-    private final PlatformTransactionManager transactionManager;
     private final BroadcastLockManager broadcastLockManager;
     private final TouchHomeProperties touchHomeProperties;
 
-    private Map<String, List<Consumer<?>>> settingListeners = new HashMap<>();
+    private Map<String, Map<String, Consumer<?>>> settingListeners = new HashMap<>();
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
     private ApplicationContext applicationContext;
+    private AllDeviceRepository allDeviceRepository;
+    private EntityManagerFactory entityManagerFactory;
+    private PlatformTransactionManager transactionManager;
+
     @Getter
     private Map<String, InternalBundleContext> bundles = new LinkedHashMap<>();
     private String latestVersion;
@@ -168,7 +179,12 @@ public class InternalManager implements EntityContext {
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
+        ((ScheduledThreadPoolExecutor) this.scheduleService).setRemoveOnCancelPolicy(true);
+
+        this.transactionManager = this.applicationContext.getBean(PlatformTransactionManager.class);
         this.hardwareEvents = this.applicationContext.getBean(HardwareEventsImpl.class);
+        this.entityManagerFactory = this.applicationContext.getBean(EntityManagerFactory.class);
+        this.allDeviceRepository = this.applicationContext.getBean(AllDeviceRepository.class);
         this.allApplicationContexts.add(applicationContext);
         this.updateDeviceFeatures();
         this.transactionTemplate = new TransactionTemplate(transactionManager);
@@ -176,18 +192,17 @@ public class InternalManager implements EntityContext {
         entityManager = applicationContext.getBean(EntityManager.class);
         updateBeans(null, applicationContext, true);
 
+        applicationContext.getBean(JwtTokenProvider.class).postConstruct(this);
         applicationContext.getBean(LoggerManager.class).postConstruct();
         applicationContext.getBean(LogService.class).setEntityContext(this);
 
         registerEntityListeners();
 
         createUser();
-        createRaspberryDevice();
 
-        applicationContext.getBean(UserRepository.class).postConstruct(this);
         applicationContext.getBean(ScriptManager.class).postConstruct();
 
-        listenSettingValue(SystemClearCacheButtonSetting.class, cacheService::clearCache);
+        listenSettingValue(SystemClearCacheButtonSetting.class, "im-clear-cache", cacheService::clearCache);
 
         // loadWorkspace modules
         log.info("Initialize bundles");
@@ -199,8 +214,6 @@ public class InternalManager implements EntityContext {
         }
 
         applicationContext.getBean(BundleContextService.class).loadBundlesFromPath();
-        // remove unused settings only after full load all external bundles
-        // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
 
         applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
         applicationContext.getBean(WorkspaceManager.class).loadWorkspace();
@@ -226,6 +239,8 @@ public class InternalManager implements EntityContext {
                 broadcastLockManager.signalAll(source.getEntityID());
             }
         });
+        this.allDeviceRepository.resetDeviceStatuses();
+
         // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
 
         notifications.add(NotificationEntityJSON.info("app-status")
@@ -233,55 +248,9 @@ public class InternalManager implements EntityContext {
 
         // create indexes on tables
         this.createTableIndexes();
-        this.fetchReleaseVersion();
+        this.schedule("check-app-version", 1, TimeUnit.DAYS, this::fetchReleaseVersion, true);
         this.hardwareEvents.addEvent("app-release", "Found new app release");
         this.hardwareEvents.addEventAndFire("app-started", "App started");
-    }
-
-    @Scheduled(fixedDelay = 360000)
-    private void fetchReleaseVersion() {
-        try {
-            log.info("Try fetch latest version from server");
-            notifications.add(NotificationEntityJSON.info("version").setName("app").setDescription("version: " + touchHomeProperties.getVersion()));
-            this.latestVersion = Curl.get(GIT_HUB_URL + "/releases/latest", Map.class).get("tag_name").toString();
-
-            if (!touchHomeProperties.getVersion().equals(this.latestVersion)) {
-                log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion, touchHomeProperties.getVersion());
-                notifications.add(NotificationEntityJSON.danger("version")
-                        .setName("app").setDescription("Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion));
-                this.hardwareEvents.fireEvent("app-release", this.latestVersion);
-            }
-        } catch (Exception ex) {
-            log.warn("Unable to fetch latest version");
-        }
-    }
-
-    private void updateDeviceFeatures() {
-        for (String feature : new String[]{"HotSpot", "SSH"}) {
-            deviceFeatures.put(feature, true);
-        }
-        if (EntityContext.isDevEnvironment() || EntityContext.isDockerEnvironment()) {
-            setFeatureState("HotSpot", false);
-        }
-        if (!EntityContext.isLinuxOrDockerEnvironment()) {
-            setFeatureState("SSH", false);
-        }
-    }
-
-    @Override
-    public <T extends BaseEntity> T getEntity(String entityID) {
-        return getEntity(entityID, true);
-    }
-
-    @Override
-    public <T extends BaseEntity> T getEntityOrDefault(String entityID, T defEntity) {
-        T entity = getEntity(entityID, true);
-        return entity == null ? defEntity : entity;
-    }
-
-    @Override
-    public <T> T getEntity(String entityID, Class<T> clazz) {
-        return entityManager.getEntity(entityID, clazz);
     }
 
     @Override
@@ -290,9 +259,17 @@ public class InternalManager implements EntityContext {
             throw new NotFoundException("Unable fetch entity for null id");
         }
         T baseEntity = useCache ? entityManager.getEntityWithFetchLazy(entityID) : entityManager.getEntityNoCache(entityID);
+        if (baseEntity == null) {
+            baseEntity = entityManager.getEntityNoCache(entityID);
+            if (baseEntity != null) {
+                cacheService.clearCache();
+            }
+        }
 
         if (baseEntity != null) {
-            getRepository(baseEntity).ifPresent(abstractRepository -> abstractRepository.updateEntityAfterFetch(baseEntity));
+            cacheService.merge(baseEntity);
+            T finalBaseEntity = baseEntity;
+            getRepository(baseEntity).ifPresent(abstractRepository -> abstractRepository.updateEntityAfterFetch(finalBaseEntity));
         }
         return baseEntity;
     }
@@ -308,20 +285,44 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public <T extends BaseEntity> T getEntity(T entity) {
-        return entityManager.getEntity(entity.getEntityID());
+    public <T extends HasIdIdentifier> void createDelayed(T entity) {
+        putToCache(entity, null);
     }
 
     @Override
-    public <T extends HasIdIdentifier> void saveDelayed(T entity) {
-        PureRepository pureRepository = pureRepositories.get(entity.getClass().getSimpleName());
-        cacheService.putToCache(pureRepository, entity);
+    public <T extends HasIdIdentifier> void updateDelayed(T entity, Consumer<T> consumer) {
+        Map<String, Object> changeFields = new HashMap<>();
+        MethodInterceptor handler = (obj, method, args, proxy) -> {
+            String setName = method.getName();
+            if (setName.startsWith("set")) {
+                String getName = method.getName().replaceFirst("s", "g");
+                Object oldValue = MethodUtils.invokeMethod(entity, getName);
+                if (!Objects.equals(oldValue, args[0])) {
+                    changeFields.put(setName, args[0]);
+                }
+            }
+            if (method.getReturnType().isAssignableFrom(entity.getClass())) {
+                proxy.invoke(entity, args);
+                return obj;
+            }
+            return proxy.invoke(entity, args);
+        };
+
+        T proxyInstance = (T) Enhancer.create(entity.getClass(), handler);
+        consumer.accept(proxyInstance);
+        if (!changeFields.isEmpty()) {
+            putToCache(entity, changeFields);
+        }
     }
 
-    @Override
-    public <T extends BaseEntity> void saveDelayed(T entity) {
-        AbstractRepository repositoryByClass = classFinder.getRepositoryByClass(entity.getClass());
-        cacheService.putToCache(repositoryByClass, entity);
+    private void putToCache(HasIdIdentifier entity, Map<String, Object> changeFields) {
+        PureRepository repository;
+        if (entity instanceof BaseEntity) {
+            repository = classFinder.getRepositoryByClass(((BaseEntity) entity).getClass());
+        } else {
+            repository = pureRepositories.get(entity.getClass().getSimpleName());
+        }
+        cacheService.putToCache(repository, entity, changeFields);
     }
 
     @Override
@@ -362,7 +363,6 @@ public class InternalManager implements EntityContext {
 
         // post save
         cacheService.entityUpdated(entity);
-        entityManager.updateBGPProcesses(entity);
 
         return merge;
     }
@@ -370,18 +370,25 @@ public class InternalManager implements EntityContext {
     @Override
     public <T> T getSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
         BundleSettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
+        String value = this.getSettingRawValue(settingPluginClazz);
+        return pluginFor.parseValue(this, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
+    }
+
+    @Override
+    public <T> String getSettingRawValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
+        BundleSettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
         if (pluginFor.transientState()) {
-            return pluginFor.parseValue(this, StringUtils.defaultIfEmpty(settingTransientState.get(pluginFor), pluginFor.getDefaultValue()));
+            return settingTransientState.get(pluginFor);
         } else {
             SettingEntity settingEntity = getEntity(SettingRepository.getKey(pluginFor));
-            return pluginFor.parseValue(this, StringUtils.defaultIfEmpty(settingEntity == null ? null : settingEntity.getValue(), pluginFor.getDefaultValue()));
+            return settingEntity == null ? null : settingEntity.getValue();
         }
     }
 
     @Override
-    public <T> void listenSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, Consumer<T> listener) {
-        settingListeners.putIfAbsent(bundleSettingPluginClazz.getName(), new ArrayList<>());
-        settingListeners.get(bundleSettingPluginClazz.getName()).add(listener);
+    public <T> void listenSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, String key, Consumer<T> listener) {
+        settingListeners.putIfAbsent(bundleSettingPluginClazz.getName(), new HashMap<>());
+        settingListeners.get(bundleSettingPluginClazz.getName()).put(key, listener);
     }
 
     @Override
@@ -389,6 +396,16 @@ public class InternalManager implements EntityContext {
         BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
         String strValue = setSettingValueSilence(settingPluginClazz, value);
         fireNotifySettingHandlers(settingPluginClazz, value, pluginFor, strValue);
+    }
+
+    /**
+     * Fire notification that setting state was changed without writing actual value to db
+     */
+    public <T> void notifySettingValueStateChanged(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
+        BundleSettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
+        SettingEntity settingEntity = getEntity(SettingRepository.getKey(pluginFor));
+        T value = pluginFor.parseValue(this, settingEntity.getValue());
+        fireNotifySettingHandlers(settingPluginClazz, value, pluginFor, settingEntity.getValue());
     }
 
     @Override
@@ -421,6 +438,16 @@ public class InternalManager implements EntityContext {
                 save(settingEntity.setValue(value));
             }
         }
+    }
+
+    @Override
+    public void addHeaderNotification(NotificationEntityJSON notificationEntityJSON) {
+        notifications.add(notificationEntityJSON);
+    }
+
+    @Override
+    public void removeHeaderNotification(NotificationEntityJSON notificationEntityJSON) {
+        notifications.remove(notificationEntityJSON);
     }
 
     @Override
@@ -459,18 +486,6 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public void sendInfoMessage(String message) {
-        sendNotification(NotificationEntityJSON.info("info-" + message.hashCode())
-                .setName(message));
-    }
-
-    @Override
-    public void sendErrorMessage(String message, Exception ex) {
-        sendNotification(NotificationEntityJSON.danger("error-" + message.hashCode())
-                .setName(message + ". Cause: " + TouchHomeUtils.getErrorMessage(ex)));
-    }
-
-    @Override
     public <T extends BaseEntity> List<T> findAll(Class<T> clazz) {
         return findAllByRepository((Class<BaseEntity>) clazz, getRepository(clazz));
     }
@@ -482,16 +497,15 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public BaseEntity<? extends BaseEntity> delete(BaseEntity baseEntity) {
-        return delete(baseEntity.getEntityID());
-    }
-
-    @Override
     public BaseEntity<? extends BaseEntity> delete(String entityId) {
         BaseEntity<? extends BaseEntity> deletedEntity = entityManager.delete(entityId);
         if (deletedEntity != null) {
+            cacheService.delete(entityId);
             for (Consumer consumer : this.entityClassRemoveListeners.getOrDefault(deletedEntity.getClass().getName(), Collections.emptyList())) {
                 consumer.accept(deletedEntity);
+            }
+            for (Consumer listener : this.entityIDRemoveListeners.getOrDefault(entityId, Collections.emptyList())) {
+                listener.accept(deletedEntity);
             }
         }
         return deletedEntity;
@@ -500,14 +514,6 @@ public class InternalManager implements EntityContext {
     @Override
     public AbstractRepository<? extends BaseEntity> getRepositoryByPrefix(String repositoryPrefix) {
         return repositoriesByPrefix.get(repositoryPrefix);
-    }
-
-    @Override
-    public AbstractRepository<BaseEntity> getRepositoryByClass(String className) {
-        Predicate<AbstractRepository> predicate = className.contains(".") ?
-                repo -> repo.getEntityClass().getName().equals(className) :
-                repo -> repo.getEntityClass().getSimpleName().equals(className);
-        return repositories.values().stream().filter(predicate).findFirst().orElse(null);
     }
 
     @Override
@@ -558,8 +564,16 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
+    public <T> Map<String, T> getBeansOfTypeWithBeanName(Class<T> clazz) {
+        Map<String, T> values = new HashMap<>();
+        for (ApplicationContext context : allApplicationContexts) {
+            values.putAll(context.getBeansOfType(clazz));
+        }
+        return values;
+    }
+
+    @Override
     public <T> Map<String, Collection<T>> getBeansOfTypeByBundles(Class<T> clazz) {
-        List<T> values = new ArrayList<>();
         Map<String, Collection<T>> res = new HashMap<>();
         for (ApplicationContext context : allApplicationContexts) {
             Collection<T> beans = context.getBeansOfType(clazz).values();
@@ -568,15 +582,6 @@ public class InternalManager implements EntityContext {
             }
         }
         return res;
-    }
-
-    @Override
-    public UserEntity getUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null) {
-            return getEntity((String) authentication.getCredentials());
-        }
-        return null;
     }
 
     @Override
@@ -590,13 +595,59 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public Map<String, Boolean> getDeviceFeatures() {
-        return deviceFeatures;
+    @SneakyThrows
+    public void listenUdp(String host, int port, BiConsumer<DatagramPacket, String> listener) {
+        String key = host + port;
+        if (!this.listenUdpMap.containsKey(key)) {
+            this.listenUdpMap.put(key, new ArrayList<>());
+            DatagramSocket socket = new DatagramSocket(host == null ? new InetSocketAddress(port) : new InetSocketAddress(host, port));
+            DatagramPacket datagramPacket = new DatagramPacket(new byte[255], 255);
+
+            String hostName = (host == null ? "0.0.0.0" : host) + ":" + port;
+            ThreadContext<Void> schedule = this.schedule("listen-udp-" + hostName, 1, TimeUnit.SECONDS, () -> {
+                socket.receive(datagramPacket);
+                byte[] data = datagramPacket.getData();
+                String text = new String(data, 0, datagramPacket.getLength());
+                for (BiConsumer<DatagramPacket, String> udpListener : listenUdpMap.get(key)) {
+                    udpListener.accept(datagramPacket, text);
+                }
+            }, true);
+            schedule.setDescription("Listen udp: " + hostName);
+        }
+        this.listenUdpMap.get(key).add(listener);
     }
 
     @Override
-    public <T extends BaseEntity> void addEntityUpdateListener(String entityID, Consumer<T> listener) {
-        this.addEntityUpdateListener(entityID, (t, t2) -> listener.accept((T) t));
+    public ThreadContext<Void> schedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
+        return addSchedule(name, timeout, timeUnit, () -> {
+            command.run();
+            return null;
+        }, ScheduleType.DELAY, showOnUI);
+    }
+
+    @Override
+    public boolean isThreadExists(String name) {
+        return this.schedulers.containsKey(name);
+    }
+
+    @Override
+    public <T> ThreadContext<T> run(String name, ThrowingSupplier<T, Exception> command, boolean showOnUI) {
+        return addSchedule(name, 0, TimeUnit.MILLISECONDS, command, ScheduleType.SINGLE, showOnUI);
+    }
+
+    @Override
+    public void cancelThread(String name) {
+        if (name != null) {
+            ThreadContextImpl context = this.schedulers.remove(name);
+            if (context != null) {
+                context.cancel();
+            }
+        }
+    }
+
+    @Override
+    public Map<String, Boolean> getDeviceFeatures() {
+        return deviceFeatures;
     }
 
     @Override
@@ -606,14 +657,15 @@ public class InternalManager implements EntityContext {
     }
 
     @Override
-    public <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, Consumer<T> listener) {
-        this.addEntityUpdateListener(entityClass, (t, t2) -> listener.accept(t));
-    }
-
-    @Override
     public <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener) {
         this.entityClassUpdateListeners.putIfAbsent(entityClass.getName(), new ArrayList<>());
         this.entityClassUpdateListeners.get(entityClass.getName()).add(listener);
+    }
+
+    @Override
+    public <T extends BaseEntity> void addEntityRemovedListener(String entityID, Consumer<T> listener) {
+        this.entityIDRemoveListeners.putIfAbsent(entityID, new ArrayList<>());
+        this.entityIDRemoveListeners.get(entityID).add(listener);
     }
 
     @Override
@@ -637,7 +689,6 @@ public class InternalManager implements EntityContext {
         InternalBundleContext internalBundleContext = bundles.remove(bundleId);
         if (internalBundleContext != null) {
             this.removeBundle(internalBundleContext.bundleContext);
-            // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
         }
     }
 
@@ -670,16 +721,10 @@ public class InternalManager implements EntityContext {
         }
     }
 
-    private void createRaspberryDevice() {
-        if (getEntity(DEFAULT_DEVICE_ENTITY_ID) == null) {
-            save(new RaspberryDeviceEntity().computeEntityID(() -> DEFAULT_DEVICE_ENTITY_ID));
-        }
-    }
-
     private <T> void fireNotifySettingHandlers(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value,
                                                BundleSettingPlugin pluginFor, String strValue) {
         if (settingListeners.containsKey(settingPluginClazz.getName())) {
-            for (Consumer consumer : settingListeners.get(settingPluginClazz.getName())) {
+            for (Consumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {
                 try {
                     consumer.accept(value);
                 } catch (Exception ex) {
@@ -688,12 +733,12 @@ public class InternalManager implements EntityContext {
             }
         }
         broadcastLockManager.signalAll(SettingEntity.PREFIX + settingPluginClazz.getSimpleName(), StringUtils.defaultIfEmpty(strValue, pluginFor.getDefaultValue()));
-        this.sendNotification(pluginFor.buildToastrNotificationEntity(value, this));
+        this.sendNotification(pluginFor.buildToastrNotificationEntity(value, strValue, this));
     }
 
     private void registerEntityListeners() {
         this.showEntityState = getSettingValue(SystemShowEntityStateSetting.class);
-        this.listenSettingValue(SystemShowEntityStateSetting.class, value -> this.showEntityState = value);
+        this.listenSettingValue(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
 
         SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
         EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
@@ -785,6 +830,7 @@ public class InternalManager implements EntityContext {
         log.info("Starting update all app bundles");
         En.get().clear();
         fetchBundleSettingPlugins(bundleContext, addBundle);
+        En.DEFAULT_LANG = getSettingValue(SystemLanguageSetting.class);
 
         Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values()
                 .stream().collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
@@ -796,6 +842,7 @@ public class InternalManager implements EntityContext {
             pureRepositories.keySet().removeAll(pureRepositoryMap.keySet());
             repositories.keySet().removeAll(context.getBeansOfType(AbstractRepository.class).keySet());
         }
+        baseEntityNameToClass = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
         repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
 
         applicationContext.getBean(ConsoleController.class).postConstruct();
@@ -806,9 +853,9 @@ public class InternalManager implements EntityContext {
         }*/
         applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
         applicationContext.getBean(WorkspaceController.class).postConstruct(this);
-        applicationContext.getBean(EntityManager.class).postConstruct();
         applicationContext.getBean(ItemController.class).postConstruct();
         applicationContext.getBean(Scratch3OtherBlocks.class).postConstruct();
+        applicationContext.getBean(PortManager.class).postConstruct();
 
         if (bundleContext != null) {
             applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addBundle);
@@ -836,7 +883,11 @@ public class InternalManager implements EntityContext {
 
     private void createTableIndexes() {
         List<Class<? extends BaseEntity>> list = classFinder.getClassesWithParent(BaseEntity.class, null, null)
-                .stream().filter(l -> !WidgetBaseEntity.class.isAssignableFrom(l)).collect(Collectors.toList());
+                .stream().filter(l -> !(WidgetBaseEntity.class.isAssignableFrom(l) || DeviceBaseEntity.class.isAssignableFrom(l)))
+                .collect(Collectors.toList());
+        list.add(DeviceBaseEntity.class);
+        list.add(WidgetBaseEntity.class);
+
         javax.persistence.EntityManager em = applicationContext.getBean(javax.persistence.EntityManager.class);
         MetamodelImplementor meta = (MetamodelImplementor) em.getMetamodel();
         new TransactionTemplate(transactionManager).execute(new TransactionCallbackWithoutResult() {
@@ -854,6 +905,68 @@ public class InternalManager implements EntityContext {
         });
     }
 
+    private <T> ThreadContext<T> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingSupplier<T, Exception> command,
+                                             ScheduleType scheduleType, boolean showOnUI) {
+        this.cancelThread(name);
+        ThreadContextImpl<T> threadContext = new ThreadContextImpl<T>(name, command, scheduleType, timeout > 0 ? timeUnit.toMillis(timeout) : null, showOnUI);
+        this.schedulers.put(name, threadContext);
+
+        Runnable runnable = () -> {
+            try {
+                threadContext.runCount++;
+                threadContext.state = "STARTED";
+                threadContext.getCommand().get();
+                threadContext.state = "FINISHED";
+            } catch (Exception ex) {
+                log.error("Exception in thread: <{}>", name);
+                threadContext.errorListener.accept(ex);
+            }
+        };
+        ScheduledFuture<?> scheduledFuture = null;
+        switch (scheduleType) {
+            case DELAY:
+                scheduledFuture = scheduleService.scheduleWithFixedDelay(runnable, 0, timeout, timeUnit);
+                break;
+            case RATE:
+                scheduledFuture = scheduleService.scheduleAtFixedRate(runnable, 0, timeout, timeUnit);
+                break;
+            case SINGLE:
+                scheduledFuture = scheduleService.schedule(runnable, 0, TimeUnit.MILLISECONDS);
+                break;
+        }
+        threadContext.scheduledFuture = (ScheduledFuture<T>) scheduledFuture;
+        return threadContext;
+    }
+
+    private void fetchReleaseVersion() {
+        try {
+            log.info("Try fetch latest version from server");
+            notifications.add(NotificationEntityJSON.info("version").setName("app").setDescription("version: " + touchHomeProperties.getVersion()));
+            this.latestVersion = Curl.get(GIT_HUB_URL + "/releases/latest", Map.class).get("tag_name").toString();
+
+            if (!touchHomeProperties.getVersion().equals(this.latestVersion)) {
+                log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion, touchHomeProperties.getVersion());
+                notifications.add(NotificationEntityJSON.danger("version")
+                        .setName("app").setDescription("Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion));
+                this.hardwareEvents.fireEvent("app-release", this.latestVersion);
+            }
+        } catch (Exception ex) {
+            log.warn("Unable to fetch latest version");
+        }
+    }
+
+    private void updateDeviceFeatures() {
+        for (String feature : new String[]{"HotSpot", "SSH"}) {
+            deviceFeatures.put(feature, true);
+        }
+        if (EntityContext.isDevEnvironment() || EntityContext.isDockerEnvironment()) {
+            setFeatureState("HotSpot", false);
+        }
+        if (!EntityContext.isLinuxOrDockerEnvironment()) {
+            setFeatureState("SSH", false);
+        }
+    }
+
     public static class InternalBundleContext {
         private final BundleEntrypoint bundleEntrypoint;
         @Getter
@@ -869,5 +982,55 @@ public class InternalManager implements EntityContext {
                 }
             }
         }
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    public static class ThreadContextImpl<T> implements ThreadContext<T> {
+        private final String name;
+        private final ThrowingSupplier<T, Exception> command;
+        private final ScheduleType scheduleType;
+        private final Long period;
+        private final boolean showOnUI;
+        private ScheduledFuture<T> scheduledFuture;
+        @Setter
+        private String state;
+        @Setter
+        private String description;
+        private boolean stopped;
+        @Setter
+        private int runCount;
+        @Getter
+        private Date creationTime = new Date();
+
+        private Consumer<Exception> errorListener;
+
+        public Long getTimeToNextSchedule() {
+            if (period == null) {
+                return null;
+            }
+            return scheduledFuture.getDelay(TimeUnit.MILLISECONDS) / 1000;
+        }
+
+        @Override
+        public void cancel() {
+            if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
+                stopped = true;
+            }
+        }
+
+        @Override
+        public T await(long timeout, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+            return scheduledFuture.get(timeout, timeUnit);
+        }
+
+        public void onError(Consumer<Exception> errorListener) {
+            this.errorListener = errorListener;
+        }
+    }
+
+    @RequiredArgsConstructor
+    public enum ScheduleType {
+        DELAY, RATE, SINGLE
     }
 }

@@ -39,8 +39,8 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         this.broadcastLockManager = broadcastLockManager;
 
         // Menu
-        this.settingsMenu = MenuBlock.ofServer("settingsMenu", "rest/setting/name", "-", "-");
-        this.hardwareEventsMenu = MenuBlock.ofServer("hardwareEventsMenu", "rest/hardware/event", "-", "-");
+        this.settingsMenu = MenuBlock.ofServer("settingsMenu", "rest/setting/name");
+        this.hardwareEventsMenu = MenuBlock.ofServer("hardwareEventsMenu", "rest/hardware/event");
 
         // Blocks
         this.myIp = Scratch3Block.ofEvaluate(50, "my_ip", BlockType.reporter, "my ip", this::getByIP);
@@ -55,11 +55,11 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         this.ipGeoLocation.addArgument("IP", ArgumentType.string, getByIP(null));
 
         this.settingChangeCommand = Scratch3Block.ofHandler(300, "setting_change", BlockType.hat, "Setting [SETTING] changed to [VALUE]", this::settingChangeEvent);
-        this.settingChangeCommand.addArgumentServerSelection(SETTING, this.settingsMenu);
+        this.settingChangeCommand.addArgument(SETTING, this.settingsMenu);
         this.settingChangeCommand.addArgument(VALUE, ArgumentType.string);
 
         this.hardwareEventCommand = Scratch3Block.ofHandler(400, "hardware_event", BlockType.hat, "Hardware event [EVENT]", this::hardwareEvent);
-        this.hardwareEventCommand.addArgumentServerSelection(EVENT, this.hardwareEventsMenu);
+        this.hardwareEventCommand.addArgument(EVENT, this.hardwareEventsMenu);
 
         this.postConstruct();
     }

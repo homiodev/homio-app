@@ -2,7 +2,7 @@ package org.touchhome.app.repository;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.touchhome.app.manager.common.InternalManager;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.setting.SettingPlugin;
 import org.touchhome.bundle.api.BundleEntrypoint;
@@ -39,7 +39,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
     }
 
     public static void fulfillEntityFromPlugin(SettingEntity entity, EntityContext entityContext) {
-        BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(entity.getEntityID());
+        BundleSettingPlugin plugin = EntityContextImpl.settingPluginsByPluginKey.get(entity.getEntityID());
         if (plugin != null) {
             entity.setBundle(getSettingBundleName(entityContext, plugin.getClass()));
             entity.setDefaultValue(plugin.getDefaultValue());
@@ -79,7 +79,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
 
     @Transactional
     public void postConstruct() {
-        for (BundleSettingPlugin settingPlugin : InternalManager.settingPluginsByPluginKey.values()) {
+        for (BundleSettingPlugin settingPlugin : EntityContextImpl.settingPluginsByPluginKey.values()) {
             if (!settingPlugin.transientState()) {
                 SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
                 if (settingEntity == null) {

@@ -215,7 +215,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
             String backupId = workspaceBlock.getFieldId("backup_list_group");
 
             WorkspaceBackupEntity entity = entityContext.getEntity(WorkspaceBackupEntity.PREFIX + backupId);
-            entityContext.save(new WorkspaceBackupValueCrudEntity()
+            entityContext.createDelayed(new WorkspaceBackupValueCrudEntity()
                     .setCreationTime(new Date())
                     .setWorkspaceBackupEntity(entity)
                     .setValue(value));

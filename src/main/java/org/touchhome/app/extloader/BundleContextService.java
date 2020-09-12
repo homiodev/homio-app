@@ -9,7 +9,7 @@ import org.reflections.util.ConfigurationBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
-import org.touchhome.app.manager.common.InternalManager;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -26,14 +26,14 @@ import java.util.stream.Collectors;
 public class BundleContextService {
 
     private final Environment env;
-    private final InternalManager internalManager;
+    private final EntityContextImpl entityContextImpl;
     private final ApplicationContext parentContext;
     private final Map<String, BundleContext> bundleContextMap = new HashMap<>();
     private final Map<String, BundleContext> artifactIdContextMap = new HashMap<>();
 
-    public BundleContextService(Environment env, InternalManager internalManager, ApplicationContext parentContext) {
+    public BundleContextService(Environment env, EntityContextImpl entityContextImpl, ApplicationContext parentContext) {
         this.env = env;
-        this.internalManager = internalManager;
+        this.entityContextImpl = entityContextImpl;
         this.parentContext = parentContext;
         for (String systemBundle : TouchHomeUtils.SYSTEM_BUNDLES) {
             BundleContext systemBundleContext = new BundleContext(systemBundle);
@@ -55,14 +55,14 @@ public class BundleContextService {
         for (BundleContext context : artifactIdContextMap.values()) {
             loadBundle(context);
         }
-        internalManager.addBundle(artifactIdContextMap);
+        entityContextImpl.addBundle(artifactIdContextMap);
     }
 
     private void loadBundlesFromPath(Path bundleContextFile) {
         BundleContext bundleContext = new BundleContext(bundleContextFile);
         artifactIdContextMap.put(bundleContext.getPomFile().getArtifactId(), bundleContext);
         loadBundle(bundleContext);
-        internalManager.addBundle(artifactIdContextMap);
+        entityContextImpl.addBundle(artifactIdContextMap);
     }
 
     private void loadBundle(String bundleId, Path bundleContextFile) {
@@ -123,7 +123,7 @@ public class BundleContextService {
     private void removeBundle(String bundleId) {
         BundleContext context = this.bundleContextMap.remove(bundleId);
         if (context != null) { // TODO: gggggggggggggggggg
-            internalManager.removeBundle(bundleId);
+            entityContextImpl.removeBundle(bundleId);
             context.destroy();
             Files.delete(context.getBundleContextFile());
             log.info("Bundle <{}> has been removed successfully", bundleId);

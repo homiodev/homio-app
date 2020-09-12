@@ -11,7 +11,6 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.json.JSONObject;
-import org.springframework.aop.support.AopUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,24 +21,26 @@ import org.touchhome.app.js.assistant.impl.CodeParser;
 import org.touchhome.app.js.assistant.impl.ParserContext;
 import org.touchhome.app.js.assistant.model.Completion;
 import org.touchhome.app.js.assistant.model.CompletionRequest;
-import org.touchhome.app.json.ScriptUiGroupsJSON;
 import org.touchhome.app.manager.ScriptManager;
-import org.touchhome.app.manager.common.InternalManager;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
+import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.manager.En;
 import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.*;
+import org.touchhome.bundle.api.ui.field.color.*;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectValueOnEmpty;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 import org.touchhome.bundle.api.ui.method.UIFieldCreateWorkspaceVariableOnEmpty;
-import org.touchhome.bundle.api.ui.method.UIFieldSelectValueOnEmpty;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.persistence.OneToMany;
-import java.beans.Introspector;
+import javax.validation.constraints.Pattern;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -62,7 +63,7 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIVILEGED_USER_ROLE;
 @RequiredArgsConstructor
 public class UtilsController {
 
-    private final InternalManager entityContext;
+    private final EntityContextImpl entityContext;
     private final ScriptManager scriptManager;
     private final CodeParser codeParser;
 
@@ -79,22 +80,20 @@ public class UtilsController {
         Constructor constructor = Stream.of(entityClassByType.getDeclaredConstructors()).filter(c -> c.getParameterCount() == 0).findAny()
                 .orElseThrow(() -> new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName()));
         constructor.setAccessible(true);
-        Object instance = constructor.newInstance();
         return fillEntityUIMetadataList(constructor.newInstance(), entityUIMetaDataSet);
     }
 
     static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet) {
         FieldUtils.getFieldsListWithAnnotation(instance.getClass(), UIField.class).forEach(field ->
-                generateUIField(instance, entityUIMetaDataSet, field, StringUtils.defaultIfEmpty(field.getAnnotation(UIField.class).name(), field.getName()), field.getType(), field.getAnnotation(UIField.class)));
+                generateUIField(instance, entityUIMetaDataSet, field,
+                        StringUtils.defaultIfEmpty(field.getAnnotation(UIField.class).name(), field.getName()),
+                        field.getType(), field.getAnnotation(UIField.class), field.getName(), field.getGenericType()));
 
         for (Method method : MethodUtils.getMethodsListWithAnnotation(instance.getClass(), UIField.class)) {
             String name = method.getAnnotation(UIField.class).name();
-            if (StringUtils.isEmpty(name)) {
-                //not too safe ))
-                name = Introspector.decapitalize(method.getName().substring(method.getName().startsWith("is") ? 2 : 3));
-            }
-
-            generateUIField(instance, entityUIMetaDataSet, null, name, method.getReturnType(), method.getAnnotation(UIField.class));
+            String methodName = InternalUtil.getMethodShortName(method);
+            generateUIField(instance, entityUIMetaDataSet, method, StringUtils.defaultIfEmpty(name, methodName),
+                    method.getReturnType(), method.getAnnotation(UIField.class), methodName, method.getGenericReturnType());
         }
 
         List<EntityUIMetaData> data = new ArrayList<>(entityUIMetaDataSet);
@@ -106,8 +105,10 @@ public class UtilsController {
     @SneakyThrows
     private static void generateUIField(Object instance,
                                         Set<EntityUIMetaData> entityUIMetaDataList,
-                                        Field field, String name, Class type,
-                                        UIField uiField) {
+                                        AccessibleObject accessibleObject, String name, Class<?> type,
+                                        UIField uiField,
+                                        String sourceName,
+                                        Type genericType) {
         if (name == null) {
             throw new IllegalArgumentException("generateUIField name must be not null");
         }
@@ -133,22 +134,24 @@ public class UtilsController {
         if (uiField.onlyEdit()) {
             entityUIMetaData.setOnlyEdit(true);
         }
-        if (field != null) {
-            entityUIMetaData.setDefaultValue(FieldUtils.readField(field, instance, true));
+        if (accessibleObject instanceof Field) {
+            entityUIMetaData.setDefaultValue(FieldUtils.readField((Field) accessibleObject, instance, true));
+        } else {
+            entityUIMetaData.setDefaultValue(((Method) accessibleObject).invoke(instance));
         }
+
         JSONObject jsonTypeMetadata = new JSONObject();
         if (uiField.type().equals(UIFieldType.AutoDetect)) {
-            if (type.isEnum() || (field != null && field.isAnnotationPresent(UIFieldSelection.class))) {
-                entityUIMetaData.setType(UIFieldType.Selection.name());
+            if (type.isEnum() || accessibleObject.isAnnotationPresent(UIFieldSelection.class) || accessibleObject.isAnnotationPresent(UIFieldBeanSelection.class)) {
+                entityUIMetaData.setType(uiField.readOnly() ? UIFieldType.String.name() : UIFieldType.Selection.name());
             } else {
-                if (field != null && field.getGenericType() instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
-                    Type genericType = field.getGenericType();
+                if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
                     Type argument = ((ParameterizedType) genericType).getActualTypeArguments()[0];
 
                     if (argument instanceof Class && BaseEntity.class.isAssignableFrom((Class<?>) argument)) {
                         entityUIMetaData.setType("List");
                         jsonTypeMetadata.put("type", ((Class<?>) argument).getSimpleName());
-                        jsonTypeMetadata.put("mappedBy", field.getAnnotation(OneToMany.class).mappedBy());
+                        jsonTypeMetadata.put("mappedBy", accessibleObject.getAnnotation(OneToMany.class).mappedBy());
                     }
                 } else {
                     if (type.equals(boolean.class)) {
@@ -165,74 +168,96 @@ public class UtilsController {
             entityUIMetaData.setType(uiField.type().name());
         }
 
-        if (field != null) {
-            UIFieldColorMatch[] uiFieldColorMatches = field.getDeclaredAnnotationsByType(UIFieldColorMatch.class);
-            if (uiFieldColorMatches.length > 0) {
-                JSONObject colors = new JSONObject();
-                for (UIFieldColorMatch uiFieldColorMatch : uiFieldColorMatches) {
-                    colors.put(uiFieldColorMatch.value(), uiFieldColorMatch.color());
-                }
-                jsonTypeMetadata.put("valueColor", colors);
-            }
+        Pattern pattern = accessibleObject.getDeclaredAnnotation(Pattern.class);
+        if (pattern != null) {
+            jsonTypeMetadata.put("regexp", pattern.regexp());
+            jsonTypeMetadata.put("regexpMsg", pattern.message());
+        }
 
-            UIFieldColorRef uiFieldColorRef = field.getDeclaredAnnotation(UIFieldColorRef.class);
-            if (uiFieldColorRef != null) {
-                if (instance.getClass().getDeclaredField(uiFieldColorRef.value()) == null) {
-                    throw new RuntimeException("Unable to find field <" + uiFieldColorRef.value() + "> declared in UIFieldColorRef");
-                }
-                jsonTypeMetadata.put("colorRef", uiFieldColorRef.value());
+        UIFieldColorMatch[] uiFieldColorMatches = accessibleObject.getDeclaredAnnotationsByType(UIFieldColorMatch.class);
+        if (uiFieldColorMatches.length > 0) {
+            JSONObject colors = new JSONObject();
+            for (UIFieldColorMatch uiFieldColorMatch : uiFieldColorMatches) {
+                colors.put(uiFieldColorMatch.value(), uiFieldColorMatch.color());
             }
+            jsonTypeMetadata.put("valueColor", colors);
+        }
 
-            UIFieldExpand uiFieldExpand = field.getDeclaredAnnotation(UIFieldExpand.class);
-            if (uiFieldExpand != null && field.getType().isAssignableFrom(List.class)) {
-                jsonTypeMetadata.put("expand", "true");
-            }
+        UIFieldColorStatusMatch uiFieldColorStatusMatch = accessibleObject.getDeclaredAnnotation(UIFieldColorStatusMatch.class);
+        if (uiFieldColorStatusMatch != null) {
+            JSONObject colors = new JSONObject();
+            colors.put("OFFLINE", uiFieldColorStatusMatch.offline());
+            colors.put("ONLINE", uiFieldColorStatusMatch.online());
+            colors.put("UNKNOWN", uiFieldColorStatusMatch.unknown());
+            colors.put("ERROR", uiFieldColorStatusMatch.error());
+            jsonTypeMetadata.put("valueColor", colors);
+        }
 
-            UIFieldRowColor uiFieldRowColor = field.getDeclaredAnnotation(UIFieldRowColor.class);
-            if (uiFieldRowColor != null) {
-                jsonTypeMetadata.put("rc", field.getName());
-            }
+        UIFieldColorBooleanMatch uiFieldColorBooleanMatch = accessibleObject.getDeclaredAnnotation(UIFieldColorBooleanMatch.class);
+        if (uiFieldColorBooleanMatch != null) {
+            JSONObject colors = new JSONObject();
+            colors.put("true", uiFieldColorBooleanMatch.False());
+            colors.put("false", uiFieldColorBooleanMatch.True());
+            jsonTypeMetadata.put("valueColor", colors);
+        }
 
-            UIFieldCreateWorkspaceVariableOnEmpty uiFieldCreateWorkspaceVariable = field.getDeclaredAnnotation(UIFieldCreateWorkspaceVariableOnEmpty.class);
-            if (uiFieldCreateWorkspaceVariable != null) {
-                jsonTypeMetadata.put("cwvoe", "true");
+        UIFieldColorRef uiFieldColorRef = accessibleObject.getDeclaredAnnotation(UIFieldColorRef.class);
+        if (uiFieldColorRef != null) {
+            if (instance.getClass().getDeclaredField(uiFieldColorRef.value()) == null) {
+                throw new RuntimeException("Unable to find field <" + uiFieldColorRef.value() + "> declared in UIFieldColorRef");
             }
+            jsonTypeMetadata.put("colorRef", uiFieldColorRef.value());
+        }
 
-            UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty = field.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
-            if (uiFieldSelectValueOnEmpty != null) {
-                jsonTypeMetadata.put("sveColor", uiFieldSelectValueOnEmpty.color());
-                jsonTypeMetadata.put("sveLabel", uiFieldSelectValueOnEmpty.label());
-            }
+        UIFieldExpand uiFieldExpand = accessibleObject.getDeclaredAnnotation(UIFieldExpand.class);
+        if (uiFieldExpand != null && type.isAssignableFrom(List.class)) {
+            jsonTypeMetadata.put("expand", "true");
+        }
 
-            if (entityUIMetaData.getType().equals(String.class.getSimpleName())) {
-                UIKeyValueField uiKeyValueField = field.getDeclaredAnnotation(UIKeyValueField.class);
-                if (uiKeyValueField != null) {
-                    jsonTypeMetadata.put("maxSize", uiKeyValueField.maxSize());
-                    jsonTypeMetadata.put("keyType", uiKeyValueField.keyType());
-                    jsonTypeMetadata.put("valueType", uiKeyValueField.valueType());
-                    jsonTypeMetadata.put("defaultKey", uiKeyValueField.defaultKey());
-                    jsonTypeMetadata.put("defaultValue", uiKeyValueField.defaultValue());
-                    jsonTypeMetadata.put("keyFormat", uiKeyValueField.keyFormat());
-                    jsonTypeMetadata.put("valueFormat", uiKeyValueField.valueFormat());
-                    jsonTypeMetadata.put("keyValueType", uiKeyValueField.keyValueType().name());
-                    entityUIMetaData.setType("KeyValue");
-                }
-            }
+        UIFieldColorSource uiFieldRowColor = accessibleObject.getDeclaredAnnotation(UIFieldColorSource.class);
+        if (uiFieldRowColor != null) {
+            jsonTypeMetadata.put("rc", sourceName);
+        }
 
-            if (entityUIMetaData.getType().equals(String.class.getSimpleName()) || entityUIMetaData.getType().equals(UIFieldType.Slider.name())) {
-                UIFieldNumber uiFieldNumber = field.getDeclaredAnnotation(UIFieldNumber.class);
-                if (uiFieldNumber != null) {
-                    jsonTypeMetadata.put("min", uiFieldNumber.min());
-                    jsonTypeMetadata.put("max", uiFieldNumber.max());
-                }
-            }
+        UIFieldCreateWorkspaceVariableOnEmpty uiFieldCreateWorkspaceVariable = accessibleObject.getDeclaredAnnotation(UIFieldCreateWorkspaceVariableOnEmpty.class);
+        if (uiFieldCreateWorkspaceVariable != null) {
+            jsonTypeMetadata.put("cwvoe", "true");
+        }
 
-            if (field.isAnnotationPresent(UIFieldCodeEditor.class)) {
-                UIFieldCodeEditor uiFieldCodeEditor = field.getDeclaredAnnotation(UIFieldCodeEditor.class);
-                jsonTypeMetadata.put("autoFormat", uiFieldCodeEditor.autoFormat());
-                jsonTypeMetadata.put("editorType", uiFieldCodeEditor.editorType());
-                entityUIMetaData.setType("CodeEditor");
+        UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty = accessibleObject.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
+        if (uiFieldSelectValueOnEmpty != null) {
+            jsonTypeMetadata.put("sveColor", uiFieldSelectValueOnEmpty.color());
+            jsonTypeMetadata.put("sveLabel", uiFieldSelectValueOnEmpty.label());
+        }
+
+        if (entityUIMetaData.getType().equals(String.class.getSimpleName())) {
+            UIKeyValueField uiKeyValueField = accessibleObject.getDeclaredAnnotation(UIKeyValueField.class);
+            if (uiKeyValueField != null) {
+                jsonTypeMetadata.put("maxSize", uiKeyValueField.maxSize());
+                jsonTypeMetadata.put("keyType", uiKeyValueField.keyType());
+                jsonTypeMetadata.put("valueType", uiKeyValueField.valueType());
+                jsonTypeMetadata.put("defaultKey", uiKeyValueField.defaultKey());
+                jsonTypeMetadata.put("defaultValue", uiKeyValueField.defaultValue());
+                jsonTypeMetadata.put("keyFormat", uiKeyValueField.keyFormat());
+                jsonTypeMetadata.put("valueFormat", uiKeyValueField.valueFormat());
+                jsonTypeMetadata.put("keyValueType", uiKeyValueField.keyValueType().name());
+                entityUIMetaData.setType("KeyValue");
             }
+        }
+
+        if (entityUIMetaData.getType().equals(String.class.getSimpleName()) || entityUIMetaData.getType().equals(UIFieldType.Slider.name())) {
+            UIFieldNumber uiFieldNumber = accessibleObject.getDeclaredAnnotation(UIFieldNumber.class);
+            if (uiFieldNumber != null) {
+                jsonTypeMetadata.put("min", uiFieldNumber.min());
+                jsonTypeMetadata.put("max", uiFieldNumber.max());
+            }
+        }
+
+        if (accessibleObject.isAnnotationPresent(UIFieldCodeEditor.class)) {
+            UIFieldCodeEditor uiFieldCodeEditor = accessibleObject.getDeclaredAnnotation(UIFieldCodeEditor.class);
+            jsonTypeMetadata.put("autoFormat", uiFieldCodeEditor.autoFormat());
+            jsonTypeMetadata.put("editorType", uiFieldCodeEditor.editorType());
+            entityUIMetaData.setType("CodeEditor");
         }
 
         if (uiField.showInContextMenu() && entityUIMetaData.getType().equals(Boolean.class.getSimpleName())) {
@@ -303,26 +328,6 @@ public class UtilsController {
         }
 
         return runScriptOnceJSON;
-    }
-
-    // TODO: not implemented
-    @GetMapping("/getAllItemsForScript")
-    public ScriptUiGroupsJSON getAllItemsForScript() {
-        ScriptUiGroupsJSON scriptUiGroupsJSON = new ScriptUiGroupsJSON();
-        for (AbstractRepository repository : InternalManager.repositories.values()) {
-            Class<?> clazz = repository.getEntityClass();
-            if (clazz.isAnnotationPresent(UISidebarMenu.class)) {
-                ScriptUiGroupsJSON.Group group = scriptUiGroupsJSON.addGroup(clazz.getSimpleName());
-                Class<?> targetClass = AopUtils.getTargetClass(repository);
-                group.baseCode = "context.get" + targetClass.getSimpleName() + "().getByEntityID(";
-
-                List<BaseEntity> list = repository.listAll();
-                for (BaseEntity baseEntity : list) {
-                    group.add(baseEntity);
-                }
-            }
-        }
-        return scriptUiGroupsJSON;
     }
 
     @GetMapping("i18n/{lang}.json")

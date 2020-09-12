@@ -10,7 +10,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
-import org.touchhome.bundle.api.repository.impl.UserRepository;
+import org.touchhome.bundle.api.repository.UserRepository;
 
 import javax.validation.Valid;
 import java.security.Principal;
@@ -34,7 +34,7 @@ public class AuthController {
     @GetMapping("status")
     public int getStatus(Principal user) {
         UserEntity userEntity = entityContext.getEntity(ADMIN_USER);
-        return user == null ? (userEntity.isPasswordNotSet() ? 402 : 401) : 200;
+        return user == null ? (userEntity == null || userEntity.isPasswordNotSet() ? 402 : 401) : 200;
     }
 
     @GetMapping("user")

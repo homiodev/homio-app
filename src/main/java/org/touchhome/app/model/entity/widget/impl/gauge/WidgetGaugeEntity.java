@@ -12,6 +12,7 @@ import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.ui.field.*;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -25,7 +26,7 @@ import java.util.List;
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> implements HasDataSource {
 
     @UIField(label = "widget.gauge_dataSource", order = 14, required = true)
-    @UIFieldSelection(optionLoader = GaugeDataSourceDynamicOptionLoader.class)
+    @UIFieldSelection(GaugeDataSourceDynamicOptionLoader.class)
     private String dataSource;
 
     @UIField(order = 15)

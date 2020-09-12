@@ -8,6 +8,7 @@ import org.springframework.data.util.Pair;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.manager.ScriptManager;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
@@ -28,7 +29,6 @@ import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.repository.widget.HasFetchChartSeries;
-import org.touchhome.app.thread.js.impl.ScriptJSBackgroundProcess;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
@@ -242,7 +242,7 @@ public class WidgetController {
                             .setJavaScriptParameters(jsEntity.getJavaScriptParameters());
 
                     CompileScriptContext compileScriptContext = scriptManager.createCompiledScript(scriptEntity, null);
-                    jsEntity.setJavaScriptResponse(ScriptJSBackgroundProcess.runJavaScript(compileScriptContext));
+                    jsEntity.setJavaScriptResponse(scriptManager.runJavaScript(compileScriptContext));
 
                 } catch (Exception ex) {
                     jsEntity.setJavaScriptErrorResponse(TouchHomeUtils.getErrorMessage(ex));
@@ -262,8 +262,8 @@ public class WidgetController {
             throw new NotFoundException("Unable to find tab with tabId: " + tabId);
         }
 
-        AbstractRepository<BaseEntity> entityRepositoryByType = entityContext.getRepositoryByClass(type);
-        WidgetBaseEntity baseEntity = (WidgetBaseEntity) entityRepositoryByType.getEntityClass().getConstructor().newInstance();
+        Class<? extends BaseEntity> typeClass = EntityContextImpl.baseEntityNameToClass.get(type);
+        WidgetBaseEntity baseEntity = (WidgetBaseEntity) typeClass.getConstructor().newInstance();
 
         baseEntity.setWidgetTabEntity(widgetTabEntity);
         return entityContext.save(baseEntity);

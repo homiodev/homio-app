@@ -4,6 +4,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.scratch.WorkspaceBlock;
+import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
 import java.util.ArrayList;
@@ -44,9 +45,9 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     }
 
     @Override
-    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key, Object expectedValue) {
+    public <T> BroadcastLockImpl<T> getOrCreateLock(WorkspaceBlock workspaceBlock, String key, T expectedValue) {
         Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
-        BroadcastLockImpl lock = new BroadcastLockImpl(key, expectedValue);
+        BroadcastLockImpl<T> lock = new BroadcastLockImpl<>(key, expectedValue);
         listenerHolder.broadcastListeners.putIfAbsent(key, new ArrayList<>());
         listenerHolder.broadcastListeners.get(key).add(lock);
         ((WorkspaceBlockImpl) workspaceBlock).addLock(lock);
@@ -54,19 +55,19 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     }
 
     @Override
-    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock) {
+    public <T> BroadcastLockImpl<T> getOrCreateLock(WorkspaceBlock workspaceBlock) {
         return getOrCreateLock(workspaceBlock, workspaceBlock.getId(), null);
     }
 
     @Override
-    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key) {
+    public <T> BroadcastLockImpl<T> getOrCreateLock(WorkspaceBlock workspaceBlock, String key) {
         return getOrCreateLock(workspaceBlock, key, null);
     }
 
     @Override
-    public BroadcastLockImpl listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
+    public <T> BroadcastLock<T> listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier)  {
         Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
-        BroadcastLockImpl lock = getOrCreateLock(workspaceBlock);
+        BroadcastLockImpl<T> lock = getOrCreateLock(workspaceBlock);
         listenerHolder.broadcastListenersMap.put(workspaceBlock.getId(), Pair.of(lock, supplier));
         if (listenerHolder.thread == null) {
             listenerHolder.thread = new Thread(runnable, Thread.currentThread().getName());

@@ -14,7 +14,7 @@ import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntit
 import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldNumber;
-import org.touchhome.bundle.api.ui.field.UIFieldSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.Entity;
@@ -44,7 +44,7 @@ public class WidgetSliderSeriesEntity extends BaseEntity<WidgetSliderSeriesEntit
     @UIField(label = "widget.slider_dataSource",
             order = 14,
             required = true)
-    @UIFieldSelection(optionLoader = SliderSeriesDataSourceDynamicOptionLoader.class)
+    @UIFieldSelection(SliderSeriesDataSourceDynamicOptionLoader.class)
     private String dataSource;
 
     @UIField(order = 15, type = UIFieldType.Color)

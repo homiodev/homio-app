@@ -2,7 +2,9 @@ package org.touchhome.app.manager;
 
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -13,7 +15,6 @@ import org.touchhome.bundle.api.model.DeviceBaseEntity;
 import org.touchhome.bundle.api.model.HasIdIdentifier;
 import org.touchhome.bundle.api.repository.PureRepository;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -28,8 +29,6 @@ import static org.touchhome.app.manager.common.ClassFinder.REPOSITORY_BY_CLAZZ;
 public class CacheService {
 
     public static final String CACHE_CLASS_BY_TYPE = "CACHE_CLASS_BY_TYPE";
-    public static final String CACHE_ALL_DEVICES = "CACHE_ALL_DEVICES";
-    public static final String ENTITY_BY_ENTITY_ID = "ENTITY_BY_ENTITY_ID";
     public static final String ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI = "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
     public static final String ENTITY_IDS_BY_CLASS_NAME = "ENTITY_IDS_BY_CLASS_NAME";
     public static final String REPOSITORY_BY_ENTITY_ID = "REPOSITORY_BY_ENTITY_ID";
@@ -42,12 +41,10 @@ public class CacheService {
         return new ConcurrentMapCacheManager(
                 CLASSES_WITH_PARENT_CLASS,
 
-                ENTITY_BY_ENTITY_ID,
                 ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI,
                 ENTITY_IDS_BY_CLASS_NAME,
 
                 REPOSITORY_BY_CLAZZ,
-                CACHE_ALL_DEVICES,
 
                 CACHE_CLASS_BY_TYPE,
                 REPOSITORY_BY_ENTITY_ID);
@@ -73,43 +70,60 @@ public class CacheService {
     }
 
     private void singleEntityUpdated(BaseEntity entity) {
-        Objects.requireNonNull(cacheManager.getCache(ENTITY_BY_ENTITY_ID)).evict(entity.getEntityID());
         Objects.requireNonNull(cacheManager.getCache(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI)).evict(entity.getEntityID());
         Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME)).clear(); // need remove all because entity may create alos another entities
-
-        if (DeviceBaseEntity.class.isAssignableFrom(entity.getClass())) {
-            Objects.requireNonNull(cacheManager.getCache(CACHE_ALL_DEVICES)).clear();
-        }
     }
 
-    public <T extends HasIdIdentifier> void putToCache(PureRepository<T> repository, T entity) {
+    public void putToCache(PureRepository repository, HasIdIdentifier entity, Map<String, Object> changeFields) {
         String identifier = entity.getIdentifier();
         if (identifier == null) {
             throw new IllegalStateException("Unable update state without id" + entity);
         }
         synchronized (entityCache) {
-            entityCache.put(identifier, new UpdateStatement(entity, repository));
+            if (entityCache.containsKey(identifier)) {
+                // override changed fields
+                entityCache.get(identifier).changeFields.putAll(changeFields);
+            } else {
+                entityCache.put(identifier, new UpdateStatement(entity, repository, changeFields));
+            }
         }
     }
 
-    @Scheduled(fixedDelayString = "${flushDelayedUpdatesInterval:30000}")
+    @SneakyThrows
+    public void merge(BaseEntity baseEntity) {
+        UpdateStatement updateStatement = entityCache.get(baseEntity.getIdentifier());
+        if (updateStatement != null && updateStatement.changeFields != null) {
+            for (Map.Entry<String, Object> entry : updateStatement.changeFields.entrySet()) {
+                MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
+    public void delete(String entityId) {
+        entityCache.remove(entityId);
+    }
+
+    @Scheduled(fixedDelay = 30000)
     public void flushDelayedUpdates() {
         if (!entityCache.isEmpty()) {
-            Map<String, UpdateStatement> entityCacheCopy;
             synchronized (entityCache) {
-                entityCacheCopy = new HashMap<>(entityCache);
-                entityCache.clear();
-            }
-            for (UpdateStatement updateStatement : entityCacheCopy.values()) {
-                try {
-                    updateStatement.pureRepository.flushCashedEntity(updateStatement.baseEntity);
+                for (UpdateStatement updateStatement : entityCache.values()) {
+                    try {
+                        if (updateStatement.changeFields != null) {
+                            for (Map.Entry<String, Object> entry : updateStatement.changeFields.entrySet()) {
+                                MethodUtils.invokeMethod(updateStatement.baseEntity, entry.getKey(), entry.getValue());
+                            }
+                        }
+                        updateStatement.repository.flushCashedEntity(updateStatement.baseEntity);
 
-                    if (updateStatement.baseEntity instanceof BaseEntity) {
-                        entityUpdated((BaseEntity) updateStatement.baseEntity);
+                        if (updateStatement.baseEntity instanceof BaseEntity) {
+                            entityUpdated((BaseEntity) updateStatement.baseEntity);
+                        }
+                    } catch (Exception ex) {
+                        log.error("Error delay update entity <{}>", updateStatement.baseEntity, ex);
                     }
-                } catch (Exception ex) {
-                    log.error("Error delay update entity <{}>", updateStatement.baseEntity, ex);
                 }
+                entityCache.clear();
             }
         }
     }
@@ -117,6 +131,7 @@ public class CacheService {
     @AllArgsConstructor
     private static class UpdateStatement {
         HasIdIdentifier baseEntity;
-        PureRepository pureRepository;
+        PureRepository repository;
+        Map<String, Object> changeFields;
     }
 }

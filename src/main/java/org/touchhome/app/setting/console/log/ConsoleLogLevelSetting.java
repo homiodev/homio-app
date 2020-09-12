@@ -33,7 +33,7 @@ public class ConsoleLogLevelSetting implements BundleConsoleSettingPlugin<Consol
 
     @Override
     public List<Option> loadAvailableValues(EntityContext entityContext) {
-        return Option.list(LogLevel.class);
+        return Option.enumList(LogLevel.class);
     }
 
     @Override

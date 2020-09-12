@@ -50,18 +50,18 @@ import org.touchhome.app.jsog.JSOGGenerator;
 import org.touchhome.app.jsog.JSOGResolver;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.common.ClassFinder;
-import org.touchhome.app.manager.common.InternalManager;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.repository.crud.base.CrudRepositoryFactoryBean;
 import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.block.Scratch3Space;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostHandler;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.DeviceBaseEntity;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
 
-import javax.persistence.EntityManager;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -69,7 +69,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -93,15 +92,16 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     private boolean applicationReady;
 
     @Bean
-   public WebMvcRegistrations mvcRegistrations() {
-       return new WebMvcRegistrations() {
-           private ExtRequestMappingHandlerMapping handlerMapping = new ExtRequestMappingHandlerMapping();
-           @Override
-           public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
-               return handlerMapping;
-           }
-       };
-   }
+    public WebMvcRegistrations mvcRegistrations() {
+        return new WebMvcRegistrations() {
+            private ExtRequestMappingHandlerMapping handlerMapping = new ExtRequestMappingHandlerMapping();
+
+            @Override
+            public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
+                return handlerMapping;
+            }
+        };
+    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -194,7 +194,7 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
             @Override
             // TODO: not optimized
             public DeviceBaseEntity deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-                return applicationContext.getBean(InternalManager.class).getEntity(p.getText(), DeviceBaseEntity.class);
+                return applicationContext.getBean(EntityContextImpl.class).getEntity(p.getText());
             }
         });
 
@@ -207,6 +207,7 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
                 .registerModule(simpleModule)
                 .setSerializationInclusion(JsonInclude.Include.NON_NULL)
                 .addMixIn(BaseEntity.class, Bean2MixIn.class);
+
         return objectMapper;
     }
 
@@ -214,7 +215,7 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     @Override
     public void addFormatters(final FormatterRegistry registry) {
         registry.addConverter(String.class, DeviceBaseEntity.class, source ->
-                applicationContext.getBean(InternalManager.class).getEntity(source, DeviceBaseEntity.class));
+                applicationContext.getBean(EntityContext.class).getEntity(source));
     }
 
     @Bean
@@ -239,8 +240,8 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
         if (event instanceof ContextRefreshedEvent && !this.applicationReady) {
             this.applicationReady = true;
             ApplicationContext applicationContext = ((ContextRefreshedEvent) event).getApplicationContext();
-            InternalManager internalManager = applicationContext.getBean(InternalManager.class);
-            internalManager.afterContextStart(applicationContext);
+            EntityContextImpl entityContextImpl = applicationContext.getBean(EntityContextImpl.class);
+            entityContextImpl.afterContextStart(applicationContext);
         }
     }
 

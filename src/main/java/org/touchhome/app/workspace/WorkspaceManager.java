@@ -1,12 +1,12 @@
 package org.touchhome.app.workspace;
 
+import com.pivovarit.function.ThrowingRunnable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
-import org.touchhome.app.manager.BackgroundProcessManager;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.repository.workspace.WorkspaceBroadcastRepository;
@@ -26,8 +26,8 @@ import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableGroupEntity
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.scratch.WorkspaceBlock;
 import org.touchhome.bundle.api.scratch.WorkspaceEventListener;
-import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
-import org.touchhome.bundle.api.workspace.BroadcastLockManager;
+import org.touchhome.bundle.api.util.NotificationType;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 
 import java.util.*;
@@ -43,7 +43,6 @@ public class WorkspaceManager {
     private final Set<String> ONCE_EXECUTION_BLOCKS = new HashSet<>(Arrays.asList("boolean_link", "group_variable_link"));
     private final BroadcastLockManagerImpl broadcastLockManager;
     private final EntityContext entityContext;
-    private final BackgroundProcessManager backgroundProcessManager;
 
     private Collection<WorkspaceEventListener> workspaceEventListeners;
     private Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
@@ -73,9 +72,12 @@ public class WorkspaceManager {
                             if (ONCE_EXECUTION_BLOCKS.contains(workspaceBlock.getOpcode())) {
                                 executeOnce(workspaceBlock);
                             } else {
-                                WorkspaceBlockProcessService service = new WorkspaceBlockProcessService(workspaceBlock, workspaceEntity, entityContext);
-                                tabHolder.tab2Services.add(service);
-                                backgroundProcessManager.fireIfNeedRestart(service);
+                                EntityContext.ThreadContext<?> threadContext = this.entityContext.run(
+                                        "workspace-" + workspaceBlock.getId(),
+                                        createWorkspaceThread(workspaceBlock, workspaceEntity), true);
+                                threadContext.setDescription("Tab[" + workspaceEntity.getName() + "]. " + workspaceBlock.getDescription());
+                                workspaceBlock.setStateHandler(threadContext::setState);
+                                tabHolder.tab2Services.add(threadContext);
                             }
                         });
             } catch (Exception ex) {
@@ -83,6 +85,24 @@ public class WorkspaceManager {
                 entityContext.sendErrorMessage("Unable to initialize workspace: " + ex.getMessage(), ex);
             }
         }
+    }
+
+    private ThrowingRunnable<Exception> createWorkspaceThread(WorkspaceBlock workspaceBlock, WorkspaceEntity workspaceEntity) {
+        return () -> {
+            String oldName = Thread.currentThread().getName();
+            String name = workspaceBlock.getId();
+            log.debug("Workspace start thread: <{}>", name);
+            try {
+                Thread.currentThread().setName(workspaceEntity.getEntityID());
+                ((WorkspaceBlockImpl) workspaceBlock).handleOrEvaluate();
+            } catch (Exception ex) {
+                log.warn("Error in workspace thread: <{}>, <{}>", name, ex.getMessage());
+                entityContext.sendNotification("Error", TouchHomeUtils.getErrorMessage(ex), NotificationType.danger);
+            } finally {
+                Thread.currentThread().setName(oldName);
+            }
+            log.debug("Workspace thread finished: <{}>", name);
+        };
     }
 
     private TabHolder releaseWorkspaceEntity(WorkspaceEntity workspaceEntity) {
@@ -94,10 +114,10 @@ public class WorkspaceManager {
         }
 
         for (WorkspaceBlock workspaceBlock : tabHolder.tab2WorkspaceBlocks.values()) {
-            workspaceBlock.release();
+            ((WorkspaceBlockImpl)workspaceBlock).release();
         }
-        for (WorkspaceBlockProcessService tab2Service : tabHolder.tab2Services) {
-            backgroundProcessManager.cancelTask(tab2Service, BackgroundProcessStatus.STOP, null);
+        for (EntityContext.ThreadContext threadContext : tabHolder.tab2Services) {
+            this.entityContext.cancelThread(threadContext.getName());
         }
         return tabHolder;
     }
@@ -138,7 +158,7 @@ public class WorkspaceManager {
         updateWorkspaceObjects(target.optJSONObject("broadcasts"), WorkspaceBroadcastRepository.PREFIX, WorkspaceBroadcastEntity::new);
 
         // backup
-        Map<BaseEntity, JSONArray> values = updateWorkspaceObjects(target.optJSONObject ("backup_lists"), WorkspaceBackupGroupEntity.PREFIX, WorkspaceBackupGroupEntity::new);
+        Map<BaseEntity, JSONArray> values = updateWorkspaceObjects(target.optJSONObject("backup_lists"), WorkspaceBackupGroupEntity.PREFIX, WorkspaceBackupGroupEntity::new);
         createSupplier(values, (baseEntity) -> new WorkspaceBackupEntity().setWorkspaceBackupGroupEntity((WorkspaceBackupGroupEntity) baseEntity), WorkspaceBackupEntity.PREFIX);
 
         // bool
@@ -260,11 +280,11 @@ public class WorkspaceManager {
         entityContext.addEntityRemovedListener(WorkspaceEntity.class, entity -> tabs.remove(entity.getEntityID()));
 
         // listen for clear workspace
-        entityContext.listenSettingValue(SystemClearWorkspaceButtonSetting.class, () ->
+        entityContext.listenSettingValue(SystemClearWorkspaceButtonSetting.class, "wm-clear-workspace", () ->
                 entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent(""))));
 
         // listen for clear variables
-        entityContext.listenSettingValue(SystemClearWorkspaceVariablesButtonSetting.class, () -> {
+        entityContext.listenSettingValue(SystemClearWorkspaceVariablesButtonSetting.class, "wm-clear-workspace-variables", () -> {
             entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent("")));
             WorkspaceShareVariableEntity entity = entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
             entityContext.save(entity.setContent(""));
@@ -294,7 +314,7 @@ public class WorkspaceManager {
     }
 
     private static class TabHolder {
-        private List<WorkspaceBlockProcessService> tab2Services = new ArrayList<>();
+        private List<EntityContext.ThreadContext> tab2Services = new ArrayList<>();
         private Map<String, WorkspaceBlock> tab2WorkspaceBlocks = new HashMap<>();
     }
 }

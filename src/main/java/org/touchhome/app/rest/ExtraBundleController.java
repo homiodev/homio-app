@@ -10,7 +10,7 @@ import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleContextService;
-import org.touchhome.app.manager.common.InternalManager;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.Set;
@@ -22,13 +22,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ExtraBundleController {
 
-    private final InternalManager internalManager;
+    private final EntityContextImpl entityContextImpl;
     private final BundleContextService bundleContextService;
 
     @GetMapping
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Set<ExtraBundleJson> getInstalledBundles() {
-        return internalManager.getBundles().values().stream()
+        return entityContextImpl.getBundles().values().stream()
                 .filter(b -> b.getBundleContext() != null)
                 .map(b -> new ExtraBundleJson(b.getBundleContext()))
                 .collect(Collectors.toSet());

@@ -12,9 +12,9 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldColorMatch;
-import org.touchhome.bundle.api.ui.field.UIFieldColorRef;
-import org.touchhome.bundle.api.ui.field.UIFieldRowColor;
+import org.touchhome.bundle.api.ui.field.color.UIFieldColorMatch;
+import org.touchhome.bundle.api.ui.field.color.UIFieldColorRef;
+import org.touchhome.bundle.api.ui.field.color.UIFieldColorSource;
 import org.touchhome.bundle.api.util.RaspberryGpioPin;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
 
@@ -105,7 +105,7 @@ public class GpioConsolePlugin implements ConsolePlugin {
         @UIFieldColorMatch(value = "LOW", color = "#B22020")
         private Object value;
 
-        @UIFieldRowColor
+        @UIFieldColorSource
         private String color;
 
         @Override

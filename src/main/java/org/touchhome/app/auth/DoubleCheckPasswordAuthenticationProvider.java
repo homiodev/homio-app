@@ -10,7 +10,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.touchhome.bundle.api.model.UserEntity;
-import org.touchhome.bundle.api.repository.impl.UserRepository;
+import org.touchhome.bundle.api.repository.UserRepository;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;

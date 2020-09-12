@@ -13,7 +13,7 @@ import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.Entity;
@@ -31,7 +31,7 @@ public class WidgetLineChartSeriesEntity extends BaseEntity<WidgetLineChartSerie
     @UIField(order = 14,
             required = true,
             label = "widget.line_dataSource")
-    @UIFieldSelection(optionLoader = ChartSeriesDataSourceDynamicOptionLoader.class)
+    @UIFieldSelection(ChartSeriesDataSourceDynamicOptionLoader.class)
     private String dataSource;
 
     @UIField(order = 15, type = UIFieldType.Color)

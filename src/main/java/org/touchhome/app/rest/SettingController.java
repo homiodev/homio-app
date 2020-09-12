@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.manager.BundleManager;
-import org.touchhome.app.manager.common.InternalManager;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.bundle.api.BundleEntrypoint;
@@ -40,7 +40,7 @@ public class SettingController {
         settingRepository.postConstruct();
 
         this.transientSettings = new HashMap<>();
-        for (BundleSettingPlugin settingPlugin : InternalManager.settingPluginsByPluginKey.values()) {
+        for (BundleSettingPlugin settingPlugin : EntityContextImpl.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {
                 this.transientSettings.put(settingPlugin.getClass(),
                         SettingRepository.createSettingEntityFromPlugin(settingPlugin, new SettingEntity(), entityContext));
@@ -50,13 +50,13 @@ public class SettingController {
 
     @GetMapping("{entityID}/options")
     public List<Option> loadSettingAvailableValues(@PathVariable("entityID") String entityID) {
-        return InternalManager.settingPluginsByPluginKey.get(entityID).loadAvailableValues(entityContext);
+        return EntityContextImpl.settingPluginsByPluginKey.get(entityID).loadAvailableValues(entityContext);
     }
 
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     @PostMapping(value = "{entityID}", consumes = "text/plain")
     public <T> void updateSettings(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
-        BundleSettingPlugin settingPlugin = InternalManager.settingPluginsByPluginKey.get(entityID);
+        BundleSettingPlugin settingPlugin = EntityContextImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin != null) {
             entityContext.setSettingValueRaw((Class<? extends BundleSettingPlugin<T>>) settingPlugin.getClass(), value);
         }
@@ -86,7 +86,7 @@ public class SettingController {
 
         for (Iterator<SettingEntity> iterator = settings.iterator(); iterator.hasNext(); ) {
             SettingEntity settingEntity = iterator.next();
-            BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(settingEntity.getEntityID());
+            BundleSettingPlugin plugin = EntityContextImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
             if (plugin != null && plugin.isVisible(entityContext)) {
 
                 // fulfill pages
@@ -116,7 +116,7 @@ public class SettingController {
     private void updateSettingToPages(List<SettingEntity> settings) {
         // fulfill console pages
         for (SettingEntity settingEntity : settings) {
-            BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(settingEntity.getEntityID());
+            BundleSettingPlugin plugin = EntityContextImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
             if (plugin instanceof BundleConsoleSettingPlugin) {
                 for (Map.Entry<String, ConsolePlugin> entry : consoleController.getConsolePluginsMap().entrySet()) {
                     if (((BundleConsoleSettingPlugin) plugin).acceptConsolePluginPage(entry.getValue())) {
@@ -132,7 +132,7 @@ public class SettingController {
      */
     private void updateSettingDescription(List<SettingEntity> settings) {
         Set<String> bundleSettings = settings.stream().map(e -> {
-            BundleSettingPlugin plugin = InternalManager.settingPluginsByPluginKey.get(e.getEntityID());
+            BundleSettingPlugin plugin = EntityContextImpl.settingPluginsByPluginKey.get(e.getEntityID());
             return SettingRepository.getSettingBundleName(entityContext, plugin.getClass());
         }).filter(Objects::nonNull).collect(Collectors.toSet());
 

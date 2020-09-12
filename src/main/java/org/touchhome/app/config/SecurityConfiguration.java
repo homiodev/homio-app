@@ -20,7 +20,7 @@ import org.touchhome.app.auth.DoubleCheckPasswordAuthenticationProvider;
 import org.touchhome.app.auth.JwtTokenFilterConfigurer;
 import org.touchhome.app.auth.JwtTokenProvider;
 import org.touchhome.app.auth.UserEntityDetailsService;
-import org.touchhome.bundle.api.repository.impl.UserRepository;
+import org.touchhome.bundle.api.repository.UserRepository;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;

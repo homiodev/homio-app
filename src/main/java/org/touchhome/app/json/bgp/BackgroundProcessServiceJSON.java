@@ -2,12 +2,9 @@ package org.touchhome.app.json.bgp;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
-import org.touchhome.bundle.api.thread.BackgroundProcessService;
-import org.touchhome.bundle.api.thread.BackgroundProcessStatus;
+import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.method.UIMethodAction;
 
 import java.util.Date;
 
@@ -32,22 +29,20 @@ public class BackgroundProcessServiceJSON implements HasEntityIdentifier {
     private String state;
 
     @UIField(readOnly = true, order = 19)
-    private BackgroundProcessService.ScheduleType scheduleType;
+    private String scheduleType;
 
     @UIField(readOnly = true, order = 20)
-    private Date nextTimeToExecute;
+    private Long timeToNextSchedule;
 
     @UIField(readOnly = true, order = 21)
-    private BackgroundProcessStatus status;
+    private Status status;
 
     @UIField(readOnly = true, order = 22)
     private String errorMessage;
 
     @UIField(readOnly = true, order = 23)
-    private long period;
+    private Long period;
 
-    @UIMethodAction(name = "ACTION.SHOW_LOGS")
-    public String showLogs(EntityContext entityContext) {
-        return "some logs";
-    }
+    @UIField(readOnly = true, order = 24)
+    private int runCount;
 }

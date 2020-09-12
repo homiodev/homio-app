@@ -140,7 +140,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
             if (level != Level.DEBUG) {
                 updateLogLevel(level);
             }
-            entityContext.listenSettingValue(ConsoleLogLevelSetting.class, logLevel -> updateLogLevel(logLevel.getLevel()));
+            entityContext.listenSettingValue(ConsoleLogLevelSetting.class, "log-set-level", logLevel -> updateLogLevel(logLevel.getLevel()));
         }
 
         private void updateLogLevel(Level level) {

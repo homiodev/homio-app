@@ -1,6 +1,3 @@
-flushDelayedUpdatesInterval: 30000
-keepGoogleCloudCacheTime: 300000
-scheduledAppPingTime: 60000
 rootDir: /opt/touchhome
 
 touchhome:
