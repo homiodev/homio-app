@@ -11,6 +11,7 @@ import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.apache.logging.log4j.Level;
 import org.hibernate.event.internal.PostDeleteEventListenerStandardImpl;
 import org.hibernate.event.internal.PostInsertEventListenerStandardImpl;
 import org.hibernate.event.internal.PostUpdateEventListenerStandardImpl;
@@ -39,7 +40,6 @@ import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleContextService;
 import org.touchhome.app.hardware.HardwareEventsImpl;
-import org.touchhome.app.json.AlwaysOnTopNotificationEntityJSON;
 import org.touchhome.app.manager.*;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
@@ -52,7 +52,6 @@ import org.touchhome.app.rest.SettingController;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemLanguageSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
-import org.touchhome.app.utils.CollectionUtils;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.WorkspaceController;
@@ -63,12 +62,13 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.condition.ExecuteOnce;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
+import org.touchhome.bundle.api.json.AlwaysOnTopNotificationEntityJSON;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.manager.En;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.DeviceBaseEntity;
-import org.touchhome.bundle.api.model.HasIdIdentifier;
+import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
@@ -77,9 +77,10 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPluginButton;
 import org.touchhome.bundle.api.setting.BundleSettingPluginStatus;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
+import org.touchhome.bundle.api.util.FlowMap;
+import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
@@ -94,6 +95,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
@@ -121,14 +123,16 @@ public class EntityContextImpl implements EntityContext {
     private static Map<String, PureRepository> pureRepositories = new HashMap<>();
     private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchhome-core";
 
-    private final Map<String, List<BiConsumer>> entityUpdateListeners = new HashMap<>();
-    private final Map<String, List<BiConsumer>> entityClassUpdateListeners = new HashMap<>();
-    private final Map<String, List<Consumer>> entityClassRemoveListeners = new HashMap<>();
-    private final Map<String, List<Consumer>> entityIDRemoveListeners = new HashMap<>();
-    private final Map<String, List<BiConsumer<DatagramPacket, String>>> listenUdpMap = new HashMap<>();
+    private final Map<String, List<BiConsumer>> entityTypeUpdateListeners = new HashMap<>();
+    private final Map<String, List<BiConsumer>> entityTypeRemoveListeners = new HashMap<>();
+
+    private final Map<String, List<BiConsumer>> entityIDUpdateListeners = new HashMap<>();
+    private final Map<String, List<BiConsumer>> entityIDRemoveListeners = new HashMap<>();
+
+    private final Map<String, UdpContext> listenUdpMap = new HashMap<>();
 
     private final Map<String, Boolean> deviceFeatures = new HashMap<>();
-    private final Set<NotificationEntityJSON> notifications = CollectionUtils.extendedSet();
+    private final Set<NotificationEntityJSON> notifications = new ConcurrentSkipListSet<>();
 
     private final ClassFinder classFinder;
     private final CacheService cacheService;
@@ -285,18 +289,22 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public <T extends HasIdIdentifier> void createDelayed(T entity) {
+    public <T extends HasEntityIdentifier> void createDelayed(T entity) {
         putToCache(entity, null);
     }
 
     @Override
-    public <T extends HasIdIdentifier> void updateDelayed(T entity, Consumer<T> consumer) {
+    public <T extends HasEntityIdentifier> void updateDelayed(T entity, Consumer<T> consumer) {
         Map<String, Object> changeFields = new HashMap<>();
         MethodInterceptor handler = (obj, method, args, proxy) -> {
             String setName = method.getName();
             if (setName.startsWith("set")) {
-                String getName = method.getName().replaceFirst("s", "g");
-                Object oldValue = MethodUtils.invokeMethod(entity, getName);
+                Object oldValue;
+                try {
+                    oldValue = MethodUtils.invokeMethod(entity, method.getName().replaceFirst("set", "get"));
+                } catch (NoSuchMethodException ex) {
+                    oldValue = MethodUtils.invokeMethod(entity, method.getName().replaceFirst("set", "is"));
+                }
                 if (!Objects.equals(oldValue, args[0])) {
                     changeFields.put(setName, args[0]);
                 }
@@ -309,13 +317,19 @@ public class EntityContextImpl implements EntityContext {
         };
 
         T proxyInstance = (T) Enhancer.create(entity.getClass(), handler);
-        consumer.accept(proxyInstance);
+
+        entityUpdate(null, null, this.entityIDUpdateListeners, this.entityTypeUpdateListeners, (Supplier<HasEntityIdentifier>) () -> {
+            consumer.accept(proxyInstance);
+            return entity;
+        });
         if (!changeFields.isEmpty()) {
             putToCache(entity, changeFields);
         }
+        // fire change event manually
+        sendEntityUpdateNotification(entity, "change");
     }
 
-    private void putToCache(HasIdIdentifier entity, Map<String, Object> changeFields) {
+    private void putToCache(HasEntityIdentifier entity, Map<String, Object> changeFields) {
         PureRepository repository;
         if (entity instanceof BaseEntity) {
             repository = classFinder.getRepositoryByClass(((BaseEntity) entity).getClass());
@@ -326,9 +340,25 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public <T extends HasIdIdentifier> void save(T entity) {
+    public <T extends HasEntityIdentifier> void save(T entity) {
         BaseCrudRepository pureRepository = (BaseCrudRepository) pureRepositories.get(entity.getClass().getSimpleName());
         pureRepository.save(entity);
+    }
+
+    private <T extends HasEntityIdentifier> T entityUpdate(T entity, T oldEntity, Map<String, List<BiConsumer>> entityIDListeners,
+                                                           Map<String, List<BiConsumer>> entityTypeListeners, Supplier<T> updateHandler) {
+        T saved = null;
+        try {
+            saved = updateHandler.get();
+        } finally {
+            if (saved != null) {
+                for (BiConsumer consumer : entityIDListeners.getOrDefault(saved.getEntityID(), Collections.emptyList())) {
+                    consumer.accept(saved, entity);
+                }
+                notifyEntityListeners(entityTypeListeners, saved, oldEntity);
+            }
+        }
+        return saved;
     }
 
     @Override
@@ -337,24 +367,12 @@ public class EntityContextImpl implements EntityContext {
         final AbstractRepository repository = foundRepo == null && entity instanceof DeviceBaseEntity ? allDeviceRepository : foundRepo;
         T oldEntity = entity.getEntityID() == null ? null : getEntity(entity);
 
-        T merge = transactionTemplate.execute(status -> {
-            T saved = null;
-            try {
-                saved = (T) repository.save(entity);
-                repository.updateEntityAfterFetch(saved);
-            } finally {
-                if (saved != null) {
-                    for (BiConsumer consumer : this.entityUpdateListeners.getOrDefault(saved.getEntityID(), Collections.emptyList())) {
-                        consumer.accept(saved, oldEntity);
-                    }
-
-                    for (BiConsumer consumer : this.entityClassUpdateListeners.getOrDefault(entity.getClass().getName(), Collections.emptyList())) {
-                        consumer.accept(saved, oldEntity);
-                    }
-                }
-            }
-            return saved;
-        });
+        T merge = transactionTemplate.execute(status ->
+                entityUpdate(entity, oldEntity, this.entityIDUpdateListeners, this.entityTypeUpdateListeners, () -> {
+                    T t = (T) repository.save(entity);
+                    repository.updateEntityAfterFetch(t);
+                    return t;
+                }));
 
         if (StringUtils.isEmpty(entity.getEntityID())) {
             entity.setEntityID(merge.getEntityID());
@@ -443,6 +461,7 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public void addHeaderNotification(NotificationEntityJSON notificationEntityJSON) {
         notifications.add(notificationEntityJSON);
+        sendNotification(notificationEntityJSON);
     }
 
     @Override
@@ -452,36 +471,22 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     public void sendNotification(String destination, Object param) {
+        if (param instanceof NotificationEntityJSON) {
+            NotificationType type = ((NotificationEntityJSON) param).getNotificationType();
+            log.log(type == NotificationType.danger ? Level.ERROR : (type == NotificationType.warning ? Level.WARN : Level.INFO),
+                    param.toString());
+        }
         messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + destination, param);
     }
 
     @Override
-    public void showAlwaysOnViewNotification(NotificationEntityJSON notificationEntityJSON, int duration, String color) {
-        AlwaysOnTopNotificationEntityJSON alwaysOnTopNotificationEntityJSON = new AlwaysOnTopNotificationEntityJSON(notificationEntityJSON);
-        alwaysOnTopNotificationEntityJSON.setColor(color);
-        alwaysOnTopNotificationEntityJSON.setDuration(duration);
-        notifications.add(alwaysOnTopNotificationEntityJSON);
-        sendNotification(alwaysOnTopNotificationEntityJSON);
-    }
-
-    @Override
-    public void showAlwaysOnViewNotification(NotificationEntityJSON notificationEntityJSON, String icon, String color, Class<? extends BundleSettingPluginButton> stopAction) {
-        AlwaysOnTopNotificationEntityJSON alwaysOnTopNotificationEntityJSON = new AlwaysOnTopNotificationEntityJSON(notificationEntityJSON);
-        alwaysOnTopNotificationEntityJSON.setColor(color);
-        alwaysOnTopNotificationEntityJSON.setIcon(icon);
-        alwaysOnTopNotificationEntityJSON.setStopAction(SettingEntity.PREFIX + stopAction.getSimpleName());
-        notifications.add(alwaysOnTopNotificationEntityJSON);
-        sendNotification(alwaysOnTopNotificationEntityJSON);
-    }
-
-    @Override
     public void hideAlwaysOnViewNotification(NotificationEntityJSON notificationEntityJSON) {
-        AlwaysOnTopNotificationEntityJSON alwaysOnTopNotificationEntityJSON = (AlwaysOnTopNotificationEntityJSON) notifications
-                .stream().filter(n -> n.getEntityID().equals(notificationEntityJSON.getEntityID())).findAny().orElse(null);
-        if (alwaysOnTopNotificationEntityJSON != null) {
-            notifications.remove(alwaysOnTopNotificationEntityJSON);
-            alwaysOnTopNotificationEntityJSON.setRemove(true);
-            sendNotification(alwaysOnTopNotificationEntityJSON);
+        for (NotificationEntityJSON notification : notifications) {
+            if (notification.getEntityID().equals(notificationEntityJSON.getEntityID())) {
+                notifications.remove(notification);
+                ((AlwaysOnTopNotificationEntityJSON) notification).setRemove(true);
+                sendNotification(notification);
+            }
         }
     }
 
@@ -498,17 +503,10 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     public BaseEntity<? extends BaseEntity> delete(String entityId) {
-        BaseEntity<? extends BaseEntity> deletedEntity = entityManager.delete(entityId);
-        if (deletedEntity != null) {
+        return entityUpdate(null, null, this.entityIDRemoveListeners, this.entityTypeRemoveListeners, () -> {
             cacheService.delete(entityId);
-            for (Consumer consumer : this.entityClassRemoveListeners.getOrDefault(deletedEntity.getClass().getName(), Collections.emptyList())) {
-                consumer.accept(deletedEntity);
-            }
-            for (Consumer listener : this.entityIDRemoveListeners.getOrDefault(entityId, Collections.emptyList())) {
-                listener.accept(deletedEntity);
-            }
-        }
-        return deletedEntity;
+            return entityManager.delete(entityId);
+        });
     }
 
     @Override
@@ -523,8 +521,8 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     public <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener) {
-        this.entityUpdateListeners.putIfAbsent(entityID, new ArrayList<>());
-        this.entityUpdateListeners.get(entityID).remove(listener);
+        this.entityIDUpdateListeners.putIfAbsent(entityID, new ArrayList<>());
+        this.entityIDUpdateListeners.get(entityID).remove(listener);
     }
 
     @Override
@@ -596,25 +594,37 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     @SneakyThrows
-    public void listenUdp(String host, int port, BiConsumer<DatagramPacket, String> listener) {
-        String key = host + port;
-        if (!this.listenUdpMap.containsKey(key)) {
-            this.listenUdpMap.put(key, new ArrayList<>());
-            DatagramSocket socket = new DatagramSocket(host == null ? new InetSocketAddress(port) : new InetSocketAddress(host, port));
-            DatagramPacket datagramPacket = new DatagramPacket(new byte[255], 255);
+    public void listenUdp(String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
+        String hostPortKey = (host == null ? "0.0.0.0" : host) + ":" + port;
+        if (!this.listenUdpMap.containsKey(hostPortKey)) {
+            ThreadContext<Void> scheduleFuture;
+            try {
+                DatagramSocket socket = new DatagramSocket(host == null ? new InetSocketAddress(port) : new InetSocketAddress(host, port));
+                DatagramPacket datagramPacket = new DatagramPacket(new byte[255], 255);
 
-            String hostName = (host == null ? "0.0.0.0" : host) + ":" + port;
-            ThreadContext<Void> schedule = this.schedule("listen-udp-" + hostName, 1, TimeUnit.SECONDS, () -> {
-                socket.receive(datagramPacket);
-                byte[] data = datagramPacket.getData();
-                String text = new String(data, 0, datagramPacket.getLength());
-                for (BiConsumer<DatagramPacket, String> udpListener : listenUdpMap.get(key)) {
-                    udpListener.accept(datagramPacket, text);
-                }
-            }, true);
-            schedule.setDescription("Listen udp: " + hostName);
+                scheduleFuture = this.schedule("listen-udp-" + hostPortKey, 1, TimeUnit.SECONDS, () -> {
+                    socket.receive(datagramPacket);
+                    byte[] data = datagramPacket.getData();
+                    String text = new String(data, 0, datagramPacket.getLength());
+                    listenUdpMap.get(hostPortKey).handle(datagramPacket, text);
+                }, true);
+                scheduleFuture.setDescription("Listen udp: " + hostPortKey);
+            } catch (Exception ex) {
+                this.addHeaderDangerNotification(hostPortKey, "UDP " + hostPortKey, En.get().getServerMessage("UDP_ERROR",
+                        FlowMap.of("key", hostPortKey, "msg", ex.getMessage())));
+                log.error("Unable to listen udp host:port: <{}>", hostPortKey);
+                return;
+            }
+            this.listenUdpMap.put(hostPortKey, new UdpContext(scheduleFuture));
         }
-        this.listenUdpMap.get(key).add(listener);
+        this.listenUdpMap.get(hostPortKey).put(key, listener);
+    }
+
+    @Override
+    public void stopListenUdp(String key) {
+        for (UdpContext udpContext : this.listenUdpMap.values()) {
+            udpContext.cancel(key);
+        }
     }
 
     @Override
@@ -652,26 +662,26 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     public <T extends BaseEntity> void addEntityUpdateListener(String entityID, BiConsumer<T, T> listener) {
-        this.entityUpdateListeners.putIfAbsent(entityID, new ArrayList<>());
-        this.entityUpdateListeners.get(entityID).add(listener);
+        this.entityIDUpdateListeners.putIfAbsent(entityID, new ArrayList<>());
+        this.entityIDUpdateListeners.get(entityID).add(listener);
     }
 
     @Override
     public <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener) {
-        this.entityClassUpdateListeners.putIfAbsent(entityClass.getName(), new ArrayList<>());
-        this.entityClassUpdateListeners.get(entityClass.getName()).add(listener);
+        this.entityTypeUpdateListeners.putIfAbsent(entityClass.getName(), new ArrayList<>());
+        this.entityTypeUpdateListeners.get(entityClass.getName()).add(listener);
     }
 
     @Override
     public <T extends BaseEntity> void addEntityRemovedListener(String entityID, Consumer<T> listener) {
         this.entityIDRemoveListeners.putIfAbsent(entityID, new ArrayList<>());
-        this.entityIDRemoveListeners.get(entityID).add(listener);
+        this.entityIDRemoveListeners.get(entityID).add((o, o2) -> listener.accept((T) o));
     }
 
     @Override
     public <T extends BaseEntity> void addEntityRemovedListener(Class<T> entityClass, Consumer<T> listener) {
-        this.entityClassRemoveListeners.putIfAbsent(entityClass.getName(), new ArrayList<>());
-        this.entityClassRemoveListeners.get(entityClass.getName()).add(listener);
+        this.entityTypeRemoveListeners.putIfAbsent(entityClass.getName(), new ArrayList<>());
+        this.entityTypeRemoveListeners.get(entityClass.getName()).add((BiConsumer<T, T>) (o, o2) -> listener.accept(o));
     }
 
     @ExecuteOnce(skipIfInstalled = "autossh", requireInternet = true)
@@ -770,16 +780,20 @@ public class EntityContextImpl implements EntityContext {
         try {
             if (entity instanceof BaseEntity) {
                 this.cacheService.entityUpdated((BaseEntity) entity);
-                // send info if item changed and it could be shown on page
-                if (entity.getClass().isAnnotationPresent(UISidebarMenu.class)) {
-                    this.sendNotification("-listen-items", new JSONObject().put("type", type).put("value", entity));
-                }
-                if (showEntityState) {
-                    this.sendNotification("-toastr", new JSONObject().put("type", type).put("value", entity));
-                }
+                sendEntityUpdateNotification(entity, type);
             }
         } catch (Exception ex) {
             log.error("Unable to update cache entity <{}> for entity: <{}>", type, entity);
+        }
+    }
+
+    private void sendEntityUpdateNotification(Object entity, String type) {
+        // send info if item changed and it could be shown on page
+        if (entity.getClass().isAnnotationPresent(UISidebarMenu.class)) {
+            this.sendNotification("-listen-items", new JSONObject().put("type", type).put("value", entity));
+        }
+        if (showEntityState) {
+            this.sendNotification("-toastr", new JSONObject().put("type", type).put("value", entity));
         }
     }
 
@@ -918,8 +932,14 @@ public class EntityContextImpl implements EntityContext {
                 threadContext.getCommand().get();
                 threadContext.state = "FINISHED";
             } catch (Exception ex) {
-                log.error("Exception in thread: <{}>", name);
-                threadContext.errorListener.accept(ex);
+                log.error("Exception in thread: <{}>. Message: <{}>", name, getErrorMessage(ex));
+                if (threadContext.errorListener != null) {
+                    try {
+                        threadContext.errorListener.accept(ex);
+                    } catch (Exception uex) {
+                        log.error("Unexpected error in thread error listener <{}>", getErrorMessage(uex));
+                    }
+                }
             }
         };
         ScheduledFuture<?> scheduledFuture = null;
@@ -964,6 +984,16 @@ public class EntityContextImpl implements EntityContext {
         }
         if (!EntityContext.isLinuxOrDockerEnvironment()) {
             setFeatureState("SSH", false);
+        }
+    }
+
+    private <T extends HasEntityIdentifier> void notifyEntityListeners(Map<String, List<BiConsumer>> entityListeners, T saved, T oldEntity) {
+        Class entityClass = saved.getClass();
+        while (!entityClass.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
+            for (BiConsumer consumer : entityListeners.getOrDefault(entityClass.getName(), Collections.emptyList())) {
+                consumer.accept(saved, oldEntity);
+            }
+            entityClass = entityClass.getSuperclass();
         }
     }
 
@@ -1032,5 +1062,28 @@ public class EntityContextImpl implements EntityContext {
     @RequiredArgsConstructor
     public enum ScheduleType {
         DELAY, RATE, SINGLE
+    }
+
+    @RequiredArgsConstructor
+    private static class UdpContext {
+        private final Map<String, BiConsumer<DatagramPacket, String>> keyToListener = new HashMap<>();
+        private final ThreadContext<Void> scheduleFuture;
+
+        public void handle(DatagramPacket datagramPacket, String text) {
+            for (BiConsumer<DatagramPacket, String> listener : keyToListener.values()) {
+                listener.accept(datagramPacket, text);
+            }
+        }
+
+        public void put(String key, BiConsumer<DatagramPacket, String> listener) {
+            this.keyToListener.put(key, listener);
+        }
+
+        public void cancel(String key) {
+            keyToListener.remove(key);
+            if (keyToListener.isEmpty()) {
+                scheduleFuture.cancel();
+            }
+        }
     }
 }

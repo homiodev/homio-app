@@ -60,7 +60,6 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     private final BroadcastLockManagerImpl broadcastLockManager;
 
     private final Scratch3Block getPrevVariableBlock;
-    private Object lastValue;
 
     public Scratch3DataBlocks(EntityContext entityContext, WorkspaceBackupRepository workspaceBackupRepository, BroadcastLockManagerImpl broadcastLockManager) {
         super("data", entityContext);
@@ -135,12 +134,11 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void booleanEventChangesHandler(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasNext()) {
-            String varRefId = workspaceBlock.getFieldId("bool_variables_group");
-            BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, WorkspaceBooleanEntity.PREFIX + varRefId);
+        workspaceBlock.getNextOrThrow();
+        String varRefId = workspaceBlock.getFieldId("bool_variables_group");
+        BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, WorkspaceBooleanEntity.PREFIX + varRefId);
 
-            workspaceBlock.subscribeToLock(lock);
-        }
+        workspaceBlock.subscribeToLock(lock);
     }
 
     private void inverseBooleanHandler(WorkspaceBlock workspaceBlock) {

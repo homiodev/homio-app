@@ -114,6 +114,11 @@ public class GpioConsolePlugin implements ConsolePlugin {
         }
 
         @Override
+        public Integer getId() {
+            return null;
+        }
+
+        @Override
         public int compareTo(@NotNull GpioPluginEntity o) {
             return this.name.compareTo(o.name);
         }

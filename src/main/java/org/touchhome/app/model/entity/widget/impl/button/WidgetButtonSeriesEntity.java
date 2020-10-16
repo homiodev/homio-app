@@ -62,7 +62,7 @@ public class WidgetButtonSeriesEntity extends BaseEntity<WidgetButtonSeriesEntit
     public static class ButtonsSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader<Void> {
 
         @Override
-        public List<Option> loadOptions(Void parameter, EntityContext entityContext) {
+        public List<Option> loadOptions(Void parameter, BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceBooleanEntity.class)
                     .add(WorkspaceBroadcastEntity.class)

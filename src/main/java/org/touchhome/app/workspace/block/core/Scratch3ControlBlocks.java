@@ -34,6 +34,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block repeatUntilBlock;
     private final Scratch3Block whenConditionChangedBlock;
     private final Scratch3Block whenValueChangedBlock;
+    private final Scratch3Block scheduleBlock;
 
     private final BroadcastLockManager broadcastLockManager;
 
@@ -42,10 +43,11 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         this.broadcastLockManager = broadcastLockManager;
 
         // Blocks
-        this.foreverBlock = Scratch3Block.ofHandler("forever", BlockType.conditional, this::foreverHandler);
-        this.repeatBlock = Scratch3Block.ofHandler("repeat", BlockType.conditional, this::repeatHandler);
-        this.ifBlock = Scratch3Block.ofHandler("if", BlockType.conditional, this::ifHandler);
-        this.ifElseBlock = Scratch3Block.ofHandler("if_else", BlockType.conditional, this::ifElseHandler);
+        this.foreverBlock = Scratch3Block.ofHandler("forever", BlockType.command, this::foreverHandler);
+        this.scheduleBlock = Scratch3Block.ofHandler("schedule", BlockType.command, this::scheduleHandler);
+        this.repeatBlock = Scratch3Block.ofHandler("repeat", BlockType.command, this::repeatHandler);
+        this.ifBlock = Scratch3Block.ofHandler("if", BlockType.command, this::ifHandler);
+        this.ifElseBlock = Scratch3Block.ofHandler("if_else", BlockType.command, this::ifElseHandler);
         this.stopBlock = Scratch3Block.ofHandler("stop", BlockType.command, this::stopHandler);
         this.waitBlock = Scratch3Block.ofHandler("wait", BlockType.command, this::waitHandler);
         this.waitUntilBlock = Scratch3Block.ofHandler("wait_until", BlockType.command, this::waitUntilHandler);
@@ -54,6 +56,21 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         this.whenValueChangedBlock = Scratch3Block.ofHandler("when_value_changed", BlockType.command, this::whenValueChangedHandler);
 
         this.postConstruct();
+    }
+
+    @SneakyThrows
+    private void scheduleHandler(WorkspaceBlock workspaceBlock) {
+        if (workspaceBlock.hasInput(SUBSTACK)) {
+            Integer time = workspaceBlock.getInputInteger("TIME");
+            String unit = workspaceBlock.getInputString("UNIT");
+            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+            while (!workspaceBlock.isDestroyed()) {
+                workspaceBlock.setState("execute");
+                child.handle();
+                workspaceBlock.setState("Wait next event");
+                Thread.sleep(TimeUnit.valueOf(unit).toMillis(time));
+            }
+        }
     }
 
     private void whenValueChangedHandler(WorkspaceBlock workspaceBlock) {

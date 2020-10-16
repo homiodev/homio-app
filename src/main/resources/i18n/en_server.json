@@ -1,0 +1,3 @@
+{
+  "UDP_ERROR": "Unable to listen udp: {{key}}. Error: {{msg}}"
+}

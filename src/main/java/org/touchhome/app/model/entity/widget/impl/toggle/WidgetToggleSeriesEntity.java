@@ -67,7 +67,7 @@ public class WidgetToggleSeriesEntity extends BaseEntity<WidgetToggleSeriesEntit
     public static class ToggleSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader<Void> {
 
         @Override
-        public List<Option> loadOptions(Void parameter, EntityContext entityContext) {
+        public List<Option> loadOptions(Void parameter, BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceBooleanEntity.class)
                     .build(entityContext);

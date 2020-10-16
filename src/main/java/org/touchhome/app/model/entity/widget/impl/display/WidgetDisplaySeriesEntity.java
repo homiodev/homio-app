@@ -76,7 +76,7 @@ public class WidgetDisplaySeriesEntity extends BaseEntity<WidgetDisplaySeriesEnt
     public static class DisplayDataSourceDynamicOptionLoader implements DynamicOptionLoader<Void> {
 
         @Override
-        public List<Option> loadOptions(Void parameter, EntityContext entityContext) {
+        public List<Option> loadOptions(Void parameter, BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceStandaloneVariableEntity.class)
                     .add(WorkspaceVariableEntity.class)

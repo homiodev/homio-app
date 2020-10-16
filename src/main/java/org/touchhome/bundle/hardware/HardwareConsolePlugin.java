@@ -93,6 +93,11 @@ public class HardwareConsolePlugin implements ConsolePlugin {
         }
 
         @Override
+        public Integer getId() {
+            return null;
+        }
+
+        @Override
         public int compareTo(@NotNull HardwareConsolePlugin.HardwarePluginEntity o) {
             return this.name.compareTo(o.name);
         }

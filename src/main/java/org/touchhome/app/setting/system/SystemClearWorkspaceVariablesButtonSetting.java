@@ -16,7 +16,7 @@ public class SystemClearWorkspaceVariablesButtonSetting implements SettingPlugin
 
     @Override
     public String getIconColor() {
-        return "text-danger";
+        return "#BD1E1E";
     }
 
     @Override

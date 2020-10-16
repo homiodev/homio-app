@@ -11,8 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.utils.CollectionUtils;
 import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.DeviceBaseEntity;
-import org.touchhome.bundle.api.model.HasIdIdentifier;
+import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.repository.PureRepository;
 
 import java.util.Map;
@@ -74,7 +73,7 @@ public class CacheService {
         Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME)).clear(); // need remove all because entity may create alos another entities
     }
 
-    public void putToCache(PureRepository repository, HasIdIdentifier entity, Map<String, Object> changeFields) {
+    public void putToCache(PureRepository repository, HasEntityIdentifier entity, Map<String, Object> changeFields) {
         String identifier = entity.getIdentifier();
         if (identifier == null) {
             throw new IllegalStateException("Unable update state without id" + entity);
@@ -130,7 +129,7 @@ public class CacheService {
 
     @AllArgsConstructor
     private static class UpdateStatement {
-        HasIdIdentifier baseEntity;
+        HasEntityIdentifier baseEntity;
         PureRepository repository;
         Map<String, Object> changeFields;
     }

@@ -24,6 +24,11 @@ public class HardwareEventsImpl implements HardwareEvents {
     private final Map<String, Consumer<Object>> listeners = new HashMap<>();
 
     @Override
+    public void removeEvents(String... keys) {
+
+    }
+
+    @Override
     public void setListener(String key, Consumer<Object> listener) {
         if (events.containsKey(Option.key(key))) {
             listeners.put(key, listener);
@@ -49,13 +54,15 @@ public class HardwareEventsImpl implements HardwareEvents {
     }
 
     @Override
-    public void addEvent(String key, String name) {
+    public String addEvent(String key, String name) {
         this.events.put(Option.of(key, name), "");
+        return key;
     }
 
     @Override
-    public void addEventAndFire(String key, String name, Object value) {
+    public String addEventAndFire(String key, String name, Object value) {
         this.events.put(Option.of(key, name), "");
         this.fireEvent(key, value);
+        return key;
     }
 }

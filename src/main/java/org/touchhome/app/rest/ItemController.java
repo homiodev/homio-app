@@ -381,14 +381,15 @@ public class ItemController {
         return null;
     }
 
-    public static List<Option> loadOptions(Object entity, EntityContext entityContext, String fieldName) {
+    public static List<Option> loadOptions(HasEntityIdentifier entity, EntityContext entityContext, String fieldName) {
         Method selectionMethodAnnotation = MethodUtils.getMethodsListWithAnnotation(entity.getClass(), UIFieldSelection.class)
                 .stream().filter(m -> InternalUtil.getMethodShortName(m).equals(fieldName)).findAny().orElse(null);
         if (selectionMethodAnnotation != null) {
-            return loadOptions(selectionMethodAnnotation, entityContext, selectionMethodAnnotation.getReturnType(), () -> selectionMethodAnnotation.invoke(entity));
+            return loadOptions(selectionMethodAnnotation, entityContext, selectionMethodAnnotation.getReturnType(),
+                    () -> selectionMethodAnnotation.invoke(entity), entity);
         } else {
             Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
-            return loadOptions(field, entityContext, field.getType(), () -> field.get(entity));
+            return loadOptions(field, entityContext, field.getType(), () -> field.get(entity), entity);
         }
     }
 
@@ -420,20 +421,23 @@ public class ItemController {
 
     @SneakyThrows
     private static List<Option> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass,
-                                            ThrowingSupplier<Object, Exception> directOptionLoaderConsumer) {
+                                            ThrowingSupplier<Object, Exception> directOptionLoaderConsumer, HasEntityIdentifier entity) {
         UIFieldSelection uiFieldTargetSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
         if (uiFieldTargetSelection != null) {
             targetClass = uiFieldTargetSelection.value();
         }
 
-        if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
+/*        if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
             DynamicOptionLoader dynamicOptionLoader = (DynamicOptionLoader) targetClass.newInstance();
             return dynamicOptionLoader.loadOptions(null, entityContext);
-        }
+        }*/
 
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
             DynamicOptionLoader dynamicOptionLoader = (DynamicOptionLoader) directOptionLoaderConsumer.get();
-            return dynamicOptionLoader.loadOptions(null, entityContext);
+            if (dynamicOptionLoader == null) {
+                dynamicOptionLoader = (DynamicOptionLoader) targetClass.newInstance();
+            }
+            return dynamicOptionLoader.loadOptions(null, entity instanceof BaseEntity ? (BaseEntity) entity : null, entityContext);
         }
 
         if (targetClass.isEnum()) {

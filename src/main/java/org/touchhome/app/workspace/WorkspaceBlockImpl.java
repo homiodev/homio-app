@@ -32,10 +32,14 @@ import static org.touchhome.bundle.api.util.NotificationType.danger;
 public class WorkspaceBlockImpl implements WorkspaceBlock {
     private final Map<String, WorkspaceBlock> allBlocks;
     private final Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
+
     @Getter
     private final String id;
+
     @Getter
     private EntityContext entityContext;
+
+    @Getter
     private String extensionId;
 
     @Getter
@@ -44,6 +48,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Getter
     private WorkspaceBlock next;
 
+    @Getter
     private WorkspaceBlock parent;
 
     @Getter
@@ -67,6 +72,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     private AtomicReference<Object> lastChildValue;
 
     private boolean destroy;
+    private List<Runnable> releaseListeners;
 
     WorkspaceBlockImpl(String id, Map<String, WorkspaceBlock> allBlocks, Map<String, Scratch3ExtensionBlocks> scratch3Blocks, EntityContext entityContext) {
         this.id = id;
@@ -147,6 +153,11 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public boolean hasField(String fieldName) {
         return this.fields.containsKey(fieldName);
+    }
+
+    @Override
+    public void setValue(Object value) {
+        this.lastValue = new AtomicReference<>(value);
     }
 
     @Override
@@ -327,8 +338,19 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     public void release() {
         this.destroy = true;
+        if (this.releaseListeners != null) {
+            this.releaseListeners.forEach(Runnable::run);
+        }
         if (this.parent != null) {
             ((WorkspaceBlockImpl) this.parent).release();
+        }
+    }
+
+    @Override
+    public void onRelease(Runnable listener) {
+        if (this.releaseListeners == null) {
+            this.releaseListeners = new ArrayList<>();
+            this.releaseListeners.add(listener);
         }
     }
 
@@ -420,7 +442,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             }
             return StringUtils.defaultIfEmpty(String.valueOf(entity.getValue()), "0");
         }),
-        LIST_PRIMITIVE;
+        LIST_PRIMITIVE,
+        FONT_AWESOME_PRIMITIVE;
 
         private Function<JSONArray, Object> refFn = array -> array.getString(1);
 

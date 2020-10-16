@@ -27,6 +27,8 @@ import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.hardware.Scratch3HardwareBlocks;
+import org.touchhome.bundle.http.Scratch3HTTPBlocks;
+import org.touchhome.bundle.ui.Scratch3UIBlocks;
 
 import java.io.InputStream;
 import java.util.*;
@@ -43,7 +45,8 @@ public class WorkspaceController {
     private static final List<Class> systemScratches = Arrays.asList(Scratch3ControlBlocks.class, Scratch3MiscBlocks.class,
             Scratch3DataBlocks.class, Scratch3EventsBlocks.class, Scratch3OperatorBlocks.class, Scratch3MutatorBlocks.class);
 
-    private static final List<Class> inlineScratches = Arrays.asList(Scratch3OtherBlocks.class, Scratch3HardwareBlocks.class);
+    private static final List<Class> inlineScratches = Arrays.asList(Scratch3OtherBlocks.class,
+            Scratch3HTTPBlocks.class, Scratch3HardwareBlocks.class, Scratch3UIBlocks.class);
 
     private final BundleController bundleController;
     private final EntityContext entityContext;

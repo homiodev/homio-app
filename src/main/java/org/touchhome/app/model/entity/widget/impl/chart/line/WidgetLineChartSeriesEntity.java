@@ -62,7 +62,7 @@ public class WidgetLineChartSeriesEntity extends BaseEntity<WidgetLineChartSerie
     public static class ChartSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<Option> loadOptions(Object parameter, EntityContext entityContext) {
+        public List<Option> loadOptions(Object parameter, BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceBackupEntity.class)
                     .add(WorkspaceBroadcastEntity.class)

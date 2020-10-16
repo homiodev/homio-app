@@ -45,4 +45,9 @@ public class BackgroundProcessServiceJSON implements HasEntityIdentifier {
 
     @UIField(readOnly = true, order = 24)
     private int runCount;
+
+    @Override
+    public Integer getId() {
+        return null;
+    }
 }

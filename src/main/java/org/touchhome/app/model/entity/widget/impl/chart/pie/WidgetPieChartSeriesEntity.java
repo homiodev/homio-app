@@ -14,8 +14,8 @@ import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -64,7 +64,7 @@ public class WidgetPieChartSeriesEntity extends BaseEntity<WidgetPieChartSeriesE
     public static class PieSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<Option> loadOptions(Object parameter, EntityContext entityContext) {
+        public List<Option> loadOptions(Object parameter, BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceBackupEntity.class)
                     .add(WorkspaceStandaloneVariableEntity.class)

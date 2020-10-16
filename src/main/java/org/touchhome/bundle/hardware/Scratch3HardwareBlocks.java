@@ -45,18 +45,17 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         // Blocks
         this.myIp = Scratch3Block.ofEvaluate(50, "my_ip", BlockType.reporter, "my ip", this::getByIP);
         this.serverTime = Scratch3Block.ofEvaluate(60, "server_time", BlockType.reporter, "server time | format [FORMAT]", this::getServerTime);
-        this.serverTime.addArgument("FORMAT", ArgumentType.string);
+        this.serverTime.addArgument("FORMAT");
 
         this.cityGeoLocation = Scratch3Block.ofEvaluate(100, "city_geo_location", BlockType.reporter, "City geo [CITY] | json", this::getCityGeoLocation);
-        this.cityGeoLocation.addArgument("CITY", ArgumentType.string,
-                TouchHomeUtils.getIpGeoLocation(TouchHomeUtils.getOuterIpAddress()).getCity());
+        this.cityGeoLocation.addArgument("CITY", TouchHomeUtils.getIpGeoLocation(TouchHomeUtils.getOuterIpAddress()).getCity());
 
         this.ipGeoLocation = Scratch3Block.ofEvaluate(200, "ip_geo_location", BlockType.reporter, "IP geo [IP] | json", this::getIPGeoLocation);
-        this.ipGeoLocation.addArgument("IP", ArgumentType.string, getByIP(null));
+        this.ipGeoLocation.addArgument("IP", getByIP(null));
 
         this.settingChangeCommand = Scratch3Block.ofHandler(300, "setting_change", BlockType.hat, "Setting [SETTING] changed to [VALUE]", this::settingChangeEvent);
         this.settingChangeCommand.addArgument(SETTING, this.settingsMenu);
-        this.settingChangeCommand.addArgument(VALUE, ArgumentType.string);
+        this.settingChangeCommand.addArgument(VALUE);
 
         this.hardwareEventCommand = Scratch3Block.ofHandler(400, "hardware_event", BlockType.hat, "Hardware event [EVENT]", this::hardwareEvent);
         this.hardwareEventCommand.addArgument(EVENT, this.hardwareEventsMenu);
@@ -70,23 +69,19 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void hardwareEvent(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasNext()) {
-            String eventName = workspaceBlock.getMenuValue(EVENT, this.hardwareEventsMenu, String.class);
-
-            BroadcastLock<String> lock = broadcastLockManager.getOrCreateLock(workspaceBlock, eventName);
-
-            workspaceBlock.subscribeToLock(lock);
-        }
+        workspaceBlock.getNextOrThrow();
+        String eventName = workspaceBlock.getMenuValue(EVENT, this.hardwareEventsMenu);
+        BroadcastLock<String> lock = broadcastLockManager.getOrCreateLock(workspaceBlock, eventName);
+        workspaceBlock.subscribeToLock(lock);
     }
 
     private void settingChangeEvent(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasNext()) {
-            String settingName = workspaceBlock.getMenuValue(SETTING, this.settingsMenu, String.class);
-            String value = workspaceBlock.getInputString(VALUE);
+        workspaceBlock.getNextOrThrow();
+        String settingName = workspaceBlock.getMenuValue(SETTING, this.settingsMenu);
+        String value = workspaceBlock.getInputString(VALUE);
 
-            BroadcastLock<String> lock = broadcastLockManager.getOrCreateLock(workspaceBlock, settingName);
-            workspaceBlock.subscribeToLock(lock, lockValue -> isEmpty(value) || value.equals(lockValue));
-        }
+        BroadcastLock<String> lock = broadcastLockManager.getOrCreateLock(workspaceBlock, settingName);
+        workspaceBlock.subscribeToLock(lock, lockValue -> isEmpty(value) || value.equals(lockValue));
     }
 
     private String getByIP(WorkspaceBlock workspaceBlock) {

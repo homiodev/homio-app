@@ -75,7 +75,7 @@ public class WidgetSliderSeriesEntity extends BaseEntity<WidgetSliderSeriesEntit
     public static class SliderSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader<Void> {
 
         @Override
-        public List<Option> loadOptions(Void parameter, EntityContext entityContext) {
+        public List<Option> loadOptions(Void parameter, BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceStandaloneVariableEntity.class)
                     .add(WorkspaceVariableEntity.class)
