@@ -46,8 +46,8 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-import org.touchhome.app.jsog.JSOGGenerator;
-import org.touchhome.app.jsog.JSOGResolver;
+import org.touchhome.app.json.jsog.JSOGGenerator;
+import org.touchhome.app.json.jsog.JSOGResolver;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
@@ -205,7 +205,7 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
                 .registerModule(hibernate5Module)
                 .registerModule(new JsonOrgModule())
                 .registerModule(simpleModule)
-                .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+                .setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
                 .addMixIn(BaseEntity.class, Bean2MixIn.class);
 
         return objectMapper;

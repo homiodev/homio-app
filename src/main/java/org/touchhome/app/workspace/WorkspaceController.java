@@ -26,7 +26,7 @@ import org.touchhome.bundle.api.scratch.Scratch3Block;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
-import org.touchhome.bundle.hardware.Scratch3HardwareBlocks;
+import org.touchhome.bundle.machine.Scratch3HardwareBlocks;
 import org.touchhome.bundle.http.Scratch3HTTPBlocks;
 import org.touchhome.bundle.ui.Scratch3UIBlocks;
 

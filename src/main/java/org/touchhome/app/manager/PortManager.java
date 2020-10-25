@@ -8,6 +8,7 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextImpl;
+import org.touchhome.app.manager.common.impl.SettingServiceImpl;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 
@@ -39,7 +40,7 @@ public class PortManager {
     }
 
     public void listenPortAvailability() {
-        Collection<BundleSettingPlugin> settingPlugins = EntityContextImpl.settingPluginsByPluginKey.values();
+        Collection<BundleSettingPlugin> settingPlugins = SettingServiceImpl.settingPluginsByPluginKey.values();
         List<BundleSettingPlugin<SerialPort>> portSettingPlugins = settingPlugins
                 .stream().filter(sp -> SerialPort.class.equals(sp.getType()))
                 .map(sp -> (BundleSettingPlugin<SerialPort>) sp)

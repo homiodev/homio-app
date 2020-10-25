@@ -111,7 +111,7 @@ public class ConsoleController {
         Set<Option> options = new LinkedHashSet<>(this.tabs);
         for (Map.Entry<String, ConsolePlugin> entry : this.consolePluginsMap.entrySet()) {
             if (entry.getValue().isEnabled()) {
-                options.add(Option.key(entry.getKey()).addJson("type", "bundle"));
+                options.add(Option.key(entry.getKey()).addJson("type", "bundle").addJson("asmTab", entry.getValue().getParentTab()));
             }
         }
         return options;

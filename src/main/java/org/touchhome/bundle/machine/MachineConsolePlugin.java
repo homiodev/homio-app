@@ -1,8 +1,10 @@
-package org.touchhome.bundle.hardware;
+package org.touchhome.bundle.machine;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.pi4j.system.SystemInfo;
+import com.pivovarit.function.ThrowingSupplier;
 import lombok.*;
+import org.apache.commons.lang3.SystemUtils;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
@@ -17,13 +19,19 @@ import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 
 @Component
 @RequiredArgsConstructor
-public class HardwareConsolePlugin implements ConsolePlugin {
+public class MachineConsolePlugin implements ConsolePlugin {
+
+    @Override
+    public String getParentTab() {
+        return "hardware";
+    }
 
     private final EntityContext entityContext;
     private final LinuxHardwareRepository linuxHardwareRepository;
@@ -36,23 +44,23 @@ public class HardwareConsolePlugin implements ConsolePlugin {
 
         List<HardwarePluginEntity> list = new ArrayList<>();
 
-        if (EntityContext.isLinuxOrDockerEnvironment()) {
-            list.add(new HardwarePluginEntity("Cpu load", linuxHardwareRepository.getCpuLoad()));
-            list.add(new HardwarePluginEntity("Cpu temperature", SystemInfo.getCpuTemperature()));
-            list.add(new HardwarePluginEntity("Ram memory", linuxHardwareRepository.getMemory()));
-            list.add(new HardwarePluginEntity("SD memory", linuxHardwareRepository.getSDCardMemory().toFineString()));
-            list.add(new HardwarePluginEntity("Uptime", linuxHardwareRepository.getUptime()));
-            String activeNetworkInterface = wirelessHardwareRepository.getActiveNetworkInterface();
-            list.add(new HardwarePluginEntity("Network interface", activeNetworkInterface));
-            list.add(new HardwarePluginEntity("Internet stat", wirelessHardwareRepository.stat(activeNetworkInterface).toString()));
-            list.add(new HardwarePluginEntity("Internet description", wirelessHardwareRepository.getNetworkDescription(activeNetworkInterface).toString()));
-            list.add(new HardwarePluginEntity("Cpu features", SystemInfo.getCpuFeatures()));
-            list.add(new HardwarePluginEntity("Java", SystemInfo.getJavaRuntime()));
-            list.add(new HardwarePluginEntity("Os", "Name: " + SystemInfo.getOsName() +
-                    ". Version: " + SystemInfo.getOsVersion() + ". Arch: " + SystemInfo.getOsArch()));
-        }
-        list.add(new HardwarePluginEntity("Ip address", linuxHardwareRepository.getIpAddress()));
-        list.add(new HardwarePluginEntity("Device model", linuxHardwareRepository.getDeviceModel()));
+        list.add(new HardwarePluginEntity("Cpu load", linuxHardwareRepository.getCpuLoad()));
+        list.add(new HardwarePluginEntity("Cpu temperature", onLinux(SystemInfo::getCpuTemperature)));
+        list.add(new HardwarePluginEntity("Ram memory", linuxHardwareRepository.getMemory()));
+        list.add(new HardwarePluginEntity("SD memory", toString(linuxHardwareRepository.getSDCardMemory())));
+        list.add(new HardwarePluginEntity("Uptime", linuxHardwareRepository.getUptime()));
+        String activeNetworkInterface = wirelessHardwareRepository.getActiveNetworkInterface();
+        list.add(new HardwarePluginEntity("Network interface", activeNetworkInterface));
+        list.add(new HardwarePluginEntity("Internet stat", toString(wirelessHardwareRepository.stat(activeNetworkInterface))));
+        list.add(new HardwarePluginEntity("Network description", toString(wirelessHardwareRepository.getNetworkDescription(activeNetworkInterface))));
+        list.add(new HardwarePluginEntity("Cpu features", onLinux(SystemInfo::getCpuFeatures)));
+        list.add(new HardwarePluginEntity("Java", SystemUtils.JAVA_RUNTIME_NAME));
+        list.add(new HardwarePluginEntity("Os", "Name: " + SystemUtils.OS_NAME +
+                ". Version: " + SystemUtils.OS_VERSION + ". Arch: " + SystemUtils.OS_ARCH));
+
+        list.add(new HardwarePluginEntity("IP address", wirelessHardwareRepository.getIPAddress()));
+        list.add(new HardwarePluginEntity("Router IP address", wirelessHardwareRepository.getGatewayIpAddress()));
+        list.add(new HardwarePluginEntity("Device model", EntityContext.isLinuxEnvironment() ? linuxHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
         list.add(new HardwarePluginEntity("Cloud status", this.entityContext.getSettingValue(CloudProviderSetting.class).getStatus()));
         list.add(new HardwarePluginEntity("Cloud keystore", user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));
         list.add(new HardwarePluginEntity("Features", getFeatures()));
@@ -65,6 +73,14 @@ public class HardwareConsolePlugin implements ConsolePlugin {
         Collections.sort(list);
 
         return list;
+    }
+
+    private <T> String toString(T value) {
+        return Optional.ofNullable(value).map(Object::toString).orElse("N/A");
+    }
+
+    private Object onLinux(ThrowingSupplier<Object, Exception> supplier) throws Exception {
+        return EntityContext.isLinuxEnvironment() ? supplier.get() : "N/A";
     }
 
     private String getFeatures() {
@@ -98,7 +114,7 @@ public class HardwareConsolePlugin implements ConsolePlugin {
         }
 
         @Override
-        public int compareTo(@NotNull HardwareConsolePlugin.HardwarePluginEntity o) {
+        public int compareTo(@NotNull MachineConsolePlugin.HardwarePluginEntity o) {
             return this.name.compareTo(o.name);
         }
     }

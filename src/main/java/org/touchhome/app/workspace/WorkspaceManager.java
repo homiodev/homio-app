@@ -97,7 +97,7 @@ public class WorkspaceManager {
                 ((WorkspaceBlockImpl) workspaceBlock).handleOrEvaluate();
             } catch (Exception ex) {
                 log.warn("Error in workspace thread: <{}>, <{}>", name, ex.getMessage());
-                entityContext.sendNotification("Error", TouchHomeUtils.getErrorMessage(ex), NotificationType.danger);
+                entityContext.sendErrorMessage("Error in workspace", ex);
             } finally {
                 Thread.currentThread().setName(oldName);
             }

@@ -41,7 +41,9 @@ import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleContextService;
 import org.touchhome.app.hardware.HardwareEventsImpl;
 import org.touchhome.app.manager.*;
-import org.touchhome.app.model.entity.SettingEntity;
+import org.touchhome.app.manager.common.impl.SettingServiceImpl;
+import org.touchhome.app.manager.common.impl.ThreadServiceImpl;
+import org.touchhome.app.manager.common.impl.UdpServiceImpl;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.repository.crud.base.BaseCrudRepository;
@@ -79,7 +81,6 @@ import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 import org.touchhome.bundle.api.setting.BundleSettingPluginStatus;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
-import org.touchhome.bundle.api.util.FlowMap;
 import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
@@ -88,11 +89,11 @@ import javax.persistence.EntityManagerFactory;
 import javax.validation.constraints.NotNull;
 import java.lang.annotation.Annotation;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
 import java.text.DateFormat;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -107,21 +108,24 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.*;
 public class EntityContextImpl implements EntityContext {
 
     public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
-    private final ScheduledExecutorService scheduleService = Executors.newScheduledThreadPool(1000, r -> new Thread(r, "entity-manager"));
-
-    @Getter
-    private final Map<String, ThreadContextImpl> schedulers = new HashMap<>();
-
-    private static final Map<BundleSettingPlugin, String> settingTransientState = new HashMap<>();
-    public static Map<String, BundleSettingPlugin> settingPluginsByPluginKey = new HashMap<>();
-    private static Map<String, BundleSettingPlugin> settingPluginsByPluginClass = new HashMap<>();
+    private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchhome-core";
 
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
     private static EntityManager entityManager;
     private static Map<String, AbstractRepository> repositoriesByPrefix;
     public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
     private static Map<String, PureRepository> pureRepositories = new HashMap<>();
-    private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchhome-core";
+
+    public static Map<String, ConfirmationRequestModel> confirmationRequest = new ConcurrentHashMap<>();
+
+    @Getter
+    @RequiredArgsConstructor
+    public static class ConfirmationRequestModel {
+        final String key;
+        final Runnable handler;
+        @Setter
+        boolean handled;
+    }
 
     private final Map<String, List<BiConsumer>> entityTypeUpdateListeners = new HashMap<>();
     private final Map<String, List<BiConsumer>> entityTypeRemoveListeners = new HashMap<>();
@@ -129,18 +133,16 @@ public class EntityContextImpl implements EntityContext {
     private final Map<String, List<BiConsumer>> entityIDUpdateListeners = new HashMap<>();
     private final Map<String, List<BiConsumer>> entityIDRemoveListeners = new HashMap<>();
 
-    private final Map<String, UdpContext> listenUdpMap = new HashMap<>();
-
     private final Map<String, Boolean> deviceFeatures = new HashMap<>();
     private final Set<NotificationEntityJSON> notifications = new ConcurrentSkipListSet<>();
 
     private final ClassFinder classFinder;
     private final CacheService cacheService;
     private final SimpMessagingTemplate messagingTemplate;
+    @Getter
     private final BroadcastLockManager broadcastLockManager;
     private final TouchHomeProperties touchHomeProperties;
 
-    private Map<String, Map<String, Consumer<?>>> settingListeners = new HashMap<>();
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
     private ApplicationContext applicationContext;
@@ -154,6 +156,11 @@ public class EntityContextImpl implements EntityContext {
 
     private Set<ApplicationContext> allApplicationContexts = new HashSet<>();
     private HardwareEventsImpl hardwareEvents;
+
+    // helper classes
+    private UdpServiceImpl udpService = new UdpServiceImpl();
+    private ThreadServiceImpl threadService = new ThreadServiceImpl();
+    private SettingServiceImpl settingService = new SettingServiceImpl(this);
 
     public Set<NotificationEntityJSON> getNotifications() {
         long time = System.currentTimeMillis();
@@ -183,7 +190,6 @@ public class EntityContextImpl implements EntityContext {
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
-        ((ScheduledThreadPoolExecutor) this.scheduleService).setRemoveOnCancelPolicy(true);
 
         this.transactionManager = this.applicationContext.getBean(PlatformTransactionManager.class);
         this.hardwareEvents = this.applicationContext.getBean(HardwareEventsImpl.class);
@@ -207,6 +213,9 @@ public class EntityContextImpl implements EntityContext {
         applicationContext.getBean(ScriptManager.class).postConstruct();
 
         listenSettingValue(SystemClearCacheButtonSetting.class, "im-clear-cache", cacheService::clearCache);
+
+        // reset device 'status' and 'joined' values
+        this.allDeviceRepository.resetDeviceStatuses();
 
         // loadWorkspace modules
         log.info("Initialize bundles");
@@ -243,7 +252,6 @@ public class EntityContextImpl implements EntityContext {
                 broadcastLockManager.signalAll(source.getEntityID());
             }
         });
-        this.allDeviceRepository.resetDeviceStatuses();
 
         // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
 
@@ -387,75 +395,44 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     public <T> T getSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
-        BundleSettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        String value = this.getSettingRawValue(settingPluginClazz);
-        return pluginFor.parseValue(this, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
+        return settingService.getSettingValue(settingPluginClazz);
     }
 
     @Override
     public <T> String getSettingRawValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
-        BundleSettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        if (pluginFor.transientState()) {
-            return settingTransientState.get(pluginFor);
-        } else {
-            SettingEntity settingEntity = getEntity(SettingRepository.getKey(pluginFor));
-            return settingEntity == null ? null : settingEntity.getValue();
-        }
+        return settingService.getSettingRawValue(settingPluginClazz);
     }
 
     @Override
     public <T> void listenSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, String key, Consumer<T> listener) {
-        settingListeners.putIfAbsent(bundleSettingPluginClazz.getName(), new HashMap<>());
-        settingListeners.get(bundleSettingPluginClazz.getName()).put(key, listener);
+        settingService.listenSettingValue(bundleSettingPluginClazz, key, listener);
     }
 
     @Override
     public <T> void setSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value) {
-        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        String strValue = setSettingValueSilence(settingPluginClazz, value);
-        fireNotifySettingHandlers(settingPluginClazz, value, pluginFor, strValue);
+        settingService.setSettingValue(settingPluginClazz, value);
     }
 
     /**
      * Fire notification that setting state was changed without writing actual value to db
      */
     public <T> void notifySettingValueStateChanged(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
-        BundleSettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        SettingEntity settingEntity = getEntity(SettingRepository.getKey(pluginFor));
-        T value = pluginFor.parseValue(this, settingEntity.getValue());
-        fireNotifySettingHandlers(settingPluginClazz, value, pluginFor, settingEntity.getValue());
+        settingService.notifySettingValueStateChanged(settingPluginClazz);
     }
 
     @Override
     public <T> void setSettingValueRaw(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull String value) {
-        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        setSettingValue(settingPluginClazz, (T) pluginFor.parseValue(this, value));
+        settingService.setSettingValueRaw(settingPluginClazz, value);
     }
 
     @Override
     public <T> String setSettingValueSilence(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull T value) {
-        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        String strValue = pluginFor.writeValue(value);
-        this.setSettingValueSilenceRaw(settingPluginClazz, strValue);
-        return strValue;
+        return settingService.setSettingValueSilence(settingPluginClazz, value);
     }
 
     @Override
     public <T> void setSettingValueSilenceRaw(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull String value) {
-        BundleSettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        log.debug("Update setting <{}> value <{}>", SettingRepository.getKey(pluginFor), value);
-
-        if (pluginFor.transientState()) {
-            settingTransientState.put(pluginFor, value);
-        } else {
-            SettingEntity settingEntity = getEntity(SettingRepository.getKey(pluginFor));
-            if (!Objects.equals(value, settingEntity.getValue())) {
-                if (settingEntity.getDefaultValue().equals(value)) {
-                    value = "";
-                }
-                save(settingEntity.setValue(value));
-            }
-        }
+        settingService.setSettingValueSilenceRaw(settingPluginClazz, value);
     }
 
     @Override
@@ -470,10 +447,19 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
+    public void sendConfirmation(String key, String title, Runnable confirmHandler, String... messages) {
+        if (!confirmationRequest.containsKey(key) || !confirmationRequest.get(key).handled) {
+            confirmationRequest.put(key, new ConfirmationRequestModel(key, confirmHandler));
+            sendNotification("-confirmation", NotificationEntityJSON.info(key).setName(title)
+                    .setDescription(String.join("~~", messages)));
+        }
+    }
+
+    @Override
     public void sendNotification(String destination, Object param) {
         if (param instanceof NotificationEntityJSON) {
             NotificationType type = ((NotificationEntityJSON) param).getNotificationType();
-            log.log(type == NotificationType.danger ? Level.ERROR : (type == NotificationType.warning ? Level.WARN : Level.INFO),
+            log.log(type == NotificationType.error ? Level.ERROR : (type == NotificationType.warning ? Level.WARN : Level.INFO),
                     param.toString());
         }
         messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + destination, param);
@@ -595,64 +581,32 @@ public class EntityContextImpl implements EntityContext {
     @Override
     @SneakyThrows
     public void listenUdp(String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
-        String hostPortKey = (host == null ? "0.0.0.0" : host) + ":" + port;
-        if (!this.listenUdpMap.containsKey(hostPortKey)) {
-            ThreadContext<Void> scheduleFuture;
-            try {
-                DatagramSocket socket = new DatagramSocket(host == null ? new InetSocketAddress(port) : new InetSocketAddress(host, port));
-                DatagramPacket datagramPacket = new DatagramPacket(new byte[255], 255);
-
-                scheduleFuture = this.schedule("listen-udp-" + hostPortKey, 1, TimeUnit.SECONDS, () -> {
-                    socket.receive(datagramPacket);
-                    byte[] data = datagramPacket.getData();
-                    String text = new String(data, 0, datagramPacket.getLength());
-                    listenUdpMap.get(hostPortKey).handle(datagramPacket, text);
-                }, true);
-                scheduleFuture.setDescription("Listen udp: " + hostPortKey);
-            } catch (Exception ex) {
-                this.addHeaderDangerNotification(hostPortKey, "UDP " + hostPortKey, En.get().getServerMessage("UDP_ERROR",
-                        FlowMap.of("key", hostPortKey, "msg", ex.getMessage())));
-                log.error("Unable to listen udp host:port: <{}>", hostPortKey);
-                return;
-            }
-            this.listenUdpMap.put(hostPortKey, new UdpContext(scheduleFuture));
-        }
-        this.listenUdpMap.get(hostPortKey).put(key, listener);
+        udpService.listenUdp(this, key, host, port, listener);
     }
 
     @Override
     public void stopListenUdp(String key) {
-        for (UdpContext udpContext : this.listenUdpMap.values()) {
-            udpContext.cancel(key);
-        }
+        udpService.stopListenUdp(key);
     }
 
     @Override
     public ThreadContext<Void> schedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
-        return addSchedule(name, timeout, timeUnit, () -> {
-            command.run();
-            return null;
-        }, ScheduleType.DELAY, showOnUI);
+        return threadService.addSchedule(name, timeout, timeUnit, command, showOnUI);
     }
 
     @Override
     public boolean isThreadExists(String name) {
-        return this.schedulers.containsKey(name);
+        return threadService.isThreadExists(name);
     }
 
     @Override
     public <T> ThreadContext<T> run(String name, ThrowingSupplier<T, Exception> command, boolean showOnUI) {
-        return addSchedule(name, 0, TimeUnit.MILLISECONDS, command, ScheduleType.SINGLE, showOnUI);
+        return threadService.addSchedule(name, 0, TimeUnit.MILLISECONDS, command, ThreadServiceImpl.ScheduleType.SINGLE, showOnUI);
     }
 
     @Override
     public void cancelThread(String name) {
-        if (name != null) {
-            ThreadContextImpl context = this.schedulers.remove(name);
-            if (context != null) {
-                context.cancel();
-            }
-        }
+        threadService.cancelThread(name);
     }
 
     @Override
@@ -733,17 +687,7 @@ public class EntityContextImpl implements EntityContext {
 
     private <T> void fireNotifySettingHandlers(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value,
                                                BundleSettingPlugin pluginFor, String strValue) {
-        if (settingListeners.containsKey(settingPluginClazz.getName())) {
-            for (Consumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {
-                try {
-                    consumer.accept(value);
-                } catch (Exception ex) {
-                    log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value);
-                }
-            }
-        }
-        broadcastLockManager.signalAll(SettingEntity.PREFIX + settingPluginClazz.getSimpleName(), StringUtils.defaultIfEmpty(strValue, pluginFor.getDefaultValue()));
-        this.sendNotification(pluginFor.buildToastrNotificationEntity(value, strValue, this));
+        settingService.fireNotifySettingHandlers(settingPluginClazz, value, pluginFor, strValue);
     }
 
     private void registerEntityListeners() {
@@ -842,7 +786,7 @@ public class EntityContextImpl implements EntityContext {
 
     private void updateBeans(BundleContext bundleContext, ApplicationContext context, boolean addBundle) {
         log.info("Starting update all app bundles");
-        En.get().clear();
+        En.clear();
         fetchBundleSettingPlugins(bundleContext, addBundle);
         En.DEFAULT_LANG = getSettingValue(SystemLanguageSetting.class);
 
@@ -878,20 +822,10 @@ public class EntityContextImpl implements EntityContext {
         log.info("Finish update all app bundles");
     }
 
-    @SneakyThrows
     private void fetchBundleSettingPlugins(BundleContext bundleContext, boolean addBundle) {
         String basePackage = bundleContext == null ? null : bundleContext.getBasePackage();
         for (Class<? extends BundleSettingPlugin> settingPlugin : classFinder.getClassesWithParent(BundleSettingPlugin.class, null, basePackage)) {
-            BundleSettingPlugin bundleSettingPlugin = settingPlugin.newInstance();
-            String key = SettingRepository.getKey(bundleSettingPlugin);
-            if (addBundle) {
-                settingPluginsByPluginKey.put(key, bundleSettingPlugin);
-                settingPluginsByPluginClass.put(settingPlugin.getName(), bundleSettingPlugin);
-            } else {
-                settingPluginsByPluginKey.remove(key);
-                settingPluginsByPluginClass.remove(settingPlugin.getName());
-                settingListeners.remove(settingPlugin.getName());
-            }
+            settingService.updateSettingPlugins(settingPlugin, addBundle);
         }
     }
 
@@ -917,45 +851,6 @@ public class EntityContextImpl implements EntityContext {
                 }
             }
         });
-    }
-
-    private <T> ThreadContext<T> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingSupplier<T, Exception> command,
-                                             ScheduleType scheduleType, boolean showOnUI) {
-        this.cancelThread(name);
-        ThreadContextImpl<T> threadContext = new ThreadContextImpl<T>(name, command, scheduleType, timeout > 0 ? timeUnit.toMillis(timeout) : null, showOnUI);
-        this.schedulers.put(name, threadContext);
-
-        Runnable runnable = () -> {
-            try {
-                threadContext.runCount++;
-                threadContext.state = "STARTED";
-                threadContext.getCommand().get();
-                threadContext.state = "FINISHED";
-            } catch (Exception ex) {
-                log.error("Exception in thread: <{}>. Message: <{}>", name, getErrorMessage(ex));
-                if (threadContext.errorListener != null) {
-                    try {
-                        threadContext.errorListener.accept(ex);
-                    } catch (Exception uex) {
-                        log.error("Unexpected error in thread error listener <{}>", getErrorMessage(uex));
-                    }
-                }
-            }
-        };
-        ScheduledFuture<?> scheduledFuture = null;
-        switch (scheduleType) {
-            case DELAY:
-                scheduledFuture = scheduleService.scheduleWithFixedDelay(runnable, 0, timeout, timeUnit);
-                break;
-            case RATE:
-                scheduledFuture = scheduleService.scheduleAtFixedRate(runnable, 0, timeout, timeUnit);
-                break;
-            case SINGLE:
-                scheduledFuture = scheduleService.schedule(runnable, 0, TimeUnit.MILLISECONDS);
-                break;
-        }
-        threadContext.scheduledFuture = (ScheduledFuture<T>) scheduledFuture;
-        return threadContext;
     }
 
     private void fetchReleaseVersion() {
@@ -997,6 +892,10 @@ public class EntityContextImpl implements EntityContext {
         }
     }
 
+    public Map<String, ThreadServiceImpl.ThreadContextImpl> getSchedulers() {
+        return threadService.getSchedulers();
+    }
+
     public static class InternalBundleContext {
         private final BundleEntrypoint bundleEntrypoint;
         @Getter
@@ -1010,79 +909,6 @@ public class EntityContextImpl implements EntityContext {
                 for (WidgetBaseTemplate widgetBaseTemplate : bundleContext.getApplicationContext().getBeansOfType(WidgetBaseTemplate.class).values()) {
                     fieldTypes.put(widgetBaseTemplate.getClass().getSimpleName(), widgetBaseTemplate);
                 }
-            }
-        }
-    }
-
-    @Getter
-    @RequiredArgsConstructor
-    public static class ThreadContextImpl<T> implements ThreadContext<T> {
-        private final String name;
-        private final ThrowingSupplier<T, Exception> command;
-        private final ScheduleType scheduleType;
-        private final Long period;
-        private final boolean showOnUI;
-        private ScheduledFuture<T> scheduledFuture;
-        @Setter
-        private String state;
-        @Setter
-        private String description;
-        private boolean stopped;
-        @Setter
-        private int runCount;
-        @Getter
-        private Date creationTime = new Date();
-
-        private Consumer<Exception> errorListener;
-
-        public Long getTimeToNextSchedule() {
-            if (period == null) {
-                return null;
-            }
-            return scheduledFuture.getDelay(TimeUnit.MILLISECONDS) / 1000;
-        }
-
-        @Override
-        public void cancel() {
-            if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
-                stopped = true;
-            }
-        }
-
-        @Override
-        public T await(long timeout, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
-            return scheduledFuture.get(timeout, timeUnit);
-        }
-
-        public void onError(Consumer<Exception> errorListener) {
-            this.errorListener = errorListener;
-        }
-    }
-
-    @RequiredArgsConstructor
-    public enum ScheduleType {
-        DELAY, RATE, SINGLE
-    }
-
-    @RequiredArgsConstructor
-    private static class UdpContext {
-        private final Map<String, BiConsumer<DatagramPacket, String>> keyToListener = new HashMap<>();
-        private final ThreadContext<Void> scheduleFuture;
-
-        public void handle(DatagramPacket datagramPacket, String text) {
-            for (BiConsumer<DatagramPacket, String> listener : keyToListener.values()) {
-                listener.accept(datagramPacket, text);
-            }
-        }
-
-        public void put(String key, BiConsumer<DatagramPacket, String> listener) {
-            this.keyToListener.put(key, listener);
-        }
-
-        public void cancel(String key) {
-            keyToListener.remove(key);
-            if (keyToListener.isEmpty()) {
-                scheduleFuture.cancel();
             }
         }
     }

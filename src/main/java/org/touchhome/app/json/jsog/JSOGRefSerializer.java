@@ -1,4 +1,4 @@
-package org.touchhome.app.jsog;
+package org.touchhome.app.json.jsog;
 
 
 import com.fasterxml.jackson.core.JsonGenerator;

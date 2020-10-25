@@ -3,7 +3,6 @@ package org.touchhome.bundle.ui;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.setting.SendBroadcastSetting;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
@@ -15,7 +14,6 @@ import org.touchhome.bundle.api.setting.BundleSettingPluginButton;
 import org.touchhome.bundle.api.util.NotificationType;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 @Log4j2
 @Getter
@@ -63,12 +61,9 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
         this.postConstruct();
 
-        entityContext.listenSettingValue(SendBroadcastSetting.class, "listen-ui-header-click", new Consumer<JSONObject>() {
-            @Override
-            public void accept(JSONObject json) {
-                String broadcastID = json.getString("name");
-                scratch3EventsBlocks.fireBroadcastEvent(broadcastID);
-            }
+        entityContext.listenSettingValue(SendBroadcastSetting.class, "listen-ui-header-click", json -> {
+            String broadcastID = json.getString("name");
+            scratch3EventsBlocks.fireBroadcastEvent(broadcastID);
         });
     }
 
@@ -112,8 +107,8 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
     @RequiredArgsConstructor
     private enum PopupType {
         INFO(NotificationMessageEntityContext::sendInfoMessage, org.touchhome.bundle.api.util.NotificationType.info),
-        WARN(NotificationMessageEntityContext::sendWarnMessage, org.touchhome.bundle.api.util.NotificationType.warning),
-        ERROR(NotificationMessageEntityContext::sendErrorMessage, org.touchhome.bundle.api.util.NotificationType.danger),
+        WARN(NotificationMessageEntityContext::sendWarningMessage, org.touchhome.bundle.api.util.NotificationType.warning),
+        ERROR(NotificationMessageEntityContext::sendErrorMessage, org.touchhome.bundle.api.util.NotificationType.error),
         SUCCESS(NotificationMessageEntityContext::sendSuccessMessage, org.touchhome.bundle.api.util.NotificationType.success);
 
         private final BiConsumer<EntityContext, String> popupHandler;

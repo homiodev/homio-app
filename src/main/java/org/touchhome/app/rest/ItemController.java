@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivovarit.function.ThrowingSupplier;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
@@ -24,14 +25,16 @@ import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.utils.InternalUtil;
-import org.touchhome.bundle.api.DynamicOptionLoader;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.*;
+import org.touchhome.bundle.api.model.micro.MicroControllerBaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
+import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
@@ -74,7 +77,7 @@ public class ItemController {
         if (UIActionDescription.Type.method.equals(uiActionDescription.getType())) {
             for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIMethodAction.class)) {
                 UIMethodAction uiMethodAction = method.getDeclaredAnnotation(UIMethodAction.class);
-                if (uiMethodAction.name().equals(uiActionDescription.getName())) {
+                if (uiMethodAction.value().equals(uiActionDescription.getName())) {
                     return executeMethodAction(method, actionHolder, applicationContext, actionEntity);
                 }
             }
@@ -113,7 +116,7 @@ public class ItemController {
         if (clazz != null) {
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIMethodAction.class)) {
                 UIMethodAction uiMethodAction = method.getDeclaredAnnotation(UIMethodAction.class);
-                actions.add(new UIActionDescription().setType(UIActionDescription.Type.method).setName(uiMethodAction.name()).setResponseAction(uiMethodAction.responseAction().name()));
+                actions.add(new UIActionDescription().setType(UIActionDescription.Type.method).setName(uiMethodAction.value()).setResponseAction(uiMethodAction.responseAction().name()));
             }
         }
         return actions;
@@ -263,6 +266,16 @@ public class ItemController {
         return list;
     }
 
+    @PostMapping("fireRouteAction")
+    public void fireRouteAction(@RequestBody RouteActionRequest routeActionRequest) {
+        Class<? extends BaseEntity> aClass = baseEntitySimpleClasses.get(routeActionRequest.type);
+        for (UISidebarButton button : aClass.getAnnotationsByType(UISidebarButton.class)) {
+            if (button.handlerClass().getSimpleName().equals(routeActionRequest.handlerClass)) {
+                TouchHomeUtils.newInstance(button.handlerClass()).accept(entityContext);
+            }
+        }
+    }
+
     @GetMapping("{entityID}")
     public BaseEntity getItem(@PathVariable("entityID") String entityID) {
         return entityManager.getEntityWithFetchLazy(entityID);
@@ -386,7 +399,7 @@ public class ItemController {
                 .stream().filter(m -> InternalUtil.getMethodShortName(m).equals(fieldName)).findAny().orElse(null);
         if (selectionMethodAnnotation != null) {
             return loadOptions(selectionMethodAnnotation, entityContext, selectionMethodAnnotation.getReturnType(),
-                    () -> selectionMethodAnnotation.invoke(entity), entity);
+                    () -> null/* TODO: selectionMethodAnnotation.invoke(entity)*/, entity);
         } else {
             Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
             return loadOptions(field, entityContext, field.getType(), () -> field.get(entity), entity);
@@ -520,5 +533,11 @@ public class ItemController {
         private int yb;
         private int bw;
         private int bh;
+    }
+
+    @Setter
+    private static class RouteActionRequest {
+        private String type;
+        private String handlerClass;
     }
 }

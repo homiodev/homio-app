@@ -5,11 +5,10 @@ import org.apache.commons.lang3.reflect.MethodUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.context.annotation.ConditionContext;
 import org.springframework.context.annotation.Conditional;
-import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.condition.ExecuteOnce;
+import org.touchhome.bundle.api.condition.LinuxEnvironmentCondition;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -25,11 +24,9 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 
-import static org.touchhome.bundle.api.EntityContext.isLinuxOrDockerEnvironment;
-
 @Log4j2
 @Component
-@Conditional(ConditionFactoryPostProcessor.LinuxCondition.class)
+@Conditional(LinuxEnvironmentCondition.class)
 public class ConditionFactoryPostProcessor implements BeanPostProcessor {
 
     private final List<ExecuteContext> executeContexts = new ArrayList<>();
@@ -98,14 +95,6 @@ public class ConditionFactoryPostProcessor implements BeanPostProcessor {
             this.lock.lock();
             this.condition.signal();
             this.lock.unlock();
-        }
-    }
-
-    public static class LinuxCondition implements org.springframework.context.annotation.Condition {
-
-        @Override
-        public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
-            return isLinuxOrDockerEnvironment();
         }
     }
 

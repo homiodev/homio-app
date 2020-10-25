@@ -1,13 +1,14 @@
 package org.touchhome.app.rest;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.touchhome.app.json.RouteJSON;
 import org.touchhome.app.manager.common.ClassFinder;
+import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 
 import java.util.*;
@@ -63,12 +64,16 @@ public class RouteController {
     private void addRouteFromUISideBarMenu(List<RouteJSON> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
         String href = aClass.getSimpleName();
         RouteJSON route = new RouteJSON(uiSidebarMenu.parent().name().toLowerCase() + "/" + href);
-        route.setType(href);
-        route.setItemType(UISidebarMenu.class.isAssignableFrom(uiSidebarMenu.itemType()) ? aClass : uiSidebarMenu.itemType());
-        route.setAllowCreateNewItems(uiSidebarMenu.allowCreateNewItems());
+        route.type = href;
+        route.itemType = UISidebarMenu.class.isAssignableFrom(uiSidebarMenu.itemType()) ? aClass : uiSidebarMenu.itemType();
+        route.allowCreateNewItems = uiSidebarMenu.allowCreateNewItems();
+        route.sidebarButtons = new ArrayList<>();
+        for (UISidebarButton button : aClass.getAnnotationsByType(UISidebarButton.class)) {
+            route.sidebarButtons.add(new SidebarButton(button.buttonIcon(), button.buttonTitle(), button.buttonText(),
+                    button.onDone(), button.buttonIconColor(), button.confirm(), button.handlerClass().getSimpleName()));
+        }
         routes.add(route);
     }
-
 
     @Getter
     public static class SidebarMenuItem {
@@ -93,8 +98,33 @@ public class RouteController {
                     uiSidebarMenu.bg(),
                     clazz.getSimpleName(),
                     uiSidebarMenu.order()
-
             );
         }
+    }
+
+    @Getter
+    public static class RouteJSON {
+
+        private String url;
+        private String type;
+        private Class<?> itemType;
+        private boolean allowCreateNewItems;
+        private List<SidebarButton> sidebarButtons;
+
+        public RouteJSON(String url) {
+            this.url = url;
+        }
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class SidebarButton {
+        private final String icon;
+        private final String title;
+        private final String text;
+        private final String onDone;
+        private final String color;
+        private final String confirm;
+        private final String handlerClass;
     }
 }

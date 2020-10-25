@@ -122,7 +122,7 @@ public class BundleContextService {
     @SneakyThrows
     private void removeBundle(String bundleId) {
         BundleContext context = this.bundleContextMap.remove(bundleId);
-        if (context != null) { // TODO: gggggggggggggggggg
+        if (context != null) {
             entityContextImpl.removeBundle(bundleId);
             context.destroy();
             Files.delete(context.getBundleContextFile());

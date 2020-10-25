@@ -333,7 +333,23 @@ public class UtilsController {
     @GetMapping("i18n/{lang}.json")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ObjectNode getI18NFromBundles(@PathVariable("lang") String lang) {
-        return En.get().getLangJson(lang);
+        return En.getLangJson(lang);
+    }
+
+    @PostMapping("confirm/{entityID}")
+    public void confirm(@PathVariable("entityID") String entityID) {
+        EntityContextImpl.ConfirmationRequestModel confirmationRequestModel = EntityContextImpl.confirmationRequest.get(entityID);
+        if (confirmationRequestModel != null && !confirmationRequestModel.isHandled()) {
+            confirmationRequestModel.getHandler().run();
+            confirmationRequestModel.setHandled(true);
+        }
+    }
+
+    @DeleteMapping("confirm/{entityID}")
+    public void notConfirm(@PathVariable("entityID") String entityID) {
+        if (EntityContextImpl.confirmationRequest.containsKey(entityID)) {
+            EntityContextImpl.confirmationRequest.get(entityID).setHandled(true);
+        }
     }
 
     @Getter

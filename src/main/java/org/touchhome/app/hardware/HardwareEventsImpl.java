@@ -39,6 +39,9 @@ public class HardwareEventsImpl implements HardwareEvents {
 
     @Override
     public void fireEvent(String key, Object value) {
+        if (key == null) {
+            return;
+        }
         if (value != null) {
             if (Objects.equals(value, lastValues.get(key))) {
                 return;

@@ -25,8 +25,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static org.touchhome.bundle.api.util.NotificationType.danger;
-
 @Setter
 @Log4j2
 public class WorkspaceBlockImpl implements WorkspaceBlock {
@@ -85,7 +83,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     public void logError(String message, Object... params) {
         log(Level.ERROR, message, params);
         String msg = log.getMessageFactory().newMessage(message, params).getFormattedMessage();
-        this.entityContext.sendNotification(msg, "", NotificationType.danger);
+        this.entityContext.sendErrorMessage(msg);
     }
 
     @Override
@@ -356,13 +354,13 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     private String sendScratch3ExtensionNotFound(String extensionId) {
         String msg = "No scratch extension <" + extensionId + "> found";
-        entityContext.sendNotification("WORKSPACE.SCRATCH_NOT_FOUND", extensionId, danger);
+        entityContext.sendErrorMessage("WORKSPACE.SCRATCH_NOT_FOUND", extensionId);
         return msg;
     }
 
     private String sendScratch3BlockNotFound(String extensionId, String opcode) {
         String msg = "No scratch block <" + opcode + "> found in extension <" + extensionId + ">";
-        entityContext.sendNotification("WORKSPACE.SCRATCH_BLOCK_NOT_FOUND", opcode, danger);
+        entityContext.sendErrorMessage("WORKSPACE.SCRATCH_BLOCK_NOT_FOUND", opcode);
         return msg;
     }
 

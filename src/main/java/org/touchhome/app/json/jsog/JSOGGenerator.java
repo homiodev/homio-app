@@ -1,5 +1,4 @@
-package org.touchhome.app.jsog;
-
+package org.touchhome.app.json.jsog;
 
 import com.fasterxml.jackson.annotation.ObjectIdGenerator;
 import org.touchhome.bundle.api.model.BaseEntity;
