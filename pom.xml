@@ -4,7 +4,7 @@
     <url>https://github.com/touchhome/touchhome-core</url>
 
     <packaging>jar</packaging>
-    <version>0.5.0</version>
+    <version>0.6.6-SNAPSHOT</version>
 
     <parent>
         <groupId>org.touchhome</groupId>
@@ -16,7 +16,7 @@
         <url>https://github.com/touchhome/${project.artifactId}</url>
         <connection>scm:git:git://github.com/github.com/touchhome/${project.artifactId}.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/touchhome/${project.artifactId}.git</developerConnection>
-        <tag>touchhome-core-0.5.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
