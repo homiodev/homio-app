@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.utils.color.ColorThief;
 import org.touchhome.app.utils.color.MMCQ;
 import org.touchhome.app.utils.color.RGBUtil;
-import org.touchhome.bundle.api.BundleEntrypoint;
+import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 
@@ -23,16 +23,16 @@ import java.util.stream.Collectors;
 @Component
 public class BundleManager {
     private Map<String, String> bundleColorMap;
-    private Map<String, BundleEntrypoint> bundleMap;
-    private Collection<BundleEntrypoint> bundleEntryPoints;
+    private Map<String, BundleEntryPoint> bundleMap;
+    private Collection<BundleEntryPoint> bundleEntryPoints;
 
     @SneakyThrows
     public void postConstruct(EntityContext entityContext) {
-        this.bundleEntryPoints = entityContext.getBeansOfType(BundleEntrypoint.class);
-        this.bundleMap = bundleEntryPoints.stream().collect(Collectors.toMap(BundleEntrypoint::getBundleId, s -> s));
+        this.bundleEntryPoints = entityContext.getBeansOfType(BundleEntryPoint.class);
+        this.bundleMap = bundleEntryPoints.stream().collect(Collectors.toMap(BundleEntryPoint::getBundleId, s -> s));
         this.bundleColorMap = new HashMap<>();
 
-        for (BundleEntrypoint bundleEntrypoint : bundleEntryPoints) {
+        for (BundleEntryPoint bundleEntrypoint : bundleEntryPoints) {
             URL imageURL = bundleEntrypoint.getBundleImageURL();
             BufferedImage img = ImageIO.read(Objects.requireNonNull(imageURL));
             MMCQ.CMap result = ColorThief.getColorMap(img, 5);
@@ -42,8 +42,8 @@ public class BundleManager {
         }
     }
 
-    public BundleEntrypoint getBundle(String bundleID) {
-        BundleEntrypoint bundleEntrypoint = bundleMap.get(bundleID);
+    public BundleEntryPoint getBundle(String bundleID) {
+        BundleEntryPoint bundleEntrypoint = bundleMap.get(bundleID);
         if (bundleEntrypoint == null) {
             throw new NotFoundException("Unable to find bundle: " + bundleID);
         }
@@ -54,7 +54,7 @@ public class BundleManager {
         return bundleColorMap.get(bundleID);
     }
 
-    public Collection<BundleEntrypoint> getBundles() {
+    public Collection<BundleEntryPoint> getBundles() {
         return bundleEntryPoints;
     }
 }

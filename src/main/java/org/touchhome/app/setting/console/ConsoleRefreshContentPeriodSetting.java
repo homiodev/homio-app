@@ -1,9 +1,10 @@
 package org.touchhome.app.setting.console;
 
-import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.json.Option;
+import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,6 +20,11 @@ public class ConsoleRefreshContentPeriodSetting implements BundleConsoleSettingP
     @Override
     public String getDefaultValue() {
         return "0";
+    }
+
+    @Override
+    public Class<Integer> getType() {
+        return Integer.class;
     }
 
     @Override

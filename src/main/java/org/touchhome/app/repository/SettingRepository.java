@@ -2,22 +2,24 @@ package org.touchhome.app.repository;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.manager.common.impl.SettingServiceImpl;
+import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.setting.SettingPlugin;
-import org.touchhome.bundle.api.BundleEntrypoint;
+import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.repository.AbstractRepository;
-import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPluginToggle;
+import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-import static org.touchhome.bundle.api.BundleEntrypoint.BUNDLE_PREFIX;
+import static org.touchhome.app.model.entity.SettingEntity.getKey;
+import static org.touchhome.bundle.api.BundleEntryPoint.BUNDLE_PREFIX;
 
 @Repository
 public class SettingRepository extends AbstractRepository<SettingEntity> {
@@ -40,7 +42,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
     }
 
     public static void fulfillEntityFromPlugin(SettingEntity entity, EntityContext entityContext) {
-        BundleSettingPlugin plugin = SettingServiceImpl.settingPluginsByPluginKey.get(entity.getEntityID());
+        BundleSettingPlugin plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entity.getEntityID());
         if (plugin != null) {
             entity.setBundle(getSettingBundleName(entityContext, plugin.getClass()));
             entity.setDefaultValue(plugin.getDefaultValue());
@@ -48,7 +50,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             entity.setAdvanced(plugin.isAdvanced());
             entity.setColor(plugin.getIconColor());
             entity.setIcon(plugin.getIcon());
-            entity.setToggleIcon(plugin.getToggleIcon());
+            if (plugin instanceof BundleSettingPluginToggle) {
+                entity.setToggleIcon(((BundleSettingPluginToggle) plugin).getToggleIcon());
+            }
             entity.setSettingType(plugin.getSettingType());
             entity.setReverted(plugin.isReverted() ? true : null);
             entity.setParameters(plugin.getParameters(entityContext, entity.getValue()));
@@ -70,17 +74,36 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
                 if (pages != null && pages.length > 0) {
                     entity.setPages(new HashSet<>(Arrays.asList(pages)));
                 }
+                ConsolePlugin.RenderType[] renderTypes = ((BundleConsoleSettingPlugin) plugin).renderTypes();
+                if (renderTypes != null && renderTypes.length > 0) {
+                    entity.setRenderTypes(new HashSet<>(Arrays.asList(renderTypes)));
+                }
             }
         }
     }
 
-    public static String getKey(BundleSettingPlugin settingPlugin) {
-        return SettingEntity.PREFIX + settingPlugin.getClass().getSimpleName();
+    /**
+     * Search bundleId for setting.
+     */
+    public static String getSettingBundleName(EntityContext entityContext, Class<? extends BundleSettingPlugin> settingPluginClass) {
+        String name = settingPluginClass.getName();
+        return settingToBundleMap.computeIfAbsent(name, key -> {
+            if (name.startsWith(BUNDLE_PREFIX)) {
+                String pathName = name.substring(0, BUNDLE_PREFIX.length() + name.substring(BUNDLE_PREFIX.length()).indexOf('.'));
+                BundleEntryPoint bundleEntrypoint = entityContext.getBeansOfType(BundleEntryPoint.class)
+                        .stream().filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
+                if (bundleEntrypoint == null) {
+                    throw new IllegalStateException("Unable find bundle entry-point for setting: ");
+                }
+                return bundleEntrypoint.getBundleId();
+            }
+            return null;
+        });
     }
 
     @Transactional
     public void postConstruct() {
-        for (BundleSettingPlugin settingPlugin : SettingServiceImpl.settingPluginsByPluginKey.values()) {
+        for (BundleSettingPlugin settingPlugin : EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
             if (!settingPlugin.transientState()) {
                 SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
                 if (settingEntity == null) {
@@ -90,11 +113,6 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
                 }
             }
         }
-    }
-
-    @Override
-    public void updateEntityAfterFetch(SettingEntity entity) {
-        fulfillEntityFromPlugin(entity, entityContext);
     }
 
     /*@Transactional
@@ -107,22 +125,8 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         }
     }*/
 
-    /**
-     * Search bundleId for setting.
-     */
-    public static String getSettingBundleName(EntityContext entityContext, Class<? extends BundleSettingPlugin> settingPluginClass) {
-        String name = settingPluginClass.getName();
-        return settingToBundleMap.computeIfAbsent(name, key -> {
-            if (name.startsWith(BUNDLE_PREFIX)) {
-                String pathName = name.substring(0, BUNDLE_PREFIX.length() + name.substring(BUNDLE_PREFIX.length()).indexOf('.'));
-                BundleEntrypoint bundleEntrypoint = entityContext.getBeansOfType(BundleEntrypoint.class)
-                        .stream().filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
-                if (bundleEntrypoint == null) {
-                    throw new IllegalStateException("Unable find bundle entrypoint for setting: ");
-                }
-                return bundleEntrypoint.getBundleId();
-            }
-            return null;
-        });
+    @Override
+    public void updateEntityAfterFetch(SettingEntity entity) {
+        fulfillEntityFromPlugin(entity, entityContext);
     }
 }

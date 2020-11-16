@@ -14,6 +14,7 @@ import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -44,10 +45,17 @@ public class ScriptManager {
     @Value("${maxJavaScriptCompileBeforeInterruptInSec:5}")
     private Integer maxJavaScriptCompileBeforeInterruptInSec;
 
+    private static void appendFunc(StringBuilder script, String funcName, String separator, String javaScript) {
+        String result = ScriptEntity.getFunctionWithName(javaScript, funcName);
+        if (result != null) {
+            script.append(separator).append("(").append(result).append(")").append(separator);
+        }
+    }
+
     public void postConstruct() {
         for (ScriptEntity scriptEntity : entityContext.findAll(ScriptEntity.class)) {
             if (scriptEntity.isAutoStart()) {
-                EntityContext.ThreadContext<Void> threadContext = this.entityContext.run(scriptEntity.getEntityID(), () -> {
+                EntityContextBGP.ThreadContext<Void> threadContext = this.entityContext.bgp().run(scriptEntity.getEntityID(), () -> {
                     CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, null);
                     runJavaScript(compiledScriptContext);
                 }, true);
@@ -68,7 +76,7 @@ public class ScriptManager {
     }
 
     public void stopThread(ScriptEntity scriptEntity) {
-        this.entityContext.cancelThread(scriptEntity.getEntityID());
+        this.entityContext.bgp().cancelThread(scriptEntity.getEntityID());
     }
 
     /**
@@ -80,7 +88,7 @@ public class ScriptManager {
             scriptEntity.setJavaScriptParameters(json);
             entityContext.save(scriptEntity);
         } else if (scriptEntity.getRepeatInterval() != 0 && allowRepeat) {
-            if (entityContext.isThreadExists(scriptEntity.getEntityID())) {
+            if (entityContext.bgp().isThreadExists(scriptEntity.getEntityID())) {
                 throw new RuntimeException("Script already in progress. Stop script to restart");
             }
             if (scriptEntity.getRepeatInterval() < minScriptThreadSleep) {
@@ -112,13 +120,6 @@ public class ScriptManager {
         }
 
         return script.toString();
-    }
-
-    private static void appendFunc(StringBuilder script, String funcName, String separator, String javaScript) {
-        String result = ScriptEntity.getFunctionWithName(javaScript, funcName);
-        if (result != null) {
-            script.append(separator).append("(").append(result).append(")").append(separator);
-        }
     }
 
     public CompileScriptContext createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream) {
@@ -158,7 +159,7 @@ public class ScriptManager {
      * Run java script once and interrupt it if too long works
      */
     public String callJavaScriptOnce(ScriptEntity scriptEntity, CompileScriptContext compiledScriptContext) throws InterruptedException, ExecutionException {
-        EntityContext.ThreadContext<String> threadContext = this.entityContext.run(scriptEntity.getEntityID(), () -> runJavaScript(compiledScriptContext), true);
+        EntityContextBGP.ThreadContext<String> threadContext = this.entityContext.bgp().run(scriptEntity.getEntityID(), () -> runJavaScript(compiledScriptContext), true);
         try {
             return threadContext.await(maxJavaScriptOnceCallBeforeInterruptInSec, TimeUnit.SECONDS);
         } catch (TimeoutException ex) {

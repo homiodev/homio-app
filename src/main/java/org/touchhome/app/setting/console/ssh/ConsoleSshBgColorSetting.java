@@ -1,8 +1,14 @@
 package org.touchhome.app.setting.console.ssh;
 
-import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
+
+import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
 
 public class ConsoleSshBgColorSetting implements BundleConsoleSettingPlugin<String> {
+
+    @Override
+    public Class<String> getType() {
+        return String.class;
+    }
 
     @Override
     public String getDefaultValue() {

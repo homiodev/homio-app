@@ -1,4 +1,4 @@
-package org.touchhome.bundle.machine;
+package org.touchhome.app.console;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.pi4j.system.SystemInfo;
@@ -7,39 +7,36 @@ import lombok.*;
 import org.apache.commons.lang3.SystemUtils;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.console.ConsolePlugin;
+import org.touchhome.bundle.api.console.ConsolePluginTable;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.cloud.setting.CloudProviderSetting;
+import org.touchhome.bundle.cloud.setting.ConsoleCloudProviderSetting;
 
 import javax.validation.constraints.NotNull;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
 
 @Component
 @RequiredArgsConstructor
-public class MachineConsolePlugin implements ConsolePlugin {
-
-    @Override
-    public String getParentTab() {
-        return "hardware";
-    }
+public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePlugin.HardwarePluginEntity>, NamedConsolePlugin {
 
     private final EntityContext entityContext;
     private final LinuxHardwareRepository linuxHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
 
     @Override
+    public String getParentTab() {
+        return "hardware";
+    }
+
+    @Override
     @SneakyThrows
-    public List<? extends HasEntityIdentifier> drawEntity() {
+    public Collection<HardwarePluginEntity> getValue() {
         UserEntity user = entityContext.getEntity(ADMIN_USER);
 
         List<HardwarePluginEntity> list = new ArrayList<>();
@@ -61,7 +58,7 @@ public class MachineConsolePlugin implements ConsolePlugin {
         list.add(new HardwarePluginEntity("IP address", wirelessHardwareRepository.getIPAddress()));
         list.add(new HardwarePluginEntity("Router IP address", wirelessHardwareRepository.getGatewayIpAddress()));
         list.add(new HardwarePluginEntity("Device model", EntityContext.isLinuxEnvironment() ? linuxHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
-        list.add(new HardwarePluginEntity("Cloud status", this.entityContext.getSettingValue(CloudProviderSetting.class).getStatus()));
+        list.add(new HardwarePluginEntity("Cloud status", this.entityContext.setting().getValue(ConsoleCloudProviderSetting.class).getStatus()));
         list.add(new HardwarePluginEntity("Cloud keystore", user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));
         list.add(new HardwarePluginEntity("Features", getFeatures()));
 
@@ -93,10 +90,20 @@ public class MachineConsolePlugin implements ConsolePlugin {
         return 1500;
     }
 
+    @Override
+    public String getName() {
+        return "machine";
+    }
+
+    @Override
+    public Class<HardwarePluginEntity> getEntityClass() {
+        return HardwarePluginEntity.class;
+    }
+
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
-    private static class HardwarePluginEntity implements HasEntityIdentifier, Comparable<HardwarePluginEntity> {
+    public static class HardwarePluginEntity implements HasEntityIdentifier, Comparable<HardwarePluginEntity> {
         @UIField(order = 1)
         private String name;
 

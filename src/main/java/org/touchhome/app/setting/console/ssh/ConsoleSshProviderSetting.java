@@ -2,14 +2,20 @@ package org.touchhome.app.setting.console.ssh;
 
 import org.touchhome.app.service.ssh.SshProvider;
 import org.touchhome.app.service.ssh.impl.TmateSshProvider;
-import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
+import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+
 
 import java.util.List;
 
 public class ConsoleSshProviderSetting implements BundleConsoleSettingPlugin<SshProvider> {
+
+    @Override
+    public Class<SshProvider> getType() {
+        return SshProvider.class;
+    }
 
     @Override
     public String getDefaultValue() {

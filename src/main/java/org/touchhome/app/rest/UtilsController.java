@@ -23,6 +23,7 @@ import org.touchhome.app.js.assistant.model.Completion;
 import org.touchhome.app.js.assistant.model.CompletionRequest;
 import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.manager.common.EntityContextImpl;
+import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.utils.InternalUtil;
@@ -280,7 +281,7 @@ public class UtilsController {
 
     @GetMapping("notifications")
     public Set<NotificationEntityJSON> getNotifications() {
-        return entityContext.getNotifications();
+        return entityContext.ui().getNotifications();
     }
 
     @PostMapping("getCompletions")
@@ -338,7 +339,7 @@ public class UtilsController {
 
     @PostMapping("confirm/{entityID}")
     public void confirm(@PathVariable("entityID") String entityID) {
-        EntityContextImpl.ConfirmationRequestModel confirmationRequestModel = EntityContextImpl.confirmationRequest.get(entityID);
+        EntityContextUIImpl.ConfirmationRequestModel confirmationRequestModel = EntityContextUIImpl.confirmationRequest.get(entityID);
         if (confirmationRequestModel != null && !confirmationRequestModel.isHandled()) {
             confirmationRequestModel.getHandler().run();
             confirmationRequestModel.setHandled(true);
@@ -347,8 +348,8 @@ public class UtilsController {
 
     @DeleteMapping("confirm/{entityID}")
     public void notConfirm(@PathVariable("entityID") String entityID) {
-        if (EntityContextImpl.confirmationRequest.containsKey(entityID)) {
-            EntityContextImpl.confirmationRequest.get(entityID).setHandled(true);
+        if (EntityContextUIImpl.confirmationRequest.containsKey(entityID)) {
+            EntityContextUIImpl.confirmationRequest.get(entityID).setHandled(true);
         }
     }
 

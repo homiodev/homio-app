@@ -7,6 +7,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.UserEntity;
@@ -30,11 +31,12 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final EntityContext entityContext;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping("status")
     public int getStatus(Principal user) {
         UserEntity userEntity = entityContext.getEntity(ADMIN_USER);
-        return user == null ? (userEntity == null || userEntity.isPasswordNotSet() ? 402 : 401) : 200;
+        return user == null ? (userEntity == null || userEntity.isPasswordNotSet(passwordEncoder) ? 402 : 401) : 200;
     }
 
     @GetMapping("user")
@@ -74,8 +76,7 @@ public class AuthController {
         }
         return entityContext.save(new UserEntity().computeEntityID(credentials::getEmail)
                 .setUserId(credentials.getEmail())
-                // password should be already encoded
-                .setPassword(credentials.getPassword())
+                .setPassword(credentials.getPassword(), this.passwordEncoder)
                 .setRoles(new HashSet<>(Arrays.asList(roles))));
     }
 }

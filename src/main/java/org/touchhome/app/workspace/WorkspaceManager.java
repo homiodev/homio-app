@@ -13,6 +13,7 @@ import org.touchhome.app.repository.workspace.WorkspaceBroadcastRepository;
 import org.touchhome.app.setting.system.SystemClearWorkspaceButtonSetting;
 import org.touchhome.app.setting.system.SystemClearWorkspaceVariablesButtonSetting;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceJsonVariableEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceShareVariableEntity;
@@ -26,8 +27,6 @@ import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableGroupEntity
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.scratch.WorkspaceBlock;
 import org.touchhome.bundle.api.scratch.WorkspaceEventListener;
-import org.touchhome.bundle.api.util.NotificationType;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 
 import java.util.*;
@@ -72,7 +71,7 @@ public class WorkspaceManager {
                             if (ONCE_EXECUTION_BLOCKS.contains(workspaceBlock.getOpcode())) {
                                 executeOnce(workspaceBlock);
                             } else {
-                                EntityContext.ThreadContext<?> threadContext = this.entityContext.run(
+                                EntityContextBGP.ThreadContext<?> threadContext = this.entityContext.bgp().run(
                                         "workspace-" + workspaceBlock.getId(),
                                         createWorkspaceThread(workspaceBlock, workspaceEntity), true);
                                 threadContext.setDescription("Tab[" + workspaceEntity.getName() + "]. " + workspaceBlock.getDescription());
@@ -82,7 +81,7 @@ public class WorkspaceManager {
                         });
             } catch (Exception ex) {
                 log.error("Unable to initialize workspace: " + ex.getMessage(), ex);
-                entityContext.sendErrorMessage("Unable to initialize workspace: " + ex.getMessage(), ex);
+                entityContext.ui().sendErrorMessage("Unable to initialize workspace: " + ex.getMessage(), ex);
             }
         }
     }
@@ -97,7 +96,7 @@ public class WorkspaceManager {
                 ((WorkspaceBlockImpl) workspaceBlock).handleOrEvaluate();
             } catch (Exception ex) {
                 log.warn("Error in workspace thread: <{}>, <{}>", name, ex.getMessage());
-                entityContext.sendErrorMessage("Error in workspace", ex);
+                entityContext.ui().sendErrorMessage("Error in workspace", ex);
             } finally {
                 Thread.currentThread().setName(oldName);
             }
@@ -114,10 +113,10 @@ public class WorkspaceManager {
         }
 
         for (WorkspaceBlock workspaceBlock : tabHolder.tab2WorkspaceBlocks.values()) {
-            ((WorkspaceBlockImpl)workspaceBlock).release();
+            ((WorkspaceBlockImpl) workspaceBlock).release();
         }
-        for (EntityContext.ThreadContext threadContext : tabHolder.tab2Services) {
-            this.entityContext.cancelThread(threadContext.getName());
+        for (EntityContextBGP.ThreadContext threadContext : tabHolder.tab2Services) {
+            this.entityContext.bgp().cancelThread(threadContext.getName());
         }
         return tabHolder;
     }
@@ -280,11 +279,11 @@ public class WorkspaceManager {
         entityContext.addEntityRemovedListener(WorkspaceEntity.class, entity -> tabs.remove(entity.getEntityID()));
 
         // listen for clear workspace
-        entityContext.listenSettingValue(SystemClearWorkspaceButtonSetting.class, "wm-clear-workspace", () ->
+        entityContext.setting().listenValue(SystemClearWorkspaceButtonSetting.class, "wm-clear-workspace", () ->
                 entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent(""))));
 
         // listen for clear variables
-        entityContext.listenSettingValue(SystemClearWorkspaceVariablesButtonSetting.class, "wm-clear-workspace-variables", () -> {
+        entityContext.setting().listenValue(SystemClearWorkspaceVariablesButtonSetting.class, "wm-clear-workspace-variables", () -> {
             entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent("")));
             WorkspaceShareVariableEntity entity = entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
             entityContext.save(entity.setContent(""));
@@ -314,7 +313,7 @@ public class WorkspaceManager {
     }
 
     private static class TabHolder {
-        private List<EntityContext.ThreadContext> tab2Services = new ArrayList<>();
+        private List<EntityContextBGP.ThreadContext> tab2Services = new ArrayList<>();
         private Map<String, WorkspaceBlock> tab2WorkspaceBlocks = new HashMap<>();
     }
 }

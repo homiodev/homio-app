@@ -65,7 +65,7 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     }
 
     @Override
-    public <T> BroadcastLock<T> listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier)  {
+    public <T> BroadcastLock<T> listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
         Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
         BroadcastLockImpl<T> lock = getOrCreateLock(workspaceBlock);
         listenerHolder.broadcastListenersMap.put(workspaceBlock.getId(), Pair.of(lock, supplier));

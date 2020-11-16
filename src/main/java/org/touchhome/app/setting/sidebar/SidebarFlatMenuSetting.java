@@ -1,12 +1,12 @@
 package org.touchhome.app.setting.sidebar;
 
-import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPluginBoolean;
 
-public class SidebarFlatMenuSetting implements BundleSettingPlugin<Boolean> {
+public class SidebarFlatMenuSetting implements BundleSettingPluginBoolean {
 
     @Override
-    public SettingType getSettingType() {
-        return SettingType.Boolean;
+    public boolean defaultValue() {
+        return true;
     }
 
     @Override

@@ -13,7 +13,6 @@ import org.touchhome.bundle.api.scratch.BlockType;
 import org.touchhome.bundle.api.scratch.Scratch3Block;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.scratch.WorkspaceBlock;
-import org.touchhome.bundle.api.util.NotificationType;
 
 @Log4j2
 @Getter
@@ -52,7 +51,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
         String scriptEntityId = workspaceBlock.getInputWorkspaceBlock("SCRIPT").getField("SCRIPT_REF");
         ScriptEntity scriptEntity = entityContext.getEntity(scriptEntityId);
         if (scriptEntity == null) {
-            entityContext.sendErrorMessage("WORKSPACE.SCRIPT_NOT_FOUND", scriptEntityId);
+            entityContext.ui().sendErrorMessage("WORKSPACE.SCRIPT_NOT_FOUND", scriptEntityId);
         } else {
             Object result = scriptManager.executeJavaScriptOnce(scriptEntity, scriptEntity.getJavaScriptParameters(), null, false);
             return result == null ? null : result.toString();
@@ -69,6 +68,6 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
         Object value = workspaceBlock.getInput("VALUE", true);
         String str = value == null ? "NULL" : value instanceof byte[] ? new String((byte[]) value) : value.toString();
         ObjectNode node = objectMapper.createObjectNode().put("block", workspaceBlock.getId()).put("value", str);
-        entityContext.sendNotification("-workspace-block-update", node);
+        entityContext.ui().sendNotification("-workspace-block-update", node);
     }
 }

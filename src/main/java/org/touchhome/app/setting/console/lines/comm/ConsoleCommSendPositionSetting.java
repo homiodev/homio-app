@@ -1,0 +1,52 @@
+package org.touchhome.app.setting.console.lines.comm;
+
+import lombok.RequiredArgsConstructor;
+import org.touchhome.bundle.api.console.ConsolePlugin;
+import org.touchhome.bundle.api.json.KeyValueEnum;
+import org.touchhome.bundle.api.setting.BundleSettingPluginSelectBoxEnum;
+import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+
+public class ConsoleCommSendPositionSetting implements BundleConsoleSettingPlugin<ConsoleCommSendPositionSetting.Position>,
+        BundleSettingPluginSelectBoxEnum<ConsoleCommSendPositionSetting.Position> {
+
+    @Override
+    public SettingType getSettingType() {
+        return SettingType.SelectBoxButton;
+    }
+
+    @Override
+    public Class<Position> getType() {
+        return ConsoleCommSendPositionSetting.Position.class;
+    }
+
+    @Override
+    public String getIcon() {
+        return "fas fa-arrows-alt";
+    }
+
+    @Override
+    public int order() {
+        return 1200;
+    }
+
+    @Override
+    public ConsolePlugin.RenderType[] renderTypes() {
+        return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.comm};
+    }
+
+    @RequiredArgsConstructor
+    enum Position implements KeyValueEnum {
+        Left(""), Right("justify-content: flex-end"), Center("justify-content: center"), Padding100("padding-left: 100px");
+        private final String value;
+
+        @Override
+        public String getKey() {
+            return value;
+        }
+
+        @Override
+        public String getValue() {
+            return name();
+        }
+    }
+}

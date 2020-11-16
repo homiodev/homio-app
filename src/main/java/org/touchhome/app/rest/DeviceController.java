@@ -3,21 +3,20 @@ package org.touchhome.app.rest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
+import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.bluetooth.BluetoothBundleEntrypoint;
-
-import java.util.Map;
+import org.touchhome.bundle.bluetooth.BluetoothBundleEntryPoint;
 
 @RestController
 @RequestMapping("/rest/device")
 @RequiredArgsConstructor
 public class DeviceController {
 
-    private final BluetoothBundleEntrypoint bluetoothBundleEntrypoint;
+    private final BluetoothBundleEntryPoint bluetoothBundleEntrypoint;
 
-    @GetMapping("characteristic")
-    public Map<String, String> getDeviceCharacteristics() {
-        return bluetoothBundleEntrypoint.getDeviceCharacteristics();
+    @GetMapping("characteristic/{uuid}")
+    public Option getDeviceCharacteristic(@PathVariable("uuid") String uuid) {
+        return Option.key(bluetoothBundleEntrypoint.getDeviceCharacteristic(uuid));
     }
 
     @PutMapping("characteristic/{uuid}")

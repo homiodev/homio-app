@@ -21,12 +21,12 @@ public class SystemJWTTokenValidSetting implements SettingPlugin<Integer>, Bundl
     }
 
     @Override
-    public int getMin() {
+    public Integer getMin() {
         return 30;
     }
 
     @Override
-    public int getMax() {
+    public Integer getMax() {
         return 1440;
     }
 

@@ -1,23 +1,24 @@
-package org.touchhome.bundle.networkInterface;
+package org.touchhome.app.console;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
-import org.touchhome.bundle.api.console.ConsolePlugin;
+import org.touchhome.bundle.api.console.ConsolePluginTable;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.field.UIField;
 
 import javax.validation.constraints.NotNull;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
-public class NetworkInterfaceConsolePlugin implements ConsolePlugin {
+public class NetworkInterfaceConsolePlugin implements ConsolePluginTable<NetworkInterfaceConsolePlugin.NetworkInterfaceEntity>, NamedConsolePlugin {
 
     @Override
     public String getParentTab() {
@@ -26,7 +27,7 @@ public class NetworkInterfaceConsolePlugin implements ConsolePlugin {
 
     @Override
     @SneakyThrows
-    public List<? extends HasEntityIdentifier> drawEntity() {
+    public Collection<NetworkInterfaceEntity> getValue() {
         List<NetworkInterfaceEntity> list = new ArrayList<>();
         for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
             list.add(new NetworkInterfaceEntity(
@@ -46,10 +47,20 @@ public class NetworkInterfaceConsolePlugin implements ConsolePlugin {
         return 1500;
     }
 
+    @Override
+    public String getName() {
+        return "networkInterface";
+    }
+
+    @Override
+    public Class<NetworkInterfaceEntity> getEntityClass() {
+        return NetworkInterfaceEntity.class;
+    }
+
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
-    private static class NetworkInterfaceEntity implements HasEntityIdentifier, Comparable<NetworkInterfaceEntity> {
+    public static class NetworkInterfaceEntity implements HasEntityIdentifier, Comparable<NetworkInterfaceEntity> {
         @UIField(order = 1)
         private String name;
 

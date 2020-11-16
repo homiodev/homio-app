@@ -14,7 +14,7 @@ import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.rest.BundleController;
 import org.touchhome.app.workspace.block.Scratch3Space;
 import org.touchhome.app.workspace.block.core.*;
-import org.touchhome.bundle.api.BundleEntrypoint;
+import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.Option;
@@ -26,7 +26,7 @@ import org.touchhome.bundle.api.scratch.Scratch3Block;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
-import org.touchhome.bundle.machine.Scratch3HardwareBlocks;
+import org.touchhome.bundle.hardware.Scratch3HardwareBlocks;
 import org.touchhome.bundle.http.Scratch3HTTPBlocks;
 import org.touchhome.bundle.ui.Scratch3UIBlocks;
 
@@ -64,7 +64,7 @@ public class WorkspaceController {
             }
 
             if (!systemScratches.contains(scratch3ExtensionBlock.getClass())) {
-                BundleEntrypoint bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId());
+                BundleEntryPoint bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId());
                 if (bundleEntrypoint == null && scratch3ExtensionBlock.getId().contains("-")) {
                     bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId().substring(0, scratch3ExtensionBlock.getId().indexOf("-")));
                 }
@@ -94,7 +94,7 @@ public class WorkspaceController {
 
     @GetMapping("extension/{bundleID}.png")
     public ResponseEntity<InputStreamResource> getExtensionImage(@PathVariable("bundleID") String bundleID) {
-        BundleEntrypoint bundleEntrypoint = bundleManager.getBundle(bundleID);
+        BundleEntryPoint bundleEntrypoint = bundleManager.getBundle(bundleID);
         InputStream stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream("extensions/" + bundleEntrypoint.getBundleId() + ".png");
         if (stream == null) {
             stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream(bundleEntrypoint.getBundleImage());

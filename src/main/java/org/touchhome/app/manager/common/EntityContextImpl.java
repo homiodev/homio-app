@@ -1,17 +1,13 @@
 package org.touchhome.app.manager.common;
 
 import com.pivovarit.function.ThrowingRunnable;
-import com.pivovarit.function.ThrowingSupplier;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
-import org.apache.logging.log4j.Level;
 import org.hibernate.event.internal.PostDeleteEventListenerStandardImpl;
 import org.hibernate.event.internal.PostInsertEventListenerStandardImpl;
 import org.hibernate.event.internal.PostUpdateEventListenerStandardImpl;
@@ -27,6 +23,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -36,16 +33,11 @@ import org.touchhome.app.LogService;
 import org.touchhome.app.auth.JwtTokenProvider;
 import org.touchhome.app.config.ExtRequestMappingHandlerMapping;
 import org.touchhome.app.config.TouchHomeProperties;
-import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleContextService;
-import org.touchhome.app.hardware.HardwareEventsImpl;
 import org.touchhome.app.manager.*;
-import org.touchhome.app.manager.common.impl.SettingServiceImpl;
-import org.touchhome.app.manager.common.impl.ThreadServiceImpl;
-import org.touchhome.app.manager.common.impl.UdpServiceImpl;
+import org.touchhome.app.manager.common.impl.*;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
-import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.repository.crud.base.BaseCrudRepository;
 import org.touchhome.app.repository.device.AllDeviceRepository;
 import org.touchhome.app.rest.ConsoleController;
@@ -59,13 +51,11 @@ import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
-import org.touchhome.bundle.api.BundleEntrypoint;
+import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.condition.ExecuteOnce;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
-import org.touchhome.bundle.api.json.AlwaysOnTopNotificationEntityJSON;
-import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.manager.En;
 import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.model.BaseEntity;
@@ -79,20 +69,15 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPluginStatus;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
-import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
 import javax.persistence.EntityManagerFactory;
-import javax.validation.constraints.NotNull;
 import java.lang.annotation.Annotation;
-import java.net.DatagramPacket;
+import java.net.URL;
 import java.text.DateFormat;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -104,28 +89,27 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.*;
 
 @Log4j2
 @Component
-@RequiredArgsConstructor
 public class EntityContextImpl implements EntityContext {
 
     public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
-    private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchhome-core";
-
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
+    public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
     private static EntityManager entityManager;
     private static Map<String, AbstractRepository> repositoriesByPrefix;
-    public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
     private static Map<String, PureRepository> pureRepositories = new HashMap<>();
+    private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchhome-core";
+    private final EntityContextUIImpl entityContextUI;
+    private final EntityContextUDPImpl entityContextUDP;
+    private final EntityContextEventImpl entityContextEvent;
+    private final EntityContextBGPImpl entityContextBGP;
+    private final EntityContextSettingImpl entityContextSetting;
 
-    public static Map<String, ConfirmationRequestModel> confirmationRequest = new ConcurrentHashMap<>();
+    private final ClassFinder classFinder;
+    private final CacheService cacheService;
 
     @Getter
-    @RequiredArgsConstructor
-    public static class ConfirmationRequestModel {
-        final String key;
-        final Runnable handler;
-        @Setter
-        boolean handled;
-    }
+    private final BroadcastLockManager broadcastLockManager;
+    private final TouchHomeProperties touchHomeProperties;
 
     private final Map<String, List<BiConsumer>> entityTypeUpdateListeners = new HashMap<>();
     private final Map<String, List<BiConsumer>> entityTypeRemoveListeners = new HashMap<>();
@@ -134,14 +118,6 @@ public class EntityContextImpl implements EntityContext {
     private final Map<String, List<BiConsumer>> entityIDRemoveListeners = new HashMap<>();
 
     private final Map<String, Boolean> deviceFeatures = new HashMap<>();
-    private final Set<NotificationEntityJSON> notifications = new ConcurrentSkipListSet<>();
-
-    private final ClassFinder classFinder;
-    private final CacheService cacheService;
-    private final SimpMessagingTemplate messagingTemplate;
-    @Getter
-    private final BroadcastLockManager broadcastLockManager;
-    private final TouchHomeProperties touchHomeProperties;
 
     private TransactionTemplate transactionTemplate;
     private Boolean showEntityState;
@@ -155,36 +131,19 @@ public class EntityContextImpl implements EntityContext {
     private String latestVersion;
 
     private Set<ApplicationContext> allApplicationContexts = new HashSet<>();
-    private HardwareEventsImpl hardwareEvents;
 
-    // helper classes
-    private UdpServiceImpl udpService = new UdpServiceImpl();
-    private ThreadServiceImpl threadService = new ThreadServiceImpl();
-    private SettingServiceImpl settingService = new SettingServiceImpl(this);
+    public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, SimpMessagingTemplate messagingTemplate,
+                             BroadcastLockManager broadcastLockManager, TouchHomeProperties touchHomeProperties) {
+        this.classFinder = classFinder;
+        this.cacheService = cacheService;
+        this.broadcastLockManager = broadcastLockManager;
+        this.touchHomeProperties = touchHomeProperties;
 
-    public Set<NotificationEntityJSON> getNotifications() {
-        long time = System.currentTimeMillis();
-        notifications.removeIf(entity -> {
-            if (entity instanceof AlwaysOnTopNotificationEntityJSON) {
-                AlwaysOnTopNotificationEntityJSON json = (AlwaysOnTopNotificationEntityJSON) entity;
-                return json.getDuration() != null && time - entity.getCreationTime().getTime() > json.getDuration() * 1000;
-            }
-            return false;
-        });
-
-        Set<NotificationEntityJSON> set = new TreeSet<>(notifications);
-        for (InternalBundleContext bundleContext : this.bundles.values()) {
-            Set<NotificationEntityJSON> notifications = bundleContext.bundleEntrypoint.getNotifications();
-            if (notifications != null) {
-                set.addAll(notifications);
-            }
-            Class<? extends BundleSettingPluginStatus> statusSettingClass = bundleContext.bundleEntrypoint.getBundleStatusSetting();
-            if (statusSettingClass != null) {
-                set.add(getSettingValue(statusSettingClass).toNotification(SettingRepository.getSettingBundleName(this, statusSettingClass)));
-            }
-        }
-
-        return set;
+        this.entityContextUI = new EntityContextUIImpl(messagingTemplate, this);
+        this.entityContextUDP = new EntityContextUDPImpl(this);
+        this.entityContextEvent = new EntityContextEventImpl(broadcastLockManager);
+        this.entityContextBGP = new EntityContextBGPImpl();
+        this.entityContextSetting = new EntityContextSettingImpl(this);
     }
 
     @SneakyThrows
@@ -192,7 +151,6 @@ public class EntityContextImpl implements EntityContext {
         this.applicationContext = applicationContext;
 
         this.transactionManager = this.applicationContext.getBean(PlatformTransactionManager.class);
-        this.hardwareEvents = this.applicationContext.getBean(HardwareEventsImpl.class);
         this.entityManagerFactory = this.applicationContext.getBean(EntityManagerFactory.class);
         this.allDeviceRepository = this.applicationContext.getBean(AllDeviceRepository.class);
         this.allApplicationContexts.add(applicationContext);
@@ -212,16 +170,16 @@ public class EntityContextImpl implements EntityContext {
 
         applicationContext.getBean(ScriptManager.class).postConstruct();
 
-        listenSettingValue(SystemClearCacheButtonSetting.class, "im-clear-cache", cacheService::clearCache);
+        setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", cacheService::clearCache);
 
         // reset device 'status' and 'joined' values
         this.allDeviceRepository.resetDeviceStatuses();
 
         // loadWorkspace modules
         log.info("Initialize bundles");
-        ArrayList<BundleEntrypoint> bundleEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
+        ArrayList<BundleEntryPoint> bundleEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntryPoint.class).values());
         Collections.sort(bundleEntrypoints);
-        for (BundleEntrypoint bundleEntrypoint : bundleEntrypoints) {
+        for (BundleEntryPoint bundleEntrypoint : bundleEntrypoints) {
             this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, null));
             bundleEntrypoint.init();
         }
@@ -255,14 +213,45 @@ public class EntityContextImpl implements EntityContext {
 
         // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
 
-        notifications.add(NotificationEntityJSON.info("app-status")
-                .setName("app").setDescription("Started at " + DateFormat.getDateTimeInstance().format(new Date())));
+        ui().addHeaderInfoNotification("app-status", "app", "Started at " + DateFormat.getDateTimeInstance().format(new Date()));
 
         // create indexes on tables
         this.createTableIndexes();
-        this.schedule("check-app-version", 1, TimeUnit.DAYS, this::fetchReleaseVersion, true);
-        this.hardwareEvents.addEvent("app-release", "Found new app release");
-        this.hardwareEvents.addEventAndFire("app-started", "App started");
+        this.bgp().schedule("check-app-version", 1, TimeUnit.DAYS, this::fetchReleaseVersion, true);
+        this.event().addEvent("app-release", "Found new app release");
+        this.event().addEventAndFire("app-started", "App started");
+
+        this.bgp().run("test", (ThrowingRunnable<Exception>) () -> {
+            while (true) {
+                Thread.sleep(1000);
+                ui().progress("test", System.currentTimeMillis() % 99, System.currentTimeMillis() + "");
+            }
+        }, true);
+    }
+
+    @Override
+    public EntityContextUIImpl ui() {
+        return entityContextUI;
+    }
+
+    @Override
+    public EntityContextEventImpl event() {
+        return this.entityContextEvent;
+    }
+
+    @Override
+    public EntityContextUDPImpl udp() {
+        return this.entityContextUDP;
+    }
+
+    @Override
+    public EntityContextBGPImpl bgp() {
+        return entityContextBGP;
+    }
+
+    @Override
+    public EntityContextSettingImpl setting() {
+        return entityContextSetting;
     }
 
     @Override
@@ -394,89 +383,6 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public <T> T getSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
-        return settingService.getSettingValue(settingPluginClazz);
-    }
-
-    @Override
-    public <T> String getSettingRawValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
-        return settingService.getSettingRawValue(settingPluginClazz);
-    }
-
-    @Override
-    public <T> void listenSettingValue(Class<? extends BundleSettingPlugin<T>> bundleSettingPluginClazz, String key, Consumer<T> listener) {
-        settingService.listenSettingValue(bundleSettingPluginClazz, key, listener);
-    }
-
-    @Override
-    public <T> void setSettingValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value) {
-        settingService.setSettingValue(settingPluginClazz, value);
-    }
-
-    /**
-     * Fire notification that setting state was changed without writing actual value to db
-     */
-    public <T> void notifySettingValueStateChanged(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
-        settingService.notifySettingValueStateChanged(settingPluginClazz);
-    }
-
-    @Override
-    public <T> void setSettingValueRaw(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull String value) {
-        settingService.setSettingValueRaw(settingPluginClazz, value);
-    }
-
-    @Override
-    public <T> String setSettingValueSilence(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull T value) {
-        return settingService.setSettingValueSilence(settingPluginClazz, value);
-    }
-
-    @Override
-    public <T> void setSettingValueSilenceRaw(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, @NotNull String value) {
-        settingService.setSettingValueSilenceRaw(settingPluginClazz, value);
-    }
-
-    @Override
-    public void addHeaderNotification(NotificationEntityJSON notificationEntityJSON) {
-        notifications.add(notificationEntityJSON);
-        sendNotification(notificationEntityJSON);
-    }
-
-    @Override
-    public void removeHeaderNotification(NotificationEntityJSON notificationEntityJSON) {
-        notifications.remove(notificationEntityJSON);
-    }
-
-    @Override
-    public void sendConfirmation(String key, String title, Runnable confirmHandler, String... messages) {
-        if (!confirmationRequest.containsKey(key) || !confirmationRequest.get(key).handled) {
-            confirmationRequest.put(key, new ConfirmationRequestModel(key, confirmHandler));
-            sendNotification("-confirmation", NotificationEntityJSON.info(key).setName(title)
-                    .setDescription(String.join("~~", messages)));
-        }
-    }
-
-    @Override
-    public void sendNotification(String destination, Object param) {
-        if (param instanceof NotificationEntityJSON) {
-            NotificationType type = ((NotificationEntityJSON) param).getNotificationType();
-            log.log(type == NotificationType.error ? Level.ERROR : (type == NotificationType.warning ? Level.WARN : Level.INFO),
-                    param.toString());
-        }
-        messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + destination, param);
-    }
-
-    @Override
-    public void hideAlwaysOnViewNotification(NotificationEntityJSON notificationEntityJSON) {
-        for (NotificationEntityJSON notification : notifications) {
-            if (notification.getEntityID().equals(notificationEntityJSON.getEntityID())) {
-                notifications.remove(notification);
-                ((AlwaysOnTopNotificationEntityJSON) notification).setRemove(true);
-                sendNotification(notification);
-            }
-        }
-    }
-
-    @Override
     public <T extends BaseEntity> List<T> findAll(Class<T> clazz) {
         return findAllByRepository((Class<BaseEntity>) clazz, getRepository(clazz));
     }
@@ -579,37 +485,6 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    @SneakyThrows
-    public void listenUdp(String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
-        udpService.listenUdp(this, key, host, port, listener);
-    }
-
-    @Override
-    public void stopListenUdp(String key) {
-        udpService.stopListenUdp(key);
-    }
-
-    @Override
-    public ThreadContext<Void> schedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
-        return threadService.addSchedule(name, timeout, timeUnit, command, showOnUI);
-    }
-
-    @Override
-    public boolean isThreadExists(String name) {
-        return threadService.isThreadExists(name);
-    }
-
-    @Override
-    public <T> ThreadContext<T> run(String name, ThrowingSupplier<T, Exception> command, boolean showOnUI) {
-        return threadService.addSchedule(name, 0, TimeUnit.MILLISECONDS, command, ThreadServiceImpl.ScheduleType.SINGLE, showOnUI);
-    }
-
-    @Override
-    public void cancelThread(String name) {
-        threadService.cancelThread(name);
-    }
-
-    @Override
     public Map<String, Boolean> getDeviceFeatures() {
         return deviceFeatures;
     }
@@ -681,18 +556,14 @@ public class EntityContextImpl implements EntityContext {
         UserEntity userEntity = getEntity(ADMIN_USER, false);
         if (userEntity == null) {
             save(new UserEntity().computeEntityID(() -> ADMIN_USER)
+                    .setPassword("admin123", getBean(PasswordEncoder.class)).setUserId("admin@gmail.com")
                     .setRoles(new HashSet<>(Arrays.asList(ADMIN_ROLE, PRIVILEGED_USER_ROLE, GUEST_ROLE))));
         }
     }
 
-    private <T> void fireNotifySettingHandlers(Class<? extends BundleSettingPlugin<T>> settingPluginClazz, T value,
-                                               BundleSettingPlugin pluginFor, String strValue) {
-        settingService.fireNotifySettingHandlers(settingPluginClazz, value, pluginFor, strValue);
-    }
-
     private void registerEntityListeners() {
-        this.showEntityState = getSettingValue(SystemShowEntityStateSetting.class);
-        this.listenSettingValue(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
+        this.showEntityState = setting().getValue(SystemShowEntityStateSetting.class);
+        setting().listenValue(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
 
         SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
         EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
@@ -734,17 +605,17 @@ public class EntityContextImpl implements EntityContext {
     private void sendEntityUpdateNotification(Object entity, String type) {
         // send info if item changed and it could be shown on page
         if (entity.getClass().isAnnotationPresent(UISidebarMenu.class)) {
-            this.sendNotification("-listen-items", new JSONObject().put("type", type).put("value", entity));
+            ui().sendNotification("-listen-items", new JSONObject().put("type", type).put("value", entity));
         }
         if (showEntityState) {
-            this.sendNotification("-toastr", new JSONObject().put("type", type).put("value", entity));
+            this.ui().sendNotification("-toastr", new JSONObject().put("type", type).put("value", entity));
         }
     }
 
     private void removeBundle(BundleContext bundleContext) {
         if (!bundleContext.isInternal() && bundleContext.isInstalled()) {
             ApplicationContext context = bundleContext.getApplicationContext();
-            context.getBean(BundleEntrypoint.class).destroy();
+            context.getBean(BundleEntryPoint.class).destroy();
             this.allApplicationContexts.remove(context);
 
             this.cacheService.clearCache();
@@ -761,8 +632,8 @@ public class EntityContextImpl implements EntityContext {
     private void addBundle(BundleContext bundleContext, Map<String, BundleContext> artifactIdToContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
             if (!bundleContext.isLoaded()) {
-                notifications.add(NotificationEntityJSON.danger("fail-bundle-" + bundleContext.getBundleID())
-                        .setName(bundleContext.getBundleFriendlyName()).setDescription("Unable to load bundle"));
+                ui().addHeaderErrorNotification("fail-bundle-" + bundleContext.getBundleID(),
+                        bundleContext.getBundleFriendlyName(), "Unable to load bundle");
                 return;
             }
             allApplicationContexts.add(bundleContext.getApplicationContext());
@@ -777,7 +648,7 @@ public class EntityContextImpl implements EntityContext {
             HardwareUtils.copyResources(bundleContext.getBundleClassLoader().getResource("files"), "/files");
             updateBeans(bundleContext, context, true);
 
-            for (BundleEntrypoint bundleEntrypoint : context.getBeansOfType(BundleEntrypoint.class).values()) {
+            for (BundleEntryPoint bundleEntrypoint : context.getBeansOfType(BundleEntryPoint.class).values()) {
                 bundleEntrypoint.init();
                 this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, bundleContext));
             }
@@ -788,7 +659,7 @@ public class EntityContextImpl implements EntityContext {
         log.info("Starting update all app bundles");
         En.clear();
         fetchBundleSettingPlugins(bundleContext, addBundle);
-        En.DEFAULT_LANG = getSettingValue(SystemLanguageSetting.class);
+        En.DEFAULT_LANG = setting().getValue(SystemLanguageSetting.class).name();
 
         Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values()
                 .stream().collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
@@ -825,7 +696,7 @@ public class EntityContextImpl implements EntityContext {
     private void fetchBundleSettingPlugins(BundleContext bundleContext, boolean addBundle) {
         String basePackage = bundleContext == null ? null : bundleContext.getBasePackage();
         for (Class<? extends BundleSettingPlugin> settingPlugin : classFinder.getClassesWithParent(BundleSettingPlugin.class, null, basePackage)) {
-            settingService.updateSettingPlugins(settingPlugin, addBundle);
+            setting().updatePlugins(settingPlugin, addBundle);
         }
     }
 
@@ -856,14 +727,13 @@ public class EntityContextImpl implements EntityContext {
     private void fetchReleaseVersion() {
         try {
             log.info("Try fetch latest version from server");
-            notifications.add(NotificationEntityJSON.info("version").setName("app").setDescription("version: " + touchHomeProperties.getVersion()));
+            ui().addHeaderInfoNotification("version", "app", "version: " + touchHomeProperties.getVersion());
             this.latestVersion = Curl.get(GIT_HUB_URL + "/releases/latest", Map.class).get("tag_name").toString();
 
             if (!touchHomeProperties.getVersion().equals(this.latestVersion)) {
                 log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion, touchHomeProperties.getVersion());
-                notifications.add(NotificationEntityJSON.danger("version")
-                        .setName("app").setDescription("Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion));
-                this.hardwareEvents.fireEvent("app-release", this.latestVersion);
+                ui().addHeaderErrorNotification("version", "app", "Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion);
+                this.event().fireEvent("app-release", this.latestVersion);
             }
         } catch (Exception ex) {
             log.warn("Unable to fetch latest version");
@@ -892,17 +762,14 @@ public class EntityContextImpl implements EntityContext {
         }
     }
 
-    public Map<String, ThreadServiceImpl.ThreadContextImpl> getSchedulers() {
-        return threadService.getSchedulers();
-    }
-
     public static class InternalBundleContext {
-        private final BundleEntrypoint bundleEntrypoint;
+        @Getter
+        private final BundleEntryPoint bundleEntrypoint;
         @Getter
         private final BundleContext bundleContext;
         private final Map<String, Object> fieldTypes = new HashMap<>();
 
-        public InternalBundleContext(BundleEntrypoint bundleEntrypoint, BundleContext bundleContext) {
+        public InternalBundleContext(BundleEntryPoint bundleEntrypoint, BundleContext bundleContext) {
             this.bundleEntrypoint = bundleEntrypoint;
             this.bundleContext = bundleContext;
             if (bundleContext != null) {

@@ -61,7 +61,7 @@ public class DoubleCheckPasswordAuthenticationProvider extends DaoAuthentication
                 }
                 // time to change password
                 UserEntity user = userRepository.getUser((String) authentication.getPrincipal());
-                userRepository.save(user.setPassword(credentials.getOp()));
+                userRepository.save(user.setPassword(credentials.getOp(), getPasswordEncoder()));
             }
         }
         attemptsCache.invalidate(userDetails.getUsername());

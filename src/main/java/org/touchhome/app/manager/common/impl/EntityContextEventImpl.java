@@ -1,9 +1,8 @@
-package org.touchhome.app.hardware;
+package org.touchhome.app.manager.common.impl;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-import org.touchhome.bundle.api.hardware.HardwareEvents;
+import org.touchhome.bundle.api.EntityContextEvent;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
@@ -13,9 +12,8 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
-@Component
 @RequiredArgsConstructor
-public class HardwareEventsImpl implements HardwareEvents {
+public class EntityContextEventImpl implements EntityContextEvent {
     private final BroadcastLockManager broadcastLockManager;
 
     @Getter

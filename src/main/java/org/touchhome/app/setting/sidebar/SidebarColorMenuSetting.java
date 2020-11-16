@@ -1,17 +1,12 @@
 package org.touchhome.app.setting.sidebar;
 
-import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPluginBoolean;
 
-public class SidebarColorMenuSetting implements BundleSettingPlugin<Boolean> {
-
-    @Override
-    public SettingType getSettingType() {
-        return SettingType.Boolean;
-    }
+public class SidebarColorMenuSetting implements BundleSettingPluginBoolean {
 
     @Override
-    public String getDefaultValue() {
-        return Boolean.TRUE.toString();
+    public boolean defaultValue() {
+        return true;
     }
 
     @Override

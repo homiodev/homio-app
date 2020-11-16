@@ -4,7 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.ThreadEntityContext;
+import org.touchhome.bundle.api.EntityContextBGP;
+import org.touchhome.bundle.api.EntityContextUDP;
 import org.touchhome.bundle.api.manager.En;
 import org.touchhome.bundle.api.util.FlowMap;
 
@@ -17,19 +18,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 @Log4j2
-public class UdpServiceImpl {
+@RequiredArgsConstructor
+public class EntityContextUDPImpl implements EntityContextUDP {
+
+    private final EntityContext entityContext;
     private final Map<String, UdpContext> listenUdpMap = new HashMap<>();
 
+    @Override
     @SneakyThrows
-    public void listenUdp(EntityContext entityContext, String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
+    public void listenUdp(String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
         String hostPortKey = (host == null ? "0.0.0.0" : host) + ":" + port;
         if (!this.listenUdpMap.containsKey(hostPortKey)) {
-            ThreadEntityContext.ThreadContext<Void> scheduleFuture;
+            EntityContextBGP.ThreadContext<Void> scheduleFuture;
             try {
                 DatagramSocket socket = new DatagramSocket(host == null ? new InetSocketAddress(port) : new InetSocketAddress(host, port));
                 DatagramPacket datagramPacket = new DatagramPacket(new byte[255], 255);
 
-                scheduleFuture = entityContext.schedule("listen-udp-" + hostPortKey, 1, TimeUnit.SECONDS, () -> {
+                scheduleFuture = entityContext.bgp().schedule("listen-udp-" + hostPortKey, 1, TimeUnit.SECONDS, () -> {
                     socket.receive(datagramPacket);
                     byte[] data = datagramPacket.getData();
                     String text = new String(data, 0, datagramPacket.getLength());
@@ -37,7 +42,7 @@ public class UdpServiceImpl {
                 }, true);
                 scheduleFuture.setDescription("Listen udp: " + hostPortKey);
             } catch (Exception ex) {
-                entityContext.addHeaderErrorNotification(hostPortKey, "UDP " + hostPortKey, En.getServerMessage("UDP_ERROR",
+                entityContext.ui().addHeaderErrorNotification(hostPortKey, "UDP " + hostPortKey, En.getServerMessage("UDP_ERROR",
                         FlowMap.of("key", hostPortKey, "msg", ex.getMessage())));
                 log.error("Unable to listen udp host:port: <{}>", hostPortKey);
                 return;
@@ -56,7 +61,7 @@ public class UdpServiceImpl {
     @RequiredArgsConstructor
     private static class UdpContext {
         private final Map<String, BiConsumer<DatagramPacket, String>> keyToListener = new HashMap<>();
-        private final ThreadEntityContext.ThreadContext<Void> scheduleFuture;
+        private final EntityContextBGP.ThreadContext<Void> scheduleFuture;
 
         public void handle(DatagramPacket datagramPacket, String text) {
             for (BiConsumer<DatagramPacket, String> listener : keyToListener.values()) {

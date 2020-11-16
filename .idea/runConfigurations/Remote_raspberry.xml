@@ -1,0 +1,20 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Remote raspberry" type="Run as an Embedded Java application" factoryName="Embedded Linux JVM">
+    <option name="classesDirectory" />
+    <option name="hostname" value="192.168.0.111" />
+    <option name="keyPath" value="" />
+    <option name="password" value="raspberry" />
+    <option name="port" value="1234" />
+    <option name="programArguments" value="" />
+    <option name="runAsRoot" value="true" />
+    <option name="sshPort" value="22" />
+    <option name="username" value="pi" />
+    <option name="usingKey" value="false" />
+    <option name="vmParameters" value="" />
+    <option name="moduleName" value="touchhome-core" />
+    <option name="mainclass" value="org.touchhome.app.TouchHomeApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

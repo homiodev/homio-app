@@ -5,13 +5,11 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
-import net.sf.cglib.proxy.MethodProxy;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.widget.JavaScriptBuilder;
 
-import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -253,7 +251,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         private MethodInterceptor createProxyHandler(StringBuilder builder) {
             return (obj, method, args, proxy) -> {
                 builder.append(".").append(method.getName()).append("(").append(evalProxyArguments(args)).append(")");
-                if(method.getReturnType().getSimpleName().equals(Object.class.getSimpleName())) {
+                if (method.getReturnType().getSimpleName().equals(Object.class.getSimpleName())) {
                     return null;
                 }
                 return createProxyInstance(method.getReturnType(), builder);

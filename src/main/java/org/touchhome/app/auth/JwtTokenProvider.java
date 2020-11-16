@@ -3,7 +3,6 @@ package org.touchhome.app.auth;
 import io.jsonwebtoken.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,9 +21,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JwtTokenProvider {
 
-    private final UserEntityDetailsService userEntityDetailsService;
     private static final String STATIC_KEY = "poorSecurity";
-
+    private final UserEntityDetailsService userEntityDetailsService;
     @Value("${security.jwt.token.expire-length:1800000}")
     private long jwtValidityTimeout; // 30min
 
@@ -33,11 +31,11 @@ public class JwtTokenProvider {
     private boolean requireAppID;
 
     public void postConstruct(EntityContext entityContext) {
-        this.requireAppID = entityContext.getSettingValue(SystemDisableAuthTokenOnRestartSetting.class);
+        this.requireAppID = entityContext.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);
         createJWTParser();
-        this.jwtValidityTimeout = entityContext.getSettingValue(SystemJWTTokenValidSetting.class);
-        entityContext.listenSettingValue(SystemJWTTokenValidSetting.class, "jwt-valid", value -> this.jwtValidityTimeout = value);
-        entityContext.listenSettingValue(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
+        this.jwtValidityTimeout = entityContext.setting().getValue(SystemJWTTokenValidSetting.class);
+        entityContext.setting().listenValue(SystemJWTTokenValidSetting.class, "jwt-valid", value -> this.jwtValidityTimeout = value);
+        entityContext.setting().listenValue(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
             this.requireAppID = value;
             createJWTParser();
         });
@@ -76,7 +74,7 @@ public class JwtTokenProvider {
             this.jwtParser.parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            throw new BadCredentialsException("Expired or invalid JWT token");
+            return false;
         }
     }
 

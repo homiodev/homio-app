@@ -1,13 +1,10 @@
 package org.touchhome.app.setting.console.ssh;
 
-import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
 
-public class ConsoleSshBlinkCursorSetting implements BundleConsoleSettingPlugin<Boolean> {
+import org.touchhome.bundle.api.setting.BundleSettingPluginBoolean;
+import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
 
-    @Override
-    public SettingType getSettingType() {
-        return SettingType.Boolean;
-    }
+public class ConsoleSshBlinkCursorSetting implements BundleConsoleSettingPlugin<Boolean>, BundleSettingPluginBoolean {
 
     @Override
     public int order() {

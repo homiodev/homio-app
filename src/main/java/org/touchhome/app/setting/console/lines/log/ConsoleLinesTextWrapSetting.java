@@ -1,16 +1,23 @@
-package org.touchhome.app.setting.console.log;
+package org.touchhome.app.setting.console.lines.log;
 
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+
 
 import java.util.List;
 
-public class ConsoleLogTextWrapSetting implements BundleConsoleSettingPlugin<String> {
+public class ConsoleLinesTextWrapSetting implements BundleConsoleSettingPlugin<String> {
 
     @Override
     public SettingType getSettingType() {
         return SettingType.SelectBoxButton;
+    }
+
+    @Override
+    public Class<String> getType() {
+        return String.class;
     }
 
     @Override
@@ -29,7 +36,7 @@ public class ConsoleLogTextWrapSetting implements BundleConsoleSettingPlugin<Str
     }
 
     @Override
-    public String[] pages() {
-        return new String[]{"log"};
+    public ConsolePlugin.RenderType[] renderTypes() {
+        return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines};
     }
 }

@@ -70,7 +70,7 @@ public class RouteController {
         route.sidebarButtons = new ArrayList<>();
         for (UISidebarButton button : aClass.getAnnotationsByType(UISidebarButton.class)) {
             route.sidebarButtons.add(new SidebarButton(button.buttonIcon(), button.buttonTitle(), button.buttonText(),
-                    button.onDone(), button.buttonIconColor(), button.confirm(), button.handlerClass().getSimpleName()));
+                    button.buttonIconColor(), button.confirm(), button.handlerClass().getSimpleName()));
         }
         routes.add(route);
     }
@@ -122,7 +122,6 @@ public class RouteController {
         private final String icon;
         private final String title;
         private final String text;
-        private final String onDone;
         private final String color;
         private final String confirm;
         private final String handlerClass;

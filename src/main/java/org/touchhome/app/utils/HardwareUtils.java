@@ -2,6 +2,7 @@ package org.touchhome.app.utils;
 
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import net.lingala.zip4j.ZipFile;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -135,7 +136,19 @@ public final class HardwareUtils {
                         try {
                             Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
                             Files.createDirectories(resolve.getParent());
-                            Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
+                            if (!Files.exists(resolve) || (Files.exists(resolve) && Files.getLastModifiedTime(resolve).compareTo(Files.getLastModifiedTime(path)) < 0)) {
+                                log.info("Copy resource <{}>", path.getFileName());
+                                Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
+                                if (path.getFileName().toString().endsWith(".zip")) {
+                                    log.info("Unzip resource <{}>", path.getFileName());
+                                    ZipFile zipFile = new ZipFile(resolve.toFile());
+                                    zipFile.extractAll(resolve.getParent().toString());
+                                    log.info("Done unzip resource <{}>", path.getFileName());
+                                }
+                                log.info("Done copy resource <{}>", path.getFileName());
+                            } else {
+                                log.info("Skip copy resource <{}>", path.getFileName());
+                            }
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }

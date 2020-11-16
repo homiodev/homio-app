@@ -1,32 +1,43 @@
-package org.touchhome.bundle.processes;
+package org.touchhome.app.console;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.manager.common.impl.ThreadServiceImpl;
-import org.touchhome.bundle.api.console.ConsolePlugin;
+import org.touchhome.app.manager.common.impl.EntityContextBGPImpl;
+import org.touchhome.bundle.api.console.ConsolePluginTable;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.ui.field.UIField;
 
+import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.ui.field.UIFieldType.StaticDate;
 
-@Component
 @RequiredArgsConstructor
-public class ProcessesConsolePlugin implements ConsolePlugin {
+public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<BaseProcessesConsolePlugin.BackgroundProcessJSON> {
 
     private final EntityContextImpl entityContextImpl;
 
     @Override
-    public List<? extends HasEntityIdentifier> drawEntity() {
-        return entityContextImpl.getSchedulers().values()
-                .stream().filter(ThreadServiceImpl.ThreadContextImpl::isShowOnUI).map(e -> {
+    public String getParentTab() {
+        return "processes";
+    }
+
+    @Override
+    public Class<BackgroundProcessJSON> getEntityClass() {
+        return BackgroundProcessJSON.class;
+    }
+
+    @Override
+    public Collection<BackgroundProcessJSON> getValue() {
+        return entityContextImpl.bgp().getSchedulers().values()
+                .stream()
+                .filter(EntityContextBGPImpl.ThreadContextImpl::isShowOnUI)
+                .filter(this::matchProcess)
+                .map(e -> {
                     BackgroundProcessJSON bgp = new BackgroundProcessJSON();
                     bgp.entityID = e.getName();
                     bgp.processName = e.getName();
@@ -41,6 +52,8 @@ public class ProcessesConsolePlugin implements ConsolePlugin {
                     return bgp;
                 }).collect(Collectors.toList());
     }
+
+    protected abstract boolean matchProcess(EntityContextBGPImpl.ThreadContextImpl<?> threadContext);
 
     @Override
     public int order() {

@@ -1,17 +1,18 @@
 package org.touchhome.app.setting.console.ssh;
 
-import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
+
 import org.touchhome.bundle.api.setting.BundleSettingPluginSlider;
+import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
 
 public class ConsoleSshFontSizeSetting implements BundleConsoleSettingPlugin<Integer>, BundleSettingPluginSlider {
 
     @Override
-    public int getMin() {
+    public Integer getMin() {
         return 5;
     }
 
     @Override
-    public int getMax() {
+    public Integer getMax() {
         return 24;
     }
 

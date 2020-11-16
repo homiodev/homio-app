@@ -7,10 +7,8 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.setting.SendBroadcastSetting;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.NotificationMessageEntityContext;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.scratch.*;
-import org.touchhome.bundle.api.setting.BundleSettingPluginButton;
 import org.touchhome.bundle.api.util.NotificationType;
 
 import java.util.function.BiConsumer;
@@ -61,7 +59,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
         this.postConstruct();
 
-        entityContext.listenSettingValue(SendBroadcastSetting.class, "listen-ui-header-click", json -> {
+        entityContext.setting().listenValue(SendBroadcastSetting.class, "listen-ui-header-click", json -> {
             String broadcastID = json.getString("name");
             scratch3EventsBlocks.fireBroadcastEvent(broadcastID);
         });
@@ -77,26 +75,25 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
     private void createHeaderEntity(WorkspaceBlock workspaceBlock, boolean isFetchDuration) {
         NotificationEntityJSON json = new NotificationEntityJSON(workspaceBlock.getId());
-        json.setDescription(workspaceBlock.getInputString("MSG"));
-        Class<? extends BundleSettingPluginButton> stopAction = null;
+        json.setValue(workspaceBlock.getInputString("MSG"));
         String color = workspaceBlock.getInputString("COLOR");
         String broadcast = workspaceBlock.getInputString("BROADCAST");
         json.setName(broadcast);
         if (isFetchDuration) {
-            entityContext.showAlwaysOnViewNotification(json, workspaceBlock.getInputInteger("DURATION"), color, SendBroadcastSetting.class);
+            entityContext.ui().showAlwaysOnViewNotification(json, workspaceBlock.getInputInteger("DURATION"), color, SendBroadcastSetting.class);
         } else {
-            entityContext.showAlwaysOnViewNotification(json, "fas fa-" + workspaceBlock.getInputString("ICON"), color, SendBroadcastSetting.class);
+            entityContext.ui().showAlwaysOnViewNotification(json, "fas fa-" + workspaceBlock.getInputString("ICON"), color, SendBroadcastSetting.class);
         }
-        workspaceBlock.onRelease(() -> entityContext.hideAlwaysOnViewNotification(json));
+        workspaceBlock.onRelease(() -> entityContext.ui().hideAlwaysOnViewNotification(json.getEntityID()));
     }
 
     private void headerHandler(WorkspaceBlock workspaceBlock) {
         NotificationEntityJSON json = new NotificationEntityJSON(workspaceBlock.getId());
         json.setNotificationType(workspaceBlock.getMenuValue("TYPE", this.popupType).NotificationType);
         json.setName(workspaceBlock.getInputString("NAME"));
-        json.setDescription(workspaceBlock.getInputString("MSG"));
-        entityContext.addHeaderNotification(json);
-        workspaceBlock.onRelease(() -> entityContext.removeHeaderNotification(json));
+        json.setValue(workspaceBlock.getInputString("MSG"));
+        entityContext.ui().addHeaderNotification(json);
+        workspaceBlock.onRelease(() -> entityContext.ui().removeHeaderNotification(json));
     }
 
     private void showPopupHandler(WorkspaceBlock workspaceBlock) {
@@ -106,10 +103,10 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
     @RequiredArgsConstructor
     private enum PopupType {
-        INFO(NotificationMessageEntityContext::sendInfoMessage, org.touchhome.bundle.api.util.NotificationType.info),
-        WARN(NotificationMessageEntityContext::sendWarningMessage, org.touchhome.bundle.api.util.NotificationType.warning),
-        ERROR(NotificationMessageEntityContext::sendErrorMessage, org.touchhome.bundle.api.util.NotificationType.error),
-        SUCCESS(NotificationMessageEntityContext::sendSuccessMessage, org.touchhome.bundle.api.util.NotificationType.success);
+        INFO((context, msg) -> context.ui().sendInfoMessage(msg), org.touchhome.bundle.api.util.NotificationType.info),
+        WARN((context, msg) -> context.ui().sendWarningMessage(msg), org.touchhome.bundle.api.util.NotificationType.warning),
+        ERROR((context, msg) -> context.ui().sendErrorMessage(msg), org.touchhome.bundle.api.util.NotificationType.error),
+        SUCCESS((context, msg) -> context.ui().sendSuccessMessage(msg), org.touchhome.bundle.api.util.NotificationType.success);
 
         private final BiConsumer<EntityContext, String> popupHandler;
         private final NotificationType NotificationType;

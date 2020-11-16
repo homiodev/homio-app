@@ -1,4 +1,4 @@
-package org.touchhome.bundle.gpio;
+package org.touchhome.app.console;
 
 import com.pi4j.io.gpio.GpioPin;
 import com.pi4j.io.gpio.GpioPinDigital;
@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.console.ConsolePlugin;
+import org.touchhome.bundle.api.console.ConsolePluginTable;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorMatch;
@@ -19,21 +19,18 @@ import org.touchhome.bundle.api.util.RaspberryGpioPin;
 import org.touchhome.bundle.raspberry.RaspberryGPIOService;
 
 import javax.validation.constraints.NotNull;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-public class GpioConsolePlugin implements ConsolePlugin {
+public class GpioConsolePlugin implements ConsolePluginTable<GpioConsolePlugin.GpioPluginEntity>, NamedConsolePlugin {
 
     private final EntityContext entityContext;
     private final RaspberryGPIOService raspberryGPIOService;
 
     @Override
-    public List<? extends HasEntityIdentifier> drawEntity() {
+    public Collection<GpioPluginEntity> getValue() {
         List<GpioPluginEntity> list = new ArrayList<>();
 
         for (RaspberryGpioPin gpioPin : RaspberryGpioPin.values()) {
@@ -69,9 +66,19 @@ public class GpioConsolePlugin implements ConsolePlugin {
         return entityContext.isFeatureEnabled("GPIO");
     }
 
+    @Override
+    public String getName() {
+        return "gpio";
+    }
+
+    @Override
+    public Class<GpioPluginEntity> getEntityClass() {
+        return GpioPluginEntity.class;
+    }
+
     @Getter
     @Setter
-    private static class GpioPluginEntity implements HasEntityIdentifier, Comparable<GpioPluginEntity> {
+    public static class GpioPluginEntity implements HasEntityIdentifier, Comparable<GpioPluginEntity> {
         @UIField(order = 1)
         @UIFieldColorRef("color")
         private String name;

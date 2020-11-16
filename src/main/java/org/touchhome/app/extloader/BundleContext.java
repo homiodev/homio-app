@@ -17,7 +17,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.touchhome.bundle.api.BundleConfiguration;
-import org.touchhome.bundle.api.BundleEntrypoint;
+import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.util.SpringUtils;
 import sun.reflect.ReflectionFactory;
 
@@ -153,16 +153,16 @@ public class BundleContext {
         }
 
         public String fetchBundleID(Reflections reflections, String artifactId) {
-            Set<Class<? extends BundleEntrypoint>> bundleEntryPoints = reflections.getSubTypesOf(BundleEntrypoint.class);
+            Set<Class<? extends BundleEntryPoint>> bundleEntryPoints = reflections.getSubTypesOf(BundleEntryPoint.class);
             if (bundleEntryPoints.isEmpty()) {
-                throw new IllegalStateException("Found no BundleEntrypoint in context of bundle: " + artifactId);
+                throw new IllegalStateException("Found no BundleEntryPoint in context of bundle: " + artifactId);
             }
             if (bundleEntryPoints.size() > 1) {
-                throw new IllegalStateException("Found multiple BundleEntrypoint in context of bundle: " + artifactId);
+                throw new IllegalStateException("Found multiple BundleEntryPoint in context of bundle: " + artifactId);
             }
-            Class<? extends BundleEntrypoint> bundleEntrypointClass = bundleEntryPoints.iterator().next();
+            Class<? extends BundleEntryPoint> bundleEntrypointClass = bundleEntryPoints.iterator().next();
 
-            BundleEntrypoint bundleEntrypoint = createClassInstance(bundleEntrypointClass, Object.class);
+            BundleEntryPoint bundleEntrypoint = createClassInstance(bundleEntrypointClass, Object.class);
             return bundleEntrypoint.getBundleId();
         }
 

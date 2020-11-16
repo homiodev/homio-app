@@ -1,6 +1,7 @@
 package org.touchhome.app.rest;
 
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,14 +19,20 @@ public class RestResponseEntityExceptionHandler {
     @ExceptionHandler({Exception.class})
     @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorHolder handleException(Exception ex) {
-        log.error("Error <{}>", TouchHomeUtils.getErrorMessage(ex), ex);
-        return new ErrorHolder("Error", TouchHomeUtils.getErrorMessage(ex), ex);
+        String msg;
+        if (ex instanceof NullPointerException || ex.getCause() instanceof NullPointerException) {
+            msg = ex.getStackTrace()[0].toString();
+        } else {
+            msg = StringUtils.defaultString(ex.getMessage(), ex.toString());
+        }
+        log.error("Error <{}>", msg);
+        return new ErrorHolder("Error", msg, ex);
     }
 
     @ExceptionHandler({HardwareException.class})
     @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorHolder handleHardwareException(HardwareException ex) {
-        log.error("Error <{}>", TouchHomeUtils.getErrorMessage(ex), ex);
+        log.error("Error <{}>", TouchHomeUtils.getErrorMessage(ex));
         return new ErrorHolder("Hardware error", String.join("; ", ex.getInputs()), ex);
     }
 }

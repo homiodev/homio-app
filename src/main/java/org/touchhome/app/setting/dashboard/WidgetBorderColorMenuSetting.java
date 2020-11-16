@@ -15,6 +15,11 @@ public class WidgetBorderColorMenuSetting implements SettingPlugin<String> {
     }
 
     @Override
+    public Class<String> getType() {
+        return String.class;
+    }
+
+    @Override
     public String getDefaultValue() {
         return "#18576D";
     }

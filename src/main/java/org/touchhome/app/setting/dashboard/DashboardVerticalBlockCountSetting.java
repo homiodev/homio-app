@@ -1,10 +1,9 @@
 package org.touchhome.app.setting.dashboard;
 
-import org.json.JSONObject;
 import org.touchhome.app.setting.SettingPlugin;
-import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.setting.BundleSettingPluginSlider;
 
-public class DashboardVerticalBlockCountSetting implements SettingPlugin {
+public class DashboardVerticalBlockCountSetting implements SettingPlugin<Integer>, BundleSettingPluginSlider {
 
     @Override
     public GroupKey getGroupKey() {
@@ -17,18 +16,18 @@ public class DashboardVerticalBlockCountSetting implements SettingPlugin {
     }
 
     @Override
-    public String getDefaultValue() {
-        return "8";
+    public Integer getMin() {
+        return 1;
     }
 
     @Override
-    public JSONObject getParameters(EntityContext entityContext, String value) {
-        return new JSONObject().put("min", 1).put("max", 10).put("step", 1);
+    public Integer getMax() {
+        return 10;
     }
 
     @Override
-    public SettingType getSettingType() {
-        return SettingType.Slider;
+    public int defaultValue() {
+        return 8;
     }
 
     @Override

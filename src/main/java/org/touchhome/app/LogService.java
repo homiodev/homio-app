@@ -14,7 +14,7 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
-import org.touchhome.app.setting.console.log.ConsoleLogLevelSetting;
+import org.touchhome.app.setting.console.lines.log.ConsoleLogLevelSetting;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -95,13 +95,13 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         }
 
         static void sendLogEvent(String appenderName, LogEvent event, EntityContext entityContext) {
-            entityContext.sendNotification("-logs-" + appenderName, formatLogMessage(event, event.getMessage().getFormattedMessage()));
+            entityContext.ui().sendNotification("-lines-" + appenderName, formatLogMessage(event, event.getMessage().getFormattedMessage()));
 
             if (event.getThrown() != null) {
                 StringWriter outError = new StringWriter();
                 event.getThrown().printStackTrace(new PrintWriter(outError));
                 String errorString = outError.toString();
-                entityContext.sendNotification("-logs-" + appenderName, formatLogMessage(event, errorString));
+                entityContext.ui().sendNotification("-lines-" + appenderName, formatLogMessage(event, errorString));
             }
         }
 
@@ -136,11 +136,11 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         }
 
         private void listenAndUpdateLogLevel(EntityContext entityContext) {
-            Level level = entityContext.getSettingValue(ConsoleLogLevelSetting.class).getLevel();
+            Level level = entityContext.setting().getValue(ConsoleLogLevelSetting.class).getLevel();
             if (level != Level.DEBUG) {
                 updateLogLevel(level);
             }
-            entityContext.listenSettingValue(ConsoleLogLevelSetting.class, "log-set-level", logLevel -> updateLogLevel(logLevel.getLevel()));
+            entityContext.setting().listenValue(ConsoleLogLevelSetting.class, "log-set-level", logLevel -> updateLogLevel(logLevel.getLevel()));
         }
 
         private void updateLogLevel(Level level) {

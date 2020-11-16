@@ -11,6 +11,7 @@ import org.touchhome.app.rest.ConsoleController;
 import org.touchhome.app.service.ssh.SshHardwareRepository;
 import org.touchhome.app.service.ssh.SshProvider;
 import org.touchhome.app.utils.Curl;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 
 import java.io.InputStream;
@@ -85,6 +86,9 @@ public class TmateSshProvider implements SshProvider {
 
     @SneakyThrows
     private void checkHardware() {
+        if (!EntityContext.isLinuxEnvironment()) {
+            throw new IllegalStateException("Unable to run ssh on non linux environment");
+        }
         if (!wirelessHardwareRepository.isSshGenerated()) {
             wirelessHardwareRepository.generateSSHKeys();
         }

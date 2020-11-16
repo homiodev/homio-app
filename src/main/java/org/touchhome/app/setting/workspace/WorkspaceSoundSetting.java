@@ -1,8 +1,9 @@
 package org.touchhome.app.setting.workspace;
 
 import org.touchhome.app.setting.SettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPluginBoolean;
 
-public class WorkspaceSoundSetting implements SettingPlugin {
+public class WorkspaceSoundSetting implements SettingPlugin<Boolean>, BundleSettingPluginBoolean {
 
     @Override
     public GroupKey getGroupKey() {
@@ -10,13 +11,8 @@ public class WorkspaceSoundSetting implements SettingPlugin {
     }
 
     @Override
-    public String getDefaultValue() {
-        return Boolean.TRUE.toString();
-    }
-
-    @Override
-    public SettingType getSettingType() {
-        return SettingType.Boolean;
+    public boolean defaultValue() {
+        return true;
     }
 
     @Override

@@ -5,17 +5,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.manager.BundleManager;
-import org.touchhome.app.manager.common.impl.SettingServiceImpl;
+import org.touchhome.app.manager.common.EntityContextImpl;
+import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
-import org.touchhome.bundle.api.BundleEntrypoint;
-import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.manager.En;
 import org.touchhome.bundle.api.model.UserEntity;
-import org.touchhome.bundle.api.setting.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.*;
@@ -32,34 +32,38 @@ public class SettingController {
     private Map<String, Set<String>> settingToPages;
     private Set<SettingEntity> descriptionSettings;
 
-    private EntityContext entityContext;
-    private Map<Class<? extends BundleSettingPlugin>, SettingEntity> transientSettings;
+    private EntityContextImpl entityContext;
+    private Map<Class<? extends BundleSettingPlugin<?>>, SettingEntity> transientSettings;
 
-    public void postConstruct(EntityContext entityContext) {
+    public void postConstruct(EntityContextImpl entityContext) {
         this.entityContext = entityContext;
         SettingRepository settingRepository = entityContext.getBean(SettingRepository.class);
         settingRepository.postConstruct();
 
         this.transientSettings = new HashMap<>();
-        for (BundleSettingPlugin settingPlugin : SettingServiceImpl.settingPluginsByPluginKey.values()) {
+        for (BundleSettingPlugin<?> settingPlugin : EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {
-                this.transientSettings.put(settingPlugin.getClass(),
+                this.transientSettings.put((Class<? extends BundleSettingPlugin<?>>) settingPlugin.getClass(),
                         SettingRepository.createSettingEntityFromPlugin(settingPlugin, new SettingEntity(), entityContext));
+            }
+            if (settingPlugin instanceof BundleConsoleSettingPlugin && !settingPlugin.getClass().getSimpleName().startsWith("Console")) {
+                throw new RuntimeException("Console plugin class <" + settingPlugin.getClass().getName() + "> must starts with name 'Console'");
             }
         }
     }
 
     @GetMapping("{entityID}/options")
-    public List<Option> loadSettingAvailableValues(@PathVariable("entityID") String entityID) {
-        return SettingServiceImpl.settingPluginsByPluginKey.get(entityID).loadAvailableValues(entityContext);
+    public Collection<Option> loadSettingAvailableValues(@PathVariable("entityID") String entityID) {
+        BundleSettingPlugin<?> bundleSettingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        return bundleSettingPlugin.loadAvailableValues(entityContext);
     }
 
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     @PostMapping(value = "{entityID}", consumes = "text/plain")
-    public <T> void updateSettings(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
-        BundleSettingPlugin settingPlugin = SettingServiceImpl.settingPluginsByPluginKey.get(entityID);
+    public <T> void updateSetting(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
+        BundleSettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin != null) {
-            entityContext.setSettingValueRaw((Class<? extends BundleSettingPlugin<T>>) settingPlugin.getClass(), value);
+            entityContext.setting().setValueRaw((Class<? extends BundleSettingPlugin<T>>) settingPlugin.getClass(), value, false);
         }
     }
 
@@ -71,9 +75,9 @@ public class SettingController {
     @GetMapping
     public List<SettingEntity> getSettings() {
         List<SettingEntity> settings = entityContext.findAll(SettingEntity.class);
-        for (Map.Entry<Class<? extends BundleSettingPlugin>, SettingEntity> entry : transientSettings.entrySet()) {
+        for (Map.Entry<Class<? extends BundleSettingPlugin<?>>, SettingEntity> entry : transientSettings.entrySet()) {
             SettingEntity settingEntity = entry.getValue();
-            settingEntity.setValue(String.valueOf(entityContext.getSettingValue((Class) entry.getKey())));
+            settingEntity.setValue(entityContext.setting().getRawValue((Class) entry.getKey()));
             SettingRepository.fulfillEntityFromPlugin(settingEntity, entityContext);
             settings.add(settingEntity);
         }
@@ -87,8 +91,8 @@ public class SettingController {
 
         for (Iterator<SettingEntity> iterator = settings.iterator(); iterator.hasNext(); ) {
             SettingEntity settingEntity = iterator.next();
-            BundleSettingPlugin plugin = SettingServiceImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
-            if (plugin != null && plugin.isVisible(entityContext)) {
+            BundleSettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
+            if (plugin != null) {
 
                 // fulfill pages
                 if (settingToPages.containsKey(settingEntity.getEntityID())) {
@@ -99,6 +103,7 @@ public class SettingController {
                 if (plugin.isSecuredValue() && !userEntity.isAdmin()) {
                     settingEntity.setValue("********");
                 }
+                settingEntity.setVisible(plugin.isVisible(entityContext));
             } else {
                 iterator.remove();
             }
@@ -117,10 +122,10 @@ public class SettingController {
     private void updateSettingToPages(List<SettingEntity> settings) {
         // fulfill console pages
         for (SettingEntity settingEntity : settings) {
-            BundleSettingPlugin plugin = SettingServiceImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
+            BundleSettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
             if (plugin instanceof BundleConsoleSettingPlugin) {
-                for (Map.Entry<String, ConsolePlugin> entry : consoleController.getConsolePluginsMap().entrySet()) {
-                    if (((BundleConsoleSettingPlugin) plugin).acceptConsolePluginPage(entry.getValue())) {
+                for (Map.Entry<String, ConsolePlugin<?>> entry : consoleController.getConsolePluginsMap().entrySet()) {
+                    if (((BundleConsoleSettingPlugin<?>) plugin).acceptConsolePluginPage(entry.getValue())) {
                         settingToPages.computeIfAbsent(settingEntity.getEntityID(),
                                 s -> new HashSet<>()).add(StringUtils.defaultString(entry.getValue().getParentTab(), entry.getKey()));
                     }
@@ -134,11 +139,11 @@ public class SettingController {
      */
     private void updateSettingDescription(List<SettingEntity> settings) {
         Set<String> bundleSettings = settings.stream().map(e -> {
-            BundleSettingPlugin plugin = SettingServiceImpl.settingPluginsByPluginKey.get(e.getEntityID());
+            BundleSettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(e.getEntityID());
             return SettingRepository.getSettingBundleName(entityContext, plugin.getClass());
         }).filter(Objects::nonNull).collect(Collectors.toSet());
 
-        for (BundleEntrypoint bundleEntrypoint : bundleManager.getBundles()) {
+        for (BundleEntryPoint bundleEntrypoint : bundleManager.getBundles()) {
             if (bundleSettings.contains(bundleEntrypoint.getBundleId())) {
                 // find if description exists inside lang.json
                 String descriptionKey = bundleEntrypoint.getBundleId() + ".setting.description";
@@ -146,7 +151,7 @@ public class SettingController {
                 if (description != null) {
                     this.descriptionSettings.add(new SettingEntity().setSettingType(BundleSettingPlugin.SettingType.Description)
                             .setBundle(bundleEntrypoint.getBundleId())
-                            .setEntityID("st_" + bundleEntrypoint.getBundleId() + "_Description")
+                            .setEntityID(SettingEntity.PREFIX + bundleEntrypoint.getBundleId() + "_Description")
                             .setValue(descriptionKey).setOrder(1));
                 }
             }

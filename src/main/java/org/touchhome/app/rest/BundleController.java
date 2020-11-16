@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.BundleManager;
-import org.touchhome.bundle.api.BundleEntrypoint;
+import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -36,7 +36,7 @@ public class BundleController {
     @GetMapping("{bundleID}/icon")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID) throws IOException {
-        BundleEntrypoint bundleEntrypoint;
+        BundleEntryPoint bundleEntrypoint;
         String bundleImage;
         try {
             bundleEntrypoint = bundleManager.getBundle(bundleID);
@@ -61,14 +61,14 @@ public class BundleController {
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<BundleJson> getBundles() {
         List<BundleJson> bundles = new ArrayList<>();
-        for (BundleEntrypoint bundle : bundleManager.getBundles()) {
+        for (BundleEntryPoint bundle : bundleManager.getBundles()) {
             bundles.add(new BundleJson(bundle.getBundleId(), bundleManager.getBundleColor(bundle.getBundleId()), bundle.order()));
         }
         Collections.sort(bundles);
         return bundles;
     }
 
-    public BundleEntrypoint getBundle(String id) {
+    public BundleEntryPoint getBundle(String id) {
         return bundleManager.getBundles().stream().filter(s -> s.getBundleId().equals(id)).findAny().orElse(null);
     }
 

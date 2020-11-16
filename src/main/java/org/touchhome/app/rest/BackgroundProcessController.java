@@ -74,7 +74,7 @@ public class BackgroundProcessController {
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void stopScriptByName(@PathVariable String url) {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
-        if(scriptEntity != null) {
+        if (scriptEntity != null) {
             log.info("Stop script: " + scriptEntity.getEntityID());
             scriptManager.stopThread(scriptEntity);
         }

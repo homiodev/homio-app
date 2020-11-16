@@ -12,7 +12,6 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.scratch.*;
-import org.touchhome.bundle.api.util.NotificationType;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.ArrayList;
@@ -83,7 +82,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     public void logError(String message, Object... params) {
         log(Level.ERROR, message, params);
         String msg = log.getMessageFactory().newMessage(message, params).getFormattedMessage();
-        this.entityContext.sendErrorMessage(msg);
+        this.entityContext.ui().sendErrorMessage(msg);
     }
 
     @Override
@@ -164,7 +163,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             try {
                 scratch3Block.getHandler().handle(this);
             } catch (Exception ex) {
-                entityContext.sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
+                entityContext.ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
                 return null;
             }
             if (this.next != null && scratch3Block.getBlockType() != BlockType.hat) {
@@ -190,7 +189,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                 this.lastValue = new AtomicReference<>(value);
                 return value;
             } catch (Exception ex) {
-                entityContext.sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
+                entityContext.ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
                 throw new RuntimeException(ex);
             }
         });
@@ -354,13 +353,13 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     private String sendScratch3ExtensionNotFound(String extensionId) {
         String msg = "No scratch extension <" + extensionId + "> found";
-        entityContext.sendErrorMessage("WORKSPACE.SCRATCH_NOT_FOUND", extensionId);
+        entityContext.ui().sendErrorMessage("WORKSPACE.SCRATCH_NOT_FOUND", extensionId);
         return msg;
     }
 
     private String sendScratch3BlockNotFound(String extensionId, String opcode) {
         String msg = "No scratch block <" + opcode + "> found in extension <" + extensionId + ">";
-        entityContext.sendErrorMessage("WORKSPACE.SCRATCH_BLOCK_NOT_FOUND", opcode);
+        entityContext.ui().sendErrorMessage("WORKSPACE.SCRATCH_BLOCK_NOT_FOUND", opcode);
         return msg;
     }
 

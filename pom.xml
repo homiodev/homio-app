@@ -4,12 +4,12 @@
     <url>https://github.com/touchhome/touchhome-core</url>
 
     <packaging>jar</packaging>
-    <version>0.6.6-SNAPSHOT</version>
+    <version>0.6.8-SNAPSHOT</version>
 
     <parent>
         <groupId>org.touchhome</groupId>
         <artifactId>touchhome-dependency</artifactId>
-        <version>2.3.5</version>
+        <version>2.4.1-SNAPSHOT</version>
     </parent>
 
     <scm>
@@ -20,14 +20,74 @@
     </scm>
 
     <properties>
-        <touchhome-bundle-api.version>1.0.9</touchhome-bundle-api.version>
-        <touchhome-bundle.version>1.0.12</touchhome-bundle.version>
+        <touchhome-bundle-api.version>1.2.0-SNAPSHOT</touchhome-bundle-api.version>
+        <touchhome-bundle.version>1.2.0-SNAPSHOT</touchhome-bundle.version>
     </properties>
 
     <dependencies>
         <dependency>
+            <groupId>com.fazecast</groupId>
+            <artifactId>jSerialComm</artifactId>
+            <version>2.6.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.lingala.zip4j</groupId>
+            <artifactId>zip4j</artifactId>
+            <version>2.6.4</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.jayway.jsonpath</groupId>
             <artifactId>json-path</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.1.50</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.8</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-exec</artifactId>
+            <version>1.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jmdns</groupId>
+            <artifactId>jmdns</artifactId>
+            <version>3.5.5</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>4.2.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+            <version>4.2.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.scream3r</groupId>
+            <artifactId>jssc</artifactId>
+            <version>2.8.0</version>
         </dependency>
 
         <dependency>
@@ -133,6 +193,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>30.0-jre</version>
+        </dependency>
+
+        <dependency>
             <groupId>tec.uom</groupId>
             <artifactId>uom-se</artifactId>
             <version>1.0.10</version>
@@ -158,6 +224,12 @@
 
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-arduino</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
             <artifactId>touchhome-bundle-raspberry</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
@@ -177,6 +249,12 @@
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
             <artifactId>touchhome-bundle-xaomi</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-serial</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
 

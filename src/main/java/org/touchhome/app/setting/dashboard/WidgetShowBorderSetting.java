@@ -1,8 +1,9 @@
 package org.touchhome.app.setting.dashboard;
 
 import org.touchhome.app.setting.SettingPlugin;
+import org.touchhome.bundle.api.setting.BundleSettingPluginBoolean;
 
-public class WidgetShowBorderSetting implements SettingPlugin {
+public class WidgetShowBorderSetting implements SettingPlugin<Boolean>, BundleSettingPluginBoolean {
 
     @Override
     public GroupKey getGroupKey() {
@@ -15,13 +16,8 @@ public class WidgetShowBorderSetting implements SettingPlugin {
     }
 
     @Override
-    public String getDefaultValue() {
-        return Boolean.TRUE.toString();
-    }
-
-    @Override
-    public SettingType getSettingType() {
-        return SettingType.Boolean;
+    public boolean defaultValue() {
+        return true;
     }
 
     @Override

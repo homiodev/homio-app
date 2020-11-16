@@ -47,7 +47,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
     @Getter
     @Setter
-    @UIField(order = 16, inlineEdit = true, showInContextMenu = true)
+    @UIField(order = 16, inlineEdit = true)
     private boolean autoStart = false;
 
     @Getter

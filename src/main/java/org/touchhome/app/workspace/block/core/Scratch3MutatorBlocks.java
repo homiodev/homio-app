@@ -38,6 +38,17 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks implements Wo
         this.postConstruct();
     }
 
+    public static Object reduceJSON(String json, String query) {
+        if (StringUtils.isNotEmpty(query)) {
+            Object filteredObject = JsonPath.read(json, query);
+            if (filteredObject instanceof Map) {
+                return new JSONObject((Map) filteredObject);
+            }
+            return filteredObject;
+        }
+        return json;
+    }
+
     @Override
     public void release(String id) {
         this.compileScriptContextMap.clear();
@@ -64,17 +75,6 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks implements Wo
         String json = workspaceBlock.getInputString("JSON");
         String query = workspaceBlock.getInputString("REDUCE");
         return reduceJSON(json, query);
-    }
-
-    public static Object reduceJSON(String json, String query) {
-        if (StringUtils.isNotEmpty(query)) {
-            Object filteredObject = JsonPath.read(json, query);
-            if (filteredObject instanceof Map) {
-                return new JSONObject((Map) filteredObject);
-            }
-            return filteredObject;
-        }
-        return json;
     }
 
     private String joinStringEvaluate(WorkspaceBlock workspaceBlock) {

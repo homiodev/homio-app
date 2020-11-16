@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.touchhome.bundle.api.ThreadEntityContext;
+import org.touchhome.bundle.api.EntityContextBGP;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -17,16 +17,27 @@ import java.util.function.Consumer;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.getErrorMessage;
 
 @Log4j2
-public class ThreadServiceImpl {
+public class EntityContextBGPImpl implements EntityContextBGP {
     private final ScheduledExecutorService scheduleService = Executors.newScheduledThreadPool(1000, r -> new Thread(r, "entity-manager"));
 
     @Getter
     private final Map<String, ThreadContextImpl> schedulers = new HashMap<>();
 
-    public ThreadServiceImpl() {
+    public EntityContextBGPImpl() {
         ((ScheduledThreadPoolExecutor) this.scheduleService).setRemoveOnCancelPolicy(true);
     }
 
+    @Override
+    public ThreadContext<Void> schedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
+        return addSchedule(name, timeout, timeUnit, command, showOnUI);
+    }
+
+    @Override
+    public <T> ThreadContext<T> run(String name, ThrowingSupplier<T, Exception> command, boolean showOnUI) {
+        return addSchedule(name, 0, TimeUnit.MILLISECONDS, command, EntityContextBGPImpl.ScheduleType.SINGLE, showOnUI);
+    }
+
+    @Override
     public void cancelThread(String name) {
         if (name != null) {
             ThreadContextImpl context = this.schedulers.remove(name);
@@ -36,19 +47,20 @@ public class ThreadServiceImpl {
         }
     }
 
+    @Override
     public boolean isThreadExists(String name) {
         return this.schedulers.containsKey(name);
     }
 
-    public ThreadEntityContext.ThreadContext<Void> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
+    public ThreadContext<Void> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
         return addSchedule(name, timeout, timeUnit, () -> {
             command.run();
             return null;
-        }, ThreadServiceImpl.ScheduleType.DELAY, showOnUI);
+        }, EntityContextBGPImpl.ScheduleType.DELAY, showOnUI);
     }
 
-    public <T> ThreadEntityContext.ThreadContext<T> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingSupplier<T, Exception> command,
-                                                                ScheduleType scheduleType, boolean showOnUI) {
+    public <T> ThreadContext<T> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingSupplier<T, Exception> command,
+                                            ScheduleType scheduleType, boolean showOnUI) {
         this.cancelThread(name);
         ThreadContextImpl<T> threadContext = new ThreadContextImpl<T>(name, command, scheduleType, timeout > 0 ? timeUnit.toMillis(timeout) : null, showOnUI);
         this.schedulers.put(name, threadContext);
@@ -86,9 +98,14 @@ public class ThreadServiceImpl {
         return threadContext;
     }
 
+    @RequiredArgsConstructor
+    public enum ScheduleType {
+        DELAY, RATE, SINGLE
+    }
+
     @Getter
     @RequiredArgsConstructor
-    public static class ThreadContextImpl<T> implements ThreadEntityContext.ThreadContext<T> {
+    public static class ThreadContextImpl<T> implements ThreadContext<T> {
         private final String name;
         private final ThrowingSupplier<T, Exception> command;
         private final ScheduleType scheduleType;
@@ -129,10 +146,5 @@ public class ThreadServiceImpl {
         public void onError(Consumer<Exception> errorListener) {
             this.errorListener = errorListener;
         }
-    }
-
-    @RequiredArgsConstructor
-    public enum ScheduleType {
-        DELAY, RATE, SINGLE
     }
 }
