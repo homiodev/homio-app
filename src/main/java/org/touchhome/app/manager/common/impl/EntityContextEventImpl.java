@@ -1,7 +1,6 @@
 package org.touchhome.app.manager.common.impl;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.touchhome.bundle.api.EntityContextEvent;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
@@ -12,7 +11,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
-@RequiredArgsConstructor
 public class EntityContextEventImpl implements EntityContextEvent {
     private final BroadcastLockManager broadcastLockManager;
 
@@ -20,6 +18,13 @@ public class EntityContextEventImpl implements EntityContextEvent {
     private final Map<Option, Object> events = new HashMap<>();
     private final Map<String, Object> lastValues = new ConcurrentHashMap<>();
     private final Map<String, Consumer<Object>> listeners = new HashMap<>();
+
+    public EntityContextEventImpl(BroadcastLockManager broadcastLockManager) {
+        this.broadcastLockManager = broadcastLockManager;
+        this.addEvent("internet-down", "Internet down");
+        this.addEvent("internet-up", "Internet up");
+        this.addEvent("app-release", "Found new app release");
+    }
 
     @Override
     public void removeEvents(String... keys) {

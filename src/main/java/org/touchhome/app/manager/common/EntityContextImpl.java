@@ -1,6 +1,5 @@
 package org.touchhome.app.manager.common;
 
-import com.pivovarit.function.ThrowingRunnable;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -53,7 +52,6 @@ import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.condition.ExecuteOnce;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.manager.En;
@@ -75,7 +73,6 @@ import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
 import javax.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
-import java.net.URL;
 import java.text.DateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -142,7 +139,7 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextUI = new EntityContextUIImpl(messagingTemplate, this);
         this.entityContextUDP = new EntityContextUDPImpl(this);
         this.entityContextEvent = new EntityContextEventImpl(broadcastLockManager);
-        this.entityContextBGP = new EntityContextBGPImpl();
+        this.entityContextBGP = new EntityContextBGPImpl(this, touchHomeProperties);
         this.entityContextSetting = new EntityContextSettingImpl(this);
     }
 
@@ -218,15 +215,14 @@ public class EntityContextImpl implements EntityContext {
         // create indexes on tables
         this.createTableIndexes();
         this.bgp().schedule("check-app-version", 1, TimeUnit.DAYS, this::fetchReleaseVersion, true);
-        this.event().addEvent("app-release", "Found new app release");
         this.event().addEventAndFire("app-started", "App started");
 
-        this.bgp().run("test", (ThrowingRunnable<Exception>) () -> {
-            while (true) {
-                Thread.sleep(1000);
-                ui().progress("test", System.currentTimeMillis() % 99, System.currentTimeMillis() + "");
+        this.bgp().runOnceOnInternetUp("install-software", () -> {
+            LinuxHardwareRepository repository = getBean(LinuxHardwareRepository.class);
+            if (!repository.isSoftwareInstalled("autossh")) {
+                repository.installSoftware("autossh");
             }
-        }, true);
+        });
     }
 
     @Override
@@ -511,11 +507,6 @@ public class EntityContextImpl implements EntityContext {
     public <T extends BaseEntity> void addEntityRemovedListener(Class<T> entityClass, Consumer<T> listener) {
         this.entityTypeRemoveListeners.putIfAbsent(entityClass.getName(), new ArrayList<>());
         this.entityTypeRemoveListeners.get(entityClass.getName()).add((BiConsumer<T, T>) (o, o2) -> listener.accept(o));
-    }
-
-    @ExecuteOnce(skipIfInstalled = "autossh", requireInternet = true)
-    public void installAutossh() {
-        getBean(LinuxHardwareRepository.class).installSoftware("autossh");
     }
 
     public void addBundle(Map<String, BundleContext> artifactIdContextMap) {

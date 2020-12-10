@@ -12,6 +12,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 import org.touchhome.bundle.api.setting.BundleSettingPluginToggle;
 import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.setting.header.dynamic.BundleDynamicHeaderSettingPlugin;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -36,13 +37,15 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         settingEntity.computeEntityID(() -> getKey(settingPlugin));
         if (settingPlugin.transientState()) {
             settingEntity.setEntityID(getKey(settingPlugin));
-            fulfillEntityFromPlugin(settingEntity, entityContext);
+            fulfillEntityFromPlugin(settingEntity, entityContext, settingPlugin);
         }
         return settingEntity;
     }
 
-    public static void fulfillEntityFromPlugin(SettingEntity entity, EntityContext entityContext) {
-        BundleSettingPlugin plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entity.getEntityID());
+    public static void fulfillEntityFromPlugin(SettingEntity entity, EntityContext entityContext, BundleSettingPlugin plugin) {
+        if (plugin == null) {
+            plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entity.getEntityID());
+        }
         if (plugin != null) {
             entity.setBundle(getSettingBundleName(entityContext, plugin.getClass()));
             entity.setDefaultValue(plugin.getDefaultValue());
@@ -58,7 +61,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             entity.setParameters(plugin.getParameters(entityContext, entity.getValue()));
             entity.setDisabled(plugin.isDisabled(entityContext) ? true : null);
             entity.setRequired(plugin.isRequired());
-            if (entity.getSettingType() == BundleSettingPlugin.SettingType.SelectBox) {
+            if (entity.getSettingType() == BundleSettingPlugin.SettingType.SelectBox.name()) {
                 entity.setAvailableValues(plugin.loadAvailableValues(entityContext));
             }
 
@@ -67,6 +70,10 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
                 entity.setGroupKey(settingPlugin.getGroupKey().name());
                 entity.setGroupIcon(settingPlugin.getGroupKey().getIcon());
                 entity.setSubGroupKey(settingPlugin.getSubGroupKey());
+            }
+
+            if (plugin instanceof BundleDynamicHeaderSettingPlugin) {
+                entity.setTitle(((BundleDynamicHeaderSettingPlugin) plugin).getTitle());
             }
 
             if (plugin instanceof BundleConsoleSettingPlugin) {
@@ -88,6 +95,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
     public static String getSettingBundleName(EntityContext entityContext, Class<? extends BundleSettingPlugin> settingPluginClass) {
         String name = settingPluginClass.getName();
         return settingToBundleMap.computeIfAbsent(name, key -> {
+            if (name.startsWith(BUNDLE_PREFIX + "api.")) {
+                return "api";
+            }
             if (name.startsWith(BUNDLE_PREFIX)) {
                 String pathName = name.substring(0, BUNDLE_PREFIX.length() + name.substring(BUNDLE_PREFIX.length()).indexOf('.'));
                 BundleEntryPoint bundleEntrypoint = entityContext.getBeansOfType(BundleEntryPoint.class)
@@ -127,6 +137,6 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
 
     @Override
     public void updateEntityAfterFetch(SettingEntity entity) {
-        fulfillEntityFromPlugin(entity, entityContext);
+        fulfillEntityFromPlugin(entity, entityContext, null);
     }
 }

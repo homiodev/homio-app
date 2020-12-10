@@ -16,6 +16,7 @@ public class TomcatHttpConnector implements WebServerFactoryCustomizer<TomcatSer
     public void customize(TomcatServletWebServerFactory factory) {
         Connector connector = new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
         connector.setPort(touchHomeProperties.getHttpPort());
+        connector.setParseBodyMethods("POST,PUT,DELETE");
         factory.addAdditionalTomcatConnectors(connector);
     }
 }

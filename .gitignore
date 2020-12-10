@@ -1,7 +1,11 @@
-.idea/
+.idea/*.*
+.idea/dataSources
+.idea/libraries
+.idea/dictionaries
 *.iml
 *.db
 *.ser
 *.log
 target/
 network.json
+

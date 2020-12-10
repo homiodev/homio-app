@@ -1,15 +1,21 @@
 package org.touchhome.app.manager.common.impl;
 
+import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingRunnable;
 import com.pivovarit.function.ThrowingSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.touchhome.app.config.TouchHomeProperties;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.EntityContextBGP;
 
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
@@ -21,15 +27,34 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     private final ScheduledExecutorService scheduleService = Executors.newScheduledThreadPool(1000, r -> new Thread(r, "entity-manager"));
 
     @Getter
-    private final Map<String, ThreadContextImpl> schedulers = new HashMap<>();
+    private final EntityContextImpl entityContext;
 
-    public EntityContextBGPImpl() {
+    @Getter
+    private final Map<String, ThreadContextImpl<?>> schedulers = new HashMap<>();
+
+    private ThreadContext<Boolean> internetThreadContext;
+
+    public EntityContextBGPImpl(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
+        this.entityContext = entityContext;
         ((ScheduledThreadPoolExecutor) this.scheduleService).setRemoveOnCancelPolicy(true);
+        listenInternetStatus(entityContext, touchHomeProperties);
     }
 
     @Override
     public ThreadContext<Void> schedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
         return addSchedule(name, timeout, timeUnit, command, showOnUI);
+    }
+
+    @Override
+    public void runOnceOnInternetUp(String name, ThrowingRunnable<Exception> command) {
+        this.internetThreadContext.addValueListener(name, (isInternetUp, ignore) -> {
+            if (isInternetUp) {
+                log.info("Internet up. Run <" + name + "> listener.");
+                command.run();
+                return true;
+            }
+            return false;
+        });
     }
 
     @Override
@@ -40,7 +65,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     @Override
     public void cancelThread(String name) {
         if (name != null) {
-            ThreadContextImpl context = this.schedulers.remove(name);
+            ThreadContextImpl<?> context = this.schedulers.remove(name);
             if (context != null) {
                 context.cancel();
             }
@@ -62,17 +87,18 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     public <T> ThreadContext<T> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingSupplier<T, Exception> command,
                                             ScheduleType scheduleType, boolean showOnUI) {
         this.cancelThread(name);
-        ThreadContextImpl<T> threadContext = new ThreadContextImpl<T>(name, command, scheduleType, timeout > 0 ? timeUnit.toMillis(timeout) : null, showOnUI);
+        ThreadContextImpl<T> threadContext = new ThreadContextImpl<>(name, command, scheduleType, timeout > 0 ? timeUnit.toMillis(timeout) : null, showOnUI);
         this.schedulers.put(name, threadContext);
 
         Runnable runnable = () -> {
             try {
                 threadContext.runCount++;
                 threadContext.state = "STARTED";
-                threadContext.getCommand().get();
+                threadContext.setRetValue(threadContext.getCommand().get());
                 threadContext.state = "FINISHED";
             } catch (Exception ex) {
                 log.error("Exception in thread: <{}>. Message: <{}>", name, getErrorMessage(ex));
+                entityContext.ui().sendErrorMessage("Error in " + name, ex);
                 if (threadContext.errorListener != null) {
                     try {
                         threadContext.errorListener.accept(ex);
@@ -122,6 +148,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         @Getter
         private Date creationTime = new Date();
 
+        public T retValue;
+        private HashMap<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
+
         private Consumer<Exception> errorListener;
 
         public Long getTimeToNextSchedule() {
@@ -143,8 +172,65 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             return scheduledFuture.get(timeout, timeUnit);
         }
 
+        @Override
         public void onError(Consumer<Exception> errorListener) {
             this.errorListener = errorListener;
         }
+
+        @Override
+        public boolean addValueListener(String name, ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
+            if (this.valueListeners == null) {
+                this.valueListeners = new HashMap<>();
+            }
+            if (this.valueListeners.containsKey(name)) {
+                log.warn("Unable to add run/schedule listener with name <" + name + "> Listener already exists");
+                return false;
+            }
+            this.valueListeners.put(name, valueListener);
+            return true;
+        }
+
+        public void setRetValue(T value) {
+            T oldValue = this.retValue;
+            this.retValue = value;
+
+            // fire listeners if require
+            if (this.valueListeners != null) {
+                for (Iterator<ThrowingBiFunction<T, T, Boolean, Exception>> iterator = this.valueListeners.values().iterator(); iterator.hasNext(); ) {
+                    ThrowingBiFunction<T, T, Boolean, Exception> fn = iterator.next();
+                    try {
+                        if (Boolean.TRUE.equals(fn.apply(value, oldValue))) {
+                            iterator.remove();
+                        }
+                    } catch (Exception ex) {
+                        log.error("Error while fire listener for run/schedule <" + this.name + ">", ex);
+                        iterator.remove();
+                    }
+                }
+                // clean if not require anymore
+                if (this.valueListeners.isEmpty()) {
+                    this.valueListeners = null;
+                }
+            }
+        }
+    }
+
+    private void listenInternetStatus(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
+        this.internetThreadContext = this.addSchedule("internet-test", 10, TimeUnit.SECONDS, () -> {
+            try {
+                URLConnection connection = new URL(touchHomeProperties.getCheckConnectivityURL()).openConnection();
+                connection.connect();
+                return true;
+            } catch (Exception ex) {
+                return false;
+            }
+        }, ScheduleType.DELAY, true);
+
+        this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
+            if (isInternetUp != isInternetWasUp) {
+                entityContext.event().fireEvent(isInternetUp ? "internet-up" : "internet-down");
+            }
+            return null;
+        });
     }
 }

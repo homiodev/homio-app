@@ -7,14 +7,20 @@ import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.SettingEntity;
+import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.bundle.api.EntityContextSetting;
+import org.touchhome.bundle.api.json.NotificationEntityJSON;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.header.dynamic.BundleDynamicHeaderSettingPlugin;
+import org.touchhome.bundle.api.setting.header.dynamic.BundleHeaderDynamicContainerSettingPlugin;
 
 import javax.validation.constraints.NotNull;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -24,6 +30,17 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     private static Map<String, BundleSettingPlugin> settingPluginsByPluginClass = new HashMap<>();
     private final EntityContextImpl entityContext;
     private Map<String, Map<String, Consumer<?>>> settingListeners = new HashMap<>();
+    public static Map<Class<? extends BundleHeaderDynamicContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
+
+    @Override
+    public void updateDynamicSettings(Class<? extends BundleHeaderDynamicContainerSettingPlugin> dynamicSettingPluginClass, List<? extends BundleDynamicHeaderSettingPlugin> dynamicSettings) {
+        List<SettingEntity> dynamicEntities = dynamicSettings.stream()
+                .map(s -> SettingRepository.createSettingEntityFromPlugin(s, new SettingEntity(), entityContext)).collect(Collectors.toList());
+        dynamicHeaderSettings.put(dynamicSettingPluginClass, dynamicEntities);
+
+        entityContext.ui().sendNotification("-dynamic-settings",
+                new NotificationEntityJSON(SettingEntity.PREFIX + dynamicSettingPluginClass.getSimpleName()).setValue(dynamicEntities));
+    }
 
     @Override
     public <T> T getValue(Class<? extends BundleSettingPlugin<T>> settingPluginClazz) {
@@ -41,6 +58,12 @@ public class EntityContextSettingImpl implements EntityContextSetting {
             SettingEntity settingEntity = entityContext.getEntity(SettingEntity.getKey(pluginFor));
             return settingEntity == null ? null : settingEntity.getValue();
         }
+    }
+
+    @Override
+    public <T> void listenValueAsync(Class<? extends BundleSettingPlugin<T>> settingClass, String key, Consumer<T> listener) {
+        listenValue(settingClass, key, value ->
+                this.entityContext.bgp().run(key, () -> listener.accept(value), true));
     }
 
     @Override
@@ -133,6 +156,10 @@ public class EntityContextSettingImpl implements EntityContextSetting {
 
     private void setValueSilenceRaw(BundleSettingPlugin<?> pluginFor, @NotNull String value) {
         log.debug("Update setting <{}> value <{}>", SettingEntity.getKey(pluginFor), value);
+
+        if (!pluginFor.isStorable()) {
+            return;
+        }
 
         if (pluginFor.transientState()) {
             settingTransientState.put(pluginFor, value);

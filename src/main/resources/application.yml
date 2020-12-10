@@ -3,6 +3,8 @@ rootDir: /opt/touchhome
 touchhome:
   version: @project.version@
   httpPort: 9119
+  serverSiteURL: https://touchhome.org
+  checkConnectivityURL: http://www.google.com
 
 spring:
   datasource:

@@ -1,6 +1,7 @@
 package org.touchhome.app.rest;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -26,6 +27,7 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
+import org.touchhome.app.utils.Curl;
 import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.NotificationEntityJSON;
@@ -277,6 +279,25 @@ public class UtilsController {
 
         entityUIMetaDataList.remove(entityUIMetaData);
         entityUIMetaDataList.add(entityUIMetaData);
+    }
+
+    @PostMapping("github/readme")
+    public GitHubReadme getUrlContent(@RequestBody String url) {
+        try {
+            if (url.endsWith("/wiki")) {
+                url = url.substring(0, url.length() - 5);
+            }
+            return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
+        } catch (Exception ex) {
+            throw new RuntimeException("No readme found");
+        }
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private static class GitHubReadme {
+        private String url;
+        private String content;
     }
 
     @GetMapping("notifications")

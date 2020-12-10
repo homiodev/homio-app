@@ -5,11 +5,11 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
-import org.touchhome.app.setting.SettingPlugin;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.BaseEntity;
 import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.header.dynamic.BundleDynamicHeaderSettingPlugin;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
@@ -26,6 +26,9 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     public static final String PREFIX = "st_";
 
     private String value;
+
+    @Transient
+    private String title;
 
     @Transient
     private String color;
@@ -70,7 +73,16 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     private String toggleIcon;
 
     @Transient
-    private SettingPlugin.SettingType settingType;
+    private String settingType;
+
+    public void setSettingTypeRaw(String settingTypeRaw) {
+        this.settingType = settingTypeRaw;
+    }
+
+    public SettingEntity setSettingType(BundleSettingPlugin.SettingType settingType) {
+        this.settingType = settingType.name();
+        return this;
+    }
 
     @Transient
     private Boolean reverted;
@@ -85,6 +97,9 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     private JSONObject parameters;
 
     public static String getKey(BundleSettingPlugin settingPlugin) {
+        if (settingPlugin instanceof BundleDynamicHeaderSettingPlugin) {
+            return SettingEntity.PREFIX + ((BundleDynamicHeaderSettingPlugin) settingPlugin).getKey();
+        }
         return SettingEntity.PREFIX + settingPlugin.getClass().getSimpleName();
     }
 

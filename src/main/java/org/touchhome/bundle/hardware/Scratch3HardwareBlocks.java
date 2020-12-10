@@ -50,12 +50,10 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         this.serverTime.addArgument("FORMAT");
 
         this.cityGeoLocation = Scratch3Block.ofEvaluate(100, "city_geo_location", BlockType.reporter, "City geo [CITY] | json", this::getCityGeoLocation);
-        this.cityGeoLocation.addArgument("CITY", wirelessHardwareRepository.getIpGeoLocation(wirelessHardwareRepository.getOuterIpAddress()).getCity());
-
-        // TODO:
+        this.cityGeoLocation.addArgument("CITY", "unknown city");
 
         this.ipGeoLocation = Scratch3Block.ofEvaluate(200, "ip_geo_location", BlockType.reporter, "IP geo [IP] | json", this::getIPGeoLocation);
-        this.ipGeoLocation.addArgument("IP", getByIP(null));
+        this.ipGeoLocation.addArgument("IP", "127.0.0.1");
 
         this.settingChangeCommand = Scratch3Block.ofHandler(300, "setting_change", BlockType.hat, "Setting [SETTING] changed to [VALUE]", this::settingChangeEvent);
         this.settingChangeCommand.addArgument(SETTING, this.settingsMenu);
@@ -63,6 +61,11 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
 
         this.hardwareEventCommand = Scratch3Block.ofHandler(400, "hardware_event", BlockType.hat, "Hardware event [EVENT]", this::hardwareEvent);
         this.hardwareEventCommand.addArgument(EVENT, this.hardwareEventsMenu);
+
+        entityContext.bgp().runOnceOnInternetUp("scratch3-hardware", () -> {
+            this.ipGeoLocation.addArgument("IP", getByIP(null));
+            this.cityGeoLocation.addArgument("CITY", wirelessHardwareRepository.getIpGeoLocation(wirelessHardwareRepository.getOuterIpAddress()).getCity());
+        });
 
         this.postConstruct();
     }

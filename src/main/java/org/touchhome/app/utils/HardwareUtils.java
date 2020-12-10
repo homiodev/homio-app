@@ -38,22 +38,10 @@ public final class HardwareUtils {
         }
         hardwareChecked = true;
         checkDatabaseInstalled(beanFactory);
-        checkInternetConnection(beanFactory);
         copyResources();
         if (EntityContext.isLinuxEnvironment()) {
             checkWiringPi(beanFactory);
             checkHotSpotAndWifi(beanFactory);
-        }
-    }
-
-    private static void checkInternetConnection(ConfigurableListableBeanFactory beanFactory) {
-        WirelessHardwareRepository repository = beanFactory.getBean(WirelessHardwareRepository.class);
-
-        boolean hasInetAccess = repository.hasInternetAccess("http://www.google.com");
-        if (hasInetAccess) {
-            log.info("Device connected to network <{}>", repository.getNetworkDescription());
-        } else {
-            log.error("!!!Device not connected to internet.!!!");
         }
     }
 

@@ -13,6 +13,7 @@ import org.apache.http.client.methods.*;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.scratch.*;
 
@@ -35,7 +36,7 @@ public class Scratch3HTTPBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block onUDPEventCommand;
     private final Scratch3Block sendUDPCCommand;
 
-    public Scratch3HTTPBlocks(EntityContext entityContext) throws SocketException {
+    public Scratch3HTTPBlocks(EntityContext entityContext, TouchHomeProperties touchHomeProperties) throws SocketException {
         super("#B8C39B", entityContext, null, "http");
         this.udpSocket.setBroadcast(true);
 
@@ -45,7 +46,7 @@ public class Scratch3HTTPBlocks extends Scratch3ExtensionBlocks {
         this.httpRequestCommand = Scratch3Block.ofHandler(10, "request", BlockType.command,
                 "HTTP [METHOD] url [URL] | RAW: [RAW] ", this::httpRequestHandler);
         this.httpRequestCommand.addArgument("METHOD", this.methodMenu);
-        this.httpRequestCommand.addArgument("URL", "touchhome.org/sample");
+        this.httpRequestCommand.addArgument("URL", touchHomeProperties.getServerSiteURL() + "/sample");
         this.httpRequestCommand.addArgument("RAW", ArgumentType.checkbox);
 
         this.httpRequestHeaderCommand = Scratch3Block.ofHandler(20, HttpApplyHandler.update_header.name(), BlockType.command,

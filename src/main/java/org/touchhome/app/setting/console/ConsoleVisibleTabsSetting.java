@@ -7,7 +7,6 @@ import org.touchhome.app.rest.ConsoleController;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.json.Option;
-
 import org.touchhome.bundle.api.setting.BundleSettingPluginText;
 import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
 
@@ -28,6 +27,9 @@ public class ConsoleVisibleTabsSetting implements BundleConsoleSettingPlugin<Str
         result.put("logs", Option.key("logs").json(json -> json.put("available", true)));
         Map<String, ConsolePlugin<?>> map = entityContext.getBean(ConsoleController.class).getConsolePluginsMap();
         for (Map.Entry<String, ConsolePlugin<?>> entry : map.entrySet()) {
+            if (entry.getKey().equals("icl")) {
+                continue;
+            }
             String parentTab = entry.getValue().getParentTab();
             if (StringUtils.isNotEmpty(parentTab)) {
                 result.putIfAbsent(parentTab, Option.key(parentTab));

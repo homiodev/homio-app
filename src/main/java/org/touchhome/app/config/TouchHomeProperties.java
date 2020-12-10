@@ -12,4 +12,6 @@ import org.springframework.stereotype.Component;
 public class TouchHomeProperties {
     private String version;
     private int httpPort;
+    private String serverSiteURL;
+    private String checkConnectivityURL;
 }

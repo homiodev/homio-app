@@ -3,6 +3,7 @@ package org.touchhome.app.rest;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
@@ -14,23 +15,24 @@ import org.touchhome.app.LogService;
 import org.touchhome.app.console.LogsConsolePlugin;
 import org.touchhome.app.console.NamedConsolePlugin;
 import org.touchhome.app.json.UIActionDescription;
+import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.service.ssh.SshProvider;
 import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.console.ConsolePlugin;
-import org.touchhome.bundle.api.console.ConsolePluginCommunicator;
-import org.touchhome.bundle.api.console.ConsolePluginEditor;
-import org.touchhome.bundle.api.console.ConsolePluginTable;
+import org.touchhome.bundle.api.console.*;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.json.ActionResponse;
 import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
+import org.touchhome.bundle.api.setting.header.BundleHeaderSettingPlugin;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.tritonus.share.ArraySet;
 
 import java.util.*;
+
+import static org.touchhome.bundle.api.util.TouchHomeUtils.putOpt;
 
 @RestController
 @RequestMapping("/rest/console")
@@ -59,7 +61,7 @@ public class ConsoleController {
         List<ConsolePlugin> consolePlugins = new ArrayList<>(entityContext.getBeansOfType(ConsolePlugin.class));
         Collections.sort(consolePlugins);
         for (ConsolePlugin consolePlugin : consolePlugins) {
-            String bundleName = BundleEntryPoint.getBundleName(consolePlugin.getClass());
+            String bundleName = consolePlugin instanceof InlineLogsConsolePlugin ? "icl" : BundleEntryPoint.getBundleName(consolePlugin.getClass());
             if (bundleName == null) {
                 if (!(consolePlugin instanceof NamedConsolePlugin)) {
                     throw new IllegalArgumentException("Unable to find ConsolePlugin name for class: "
@@ -74,7 +76,7 @@ public class ConsoleController {
     @GetMapping("tab/{tab}/actions")
     public List<UIActionDescription> getConsoleTabActions(@PathVariable("tab") String tab) {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
-        return consolePlugin == null ? Collections.emptyList() : ItemController.fetchUIHeaderActions(consolePlugin.getHeaderActions());
+        return consolePlugin == null ? Collections.emptyList() : fetchUIHeaderActions(consolePlugin);
     }
 
     @GetMapping("tab/{tab}/content")
@@ -138,6 +140,9 @@ public class ConsoleController {
         Set<ConsoleTab> tabs = new HashSet<>(this.tabs);
         Map<String, ConsoleTab> parens = new HashMap<>();
         for (Map.Entry<String, ConsolePlugin<?>> entry : this.consolePluginsMap.entrySet()) {
+            if (entry.getKey().equals("icl")) {
+                continue;
+            }
             ConsolePlugin<?> consolePlugin = entry.getValue();
             String parentName = consolePlugin.getParentTab();
             if (consolePlugin.isEnabled()) {
@@ -169,6 +174,31 @@ public class ConsoleController {
     @GetMapping("ssh/{token}")
     public SessionStatusModel getSshStatus(@PathVariable("token") String token) {
         return this.entityContext.setting().getValue(ConsoleSshProviderSetting.class).getSshStatus(token);
+    }
+
+    @SneakyThrows
+    static List<UIActionDescription> fetchUIHeaderActions(ConsolePlugin<?> consolePlugin) {
+        List<UIActionDescription> actions = new ArrayList<>();
+        Map<String, Class<? extends BundleHeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
+        if (actionMap != null) {
+            for (Map.Entry<String, Class<? extends BundleHeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
+                Class<? extends BundleHeaderSettingPlugin<?>> settingClass = entry.getValue();
+                JSONObject metadata = new JSONObject().put("ref", SettingEntity.getKey(settingClass));
+                BundleHeaderSettingPlugin<?> plugin = settingClass.newInstance();
+                putOpt(metadata, "fabc", plugin.fireActionsBeforeChange());
+
+                actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName(entry.getKey())
+                        .setMetadata(metadata));
+            }
+        }
+        if (consolePlugin instanceof ConsolePluginEditor) {
+            Class<? extends BundleHeaderSettingPlugin<?>> nameHeaderAction = ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
+            if (nameHeaderAction != null) {
+                actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName("name")
+                        .setMetadata(new JSONObject().put("ref", SettingEntity.getKey(nameHeaderAction))));
+            }
+        }
+        return actions;
     }
 
     @Getter

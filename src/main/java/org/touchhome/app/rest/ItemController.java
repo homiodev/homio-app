@@ -21,7 +21,6 @@ import org.touchhome.app.manager.ImageManager;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.EntityManager;
-import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.utils.InternalUtil;
@@ -32,7 +31,6 @@ import org.touchhome.bundle.api.json.Option;
 import org.touchhome.bundle.api.model.*;
 import org.touchhome.bundle.api.model.micro.MicroControllerBaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
-import org.touchhome.bundle.api.setting.BundleSettingPlugin;
 import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
@@ -99,17 +97,6 @@ public class ItemController {
         }
         method.setAccessible(true);
         return (ActionResponse) method.invoke(actionHolder, objects.toArray());
-    }
-
-    static List<UIActionDescription> fetchUIHeaderActions(Map<String, Class<? extends BundleSettingPlugin<?>>> actionMap) {
-        List<UIActionDescription> actions = new ArrayList<>();
-        if (actionMap != null) {
-            for (Map.Entry<String, Class<? extends BundleSettingPlugin<?>>> entry : actionMap.entrySet()) {
-                actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName(entry.getKey())
-                        .setMetadata(new JSONObject().put("ref", SettingEntity.getKey(entry.getValue()))));
-            }
-        }
-        return actions;
     }
 
     static List<UIActionDescription> fetchUIActionsFromClass(Class<?> clazz) {
