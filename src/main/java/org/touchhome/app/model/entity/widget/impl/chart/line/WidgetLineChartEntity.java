@@ -5,7 +5,7 @@ import lombok.Setter;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.LineInterpolation;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 
 import javax.persistence.*;

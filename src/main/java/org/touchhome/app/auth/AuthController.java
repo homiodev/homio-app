@@ -10,7 +10,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.UserEntity;
+import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.repository.UserRepository;
 
 import javax.validation.Valid;
@@ -18,7 +18,7 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.HashSet;
 
-import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
+import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.*;
 
 @Log4j2

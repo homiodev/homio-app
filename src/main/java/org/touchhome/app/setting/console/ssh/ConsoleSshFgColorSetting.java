@@ -1,9 +1,9 @@
 package org.touchhome.app.setting.console.ssh;
 
 
-import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
-public class ConsoleSshFgColorSetting implements BundleConsoleSettingPlugin<String> {
+public class ConsoleSshFgColorSetting implements ConsoleSettingPlugin<String> {
 
     @Override
     public Class<String> getType() {

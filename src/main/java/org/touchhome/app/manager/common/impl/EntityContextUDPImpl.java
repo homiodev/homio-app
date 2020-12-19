@@ -6,7 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.EntityContextUDP;
-import org.touchhome.bundle.api.manager.En;
+import org.touchhome.bundle.api.Lang;
 import org.touchhome.bundle.api.util.FlowMap;
 
 import java.net.DatagramPacket;
@@ -42,7 +42,7 @@ public class EntityContextUDPImpl implements EntityContextUDP {
                 }, true);
                 scheduleFuture.setDescription("Listen udp: " + hostPortKey);
             } catch (Exception ex) {
-                entityContext.ui().addHeaderErrorNotification(hostPortKey, "UDP " + hostPortKey, En.getServerMessage("UDP_ERROR",
+                entityContext.ui().addHeaderErrorNotification(hostPortKey, "UDP " + hostPortKey, Lang.getServerMessage("UDP_ERROR",
                         FlowMap.of("key", hostPortKey, "msg", ex.getMessage())));
                 log.error("Unable to listen udp host:port: <{}>", hostPortKey);
                 return;

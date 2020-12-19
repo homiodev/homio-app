@@ -1,9 +1,9 @@
 package org.touchhome.app.setting.system;
 
-import org.touchhome.app.setting.SettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPluginSlider;
+import org.touchhome.app.setting.CoreSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPluginSlider;
 
-public class SystemJWTTokenValidSetting implements SettingPlugin<Integer>, BundleSettingPluginSlider {
+public class SystemJWTTokenValidSetting implements CoreSettingPlugin<Integer>, SettingPluginSlider {
 
     @Override
     public GroupKey getGroupKey() {

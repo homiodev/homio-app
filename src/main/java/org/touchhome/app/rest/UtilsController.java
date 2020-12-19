@@ -29,10 +29,10 @@ import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.app.utils.InternalUtil;
+import org.touchhome.bundle.api.Lang;
+import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.json.NotificationEntityJSON;
-import org.touchhome.bundle.api.manager.En;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.model.NotificationModel;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.color.*;
@@ -293,15 +293,8 @@ public class UtilsController {
         }
     }
 
-    @Getter
-    @AllArgsConstructor
-    private static class GitHubReadme {
-        private String url;
-        private String content;
-    }
-
     @GetMapping("notifications")
-    public Set<NotificationEntityJSON> getNotifications() {
+    public Set<NotificationModel> getNotifications() {
         return entityContext.ui().getNotifications();
     }
 
@@ -355,7 +348,7 @@ public class UtilsController {
     @GetMapping("i18n/{lang}.json")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ObjectNode getI18NFromBundles(@PathVariable("lang") String lang) {
-        return En.getLangJson(lang);
+        return Lang.getLangJson(lang);
     }
 
     @PostMapping("confirm/{entityID}")
@@ -372,6 +365,13 @@ public class UtilsController {
         if (EntityContextUIImpl.confirmationRequest.containsKey(entityID)) {
             EntityContextUIImpl.confirmationRequest.get(entityID).setHandled(true);
         }
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private static class GitHubReadme {
+        private String url;
+        private String content;
     }
 
     @Getter

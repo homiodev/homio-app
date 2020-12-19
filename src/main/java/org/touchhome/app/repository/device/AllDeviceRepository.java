@@ -3,7 +3,7 @@ package org.touchhome.app.repository.device;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.touchhome.bundle.api.model.DeviceBaseEntity;
+import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 

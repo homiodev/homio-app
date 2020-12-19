@@ -1,4 +1,4 @@
-package org.touchhome.app.service.ssh.impl;
+package org.touchhome.app.service.ssh;
 
 import com.pi4j.system.SystemInfo;
 import lombok.AllArgsConstructor;
@@ -7,12 +7,10 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Component;
-import org.touchhome.app.rest.ConsoleController;
-import org.touchhome.app.service.ssh.SshHardwareRepository;
-import org.touchhome.app.service.ssh.SshProvider;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
+import org.touchhome.bundle.api.service.SshProvider;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -80,8 +78,8 @@ public class TmateSshProvider implements SshProvider {
     }
 
     @Override
-    public ConsoleController.SessionStatusModel getSshStatus(String token) {
-        return Curl.get("https://tmate.io/api/t/" + token, ConsoleController.SessionStatusModel.class);
+    public SessionStatusModel getSshStatus(String token) {
+        return Curl.get("https://tmate.io/api/t/" + token, SessionStatusModel.class);
     }
 
     @SneakyThrows

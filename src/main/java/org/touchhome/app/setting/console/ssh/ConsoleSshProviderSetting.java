@@ -1,16 +1,11 @@
 package org.touchhome.app.setting.console.ssh;
 
-import org.touchhome.app.service.ssh.SshProvider;
-import org.touchhome.app.service.ssh.impl.TmateSshProvider;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+import org.touchhome.app.service.ssh.TmateSshProvider;
+import org.touchhome.bundle.api.service.SshProvider;
+import org.touchhome.bundle.api.setting.SettingPluginOptionsBean;
+import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
-
-import java.util.List;
-
-public class ConsoleSshProviderSetting implements BundleConsoleSettingPlugin<SshProvider> {
+public class ConsoleSshProviderSetting implements ConsoleSettingPlugin<SshProvider>, SettingPluginOptionsBean<SshProvider> {
 
     @Override
     public Class<SshProvider> getType() {
@@ -23,11 +18,6 @@ public class ConsoleSshProviderSetting implements BundleConsoleSettingPlugin<Ssh
     }
 
     @Override
-    public SettingType getSettingType() {
-        return SettingType.SelectBoxDynamic;
-    }
-
-    @Override
     public int order() {
         return 600;
     }
@@ -35,16 +25,5 @@ public class ConsoleSshProviderSetting implements BundleConsoleSettingPlugin<Ssh
     @Override
     public String[] pages() {
         return new String[]{"ssh"};
-    }
-
-    @Override
-    public List<Option> loadAvailableValues(EntityContext entityContext) {
-        return Option.simpleNamelist(entityContext.getBeansOfType(SshProvider.class));
-    }
-
-    @Override
-    public SshProvider parseValue(EntityContext entityContext, String value) {
-        return entityContext.getBeansOfType(SshProvider.class).stream().filter(p -> p.getClass().getSimpleName().equals(value)).findAny()
-                .orElseThrow(() -> new NotFoundException("Unable to find ssh provider with name: " + value));
     }
 }

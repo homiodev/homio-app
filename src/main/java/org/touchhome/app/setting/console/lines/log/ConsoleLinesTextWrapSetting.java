@@ -2,13 +2,13 @@ package org.touchhome.app.setting.console.lines.log;
 
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
-
+import org.touchhome.bundle.api.model.OptionModel;
+import org.touchhome.bundle.api.setting.SettingPluginOptions;
+import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
 import java.util.List;
 
-public class ConsoleLinesTextWrapSetting implements BundleConsoleSettingPlugin<String> {
+public class ConsoleLinesTextWrapSetting implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
 
     @Override
     public SettingType getSettingType() {
@@ -26,8 +26,8 @@ public class ConsoleLinesTextWrapSetting implements BundleConsoleSettingPlugin<S
     }
 
     @Override
-    public List<Option> loadAvailableValues(EntityContext entityContext) {
-        return Option.list("nowrap", "pre", "pre-wrap", "break-spaces");
+    public List<OptionModel> getOptions(EntityContext entityContext) {
+        return OptionModel.list("nowrap", "pre", "pre-wrap", "break-spaces");
     }
 
     @Override

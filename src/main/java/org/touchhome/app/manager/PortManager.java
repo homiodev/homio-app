@@ -6,19 +6,15 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
-import org.touchhome.app.model.entity.SettingEntity;
-import org.touchhome.bundle.api.json.NotificationEntityJSON;
-import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPluginOptions;
+import org.touchhome.bundle.api.setting.SettingPlugin;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import static org.touchhome.bundle.api.setting.BundleSettingPluginPort.PORT_UNAVAILABLE;
 
 /**
  * Port manager scan all setting bundles to match type as SerialPort and listen if ports available or not,
@@ -30,9 +26,9 @@ import static org.touchhome.bundle.api.setting.BundleSettingPluginPort.PORT_UNAV
 public class PortManager {
     private final EntityContextImpl entityContext;
 
-    private Map<Class<? extends BundleSettingPlugin<SerialPort>>, Pair<String, Boolean>> portListeners = new HashMap<>();
+    private Map<Class<? extends SettingPlugin<SerialPort>>, Pair<String, Boolean>> portListeners = new HashMap<>();
     private Set<String> ports = new HashSet<>();
-    private List<BundleSettingPlugin<SerialPort>> portSettingPlugins;
+    private List<SettingPluginOptions<SerialPort>> portSettingPlugins;
 
     public void postConstruct() {
         portListeners.clear();
@@ -41,14 +37,14 @@ public class PortManager {
     }
 
     public void listenPortAvailability() {
-        Collection<BundleSettingPlugin> settingPlugins = EntityContextSettingImpl.settingPluginsByPluginKey.values();
+        Collection<SettingPlugin> settingPlugins = EntityContextSettingImpl.settingPluginsByPluginKey.values();
         this.portSettingPlugins = settingPlugins
                 .stream().filter(sp -> SerialPort.class.equals(sp.getType()))
-                .map(sp -> (BundleSettingPlugin<SerialPort>) sp)
+                .map(sp -> (SettingPluginOptions<SerialPort>) sp)
                 .collect(Collectors.toList());
 
-        for (BundleSettingPlugin<SerialPort> portSettingPlugin : portSettingPlugins) {
-            Class<? extends BundleSettingPlugin<SerialPort>> clazz = (Class<? extends BundleSettingPlugin<SerialPort>>) portSettingPlugin.getClass();
+        for (SettingPlugin<SerialPort> portSettingPlugin : portSettingPlugins) {
+            Class<? extends SettingPlugin<SerialPort>> clazz = (Class<? extends SettingPlugin<SerialPort>>) portSettingPlugin.getClass();
             String portRawValue = entityContext.setting().getRawValue(clazz);
             if (StringUtils.isNotEmpty(portRawValue)) {
                 addPortToListening(clazz, portRawValue, entityContext.setting().getValue(clazz));
@@ -65,7 +61,7 @@ public class PortManager {
         }
     }
 
-    private void addPortToListening(Class<? extends BundleSettingPlugin<SerialPort>> clazz, String portRawValue, SerialPort serialPort) {
+    private void addPortToListening(Class<? extends SettingPlugin<SerialPort>> clazz, String portRawValue, SerialPort serialPort) {
         portListeners.put(clazz, MutablePair.of(portRawValue, serialPort != null));
         if (serialPort == null) {
             addPortNotAvailableNotification(clazz, portRawValue);
@@ -80,10 +76,12 @@ public class PortManager {
         // notify UI for reload available options
         if (!this.ports.equals(ports.keySet())) {
             this.ports = ports.keySet();
-            entityContext.ui().sendNotification("-settings", new JSONObject().put("reload",
-                    portSettingPlugins.stream().map(SettingEntity::getKey).collect(Collectors.toSet())));
+
+            for (SettingPluginOptions<?> portSettingPlugin : portSettingPlugins) {
+                entityContext.setting().reloadSettings(portSettingPlugin.getClass());
+            }
         }
-        for (Map.Entry<Class<? extends BundleSettingPlugin<SerialPort>>, Pair<String, Boolean>> entry : portListeners.entrySet()) {
+        for (Map.Entry<Class<? extends SettingPlugin<SerialPort>>, Pair<String, Boolean>> entry : portListeners.entrySet()) {
             String portName = entry.getValue().getKey();
             if (ports.containsKey(portName)) {
                 // check if we didn't fire event already
@@ -100,15 +98,14 @@ public class PortManager {
         }
     }
 
-    private void portAvailable(Class<? extends BundleSettingPlugin<SerialPort>> clazz, String portName) {
+    private void portAvailable(Class<? extends SettingPlugin<SerialPort>> clazz, String portName) {
         log.info("Port became available: <{}>", portName);
-        entityContext.ui().removeHeaderNotification(NotificationEntityJSON.info(clazz.getSimpleName()));
+        entityContext.ui().removeHeaderNotification(clazz.getSimpleName());
     }
 
-    private void addPortNotAvailableNotification(Class<? extends BundleSettingPlugin<SerialPort>> settingPluginClass, String portName) {
+    private void addPortNotAvailableNotification(Class<? extends SettingPlugin<SerialPort>> settingPluginClass, String portName) {
         log.warn("Port became not available: <{}>", portName);
-        entityContext.ui().addHeaderNotification(NotificationEntityJSON.danger(settingPluginClass.getSimpleName())
-                .setName(portName)
-                .setValue(PORT_UNAVAILABLE + settingPluginClass.getSimpleName()));
+        entityContext.ui().addHeaderErrorNotification(settingPluginClass.getSimpleName(), portName,
+                "Port unavailable: " + settingPluginClass.getSimpleName());
     }
 }

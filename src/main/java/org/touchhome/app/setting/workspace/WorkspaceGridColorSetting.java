@@ -1,8 +1,8 @@
 package org.touchhome.app.setting.workspace;
 
-import org.touchhome.app.setting.SettingPlugin;
+import org.touchhome.app.setting.CoreSettingPlugin;
 
-public class WorkspaceGridColorSetting implements SettingPlugin<String> {
+public class WorkspaceGridColorSetting implements CoreSettingPlugin<String> {
 
     @Override
     public GroupKey getGroupKey() {

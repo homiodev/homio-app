@@ -28,13 +28,11 @@
         <dependency>
             <groupId>com.fazecast</groupId>
             <artifactId>jSerialComm</artifactId>
-            <version>2.6.2</version>
         </dependency>
 
         <dependency>
             <groupId>net.lingala.zip4j</groupId>
             <artifactId>zip4j</artifactId>
-            <version>2.6.4</version>
         </dependency>
 
         <dependency>
@@ -45,61 +43,51 @@
         <dependency>
             <groupId>com.jcraft</groupId>
             <artifactId>jsch</artifactId>
-            <version>0.1.50</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>1.8</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-exec</artifactId>
-            <version>1.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.jmdns</groupId>
             <artifactId>jmdns</artifactId>
-            <version>3.5.5</version>
         </dependency>
 
         <dependency>
             <groupId>commons-net</groupId>
             <artifactId>commons-net</artifactId>
-            <version>3.3</version>
         </dependency>
 
         <dependency>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna</artifactId>
-            <version>4.2.2</version>
         </dependency>
 
         <dependency>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna-platform</artifactId>
-            <version>4.2.2</version>
         </dependency>
 
         <dependency>
             <groupId>org.scream3r</groupId>
             <artifactId>jssc</artifactId>
-            <version>2.8.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.pivovarit</groupId>
             <artifactId>throwing-function</artifactId>
-            <version>1.5.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-text</artifactId>
-            <version>1.9</version>
         </dependency>
 
         <dependency>
@@ -110,7 +98,6 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20200518</version>
         </dependency>
 
         <dependency>
@@ -127,19 +114,16 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-collections4</artifactId>
-            <version>4.1</version>
         </dependency>
 
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-annotations</artifactId>
-            <version>1.5.13</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-json-org</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
 
         <dependency>
@@ -171,25 +155,21 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.11</version>
         </dependency>
 
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.4</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.pi4j</groupId>
             <artifactId>pi4j-core</artifactId>
-            <version>${pi4j.version}</version>
         </dependency>
 
         <dependency>
@@ -201,13 +181,11 @@
         <dependency>
             <groupId>tec.uom</groupId>
             <artifactId>uom-se</artifactId>
-            <version>1.0.10</version>
         </dependency>
 
         <dependency>
             <groupId>com.github.sarveswaran-m</groupId>
             <artifactId>util.concurrent.blockingMap</artifactId>
-            <version>0.91</version>
         </dependency>
 
         <dependency>
@@ -285,7 +263,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
-            <version>2.9.8</version>
         </dependency>
 
         <dependency>
@@ -331,7 +308,6 @@
         <dependency>
             <groupId>commons-net</groupId>
             <artifactId>commons-net</artifactId>
-            <version>3.3</version>
         </dependency>
 
         <dependency>
@@ -431,7 +407,6 @@
         <dependency>
             <groupId>com.maxmind.geoip2</groupId>
             <artifactId>geoip2</artifactId>
-            <version>2.8.0</version>
         </dependency>
     </dependencies>
 

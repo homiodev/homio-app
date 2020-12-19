@@ -9,10 +9,10 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.scratch.BlockType;
-import org.touchhome.bundle.api.scratch.Scratch3Block;
-import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.scratch.WorkspaceBlock;
+import org.touchhome.bundle.api.workspace.scratch.BlockType;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 
 @Log4j2
 @Getter

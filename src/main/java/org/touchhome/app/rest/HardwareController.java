@@ -8,10 +8,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.hardware.other.StartupHardwareRepository;
-import org.touchhome.bundle.api.json.Option;
+import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
-import java.util.Set;
+import java.util.Collection;
 
 import static org.touchhome.bundle.api.util.TouchHomeUtils.ADMIN_ROLE;
 
@@ -24,7 +24,7 @@ public class HardwareController {
     private final StartupHardwareRepository startupHardwareRepository;
 
     @GetMapping("event")
-    public Set<Option> getHardwareEvents() {
+    public Collection<OptionModel> getHardwareEvents() {
         return entityContext.event().getEvents().keySet();
     }
 

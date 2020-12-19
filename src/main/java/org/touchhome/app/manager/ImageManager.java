@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.repository.ImageRepository;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.ImageEntity;
+import org.touchhome.bundle.api.entity.ImageEntity;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.imageio.ImageIO;

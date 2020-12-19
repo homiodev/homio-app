@@ -2,7 +2,7 @@ package org.touchhome.app.manager.common.impl;
 
 import lombok.Getter;
 import org.touchhome.bundle.api.EntityContextEvent;
-import org.touchhome.bundle.api.json.Option;
+import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
 import java.util.HashMap;
@@ -15,7 +15,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     private final BroadcastLockManager broadcastLockManager;
 
     @Getter
-    private final Map<Option, Object> events = new HashMap<>();
+    private final Map<OptionModel, Object> events = new HashMap<>();
     private final Map<String, Object> lastValues = new ConcurrentHashMap<>();
     private final Map<String, Consumer<Object>> listeners = new HashMap<>();
 
@@ -33,7 +33,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
     @Override
     public void setListener(String key, Consumer<Object> listener) {
-        if (events.containsKey(Option.key(key))) {
+        if (events.containsKey(OptionModel.key(key))) {
             listeners.put(key, listener);
         } else {
             throw new IllegalArgumentException("Unable to listen unknown event: " + key);
@@ -61,13 +61,13 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
     @Override
     public String addEvent(String key, String name) {
-        this.events.put(Option.of(key, name), "");
+        this.events.put(OptionModel.of(key, name), "");
         return key;
     }
 
     @Override
     public String addEventAndFire(String key, String name, Object value) {
-        this.events.put(Option.of(key, name), "");
+        this.events.put(OptionModel.of(key, name), "");
         this.fireEvent(key, value);
         return key;
     }

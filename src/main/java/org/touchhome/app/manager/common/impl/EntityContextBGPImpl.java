@@ -73,8 +73,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public boolean isThreadExists(String name) {
-        return this.schedulers.containsKey(name);
+    public boolean isThreadExists(String name, boolean checkOnlyRunningThreads) {
+        ThreadContextImpl<?> threadContext = this.schedulers.get(name);
+        if (checkOnlyRunningThreads) {
+            return threadContext != null && !threadContext.stopped;
+        }
+        return threadContext != null;
     }
 
     public ThreadContext<Void> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
@@ -97,8 +101,11 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 threadContext.setRetValue(threadContext.getCommand().get());
                 threadContext.state = "FINISHED";
             } catch (Exception ex) {
+                threadContext.state = "FINISHED_WITH_ERROR";
+                threadContext.stopped = true;
+
                 log.error("Exception in thread: <{}>. Message: <{}>", name, getErrorMessage(ex));
-                entityContext.ui().sendErrorMessage("Error in " + name, ex);
+                entityContext.ui().sendErrorMessage(ex);
                 if (threadContext.errorListener != null) {
                     try {
                         threadContext.errorListener.accept(ex);
@@ -124,6 +131,25 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         return threadContext;
     }
 
+    private void listenInternetStatus(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
+        this.internetThreadContext = this.addSchedule("internet-test", 10, TimeUnit.SECONDS, () -> {
+            try {
+                URLConnection connection = new URL(touchHomeProperties.getCheckConnectivityURL()).openConnection();
+                connection.connect();
+                return true;
+            } catch (Exception ex) {
+                return false;
+            }
+        }, ScheduleType.DELAY, true);
+
+        this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
+            if (isInternetUp != isInternetWasUp) {
+                entityContext.event().fireEvent(isInternetUp ? "internet-up" : "internet-down");
+            }
+            return null;
+        });
+    }
+
     @RequiredArgsConstructor
     public enum ScheduleType {
         DELAY, RATE, SINGLE
@@ -137,6 +163,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private final ScheduleType scheduleType;
         private final Long period;
         private final boolean showOnUI;
+        public T retValue;
         private ScheduledFuture<T> scheduledFuture;
         @Setter
         private String state;
@@ -147,9 +174,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private int runCount;
         @Getter
         private Date creationTime = new Date();
-
-        public T retValue;
-        private HashMap<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
+        private Map<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
 
         private Consumer<Exception> errorListener;
 
@@ -180,7 +205,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         @Override
         public boolean addValueListener(String name, ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
             if (this.valueListeners == null) {
-                this.valueListeners = new HashMap<>();
+                this.valueListeners = new ConcurrentHashMap<>();
             }
             if (this.valueListeners.containsKey(name)) {
                 log.warn("Unable to add run/schedule listener with name <" + name + "> Listener already exists");
@@ -213,24 +238,5 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 }
             }
         }
-    }
-
-    private void listenInternetStatus(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
-        this.internetThreadContext = this.addSchedule("internet-test", 10, TimeUnit.SECONDS, () -> {
-            try {
-                URLConnection connection = new URL(touchHomeProperties.getCheckConnectivityURL()).openConnection();
-                connection.connect();
-                return true;
-            } catch (Exception ex) {
-                return false;
-            }
-        }, ScheduleType.DELAY, true);
-
-        this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
-            if (isInternetUp != isInternetWasUp) {
-                entityContext.event().fireEvent(isInternetUp ? "internet-up" : "internet-down");
-            }
-            return null;
-        });
     }
 }

@@ -3,8 +3,8 @@ package org.touchhome.app.workspace;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.touchhome.bundle.api.scratch.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;

@@ -10,7 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.core.env.Environment;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;

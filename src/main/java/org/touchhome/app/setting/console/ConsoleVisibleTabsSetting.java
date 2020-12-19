@@ -6,15 +6,17 @@ import org.json.JSONObject;
 import org.touchhome.app.rest.ConsoleController;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.setting.BundleSettingPluginText;
-import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.model.OptionModel;
+import org.touchhome.bundle.api.setting.SettingPluginOptions;
+import org.touchhome.bundle.api.setting.SettingPluginText;
+import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ConsoleVisibleTabsSetting implements BundleConsoleSettingPlugin<String>, BundleSettingPluginText {
+public class ConsoleVisibleTabsSetting implements ConsoleSettingPlugin<String>, SettingPluginText,
+        SettingPluginOptions<String> {
 
     @Override
     public int order() {
@@ -22,9 +24,9 @@ public class ConsoleVisibleTabsSetting implements BundleConsoleSettingPlugin<Str
     }
 
     @Override
-    public Collection<Option> loadAvailableValues(EntityContext entityContext) {
-        Map<String, Option> result = new HashMap<>();
-        result.put("logs", Option.key("logs").json(json -> json.put("available", true)));
+    public Collection<OptionModel> getOptions(EntityContext entityContext) {
+        Map<String, OptionModel> result = new HashMap<>();
+        result.put("logs", OptionModel.key("logs").json(json -> json.put("available", true)));
         Map<String, ConsolePlugin<?>> map = entityContext.getBean(ConsoleController.class).getConsolePluginsMap();
         for (Map.Entry<String, ConsolePlugin<?>> entry : map.entrySet()) {
             if (entry.getKey().equals("icl")) {
@@ -32,14 +34,14 @@ public class ConsoleVisibleTabsSetting implements BundleConsoleSettingPlugin<Str
             }
             String parentTab = entry.getValue().getParentTab();
             if (StringUtils.isNotEmpty(parentTab)) {
-                result.putIfAbsent(parentTab, Option.key(parentTab));
+                result.putIfAbsent(parentTab, OptionModel.key(parentTab));
                 if (!result.get(parentTab).getJson().has("children")) {
                     result.get(parentTab).getJson().put("children", new JSONArray());
                 }
                 result.get(parentTab).getJson().getJSONArray("children")
                         .put(new JSONObject().put("subTab", entry.getKey()).put("available", entry.getValue().isEnabled()));
             } else {
-                result.put(entry.getKey(), Option.key(entry.getKey()).json(json -> json.put("available", entry.getValue().isEnabled())));
+                result.put(entry.getKey(), OptionModel.key(entry.getKey()).json(json -> json.put("available", entry.getValue().isEnabled())));
             }
         }
         return result.values();

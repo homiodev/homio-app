@@ -2,12 +2,12 @@ package org.touchhome.app.setting.console.lines.comm;
 
 import lombok.RequiredArgsConstructor;
 import org.touchhome.bundle.api.console.ConsolePlugin;
-import org.touchhome.bundle.api.json.KeyValueEnum;
-import org.touchhome.bundle.api.setting.BundleSettingPluginSelectBoxEnum;
-import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.model.KeyValueEnum;
+import org.touchhome.bundle.api.setting.SettingPluginOptionsEnum;
+import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
-public class ConsoleCommSendPositionSetting implements BundleConsoleSettingPlugin<ConsoleCommSendPositionSetting.Position>,
-        BundleSettingPluginSelectBoxEnum<ConsoleCommSendPositionSetting.Position> {
+public class ConsoleCommSendPositionSetting implements ConsoleSettingPlugin<ConsoleCommSendPositionSetting.Position>,
+        SettingPluginOptionsEnum<ConsoleCommSendPositionSetting.Position> {
 
     @Override
     public SettingType getSettingType() {

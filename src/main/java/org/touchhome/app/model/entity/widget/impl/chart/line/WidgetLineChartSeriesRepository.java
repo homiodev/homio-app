@@ -2,7 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.chart.line;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import java.util.List;

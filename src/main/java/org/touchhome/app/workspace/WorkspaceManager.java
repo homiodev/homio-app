@@ -14,20 +14,20 @@ import org.touchhome.app.setting.system.SystemClearWorkspaceButtonSetting;
 import org.touchhome.app.setting.system.SystemClearWorkspaceVariablesButtonSetting;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.workspace.WorkspaceJsonVariableEntity;
-import org.touchhome.bundle.api.model.workspace.WorkspaceShareVariableEntity;
-import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupEntity;
-import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupGroupEntity;
-import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
-import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanGroupEntity;
-import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
-import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableGroupEntity;
-import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.scratch.WorkspaceBlock;
-import org.touchhome.bundle.api.scratch.WorkspaceEventListener;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.workspace.WorkspaceJsonVariableEntity;
+import org.touchhome.bundle.api.entity.workspace.WorkspaceShareVariableEntity;
+import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
+import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupEntity;
+import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupGroupEntity;
+import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
+import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanGroupEntity;
+import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
+import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableGroupEntity;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
+import org.touchhome.bundle.api.workspace.WorkspaceEventListener;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import java.util.*;
 import java.util.function.Function;
@@ -310,6 +310,15 @@ public class WorkspaceManager {
                 reloadWorkspace(workspaceEntity);
             }
         }
+    }
+
+    public WorkspaceBlock getWorkspaceBlockById(String id) {
+        for (TabHolder tabHolder : this.tabs.values()) {
+            if (tabHolder.tab2WorkspaceBlocks.containsKey(id)) {
+                return tabHolder.tab2WorkspaceBlocks.get(id);
+            }
+        }
+        return null;
     }
 
     private static class TabHolder {

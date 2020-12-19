@@ -8,10 +8,10 @@ import org.touchhome.app.model.entity.widget.HasDataSource;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
+import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupEntity;
+import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
@@ -64,7 +64,7 @@ public class WidgetPieChartSeriesEntity extends BaseEntity<WidgetPieChartSeriesE
     public static class PieSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<Option> loadOptions(Object parameter, BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(Object parameter, BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceBackupEntity.class)
                     .add(WorkspaceStandaloneVariableEntity.class)

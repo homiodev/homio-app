@@ -1,7 +1,7 @@
 package org.touchhome.app.repository.widget;
 
 import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;

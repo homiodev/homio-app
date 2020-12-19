@@ -4,11 +4,11 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Level;
 
-import org.touchhome.bundle.api.setting.BundleSettingPluginSelectBoxEnum;
-import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPluginOptionsEnum;
+import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
-public class ConsoleLogLevelSetting implements BundleConsoleSettingPlugin<ConsoleLogLevelSetting.LogLevel>,
-        BundleSettingPluginSelectBoxEnum<ConsoleLogLevelSetting.LogLevel> {
+public class ConsoleLogLevelSetting implements ConsoleSettingPlugin<ConsoleLogLevelSetting.LogLevel>,
+        SettingPluginOptionsEnum<ConsoleLogLevelSetting.LogLevel> {
 
     @Override
     public SettingType getSettingType() {

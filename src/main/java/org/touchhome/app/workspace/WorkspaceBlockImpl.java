@@ -9,9 +9,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.json.JSONArray;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.scratch.*;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
+import org.touchhome.bundle.api.workspace.scratch.*;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.ArrayList;

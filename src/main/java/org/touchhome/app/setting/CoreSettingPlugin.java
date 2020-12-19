@@ -2,9 +2,9 @@ package org.touchhome.app.setting;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPlugin;
 
-public interface SettingPlugin<T> extends BundleSettingPlugin<T> {
+public interface CoreSettingPlugin<T> extends SettingPlugin<T> {
 
     GroupKey getGroupKey();
 

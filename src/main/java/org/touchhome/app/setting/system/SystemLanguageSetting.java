@@ -1,11 +1,10 @@
 package org.touchhome.app.setting.system;
 
-import org.touchhome.app.setting.SettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPluginSelectBoxEnum;
-import org.touchhome.bundle.api.ui.Lang;
+import org.touchhome.app.setting.CoreSettingPlugin;
+import org.touchhome.bundle.api.Lang;
+import org.touchhome.bundle.api.setting.SettingPluginOptionsEnum;
 
-public class SystemLanguageSetting implements SettingPlugin<Lang>,
-        BundleSettingPluginSelectBoxEnum<Lang> {
+public class SystemLanguageSetting implements CoreSettingPlugin<Lang>, SettingPluginOptionsEnum<Lang> {
 
     @Override
     public GroupKey getGroupKey() {

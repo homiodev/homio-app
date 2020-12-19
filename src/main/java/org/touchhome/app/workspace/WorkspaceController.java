@@ -16,14 +16,14 @@ import org.touchhome.app.workspace.block.Scratch3Space;
 import org.touchhome.app.workspace.block.core.*;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.workspace.WorkspaceShareVariableEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.link.HasWorkspaceVariableLinkAbility;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.workspace.WorkspaceShareVariableEntity;
+import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
-import org.touchhome.bundle.api.scratch.Scratch3Block;
-import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.api.workspace.HasWorkspaceVariableLinkAbility;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.hardware.Scratch3HardwareBlocks;
@@ -124,8 +124,8 @@ public class WorkspaceController {
     }
 
     @GetMapping("variable/{type}")
-    public List<Option> getWorkspaceVariables(@PathVariable("type") String type) {
-        return Option.list(entityContext.findAllByPrefix(type));
+    public List<OptionModel> getWorkspaceVariables(@PathVariable("type") String type) {
+        return OptionModel.list(entityContext.findAllByPrefix(type));
     }
 
     @SneakyThrows
@@ -159,19 +159,19 @@ public class WorkspaceController {
     }
 
     @GetMapping("tab")
-    public List<Option> getWorkspaceTabs() {
+    public List<OptionModel> getWorkspaceTabs() {
         List<WorkspaceEntity> tabs = entityContext.findAll(WorkspaceEntity.class);
         Collections.sort(tabs);
-        return Option.list(tabs);
+        return OptionModel.list(tabs);
     }
 
     @SneakyThrows
     @PostMapping("tab/{name}")
-    public Option createWorkspaceTab(@PathVariable("name") String name) {
+    public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
         BaseEntity workspaceEntity = entityContext.getEntity(WorkspaceEntity.PREFIX + name);
         if (workspaceEntity == null) {
             WorkspaceEntity entity = entityContext.save(new WorkspaceEntity().setName(name).computeEntityID(() -> name));
-            return Option.of(entity.getEntityID(), entity.getTitle());
+            return OptionModel.of(entity.getEntityID(), entity.getTitle());
         }
         throw new IllegalArgumentException("Workspace tab with name <" + name + "> already exists");
     }
@@ -185,7 +185,7 @@ public class WorkspaceController {
     @SneakyThrows
     @PutMapping("tab/{entityID}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
-    public void renameWorkspaceTab(@PathVariable("entityID") String entityID, @RequestBody Option option) {
+    public void renameWorkspaceTab(@PathVariable("entityID") String entityID, @RequestBody OptionModel option) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
             throw new NotFoundException("Unable to find workspace tab with id: " + entityID);

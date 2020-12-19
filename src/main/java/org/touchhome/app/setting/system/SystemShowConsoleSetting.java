@@ -1,9 +1,9 @@
 package org.touchhome.app.setting.system;
 
-import org.touchhome.app.setting.SettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPluginBoolean;
+import org.touchhome.app.setting.CoreSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPluginBoolean;
 
-public class SystemShowConsoleSetting implements SettingPlugin<Boolean>, BundleSettingPluginBoolean {
+public class SystemShowConsoleSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
     public GroupKey getGroupKey() {

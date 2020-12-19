@@ -1,10 +1,12 @@
 package org.touchhome.app.setting.system;
 
 import org.json.JSONObject;
-import org.touchhome.app.setting.SettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPluginButton;
+import org.touchhome.app.setting.CoreSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPluginButton;
 
-public class SystemClearWorkspaceVariablesButtonSetting implements SettingPlugin<JSONObject>, BundleSettingPluginButton {
+import static org.touchhome.bundle.api.util.TouchHomeUtils.DANGER_COLOR;
+
+public class SystemClearWorkspaceVariablesButtonSetting implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 
     @Override
     public GroupKey getGroupKey() {
@@ -18,7 +20,7 @@ public class SystemClearWorkspaceVariablesButtonSetting implements SettingPlugin
 
     @Override
     public String getIconColor() {
-        return "#BD1E1E";
+        return DANGER_COLOR;
     }
 
     @Override

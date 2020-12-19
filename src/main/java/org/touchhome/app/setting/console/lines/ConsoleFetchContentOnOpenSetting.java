@@ -2,10 +2,10 @@ package org.touchhome.app.setting.console.lines;
 
 import org.touchhome.bundle.api.console.ConsolePlugin;
 
-import org.touchhome.bundle.api.setting.BundleSettingPluginBoolean;
-import org.touchhome.bundle.api.setting.console.BundleConsoleSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPluginBoolean;
+import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
-public class ConsoleFetchContentOnOpenSetting implements BundleConsoleSettingPlugin<Boolean>, BundleSettingPluginBoolean {
+public class ConsoleFetchContentOnOpenSetting implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
     public int order() {

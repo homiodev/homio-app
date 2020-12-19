@@ -4,6 +4,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import net.lingala.zip4j.ZipFile;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.jdbc.DataSourceBuilder;
@@ -125,15 +126,19 @@ public final class HardwareUtils {
                             Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
                             Files.createDirectories(resolve.getParent());
                             if (!Files.exists(resolve) || (Files.exists(resolve) && Files.getLastModifiedTime(resolve).compareTo(Files.getLastModifiedTime(path)) < 0)) {
-                                log.info("Copy resource <{}>", path.getFileName());
-                                Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
-                                if (path.getFileName().toString().endsWith(".zip")) {
-                                    log.info("Unzip resource <{}>", path.getFileName());
-                                    ZipFile zipFile = new ZipFile(resolve.toFile());
-                                    zipFile.extractAll(resolve.getParent().toString());
-                                    log.info("Done unzip resource <{}>", path.getFileName());
+                                if (mayCopyResource(path.getFileName().toString())) {
+                                    log.info("Copy resource <{}>", path.getFileName());
+                                    Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
+                                    if (path.getFileName().toString().endsWith(".zip")) {
+                                        log.info("Unzip resource <{}>", path.getFileName());
+                                        ZipFile zipFile = new ZipFile(resolve.toFile());
+                                        zipFile.extractAll(resolve.getParent().toString());
+                                        log.info("Done unzip resource <{}>", path.getFileName());
+                                    }
+                                    log.info("Done copy resource <{}>", path.getFileName());
+                                } else {
+                                    log.warn("Skip copying resource <{}>", path.getFileName());
                                 }
-                                log.info("Done copy resource <{}>", path.getFileName());
                             } else {
                                 log.info("Skip copy resource <{}>", path.getFileName());
                             }
@@ -146,5 +151,16 @@ public final class HardwareUtils {
                 FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
             }
         }
+    }
+
+    // not to smart but works well :)
+    private static boolean mayCopyResource(String fileName) {
+        if (fileName.endsWith("_filter.zip")) {
+            if (SystemUtils.IS_OS_LINUX && !fileName.endsWith(".avr_filter.zip")) {
+                return false;
+            }
+            return !SystemUtils.IS_OS_WINDOWS || fileName.endsWith(".win_filter.zip");
+        }
+        return true;
     }
 }

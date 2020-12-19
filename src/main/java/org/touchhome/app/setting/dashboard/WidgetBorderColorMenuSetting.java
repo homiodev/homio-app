@@ -1,11 +1,11 @@
 package org.touchhome.app.setting.dashboard;
 
-import org.touchhome.app.setting.SettingPlugin;
+import org.touchhome.app.setting.CoreSettingPlugin;
 
-public class WidgetBorderColorMenuSetting implements SettingPlugin<String> {
+public class WidgetBorderColorMenuSetting implements CoreSettingPlugin<String> {
 
     @Override
-    public SettingPlugin.GroupKey getGroupKey() {
+    public GroupKey getGroupKey() {
         return GroupKey.dashboard;
     }
 

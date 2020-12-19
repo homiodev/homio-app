@@ -8,9 +8,9 @@ import org.touchhome.app.model.entity.widget.HasDataSource;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
+import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
@@ -62,7 +62,7 @@ public class WidgetButtonSeriesEntity extends BaseEntity<WidgetButtonSeriesEntit
     public static class ButtonsSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader<Void> {
 
         @Override
-        public List<Option> loadOptions(Void parameter, BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(Void parameter, BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceBooleanEntity.class)
                     .add(WorkspaceBroadcastEntity.class)

@@ -6,10 +6,10 @@ import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.touchhome.bundle.api.console.ConsolePlugin;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.setting.BundleSettingPlugin;
-import org.touchhome.bundle.api.setting.header.dynamic.BundleDynamicHeaderSettingPlugin;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.model.OptionModel;
+import org.touchhome.bundle.api.setting.SettingPlugin;
+import org.touchhome.bundle.api.setting.header.dynamic.DynamicHeaderSettingPlugin;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
@@ -64,7 +64,10 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     private boolean advanced;
 
     @Transient
-    private Collection<Option> availableValues;
+    private boolean storable;
+
+    @Transient
+    private Collection<OptionModel> availableValues;
 
     @Transient
     private String icon;
@@ -74,37 +77,33 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
 
     @Transient
     private String settingType;
+    @Transient
+    private Boolean reverted;
+    @Transient
+    private Boolean disabled;
+    @Transient
+    private Boolean required;
+    @Transient
+    private JSONObject parameters;
+
+    public static String getKey(SettingPlugin settingPlugin) {
+        if (settingPlugin instanceof DynamicHeaderSettingPlugin) {
+            return SettingEntity.PREFIX + ((DynamicHeaderSettingPlugin) settingPlugin).getKey();
+        }
+        return SettingEntity.PREFIX + settingPlugin.getClass().getSimpleName();
+    }
+
+    public static String getKey(Class<? extends SettingPlugin> settingPluginClazz) {
+        return SettingEntity.PREFIX + settingPluginClazz.getSimpleName();
+    }
 
     public void setSettingTypeRaw(String settingTypeRaw) {
         this.settingType = settingTypeRaw;
     }
 
-    public SettingEntity setSettingType(BundleSettingPlugin.SettingType settingType) {
+    public SettingEntity setSettingType(SettingPlugin.SettingType settingType) {
         this.settingType = settingType.name();
         return this;
-    }
-
-    @Transient
-    private Boolean reverted;
-
-    @Transient
-    private Boolean disabled;
-
-    @Transient
-    private Boolean required;
-
-    @Transient
-    private JSONObject parameters;
-
-    public static String getKey(BundleSettingPlugin settingPlugin) {
-        if (settingPlugin instanceof BundleDynamicHeaderSettingPlugin) {
-            return SettingEntity.PREFIX + ((BundleDynamicHeaderSettingPlugin) settingPlugin).getKey();
-        }
-        return SettingEntity.PREFIX + settingPlugin.getClass().getSimpleName();
-    }
-
-    public static String getKey(Class<? extends BundleSettingPlugin> settingPluginClazz) {
-        return SettingEntity.PREFIX + settingPluginClazz.getSimpleName();
     }
 
     public String getValue() {

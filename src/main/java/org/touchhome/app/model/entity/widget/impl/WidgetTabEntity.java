@@ -3,7 +3,7 @@ package org.touchhome.app.model.entity.widget.impl;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
 
 import javax.persistence.Entity;
 import javax.persistence.FetchType;

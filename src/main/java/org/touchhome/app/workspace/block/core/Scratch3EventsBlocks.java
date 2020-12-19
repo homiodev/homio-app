@@ -8,10 +8,10 @@ import org.touchhome.app.model.workspace.WorkspaceBroadcastValueCrudEntity;
 import org.touchhome.app.repository.workspace.WorkspaceBroadcastRepository;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.scratch.BlockType;
-import org.touchhome.bundle.api.scratch.Scratch3Block;
-import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.scratch.WorkspaceBlock;
+import org.touchhome.bundle.api.workspace.scratch.BlockType;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 
 import java.util.Date;
@@ -29,7 +29,7 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
         this.broadcastLockManager = broadcastLockManager;
 
         // Blocks
-        this.receiveEvent = Scratch3Block.ofHandler("whenbroadcastreceived", BlockType.hat, this::receiveEventHandler);
+        this.receiveEvent = Scratch3Block.ofHandler("gotroadcast", BlockType.hat, this::receiveEventHandler);
         this.broadcastEvent = Scratch3Block.ofHandler("broadcast", BlockType.command, this::broadcastEventHandler);
 
         this.postConstruct();

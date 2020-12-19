@@ -1,7 +1,7 @@
 package org.touchhome.app.repository.workspace.var;
 
 import org.springframework.stereotype.Repository;
-import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
+import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 @Repository

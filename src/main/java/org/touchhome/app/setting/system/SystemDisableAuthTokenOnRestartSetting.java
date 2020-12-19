@@ -1,9 +1,9 @@
 package org.touchhome.app.setting.system;
 
-import org.touchhome.app.setting.SettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPluginBoolean;
+import org.touchhome.app.setting.CoreSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPluginBoolean;
 
-public class SystemDisableAuthTokenOnRestartSetting implements SettingPlugin<Boolean>, BundleSettingPluginBoolean {
+public class SystemDisableAuthTokenOnRestartSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
     public GroupKey getGroupKey() {

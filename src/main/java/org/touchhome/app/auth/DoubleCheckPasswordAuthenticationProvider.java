@@ -9,7 +9,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.touchhome.bundle.api.model.UserEntity;
+import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.repository.UserRepository;
 
 import java.util.concurrent.ExecutionException;

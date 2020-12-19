@@ -5,10 +5,10 @@ import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.workspace.WorkspaceBlockImpl;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.scratch.BlockType;
-import org.touchhome.bundle.api.scratch.Scratch3Block;
-import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.scratch.WorkspaceBlock;
+import org.touchhome.bundle.api.workspace.scratch.BlockType;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
@@ -17,8 +17,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-import static org.touchhome.bundle.api.scratch.Scratch3Block.CONDITION;
-import static org.touchhome.bundle.api.scratch.Scratch3Block.SUBSTACK;
+import static org.touchhome.bundle.api.workspace.scratch.Scratch3Block.CONDITION;
+import static org.touchhome.bundle.api.workspace.scratch.Scratch3Block.SUBSTACK;
 
 @Getter
 @Component

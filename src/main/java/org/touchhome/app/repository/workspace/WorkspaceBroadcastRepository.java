@@ -5,7 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.repository.widget.HasFetchChartSeries;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import java.util.Date;

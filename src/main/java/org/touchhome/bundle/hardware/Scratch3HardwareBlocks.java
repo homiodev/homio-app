@@ -7,7 +7,8 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
-import org.touchhome.bundle.api.scratch.*;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
+import org.touchhome.bundle.api.workspace.scratch.*;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 
 import java.text.SimpleDateFormat;

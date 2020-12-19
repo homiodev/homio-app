@@ -22,7 +22,7 @@ public class WireController {
     }*/
 
     /*@RequestMapping(value = "/get1WireSensors", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<Option> get1WireSensors(@RequestParam(value = "onlyUnused", defaultValue = "false") boolean onlyUnused)
+    public List<OptionModel> get1WireSensors(@RequestParam(value = "onlyUnused", defaultValue = "false") boolean onlyUnused)
             throws IOException {
         return w1Manager.getNotRegisteredSensors(onlyUnused);
     }*/

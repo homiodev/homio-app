@@ -2,7 +2,7 @@ package org.touchhome.app.model.workspace;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
 
 import javax.persistence.*;
 import java.util.Set;

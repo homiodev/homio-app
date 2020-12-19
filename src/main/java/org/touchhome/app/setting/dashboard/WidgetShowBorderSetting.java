@@ -1,9 +1,9 @@
 package org.touchhome.app.setting.dashboard;
 
-import org.touchhome.app.setting.SettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPluginBoolean;
+import org.touchhome.app.setting.CoreSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPluginBoolean;
 
-public class WidgetShowBorderSetting implements SettingPlugin<Boolean>, BundleSettingPluginBoolean {
+public class WidgetShowBorderSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
     public GroupKey getGroupKey() {

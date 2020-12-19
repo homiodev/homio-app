@@ -32,12 +32,12 @@ import org.touchhome.app.repository.widget.HasFetchChartSeries;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
+import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
+import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
-import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
+import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
@@ -312,18 +312,18 @@ public class WidgetController {
     }
 
     @GetMapping("tab")
-    public List<Option> getWidgetTabs() {
+    public List<OptionModel> getWidgetTabs() {
         return entityContext.findAll(WidgetTabEntity.class).stream().sorted()
-                .map(t -> Option.of(t.getEntityID(), t.getName())).collect(Collectors.toList());
+                .map(t -> OptionModel.of(t.getEntityID(), t.getName())).collect(Collectors.toList());
     }
 
     @SneakyThrows
     @PostMapping("tab/{name}")
-    public Option createWorkspaceTab(@PathVariable("name") String name) {
+    public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
         BaseEntity widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
             widgetTab = entityContext.save(new WidgetTabEntity().computeEntityID(() -> name));
-            return Option.of(widgetTab.getEntityID(), widgetTab.getName());
+            return OptionModel.of(widgetTab.getEntityID(), widgetTab.getName());
         }
         throw new IllegalStateException("Widget tab with same name already exists");
     }

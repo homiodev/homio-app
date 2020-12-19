@@ -2,7 +2,7 @@ package org.touchhome.app.workspace;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
-import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import javax.validation.constraints.NotNull;
 import java.util.Objects;

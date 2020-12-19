@@ -5,7 +5,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import org.touchhome.bundle.api.model.UserEntity;
+import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.repository.UserRepository;
 
 @Service

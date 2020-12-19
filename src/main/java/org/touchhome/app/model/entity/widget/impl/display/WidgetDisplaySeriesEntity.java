@@ -7,12 +7,12 @@ import lombok.experimental.Accessors;
 import org.touchhome.app.model.entity.widget.HasDataSource;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.model.workspace.backup.WorkspaceBackupEntity;
-import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
-import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
+import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupEntity;
+import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
+import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
+import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
@@ -76,7 +76,7 @@ public class WidgetDisplaySeriesEntity extends BaseEntity<WidgetDisplaySeriesEnt
     public static class DisplayDataSourceDynamicOptionLoader implements DynamicOptionLoader<Void> {
 
         @Override
-        public List<Option> loadOptions(Void parameter, BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(Void parameter, BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceStandaloneVariableEntity.class)
                     .add(WorkspaceVariableEntity.class)

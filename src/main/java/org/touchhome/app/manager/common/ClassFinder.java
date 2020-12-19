@@ -11,7 +11,7 @@ import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.extloader.BundleClassLoaderHolder;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import java.lang.annotation.Annotation;
@@ -98,17 +98,18 @@ public class ClassFinder {
             }
             // find most child repository
             R bestPotentialRepository = null;
+            int lowestLevel = 100;
             for (R r : potentialRepository) {
                 Class entityClass = clazz;
                 // get level
-                int lowestLevel = -1;
-                int level = Integer.MAX_VALUE;
+                int level = 0;
                 while (entityClass != null) {
                     if (entityClass.equals(r.getEntityClass())) {
-                        if (level < lowestLevel) {
+                        if (lowestLevel > level) {
+                            lowestLevel = level;
                             bestPotentialRepository = r;
-                            break;
                         }
+                        break;
                     } else {
                         level++;
                         entityClass = entityClass.getSuperclass();

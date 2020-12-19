@@ -1,7 +1,7 @@
 package org.touchhome.app.repository.workspace.bool;
 
 import org.springframework.stereotype.Repository;
-import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanGroupEntity;
+import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanGroupEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 @Repository

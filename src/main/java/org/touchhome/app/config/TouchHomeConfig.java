@@ -56,11 +56,11 @@ import org.touchhome.app.repository.crud.base.CrudRepositoryFactoryBean;
 import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.block.Scratch3Space;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostHandler;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.DeviceBaseEntity;
-import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;

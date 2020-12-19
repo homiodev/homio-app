@@ -8,10 +8,10 @@ import org.apache.commons.lang3.SystemUtils;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePluginTable;
+import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
-import org.touchhome.bundle.api.model.UserEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.cloud.setting.ConsoleCloudProviderSetting;
 
@@ -19,7 +19,7 @@ import javax.validation.constraints.NotNull;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
+import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
 
 @Component
 @RequiredArgsConstructor

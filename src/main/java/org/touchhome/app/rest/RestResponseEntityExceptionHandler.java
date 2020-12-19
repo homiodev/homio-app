@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.bundle.api.hquery.api.HardwareException;
-import org.touchhome.bundle.api.json.ErrorHolder;
+import org.touchhome.bundle.api.model.ErrorHolderModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Log4j2
@@ -18,7 +18,7 @@ public class RestResponseEntityExceptionHandler {
 
     @ExceptionHandler({Exception.class})
     @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorHolder handleException(Exception ex) {
+    public ErrorHolderModel handleException(Exception ex) {
         String msg;
         if (ex instanceof NullPointerException || ex.getCause() instanceof NullPointerException) {
             msg = ex.getStackTrace()[0].toString();
@@ -26,13 +26,13 @@ public class RestResponseEntityExceptionHandler {
             msg = StringUtils.defaultString(ex.getMessage(), ex.toString());
         }
         log.error("Error <{}>", msg);
-        return new ErrorHolder("Error", msg, ex);
+        return new ErrorHolderModel("Error", msg, ex);
     }
 
     @ExceptionHandler({HardwareException.class})
     @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorHolder handleHardwareException(HardwareException ex) {
+    public ErrorHolderModel handleHardwareException(HardwareException ex) {
         log.error("Error <{}>", TouchHomeUtils.getErrorMessage(ex));
-        return new ErrorHolder("Hardware error", String.join("; ", ex.getInputs()), ex);
+        return new ErrorHolderModel("Hardware error", String.join("; ", ex.getInputs()), ex);
     }
 }

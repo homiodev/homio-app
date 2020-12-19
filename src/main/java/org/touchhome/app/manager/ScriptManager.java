@@ -6,6 +6,7 @@ import jdk.nashorn.api.scripting.NashornScriptEngineFactory;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -15,7 +16,6 @@ import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
-import org.touchhome.bundle.api.manager.LoggerManager;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -59,9 +59,8 @@ public class ScriptManager {
                     CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, null);
                     runJavaScript(compiledScriptContext);
                 }, true);
-                threadContext.onError(ex -> {
-                    entityContext.updateDelayed(scriptEntity, s -> s.setStatus(Status.ERROR).setError(TouchHomeUtils.getErrorMessage(ex)));
-                });
+                threadContext.onError(ex ->
+                        entityContext.updateDelayed(scriptEntity, s -> s.setStatus(Status.ERROR).setError(TouchHomeUtils.getErrorMessage(ex))));
             }
         }
     }
@@ -88,7 +87,7 @@ public class ScriptManager {
             scriptEntity.setJavaScriptParameters(json);
             entityContext.save(scriptEntity);
         } else if (scriptEntity.getRepeatInterval() != 0 && allowRepeat) {
-            if (entityContext.bgp().isThreadExists(scriptEntity.getEntityID())) {
+            if (entityContext.bgp().isThreadExists(scriptEntity.getEntityID(), true)) {
                 throw new RuntimeException("Script already in progress. Stop script to restart");
             }
             if (scriptEntity.getRepeatInterval() < minScriptThreadSleep) {
@@ -130,7 +129,7 @@ public class ScriptManager {
         engine.put(JavaScriptBinder.entityContext.name(), entityContext);
         engine.put(JavaScriptBinder.script.name(), scriptEntity);
 
-        JSONObject jsonParams = new JSONObject(scriptEntity.getJavaScriptParameters());
+        JSONObject jsonParams = new JSONObject(StringUtils.defaultIfEmpty(scriptEntity.getJavaScriptParameters(), "{}"));
         engine.put(JavaScriptBinder.params.name(), jsonParams);
 
         CompiledScript compiled;

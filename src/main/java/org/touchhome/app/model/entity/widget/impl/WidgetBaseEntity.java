@@ -5,7 +5,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.touchhome.app.model.entity.widget.HasDataSource;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;

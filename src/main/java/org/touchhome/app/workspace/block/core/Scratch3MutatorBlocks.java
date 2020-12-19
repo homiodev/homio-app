@@ -10,7 +10,9 @@ import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.scratch.*;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
+import org.touchhome.bundle.api.workspace.WorkspaceEventListener;
+import org.touchhome.bundle.api.workspace.scratch.*;
 
 import java.util.HashMap;
 import java.util.Map;

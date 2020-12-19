@@ -25,11 +25,15 @@ import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.DeviceBaseEntity;
+import org.touchhome.bundle.api.entity.ImageEntity;
+import org.touchhome.bundle.api.entity.micro.MicroControllerBaseEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.json.ActionResponse;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.model.*;
-import org.touchhome.bundle.api.model.micro.MicroControllerBaseEntity;
+import org.touchhome.bundle.api.model.ActionResponseModel;
+import org.touchhome.bundle.api.model.HasEntityIdentifier;
+import org.touchhome.bundle.api.model.HasPosition;
+import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
@@ -72,7 +76,7 @@ public class ItemController {
     private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
 
     @SneakyThrows
-    static ActionResponse executeAction(UIActionDescription uiActionDescription, Object actionHolder, ApplicationContext applicationContext, BaseEntity actionEntity) {
+    static ActionResponseModel executeAction(UIActionDescription uiActionDescription, Object actionHolder, ApplicationContext applicationContext, BaseEntity actionEntity) {
         if (UIActionDescription.Type.method.equals(uiActionDescription.getType())) {
             for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIMethodAction.class)) {
                 UIMethodAction uiMethodAction = method.getDeclaredAnnotation(UIMethodAction.class);
@@ -86,7 +90,7 @@ public class ItemController {
     }
 
     @SneakyThrows
-    static ActionResponse executeMethodAction(Method method, Object actionHolder, ApplicationContext applicationContext, BaseEntity actionEntity) {
+    static ActionResponseModel executeMethodAction(Method method, Object actionHolder, ApplicationContext applicationContext, BaseEntity actionEntity) {
         List<Object> objects = new ArrayList<>();
         for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
             if (BaseEntity.class.isAssignableFrom((Class) parameterType.getType())) {
@@ -96,7 +100,7 @@ public class ItemController {
             }
         }
         method.setAccessible(true);
-        return (ActionResponse) method.invoke(actionHolder, objects.toArray());
+        return (ActionResponseModel) method.invoke(actionHolder, objects.toArray());
     }
 
     static List<UIActionDescription> fetchUIActionsFromClass(Class<?> clazz) {
@@ -104,14 +108,13 @@ public class ItemController {
         if (clazz != null) {
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIMethodAction.class)) {
                 UIMethodAction uiMethodAction = method.getDeclaredAnnotation(UIMethodAction.class);
-                actions.add(new UIActionDescription().setType(UIActionDescription.Type.method).setName(uiMethodAction.value())
-                        .setResponseAction(uiMethodAction.responseAction().name()));
+                actions.add(new UIActionDescription().setType(UIActionDescription.Type.method).setName(uiMethodAction.value()));
             }
         }
         return actions;
     }
 
-    public static List<Option> loadOptions(HasEntityIdentifier entity, EntityContext entityContext, String fieldName) {
+    public static Collection<OptionModel> loadOptions(HasEntityIdentifier entity, EntityContext entityContext, String fieldName) {
         Method selectionMethodAnnotation = MethodUtils.getMethodsListWithAnnotation(entity.getClass(), UIFieldSelection.class)
                 .stream().filter(m -> InternalUtil.getMethodShortName(m).equals(fieldName)).findAny().orElse(null);
         if (selectionMethodAnnotation != null) {
@@ -124,17 +127,12 @@ public class ItemController {
     }
 
     @SneakyThrows
-    private static List<Option> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass,
-                                            ThrowingSupplier<Object, Exception> directOptionLoaderConsumer, HasEntityIdentifier entity) {
+    private static Collection<OptionModel> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass,
+                                                       ThrowingSupplier<Object, Exception> directOptionLoaderConsumer, HasEntityIdentifier entity) {
         UIFieldSelection uiFieldTargetSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
         if (uiFieldTargetSelection != null) {
             targetClass = uiFieldTargetSelection.value();
         }
-
-/*        if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
-            DynamicOptionLoader dynamicOptionLoader = (DynamicOptionLoader) targetClass.newInstance();
-            return dynamicOptionLoader.loadOptions(null, entityContext);
-        }*/
 
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
             DynamicOptionLoader dynamicOptionLoader = (DynamicOptionLoader) directOptionLoaderConsumer.get();
@@ -145,12 +143,12 @@ public class ItemController {
         }
 
         if (targetClass.isEnum()) {
-            return Stream.of(targetClass.getEnumConstants()).map(e -> Option.key(e.toString())).collect(Collectors.toList());
+            return Stream.of(targetClass.getEnumConstants()).map(e -> OptionModel.key(e.toString())).collect(Collectors.toList());
         }
 
         if (field.isAnnotationPresent(UIFieldBeanSelection.class)) {
             return entityContext.getBeansOfTypeWithBeanName(targetClass).keySet()
-                    .stream().map(Option::key).collect(Collectors.toList());
+                    .stream().map(OptionModel::key).collect(Collectors.toList());
         }
 
         return Collections.emptyList();
@@ -191,9 +189,9 @@ public class ItemController {
 
     @GetMapping("/{type}/types")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public Set<Option> getCreateNewItemOptions(@PathVariable("type") String type) {
+    public Set<OptionModel> getCreateNewItemOptions(@PathVariable("type") String type) {
         Class<?> entityClassByType = entityManager.getClassByType(type);
-        Set<Option> list = fetchCreateItemTypes(entityClassByType);
+        Set<OptionModel> list = fetchCreateItemTypes(entityClassByType);
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
             list.add(getUISideBarMenuOption(aClass));
         }
@@ -201,11 +199,11 @@ public class ItemController {
     }
 
     @GetMapping("type/{type}/options")
-    public List<Option> getItemOptionsByType(@PathVariable("type") String type) {
+    public List<OptionModel> getItemOptionsByType(@PathVariable("type") String type) {
         putTypeToEntityIfNotExists(type);
-        List<Option> list = new ArrayList<>();
+        List<OptionModel> list = new ArrayList<>();
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-            list.addAll(Option.list(entityContext.findAll(aClass)));
+            list.addAll(OptionModel.list(entityContext.findAll(aClass)));
         }
         Collections.sort(list);
 
@@ -301,7 +299,7 @@ public class ItemController {
     }
 
     @PostMapping("fireRouteAction")
-    public ActionResponse fireRouteAction(@RequestBody RouteActionRequest routeActionRequest) {
+    public ActionResponseModel fireRouteAction(@RequestBody RouteActionRequest routeActionRequest) {
         Class<? extends BaseEntity> aClass = baseEntitySimpleClasses.get(routeActionRequest.type);
         for (UISidebarButton button : aClass.getAnnotationsByType(UISidebarButton.class)) {
             if (button.handlerClass().getSimpleName().equals(routeActionRequest.handlerClass)) {
@@ -382,20 +380,20 @@ public class ItemController {
     }
 
     @GetMapping("{entityID}/{fieldName}/options")
-    public List loadSelectOptions(@PathVariable("entityID") String entityID,
-                                  @PathVariable("fieldName") String fieldName,
-                                  @RequestParam("fieldFetchType") String fieldFetchType) throws Exception {
-        BaseEntity entity = entityContext.getEntity(entityID);
+    public Collection<OptionModel> loadSelectOptions(@PathVariable("entityID") String entityID,
+                                                     @PathVariable("fieldName") String fieldName,
+                                                     @RequestParam("fieldFetchType") String fieldFetchType) throws Exception {
+        BaseEntity<?> entity = entityContext.getEntity(entityID);
         if (entity == null) {
             entity = getInstanceByClass(entityID); // i.e in case we load Widget
         }
-        Class entityClass = entity.getClass();
+        Class<?> entityClass = entity.getClass();
         if (StringUtils.isNotEmpty(fieldFetchType)) {
             String[] bundleAndClassName = fieldFetchType.split(":");
             entityClass = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
         }
 
-        List<Option> options = getEntityOptions(fieldName, entity, entityClass);
+        List<OptionModel> options = getEntityOptions(fieldName, entity, entityClass);
         if (options != null) {
             return options;
         }
@@ -403,9 +401,9 @@ public class ItemController {
         return loadOptions(entity, entityContext, fieldName);
     }
 
-    private List<Option> getEntityOptions(String fieldName, BaseEntity entity, Class entityClass) {
+    private List<OptionModel> getEntityOptions(String fieldName, BaseEntity<?> entity, Class<?> entityClass) {
         Field field = FieldUtils.getField(entityClass, fieldName, true);
-        Class returnType = field == null ? null : field.getType();
+        Class<?> returnType = field == null ? null : field.getType();
         if (returnType == null) {
             Method method = MethodUtils.getAccessibleMethod(entityClass, "get" + StringUtils.capitalize(fieldName));
             returnType = method == null ? null : method.getReturnType();
@@ -413,7 +411,7 @@ public class ItemController {
         if (returnType.getDeclaredAnnotation(Entity.class) != null) {
             Class<BaseEntity> clazz = (Class<BaseEntity>) returnType;
             List<? extends BaseEntity> selectedOptions = entityContext.findAll(clazz);
-            List<Option> options = selectedOptions.stream().map(t -> new Option(t.getEntityID(), t.getTitle())).collect(Collectors.toList());
+            List<OptionModel> options = selectedOptions.stream().map(t -> OptionModel.of(t.getEntityID(), t.getTitle())).collect(Collectors.toList());
 
             // make filtering/add messages/etc...
             Method filterOptionMethod = findFilterOptionMethod(fieldName, entity);
@@ -429,16 +427,16 @@ public class ItemController {
         return null;
     }
 
-    private Set<Option> fetchCreateItemTypes(Class<?> entityClassByType) {
+    private Set<OptionModel> fetchCreateItemTypes(Class<?> entityClassByType) {
         return classFinder.getClassesWithParent(entityClassByType)
                 .stream()
                 .map(this::getUISideBarMenuOption)
                 .collect(Collectors.toSet());
     }
 
-    private Option getUISideBarMenuOption(Class<?> aClass) {
+    private OptionModel getUISideBarMenuOption(Class<?> aClass) {
         UISidebarMenu uiSidebarMenu = aClass.getAnnotation(UISidebarMenu.class);
-        return uiSidebarMenu == null ? Option.key(aClass.getSimpleName()) : Option.key(aClass.getSimpleName());
+        return uiSidebarMenu == null ? OptionModel.key(aClass.getSimpleName()) : OptionModel.key(aClass.getSimpleName());
     }
 
     private void putTypeToEntityIfNotExists(String type) {

@@ -2,8 +2,8 @@ package org.touchhome.app.model.entity.widget;
 
 import org.springframework.data.util.Pair;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.json.Option;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.model.OptionModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,9 +11,9 @@ import java.util.stream.Collectors;
 
 public final class SeriesBuilder {
 
-    private static <T extends BaseEntity> List<Option> buildOptions(EntityContext entityContext, Class<T> type, String prefix) {
+    private static <T extends BaseEntity> List<OptionModel> buildOptions(EntityContext entityContext, Class<T> type, String prefix) {
         return entityContext.findAll(type).stream()
-                .map(e -> Option.of(e.getEntityID(), prefix + e.getTitle())).collect(Collectors.toList());
+                .map(e -> OptionModel.of(e.getEntityID(), prefix + e.getTitle())).collect(Collectors.toList());
     }
 
     public static ChartOptionsBuilder seriesOptions() {
@@ -34,8 +34,8 @@ public final class SeriesBuilder {
             return this;
         }
 
-        public List<Option> build(EntityContext entityContext) {
-            List<Option> list = new ArrayList<>();
+        public List<OptionModel> build(EntityContext entityContext) {
+            List<OptionModel> list = new ArrayList<>();
             for (Pair<Class<? extends BaseEntity>, String> pair : options) {
                 list.addAll(SeriesBuilder.buildOptions(entityContext, pair.getFirst(), pair.getSecond()));
             }

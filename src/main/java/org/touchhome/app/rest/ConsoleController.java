@@ -7,6 +7,7 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.access.annotation.Secured;
@@ -17,16 +18,20 @@ import org.touchhome.app.console.NamedConsolePlugin;
 import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
-import org.touchhome.app.service.ssh.SshProvider;
 import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
-import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.console.*;
+import org.touchhome.bundle.api.console.ConsolePlugin;
+import org.touchhome.bundle.api.console.ConsolePluginCommunicator;
+import org.touchhome.bundle.api.console.ConsolePluginEditor;
+import org.touchhome.bundle.api.console.ConsolePluginTable;
+import org.touchhome.bundle.api.console.dependency.ConsolePluginRequireZipDependency;
 import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.json.ActionResponse;
-import org.touchhome.bundle.api.json.Option;
+import org.touchhome.bundle.api.model.ActionResponseModel;
+import org.touchhome.bundle.api.model.FileModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
-import org.touchhome.bundle.api.setting.header.BundleHeaderSettingPlugin;
+import org.touchhome.bundle.api.model.OptionModel;
+import org.touchhome.bundle.api.service.SshProvider;
+import org.touchhome.bundle.api.setting.header.HeaderSettingPlugin;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.tritonus.share.ArraySet;
 
@@ -47,6 +52,31 @@ public class ConsoleController {
     private Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
     private Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
 
+    @SneakyThrows
+    static List<UIActionDescription> fetchUIHeaderActions(ConsolePlugin<?> consolePlugin) {
+        List<UIActionDescription> actions = new ArrayList<>();
+        Map<String, Class<? extends HeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
+        if (actionMap != null) {
+            for (Map.Entry<String, Class<? extends HeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
+                Class<? extends HeaderSettingPlugin<?>> settingClass = entry.getValue();
+                JSONObject metadata = new JSONObject().put("ref", SettingEntity.getKey(settingClass));
+                HeaderSettingPlugin<?> plugin = settingClass.newInstance();
+                putOpt(metadata, "fabc", plugin.fireActionsBeforeChange());
+
+                actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName(entry.getKey())
+                        .setMetadata(metadata));
+            }
+        }
+        if (consolePlugin instanceof ConsolePluginEditor) {
+            Class<? extends HeaderSettingPlugin<?>> nameHeaderAction = ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
+            if (nameHeaderAction != null) {
+                actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName("name")
+                        .setMetadata(new JSONObject().put("ref", SettingEntity.getKey(nameHeaderAction))));
+            }
+        }
+        return actions;
+    }
+
     public void postConstruct() {
         this.consolePluginsMap.clear();
         this.tabs.clear();
@@ -61,7 +91,7 @@ public class ConsoleController {
         List<ConsolePlugin> consolePlugins = new ArrayList<>(entityContext.getBeansOfType(ConsolePlugin.class));
         Collections.sort(consolePlugins);
         for (ConsolePlugin consolePlugin : consolePlugins) {
-            String bundleName = consolePlugin instanceof InlineLogsConsolePlugin ? "icl" : BundleEntryPoint.getBundleName(consolePlugin.getClass());
+            String bundleName = consolePlugin.getEntityID();
             if (bundleName == null) {
                 if (!(consolePlugin instanceof NamedConsolePlugin)) {
                     throw new IllegalArgumentException("Unable to find ConsolePlugin name for class: "
@@ -101,11 +131,11 @@ public class ConsoleController {
         return consolePlugin.getValue();
     }
 
-    @PostMapping(value = "tab/{tab}/{entityID}/action")
+    @PostMapping("tab/{tab}/{entityID}/action")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
-    public ActionResponse executeAction(@PathVariable("tab") String tab,
-                                        @PathVariable("entityID") String entityID,
-                                        @RequestBody UIActionDescription requestAction) {
+    public ActionResponseModel executeAction(@PathVariable("tab") String tab,
+                                             @PathVariable("entityID") String entityID,
+                                             @RequestBody UIActionDescription requestAction) {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
@@ -114,16 +144,34 @@ public class ConsoleController {
         } else if (consolePlugin instanceof ConsolePluginCommunicator) {
             return ((ConsolePluginCommunicator) consolePlugin).commandReceived(requestAction.getName());
         } else if (consolePlugin instanceof ConsolePluginEditor) {
-            return ((ConsolePluginEditor) consolePlugin).save(
-                    new ConsolePluginEditor.EditorContent(requestAction.getName(), requestAction.getMetadata().getString("content")));
+            if (requestAction.getMetadata().has("glyph")) {
+                return ((ConsolePluginEditor) consolePlugin).glyphClicked(requestAction.getMetadata().getString("glyph"));
+            }
+            if (StringUtils.isNotEmpty(requestAction.getName()) && requestAction.getMetadata().has("content")) {
+                return ((ConsolePluginEditor) consolePlugin).save(
+                        new FileModel(requestAction.getName(), requestAction.getMetadata().getString("content"), null, false));
+            }
         }
         throw new IllegalArgumentException("Unable to handle action for tab: " + tab);
     }
 
+    @PostMapping("tab/{tab}/update")
+    public void updateDependencies(@PathVariable("tab") String tab) throws Exception {
+        ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
+        if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
+            ConsolePluginRequireZipDependency dependency = (ConsolePluginRequireZipDependency) consolePlugin;
+            if (dependency.requireInstallDependencies()) {
+                entityContext.bgp().runWithProgress("install-deps-" + dependency.getClass().getSimpleName(),
+                        progressKey -> dependency.installDependency(entityContext, progressKey), null,
+                        () -> new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"));
+            }
+        }
+    }
+
     @GetMapping("tab/{tab}/{entityID}/{fieldName}/options")
-    public List<Option> loadSelectOptions(@PathVariable("tab") String tab,
-                                          @PathVariable("entityID") String entityID,
-                                          @PathVariable("fieldName") String fieldName) {
+    public Collection<OptionModel> loadSelectOptions(@PathVariable("tab") String tab,
+                                                     @PathVariable("entityID") String entityID,
+                                                     @PathVariable("fieldName") String fieldName) {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
@@ -147,6 +195,11 @@ public class ConsoleController {
             String parentName = consolePlugin.getParentTab();
             if (consolePlugin.isEnabled()) {
                 ConsoleTab consoleTab = new ConsoleTab(entry.getKey(), consolePlugin.getRenderType(), consolePlugin.getOptions());
+
+                if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
+                    consoleTab.getOptions().put("reqDeps", ((ConsolePluginRequireZipDependency<?>) consolePlugin).requireInstallDependencies());
+                }
+
                 if (parentName != null) {
                     parens.putIfAbsent(parentName, new ConsoleTab(parentName, null, consolePlugin.getOptions()));
                     parens.get(parentName).addChild(consoleTab);
@@ -172,33 +225,8 @@ public class ConsoleController {
     }
 
     @GetMapping("ssh/{token}")
-    public SessionStatusModel getSshStatus(@PathVariable("token") String token) {
+    public SshProvider.SessionStatusModel getSshStatus(@PathVariable("token") String token) {
         return this.entityContext.setting().getValue(ConsoleSshProviderSetting.class).getSshStatus(token);
-    }
-
-    @SneakyThrows
-    static List<UIActionDescription> fetchUIHeaderActions(ConsolePlugin<?> consolePlugin) {
-        List<UIActionDescription> actions = new ArrayList<>();
-        Map<String, Class<? extends BundleHeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
-        if (actionMap != null) {
-            for (Map.Entry<String, Class<? extends BundleHeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
-                Class<? extends BundleHeaderSettingPlugin<?>> settingClass = entry.getValue();
-                JSONObject metadata = new JSONObject().put("ref", SettingEntity.getKey(settingClass));
-                BundleHeaderSettingPlugin<?> plugin = settingClass.newInstance();
-                putOpt(metadata, "fabc", plugin.fireActionsBeforeChange());
-
-                actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName(entry.getKey())
-                        .setMetadata(metadata));
-            }
-        }
-        if (consolePlugin instanceof ConsolePluginEditor) {
-            Class<? extends BundleHeaderSettingPlugin<?>> nameHeaderAction = ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
-            if (nameHeaderAction != null) {
-                actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName("name")
-                        .setMetadata(new JSONObject().put("ref", SettingEntity.getKey(nameHeaderAction))));
-            }
-        }
-        return actions;
     }
 
     @Getter
@@ -213,7 +241,7 @@ public class ConsoleController {
         public ConsoleTab(String name, ConsolePlugin.RenderType renderType, JSONObject options) {
             this.name = name;
             this.renderType = renderType;
-            this.options = options;
+            this.options = options == null ? new JSONObject() : options;
         }
 
         public void addChild(ConsoleTab consoleTab) {
@@ -231,16 +259,5 @@ public class ConsoleController {
         Collection<?> list;
         List<EntityUIMetaData> uiFields;
         List<UIActionDescription> actions;
-    }
-
-    @Getter
-    @Setter
-    public static class SessionStatusModel {
-        private boolean closed;
-        private String closed_at;
-        private String created_at;
-        private String disconnected_at;
-        private String ssh_cmd_fmt;
-        private String ws_url_fmt;
     }
 }

@@ -1,9 +1,9 @@
 package org.touchhome.app.setting.dashboard;
 
-import org.touchhome.app.setting.SettingPlugin;
-import org.touchhome.bundle.api.setting.BundleSettingPluginSlider;
+import org.touchhome.app.setting.CoreSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPluginSlider;
 
-public class DashboardVerticalBlockCountSetting implements SettingPlugin<Integer>, BundleSettingPluginSlider {
+public class DashboardVerticalBlockCountSetting implements CoreSettingPlugin<Integer>, SettingPluginSlider {
 
     @Override
     public GroupKey getGroupKey() {

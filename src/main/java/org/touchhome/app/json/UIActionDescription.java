@@ -12,7 +12,6 @@ public class UIActionDescription {
     private Type type;
     private String name;
     private JSONObject metadata;
-    private String responseAction;
 
     public enum Type {
         header, method

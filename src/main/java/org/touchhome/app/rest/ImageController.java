@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.ImageManager;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.ImageEntity;
+import org.touchhome.bundle.api.entity.ImageEntity;
 
 @RestController
 @RequestMapping("/rest/image")

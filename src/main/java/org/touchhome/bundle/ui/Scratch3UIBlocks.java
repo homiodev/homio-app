@@ -5,11 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.setting.SendBroadcastSetting;
+import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.json.NotificationEntityJSON;
-import org.touchhome.bundle.api.scratch.*;
-import org.touchhome.bundle.api.util.NotificationType;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
+import org.touchhome.bundle.api.workspace.scratch.*;
+import org.touchhome.bundle.api.util.NotificationLevel;
 
 import java.util.function.BiConsumer;
 
@@ -26,7 +27,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block topImageHeaderCommand;
     private final Scratch3EventsBlocks scratch3EventsBlocks;
 
-    public Scratch3UIBlocks(EntityContext entityContext, Scratch3EventsBlocks scratch3EventsBlocks) {
+    public Scratch3UIBlocks(EntityContext entityContext, Scratch3EventsBlocks scratch3EventsBlocks, WorkspaceManager workspaceManager) {
         super("#7C4B96", entityContext, null, "ui");
         this.scratch3EventsBlocks = scratch3EventsBlocks;
 
@@ -60,8 +61,12 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
         this.postConstruct();
 
         entityContext.setting().listenValue(SendBroadcastSetting.class, "listen-ui-header-click", json -> {
-            String broadcastID = json.getString("name");
-            scratch3EventsBlocks.fireBroadcastEvent(broadcastID);
+            String workspaceEntityID = json.getString("entityID");
+            WorkspaceBlock workspaceBlock = workspaceManager.getWorkspaceBlockById(workspaceEntityID);
+            if (workspaceBlock != null) {
+                String broadcastID = workspaceBlock.getInputString("BROADCAST");
+                scratch3EventsBlocks.fireBroadcastEvent(broadcastID);
+            }
         });
     }
 
@@ -74,26 +79,21 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void createHeaderEntity(WorkspaceBlock workspaceBlock, boolean isFetchDuration) {
-        NotificationEntityJSON json = new NotificationEntityJSON(workspaceBlock.getId());
-        json.setValue(workspaceBlock.getInputString("MSG"));
+        String title = workspaceBlock.getInputString("MSG");
         String color = workspaceBlock.getInputString("COLOR");
-        String broadcast = workspaceBlock.getInputString("BROADCAST");
-        json.setName(broadcast);
+        // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
         if (isFetchDuration) {
-            entityContext.ui().showAlwaysOnViewNotification(json, workspaceBlock.getInputInteger("DURATION"), color, SendBroadcastSetting.class);
+            entityContext.ui().showAlwaysOnViewNotification(workspaceBlock.getId(), title, null, color, workspaceBlock.getInputInteger("DURATION"), SendBroadcastSetting.class);
         } else {
-            entityContext.ui().showAlwaysOnViewNotification(json, "fas fa-" + workspaceBlock.getInputString("ICON"), color, SendBroadcastSetting.class);
+            entityContext.ui().showAlwaysOnViewNotification(workspaceBlock.getId(), title, "fas fa-" + workspaceBlock.getInputString("ICON"), color, null, SendBroadcastSetting.class);
         }
-        workspaceBlock.onRelease(() -> entityContext.ui().hideAlwaysOnViewNotification(json.getEntityID()));
+        workspaceBlock.onRelease(() -> entityContext.ui().hideAlwaysOnViewNotification(workspaceBlock.getId()));
     }
 
     private void headerHandler(WorkspaceBlock workspaceBlock) {
-        NotificationEntityJSON json = new NotificationEntityJSON(workspaceBlock.getId());
-        json.setNotificationType(workspaceBlock.getMenuValue("TYPE", this.popupType).NotificationType);
-        json.setName(workspaceBlock.getInputString("NAME"));
-        json.setValue(workspaceBlock.getInputString("MSG"));
-        entityContext.ui().addHeaderNotification(json);
-        workspaceBlock.onRelease(() -> entityContext.ui().removeHeaderNotification(json));
+        entityContext.ui().addHeaderNotification(workspaceBlock.getId(), workspaceBlock.getInputString("NAME"),
+                workspaceBlock.getInputString("MSG"), workspaceBlock.getMenuValue("TYPE", this.popupType).level);
+        workspaceBlock.onRelease(() -> entityContext.ui().removeHeaderNotification(workspaceBlock.getId()));
     }
 
     private void showPopupHandler(WorkspaceBlock workspaceBlock) {
@@ -103,12 +103,12 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
     @RequiredArgsConstructor
     private enum PopupType {
-        INFO((context, msg) -> context.ui().sendInfoMessage(msg), org.touchhome.bundle.api.util.NotificationType.info),
-        WARN((context, msg) -> context.ui().sendWarningMessage(msg), org.touchhome.bundle.api.util.NotificationType.warning),
-        ERROR((context, msg) -> context.ui().sendErrorMessage(msg), org.touchhome.bundle.api.util.NotificationType.error),
-        SUCCESS((context, msg) -> context.ui().sendSuccessMessage(msg), org.touchhome.bundle.api.util.NotificationType.success);
+        INFO((context, msg) -> context.ui().sendInfoMessage(msg), NotificationLevel.info),
+        WARN((context, msg) -> context.ui().sendWarningMessage(msg), NotificationLevel.warning),
+        ERROR((context, msg) -> context.ui().sendErrorMessage(msg), NotificationLevel.error),
+        SUCCESS((context, msg) -> context.ui().sendSuccessMessage(msg), NotificationLevel.success);
 
         private final BiConsumer<EntityContext, String> popupHandler;
-        private final NotificationType NotificationType;
+        private final NotificationLevel level;
     }
 }

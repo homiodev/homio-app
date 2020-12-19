@@ -52,24 +52,23 @@ import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.Lang;
+import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.DeviceBaseEntity;
+import org.touchhome.bundle.api.entity.UserEntity;
+import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
+import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
+import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
-import org.touchhome.bundle.api.manager.En;
-import org.touchhome.bundle.api.manager.LoggerManager;
-import org.touchhome.bundle.api.model.BaseEntity;
-import org.touchhome.bundle.api.model.DeviceBaseEntity;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
-import org.touchhome.bundle.api.model.UserEntity;
-import org.touchhome.bundle.api.model.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.model.workspace.bool.WorkspaceBooleanEntity;
-import org.touchhome.bundle.api.model.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
-import org.touchhome.bundle.api.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.setting.BundleSettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import javax.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
@@ -81,7 +80,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.model.UserEntity.ADMIN_USER;
+import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.*;
 
 @Log4j2
@@ -217,6 +216,7 @@ public class EntityContextImpl implements EntityContext {
         this.bgp().schedule("check-app-version", 1, TimeUnit.DAYS, this::fetchReleaseVersion, true);
         this.event().addEventAndFire("app-started", "App started");
 
+        // install autossh. Should refactor to move somewhere else
         this.bgp().runOnceOnInternetUp("install-software", () -> {
             LinuxHardwareRepository repository = getBean(LinuxHardwareRepository.class);
             if (!repository.isSoftwareInstalled("autossh")) {
@@ -553,8 +553,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private void registerEntityListeners() {
-        this.showEntityState = setting().getValue(SystemShowEntityStateSetting.class);
-        setting().listenValue(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
+        setting().listenValueAndGet(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
 
         SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
         EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
@@ -599,7 +598,17 @@ public class EntityContextImpl implements EntityContext {
             ui().sendNotification("-listen-items", new JSONObject().put("type", type).put("value", entity));
         }
         if (showEntityState) {
-            this.ui().sendNotification("-toastr", new JSONObject().put("type", type).put("value", entity));
+            switch (type) {
+                case "removed":
+                    this.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED");
+                    break;
+                case "created":
+                    this.ui().sendInfoMessage("TOASTR.ENTITY_INSERTED");
+                    break;
+                case "changed":
+                    this.ui().sendInfoMessage("TOASTR.ENTITY_UPDATED");
+                    break;
+            }
         }
     }
 
@@ -648,9 +657,9 @@ public class EntityContextImpl implements EntityContext {
 
     private void updateBeans(BundleContext bundleContext, ApplicationContext context, boolean addBundle) {
         log.info("Starting update all app bundles");
-        En.clear();
-        fetchBundleSettingPlugins(bundleContext, addBundle);
-        En.DEFAULT_LANG = setting().getValue(SystemLanguageSetting.class).name();
+        Lang.clear();
+        fetchSettingPlugins(bundleContext, addBundle);
+        Lang.DEFAULT_LANG = setting().getValue(SystemLanguageSetting.class).name();
 
         Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values()
                 .stream().collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
@@ -684,9 +693,9 @@ public class EntityContextImpl implements EntityContext {
         log.info("Finish update all app bundles");
     }
 
-    private void fetchBundleSettingPlugins(BundleContext bundleContext, boolean addBundle) {
+    private void fetchSettingPlugins(BundleContext bundleContext, boolean addBundle) {
         String basePackage = bundleContext == null ? null : bundleContext.getBasePackage();
-        for (Class<? extends BundleSettingPlugin> settingPlugin : classFinder.getClassesWithParent(BundleSettingPlugin.class, null, basePackage)) {
+        for (Class<? extends SettingPlugin> settingPlugin : classFinder.getClassesWithParent(SettingPlugin.class, null, basePackage)) {
             setting().updatePlugins(settingPlugin, addBundle);
         }
     }

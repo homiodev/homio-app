@@ -3,7 +3,7 @@ package org.touchhome.app.json.jsog;
 import com.fasterxml.jackson.annotation.ObjectIdGenerator;
 import com.fasterxml.jackson.annotation.ObjectIdResolver;
 import com.fasterxml.jackson.annotation.SimpleObjectIdResolver;
-import org.touchhome.bundle.api.model.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntity;
 
 import java.util.HashMap;
 import java.util.Map;
