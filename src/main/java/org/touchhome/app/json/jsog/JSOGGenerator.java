@@ -2,6 +2,7 @@ package org.touchhome.app.json.jsog;
 
 import com.fasterxml.jackson.annotation.ObjectIdGenerator;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 
 /**
  * Use this as an object id generator and your class will serialize as jsog.
@@ -50,7 +51,7 @@ public class JSOGGenerator extends ObjectIdGenerator<JSOGRef> {
         if (forPojo instanceof BaseEntity) {
             return new JSOGRef(((BaseEntity) forPojo).getEntityID());
         }
-        throw new IllegalStateException("forPojo is not a Model but: " + forPojo.getClass().getSimpleName());
+        throw new ServerException("forPojo is not a Model but: " + forPojo.getClass().getSimpleName());
     }
 
     @Override

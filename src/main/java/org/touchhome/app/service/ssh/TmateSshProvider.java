@@ -9,6 +9,7 @@ import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.service.SshProvider;
 
@@ -85,7 +86,7 @@ public class TmateSshProvider implements SshProvider {
     @SneakyThrows
     private void checkHardware() {
         if (!EntityContext.isLinuxEnvironment()) {
-            throw new IllegalStateException("Unable to run ssh on non linux environment");
+            throw new ServerException("Unable to run ssh on non linux environment");
         }
         if (!wirelessHardwareRepository.isSshGenerated()) {
             wirelessHardwareRepository.generateSSHKeys();
@@ -97,7 +98,7 @@ public class TmateSshProvider implements SshProvider {
 
             String tmateVersion = sshHardwareRepository.getTmateVersion();
             if (tmateVersion == null) {
-                throw new RuntimeException("Unable to find tmate");
+                throw new ServerException("Unable to find tmate");
             } else {
                 log.warn("Tmate installed version: {}" + tmateVersion);
             }

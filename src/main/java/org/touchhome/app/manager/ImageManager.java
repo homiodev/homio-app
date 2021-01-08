@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.repository.ImageRepository;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.ImageEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.imageio.ImageIO;
@@ -72,7 +73,7 @@ public class ImageManager {
             return entityContext.save(imageEntity);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new ServerException(e);
         }
     }
 }

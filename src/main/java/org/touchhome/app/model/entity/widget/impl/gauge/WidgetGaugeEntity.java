@@ -3,9 +3,9 @@ package org.touchhome.app.model.entity.widget.impl.gauge;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.app.model.entity.widget.HasDataSource;
+import org.touchhome.bundle.api.entity.widget.HasWidgetDataSource;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
-import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
@@ -27,7 +27,7 @@ import java.util.List;
 @Getter
 @Setter
 @Accessors(chain = true)
-public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> implements HasDataSource {
+public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> implements HasWidgetDataSource {
 
     @UIField(label = "widget.gauge_dataSource", order = 14, required = true)
     @UIFieldSelection(GaugeDataSourceDynamicOptionLoader.class)
@@ -35,7 +35,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> imple
 
     @UIField(order = 15)
     @Enumerated(EnumType.STRING)
-    private GaugeType gaugeType = GaugeType.arch;
+    private GaugeType displayType = GaugeType.arch;
 
     @UIField(order = 16, label = "gauge.min")
     private Integer min = 0;

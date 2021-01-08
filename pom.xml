@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <artifactId>touchhome-core</artifactId>
     <url>https://github.com/touchhome/touchhome-core</url>
@@ -20,6 +21,7 @@
     </scm>
 
     <properties>
+        <start-class>org.touchhome.app.TouchHomeApplication</start-class>
         <touchhome-bundle-api.version>1.2.0-SNAPSHOT</touchhome-bundle-api.version>
         <touchhome-bundle.version>1.2.0-SNAPSHOT</touchhome-bundle.version>
     </properties>
@@ -208,6 +210,24 @@
 
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-video</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.sarxos</groupId>
+            <artifactId>webcam-capture</artifactId>
+            <version>0.3.12</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.sarxos</groupId>
+            <artifactId>webcam-capture-driver-ipcam</artifactId>
+            <version>0.3.12</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
             <artifactId>touchhome-bundle-raspberry</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>
@@ -281,12 +301,6 @@
             <groupId>uk.co.caprica</groupId>
             <artifactId>vlcj</artifactId>
             <version>3.10.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.sarxos</groupId>
-            <artifactId>webcam-capture</artifactId>
-            <version>0.3.11</version>
         </dependency>
 
         <dependency>
@@ -460,6 +474,8 @@
                 <configuration>
                     <fork>true</fork>
                     <skip>false</skip>
+                    <mainClass>${start-class}</mainClass>
+                    <layout>ZIP</layout>
                 </configuration>
                 <executions>
                     <execution>
@@ -496,6 +512,20 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <profiles>
+        <profile>
+            <id>intellij-properties-launcher</id>
+
+            <dependencies>
+                <dependency>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-loader</artifactId>
+                </dependency>
+            </dependencies>
+
+        </profile>
+    </profiles>
 
     <repositories>
         <repository>

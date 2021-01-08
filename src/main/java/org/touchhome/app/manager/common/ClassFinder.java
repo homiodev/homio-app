@@ -2,6 +2,7 @@ package org.touchhome.app.manager.common;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationContext;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.extloader.BundleClassLoaderHolder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import java.lang.annotation.Annotation;
@@ -43,7 +45,7 @@ public class ClassFinder {
                 try {
                     foundClasses.add((Class<? extends T>) scanner.getResourceLoader().getClassLoader().loadClass(bd.getBeanClassName()));
                 } catch (ClassNotFoundException e) {
-                    throw new RuntimeException(e);
+                    throw new ServerException(e);
                 }
             }
         }
@@ -63,16 +65,13 @@ public class ClassFinder {
     }
 
     public <T> List<Class<? extends T>> getClassesWithParent(Class<T> parentClass, String className, String basePackage) {
-        if (basePackage == null) {
-            basePackage = "org.touchhome";
-        }
         List<Class<? extends T>> foundClasses = new ArrayList<>();
         for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(false)) {
             scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
 
-            getClassesWithParentFromPackage(basePackage, className, scanner, foundClasses);
-            // TODO: refactor
-            if (foundClasses.isEmpty()) {
+            getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.touchhome"), className, scanner, foundClasses);
+
+            if (foundClasses.isEmpty() && basePackage == null) {
                 getClassesWithParentFromPackage("com.pi4j", className, scanner, foundClasses);
             }
         }
@@ -121,7 +120,7 @@ public class ClassFinder {
             }
         }
 
-        throw new IllegalStateException("Unable find repository for entity class: " + clazz);
+        throw new ServerException("Unable find repository for entity class: " + clazz);
     }
 
     private <T> void getClassesWithParentFromPackage(String basePackage, String className, ClassPathScanningCandidateComponentProvider scanner, List<Class<? extends T>> foundClasses) {

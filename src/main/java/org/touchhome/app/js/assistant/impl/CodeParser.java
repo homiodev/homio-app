@@ -9,6 +9,7 @@ import org.touchhome.app.js.assistant.model.Completion;
 import org.touchhome.app.js.assistant.model.CompletionItemKind;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.utils.JavaScriptBinder;
+import org.touchhome.bundle.api.exception.ServerException;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
@@ -226,7 +227,7 @@ public class CodeParser {
                     CompletionItemKind.Method);
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RuntimeException(ex);
+            throw new ServerException(ex);
         }
     }
 
@@ -252,7 +253,7 @@ public class CodeParser {
                     CompletionItemKind.Method);
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RuntimeException(ex);
+            throw new ServerException(ex);
         }
     }
 

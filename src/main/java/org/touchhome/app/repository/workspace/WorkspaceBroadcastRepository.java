@@ -6,6 +6,7 @@ import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.repository.widget.HasFetchChartSeries;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import java.util.Date;
@@ -33,12 +34,12 @@ public class WorkspaceBroadcastRepository extends AbstractRepository<WorkspaceBr
             case Count:
                 return buildValuesQuery(em, "WorkspaceBroadcastEntity.fetchCount", source, from, to).getSingleResult();
         }
-        throw new RuntimeException("Not implemented exception");
+        throw new ServerException("Not implemented exception");
     }
 
     @Override
     public Date getMinDate(BaseEntity source) {
-        throw new RuntimeException("Not implemented exception");
+        throw new ServerException("Not implemented exception");
 /*        return em.createNamedQuery("WorkspaceBackupEntity.fetchMinDate", Date.class)
                 .setParameter("source", source).getSingleResult();*/
     }

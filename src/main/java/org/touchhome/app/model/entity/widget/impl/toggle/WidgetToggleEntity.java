@@ -2,7 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.toggle;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -22,7 +22,7 @@ public class WidgetToggleEntity extends WidgetBaseEntity<WidgetToggleEntity> {
 
     @UIField(order = 32)
     @Enumerated(EnumType.STRING)
-    private ToggleType toggleType = ToggleType.Slide;
+    private ToggleType displayType = ToggleType.Slide;
 
     @Override
     public String getImage() {

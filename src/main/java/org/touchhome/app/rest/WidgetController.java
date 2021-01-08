@@ -1,9 +1,12 @@
 package org.touchhome.app.rest;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.util.Pair;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
@@ -11,10 +14,11 @@ import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
-import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
-import org.touchhome.app.model.entity.widget.impl.WidgetTabEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetButtonSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartPeriod;
+import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
+import org.touchhome.app.repository.widget.impl.chart.WidgetBarChartSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity;
@@ -29,14 +33,17 @@ import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.repository.widget.HasFetchChartSeries;
+import org.touchhome.app.repository.widget.HasLastNumberValueRepository;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetTabEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -54,17 +61,18 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIVILEGED_USER_ROLE;
 @RequiredArgsConstructor
 public class WidgetController {
 
-    private final List<WidgetBaseEntity> widgetBaseEntities;
+    private final List<WidgetBaseEntity<?>> widgetBaseEntities;
     private final EntityContext entityContext;
     private final Scratch3EventsBlocks scratch3EventsBlocks;
     private final ScriptManager scriptManager;
+    private final ObjectMapper objectMapper;
 
     @SneakyThrows
     @GetMapping("plugins")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<AvailableWidget> getAvailableWidgets() {
         List<AvailableWidget> options = new ArrayList<>();
-        for (WidgetBaseEntity entity : this.widgetBaseEntities) {
+        for (WidgetBaseEntity<?> entity : this.widgetBaseEntities) {
             options.add(new AvailableWidget(entity.getType(), entity.getImage(), null));
         }
         AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", new ArrayList<>());
@@ -86,15 +94,38 @@ public class WidgetController {
     @GetMapping("button/{entityID}/handle")
     public void handleButtonClick(@PathVariable("entityID") String entityID) {
         WidgetButtonSeriesEntity entity = entityContext.getEntity(entityID);
-        BaseEntity source = entityContext.getEntity(entity.getDataSource());
+        BaseEntity<?> source = entityContext.getEntity(entity.getDataSource());
         if (source instanceof WorkspaceBroadcastEntity) {
             scratch3EventsBlocks.broadcastEvent((WorkspaceBroadcastEntity) source);
         } else if (source instanceof WorkspaceBooleanEntity) {
             WorkspaceBooleanEntity wbEntity = (WorkspaceBooleanEntity) source;
             entityContext.save(wbEntity.inverseValue());
         } else {
-            throw new RuntimeException("Unable to find handler for button");
+            throw new ServerException("Unable to find handler for button");
         }
+    }
+
+    @GetMapping("bar/{entityID}/series")
+    public Set<BarSeries> getBarSeries(@PathVariable("entityID") String entityID,
+                                       @RequestParam(value = "liveEntity", required = false) String liveEntity) throws JsonProcessingException {
+        WidgetBarChartEntity entity = entityContext.getEntity(entityID);
+        if (liveEntity != null) {
+            entity = objectMapper.readValue(liveEntity, entity.getClass());
+        }
+        Set<BarSeries> series = new LinkedHashSet<>();
+        for (WidgetBarChartSeriesEntity item : entity.getSeries()) {
+            if (item.getDataSource() != null) {
+                BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
+                HasLastNumberValueRepository repository = getRepository(source, HasLastNumberValueRepository.class);
+                double value = repository.getLastNumberValue(source);
+                BarSeries barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()), value);
+                int i = 1;
+                while (!series.add(barSeries)) {
+                    barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()) + "(" + i++ + ")", value);
+                }
+            }
+        }
+        return series;
     }
 
     @GetMapping("line/{entityID}/series")
@@ -103,8 +134,8 @@ public class WidgetController {
         WidgetLineChartEntity entity = entityContext.getEntity(entityID);
         List<ChartSeries> series = new ArrayList<>();
         for (WidgetLineChartSeriesEntity item : entity.getSeries()) {
-            BaseEntity source = entityContext.getEntity(item.getDataSource());
-            HasFetchChartSeries repository = getHasFetchChartRepository(source);
+            BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
+            HasFetchChartSeries repository = getRepository(source, HasFetchChartSeries.class);
 
             ChartPeriod chartPeriod = ChartPeriod.fromValue(period);
             Pair<Date, Date> range = chartPeriod.getDateRange();
@@ -127,8 +158,8 @@ public class WidgetController {
         WidgetPieChartEntity entity = entityContext.getEntity(entityID);
         List<PieSeries> series = new ArrayList<>();
         for (WidgetPieChartSeriesEntity item : entity.getSeries()) {
-            BaseEntity source = entityContext.getEntity(item.getDataSource());
-            HasFetchChartSeries repository = getHasFetchChartRepository(source);
+            BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
+            HasFetchChartSeries repository = getRepository(source, HasFetchChartSeries.class);
 
             ChartPeriod chartPeriod = ChartPeriod.fromValue(period);
             Pair<Date, Date> range = chartPeriod.getDateRange();
@@ -150,7 +181,7 @@ public class WidgetController {
         WidgetSliderEntity entity = entityContext.getEntity(entityID);
         List<Float> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetSliderSeriesEntity item : entity.getSeries()) {
-            BaseEntity dataSource = entityContext.getEntity(item.getDataSource());
+            BaseEntity<?> dataSource = entityContext.getEntity(item.getDataSource());
             values.add(fetchVariableValue(dataSource));
         }
         return values;
@@ -161,11 +192,11 @@ public class WidgetController {
         WidgetToggleEntity entity = entityContext.getEntity(entityID);
         List<Boolean> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetToggleSeriesEntity item : entity.getSeries()) {
-            BaseEntity dataSource = entityContext.getEntity(item.getDataSource());
+            BaseEntity<?> dataSource = entityContext.getEntity(item.getDataSource());
             if (dataSource instanceof WorkspaceBooleanEntity) {
                 values.add(((WorkspaceBooleanEntity) dataSource).getValue());
             } else {
-                throw new RuntimeException("Unable to find handler for fetch value from <Data Source>: " + dataSource.getTitle());
+                throw new ServerException("Unable to find handler for fetch value from <Data Source>: " + dataSource.getTitle());
             }
         }
         return values;
@@ -176,7 +207,7 @@ public class WidgetController {
         WidgetDisplayEntity entity = entityContext.getEntity(entityID);
         List<Pair<Object, Date>> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetDisplaySeriesEntity item : entity.getSeries()) {
-            BaseEntity source = entityContext.getEntity(item.getDataSource());
+            BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
             Object val;
             if (source instanceof WorkspaceBooleanEntity) {
                 val = ((WorkspaceBooleanEntity) source).getValue();
@@ -195,13 +226,13 @@ public class WidgetController {
         if (series == null) {
             throw new NotFoundException("Unable to find series: " + seriesEntityID + " for entity: " + entity.getTitle());
         }
-        BaseEntity source = entityContext.getEntity(series.getDataSource());
+        BaseEntity<?> source = entityContext.getEntity(series.getDataSource());
         if (source instanceof WorkspaceStandaloneVariableEntity) {
             entityContext.save(((WorkspaceStandaloneVariableEntity) source).setValue(integerValue.value));
         } else if (source instanceof WorkspaceVariableEntity) {
             entityContext.save(((WorkspaceVariableEntity) source).setValue(integerValue.value));
         } else {
-            throw new RuntimeException("Unable to find handler for set value for slider");
+            throw new ServerException("Unable to find handler for set value for slider");
         }
     }
 
@@ -212,11 +243,11 @@ public class WidgetController {
         if (series == null) {
             throw new NotFoundException("Unable to find series: " + seriesEntityID + " for entity: " + entity.getTitle());
         }
-        BaseEntity source = entityContext.getEntity(series.getDataSource());
+        BaseEntity<?> source = entityContext.getEntity(series.getDataSource());
         if (source instanceof WorkspaceBooleanEntity) {
             entityContext.save(((WorkspaceBooleanEntity) source).setValue(booleanValue.value));
         } else {
-            throw new RuntimeException("Unable to find handler for set value for slider");
+            throw new ServerException("Unable to find handler for set value for slider");
         }
     }
 
@@ -226,13 +257,13 @@ public class WidgetController {
                 .stream().filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId)).collect(Collectors.toList());
 
         boolean updated = false;
-        for (WidgetBaseEntity widget : widgets) {
+        for (WidgetBaseEntity<?> widget : widgets) {
             updated |= widget.updateRelations(entityContext);
         }
         if (updated) {
             widgets = entityContext.findAll(WidgetBaseEntity.class);
         }
-        for (WidgetBaseEntity widget : widgets) {
+        for (WidgetBaseEntity<?> widget : widgets) {
             if (widget instanceof WidgetJsEntity) {
                 WidgetJsEntity jsEntity = (WidgetJsEntity) widget;
                 try {
@@ -255,7 +286,7 @@ public class WidgetController {
 
     @Secured(PRIVILEGED_USER_ROLE)
     @PostMapping("create/{tabId}/{type}")
-    public BaseEntity createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
+    public BaseEntity<?> createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
         if (widgetTabEntity == null) {
@@ -263,7 +294,7 @@ public class WidgetController {
         }
 
         Class<? extends BaseEntity> typeClass = EntityContextImpl.baseEntityNameToClass.get(type);
-        WidgetBaseEntity baseEntity = (WidgetBaseEntity) typeClass.getConstructor().newInstance();
+        WidgetBaseEntity<?> baseEntity = (WidgetBaseEntity<?>) typeClass.getConstructor().newInstance();
 
         baseEntity.setWidgetTabEntity(widgetTabEntity);
         return entityContext.save(baseEntity);
@@ -271,7 +302,7 @@ public class WidgetController {
 
     @Secured(PRIVILEGED_USER_ROLE)
     @PostMapping("create/{tabId}/{type}/{bundle}")
-    public BaseEntity createExtraWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type, @PathVariable("bundle") String bundle) {
+    public BaseEntity<?> createExtraWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type, @PathVariable("bundle") String bundle) {
         log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, bundle: <{}>", type, tabId, bundle);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
         if (widgetTabEntity == null) {
@@ -320,12 +351,12 @@ public class WidgetController {
     @SneakyThrows
     @PostMapping("tab/{name}")
     public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
-        BaseEntity widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
+        BaseEntity<?> widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
             widgetTab = entityContext.save(new WidgetTabEntity().computeEntityID(() -> name));
             return OptionModel.of(widgetTab.getEntityID(), widgetTab.getName());
         }
-        throw new IllegalStateException("Widget tab with same name already exists");
+        throw new ServerException("Widget tab with same name already exists");
     }
 
     @SneakyThrows
@@ -353,29 +384,29 @@ public class WidgetController {
     }
 
     private WidgetTabEntity getWidgetTabEntity(String tabId) {
-        BaseEntity baseEntity = entityContext.getEntity(tabId);
+        BaseEntity<?> baseEntity = entityContext.getEntity(tabId);
         if (baseEntity instanceof WidgetTabEntity) {
             return (WidgetTabEntity) baseEntity;
         }
-        throw new IllegalStateException("Unable to find widget tab with id: " + tabId);
+        throw new ServerException("Unable to find widget tab with id: " + tabId);
     }
 
-    private Float fetchVariableValue(BaseEntity dataSource) {
+    private Float fetchVariableValue(BaseEntity<?> dataSource) {
         if (dataSource instanceof WorkspaceStandaloneVariableEntity) {
             return ((WorkspaceStandaloneVariableEntity) dataSource).getValue();
         } else if (dataSource instanceof WorkspaceVariableEntity) {
             return ((WorkspaceVariableEntity) dataSource).getValue();
         } else {
-            throw new RuntimeException("Unable to find handler for fetch value from <Data Source>: " + dataSource.getTitle());
+            throw new ServerException("Unable to find handler for fetch value from <Data Source>: " + dataSource.getTitle());
         }
     }
 
-    private HasFetchChartSeries getHasFetchChartRepository(BaseEntity source) {
-        AbstractRepository abstractRepository = entityContext.getRepository(source).orElseThrow(() -> new NotFoundException("Repository not found"));
-        if (!(abstractRepository instanceof HasFetchChartSeries)) {
-            throw new RuntimeException("Repository: " + abstractRepository.getClass().getSimpleName() + " must implement <HasFetchChartSeries> interface");
+    private <T> T getRepository(BaseEntity<?> source, Class<T> repositoryAbility) {
+        AbstractRepository<?> abstractRepository = entityContext.getRepository(source).orElseThrow(() -> new NotFoundException("Repository not found"));
+        if (!repositoryAbility.isAssignableFrom(abstractRepository.getClass())) {
+            throw new ServerException("Repository: " + abstractRepository.getClass().getSimpleName() + " must implement <" + repositoryAbility.getSimpleName() + "> interface");
         }
-        return (HasFetchChartSeries) abstractRepository;
+        return (T) abstractRepository;
     }
 
    /* @RequestMapping(value = "/getWidget", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -439,6 +470,26 @@ public class WidgetController {
         @AllArgsConstructor
         private static class Extra {
             private String code;
+        }
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private static class BarSeries {
+        private String name;
+        private Object value;
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            BarSeries barSeries = (BarSeries) o;
+            return name.equals(barSeries.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name);
         }
     }
 

@@ -1,13 +1,15 @@
-package org.touchhome.app.model.entity.widget.impl.js;
+package org.touchhome.app.repository.widget.impl;
 
 import org.springframework.stereotype.Repository;
+import org.touchhome.app.model.entity.widget.impl.js.WidgetJsEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
+// TODO: not tested!!!!!!!!!!!
 @Repository
 public class WidgetJsRepository extends AbstractRepository<WidgetJsEntity> {
 
     public WidgetJsRepository() {
-        super(WidgetJsEntity.class, "mbw_");
+        super(WidgetJsEntity.class, "wtjs_");
     }
 
     /* @Override

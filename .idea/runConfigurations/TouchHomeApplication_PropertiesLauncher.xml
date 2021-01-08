@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="TouchHomeApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+  <configuration default="false" name="TouchHomeApplication-PropertiesLauncher" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <module name="touchhome-core" />
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="false" />
@@ -11,7 +11,8 @@
         <ENTRY IS_ENABLED="true" PARSER="runconfig" />
       </ENTRIES>
     </extension>
-    <option name="SPRING_BOOT_MAIN_CLASS" value="org.touchhome.app.TouchHomeApplication" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="org.springframework.boot.loader.PropertiesLauncher" />
+    <option name="VM_PARAMETERS" value="-Dloader.main=org.touchhome.app.TouchHomeApplication -Dloader.path=c:\Users\rma\touchhome\external_jars\" />
     <option name="ALTERNATIVE_JRE_PATH" />
     <method v="2">
       <option name="Make" enabled="true" />

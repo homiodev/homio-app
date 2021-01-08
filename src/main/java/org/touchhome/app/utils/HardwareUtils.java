@@ -110,7 +110,7 @@ public final class HardwareUtils {
     private static void copyResources() {
         URL url = HardwareUtils.class.getClassLoader().getResource("asm_files");
         if (url == null) {
-            throw new IllegalStateException("Unable to find 'asm_files' directory.");
+            throw new RuntimeException("Unable to find 'asm_files' directory.");
         }
         copyResources(url, "/BOOT-INF/classes/asm_files");
     }

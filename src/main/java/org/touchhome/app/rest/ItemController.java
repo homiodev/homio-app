@@ -1,7 +1,6 @@
 package org.touchhome.app.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pivovarit.function.ThrowingSupplier;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -21,7 +20,6 @@ import org.touchhome.app.manager.ImageManager;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.EntityManager;
-import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.bundle.api.EntityContext;
@@ -29,7 +27,9 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.ImageEntity;
 import org.touchhome.bundle.api.entity.micro.MicroControllerBaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.HasPosition;
@@ -42,6 +42,7 @@ import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldClassSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 import org.touchhome.bundle.api.ui.method.UIMethodAction;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -53,6 +54,7 @@ import java.awt.image.BufferedImage;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -119,27 +121,30 @@ public class ItemController {
                 .stream().filter(m -> InternalUtil.getMethodShortName(m).equals(fieldName)).findAny().orElse(null);
         if (selectionMethodAnnotation != null) {
             return loadOptions(selectionMethodAnnotation, entityContext, selectionMethodAnnotation.getReturnType(),
-                    () -> null/* TODO: selectionMethodAnnotation.invoke(entity)*/, entity);
+                    entity);
         } else {
             Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
-            return loadOptions(field, entityContext, field.getType(), () -> field.get(entity), entity);
+            UIFieldSelection uiFieldSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
+            if (uiFieldSelection != null) {
+                return loadOptions(field, entityContext, field.getType(), entity);
+            }
+            return loadOptions(field, entityContext, field.getType(), entity);
         }
     }
 
     @SneakyThrows
     private static Collection<OptionModel> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass,
-                                                       ThrowingSupplier<Object, Exception> directOptionLoaderConsumer, HasEntityIdentifier entity) {
+                                                       HasEntityIdentifier entity) {
         UIFieldSelection uiFieldTargetSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
         if (uiFieldTargetSelection != null) {
             targetClass = uiFieldTargetSelection.value();
         }
-
+        DynamicOptionLoader<?> dynamicOptionLoader = null;
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
-            DynamicOptionLoader dynamicOptionLoader = (DynamicOptionLoader) directOptionLoaderConsumer.get();
-            if (dynamicOptionLoader == null) {
-                dynamicOptionLoader = (DynamicOptionLoader) targetClass.newInstance();
-            }
-            return dynamicOptionLoader.loadOptions(null, entity instanceof BaseEntity ? (BaseEntity) entity : null, entityContext);
+            dynamicOptionLoader = (DynamicOptionLoader<?>) targetClass.newInstance();
+        }
+        if (dynamicOptionLoader != null) {
+            return dynamicOptionLoader.loadOptions(null, entity instanceof BaseEntity ? (BaseEntity<?>) entity : null, entityContext);
         }
 
         if (targetClass.isEnum()) {
@@ -149,6 +154,15 @@ public class ItemController {
         if (field.isAnnotationPresent(UIFieldBeanSelection.class)) {
             return entityContext.getBeansOfTypeWithBeanName(targetClass).keySet()
                     .stream().map(OptionModel::key).collect(Collectors.toList());
+        } else if (field.isAnnotationPresent(UIFieldClassSelection.class)) {
+            ClassFinder classFinder = entityContext.getBean(ClassFinder.class);
+            UIFieldClassSelection uiFieldClassSelection = field.getDeclaredAnnotation(UIFieldClassSelection.class);
+            List<Class<?>> list = new ArrayList<>();
+            for (String basePackage : uiFieldClassSelection.basePackages()) {
+                list.addAll(classFinder.getClassesWithParent(uiFieldClassSelection.value(), null, basePackage));
+            }
+            Predicate<Class<?>> predicate = TouchHomeUtils.newInstance(uiFieldClassSelection.filter());
+            return list.stream().filter(predicate).map(c -> OptionModel.of(c.getName(), c.getSimpleName())).collect(Collectors.toList());
         }
 
         return Collections.emptyList();
@@ -212,7 +226,7 @@ public class ItemController {
 
     @PostMapping(value = "{entityID}/action")
     public Object executeAction(@PathVariable("entityID") String entityID, @RequestBody UIActionDescription uiActionDescription) {
-        BaseEntity entity = entityContext.getEntity(entityID);
+        BaseEntity<?> entity = entityContext.getEntity(entityID);
         return ItemController.executeAction(uiActionDescription, entity, applicationContext, entity);
     }
 
@@ -224,19 +238,19 @@ public class ItemController {
     }
 
     @PostMapping("{type}")
-    public BaseEntity create(@PathVariable("type") String type) throws Exception {
+    public BaseEntity<?> create(@PathVariable("type") String type) throws Exception {
         log.debug("Request creating entity by type: <{}>", type);
         Class<? extends BaseEntity> typeClass = EntityContextImpl.baseEntityNameToClass.get(type);
         if (typeClass == null) {
             throw new IllegalArgumentException("Unable to find base entity with type: " + type);
         }
-        BaseEntity baseEntity = typeClass.getConstructor().newInstance();
+        BaseEntity<?> baseEntity = typeClass.getConstructor().newInstance();
         return entityContext.save(baseEntity);
     }
 
     @PostMapping("{entityID}/copy")
-    public BaseEntity copyEntityByID(@PathVariable("entityID") String entityID) {
-        BaseEntity entity = entityContext.getEntity(entityID);
+    public BaseEntity<?> copyEntityByID(@PathVariable("entityID") String entityID) {
+        BaseEntity<?> entity = entityContext.getEntity(entityID);
         entity.copy();
         return entityContext.save(entity);
     }
@@ -250,17 +264,17 @@ public class ItemController {
     @GetMapping("{entityID}/dependencies")
     public List<String> canRemove(@PathVariable("entityID") String entityID) {
         AbstractRepository repository = entityContext.getRepository(entityContext.getEntity(entityID)).orElse(null);
-        List<BaseEntity> usages = getUsages(entityID, repository);
+        List<BaseEntity<?>> usages = getUsages(entityID, repository);
         return usages.stream().map(Object::toString).collect(Collectors.toList());
     }
 
     @PutMapping
     @SneakyThrows
-    public BaseEntity updateItems(@RequestBody String json) {
+    public BaseEntity<?> updateItems(@RequestBody String json) {
         JSONObject jsonObject = new JSONObject(json);
-        BaseEntity resultField = null;
+        BaseEntity<?> resultField = null;
         for (String entityId : jsonObject.keySet()) {
-            BaseEntity entity = entityContext.getEntity(entityId);
+            BaseEntity<?> entity = entityContext.getEntity(entityId);
 
             if (entity == null) {
                 throw new NotFoundException("Entity '" + entityId + "' not found");
@@ -273,13 +287,13 @@ public class ItemController {
             for (String fieldName : entityFields.keySet()) {
                 Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
                 if (field != null && BaseEntity.class.isAssignableFrom(field.getType())) {
-                    BaseEntity refEntity = entityContext.getEntity(entityFields.getString(fieldName));
+                    BaseEntity<?> refEntity = entityContext.getEntity(entityFields.getString(fieldName));
                     FieldUtils.writeField(field, entity, refEntity);
                 }
             }
 
             // update entity
-            BaseEntity savedEntity = entityContext.save(entity);
+            BaseEntity<?> savedEntity = entityContext.save(entity);
             if (resultField == null) {
                 resultField = savedEntity;
             }
@@ -315,22 +329,22 @@ public class ItemController {
     }*/
 
     @GetMapping("{entityID}")
-    public BaseEntity getItem(@PathVariable("entityID") String entityID) {
+    public BaseEntity<?> getItem(@PathVariable("entityID") String entityID) {
         return entityManager.getEntityWithFetchLazy(entityID);
     }
 
     @SneakyThrows
     @PutMapping("{entityID}/mappedBy/{mappedBy}")
-    public BaseEntity putToItem(@PathVariable("entityID") String entityID,
-                                @PathVariable("mappedBy") String mappedBy,
-                                @RequestBody String json) {
+    public BaseEntity<?> putToItem(@PathVariable("entityID") String entityID,
+                                   @PathVariable("mappedBy") String mappedBy,
+                                   @RequestBody String json) {
         JSONObject jsonObject = new JSONObject(json);
-        BaseEntity owner = entityContext.getEntity(entityID);
+        BaseEntity<?> owner = entityContext.getEntity(entityID);
 
         for (String type : jsonObject.keySet()) {
             Class<? extends BaseEntity> className = entityManager.getClassByType(type);
             JSONObject entityFields = jsonObject.getJSONObject(type);
-            BaseEntity newEntity = objectMapper.readValue(entityFields.toString(), className);
+            BaseEntity<?> newEntity = objectMapper.readValue(entityFields.toString(), className);
             FieldUtils.writeDeclaredField(newEntity, mappedBy, owner, true);
             entityContext.save(newEntity);
         }
@@ -341,10 +355,10 @@ public class ItemController {
     @SneakyThrows
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     @DeleteMapping("{entityID}/field/{field}/item/{entityToRemove}")
-    public BaseEntity removeFromItem(@PathVariable("entityID") String entityID,
-                                     @PathVariable("field") String field,
-                                     @PathVariable("entityToRemove") String entityToRemove) {
-        BaseEntity entity = entityContext.getEntity(entityID);
+    public BaseEntity<?> removeFromItem(@PathVariable("entityID") String entityID,
+                                        @PathVariable("field") String field,
+                                        @PathVariable("entityToRemove") String entityToRemove) {
+        BaseEntity<?> entity = entityContext.getEntity(entityID);
         entityContext.delete(entityToRemove);
         return entityContext.getEntity(entity);
     }
@@ -352,10 +366,10 @@ public class ItemController {
     @PostMapping("{entityID}/block")
     public void updateBlockPosition(@PathVariable("entityID") String entityID,
                                     @RequestBody UpdateBlockPosition position) {
-        BaseEntity entity = entityContext.getEntity(entityID);
+        BaseEntity<?> entity = entityContext.getEntity(entityID);
         if (entity != null) {
             if (entity instanceof HasPosition) {
-                HasPosition hasPosition = (HasPosition) entity;
+                HasPosition<?> hasPosition = (HasPosition<?>) entity;
                 hasPosition.setXb(position.xb);
                 hasPosition.setYb(position.yb);
                 hasPosition.setBw(position.bw);
@@ -375,7 +389,7 @@ public class ItemController {
         } catch (Exception e) {
 
             log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new ServerException(e);
         }
     }
 
@@ -409,7 +423,7 @@ public class ItemController {
             returnType = method == null ? null : method.getReturnType();
         }
         if (returnType.getDeclaredAnnotation(Entity.class) != null) {
-            Class<BaseEntity> clazz = (Class<BaseEntity>) returnType;
+            Class<BaseEntity<?>> clazz = (Class<BaseEntity<?>>) returnType;
             List<? extends BaseEntity> selectedOptions = entityContext.findAll(clazz);
             List<OptionModel> options = selectedOptions.stream().map(t -> OptionModel.of(t.getEntityID(), t.getTitle())).collect(Collectors.toList());
 
@@ -453,9 +467,9 @@ public class ItemController {
         }
     }
 
-    private List<BaseEntity> getUsages(String entityID, AbstractRepository<BaseEntity> repository) {
+    private List<BaseEntity<?>> getUsages(String entityID, AbstractRepository<BaseEntity<?>> repository) {
         Object baseEntity = repository.getByEntityIDWithFetchLazy(entityID, false);
-        List<BaseEntity> usages = new ArrayList<>();
+        List<BaseEntity<?>> usages = new ArrayList<>();
         if (baseEntity != null) {
             FieldUtils.getAllFieldsList(baseEntity.getClass()).forEach(field -> {
                 try {
@@ -464,18 +478,18 @@ public class ItemController {
                     if (aClass != null) {
                         Object targetValue = FieldUtils.readField(field, baseEntity, true);
                         if (targetValue instanceof Collection) {
-                            if (!((Collection) targetValue).isEmpty()) {
-                                for (Object o : (Collection) targetValue) {
+                            if (!((Collection<?>) targetValue).isEmpty()) {
+                                for (Object o : (Collection<?>) targetValue) {
                                     o.toString(); // hibernate initialize
-                                    usages.add((BaseEntity) o);
+                                    usages.add((BaseEntity<?>) o);
                                 }
                             }
                         } else if (targetValue != null) {
-                            usages.add((BaseEntity) targetValue);
+                            usages.add((BaseEntity<?>) targetValue);
                         }
                     }
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    throw new ServerException(e);
                 }
             });
         }
@@ -504,12 +518,12 @@ public class ItemController {
         return null;
     }
 
-    private BaseEntity getInstanceByClass(String className) throws Exception {
+    private BaseEntity<?> getInstanceByClass(String className) throws Exception {
         Class<?> aClass = entityManager.getClassByType(className);
         for (Constructor<?> constructor : aClass.getConstructors()) {
             if (constructor.getParameterCount() == 0) {
                 constructor.setAccessible(true);
-                return (BaseEntity) constructor.newInstance();
+                return (BaseEntity<?>) constructor.newInstance();
             }
         }
         throw new IllegalArgumentException("Unable find class: " + className);

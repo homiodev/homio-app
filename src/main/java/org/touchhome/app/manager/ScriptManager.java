@@ -16,6 +16,7 @@ import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
@@ -88,10 +89,10 @@ public class ScriptManager {
             entityContext.save(scriptEntity);
         } else if (scriptEntity.getRepeatInterval() != 0 && allowRepeat) {
             if (entityContext.bgp().isThreadExists(scriptEntity.getEntityID(), true)) {
-                throw new RuntimeException("Script already in progress. Stop script to restart");
+                throw new ServerException("Script already in progress. Stop script to restart");
             }
             if (scriptEntity.getRepeatInterval() < minScriptThreadSleep) {
-                throw new RuntimeException("Script has bad 'REPEAT_EVERY' value. Must be >= " + minScriptThreadSleep);
+                throw new ServerException("Script has bad 'REPEAT_EVERY' value. Must be >= " + minScriptThreadSleep);
             }
             scriptEntity.setJavaScriptParameters(json);
             entityContext.save(scriptEntity);
@@ -149,7 +150,7 @@ public class ScriptManager {
             }
         } catch (Exception ex) {
             log.error("Can not compile script: <{}>. Msg: <{}>", scriptEntity.getEntityID(), ex.getMessage());
-            throw new RuntimeException(ex);
+            throw new ServerException(ex);
         }
         return new CompileScriptContext(compiled, formattedJavaScript, jsonParams);
     }

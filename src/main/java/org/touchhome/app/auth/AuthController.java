@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.UserEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.repository.UserRepository;
 
 import javax.validation.Valid;
@@ -72,7 +73,7 @@ public class AuthController {
         log.info("Create guest user <{}>", credentials.getEmail());
         UserEntity user = userRepository.getUser(credentials.getEmail());
         if (user != null) {
-            throw new IllegalArgumentException("User already exists");
+            throw new ServerException("User already exists");
         }
         return entityContext.save(new UserEntity().computeEntityID(credentials::getEmail)
                 .setUserId(credentials.getEmail())

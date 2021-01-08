@@ -2,7 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.display;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.ui.field.UIField;
 

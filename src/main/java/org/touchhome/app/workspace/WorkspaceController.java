@@ -19,6 +19,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceShareVariableEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.workspace.HasWorkspaceVariableLinkAbility;
@@ -71,7 +72,7 @@ public class WorkspaceController {
                 int order = Integer.MAX_VALUE;
                 if (bundleEntrypoint == null) {
                     if (!inlineScratches.contains(scratch3ExtensionBlock.getClass())) {
-                        throw new IllegalStateException("Unable to find bundle context with id: " + scratch3ExtensionBlock.getId());
+                        throw new ServerException("Unable to find bundle context with id: " + scratch3ExtensionBlock.getId());
                     }
                 } else {
                     order = bundleEntrypoint.order();
@@ -151,10 +152,10 @@ public class WorkspaceController {
             if (repository instanceof HasWorkspaceVariableLinkAbility) {
                 ((HasWorkspaceVariableLinkAbility) repository).createVariable(entityID, createVariable.varGroup, createVariable.varName, createVariable.key);
             } else {
-                throw new IllegalStateException("Entity: '" + entityID + "' repository has no workspace variable link ability");
+                throw new ServerException("Entity: '" + entityID + "' repository has no workspace variable link ability");
             }
         } else {
-            throw new IllegalStateException("Unable to find repository for entity: " + entityID);
+            throw new ServerException("Unable to find repository for entity: " + entityID);
         }
     }
 
@@ -212,10 +213,10 @@ public class WorkspaceController {
             throw new NotFoundException("Unable to find workspace tab with id: " + entityID);
         }
         if (WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(entity.getName())) {
-            throw new IllegalArgumentException("Unable to delete main workspace");
+            throw new IllegalArgumentException("ERROR.REMOVE_MAIN_TAB");
         }
         if (!workspaceManager.isEmpty(entity.getContent())) {
-            throw new IllegalArgumentException("Unable to delete non empty workspace");
+            throw new IllegalArgumentException("ERROR.REMOVE_NON_EMPTY_TAB");
         }
         entityContext.delete(entityID);
     }

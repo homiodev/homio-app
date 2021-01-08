@@ -102,6 +102,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
                 try {
                     consumer.accept(value);
                 } catch (Exception ex) {
+                    entityContext.ui().sendErrorMessage(ex);
                     log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value);
                 }
             }

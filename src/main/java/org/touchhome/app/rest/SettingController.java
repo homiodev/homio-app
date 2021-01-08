@@ -1,6 +1,7 @@
 package org.touchhome.app.rest;
 
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.Lang;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.UserEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginOptions;
@@ -42,6 +44,7 @@ public class SettingController {
     // true - installing, false removing
     private Map<String, Boolean> packagesInProgress = new ConcurrentHashMap<>();
 
+    @SneakyThrows
     public void postConstruct(EntityContextImpl entityContext) {
         this.entityContext = entityContext;
         SettingRepository settingRepository = entityContext.getBean(SettingRepository.class);
@@ -54,7 +57,7 @@ public class SettingController {
                         SettingRepository.createSettingEntityFromPlugin(settingPlugin, new SettingEntity(), entityContext));
             }
             if (settingPlugin instanceof ConsoleSettingPlugin && !settingPlugin.getClass().getSimpleName().startsWith("Console")) {
-                throw new RuntimeException("Console plugin class <" + settingPlugin.getClass().getName() + "> must starts with name 'Console'");
+                throw new ServerException("Console plugin class <" + settingPlugin.getClass().getName() + "> must starts with name 'Console'");
             }
         }
     }

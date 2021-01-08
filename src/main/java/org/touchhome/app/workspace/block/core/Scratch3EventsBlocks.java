@@ -29,7 +29,7 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
         this.broadcastLockManager = broadcastLockManager;
 
         // Blocks
-        this.receiveEvent = Scratch3Block.ofHandler("gotroadcast", BlockType.hat, this::receiveEventHandler);
+        this.receiveEvent = Scratch3Block.ofHandler("gotbroadcast", BlockType.hat, this::receiveEventHandler);
         this.broadcastEvent = Scratch3Block.ofHandler("broadcast", BlockType.command, this::broadcastEventHandler);
 
         this.postConstruct();

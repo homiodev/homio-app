@@ -3,6 +3,7 @@ package org.touchhome.app.model.entity.widget.impl.chart.pie;
 import lombok.Getter;
 import lombok.Setter;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
+import org.touchhome.app.model.entity.widget.impl.chart.ChartPeriod;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -14,6 +15,19 @@ import java.util.Set;
 @Setter
 @Entity
 public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity> {
+
+    @UIField(order = 12)
+    @Enumerated(EnumType.STRING)
+    private ChartPeriod chartPeriod = ChartPeriod.All;
+
+    @UIField(order = 33, showInContextMenu = true)
+    private Boolean showButtons = Boolean.FALSE;
+
+    @UIField(order = 35)
+    private String labelFormatting = "#LABEL#";
+
+    @UIField(order = 36)
+    private String valueFormatting = "#VALUE#";
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetPieChartEntity")
     @UIField(order = 30, onlyEdit = true)
@@ -32,7 +46,7 @@ public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity> 
 
     @UIField(order = 35)
     @Enumerated(EnumType.STRING)
-    private PieChartType pieChartType = PieChartType.Regular;
+    private PieChartType displayType = PieChartType.Regular;
 
     @Override
     public String getImage() {

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.app.model.entity.widget.HasDataSource;
+import org.touchhome.bundle.api.entity.widget.HasWidgetDataSource;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.bundle.api.EntityContext;
@@ -28,7 +28,7 @@ import java.util.Set;
 @Accessors(chain = true)
 @Entity
 public class WidgetPieChartSeriesEntity extends BaseEntity<WidgetPieChartSeriesEntity>
-        implements Comparable<WidgetPieChartSeriesEntity>, HasDataSource {
+        implements Comparable<WidgetPieChartSeriesEntity>, HasWidgetDataSource {
 
     @UIField(order = 14,
             required = true,

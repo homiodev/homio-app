@@ -4,15 +4,18 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity;
 import org.touchhome.app.repository.widget.HasFetchChartSeries;
+import org.touchhome.app.repository.widget.HasLastNumberValueRepository;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import java.util.Date;
 import java.util.List;
 
 @Repository("backupRepository")
-public class WorkspaceBackupRepository extends AbstractRepository<WorkspaceBackupEntity> implements HasFetchChartSeries {
+public class WorkspaceBackupRepository extends AbstractRepository<WorkspaceBackupEntity>
+        implements HasFetchChartSeries, HasLastNumberValueRepository<WorkspaceBackupEntity> {
 
     public WorkspaceBackupRepository() {
         super(WorkspaceBackupEntity.class, WorkspaceBackupEntity.PREFIX);
@@ -39,7 +42,7 @@ public class WorkspaceBackupRepository extends AbstractRepository<WorkspaceBacku
             case Count:
                 return buildValuesQuery(em, "WorkspaceBackupEntity.fetchCount", source, from, to).getSingleResult();
         }
-        throw new RuntimeException("Not implemented exception");
+        throw new ServerException("Not implemented exception");
     }
 
     @Override
@@ -47,6 +50,11 @@ public class WorkspaceBackupRepository extends AbstractRepository<WorkspaceBacku
         return null;
         //em.createNamedQuery("WorkspaceBackupValueCrudEntity.fetchMinDate", Date.class)
         //       .setParameter("source", source).getSingleResult();
+    }
+
+    @Override
+    public double getLastNumberValue(WorkspaceBackupEntity source) {
+        return this.getBackupLastValue(source);
     }
 }
 

@@ -4,11 +4,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.app.model.entity.widget.HasDataSource;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.HasWidgetDataSource;
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
@@ -26,7 +26,7 @@ import java.util.Set;
 @Getter
 @Accessors(chain = true)
 @Entity
-public class WidgetButtonSeriesEntity extends BaseEntity<WidgetButtonSeriesEntity> implements Comparable<WidgetButtonSeriesEntity>, HasDataSource {
+public class WidgetButtonSeriesEntity extends BaseEntity<WidgetButtonSeriesEntity> implements Comparable<WidgetButtonSeriesEntity>, HasWidgetDataSource {
 
     @UIField(order = 14,
             required = true,

@@ -51,7 +51,7 @@ import org.touchhome.app.json.jsog.JSOGResolver;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.repository.crud.base.CrudRepositoryFactoryBean;
 import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.block.Scratch3Space;

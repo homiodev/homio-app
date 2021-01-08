@@ -8,6 +8,7 @@ import org.touchhome.app.setting.CoreSettingPlugin;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.setting.SettingPlugin;
@@ -119,7 +120,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
                 BundleEntryPoint bundleEntrypoint = entityContext.getBeansOfType(BundleEntryPoint.class)
                         .stream().filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
                 if (bundleEntrypoint == null) {
-                    throw new IllegalStateException("Unable find bundle entry-point for setting: ");
+                    throw new ServerException("Unable find bundle entry-point for setting: ");
                 }
                 return bundleEntrypoint.getBundleId();
             }

@@ -5,6 +5,7 @@ import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.workspace.WorkspaceBlockImpl;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
@@ -160,7 +161,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private void waitHandler(WorkspaceBlock workspaceBlock) {
         int duration = workspaceBlock.getInputInteger("DURATION");
         if (duration < 1 || duration > 3600) {
-            throw new RuntimeException("Unable to sleep current block, because duration is more than 1 hour. Actual value is: " + duration);
+            throw new ServerException("Unable to sleep current block, because duration is more than 1 hour. Actual value is: " + duration);
         }
         TimeUnit.SECONDS.sleep(duration);
     }

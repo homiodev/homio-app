@@ -135,9 +135,9 @@ public class WorkspaceManager {
             return true;
         }
         JSONObject target = new JSONObject(content).getJSONObject("target");
-        for (String key : new String[]{"variables", "lists", "backup_lists", "bool_variables", "group_variables", "blocks"}) {
-            if (!target.getJSONObject(key).keySet().isEmpty()) {
-                return true;
+        for (String key : new String[]{"comments", "blocks"}) {
+            if (target.has(key) && !target.getJSONObject(key).keySet().isEmpty()) {
+                return false;
             }
         }
         return true;

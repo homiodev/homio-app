@@ -11,6 +11,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.utils.Curl;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.IOException;
@@ -140,7 +141,7 @@ public class BundleContextService {
         BundleContext context = this.bundleContextMap.get(bundleId);
         if (context != null) {
             if (context.getVersion().equals(version)) {
-                throw new IllegalStateException("Bundle <{}> already up to date");
+                throw new ServerException("Bundle <{}> already up to date");
             }
             removeBundle(bundleId);
         }
@@ -152,7 +153,7 @@ public class BundleContextService {
     public void uninstallBundle(String name) {
         BundleContext context = this.bundleContextMap.get(name);
         if (context == null) {
-            throw new IllegalStateException("Bundle <{}> not exists");
+            throw new ServerException("Bundle <{}> not exists");
         }
         removeBundle(name);
     }

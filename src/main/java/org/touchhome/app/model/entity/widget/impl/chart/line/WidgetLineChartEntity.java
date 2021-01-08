@@ -3,6 +3,7 @@ package org.touchhome.app.model.entity.widget.impl.chart.line;
 import lombok.Getter;
 import lombok.Setter;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
+import org.touchhome.app.model.entity.widget.impl.chart.ChartPeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.LineInterpolation;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -16,22 +17,29 @@ import java.util.Set;
 @Entity
 public class WidgetLineChartEntity extends ChartBaseEntity<WidgetLineChartEntity> {
 
+    @UIField(order = 12)
+    @Enumerated(EnumType.STRING)
+    private ChartPeriod chartPeriod = ChartPeriod.All;
+
+    @UIField(order = 33, showInContextMenu = true)
+    private Boolean showButtons = Boolean.FALSE;
+
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetLineChartEntity")
     @UIField(order = 30, onlyEdit = true)
     @OrderBy("priority asc")
     private Set<WidgetLineChartSeriesEntity> series;
 
     @UIField(order = 28)
-    private Boolean showxAxis = Boolean.TRUE;
+    private Boolean showAxisX = Boolean.TRUE;
 
     @UIField(order = 29)
-    private Boolean showyAxis = Boolean.TRUE;
+    private Boolean showAxisY = Boolean.TRUE;
 
     @UIField(order = 30)
-    private String xaxisLabel = "Date";
+    private String axisLabelX = "Date";
 
     @UIField(order = 31)
-    private String yaxisLabel = "Value";
+    private String axisLabelY = "Value";
 
     @UIField(order = 32)
     private Boolean timeline = Boolean.TRUE;

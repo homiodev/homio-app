@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.touchhome.app.model.entity.widget.HorizontalPosition;
 import org.touchhome.app.model.entity.widget.VerticalPosition;
-import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;

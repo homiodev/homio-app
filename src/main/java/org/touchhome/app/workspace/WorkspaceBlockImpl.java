@@ -11,6 +11,7 @@ import org.json.JSONArray;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.*;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -89,7 +90,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public void logErrorAndThrow(String message, Object... params) {
         logError(message, params);
-        throw new IllegalStateException(message);
+        throw new ServerException(message);
     }
 
     @Override
@@ -191,7 +192,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                 return value;
             } catch (Exception ex) {
                 entityContext.ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
-                throw new RuntimeException(ex);
+                throw new ServerException(ex);
             }
         });
     }
@@ -212,7 +213,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             return scratch3Block;
         }
         // actually unreachable code
-        throw new RuntimeException();
+        throw new ServerException("unreachable code");
     }
 
     @Override

@@ -36,7 +36,6 @@ import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleContextService;
 import org.touchhome.app.manager.*;
 import org.touchhome.app.manager.common.impl.*;
-import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
 import org.touchhome.app.repository.crud.base.BaseCrudRepository;
 import org.touchhome.app.repository.device.AllDeviceRepository;
 import org.touchhome.app.rest.ConsoleController;
@@ -56,6 +55,7 @@ import org.touchhome.bundle.api.Lang;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.UserEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
@@ -481,6 +481,19 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
+    public <T> List<Class<? extends T>> getClassesWithParent(Class<T> baseClass, String... packages) {
+        List<Class<? extends T>> classes = new ArrayList<>();
+        if (packages.length > 0) {
+            for (String basePackage : packages) {
+                classes.addAll(classFinder.getClassesWithParent(baseClass, null, basePackage));
+            }
+        } else {
+            classes.addAll(classFinder.getClassesWithParent(baseClass, null, baseClass.getPackage().getName()));
+        }
+        return classes;
+    }
+
+    @Override
     public Map<String, Boolean> getDeviceFeatures() {
         return deviceFeatures;
     }
@@ -659,7 +672,6 @@ public class EntityContextImpl implements EntityContext {
         log.info("Starting update all app bundles");
         Lang.clear();
         fetchSettingPlugins(bundleContext, addBundle);
-        Lang.DEFAULT_LANG = setting().getValue(SystemLanguageSetting.class).name();
 
         Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values()
                 .stream().collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
@@ -674,6 +686,7 @@ public class EntityContextImpl implements EntityContext {
         baseEntityNameToClass = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
         repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
 
+        Lang.DEFAULT_LANG = setting().getValue(SystemLanguageSetting.class).name();
         applicationContext.getBean(ConsoleController.class).postConstruct();
         applicationContext.getBean(BundleManager.class).postConstruct(this);
         applicationContext.getBean(SettingController.class).postConstruct(this);

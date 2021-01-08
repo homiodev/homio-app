@@ -18,6 +18,7 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.touchhome.bundle.api.BundleConfiguration;
 import org.touchhome.bundle.api.BundleEntryPoint;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.util.SpringUtils;
 import sun.reflect.ReflectionFactory;
 
@@ -77,7 +78,7 @@ public class BundleContext {
                 return pomReader.read(file.getInputStream(e));
             }
         }
-        throw new RuntimeException("Unable to find pom.xml in jar");
+        throw new ServerException("Unable to find pom.xml in jar");
     }
 
     public Set<String> getDependencies() {
@@ -123,7 +124,7 @@ public class BundleContext {
             version = this.pomFile.getParent().getVersion();
         }
         if (version == null) {
-            throw new IllegalStateException("Unable to find version for bundle: " + bundleID);
+            throw new ServerException("Unable to find version for bundle: " + bundleID);
         }
         return version;
     }
@@ -155,10 +156,10 @@ public class BundleContext {
         public String fetchBundleID(Reflections reflections, String artifactId) {
             Set<Class<? extends BundleEntryPoint>> bundleEntryPoints = reflections.getSubTypesOf(BundleEntryPoint.class);
             if (bundleEntryPoints.isEmpty()) {
-                throw new IllegalStateException("Found no BundleEntryPoint in context of bundle: " + artifactId);
+                throw new ServerException("Found no BundleEntryPoint in context of bundle: " + artifactId);
             }
             if (bundleEntryPoints.size() > 1) {
-                throw new IllegalStateException("Found multiple BundleEntryPoint in context of bundle: " + artifactId);
+                throw new ServerException("Found multiple BundleEntryPoint in context of bundle: " + artifactId);
             }
             Class<? extends BundleEntryPoint> bundleEntrypointClass = bundleEntryPoints.iterator().next();
 
@@ -202,14 +203,14 @@ public class BundleContext {
             // find configuration class
             Set<Class<?>> springConfigClasses = reflections.getTypesAnnotatedWith(BundleConfiguration.class);
             if (springConfigClasses.isEmpty()) {
-                throw new RuntimeException("Configuration class with annotation @BundleConfiguration not found. Not possible to create spring context");
+                throw new ServerException("Configuration class with annotation @BundleConfiguration not found. Not possible to create spring context");
             }
             if (springConfigClasses.size() > 1) {
-                throw new RuntimeException("Configuration class with annotation @BundleConfiguration must be unique, but found: " + StringUtils.join(springConfigClasses, ", "));
+                throw new ServerException("Configuration class with annotation @BundleConfiguration must be unique, but found: " + StringUtils.join(springConfigClasses, ", "));
             }
             Class<?> batchConfigurationClass = springConfigClasses.iterator().next();
             if (batchConfigurationClass.getDeclaredAnnotation(BundleConfiguration.class) == null) {
-                throw new RuntimeException("Loaded batch definition has different ws-service-api.jar version and can not be instantiated");
+                throw new ServerException("Loaded batch definition has different ws-service-api.jar version and can not be instantiated");
             }
             return batchConfigurationClass;
         }

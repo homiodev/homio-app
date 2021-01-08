@@ -1,6 +1,7 @@
-package org.touchhome.app.model.entity.widget.impl.chart.line;
+package org.touchhome.app.repository.widget.impl.chart;
 
 import org.springframework.stereotype.Repository;
+import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 @Repository

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.repository.ScriptRepository;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 // TODO: refactor this !!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -25,13 +26,13 @@ public class BackgroundProcessController {
     public void dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws Exception {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
         if (scriptEntity == null) {
-            throw new RuntimeException("Dynamic URL: '" + url + "' not exists.");
+            throw new ServerException("Dynamic URL: '" + url + "' not exists.");
         }
         if (StringUtils.isEmpty(scriptEntity.getJavaScript())) {
-            throw new RuntimeException("Script not valid for dynamic URL: '" + url + "'.");
+            throw new ServerException("Script not valid for dynamic URL: '" + url + "'.");
         }
         if (StringUtils.isEmpty(scriptEntity.getJavaScript())) {
-            throw new RuntimeException("Script not valid for dynamic URL: '" + url + "'.");
+            throw new ServerException("Script not valid for dynamic URL: '" + url + "'.");
         }
         scriptManager.startThread(scriptEntity, json, true, null, false);
     }
@@ -99,7 +100,7 @@ public class BackgroundProcessController {
                 backgroundProcessManager.scheduleAtFixedRate(backgroundProcessService);
             }
         } catch (Exception ex) {
-            throw new RuntimeException(ex);
+            throw new ServerException(ex);
         }
     }*/
 }

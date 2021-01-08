@@ -15,6 +15,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.*;
@@ -79,7 +80,7 @@ public class LoggerManager {
 
         } catch (IOException e) {
             log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new ServerException(e);
         }
     }
 
@@ -105,7 +106,7 @@ public class LoggerManager {
             return resolve;
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new ServerException(e);
         }
     }
 
@@ -129,7 +130,7 @@ public class LoggerManager {
             return getLogger(logOutputStream);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new ServerException(e);
         }
     }
 
@@ -161,7 +162,7 @@ public class LoggerManager {
                 }
             }
         } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            throw new ServerException(ex);
         }
         return result;
     }

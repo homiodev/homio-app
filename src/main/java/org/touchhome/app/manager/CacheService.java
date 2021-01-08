@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.utils.CollectionUtils;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.repository.PureRepository;
 
@@ -76,7 +77,7 @@ public class CacheService {
     public void putToCache(PureRepository repository, HasEntityIdentifier entity, Map<String, Object> changeFields) {
         String identifier = entity.getIdentifier();
         if (identifier == null) {
-            throw new IllegalStateException("Unable update state without id" + entity);
+            throw new ServerException("Unable update state without id" + entity);
         }
         synchronized (entityCache) {
             if (entityCache.containsKey(identifier)) {

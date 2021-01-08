@@ -32,11 +32,13 @@ import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.bundle.api.Lang;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.NotificationModel;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.color.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldClassSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectValueOnEmpty;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 import org.touchhome.bundle.api.ui.method.UIFieldCreateWorkspaceVariableOnEmpty;
@@ -145,7 +147,10 @@ public class UtilsController {
 
         JSONObject jsonTypeMetadata = new JSONObject();
         if (uiField.type().equals(UIFieldType.AutoDetect)) {
-            if (type.isEnum() || accessibleObject.isAnnotationPresent(UIFieldSelection.class) || accessibleObject.isAnnotationPresent(UIFieldBeanSelection.class)) {
+            if (type.isEnum() ||
+                    accessibleObject.isAnnotationPresent(UIFieldSelection.class) ||
+                    accessibleObject.isAnnotationPresent(UIFieldClassSelection.class) ||
+                    accessibleObject.isAnnotationPresent(UIFieldBeanSelection.class)) {
                 entityUIMetaData.setType(uiField.readOnly() ? UIFieldType.String.name() : UIFieldType.Selection.name());
             } else {
                 if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
@@ -207,7 +212,7 @@ public class UtilsController {
         UIFieldColorRef uiFieldColorRef = accessibleObject.getDeclaredAnnotation(UIFieldColorRef.class);
         if (uiFieldColorRef != null) {
             if (instance.getClass().getDeclaredField(uiFieldColorRef.value()) == null) {
-                throw new RuntimeException("Unable to find field <" + uiFieldColorRef.value() + "> declared in UIFieldColorRef");
+                throw new ServerException("Unable to find field <" + uiFieldColorRef.value() + "> declared in UIFieldColorRef");
             }
             jsonTypeMetadata.put("colorRef", uiFieldColorRef.value());
         }
@@ -248,12 +253,18 @@ public class UtilsController {
             }
         }
 
-        if (entityUIMetaData.getType().equals(String.class.getSimpleName()) || entityUIMetaData.getType().equals(UIFieldType.Slider.name())) {
-            UIFieldNumber uiFieldNumber = accessibleObject.getDeclaredAnnotation(UIFieldNumber.class);
-            if (uiFieldNumber != null) {
-                jsonTypeMetadata.put("min", uiFieldNumber.min());
-                jsonTypeMetadata.put("max", uiFieldNumber.max());
-            }
+        UIFieldNumber uiFieldNumber = accessibleObject.getDeclaredAnnotation(UIFieldNumber.class);
+        if (uiFieldNumber != null) {
+            jsonTypeMetadata.put("min", uiFieldNumber.min());
+            jsonTypeMetadata.put("max", uiFieldNumber.max());
+        }
+
+        if (accessibleObject.isAnnotationPresent(UIFieldSlider.class)) {
+            UIFieldSlider uiFieldSlider = accessibleObject.getDeclaredAnnotation(UIFieldSlider.class);
+            jsonTypeMetadata.put("min", uiFieldSlider.min());
+            jsonTypeMetadata.put("max", uiFieldSlider.max());
+            jsonTypeMetadata.put("step", uiFieldSlider.step());
+            entityUIMetaData.setType(UIFieldType.Slider.name());
         }
 
         if (accessibleObject.isAnnotationPresent(UIFieldCodeEditor.class)) {
@@ -289,7 +300,7 @@ public class UtilsController {
             }
             return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
         } catch (Exception ex) {
-            throw new RuntimeException("No readme found");
+            throw new ServerException("No readme found");
         }
     }
 

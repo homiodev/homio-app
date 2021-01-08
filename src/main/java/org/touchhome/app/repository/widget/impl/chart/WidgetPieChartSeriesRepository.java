@@ -1,7 +1,8 @@
-package org.touchhome.app.model.entity.widget.impl.chart.pie;
+package org.touchhome.app.repository.widget.impl.chart;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartSeriesEntity;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 

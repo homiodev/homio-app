@@ -3,8 +3,9 @@ package org.touchhome.app.repository.widget;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.touchhome.app.model.entity.widget.impl.WidgetBaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import java.util.List;
@@ -35,7 +36,7 @@ public class WidgetRepository extends AbstractRepository<WidgetBaseEntity> {
     @Override
     public WidgetBaseEntity save(WidgetBaseEntity entity) {
         if (entity.getWidgetTabEntity() == null) {
-            throw new IllegalStateException("Unable to save widget without attach to tab");
+            throw new ServerException("Unable to save widget without attach to tab");
         }
         return super.save(entity);
     }
