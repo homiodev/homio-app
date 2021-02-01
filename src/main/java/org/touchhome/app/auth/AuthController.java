@@ -34,18 +34,18 @@ public class AuthController {
     private final EntityContext entityContext;
     private final PasswordEncoder passwordEncoder;
 
-    @GetMapping("status")
+    @GetMapping("/status")
     public int getStatus(Principal user) {
         UserEntity userEntity = entityContext.getEntity(ADMIN_USER);
         return user == null ? (userEntity == null || userEntity.isPasswordNotSet(passwordEncoder) ? 402 : 401) : 200;
     }
 
-    @GetMapping("user")
+    @GetMapping("/user")
     public UserEntity getUser() {
         return entityContext.getEntity(ADMIN_USER);
     }
 
-    @PostMapping("login")
+    @PostMapping("/login")
     public String login(@Valid @RequestBody Credentials credentials) {
         log.info("Login <{}>", credentials.getEmail());
         try {
@@ -58,13 +58,13 @@ public class AuthController {
     }
 
     @Secured(ADMIN_ROLE)
-    @PostMapping("user/guest")
+    @PostMapping("/user/guest")
     public UserEntity createGuestUser(@Valid @RequestBody Credentials credentials) {
         return createUser(credentials, GUEST_ROLE);
     }
 
     @Secured(ADMIN_ROLE)
-    @PostMapping("user/privileged")
+    @PostMapping("/user/privileged")
     public UserEntity createPrivilegedUser(@Valid @RequestBody Credentials credentials) {
         return createUser(credentials, PRIVILEGED_USER_ROLE, GUEST_ROLE);
     }

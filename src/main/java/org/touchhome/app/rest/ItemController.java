@@ -1,10 +1,7 @@
 package org.touchhome.app.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
@@ -15,6 +12,7 @@ import org.json.JSONObject;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
+import org.touchhome.app.camera.entity.BaseCameraEntity;
 import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.manager.ImageManager;
 import org.touchhome.app.manager.common.ClassFinder;
@@ -26,6 +24,8 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.ImageEntity;
+import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
+import org.touchhome.bundle.api.entity.dependency.RequireExecutableDependency;
 import org.touchhome.bundle.api.entity.micro.MicroControllerBaseEntity;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
@@ -66,7 +66,8 @@ import static org.touchhome.app.rest.UtilsController.fillEntityUIMetadataList;
 @RequiredArgsConstructor
 public class ItemController {
 
-    private static Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
+    private final Map<String, DependencyInstallersContext> typeToRequireDependencies = new HashMap<>();
+    private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
     private final Map<String, List<EntityUIMetaData>> fieldsMap = new HashMap<>();
     private final ObjectMapper objectMapper;
     private final EntityContextImpl entityContext;
@@ -117,19 +118,25 @@ public class ItemController {
     }
 
     public static Collection<OptionModel> loadOptions(HasEntityIdentifier entity, EntityContext entityContext, String fieldName) {
-        Method selectionMethodAnnotation = MethodUtils.getMethodsListWithAnnotation(entity.getClass(), UIFieldSelection.class)
-                .stream().filter(m -> InternalUtil.getMethodShortName(m).equals(fieldName)).findAny().orElse(null);
-        if (selectionMethodAnnotation != null) {
-            return loadOptions(selectionMethodAnnotation, entityContext, selectionMethodAnnotation.getReturnType(),
-                    entity);
+        Method method = InternalUtil.findMethodByName(entity.getClass(), fieldName);
+        if (method != null) {
+            UIFieldSelection uiFieldSelection = method.getDeclaredAnnotation(UIFieldSelection.class);
+            if (uiFieldSelection != null) {
+                return loadOptions(method, entityContext, method.getReturnType(), entity);
+            }
+            return loadOptions(method, entityContext, method.getReturnType(), entity);
         } else {
             Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
-            UIFieldSelection uiFieldSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
-            if (uiFieldSelection != null) {
+            if (field != null) {
+                UIFieldSelection uiFieldSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
+                if (uiFieldSelection != null) {
+                    return loadOptions(field, entityContext, field.getType(), entity);
+                }
                 return loadOptions(field, entityContext, field.getType(), entity);
             }
-            return loadOptions(field, entityContext, field.getType(), entity);
         }
+        throw new ServerException("Unable to find select handler for entity type: " + entity.getClass().getSimpleName()
+                + " and fieldName: " + fieldName);
     }
 
     @SneakyThrows
@@ -141,14 +148,14 @@ public class ItemController {
         }
         DynamicOptionLoader<?> dynamicOptionLoader = null;
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
-            dynamicOptionLoader = (DynamicOptionLoader<?>) targetClass.newInstance();
+            dynamicOptionLoader = (DynamicOptionLoader<?>) TouchHomeUtils.newInstance(targetClass);
         }
         if (dynamicOptionLoader != null) {
             return dynamicOptionLoader.loadOptions(null, entity instanceof BaseEntity ? (BaseEntity<?>) entity : null, entityContext);
         }
 
         if (targetClass.isEnum()) {
-            return Stream.of(targetClass.getEnumConstants()).map(e -> OptionModel.key(e.toString())).collect(Collectors.toList());
+            return OptionModel.enumList((Class<? extends Enum>) targetClass);
         }
 
         if (field.isAnnotationPresent(UIFieldBeanSelection.class)) {
@@ -174,9 +181,10 @@ public class ItemController {
         this.baseEntitySimpleClasses.put(MicroControllerBaseEntity.class.getSimpleName(), MicroControllerBaseEntity.class);
         this.baseEntitySimpleClasses.put(DeviceBaseEntity.class.getSimpleName(), DeviceBaseEntity.class);
         this.baseEntitySimpleClasses.put(WidgetBaseEntity.class.getSimpleName(), WidgetBaseEntity.class);
+        this.baseEntitySimpleClasses.put(BaseCameraEntity.class.getSimpleName(), BaseCameraEntity.class);
     }
 
-    @GetMapping("{type}/fields")
+    @GetMapping("/{type}/fields")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<EntityUIMetaData> getUIFieldsByType(@PathVariable("type") String type,
                                                     @RequestParam(value = "subType", defaultValue = "") String subType) {
@@ -204,7 +212,14 @@ public class ItemController {
     @GetMapping("/{type}/types")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Set<OptionModel> getCreateNewItemOptions(@PathVariable("type") String type) {
+        // type nay be base class also
         Class<?> entityClassByType = entityManager.getClassByType(type);
+        if (entityClassByType == null) {
+            putTypeToEntityIfNotExists(type);
+            if (!typeToEntityClassNames.containsKey(type)) {
+                return Collections.emptySet();
+            }
+        }
         Set<OptionModel> list = fetchCreateItemTypes(entityClassByType);
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
             list.add(getUISideBarMenuOption(aClass));
@@ -212,7 +227,7 @@ public class ItemController {
         return list;
     }
 
-    @GetMapping("type/{type}/options")
+    @GetMapping("/type/{type}/options")
     public List<OptionModel> getItemOptionsByType(@PathVariable("type") String type) {
         putTypeToEntityIfNotExists(type);
         List<OptionModel> list = new ArrayList<>();
@@ -224,44 +239,74 @@ public class ItemController {
         return list;
     }
 
+    private void reloadItems(String type) {
+        entityContext.ui().sendNotification("-global", new JSONObject().put("type", "reloadItems")
+                .put("value", type));
+    }
+
+    @PostMapping(value = "{type}/installDep/{dependency}")
+    public void installDep(@PathVariable("type") String type, @PathVariable("dependency") String dependency) throws Exception {
+        if (this.typeToRequireDependencies.containsKey(type)) {
+            DependencyInstallersContext context = this.typeToRequireDependencies.get(type);
+            DependencyExecutableInstaller installer = context.installerContexts.stream()
+                    .filter(c -> c.requireDependency.equals(dependency))
+                    .map(c -> c.installer).findAny().orElse(null);
+            if (installer != null) {
+                if (installer.isRequireInstallDependencies(entityContext)) {
+                    entityContext.bgp().runWithProgress("install-deps-" + dependency,
+                            progressKey -> {
+                                installer.installDependency(entityContext, progressKey);
+                                typeToRequireDependencies.get(type).installerContexts.removeIf(ctx -> ctx.requireDependency.equals(dependency));
+                                reloadItems(type);
+                            }, null,
+                            () -> new RuntimeException("INSTALL_DEPENDENCY_IN_PROGRESS"));
+                }
+            }
+        }
+    }
+
+    private static class InstallDependencyRequest {
+        private String dependency;
+    }
+
     @PostMapping(value = "{entityID}/action")
     public Object executeAction(@PathVariable("entityID") String entityID, @RequestBody UIActionDescription uiActionDescription) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
         return ItemController.executeAction(uiActionDescription, entity, applicationContext, entity);
     }
 
-    @GetMapping("{type}/actions")
+    @GetMapping("/{type}/actions")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<UIActionDescription> getItemsActions(@PathVariable("type") String type) {
         Class<?> entityClassByType = entityManager.getClassByType(type);
         return fetchUIActionsFromClass(entityClassByType);
     }
 
-    @PostMapping("{type}")
+    @PostMapping("/{type}")
     public BaseEntity<?> create(@PathVariable("type") String type) throws Exception {
         log.debug("Request creating entity by type: <{}>", type);
         Class<? extends BaseEntity> typeClass = EntityContextImpl.baseEntityNameToClass.get(type);
         if (typeClass == null) {
             throw new IllegalArgumentException("Unable to find base entity with type: " + type);
         }
-        BaseEntity<?> baseEntity = typeClass.getConstructor().newInstance();
+        BaseEntity<?> baseEntity = TouchHomeUtils.newInstance(typeClass);
         return entityContext.save(baseEntity);
     }
 
-    @PostMapping("{entityID}/copy")
+    @PostMapping("/{entityID}/copy")
     public BaseEntity<?> copyEntityByID(@PathVariable("entityID") String entityID) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
         entity.copy();
         return entityContext.save(entity);
     }
 
-    @DeleteMapping("{entityID}")
+    @DeleteMapping("/{entityID}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void removeEntity(@PathVariable("entityID") String entityID) {
         entityContext.delete(entityID);
     }
 
-    @GetMapping("{entityID}/dependencies")
+    @GetMapping("/{entityID}/dependencies")
     public List<String> canRemove(@PathVariable("entityID") String entityID) {
         AbstractRepository repository = entityContext.getRepository(entityContext.getEntity(entityID)).orElse(null);
         List<BaseEntity<?>> usages = getUsages(entityID, repository);
@@ -301,18 +346,24 @@ public class ItemController {
         return resultField;
     }
 
-    @GetMapping("type/{type}")
-    public List<BaseEntity> getItemsByType(@PathVariable("type") String type) {
+    @GetMapping("/type/{type}")
+    public ItemsByTypeResponse getItemsByType(@PathVariable("type") String type) {
         putTypeToEntityIfNotExists(type);
         List<BaseEntity> list = new ArrayList<>();
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
             list.addAll(entityContext.findAll(aClass));
         }
-
-        return list;
+        return new ItemsByTypeResponse(list, typeToRequireDependencies.get(type).getAllRequireDependencies());
     }
 
-    @PostMapping("fireRouteAction")
+    @Getter
+    @RequiredArgsConstructor
+    private static class ItemsByTypeResponse {
+        private final List<BaseEntity> items;
+        private final Set<String> requireDependencies;
+    }
+
+    @PostMapping("/fireRouteAction")
     public ActionResponseModel fireRouteAction(@RequestBody RouteActionRequest routeActionRequest) {
         Class<? extends BaseEntity> aClass = baseEntitySimpleClasses.get(routeActionRequest.type);
         for (UISidebarButton button : aClass.getAnnotationsByType(UISidebarButton.class)) {
@@ -323,18 +374,18 @@ public class ItemController {
         return null;
     }
 
-    /*@PostMapping("{entityID}/image")
+    /*@PostMapping("/{entityID}/image")
     public DeviceBaseEntity updateItemImage(@PathVariable("entityID") String entityID, @RequestBody ImageEntity imageEntity) {
         return updateItem(entityID, true, baseEntity -> baseEntity.setImageEntity(imageEntity));
     }*/
 
-    @GetMapping("{entityID}")
+    @GetMapping("/{entityID}")
     public BaseEntity<?> getItem(@PathVariable("entityID") String entityID) {
         return entityManager.getEntityWithFetchLazy(entityID);
     }
 
     @SneakyThrows
-    @PutMapping("{entityID}/mappedBy/{mappedBy}")
+    @PutMapping("/{entityID}/mappedBy/{mappedBy}")
     public BaseEntity<?> putToItem(@PathVariable("entityID") String entityID,
                                    @PathVariable("mappedBy") String mappedBy,
                                    @RequestBody String json) {
@@ -354,7 +405,7 @@ public class ItemController {
 
     @SneakyThrows
     @Secured(TouchHomeUtils.ADMIN_ROLE)
-    @DeleteMapping("{entityID}/field/{field}/item/{entityToRemove}")
+    @DeleteMapping("/{entityID}/field/{field}/item/{entityToRemove}")
     public BaseEntity<?> removeFromItem(@PathVariable("entityID") String entityID,
                                         @PathVariable("field") String field,
                                         @PathVariable("entityToRemove") String entityToRemove) {
@@ -363,7 +414,7 @@ public class ItemController {
         return entityContext.getEntity(entity);
     }
 
-    @PostMapping("{entityID}/block")
+    @PostMapping("/{entityID}/block")
     public void updateBlockPosition(@PathVariable("entityID") String entityID,
                                     @RequestBody UpdateBlockPosition position) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
@@ -381,7 +432,7 @@ public class ItemController {
         }
     }
 
-    @PostMapping("{entityID}/uploadImageBase64")
+    @PostMapping("/{entityID}/uploadImageBase64")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public ImageEntity uploadImageBase64(@PathVariable("entityID") String entityID, @RequestBody BufferedImage bufferedImage) {
         try {
@@ -393,7 +444,7 @@ public class ItemController {
         }
     }
 
-    @GetMapping("{entityID}/{fieldName}/options")
+    @GetMapping("/{entityID}/{fieldName}/options")
     public Collection<OptionModel> loadSelectOptions(@PathVariable("entityID") String entityID,
                                                      @PathVariable("fieldName") String fieldName,
                                                      @RequestParam("fieldFetchType") String fieldFetchType) throws Exception {
@@ -419,7 +470,7 @@ public class ItemController {
         Field field = FieldUtils.getField(entityClass, fieldName, true);
         Class<?> returnType = field == null ? null : field.getType();
         if (returnType == null) {
-            Method method = MethodUtils.getAccessibleMethod(entityClass, "get" + StringUtils.capitalize(fieldName));
+            Method method = InternalUtil.findMethodByName(entityClass, fieldName);
             returnType = method == null ? null : method.getReturnType();
         }
         if (returnType.getDeclaredAnnotation(Entity.class) != null) {
@@ -453,6 +504,20 @@ public class ItemController {
         return uiSidebarMenu == null ? OptionModel.key(aClass.getSimpleName()) : OptionModel.key(aClass.getSimpleName());
     }
 
+    private static class DependencyInstallersContext {
+        private final List<SingleInstallerContext> installerContexts = new ArrayList<>();
+
+        public Set<String> getAllRequireDependencies() {
+            return installerContexts.stream().map(c -> c.requireDependency).collect(Collectors.toSet());
+        }
+
+        @RequiredArgsConstructor
+        private static class SingleInstallerContext {
+            private final DependencyExecutableInstaller installer;
+            private final String requireDependency;
+        }
+    }
+
     private void putTypeToEntityIfNotExists(String type) {
         if (!typeToEntityClassNames.containsKey(type)) {
             typeToEntityClassNames.put(type, new ArrayList<>());
@@ -462,6 +527,16 @@ public class ItemController {
                     typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(baseEntityByName));
                 } else {
                     typeToEntityClassNames.get(type).add(baseEntityByName);
+                }
+
+                // populate if entity require extra packages to install
+                typeToRequireDependencies.put(type, new DependencyInstallersContext());
+                for (RequireExecutableDependency dependency : baseEntityByName.getAnnotationsByType(RequireExecutableDependency.class)) {
+                    DependencyExecutableInstaller installer = TouchHomeUtils.newInstance(dependency.installer());
+                    if (installer.isRequireInstallDependencies(entityContext)) {
+                        typeToRequireDependencies.get(type).installerContexts.add(
+                                new DependencyInstallersContext.SingleInstallerContext(installer, dependency.name()));
+                    }
                 }
             }
         }
@@ -518,15 +593,13 @@ public class ItemController {
         return null;
     }
 
-    private BaseEntity<?> getInstanceByClass(String className) throws Exception {
+    private BaseEntity<?> getInstanceByClass(String className) {
         Class<?> aClass = entityManager.getClassByType(className);
-        for (Constructor<?> constructor : aClass.getConstructors()) {
-            if (constructor.getParameterCount() == 0) {
-                constructor.setAccessible(true);
-                return (BaseEntity<?>) constructor.newInstance();
-            }
+        BaseEntity<?> instance = (BaseEntity<?>) TouchHomeUtils.newInstance(aClass);
+        if (instance == null) {
+            throw new IllegalArgumentException("Unable find class: " + className);
         }
-        throw new IllegalArgumentException("Unable find class: " + className);
+        return instance;
     }
 
     @Data

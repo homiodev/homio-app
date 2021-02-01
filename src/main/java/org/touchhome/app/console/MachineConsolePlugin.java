@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePluginTable;
 import org.touchhome.bundle.api.entity.UserEntity;
-import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
+import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -26,7 +26,7 @@ import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
 public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePlugin.HardwarePluginEntity>, NamedConsolePlugin {
 
     private final EntityContext entityContext;
-    private final LinuxHardwareRepository linuxHardwareRepository;
+    private final MachineHardwareRepository machineHardwareRepository;
     private final WirelessHardwareRepository wirelessHardwareRepository;
 
     @Override
@@ -41,23 +41,24 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
 
         List<HardwarePluginEntity> list = new ArrayList<>();
 
-        list.add(new HardwarePluginEntity("Cpu load", linuxHardwareRepository.getCpuLoad()));
+        list.add(new HardwarePluginEntity("Cpu load", machineHardwareRepository.getCpuLoad()));
         list.add(new HardwarePluginEntity("Cpu temperature", onLinux(SystemInfo::getCpuTemperature)));
-        list.add(new HardwarePluginEntity("Ram memory", linuxHardwareRepository.getMemory()));
-        list.add(new HardwarePluginEntity("SD memory", toString(linuxHardwareRepository.getSDCardMemory())));
-        list.add(new HardwarePluginEntity("Uptime", linuxHardwareRepository.getUptime()));
+        list.add(new HardwarePluginEntity("Ram memory", machineHardwareRepository.getMemory()));
+        list.add(new HardwarePluginEntity("SD memory", toString(machineHardwareRepository.getSDCardMemory())));
+        list.add(new HardwarePluginEntity("Uptime", machineHardwareRepository.getUptime()));
         String activeNetworkInterface = wirelessHardwareRepository.getActiveNetworkInterface();
         list.add(new HardwarePluginEntity("Network interface", activeNetworkInterface));
         list.add(new HardwarePluginEntity("Internet stat", toString(wirelessHardwareRepository.stat(activeNetworkInterface))));
         list.add(new HardwarePluginEntity("Network description", toString(wirelessHardwareRepository.getNetworkDescription(activeNetworkInterface))));
         list.add(new HardwarePluginEntity("Cpu features", onLinux(SystemInfo::getCpuFeatures)));
+        list.add(new HardwarePluginEntity("Cpu num", Runtime.getRuntime().availableProcessors()));
         list.add(new HardwarePluginEntity("Java", SystemUtils.JAVA_RUNTIME_NAME));
         list.add(new HardwarePluginEntity("Os", "Name: " + SystemUtils.OS_NAME +
                 ". Version: " + SystemUtils.OS_VERSION + ". Arch: " + SystemUtils.OS_ARCH));
 
         list.add(new HardwarePluginEntity("IP address", wirelessHardwareRepository.getIPAddress()));
         list.add(new HardwarePluginEntity("Router IP address", wirelessHardwareRepository.getGatewayIpAddress()));
-        list.add(new HardwarePluginEntity("Device model", EntityContext.isLinuxEnvironment() ? linuxHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
+        list.add(new HardwarePluginEntity("Device model", EntityContext.isLinuxEnvironment() ? machineHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
         list.add(new HardwarePluginEntity("Cloud status", this.entityContext.setting().getValue(ConsoleCloudProviderSetting.class).getStatus()));
         list.add(new HardwarePluginEntity("Cloud keystore", user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));
         list.add(new HardwarePluginEntity("Features", getFeatures()));

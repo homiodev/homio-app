@@ -2,7 +2,6 @@ package org.touchhome.app.utils;
 
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import net.lingala.zip4j.ZipFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.springframework.beans.factory.BeanFactory;
@@ -131,8 +130,7 @@ public final class HardwareUtils {
                                     Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
                                     if (path.getFileName().toString().endsWith(".zip")) {
                                         log.info("Unzip resource <{}>", path.getFileName());
-                                        ZipFile zipFile = new ZipFile(resolve.toFile());
-                                        zipFile.extractAll(resolve.getParent().toString());
+                                        TouchHomeUtils.unzip(resolve, resolve.getParent());
                                         log.info("Done unzip resource <{}>", path.getFileName());
                                     }
                                     log.info("Done copy resource <{}>", path.getFileName());

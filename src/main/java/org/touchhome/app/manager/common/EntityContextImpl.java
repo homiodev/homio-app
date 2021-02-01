@@ -1,5 +1,6 @@
 package org.touchhome.app.manager.common;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -60,7 +61,7 @@ import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEnti
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.hardware.other.LinuxHardwareRepository;
+import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
@@ -212,13 +213,13 @@ public class EntityContextImpl implements EntityContext {
         ui().addHeaderInfoNotification("app-status", "app", "Started at " + DateFormat.getDateTimeInstance().format(new Date()));
 
         // create indexes on tables
-        this.createTableIndexes();
+        //  this.createTableIndexes();
         this.bgp().schedule("check-app-version", 1, TimeUnit.DAYS, this::fetchReleaseVersion, true);
         this.event().addEventAndFire("app-started", "App started");
 
         // install autossh. Should refactor to move somewhere else
         this.bgp().runOnceOnInternetUp("install-software", () -> {
-            LinuxHardwareRepository repository = getBean(LinuxHardwareRepository.class);
+            MachineHardwareRepository repository = getBean(MachineHardwareRepository.class);
             if (!repository.isSoftwareInstalled("autossh")) {
                 repository.installSoftware("autossh");
             }
@@ -319,7 +320,7 @@ public class EntityContextImpl implements EntityContext {
             putToCache(entity, changeFields);
         }
         // fire change event manually
-        sendEntityUpdateNotification(entity, "change");
+        sendEntityUpdateNotification(entity, ItemAction.Update);
     }
 
     private void putToCache(HasEntityIdentifier entity, Map<String, Object> changeFields) {
@@ -574,14 +575,14 @@ public class EntityContextImpl implements EntityContext {
             @Override
             public void onPostInsert(PostInsertEvent event) {
                 super.onPostInsert(event);
-                updateCacheEntity(event.getEntity(), "created");
+                updateCacheEntity(event.getEntity(), ItemAction.Insert);
             }
         });
         registry.getEventListenerGroup(EventType.POST_UPDATE).appendListener(new PostUpdateEventListenerStandardImpl() {
             @Override
             public void onPostUpdate(PostUpdateEvent event) {
                 super.onPostUpdate(event);
-                updateCacheEntity(event.getEntity(), "changed");
+                updateCacheEntity(event.getEntity(), ItemAction.Update);
             }
         });
 
@@ -589,12 +590,12 @@ public class EntityContextImpl implements EntityContext {
             @Override
             public void onPostDelete(PostDeleteEvent event) {
                 super.onPostDelete(event);
-                updateCacheEntity(event.getEntity(), "removed");
+                updateCacheEntity(event.getEntity(), ItemAction.Remove);
             }
         });
     }
 
-    private void updateCacheEntity(Object entity, String type) {
+    private void updateCacheEntity(Object entity, ItemAction type) {
         try {
             if (entity instanceof BaseEntity) {
                 this.cacheService.entityUpdated((BaseEntity) entity);
@@ -605,24 +606,31 @@ public class EntityContextImpl implements EntityContext {
         }
     }
 
-    private void sendEntityUpdateNotification(Object entity, String type) {
-        // send info if item changed and it could be shown on page
-        if (entity.getClass().isAnnotationPresent(UISidebarMenu.class)) {
-            ui().sendNotification("-listen-items", new JSONObject().put("type", type).put("value", entity));
+    private void sendEntityUpdateNotification(Object entity, ItemAction type) {
+        // send info if item changed and it could be shown on page.
+        //check super ie. if we have group of items under same parent object i.e. IpCameraEntity has no UISidebarMenu but parent has this annotation
+        if (entity.getClass().isAnnotationPresent(UISidebarMenu.class) ||
+                entity.getClass().getSuperclass().isAnnotationPresent(UISidebarMenu.class)) {
+            ui().sendNotification("-global", new JSONObject().put("type", type.name).put("value", entity));
         }
         if (showEntityState) {
-            switch (type) {
-                case "removed":
-                    this.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED");
-                    break;
-                case "created":
-                    this.ui().sendInfoMessage("TOASTR.ENTITY_INSERTED");
-                    break;
-                case "changed":
-                    this.ui().sendInfoMessage("TOASTR.ENTITY_UPDATED");
-                    break;
-            }
+            type.messageEvent.accept(this);
         }
+    }
+
+    @AllArgsConstructor
+    private enum ItemAction {
+        Insert("addItem", context -> {
+            context.ui().sendInfoMessage("TOASTR.ENTITY_INSERTED");
+        }),
+        Update("addItem", context -> {
+            context.ui().sendInfoMessage("TOASTR.ENTITY_UPDATED");
+        }),
+        Remove("removeItem", context -> {
+            context.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED");
+        });
+        private final String name;
+        private final Consumer<EntityContextImpl> messageEvent;
     }
 
     private void removeBundle(BundleContext bundleContext) {

@@ -68,7 +68,7 @@ public class WidgetController {
     private final ObjectMapper objectMapper;
 
     @SneakyThrows
-    @GetMapping("plugins")
+    @GetMapping("/plugins")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<AvailableWidget> getAvailableWidgets() {
         List<AvailableWidget> options = new ArrayList<>();
@@ -91,7 +91,7 @@ public class WidgetController {
         return options;
     }
 
-    @GetMapping("button/{entityID}/handle")
+    @GetMapping("/button/{entityID}/handle")
     public void handleButtonClick(@PathVariable("entityID") String entityID) {
         WidgetButtonSeriesEntity entity = entityContext.getEntity(entityID);
         BaseEntity<?> source = entityContext.getEntity(entity.getDataSource());
@@ -105,7 +105,7 @@ public class WidgetController {
         }
     }
 
-    @GetMapping("bar/{entityID}/series")
+    @GetMapping("/bar/{entityID}/series")
     public Set<BarSeries> getBarSeries(@PathVariable("entityID") String entityID,
                                        @RequestParam(value = "liveEntity", required = false) String liveEntity) throws JsonProcessingException {
         WidgetBarChartEntity entity = entityContext.getEntity(entityID);
@@ -128,7 +128,7 @@ public class WidgetController {
         return series;
     }
 
-    @GetMapping("line/{entityID}/series")
+    @GetMapping("/line/{entityID}/series")
     public List<ChartSeries> getChartSeries(@PathVariable("entityID") String entityID,
                                             @RequestParam("period") String period) {
         WidgetLineChartEntity entity = entityContext.getEntity(entityID);
@@ -153,7 +153,7 @@ public class WidgetController {
         return series;
     }
 
-    @GetMapping("pie/{entityID}/series")
+    @GetMapping("/pie/{entityID}/series")
     public List<PieSeries> getPieSeries(@PathVariable("entityID") String entityID, @RequestParam("period") String period) {
         WidgetPieChartEntity entity = entityContext.getEntity(entityID);
         List<PieSeries> series = new ArrayList<>();
@@ -170,13 +170,13 @@ public class WidgetController {
         return series;
     }
 
-    @GetMapping("gauge/{entityID}/value")
+    @GetMapping("/gauge/{entityID}/value")
     public Float getGaugeValue(@PathVariable("entityID") String entityID) {
         WidgetGaugeEntity entity = entityContext.getEntity(entityID);
         return fetchVariableValue(entityContext.getEntity(entity.getDataSource()));
     }
 
-    @GetMapping("slider/{entityID}/values")
+    @GetMapping("/slider/{entityID}/values")
     public List<Float> getSliderValues(@PathVariable("entityID") String entityID) {
         WidgetSliderEntity entity = entityContext.getEntity(entityID);
         List<Float> values = new ArrayList<>(entity.getSeries().size());
@@ -187,7 +187,7 @@ public class WidgetController {
         return values;
     }
 
-    @GetMapping("toggle/{entityID}/values")
+    @GetMapping("/toggle/{entityID}/values")
     public List<Boolean> getToggleValues(@PathVariable("entityID") String entityID) {
         WidgetToggleEntity entity = entityContext.getEntity(entityID);
         List<Boolean> values = new ArrayList<>(entity.getSeries().size());
@@ -202,7 +202,7 @@ public class WidgetController {
         return values;
     }
 
-    @GetMapping("display/{entityID}/values")
+    @GetMapping("/display/{entityID}/values")
     public List<Pair<Object, Date>> getDisplayValues(@PathVariable("entityID") String entityID) {
         WidgetDisplayEntity entity = entityContext.getEntity(entityID);
         List<Pair<Object, Date>> values = new ArrayList<>(entity.getSeries().size());
@@ -219,7 +219,7 @@ public class WidgetController {
         return values;
     }
 
-    @PostMapping("slider/{entityID}/series/{seriesEntityID}")
+    @PostMapping("/slider/{entityID}/series/{seriesEntityID}")
     public void updateSliderValue(@PathVariable("entityID") String entityID, @PathVariable("seriesEntityID") String seriesEntityID, @RequestBody IntegerValue integerValue) {
         WidgetSliderEntity entity = entityContext.getEntity(entityID);
         WidgetSliderSeriesEntity series = entity.getSeries().stream().filter(s -> s.getEntityID().equals(seriesEntityID)).findAny().orElse(null);
@@ -236,7 +236,7 @@ public class WidgetController {
         }
     }
 
-    @PostMapping("toggle/{entityID}/series/{seriesEntityID}")
+    @PostMapping("/toggle/{entityID}/series/{seriesEntityID}")
     public void updateToggleValue(@PathVariable("entityID") String entityID, @PathVariable("seriesEntityID") String seriesEntityID, @RequestBody BooleanValue booleanValue) {
         WidgetToggleEntity entity = entityContext.getEntity(entityID);
         WidgetToggleSeriesEntity series = entity.getSeries().stream().filter(s -> s.getEntityID().equals(seriesEntityID)).findAny().orElse(null);
@@ -251,7 +251,7 @@ public class WidgetController {
         }
     }
 
-    @GetMapping("{tabId}/widget")
+    @GetMapping("/{tabId}/widget")
     public List<WidgetBaseEntity> getWidgets(@PathVariable("tabId") String tabId) {
         List<WidgetBaseEntity> widgets = entityContext.findAll(WidgetBaseEntity.class)
                 .stream().filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId)).collect(Collectors.toList());
@@ -285,7 +285,7 @@ public class WidgetController {
     }
 
     @Secured(PRIVILEGED_USER_ROLE)
-    @PostMapping("create/{tabId}/{type}")
+    @PostMapping("/create/{tabId}/{type}")
     public BaseEntity<?> createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
@@ -301,7 +301,7 @@ public class WidgetController {
     }
 
     @Secured(PRIVILEGED_USER_ROLE)
-    @PostMapping("create/{tabId}/{type}/{bundle}")
+    @PostMapping("/create/{tabId}/{type}/{bundle}")
     public BaseEntity<?> createExtraWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type, @PathVariable("bundle") String bundle) {
         log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, bundle: <{}>", type, tabId, bundle);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
@@ -342,14 +342,14 @@ public class WidgetController {
         return entityContext.save(widgetJsEntity);
     }
 
-    @GetMapping("tab")
+    @GetMapping("/tab")
     public List<OptionModel> getWidgetTabs() {
         return entityContext.findAll(WidgetTabEntity.class).stream().sorted()
                 .map(t -> OptionModel.of(t.getEntityID(), t.getName())).collect(Collectors.toList());
     }
 
     @SneakyThrows
-    @PostMapping("tab/{name}")
+    @PostMapping("/tab/{name}")
     public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
         BaseEntity<?> widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
@@ -360,7 +360,7 @@ public class WidgetController {
     }
 
     @SneakyThrows
-    @PutMapping("tab/{tabId}/{name}")
+    @PutMapping("/tab/{tabId}/{name}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void renameWorkspaceTab(@PathVariable("tabId") String tabId, @PathVariable("name") String name) {
         if (!WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(name)) {
@@ -374,7 +374,7 @@ public class WidgetController {
         }
     }
 
-    @DeleteMapping("tab/{tabId}")
+    @DeleteMapping("/tab/{tabId}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void deleteWorkspaceTab(@PathVariable("tabId") String tabId) {
         WidgetTabEntity widgetTabEntity = getWidgetTabEntity(tabId);

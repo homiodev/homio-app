@@ -14,12 +14,12 @@ public class DeviceController {
 
     private final BluetoothBundleEntryPoint bluetoothBundleEntrypoint;
 
-    @GetMapping("characteristic/{uuid}")
+    @GetMapping("/characteristic/{uuid}")
     public OptionModel getDeviceCharacteristic(@PathVariable("uuid") String uuid) {
         return OptionModel.key(bluetoothBundleEntrypoint.getDeviceCharacteristic(uuid));
     }
 
-    @PutMapping("characteristic/{uuid}")
+    @PutMapping("/characteristic/{uuid}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
         bluetoothBundleEntrypoint.setDeviceCharacteristic(uuid, value);

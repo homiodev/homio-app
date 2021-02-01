@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Checks with encoded password and raw
  */
+// TODO: need double check this functionality
 public class DoubleCheckPasswordAuthenticationProvider extends DaoAuthenticationProvider {
 
     private static final int MAX_ATTEMPT = 10;

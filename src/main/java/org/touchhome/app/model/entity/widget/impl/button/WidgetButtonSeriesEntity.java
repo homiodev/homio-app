@@ -28,9 +28,7 @@ import java.util.Set;
 @Entity
 public class WidgetButtonSeriesEntity extends BaseEntity<WidgetButtonSeriesEntity> implements Comparable<WidgetButtonSeriesEntity>, HasWidgetDataSource {
 
-    @UIField(order = 14,
-            required = true,
-            label = "widget.button_dataSource")
+    @UIField(order = 14, required = true)
     @UIFieldSelection(ButtonsSeriesDataSourceDynamicOptionLoader.class)
     private String dataSource;
 

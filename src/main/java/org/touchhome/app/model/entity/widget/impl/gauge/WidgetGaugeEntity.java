@@ -29,7 +29,7 @@ import java.util.List;
 @Accessors(chain = true)
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> implements HasWidgetDataSource {
 
-    @UIField(label = "widget.gauge_dataSource", order = 14, required = true)
+    @UIField(order = 14, required = true)
     @UIFieldSelection(GaugeDataSourceDynamicOptionLoader.class)
     private String dataSource;
 

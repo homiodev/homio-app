@@ -36,6 +36,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     private final PasswordEncoder passwordEncoder;
     private final UserEntityDetailsService userEntityDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final TouchHomeProperties touchHomeProperties;
     private final Log log = LogFactory.getLog(RequestFilter.class);
 
     @Override
@@ -47,15 +48,20 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
         // Entry points
-        http.authorizeRequests()//
-                .antMatchers(
-                        WebSocketConfig.ENDPOINT,
-                        "/rest/auth/status",
-                        "/rest/auth/login",
-                        "/rest/bundle/*/icon",
-                        "/rest/device/**").permitAll()
-                // Disallow everything else..
-                .anyRequest().authenticated();
+        if(touchHomeProperties.isDisableSecurity()) {
+            log.warn("!!! TouchHome security disabled !!!");
+            http.authorizeRequests().antMatchers(WebSocketConfig.ENDPOINT, "/rest/**").permitAll();
+        } else {
+            http.authorizeRequests()//
+                    .antMatchers(
+                            WebSocketConfig.ENDPOINT,
+                            "/rest/auth/status",
+                            "/rest/auth/login",
+                            "/rest/bundle/*/icon",
+                            "/rest/device/**").permitAll()
+                    // Disallow everything else..
+                    .anyRequest().authenticated();
+        }
 
         // If a user try to access a resource without having enough permissions
         http.exceptionHandling().accessDeniedPage("/login");

@@ -178,7 +178,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         } else {
             SettingEntity settingEntity = entityContext.getEntity(SettingEntity.getKey(pluginFor));
             if (!Objects.equals(value, settingEntity.getValue())) {
-                if (settingEntity.getDefaultValue().equals(value)) {
+                if (Objects.equals(settingEntity.getDefaultValue(), value)) {
                     value = "";
                 }
                 entityContext.save(settingEntity.setValue(value));

@@ -23,12 +23,12 @@ public class HardwareController {
     private final EntityContextImpl entityContext;
     private final StartupHardwareRepository startupHardwareRepository;
 
-    @GetMapping("event")
+    @GetMapping("/event")
     public Collection<OptionModel> getHardwareEvents() {
         return entityContext.event().getEvents().keySet();
     }
 
-    @PostMapping("app/update")
+    @PostMapping("/app/update")
     @Secured(ADMIN_ROLE)
     public void updateApp() {
         startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath());

@@ -28,8 +28,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
+
 @RestController
-@RequestMapping("/rest/setting")
+@RequestMapping(value = "/rest/setting", produces = APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 public class SettingController {
 
@@ -62,13 +64,13 @@ public class SettingController {
         }
     }
 
-    @GetMapping("{entityID}/options")
+    @GetMapping("/{entityID}/options")
     public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID) {
         SettingPluginOptions<?> settingPlugin = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         return SettingRepository.getOptions(settingPlugin, entityContext);
     }
 
-    @GetMapping("{entityID}/packages/all")
+    @GetMapping("/{entityID}/packages/all")
     public SettingPluginPackageInstall.PackageContext loadAllPackages(@PathVariable("entityID") String entityID) throws Exception {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
@@ -89,7 +91,7 @@ public class SettingController {
         return null;
     }
 
-    @GetMapping("{entityID}/packages")
+    @GetMapping("/{entityID}/packages")
     public SettingPluginPackageInstall.PackageContext loadInstalledPackages(@PathVariable("entityID") String entityID) throws Exception {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
@@ -98,7 +100,7 @@ public class SettingController {
         return null;
     }
 
-    @DeleteMapping("{entityID}/packages")
+    @DeleteMapping("/{entityID}/packages")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void unInstallPackage(@PathVariable("entityID") String entityID,
                                  @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
@@ -113,7 +115,7 @@ public class SettingController {
         }
     }
 
-    @PostMapping("{entityID}/packages")
+    @PostMapping("/{entityID}/packages")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void installPackage(@PathVariable("entityID") String entityID,
                                @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
@@ -146,7 +148,7 @@ public class SettingController {
         }
     }
 
-    @GetMapping("name")
+    @GetMapping("/name")
     public List<OptionModel> getSettingNames() {
         return OptionModel.list(entityContext.findAll(SettingEntity.class));
     }
@@ -168,7 +170,7 @@ public class SettingController {
             settings.add(settingEntity);
         }
 
-        UserEntity userEntity = entityContext.getUser();
+        UserEntity userEntity = entityContext.getUser(true);
 
         if (settingToPages == null) {
             settingToPages = new HashMap<>();

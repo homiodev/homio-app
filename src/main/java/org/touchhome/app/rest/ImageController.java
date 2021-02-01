@@ -21,7 +21,7 @@ public class ImageController {
     private final ImageManager imageManager;
     private final EntityContext entityContext;
 
-    @GetMapping("{imagePath:.+}")
+    @GetMapping("/{imagePath:.+}")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ResponseEntity<InputStreamResource> getImage(@PathVariable String imagePath) {
         ImageEntity imageEntity = entityContext.getEntity(imagePath);

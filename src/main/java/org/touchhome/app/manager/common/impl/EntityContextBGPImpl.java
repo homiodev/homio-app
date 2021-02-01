@@ -1,6 +1,7 @@
 package org.touchhome.app.manager.common.impl;
 
 import com.pivovarit.function.ThrowingBiFunction;
+import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
 import com.pivovarit.function.ThrowingSupplier;
 import lombok.Getter;
@@ -59,7 +60,25 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @Override
     public <T> ThreadContext<T> run(String name, ThrowingSupplier<T, Exception> command, boolean showOnUI) {
-        return addSchedule(name, 0, TimeUnit.MILLISECONDS, command, EntityContextBGPImpl.ScheduleType.SINGLE, showOnUI);
+        return addSchedule(name, 0, TimeUnit.MILLISECONDS, threadContext -> command.get(), EntityContextBGPImpl.ScheduleType.SINGLE, showOnUI);
+    }
+
+    @Override
+    public ThreadContext<Void> runInfinite(String name, ThrowingRunnable<Exception> command, boolean showOnUI, int delay, boolean stopOnException) {
+        return new ThreadContextImpl<>(name, context -> {
+            while (!context.isStopped())
+                try {
+                    while (!Thread.currentThread().isInterrupted()) {
+                        command.run();
+                        Thread.sleep(delay);
+                    }
+                } catch (Exception ex) {
+                    if (stopOnException) {
+                        context.cancel();
+                    }
+                }
+            return null;
+        }, EntityContextBGPImpl.ScheduleType.SINGLE, null, showOnUI);
     }
 
     @Override
@@ -81,24 +100,24 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         return threadContext != null;
     }
 
-    public ThreadContext<Void> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
-        return addSchedule(name, timeout, timeUnit, () -> {
+    private ThreadContext<Void> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
+        return addSchedule(name, timeout, timeUnit, voidThreadContext -> {
             command.run();
             return null;
         }, EntityContextBGPImpl.ScheduleType.DELAY, showOnUI);
     }
 
-    public <T> ThreadContext<T> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingSupplier<T, Exception> command,
-                                            ScheduleType scheduleType, boolean showOnUI) {
+    private <T> ThreadContext<T> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingFunction<ThreadContext<T>, T, Exception> command,
+                                             ScheduleType scheduleType, boolean showOnUI) {
         this.cancelThread(name);
-        ThreadContextImpl<T> threadContext = new ThreadContextImpl<>(name, command, scheduleType, timeout > 0 ? timeUnit.toMillis(timeout) : null, showOnUI);
+        ThreadContextImpl<T> threadContext = new ThreadContextImpl<T>(name, command, scheduleType, timeout > 0 ? timeUnit.toMillis(timeout) : null, showOnUI);
         this.schedulers.put(name, threadContext);
 
         Runnable runnable = () -> {
             try {
                 threadContext.runCount++;
                 threadContext.state = "STARTED";
-                threadContext.setRetValue(threadContext.getCommand().get());
+                threadContext.setRetValue(threadContext.getCommand().apply(threadContext));
                 threadContext.state = "FINISHED";
             } catch (Exception ex) {
                 threadContext.state = "FINISHED_WITH_ERROR";
@@ -132,7 +151,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     private void listenInternetStatus(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
-        this.internetThreadContext = this.addSchedule("internet-test", 10, TimeUnit.SECONDS, () -> {
+        this.internetThreadContext = this.addSchedule("internet-test", 10, TimeUnit.SECONDS, booleanThreadContext -> {
             try {
                 URLConnection connection = new URL(touchHomeProperties.getCheckConnectivityURL()).openConnection();
                 connection.connect();
@@ -159,7 +178,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     @RequiredArgsConstructor
     public static class ThreadContextImpl<T> implements ThreadContext<T> {
         private final String name;
-        private final ThrowingSupplier<T, Exception> command;
+        private final ThrowingFunction<ThreadContext<T>, T, Exception> command;
         private final ScheduleType scheduleType;
         private final Long period;
         private final boolean showOnUI;

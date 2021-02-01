@@ -37,7 +37,7 @@ public class RouteController {
         return routes;
     }
 
-    @GetMapping("menu")
+    @GetMapping("/menu")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Map<String, List<SidebarMenuItem>> getMenu() {
         Map<String, List<SidebarMenuItem>> sidebarMenus = new HashMap<>();

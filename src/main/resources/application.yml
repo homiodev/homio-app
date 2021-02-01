@@ -1,6 +1,7 @@
 rootDir: /opt/touchhome
 
 touchhome:
+  disableSecurity: false
   version: @project.version@
   httpPort: 9119
   serverSiteURL: https://touchhome.org

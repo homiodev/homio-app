@@ -57,7 +57,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
-import java.util.stream.Stream;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
@@ -82,24 +81,30 @@ public class UtilsController {
         if (entityClassByType == null) {
             return Collections.emptyList();
         }
-        Constructor constructor = Stream.of(entityClassByType.getDeclaredConstructors()).filter(c -> c.getParameterCount() == 0).findAny()
-                .orElseThrow(() -> new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName()));
-        constructor.setAccessible(true);
-        return fillEntityUIMetadataList(constructor.newInstance(), entityUIMetaDataSet);
+        Object instance = TouchHomeUtils.newInstance(entityClassByType);
+        if (instance == null) {
+            throw new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName());
+        }
+        return fillEntityUIMetadataList(instance, entityUIMetaDataSet);
     }
 
     static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet) {
-        FieldUtils.getFieldsListWithAnnotation(instance.getClass(), UIField.class).forEach(field ->
-                generateUIField(instance, entityUIMetaDataSet, field,
-                        StringUtils.defaultIfEmpty(field.getAnnotation(UIField.class).name(), field.getName()),
-                        field.getType(), field.getAnnotation(UIField.class), field.getName(), field.getGenericType()));
-
+        Set<String> foundMethods = new HashSet<>();
         for (Method method : MethodUtils.getMethodsListWithAnnotation(instance.getClass(), UIField.class)) {
             String name = method.getAnnotation(UIField.class).name();
             String methodName = InternalUtil.getMethodShortName(method);
+            foundMethods.add(methodName);
             generateUIField(instance, entityUIMetaDataSet, method, StringUtils.defaultIfEmpty(name, methodName),
                     method.getReturnType(), method.getAnnotation(UIField.class), methodName, method.getGenericReturnType());
         }
+
+        FieldUtils.getFieldsListWithAnnotation(instance.getClass(), UIField.class).forEach(field -> {
+            if (!foundMethods.contains(field.getName())) { // skip if already managed by methods
+                generateUIField(instance, entityUIMetaDataSet, field,
+                        StringUtils.defaultIfEmpty(field.getAnnotation(UIField.class).name(), field.getName()),
+                        field.getType(), field.getAnnotation(UIField.class), field.getName(), field.getGenericType());
+            }
+        });
 
         List<EntityUIMetaData> data = new ArrayList<>(entityUIMetaDataSet);
         Collections.sort(data);
@@ -292,7 +297,7 @@ public class UtilsController {
         entityUIMetaDataList.add(entityUIMetaData);
     }
 
-    @PostMapping("github/readme")
+    @PostMapping("/github/readme")
     public GitHubReadme getUrlContent(@RequestBody String url) {
         try {
             if (url.endsWith("/wiki")) {
@@ -304,12 +309,12 @@ public class UtilsController {
         }
     }
 
-    @GetMapping("notifications")
+    @GetMapping("/notifications")
     public Set<NotificationModel> getNotifications() {
         return entityContext.ui().getNotifications();
     }
 
-    @PostMapping("getCompletions")
+    @PostMapping("/getCompletions")
     public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest) throws NoSuchMethodException {
         ParserContext context = ParserContext.noneContext();
         return codeParser.addCompetitionFromManagerOrClass(
@@ -335,7 +340,7 @@ public class UtilsController {
                 headers, HttpStatus.OK);
     }
 
-    @PostMapping("code/run")
+    @PostMapping("/code/run")
     @Secured(PRIVILEGED_USER_ROLE)
     public RunScriptOnceJSON runScriptOnce(@RequestBody ScriptEntity scriptEntity) throws IOException {
         RunScriptOnceJSON runScriptOnceJSON = new RunScriptOnceJSON();
@@ -356,13 +361,13 @@ public class UtilsController {
         return runScriptOnceJSON;
     }
 
-    @GetMapping("i18n/{lang}.json")
+    @GetMapping("/i18n/{lang}.json")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ObjectNode getI18NFromBundles(@PathVariable("lang") String lang) {
         return Lang.getLangJson(lang);
     }
 
-    @PostMapping("confirm/{entityID}")
+    @PostMapping("/confirm/{entityID}")
     public void confirm(@PathVariable("entityID") String entityID) {
         EntityContextUIImpl.ConfirmationRequestModel confirmationRequestModel = EntityContextUIImpl.confirmationRequest.get(entityID);
         if (confirmationRequestModel != null && !confirmationRequestModel.isHandled()) {
@@ -371,7 +376,7 @@ public class UtilsController {
         }
     }
 
-    @DeleteMapping("confirm/{entityID}")
+    @DeleteMapping("/confirm/{entityID}")
     public void notConfirm(@PathVariable("entityID") String entityID) {
         if (EntityContextUIImpl.confirmationRequest.containsKey(entityID)) {
             EntityContextUIImpl.confirmationRequest.get(entityID).setHandled(true);

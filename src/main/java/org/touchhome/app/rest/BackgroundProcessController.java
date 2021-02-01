@@ -21,7 +21,7 @@ public class BackgroundProcessController {
     private final ScriptRepository scriptRepository;
     private final ScriptManager scriptManager;
 
-    @GetMapping("dynamic/{url}")
+    @GetMapping("/dynamic/{url}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws Exception {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
@@ -37,7 +37,7 @@ public class BackgroundProcessController {
         scriptManager.startThread(scriptEntity, json, true, null, false);
     }
 
-    /*@GetMapping("progress")
+    /*@GetMapping("/progress")
     public List<BackgroundProcessStatusJSON> getProgressValue(@RequestParam("values") String values) {
         List<BackgroundProcessStatusJSON> backgroundProcessStatusJSONList = new ArrayList<>();
         for (String entityIDAndKey : values.split(";")) {
@@ -71,7 +71,7 @@ public class BackgroundProcessController {
         return backgroundProcessStatusJSONList;
     }*/
 
-    @GetMapping("dynamic/stop/{url}")
+    @GetMapping("/dynamic/stop/{url}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void stopScriptByName(@PathVariable String url) {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);

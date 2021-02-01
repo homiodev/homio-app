@@ -33,7 +33,7 @@ public class BundleController {
 
     private final BundleManager bundleManager;
 
-    @GetMapping("{bundleID}/icon")
+    @GetMapping("/{bundleID}/icon")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID) throws IOException {
         BundleEntryPoint bundleEntrypoint;

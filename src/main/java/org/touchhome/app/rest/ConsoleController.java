@@ -60,7 +60,7 @@ public class ConsoleController {
             for (Map.Entry<String, Class<? extends HeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
                 Class<? extends HeaderSettingPlugin<?>> settingClass = entry.getValue();
                 JSONObject metadata = new JSONObject().put("ref", SettingEntity.getKey(settingClass));
-                HeaderSettingPlugin<?> plugin = settingClass.newInstance();
+                HeaderSettingPlugin<?> plugin = TouchHomeUtils.newInstance(settingClass);
                 putOpt(metadata, "fabc", plugin.fireActionsBeforeChange());
 
                 actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName(entry.getKey())
@@ -103,13 +103,13 @@ public class ConsoleController {
         }
     }
 
-    @GetMapping("tab/{tab}/actions")
+    @GetMapping("/tab/{tab}/actions")
     public List<UIActionDescription> getConsoleTabActions(@PathVariable("tab") String tab) {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         return consolePlugin == null ? Collections.emptyList() : fetchUIHeaderActions(consolePlugin);
     }
 
-    @GetMapping("tab/{tab}/content")
+    @GetMapping("/tab/{tab}/content")
     public Object getTabContent(@PathVariable("tab") String tab) {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         if (consolePlugin == null) {
@@ -131,7 +131,7 @@ public class ConsoleController {
         return consolePlugin.getValue();
     }
 
-    @PostMapping("tab/{tab}/{entityID}/action")
+    @PostMapping("/tab/{tab}/{entityID}/action")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public ActionResponseModel executeAction(@PathVariable("tab") String tab,
                                              @PathVariable("entityID") String entityID,
@@ -155,7 +155,7 @@ public class ConsoleController {
         throw new IllegalArgumentException("Unable to handle action for tab: " + tab);
     }
 
-    @PostMapping("tab/{tab}/update")
+    @PostMapping("/tab/{tab}/update")
     public void updateDependencies(@PathVariable("tab") String tab) throws Exception {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
@@ -168,7 +168,7 @@ public class ConsoleController {
         }
     }
 
-    @GetMapping("tab/{tab}/{entityID}/{fieldName}/options")
+    @GetMapping("/tab/{tab}/{entityID}/{fieldName}/options")
     public Collection<OptionModel> loadSelectOptions(@PathVariable("tab") String tab,
                                                      @PathVariable("entityID") String entityID,
                                                      @PathVariable("fieldName") String fieldName) {
@@ -182,7 +182,7 @@ public class ConsoleController {
         return null;
     }
 
-    @GetMapping("tab")
+    @GetMapping("/tab")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Set<ConsoleTab> getTabs() {
         Set<ConsoleTab> tabs = new HashSet<>(this.tabs);
@@ -212,19 +212,19 @@ public class ConsoleController {
         return tabs;
     }
 
-    @PostMapping("ssh")
+    @PostMapping("/ssh")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public SshProvider.SshSession openSshSession() {
         return this.entityContext.setting().getValue(ConsoleSshProviderSetting.class).openSshSession();
     }
 
-    @DeleteMapping("ssh/{token}")
+    @DeleteMapping("/ssh/{token}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void closeSshSession(@PathVariable("token") String token) {
         this.entityContext.setting().getValue(ConsoleSshProviderSetting.class).closeSshSession(token);
     }
 
-    @GetMapping("ssh/{token}")
+    @GetMapping("/ssh/{token}")
     public SshProvider.SessionStatusModel getSshStatus(@PathVariable("token") String token) {
         return this.entityContext.setting().getValue(ConsoleSshProviderSetting.class).getSshStatus(token);
     }

@@ -4,11 +4,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.entity.widget.HasWidgetDataSource;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.HasWidgetDataSource;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupEntity;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -30,9 +30,7 @@ import java.util.Set;
 public class WidgetPieChartSeriesEntity extends BaseEntity<WidgetPieChartSeriesEntity>
         implements Comparable<WidgetPieChartSeriesEntity>, HasWidgetDataSource {
 
-    @UIField(order = 14,
-            required = true,
-            label = "widget.pie_dataSource")
+    @UIField(order = 14, required = true)
     @UIFieldSelection(PieSeriesDataSourceDynamicOptionLoader.class)
     private String dataSource;
 

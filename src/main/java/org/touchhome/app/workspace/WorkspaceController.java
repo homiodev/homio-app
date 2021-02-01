@@ -88,12 +88,12 @@ public class WorkspaceController {
         Collections.sort(extensions);
     }
 
-    @GetMapping("extension")
+    @GetMapping("/extension")
     public List<Scratch3ExtensionImpl> getExtensions() {
         return extensions;
     }
 
-    @GetMapping("extension/{bundleID}.png")
+    @GetMapping("/extension/{bundleID}.png")
     public ResponseEntity<InputStreamResource> getExtensionImage(@PathVariable("bundleID") String bundleID) {
         BundleEntryPoint bundleEntrypoint = bundleManager.getBundle(bundleID);
         InputStream stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream("extensions/" + bundleEntrypoint.getBundleId() + ".png");
@@ -106,7 +106,7 @@ public class WorkspaceController {
         return TouchHomeUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
     }
 
-    @GetMapping("{entityID}")
+    @GetMapping("/{entityID}")
     public String getWorkspace(@PathVariable("entityID") String entityID) {
         WorkspaceEntity workspaceEntity = entityContext.getEntity(entityID);
         if (workspaceEntity == null) {
@@ -115,7 +115,7 @@ public class WorkspaceController {
         return workspaceEntity.getContent();
     }
 
-    @GetMapping("variable")
+    @GetMapping("/variable")
     public String getWorkspaceVariables() {
         WorkspaceShareVariableEntity entity = entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
         if (entity == null) {
@@ -124,27 +124,27 @@ public class WorkspaceController {
         return entity.getContent();
     }
 
-    @GetMapping("variable/{type}")
+    @GetMapping("/variable/{type}")
     public List<OptionModel> getWorkspaceVariables(@PathVariable("type") String type) {
         return OptionModel.list(entityContext.findAllByPrefix(type));
     }
 
     @SneakyThrows
-    @PostMapping("{entityID}")
+    @PostMapping("/{entityID}")
     public void saveWorkspace(@PathVariable("entityID") String entityID, @RequestBody String json) {
         WorkspaceEntity workspaceEntity = entityContext.getEntity(entityID);
         entityContext.save(workspaceEntity.setContent(json));
     }
 
     @SneakyThrows
-    @PostMapping("variable")
+    @PostMapping("/variable")
     public void saveVariables(@RequestBody String json) {
         WorkspaceShareVariableEntity entity = entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
         entityContext.save(entity.setContent(json));
     }
 
     @SneakyThrows
-    @PostMapping("variable/{entityID}")
+    @PostMapping("/variable/{entityID}")
     public void saveVariables(@PathVariable("entityID") String entityID, @RequestBody CreateVariable createVariable) {
         Optional<AbstractRepository> optionalRepository = entityContext.getRepository(entityID);
         if (optionalRepository.isPresent()) {
@@ -159,7 +159,7 @@ public class WorkspaceController {
         }
     }
 
-    @GetMapping("tab")
+    @GetMapping("/tab")
     public List<OptionModel> getWorkspaceTabs() {
         List<WorkspaceEntity> tabs = entityContext.findAll(WorkspaceEntity.class);
         Collections.sort(tabs);
@@ -167,7 +167,7 @@ public class WorkspaceController {
     }
 
     @SneakyThrows
-    @PostMapping("tab/{name}")
+    @PostMapping("/tab/{name}")
     public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
         BaseEntity workspaceEntity = entityContext.getEntity(WorkspaceEntity.PREFIX + name);
         if (workspaceEntity == null) {
@@ -178,13 +178,13 @@ public class WorkspaceController {
     }
 
     @SneakyThrows
-    @GetMapping("tab/{name}")
+    @GetMapping("/tab/{name}")
     public boolean tabExists(@PathVariable("name") String name) {
         return entityContext.getEntity(WorkspaceEntity.PREFIX + name) != null;
     }
 
     @SneakyThrows
-    @PutMapping("tab/{entityID}")
+    @PutMapping("/tab/{entityID}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void renameWorkspaceTab(@PathVariable("entityID") String entityID, @RequestBody OptionModel option) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
@@ -205,7 +205,7 @@ public class WorkspaceController {
         }
     }
 
-    @DeleteMapping("tab/{entityID}")
+    @DeleteMapping("/tab/{entityID}")
     @Secured(TouchHomeUtils.ADMIN_ROLE)
     public void deleteWorkspaceTab(@PathVariable("entityID") String entityID) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);

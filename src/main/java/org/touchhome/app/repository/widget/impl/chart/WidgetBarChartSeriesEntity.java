@@ -30,9 +30,7 @@ import java.util.Set;
 public class WidgetBarChartSeriesEntity extends BaseEntity<WidgetBarChartSeriesEntity>
         implements Comparable<WidgetBarChartSeriesEntity>, HasWidgetDataSource {
 
-    @UIField(order = 14,
-            required = true,
-            label = "widget.bar_dataSource")
+    @UIField(order = 14, required = true)
     @UIFieldSelection(BarSeriesDataSourceDynamicOptionLoader.class)
     private String dataSource;
 

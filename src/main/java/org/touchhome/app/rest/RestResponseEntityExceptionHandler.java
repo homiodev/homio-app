@@ -26,6 +26,9 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
             request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex, WebRequest.SCOPE_REQUEST);
         }
         String msg = StringUtils.defaultString(ex.getMessage(), ex.toString());
+        if(ex instanceof NullPointerException) {
+            msg += ". src: " + ex.getStackTrace()[0].toString();
+        }
         log.error("Error <{}>", msg);
         return new ResponseEntity<>(new ErrorHolderModel("Error", msg, ex), headers, status);
     }

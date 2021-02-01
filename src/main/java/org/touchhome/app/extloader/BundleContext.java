@@ -54,11 +54,10 @@ public class BundleContext {
     @SneakyThrows
     BundleContext(Path bundleContextFile) {
         this.bundleContextFile = bundleContextFile;
-        String fileName = bundleContextFile.getFileName().toString();
         ZipFile zipFile = new ZipFile(bundleContextFile.toString());
         JarInputStream jarStream = new JarInputStream(new FileInputStream(bundleContextFile.toString()));
         this.manifest = jarStream.getManifest();
-        this.pomFile = readPomFile(zipFile, fileName);
+        this.pomFile = readPomFile(zipFile);
         jarStream.close();
         zipFile.close();
     }
@@ -71,7 +70,7 @@ public class BundleContext {
         this.internal = true;
     }
 
-    private Model readPomFile(ZipFile file, String fileName) throws IOException, XmlPullParserException {
+    private Model readPomFile(ZipFile file) throws IOException, XmlPullParserException {
         String artifactId = this.manifest.getMainAttributes().getValue("artifactId");
         for (ZipEntry e : Collections.list(file.entries())) {
             if (e.getName().endsWith(artifactId + "/pom.xml")) {

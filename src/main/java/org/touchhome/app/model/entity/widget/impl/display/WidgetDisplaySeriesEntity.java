@@ -30,9 +30,7 @@ import java.util.Set;
 @Entity
 public class WidgetDisplaySeriesEntity extends BaseEntity<WidgetDisplaySeriesEntity> implements Comparable<WidgetDisplaySeriesEntity>, HasWidgetDataSource {
 
-    @UIField(order = 14,
-            required = true,
-            label = "widget.display_dataSource")
+    @UIField(order = 14, required = true)
     @UIFieldSelection(DisplayDataSourceDynamicOptionLoader.class)
     private String dataSource;
 
