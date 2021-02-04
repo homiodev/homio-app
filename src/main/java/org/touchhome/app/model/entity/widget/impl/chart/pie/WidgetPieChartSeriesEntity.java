@@ -1,6 +1,5 @@
 package org.touchhome.app.model.entity.widget.impl.chart.pie;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -8,7 +7,7 @@ import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.entity.widget.HasWidgetDataSource;
+import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupEntity;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -18,51 +17,38 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.ManyToOne;
 import java.util.List;
-import java.util.Set;
 
-@Setter
-@Getter
-@Accessors(chain = true)
 @Entity
-public class WidgetPieChartSeriesEntity extends BaseEntity<WidgetPieChartSeriesEntity>
-        implements Comparable<WidgetPieChartSeriesEntity>, HasWidgetDataSource {
+public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChartEntity> {
+
+    public static final String PREFIX = "piesw_";
 
     @UIField(order = 14, required = true)
     @UIFieldSelection(PieSeriesDataSourceDynamicOptionLoader.class)
-    private String dataSource;
+    public String getDataSource() {
+        return getJsonData("ds");
+    }
 
     @UIField(order = 15, type = UIFieldType.Color)
-    private String color = "#FFFFFF";
+    public String getColor() {
+        return getJsonData("color", "#FFFFFF");
+    }
 
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    private WidgetPieChartEntity widgetPieChartEntity;
-
-    private int priority;
-
-    @Override
-    public int compareTo(WidgetPieChartSeriesEntity entity) {
-        return Integer.compare(this.priority, entity.priority);
+    public WidgetPieChartSeriesEntity setColor(String value) {
+        setJsonData("color", value);
+        return this;
     }
 
     @Override
-    public void getAllRelatedEntities(Set<BaseEntity> set) {
-        set.add(widgetPieChartEntity);
-    }
-
-    @Override
-    @UIField(order = 3, transparent = true)
-    public String getDescription() {
-        return super.getDescription();
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 
     public static class PieSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<OptionModel> loadOptions(Object parameter, BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceBackupEntity.class)
                     .add(WorkspaceStandaloneVariableEntity.class)

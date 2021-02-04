@@ -8,6 +8,7 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.setting.CoreSettingPlugin;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.model.ProgressBar;
 import org.touchhome.bundle.api.setting.SettingPluginPackageInstall;
 
 import java.util.List;
@@ -52,14 +53,14 @@ public class SystemBundleLibraryManagerSetting implements SettingPluginPackageIn
     }
 
     @Override
-    public void installPackage(EntityContext entityContext, PackageRequest packageRequest, String progressKey) {
+    public void installPackage(EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
         entityContext.getBean(BundleContextService.class).installBundle(packageRequest.getName(),
                 packageRequest.getUrl(),
                 packageRequest.getVersion());
     }
 
     @Override
-    public void unInstallPackage(EntityContext entityContext, PackageRequest packageRequest, String progressKey) {
+    public void unInstallPackage(EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
         entityContext.getBean(BundleContextService.class).uninstallBundle(packageRequest.getName());
     }
 

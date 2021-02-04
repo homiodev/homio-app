@@ -8,6 +8,6 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 public class WorkspaceBooleanRepository extends AbstractRepository<WorkspaceBooleanEntity> {
 
     public WorkspaceBooleanRepository() {
-        super(WorkspaceBooleanEntity.class, WorkspaceBooleanEntity.PREFIX);
+        super(WorkspaceBooleanEntity.class);
     }
 }

@@ -11,6 +11,8 @@ import org.json.JSONObject;
 public class UIActionDescription {
     private Type type;
     private String name;
+    private String icon;
+    private String iconColor;
     private JSONObject metadata;
 
     public enum Type {

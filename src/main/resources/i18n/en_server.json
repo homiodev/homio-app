@@ -1,3 +1,12 @@
 {
-  "UDP_ERROR": "Unable to listen udp: {{key}}. Error: {{msg}}"
+  "UDP_ERROR": "Unable to listen udp: {{key}}. Error: {{msg}}",
+  "NEW_DEVICE": {
+    "TITLE": "Found device: {{NAME}}",
+    "NAME": "Name   '{{NAME}}'",
+    "URL": "URL    '{{URL}}'"
+  },
+  "VIDEO_STREAM": {
+    "PORT": "Port   {{PORT}}",
+    "NEW_DEVICE_QUESTION": "Do you want create new video stream?"
+  }
 }

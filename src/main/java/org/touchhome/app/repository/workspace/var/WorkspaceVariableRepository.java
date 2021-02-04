@@ -8,6 +8,6 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 public class WorkspaceVariableRepository extends AbstractRepository<WorkspaceVariableEntity> {
 
     public WorkspaceVariableRepository() {
-        super(WorkspaceVariableEntity.class, WorkspaceVariableEntity.PREFIX);
+        super(WorkspaceVariableEntity.class);
     }
 }

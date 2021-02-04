@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.touchhome.app.model.entity.ScriptEntity;
+import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.repository.workspace.WorkspaceBroadcastRepository;
@@ -75,7 +76,7 @@ public class DemoConfiguration {
         WorkspaceShareVariableEntity shareVariableEntity = entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
         JSONObject target = new JSONObject(StringUtils.defaultIfEmpty(shareVariableEntity.getContent(), "{}"));
         removeOutdatedVariables(target.optJSONObject("variables"), WorkspaceStandaloneVariableEntity.PREFIX);
-        removeOutdatedVariables(target.optJSONObject("broadcasts"), WorkspaceBroadcastRepository.PREFIX);
+        removeOutdatedVariables(target.optJSONObject("broadcasts"), WorkspaceBroadcastEntity.PREFIX);
         removeOutdatedVariables(target.optJSONObject("backup_lists"), WorkspaceBackupGroupEntity.PREFIX);
         removeOutdatedVariables(target.optJSONObject("bool_variables"), WorkspaceBooleanGroupEntity.PREFIX);
         removeOutdatedVariables(target.optJSONObject("group_variables"), WorkspaceVariableGroupEntity.PREFIX);

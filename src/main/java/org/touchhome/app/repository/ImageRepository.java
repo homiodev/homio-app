@@ -8,10 +8,8 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository
 public class ImageRepository extends AbstractRepository<ImageEntity> {
 
-    public static final String PREFIX = "i_";
-
     public ImageRepository() {
-        super(ImageEntity.class, PREFIX);
+        super(ImageEntity.class);
     }
 
     @Transactional(readOnly = true)

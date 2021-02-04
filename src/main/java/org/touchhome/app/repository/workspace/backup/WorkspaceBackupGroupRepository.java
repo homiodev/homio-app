@@ -8,7 +8,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 public class WorkspaceBackupGroupRepository extends AbstractRepository<WorkspaceBackupGroupEntity> {
 
     public WorkspaceBackupGroupRepository() {
-        super(WorkspaceBackupGroupEntity.class, WorkspaceBackupGroupEntity.PREFIX);
+        super(WorkspaceBackupGroupEntity.class);
     }
 }
 

@@ -9,7 +9,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 public class ScriptRepository extends AbstractRepository<ScriptEntity> {
 
     public ScriptRepository() {
-        super(ScriptEntity.class, "s_");
+        super(ScriptEntity.class);
     }
 
     @Transactional(readOnly = true)

@@ -8,7 +8,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 public class PlaceRepository extends AbstractRepository<PlaceEntity> {
 
     public PlaceRepository() {
-        super(PlaceEntity.class, "pl_");
+        super(PlaceEntity.class);
     }
 
 }

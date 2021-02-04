@@ -35,6 +35,8 @@ import java.util.Set;
 @Accessors(chain = true)
 public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
+    public static final String PREFIX = "script_";
+
     @Getter
     @Setter
     @Column(nullable = false)
@@ -146,5 +148,10 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
             });
         }
         return formattedJavaScript;
+    }
+
+    @Override
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 }

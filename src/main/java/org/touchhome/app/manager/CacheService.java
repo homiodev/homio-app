@@ -7,9 +7,11 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.utils.CollectionUtils;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
@@ -36,6 +38,7 @@ public class CacheService {
     private final Map<String, UpdateStatement> entityCache = new ConcurrentHashMap<>();
 
     private final CacheManager cacheManager;
+    private final ApplicationContext applicationContext;
 
     public static CacheManager createCacheManager() {
         return new ConcurrentMapCacheManager(
@@ -59,7 +62,7 @@ public class CacheService {
     }
 
     public void entityUpdated(BaseEntity entity) {
-        Set<BaseEntity> relatedEntities = CollectionUtils.extendedSet();
+        Set<BaseEntity> relatedEntities = CollectionUtils.nullSafeSet();
         entity.getAllRelatedEntities(relatedEntities);
         relatedEntities.add(entity);
         for (BaseEntity relatedEntity : relatedEntities) {
@@ -84,7 +87,7 @@ public class CacheService {
                 // override changed fields
                 entityCache.get(identifier).changeFields.putAll(changeFields);
             } else {
-                entityCache.put(identifier, new UpdateStatement(entity, repository, changeFields));
+                entityCache.put(identifier, new UpdateStatement(identifier, repository, changeFields));
             }
         }
     }
@@ -107,20 +110,22 @@ public class CacheService {
     public void flushDelayedUpdates() {
         if (!entityCache.isEmpty()) {
             synchronized (entityCache) {
+                EntityContext entityContext = applicationContext.getBean(EntityContext.class);
                 for (UpdateStatement updateStatement : entityCache.values()) {
                     try {
                         if (updateStatement.changeFields != null) {
+                            HasEntityIdentifier baseEntity = entityContext.getEntity(updateStatement.entityID, false);
                             for (Map.Entry<String, Object> entry : updateStatement.changeFields.entrySet()) {
-                                MethodUtils.invokeMethod(updateStatement.baseEntity, entry.getKey(), entry.getValue());
+                                MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
+                            }
+                            updateStatement.repository.flushCashedEntity(baseEntity);
+
+                            if (baseEntity instanceof BaseEntity) {
+                                entityUpdated((BaseEntity) baseEntity);
                             }
                         }
-                        updateStatement.repository.flushCashedEntity(updateStatement.baseEntity);
-
-                        if (updateStatement.baseEntity instanceof BaseEntity) {
-                            entityUpdated((BaseEntity) updateStatement.baseEntity);
-                        }
                     } catch (Exception ex) {
-                        log.error("Error delay update entity <{}>", updateStatement.baseEntity, ex);
+                        log.error("Error delay update entity <{}>", updateStatement.entityID, ex);
                     }
                 }
                 entityCache.clear();
@@ -128,9 +133,18 @@ public class CacheService {
         }
     }
 
+    public Object getFieldValue(String identifier, String key) {
+        synchronized (entityCache) {
+            if (entityCache.containsKey(identifier)) {
+                return entityCache.get(identifier).changeFields.get(key);
+            }
+        }
+        return null;
+    }
+
     @AllArgsConstructor
     private static class UpdateStatement {
-        HasEntityIdentifier baseEntity;
+        String entityID;
         PureRepository repository;
         Map<String, Object> changeFields;
     }

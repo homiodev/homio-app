@@ -1,13 +1,9 @@
 package org.touchhome.app.model.entity.widget.impl.display;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.entity.widget.HasWidgetDataSource;
+import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupEntity;
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
@@ -19,62 +15,79 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.ManyToOne;
 import java.util.List;
-import java.util.Set;
 
-@Setter
-@Getter
-@Accessors(chain = true)
 @Entity
-public class WidgetDisplaySeriesEntity extends BaseEntity<WidgetDisplaySeriesEntity> implements Comparable<WidgetDisplaySeriesEntity>, HasWidgetDataSource {
+public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity> {
+
+    public static final String PREFIX = "wtdps_";
 
     @UIField(order = 14, required = true)
     @UIFieldSelection(DisplayDataSourceDynamicOptionLoader.class)
-    private String dataSource;
-
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    private WidgetDisplayEntity widgetDisplayEntity;
-
-    private int priority;
+    public String getDataSource() {
+        return getJsonData("ds");
+    }
 
     @UIField(order = 20, type = UIFieldType.Color)
-    private String foreground = "#009688";
+    public String getForeground() {
+        return getJsonData("fg", "#009688");
+    }
+
+    public WidgetDisplaySeriesEntity setForeground(String value) {
+        setJsonData("fg", value);
+        return this;
+    }
 
     @UIField(order = 21, type = UIFieldType.Color)
-    private String background = "rgba(0, 0, 0, 0.1)";
+    public String getBackground() {
+        return getJsonData("bg", "rgba(0, 0, 0, 0.1)");
+    }
+
+    public WidgetDisplaySeriesEntity setBackground(String value) {
+        setJsonData("bg", value);
+        return this;
+    }
 
     @UIField(order = 22)
-    private String prepend = "";
+    public String getPrepend() {
+        return getJsonData("prepend");
+    }
+
+    public WidgetDisplaySeriesEntity setPrepend(String value) {
+        setJsonData("prepend", value);
+        return this;
+    }
+
 
     @UIField(order = 23)
-    private String append = "";
+    public String getAppend() {
+        return getJsonData("append");
+    }
+
+    public WidgetDisplaySeriesEntity setAppend(String value) {
+        setJsonData("append", value);
+        return this;
+    }
 
     @UIField(order = 24)
-    private Boolean showLastUpdateDate = Boolean.FALSE;
+    public boolean getShowLastUpdateDate() {
+        return getJsonData("showLastUpdateDate", Boolean.FALSE);
+    }
 
-    @Override
-    public int compareTo(WidgetDisplaySeriesEntity entity) {
-        return Integer.compare(this.priority, entity.priority);
+    public WidgetDisplaySeriesEntity setShowLastUpdateDate(boolean value) {
+        setJsonData("showLastUpdateDate", value);
+        return this;
     }
 
     @Override
-    public void getAllRelatedEntities(Set<BaseEntity> set) {
-        set.add(widgetDisplayEntity);
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 
-    @Override
-    @UIField(order = 3, transparent = true)
-    public String getDescription() {
-        return super.getDescription();
-    }
-
-    public static class DisplayDataSourceDynamicOptionLoader implements DynamicOptionLoader<Void> {
+    public static class DisplayDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<OptionModel> loadOptions(Void parameter, BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceStandaloneVariableEntity.class)
                     .add(WorkspaceVariableEntity.class)

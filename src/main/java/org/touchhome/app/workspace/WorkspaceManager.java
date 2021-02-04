@@ -9,7 +9,6 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.repository.device.WorkspaceRepository;
-import org.touchhome.app.repository.workspace.WorkspaceBroadcastRepository;
 import org.touchhome.app.setting.system.SystemClearWorkspaceButtonSetting;
 import org.touchhome.app.setting.system.SystemClearWorkspaceVariablesButtonSetting;
 import org.touchhome.bundle.api.EntityContext;
@@ -148,24 +147,24 @@ public class WorkspaceManager {
         JSONObject target = new JSONObject(StringUtils.defaultIfEmpty(entity.getContent(), "{}"));
 
         // single variables
-        updateWorkspaceObjects(target.optJSONObject("variables"), WorkspaceStandaloneVariableEntity.PREFIX, WorkspaceStandaloneVariableEntity::new);
+        updateWorkspaceObjects(target.optJSONObject("variables"), WorkspaceStandaloneVariableEntity::new);
 
         // json variables
-        updateWorkspaceObjects(target.optJSONObject("json_variables"), WorkspaceJsonVariableEntity.PREFIX, WorkspaceJsonVariableEntity::new);
+        updateWorkspaceObjects(target.optJSONObject("json_variables"), WorkspaceJsonVariableEntity::new);
 
         // broadcasts
-        updateWorkspaceObjects(target.optJSONObject("broadcasts"), WorkspaceBroadcastRepository.PREFIX, WorkspaceBroadcastEntity::new);
+        updateWorkspaceObjects(target.optJSONObject("broadcasts"), WorkspaceBroadcastEntity::new);
 
         // backup
-        Map<BaseEntity, JSONArray> values = updateWorkspaceObjects(target.optJSONObject("backup_lists"), WorkspaceBackupGroupEntity.PREFIX, WorkspaceBackupGroupEntity::new);
+        Map<BaseEntity, JSONArray> values = updateWorkspaceObjects(target.optJSONObject("backup_lists"), WorkspaceBackupGroupEntity::new);
         createSupplier(values, (baseEntity) -> new WorkspaceBackupEntity().setWorkspaceBackupGroupEntity((WorkspaceBackupGroupEntity) baseEntity), WorkspaceBackupEntity.PREFIX);
 
         // bool
-        values = updateWorkspaceObjects(target.optJSONObject("bool_variables"), WorkspaceBooleanGroupEntity.PREFIX, WorkspaceBooleanGroupEntity::new);
+        values = updateWorkspaceObjects(target.optJSONObject("bool_variables"), WorkspaceBooleanGroupEntity::new);
         createSupplier(values, (baseEntity) -> new WorkspaceBooleanEntity().setWorkspaceBooleanGroupEntity((WorkspaceBooleanGroupEntity) baseEntity), WorkspaceBooleanEntity.PREFIX);
 
         // group variables
-        values = updateWorkspaceObjects(target.optJSONObject("group_variables"), WorkspaceVariableGroupEntity.PREFIX, WorkspaceVariableGroupEntity::new);
+        values = updateWorkspaceObjects(target.optJSONObject("group_variables"), WorkspaceVariableGroupEntity::new);
         createSupplier(values, (baseEntity) -> new WorkspaceVariableEntity().setWorkspaceVariableGroupEntity((WorkspaceVariableGroupEntity) baseEntity), WorkspaceVariableEntity.PREFIX);
     }
 
@@ -224,9 +223,10 @@ public class WorkspaceManager {
         }
     }
 
-    private Map<BaseEntity, JSONArray> updateWorkspaceObjects(JSONObject list, String repositoryPrefix, Supplier<BaseEntity> entitySupplier) {
+    private Map<BaseEntity, JSONArray> updateWorkspaceObjects(JSONObject list, Supplier<BaseEntity> entitySupplier) {
         Set<String> entities = new HashSet<>();
         Map<BaseEntity, JSONArray> res = new HashMap<>();
+        String repositoryPrefix = entitySupplier.get().getEntityPrefix();
         if (list != null) {
             for (String id : list.keySet()) {
                 JSONArray array = list.optJSONArray(id);
@@ -274,9 +274,12 @@ public class WorkspaceManager {
         } catch (Exception ex) {
             log.error("Unable to load workspace. Looks like workspace has incorrect value", ex);
         }
-        entityContext.addEntityUpdateListener(WorkspaceEntity.class, this::reloadWorkspace);
-        entityContext.addEntityUpdateListener(WorkspaceShareVariableEntity.class, this::reloadVariable);
-        entityContext.addEntityRemovedListener(WorkspaceEntity.class, entity -> tabs.remove(entity.getEntityID()));
+        entityContext.event().addEntityUpdateListener(WorkspaceEntity.class,
+                "workspace-change-listener", this::reloadWorkspace);
+        entityContext.event().addEntityUpdateListener(WorkspaceShareVariableEntity.class,
+                "workspace-share-var-change-listener", this::reloadVariable);
+        entityContext.event().addEntityRemovedListener(WorkspaceEntity.class,
+                "workspace-remove-listener", entity -> tabs.remove(entity.getEntityID()));
 
         // listen for clear workspace
         entityContext.setting().listenValue(SystemClearWorkspaceButtonSetting.class, "wm-clear-workspace", () ->

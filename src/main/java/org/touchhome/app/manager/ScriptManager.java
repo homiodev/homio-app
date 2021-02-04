@@ -159,7 +159,7 @@ public class ScriptManager {
      * Run java script once and interrupt it if too long works
      */
     public String callJavaScriptOnce(ScriptEntity scriptEntity, CompileScriptContext compiledScriptContext) throws InterruptedException, ExecutionException {
-        EntityContextBGP.ThreadContext<String> threadContext = this.entityContext.bgp().run(scriptEntity.getEntityID(), () -> runJavaScript(compiledScriptContext), true);
+        EntityContextBGP.ThreadContext<String> threadContext = this.entityContext.bgp().runAndGet(scriptEntity.getEntityID(), () -> runJavaScript(compiledScriptContext), true);
         try {
             return threadContext.await(maxJavaScriptOnceCallBeforeInterruptInSec, TimeUnit.SECONDS);
         } catch (TimeoutException ex) {

@@ -1,45 +1,77 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.touchhome.app.model.entity.widget.HorizontalPosition;
 import org.touchhome.app.model.entity.widget.VerticalPosition;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
-import javax.persistence.*;
-import java.util.Set;
+import javax.persistence.Entity;
 
 @Entity
-@Getter
-@Setter
-public class WidgetSliderEntity extends WidgetBaseEntity<WidgetSliderEntity> {
+public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity> {
+
+    public static final String PREFIX = "wtsl_";
 
     @UIField(order = 31, showInContextMenu = true)
-    private Boolean vertical = Boolean.FALSE;
+    public Boolean isVertical() {
+        return getJsonData("vt", Boolean.FALSE);
+    }
+
+    public WidgetSliderEntity setVertical(Boolean value) {
+        setJsonData("vt", value);
+        return this;
+    }
 
     @UIField(order = 33, showInContextMenu = true)
-    private Boolean showValue = Boolean.TRUE;
+    public Boolean getShowValue() {
+        return getJsonData("sv", Boolean.TRUE);
+    }
+
+    public WidgetSliderEntity setShowValue(Boolean value) {
+        setJsonData("sv", value);
+        return this;
+    }
 
     @UIField(order = 34)
-    private Boolean thumbLabel = Boolean.TRUE;
+    public Boolean getThumbLabel() {
+        return getJsonData("tl", Boolean.TRUE);
+    }
+
+    public WidgetSliderEntity setThumbLabel(Boolean value) {
+        setJsonData("tl", value);
+        return this;
+    }
 
     @UIField(order = 35, type = UIFieldType.Color)
-    private String labelColor = "#e65100";
+    public String getLabelColor() {
+        return getJsonData("lc", "#e65100");
+    }
+
+    public WidgetSliderEntity setLabelColor(String value) {
+        setJsonData("lc", value);
+        return this;
+    }
 
     @UIField(order = 40)
-    private VerticalPosition verticalPosition = VerticalPosition.Bottom;
+    public VerticalPosition getVerticalPosition() {
+        return getJsonDataEnum("vp", VerticalPosition.Bottom);
+    }
 
-    @UIField(order = 40)
-    private HorizontalPosition horizontalPosition = HorizontalPosition.Right;
+    public WidgetSliderEntity setVerticalPosition(VerticalPosition value) {
+        setJsonData("vp", value);
+        return this;
+    }
 
-    @OrderBy("priority asc")
-    @UIField(order = 30, onlyEdit = true)
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetSliderEntity")
-    private Set<WidgetSliderSeriesEntity> series;
+    @UIField(order = 41)
+    public HorizontalPosition getHorizontalPosition() {
+        return getJsonDataEnum("hp", HorizontalPosition.Right);
+    }
+
+    public WidgetSliderEntity setHorizontalPosition(HorizontalPosition value) {
+        setJsonData("hp", value);
+        return this;
+    }
 
     @Override
     public String getImage() {
@@ -47,13 +79,7 @@ public class WidgetSliderEntity extends WidgetBaseEntity<WidgetSliderEntity> {
     }
 
     @Override
-    public boolean updateRelations(EntityContext entityContext) {
-        return validateSeries(series, entityContext);
-    }
-
-    @Override
-    public void copy() {
-        super.copy();
-        series.forEach(BaseEntity::copy);
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 }

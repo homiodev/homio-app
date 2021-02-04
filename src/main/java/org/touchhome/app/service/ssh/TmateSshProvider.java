@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.exception.ServerException;
-import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
+import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.service.SshProvider;
 
 import java.io.InputStream;
@@ -24,7 +24,7 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class TmateSshProvider implements SshProvider {
 
-    private final WirelessHardwareRepository wirelessHardwareRepository;
+    private final NetworkHardwareRepository networkHardwareRepository;
     private final SshHardwareRepository sshHardwareRepository;
 
     private Thread tmateThread;
@@ -88,8 +88,8 @@ public class TmateSshProvider implements SshProvider {
         if (!EntityContext.isLinuxEnvironment()) {
             throw new ServerException("Unable to run ssh on non linux environment");
         }
-        if (!wirelessHardwareRepository.isSshGenerated()) {
-            wirelessHardwareRepository.generateSSHKeys();
+        if (!networkHardwareRepository.isSshGenerated()) {
+            networkHardwareRepository.generateSSHKeys();
         }
         if (sshHardwareRepository.getTmateVersion() == null) {
             if ("7".equals(SystemInfo.getCpuArchitecture())) {

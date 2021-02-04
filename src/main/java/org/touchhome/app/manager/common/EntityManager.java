@@ -10,6 +10,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import javax.persistence.Entity;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -61,6 +62,12 @@ public class EntityManager {
                 if (abstractRepository.isMatch(entityID)) {
                     return Optional.of(abstractRepository);
                 }
+            }
+        }
+        // in case if entity has no 1-1 repository then try find base repository if possible
+        for (Map.Entry<String, AbstractRepository> entry : EntityContextImpl.repositoriesByPrefix.entrySet()) {
+            if (entityID.startsWith(entry.getKey())) {
+                return Optional.of(entry.getValue());
             }
         }
         return Optional.empty();

@@ -100,12 +100,12 @@ public class PortManager {
 
     private void portAvailable(Class<? extends SettingPlugin<SerialPort>> clazz, String portName) {
         log.info("Port became available: <{}>", portName);
-        entityContext.ui().removeHeaderNotification(clazz.getSimpleName());
+        entityContext.ui().removeBellNotification(clazz.getSimpleName());
     }
 
     private void addPortNotAvailableNotification(Class<? extends SettingPlugin<SerialPort>> settingPluginClass, String portName) {
         log.warn("Port became not available: <{}>", portName);
-        entityContext.ui().addHeaderErrorNotification(settingPluginClass.getSimpleName(), portName,
+        entityContext.ui().addBellErrorNotification(settingPluginClass.getSimpleName(), portName,
                 "Port unavailable: " + settingPluginClass.getSimpleName());
     }
 }

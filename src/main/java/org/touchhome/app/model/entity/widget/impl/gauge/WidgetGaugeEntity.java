@@ -1,13 +1,9 @@
 package org.touchhome.app.model.entity.widget.impl.gauge;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.entity.widget.HasWidgetDataSource;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -19,56 +15,135 @@ import org.touchhome.bundle.api.ui.field.UIKeyValueField;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import java.util.List;
 
 @Entity
-@Getter
-@Setter
-@Accessors(chain = true)
-public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> implements HasWidgetDataSource {
+public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
+
+    public static final String PREFIX = "wtgg_";
 
     @UIField(order = 14, required = true)
     @UIFieldSelection(GaugeDataSourceDynamicOptionLoader.class)
-    private String dataSource;
+    public String getDataSource() {
+        return getJsonData("ds");
+    }
+
+    public WidgetGaugeEntity setDataSource(String value) {
+        setJsonData("ds", value);
+        return this;
+    }
 
     @UIField(order = 15)
-    @Enumerated(EnumType.STRING)
-    private GaugeType displayType = GaugeType.arch;
+    public GaugeType getDisplayType() {
+        return getJsonDataEnum("displayType", GaugeType.arch);
+    }
+
+    public WidgetGaugeEntity setDisplayType(GaugeType value) {
+        setJsonData("displayType", value);
+        return this;
+    }
 
     @UIField(order = 16, label = "gauge.min")
-    private Integer min = 0;
+    public Integer getMin() {
+        return getJsonData("min", 0);
+    }
+
+    public WidgetGaugeEntity setMin(Integer value) {
+        setJsonData("min", value);
+        return this;
+    }
 
     @UIField(order = 17, label = "gauge.max")
-    private Integer max = 255;
+    public Integer getMax() {
+        return getJsonData("max", 255);
+    }
+
+    public WidgetGaugeEntity setMax(Integer value) {
+        setJsonData("max", value);
+        return this;
+    }
 
     @UIField(order = 18, type = UIFieldType.Slider, label = "gauge.thick")
     @UIFieldNumber(min = 1, max = 10)
-    private Integer thick = 6;
+    public Integer getThick() {
+        return getJsonData("thick", 6);
+    }
+
+    public WidgetGaugeEntity setThick(Integer value) {
+        setJsonData("thick", value);
+        return this;
+    }
 
     @UIField(order = 19)
-    @Enumerated(EnumType.STRING)
-    private LineType gaugeCapType = LineType.round;
+    public LineType getGaugeCapType() {
+        return getJsonDataEnum("gaugeCapType", LineType.round);
+    }
+
+    public WidgetGaugeEntity setGaugeCapType(Integer value) {
+        setJsonData("gaugeCapType", value);
+        return this;
+    }
 
     @UIField(order = 20, type = UIFieldType.Color)
-    private String foreground = "#009688";
+    public String getForeground() {
+        return getJsonData("fg", "#009688");
+    }
+
+    public WidgetGaugeEntity setForeground(String value) {
+        setJsonData("fg", value);
+        return this;
+    }
 
     @UIField(order = 21, type = UIFieldType.Color)
-    private String background = "rgba(0, 0, 0, 0.1)";
+    public String getBackground() {
+        return getJsonData("bg", "rgba(0, 0, 0, 0.1)");
+    }
+
+    public WidgetGaugeEntity setBackground(String value) {
+        setJsonData("bg", value);
+        return this;
+    }
 
     @UIField(order = 22)
-    private String prepend = "";
+    public String getPrepend() {
+        return getJsonData("prepend");
+    }
+
+    public WidgetGaugeEntity setPrepend(String value) {
+        setJsonData("prepend", value);
+        return this;
+    }
 
     @UIField(order = 23)
-    private String append = "";
+    public String getAppend() {
+        return getJsonData("append");
+    }
+
+    public WidgetGaugeEntity setAppend(String value) {
+        setJsonData("append", value);
+        return this;
+    }
 
     @UIField(order = 24)
-    private Boolean animations = Boolean.FALSE;
+    public Boolean getAnimations() {
+        return getJsonData("animations", Boolean.FALSE);
+    }
+
+    public WidgetGaugeEntity setAnimations(Boolean value) {
+        setJsonData("animations", value);
+        return this;
+    }
 
     @UIField(order = 25)
     @UIKeyValueField(maxSize = 5, keyType = UIFieldType.Float, valueType = UIFieldType.Color, defaultKey = "0", defaultValue = "#FFFFFF")
-    private String threshold = "{}";
+    public String getThreshold() {
+        return getJsonData("threshold", "{}");
+    }
+
+    public WidgetGaugeEntity setThreshold(String value) {
+        setJsonData("threshold", value);
+        return this;
+    }
 
     @Override
     public String getImage() {
@@ -77,11 +152,17 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> imple
 
     @Override
     public boolean updateRelations(EntityContext entityContext) {
+        String dataSource = getDataSource();
         if (dataSource != null && entityContext.getEntity(dataSource) == null) {
-            this.dataSource = null;
+            this.setDataSource(null);
             return true;
         }
         return false;
+    }
+
+    @Override
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 
     public enum GaugeType {
@@ -92,10 +173,10 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> imple
         round, butt
     }
 
-    public static class GaugeDataSourceDynamicOptionLoader implements DynamicOptionLoader<Void> {
+    public static class GaugeDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<OptionModel> loadOptions(Void parameter, BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceStandaloneVariableEntity.class)
                     .add(WorkspaceVariableEntity.class)

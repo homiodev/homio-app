@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.util.Constants;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.IOException;
@@ -36,7 +37,7 @@ public class BundleContextService {
         this.env = env;
         this.entityContextImpl = entityContextImpl;
         this.parentContext = parentContext;
-        for (String systemBundle : TouchHomeUtils.SYSTEM_BUNDLES) {
+        for (String systemBundle : Constants.SYSTEM_BUNDLES) {
             BundleContext systemBundleContext = new BundleContext(systemBundle);
             this.bundleContextMap.put(systemBundle, systemBundleContext);
             this.artifactIdContextMap.put(systemBundle, systemBundleContext);

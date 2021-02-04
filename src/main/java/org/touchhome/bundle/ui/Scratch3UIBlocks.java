@@ -83,17 +83,17 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
         String color = workspaceBlock.getInputString("COLOR");
         // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
         if (isFetchDuration) {
-            entityContext.ui().showAlwaysOnViewNotification(workspaceBlock.getId(), title, null, color, workspaceBlock.getInputInteger("DURATION"), SendBroadcastSetting.class);
+            entityContext.ui().addHeaderButton(workspaceBlock.getId(), title, color, workspaceBlock.getInputInteger("DURATION"), SendBroadcastSetting.class);
         } else {
-            entityContext.ui().showAlwaysOnViewNotification(workspaceBlock.getId(), title, "fas fa-" + workspaceBlock.getInputString("ICON"), color, null, SendBroadcastSetting.class);
+            entityContext.ui().addHeaderButton(workspaceBlock.getId(), title, "fas fa-" + workspaceBlock.getInputString("ICON"), color, false, SendBroadcastSetting.class);
         }
-        workspaceBlock.onRelease(() -> entityContext.ui().hideAlwaysOnViewNotification(workspaceBlock.getId()));
+        workspaceBlock.onRelease(() -> entityContext.ui().removeHeaderButton(workspaceBlock.getId()));
     }
 
     private void headerHandler(WorkspaceBlock workspaceBlock) {
-        entityContext.ui().addHeaderNotification(workspaceBlock.getId(), workspaceBlock.getInputString("NAME"),
+        entityContext.ui().addBellNotification(workspaceBlock.getId(), workspaceBlock.getInputString("NAME"),
                 workspaceBlock.getInputString("MSG"), workspaceBlock.getMenuValue("TYPE", this.popupType).level);
-        workspaceBlock.onRelease(() -> entityContext.ui().removeHeaderNotification(workspaceBlock.getId()));
+        workspaceBlock.onRelease(() -> entityContext.ui().removeBellNotification(workspaceBlock.getId()));
     }
 
     private void showPopupHandler(WorkspaceBlock workspaceBlock) {

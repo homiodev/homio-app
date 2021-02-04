@@ -2,27 +2,41 @@ package org.touchhome.app.rest;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.annotation.Secured;
-import org.springframework.web.bind.annotation.*;
-import org.touchhome.app.manager.ScriptManager;
-import org.touchhome.app.model.entity.ScriptEntity;
-import org.touchhome.app.repository.ScriptRepository;
-import org.touchhome.bundle.api.exception.ServerException;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.touchhome.app.manager.common.EntityContextImpl;
 
-// TODO: refactor this !!!!!!!!!!!!!!!!!!!!!!!!!!
+import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
+
 @Log4j2
 @RestController
-@RequestMapping("/rest/background")
+@RequestMapping("/rest/bgp")
 @RequiredArgsConstructor
 public class BackgroundProcessController {
 
-    private final ScriptRepository scriptRepository;
-    private final ScriptManager scriptManager;
+    private final EntityContextImpl entityContext;
 
-    @GetMapping("/dynamic/{url}")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @DeleteMapping("/{name}")
+    @Secured(ADMIN_ROLE)
+    public void cancelProcess(@PathVariable("name") String name) {
+        entityContext.bgp().cancelThread(name);
+    }
+
+   /* @GetMapping("/dynamic/stop/{url}")
+    @Secured(ADMIN_ROLE)
+    public void stopScriptByName(@PathVariable String url) {
+        ScriptEntity scriptEntity = scriptRepository.getByURL(url);
+        if (scriptEntity != null) {
+            log.info("Stop script: " + scriptEntity.getEntityID());
+            scriptManager.stopThread(scriptEntity);
+        }
+    }*/
+
+    /*@GetMapping("/dynamic/{url}")
+    @Secured(ADMIN_ROLE)
     public void dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws Exception {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
         if (scriptEntity == null) {
@@ -35,7 +49,7 @@ public class BackgroundProcessController {
             throw new ServerException("Script not valid for dynamic URL: '" + url + "'.");
         }
         scriptManager.startThread(scriptEntity, json, true, null, false);
-    }
+    }*/
 
     /*@GetMapping("/progress")
     public List<BackgroundProcessStatusJSON> getProgressValue(@RequestParam("values") String values) {
@@ -70,16 +84,6 @@ public class BackgroundProcessController {
         }
         return backgroundProcessStatusJSONList;
     }*/
-
-    @GetMapping("/dynamic/stop/{url}")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
-    public void stopScriptByName(@PathVariable String url) {
-        ScriptEntity scriptEntity = scriptRepository.getByURL(url);
-        if (scriptEntity != null) {
-            log.info("Stop script: " + scriptEntity.getEntityID());
-            scriptManager.stopThread(scriptEntity);
-        }
-    }
 
     /*private void buildBackgroundProcessStatus(String entityID, List<BackgroundProcessStatusJSON> backgroundProcessStatuses, BaseEntity item, Class<? extends AbstractJSBackgroundProcessService> aClass) {
         try {

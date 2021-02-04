@@ -16,7 +16,7 @@ import org.touchhome.bundle.api.setting.SettingPluginOptions;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsRemovable;
 import org.touchhome.bundle.api.setting.SettingPluginToggle;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
-import org.touchhome.bundle.api.setting.header.dynamic.DynamicHeaderSettingPlugin;
+import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 
 import java.util.*;
 
@@ -30,7 +30,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
     private final EntityContext entityContext;
 
     public SettingRepository(EntityContext entityContext) {
-        super(SettingEntity.class, SettingEntity.PREFIX);
+        super(SettingEntity.class);
         this.entityContext = entityContext;
     }
 
@@ -89,8 +89,8 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
                 entity.setSubGroupKey(settingPlugin.getSubGroupKey());
             }
 
-            if (plugin instanceof DynamicHeaderSettingPlugin) {
-                entity.setTitle(((DynamicHeaderSettingPlugin<?>) plugin).getTitle());
+            if (plugin instanceof DynamicConsoleHeaderSettingPlugin) {
+                entity.setTitle(((DynamicConsoleHeaderSettingPlugin<?>) plugin).getTitle());
             }
 
             if (plugin instanceof ConsoleSettingPlugin) {
@@ -151,9 +151,4 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             }
         }
     }*/
-
-    @Override
-    public void updateEntityAfterFetch(SettingEntity entity) {
-        fulfillEntityFromPlugin(entity, entityContext, null);
-    }
 }

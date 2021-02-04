@@ -95,10 +95,5 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
         @UIField(readOnly = true, order = 24)
         private int runCount;
-
-        @Override
-        public Integer getId() {
-            return null;
-        }
     }
 }

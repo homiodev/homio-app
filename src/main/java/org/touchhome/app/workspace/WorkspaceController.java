@@ -35,6 +35,8 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
+
 @Log4j2
 @RestController
 @RequiredArgsConstructor
@@ -185,7 +187,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PutMapping("/tab/{entityID}")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @Secured(ADMIN_ROLE)
     public void renameWorkspaceTab(@PathVariable("entityID") String entityID, @RequestBody OptionModel option) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
@@ -206,17 +208,17 @@ public class WorkspaceController {
     }
 
     @DeleteMapping("/tab/{entityID}")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @Secured(ADMIN_ROLE)
     public void deleteWorkspaceTab(@PathVariable("entityID") String entityID) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
             throw new NotFoundException("Unable to find workspace tab with id: " + entityID);
         }
         if (WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(entity.getName())) {
-            throw new IllegalArgumentException("ERROR.REMOVE_MAIN_TAB");
+            throw new IllegalArgumentException("REMOVE_MAIN_TAB");
         }
         if (!workspaceManager.isEmpty(entity.getContent())) {
-            throw new IllegalArgumentException("ERROR.REMOVE_NON_EMPTY_TAB");
+            throw new IllegalArgumentException("REMOVE_NON_EMPTY_TAB");
         }
         entityContext.delete(entityID);
     }

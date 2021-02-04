@@ -1,28 +1,24 @@
 package org.touchhome.app.model.entity.widget.impl.toggle;
 
-import lombok.Getter;
-import lombok.Setter;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.bundle.api.ui.field.UIField;
 
-import javax.persistence.*;
-import java.util.Set;
+import javax.persistence.Entity;
 
 @Entity
-@Getter
-@Setter
-public class WidgetToggleEntity extends WidgetBaseEntity<WidgetToggleEntity> {
+public class WidgetToggleEntity extends WidgetBaseEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity> {
 
-    @OrderBy("priority asc")
-    @UIField(order = 30, onlyEdit = true)
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetToggleEntity")
-    private Set<WidgetToggleSeriesEntity> series;
+    public static final String PREFIX = "wttg_";
 
     @UIField(order = 32)
-    @Enumerated(EnumType.STRING)
-    private ToggleType displayType = ToggleType.Slide;
+    public ToggleType getDisplayType() {
+        return getJsonDataEnum("displayType", ToggleType.Slide);
+    }
+
+    public WidgetToggleEntity setDisplayType(ToggleType value) {
+        setJsonData("displayType", value);
+        return this;
+    }
 
     @Override
     public String getImage() {
@@ -30,14 +26,8 @@ public class WidgetToggleEntity extends WidgetBaseEntity<WidgetToggleEntity> {
     }
 
     @Override
-    public boolean updateRelations(EntityContext entityContext) {
-        return validateSeries(series, entityContext);
-    }
-
-    @Override
-    public void copy() {
-        super.copy();
-        series.forEach(BaseEntity::copy);
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 
     enum ToggleType {

@@ -21,14 +21,14 @@ import org.touchhome.bundle.api.setting.SettingPluginOptions;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsRemovable;
 import org.touchhome.bundle.api.setting.SettingPluginPackageInstall;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
-import org.touchhome.bundle.api.setting.header.dynamic.DynamicHeaderContainerSettingPlugin;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
+import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 
 @RestController
 @RequestMapping(value = "/rest/setting", produces = APPLICATION_JSON_VALUE)
@@ -101,7 +101,7 @@ public class SettingController {
     }
 
     @DeleteMapping("/{entityID}/packages")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @Secured(ADMIN_ROLE)
     public void unInstallPackage(@PathVariable("entityID") String entityID,
                                  @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
@@ -109,14 +109,14 @@ public class SettingController {
             if (!packagesInProgress.containsKey(packageRequest.getName())) {
                 packagesInProgress.put(packageRequest.getName(), false);
                 entityContext.ui().runWithProgress("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(),
-                        key -> ((SettingPluginPackageInstall) settingPlugin).unInstallPackage(entityContext, packageRequest, key),
-                        () -> packagesInProgress.remove(packageRequest.getName()));
+                        false, progressBar -> ((SettingPluginPackageInstall) settingPlugin).unInstallPackage(entityContext, packageRequest, progressBar),
+                        (ex) -> packagesInProgress.remove(packageRequest.getName()));
             }
         }
     }
 
     @PostMapping("/{entityID}/packages")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @Secured(ADMIN_ROLE)
     public void installPackage(@PathVariable("entityID") String entityID,
                                @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
@@ -124,13 +124,13 @@ public class SettingController {
             if (!packagesInProgress.containsKey(packageRequest.getName())) {
                 packagesInProgress.put(packageRequest.getName(), true);
                 entityContext.ui().runWithProgress("Install " + packageRequest.getName() + "/" + packageRequest.getVersion(),
-                        key -> ((SettingPluginPackageInstall) settingPlugin).installPackage(entityContext, packageRequest, key),
-                        () -> packagesInProgress.remove(packageRequest.getName()));
+                        false, progressBar -> ((SettingPluginPackageInstall) settingPlugin).installPackage(entityContext, packageRequest, progressBar),
+                        (ex) -> packagesInProgress.remove(packageRequest.getName()));
             }
         }
     }
 
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @Secured(ADMIN_ROLE)
     @PostMapping(value = "{entityID}", consumes = "text/plain")
     public <T> void updateSetting(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
@@ -139,7 +139,7 @@ public class SettingController {
         }
     }
 
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @Secured(ADMIN_ROLE)
     @DeleteMapping(value = "{entityID}", consumes = "text/plain")
     public void removeSettingValue(@PathVariable("entityID") String entityID, @RequestBody String value) throws Exception {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
@@ -160,7 +160,7 @@ public class SettingController {
             SettingEntity settingEntity = entry.getValue();
             settingEntity.setValue(entityContext.setting().getRawValue((Class) entry.getKey()));
             SettingRepository.fulfillEntityFromPlugin(settingEntity, entityContext, null);
-            if (DynamicHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
+            if (DynamicConsoleHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
                 settingEntity.setSettingTypeRaw("Container");
                 List<SettingEntity> options = EntityContextSettingImpl.dynamicHeaderSettings.get(entry.getKey());
                 settingEntity.getParameters().put("dynamicOptions", options);

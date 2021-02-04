@@ -19,6 +19,7 @@ import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
+import org.touchhome.app.utils.UIFieldUtils;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.console.ConsolePluginCommunicator;
@@ -31,12 +32,13 @@ import org.touchhome.bundle.api.model.FileModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.service.SshProvider;
-import org.touchhome.bundle.api.setting.header.HeaderSettingPlugin;
+import org.touchhome.bundle.api.setting.console.header.ConsoleHeaderSettingPlugin;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.tritonus.share.ArraySet;
 
 import java.util.*;
 
+import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.putOpt;
 
 @RestController
@@ -55,12 +57,12 @@ public class ConsoleController {
     @SneakyThrows
     static List<UIActionDescription> fetchUIHeaderActions(ConsolePlugin<?> consolePlugin) {
         List<UIActionDescription> actions = new ArrayList<>();
-        Map<String, Class<? extends HeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
+        Map<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
         if (actionMap != null) {
-            for (Map.Entry<String, Class<? extends HeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
-                Class<? extends HeaderSettingPlugin<?>> settingClass = entry.getValue();
+            for (Map.Entry<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
+                Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
                 JSONObject metadata = new JSONObject().put("ref", SettingEntity.getKey(settingClass));
-                HeaderSettingPlugin<?> plugin = TouchHomeUtils.newInstance(settingClass);
+                ConsoleHeaderSettingPlugin<?> plugin = TouchHomeUtils.newInstance(settingClass);
                 putOpt(metadata, "fabc", plugin.fireActionsBeforeChange());
 
                 actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName(entry.getKey())
@@ -68,7 +70,7 @@ public class ConsoleController {
             }
         }
         if (consolePlugin instanceof ConsolePluginEditor) {
-            Class<? extends HeaderSettingPlugin<?>> nameHeaderAction = ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
+            Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction = ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
             if (nameHeaderAction != null) {
                 actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName("name")
                         .setMetadata(new JSONObject().put("ref", SettingEntity.getKey(nameHeaderAction))));
@@ -125,44 +127,44 @@ public class ConsoleController {
 
             return new EntityContent()
                     .setList(baseEntities)
-                    .setActions(ItemController.fetchUIActionsFromClass(clazz))
-                    .setUiFields(UtilsController.fillEntityUIMetadataList(clazz));
+                    .setActions(UIFieldUtils.fetchUIActionsFromClass(clazz))
+                    .setUiFields(UIFieldUtils.fillEntityUIMetadataList(clazz));
         }
         return consolePlugin.getValue();
     }
 
     @PostMapping("/tab/{tab}/{entityID}/action")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @Secured(ADMIN_ROLE)
     public ActionResponseModel executeAction(@PathVariable("tab") String tab,
                                              @PathVariable("entityID") String entityID,
-                                             @RequestBody UIActionDescription requestAction) {
+                                             @RequestBody ItemController.ActionRequestModel actionRequestModel) {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-            return ItemController.executeAction(requestAction, identifier, applicationContext, entityContext.getEntity(identifier.getEntityID()));
+            return ItemController.executeAction(actionRequestModel, identifier, applicationContext, entityContext.getEntity(identifier.getEntityID()));
         } else if (consolePlugin instanceof ConsolePluginCommunicator) {
-            return ((ConsolePluginCommunicator) consolePlugin).commandReceived(requestAction.getName());
+            return ((ConsolePluginCommunicator) consolePlugin).commandReceived(actionRequestModel.getName());
         } else if (consolePlugin instanceof ConsolePluginEditor) {
-            if (requestAction.getMetadata().has("glyph")) {
-                return ((ConsolePluginEditor) consolePlugin).glyphClicked(requestAction.getMetadata().getString("glyph"));
+            if (actionRequestModel.getMetadata().has("glyph")) {
+                return ((ConsolePluginEditor) consolePlugin).glyphClicked(actionRequestModel.getMetadata().getString("glyph"));
             }
-            if (StringUtils.isNotEmpty(requestAction.getName()) && requestAction.getMetadata().has("content")) {
+            if (StringUtils.isNotEmpty(actionRequestModel.getName()) && actionRequestModel.getMetadata().has("content")) {
                 return ((ConsolePluginEditor) consolePlugin).save(
-                        new FileModel(requestAction.getName(), requestAction.getMetadata().getString("content"), null, false));
+                        new FileModel(actionRequestModel.getName(), actionRequestModel.getMetadata().getString("content"), null, false));
             }
         }
         throw new IllegalArgumentException("Unable to handle action for tab: " + tab);
     }
 
     @PostMapping("/tab/{tab}/update")
-    public void updateDependencies(@PathVariable("tab") String tab) throws Exception {
+    public void updateDependencies(@PathVariable("tab") String tab) {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
             ConsolePluginRequireZipDependency dependency = (ConsolePluginRequireZipDependency) consolePlugin;
             if (dependency.requireInstallDependencies()) {
                 entityContext.bgp().runWithProgress("install-deps-" + dependency.getClass().getSimpleName(),
-                        progressKey -> dependency.installDependency(entityContext, progressKey), null,
+                        false, progressBar -> dependency.installDependency(entityContext, progressBar), null,
                         () -> new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"));
             }
         }
@@ -177,7 +179,7 @@ public class ConsoleController {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID))
                     .findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-            return ItemController.loadOptions(identifier, entityContext, fieldName);
+            return UIFieldUtils.loadOptions(identifier, entityContext, fieldName);
         }
         return null;
     }
@@ -213,13 +215,13 @@ public class ConsoleController {
     }
 
     @PostMapping("/ssh")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @Secured(ADMIN_ROLE)
     public SshProvider.SshSession openSshSession() {
         return this.entityContext.setting().getValue(ConsoleSshProviderSetting.class).openSshSession();
     }
 
     @DeleteMapping("/ssh/{token}")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @Secured(ADMIN_ROLE)
     public void closeSshSession(@PathVariable("token") String token) {
         this.entityContext.setting().getValue(ConsoleSshProviderSetting.class).closeSshSession(token);
     }

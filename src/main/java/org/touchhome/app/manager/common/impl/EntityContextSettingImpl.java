@@ -13,8 +13,8 @@ import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginOptions;
-import org.touchhome.bundle.api.setting.header.dynamic.DynamicHeaderContainerSettingPlugin;
-import org.touchhome.bundle.api.setting.header.dynamic.DynamicHeaderSettingPlugin;
+import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
+import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 
 import javax.validation.constraints.NotNull;
 import java.lang.reflect.Modifier;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class EntityContextSettingImpl implements EntityContextSetting {
     private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
     public static Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
-    public static Map<Class<? extends DynamicHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
+    public static Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
     private static Map<String, SettingPlugin> settingPluginsByPluginClass = new HashMap<>();
     private final EntityContextImpl entityContext;
     private Map<String, Map<String, Consumer<?>>> settingListeners = new HashMap<>();
@@ -43,7 +43,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     @Override
-    public void reloadSettings(Class<? extends DynamicHeaderContainerSettingPlugin> dynamicSettingPluginClass, List<? extends DynamicHeaderSettingPlugin> dynamicSettings) {
+    public void reloadSettings(Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass, List<? extends DynamicConsoleHeaderSettingPlugin> dynamicSettings) {
         List<SettingEntity> dynamicEntities = dynamicSettings.stream()
                 .map(s -> SettingRepository.createSettingEntityFromPlugin(s, new SettingEntity(), entityContext)).collect(Collectors.toList());
         dynamicHeaderSettings.put(dynamicSettingPluginClass, dynamicEntities);

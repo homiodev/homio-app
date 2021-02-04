@@ -79,11 +79,6 @@ public class NetworkInterfaceConsolePlugin implements ConsolePluginTable<Network
         }
 
         @Override
-        public Integer getId() {
-            return null;
-        }
-
-        @Override
         public int compareTo(@NotNull NetworkInterfaceEntity o) {
             return this.name.compareTo(o.name);
         }

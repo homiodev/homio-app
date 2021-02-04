@@ -29,7 +29,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         if(ex instanceof NullPointerException) {
             msg += ". src: " + ex.getStackTrace()[0].toString();
         }
-        log.error("Error <{}>", msg);
+        log.error("Error <{}>", msg, ex);
         return new ResponseEntity<>(new ErrorHolderModel("Error", msg, ex), headers, status);
     }
 

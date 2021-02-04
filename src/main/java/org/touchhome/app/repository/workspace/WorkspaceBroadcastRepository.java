@@ -15,10 +15,8 @@ import java.util.List;
 @Repository("broadcastRepository")
 public class WorkspaceBroadcastRepository extends AbstractRepository<WorkspaceBroadcastEntity> implements HasFetchChartSeries {
 
-    public static final String PREFIX = "brc_";
-
     public WorkspaceBroadcastRepository() {
-        super(WorkspaceBroadcastEntity.class, PREFIX);
+        super(WorkspaceBroadcastEntity.class);
     }
 
     @Override

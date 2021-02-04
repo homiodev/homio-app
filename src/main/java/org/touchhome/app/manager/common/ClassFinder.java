@@ -38,6 +38,18 @@ public class ClassFinder {
         return list;
     }
 
+    public static List<Class<?>> findAllParentClasses(Class<?> childClass, Class<?> topParentClass) {
+        List<Class<?>> result = new ArrayList<>();
+        if (!topParentClass.isAssignableFrom(childClass)) {
+            throw new RuntimeException("Class <" + childClass.getSimpleName() + "> isn't assigned of class <" + topParentClass.getSimpleName() + ">");
+        }
+        while (!childClass.getSimpleName().equals(topParentClass.getSimpleName())) {
+            result.add(childClass);
+            childClass = childClass.getSuperclass();
+        }
+        return result;
+    }
+
     private <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation, boolean includeInterfaces) {
         List<Class<? extends T>> foundClasses = new ArrayList<>();
         for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(includeInterfaces)) {

@@ -47,6 +47,7 @@ import org.touchhome.app.setting.system.SystemLanguageSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.app.utils.HardwareUtils;
+import org.touchhome.app.videoStream.CameraController;
 import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
@@ -61,12 +62,14 @@ import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEnti
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
@@ -76,13 +79,13 @@ import java.lang.annotation.Annotation;
 import java.text.DateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
-import static org.touchhome.bundle.api.util.TouchHomeUtils.*;
+import static org.touchhome.bundle.api.util.Constants.*;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.MACHINE_IP_ADDRESS;
 
 @Log4j2
 @Component
@@ -92,7 +95,7 @@ public class EntityContextImpl implements EntityContext {
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
     public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
     private static EntityManager entityManager;
-    private static Map<String, AbstractRepository> repositoriesByPrefix;
+    public static Map<String, AbstractRepository> repositoriesByPrefix;
     private static Map<String, PureRepository> pureRepositories = new HashMap<>();
     private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchhome-core";
     private final EntityContextUIImpl entityContextUI;
@@ -107,12 +110,6 @@ public class EntityContextImpl implements EntityContext {
     @Getter
     private final BroadcastLockManager broadcastLockManager;
     private final TouchHomeProperties touchHomeProperties;
-
-    private final Map<String, List<BiConsumer>> entityTypeUpdateListeners = new HashMap<>();
-    private final Map<String, List<BiConsumer>> entityTypeRemoveListeners = new HashMap<>();
-
-    private final Map<String, List<BiConsumer>> entityIDUpdateListeners = new HashMap<>();
-    private final Map<String, List<BiConsumer>> entityIDRemoveListeners = new HashMap<>();
 
     private final Map<String, Boolean> deviceFeatures = new HashMap<>();
 
@@ -146,6 +143,7 @@ public class EntityContextImpl implements EntityContext {
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
+        MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
 
         this.transactionManager = this.applicationContext.getBean(PlatformTransactionManager.class);
         this.entityManagerFactory = this.applicationContext.getBean(EntityManagerFactory.class);
@@ -188,29 +186,36 @@ public class EntityContextImpl implements EntityContext {
         applicationContext.getBean(WorkspaceController.class).postConstruct(this);
         applicationContext.getBean(WidgetManager.class).postConstruct();
 
+
+        applicationContext.getBean(CameraController.class).init();
+
+
         // trigger handlers when variables changed
-        this.addEntityUpdateListener(WorkspaceVariableEntity.class, (source, oldSource) -> {
-            if (oldSource == null || source.getValue() != oldSource.getValue()) {
-                Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
-                broadcastLockManager.signalAll(source.getEntityID());
-            }
-        });
-        this.addEntityUpdateListener(WorkspaceStandaloneVariableEntity.class, (source, oldSource) -> {
-            if (oldSource == null || source.getValue() != oldSource.getValue()) {
-                Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
-                broadcastLockManager.signalAll(source.getEntityID());
-            }
-        });
-        this.addEntityUpdateListener(WorkspaceBooleanEntity.class, (source, oldSource) -> {
-            if (oldSource == null || source.getValue() != oldSource.getValue()) {
-                Scratch3ExtensionBlocks.sendWorkspaceBooleanValueChangeValue(this, source, source.getValue());
-                broadcastLockManager.signalAll(source.getEntityID());
-            }
-        });
+        this.event().addEntityUpdateListener(WorkspaceVariableEntity.class, "workspace-var-change-listener",
+                (source, oldSource) -> {
+                    if (oldSource == null || source.getValue() != oldSource.getValue()) {
+                        Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
+                        broadcastLockManager.signalAll(source.getEntityID());
+                    }
+                });
+        this.event().addEntityUpdateListener(WorkspaceStandaloneVariableEntity.class, "workspace-stand-var-change-listener",
+                (source, oldSource) -> {
+                    if (oldSource == null || source.getValue() != oldSource.getValue()) {
+                        Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
+                        broadcastLockManager.signalAll(source.getEntityID());
+                    }
+                });
+        this.event().addEntityUpdateListener(WorkspaceBooleanEntity.class, "workspace-var-bool-change-listener",
+                (source, oldSource) -> {
+                    if (oldSource == null || source.getValue() != oldSource.getValue()) {
+                        Scratch3ExtensionBlocks.sendWorkspaceBooleanValueChangeValue(this, source, source.getValue());
+                        broadcastLockManager.signalAll(source.getEntityID());
+                    }
+                });
 
         // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
 
-        ui().addHeaderInfoNotification("app-status", "app", "Started at " + DateFormat.getDateTimeInstance().format(new Date()));
+        ui().addBellInfoNotification("app-status", "app", "Started at " + DateFormat.getDateTimeInstance().format(new Date()));
 
         // create indexes on tables
         //  this.createTableIndexes();
@@ -266,8 +271,7 @@ public class EntityContextImpl implements EntityContext {
 
         if (baseEntity != null) {
             cacheService.merge(baseEntity);
-            T finalBaseEntity = baseEntity;
-            getRepository(baseEntity).ifPresent(abstractRepository -> abstractRepository.updateEntityAfterFetch(finalBaseEntity));
+            baseEntity.afterFetch(this);
         }
         return baseEntity;
     }
@@ -295,7 +299,10 @@ public class EntityContextImpl implements EntityContext {
             if (setName.startsWith("set")) {
                 Object oldValue;
                 try {
-                    oldValue = MethodUtils.invokeMethod(entity, method.getName().replaceFirst("set", "get"));
+                    oldValue = cacheService.getFieldValue(entity.getIdentifier(), setName);
+                    if (oldValue == null) {
+                        oldValue = MethodUtils.invokeMethod(entity, method.getName().replaceFirst("set", "get"));
+                    }
                 } catch (NoSuchMethodException ex) {
                     oldValue = MethodUtils.invokeMethod(entity, method.getName().replaceFirst("set", "is"));
                 }
@@ -312,7 +319,7 @@ public class EntityContextImpl implements EntityContext {
 
         T proxyInstance = (T) Enhancer.create(entity.getClass(), handler);
 
-        entityUpdate(null, null, this.entityIDUpdateListeners, this.entityTypeUpdateListeners, (Supplier<HasEntityIdentifier>) () -> {
+        entityUpdate(null, this.event().getEntityUpdateListeners(), (Supplier<HasEntityIdentifier>) () -> {
             consumer.accept(proxyInstance);
             return entity;
         });
@@ -339,17 +346,14 @@ public class EntityContextImpl implements EntityContext {
         pureRepository.save(entity);
     }
 
-    private <T extends HasEntityIdentifier> T entityUpdate(T entity, T oldEntity, Map<String, List<BiConsumer>> entityIDListeners,
-                                                           Map<String, List<BiConsumer>> entityTypeListeners, Supplier<T> updateHandler) {
+    private <T extends HasEntityIdentifier> T entityUpdate(T oldEntity, EntityContextEventImpl.EntityListener entityListener,
+                                                           Supplier<T> updateHandler) {
         T saved = null;
         try {
             saved = updateHandler.get();
         } finally {
             if (saved != null) {
-                for (BiConsumer consumer : entityIDListeners.getOrDefault(saved.getEntityID(), Collections.emptyList())) {
-                    consumer.accept(saved, entity);
-                }
-                notifyEntityListeners(entityTypeListeners, saved, oldEntity);
+                entityListener.notify(saved, oldEntity);
             }
         }
         return saved;
@@ -359,12 +363,15 @@ public class EntityContextImpl implements EntityContext {
     public <T extends BaseEntity> T save(T entity) {
         AbstractRepository foundRepo = classFinder.getRepositoryByClass(entity.getClass());
         final AbstractRepository repository = foundRepo == null && entity instanceof DeviceBaseEntity ? allDeviceRepository : foundRepo;
-        T oldEntity = entity.getEntityID() == null ? null : getEntity(entity);
+        EntityContextEventImpl.EntityListener entityUpdateListeners = this.event().getEntityUpdateListeners();
+
+        T oldEntity = entity.getEntityID() == null ? null :
+                entityUpdateListeners.isRequireFetchOldEntity(entity) ? getEntity(entity.getEntityID(), false) : null;
 
         T merge = transactionTemplate.execute(status ->
-                entityUpdate(entity, oldEntity, this.entityIDUpdateListeners, this.entityTypeUpdateListeners, () -> {
+                entityUpdate(oldEntity, entityUpdateListeners, () -> {
                     T t = (T) repository.save(entity);
-                    repository.updateEntityAfterFetch(t);
+                    t.afterFetch(this);
                     return t;
                 }));
 
@@ -392,7 +399,7 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     public BaseEntity<? extends BaseEntity> delete(String entityId) {
-        return entityUpdate(null, null, this.entityIDRemoveListeners, this.entityTypeRemoveListeners, () -> {
+        return entityUpdate(null, this.event().getEntityRemoveListeners(), () -> {
             cacheService.delete(entityId);
             return entityManager.delete(entityId);
         });
@@ -406,12 +413,6 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public <T extends BaseEntity> T getEntityByName(String name, Class<T> entityClass) {
         return classFinder.getRepositoryByClass(entityClass).getByName(name);
-    }
-
-    @Override
-    public <T extends BaseEntity> void removeEntityUpdateListener(String entityID, BiConsumer<T, T> listener) {
-        this.entityIDUpdateListeners.putIfAbsent(entityID, new ArrayList<>());
-        this.entityIDUpdateListeners.get(entityID).remove(listener);
     }
 
     @Override
@@ -499,30 +500,6 @@ public class EntityContextImpl implements EntityContext {
         return deviceFeatures;
     }
 
-    @Override
-    public <T extends BaseEntity> void addEntityUpdateListener(String entityID, BiConsumer<T, T> listener) {
-        this.entityIDUpdateListeners.putIfAbsent(entityID, new ArrayList<>());
-        this.entityIDUpdateListeners.get(entityID).add(listener);
-    }
-
-    @Override
-    public <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, BiConsumer<T, T> listener) {
-        this.entityTypeUpdateListeners.putIfAbsent(entityClass.getName(), new ArrayList<>());
-        this.entityTypeUpdateListeners.get(entityClass.getName()).add(listener);
-    }
-
-    @Override
-    public <T extends BaseEntity> void addEntityRemovedListener(String entityID, Consumer<T> listener) {
-        this.entityIDRemoveListeners.putIfAbsent(entityID, new ArrayList<>());
-        this.entityIDRemoveListeners.get(entityID).add((o, o2) -> listener.accept((T) o));
-    }
-
-    @Override
-    public <T extends BaseEntity> void addEntityRemovedListener(Class<T> entityClass, Consumer<T> listener) {
-        this.entityTypeRemoveListeners.putIfAbsent(entityClass.getName(), new ArrayList<>());
-        this.entityTypeRemoveListeners.get(entityClass.getName()).add((BiConsumer<T, T>) (o, o2) -> listener.accept(o));
-    }
-
     public void addBundle(Map<String, BundleContext> artifactIdContextMap) {
         for (String artifactId : artifactIdContextMap.keySet()) {
             this.addBundle(artifactIdContextMap.get(artifactId), artifactIdContextMap);
@@ -552,7 +529,7 @@ public class EntityContextImpl implements EntityContext {
         return entityManager.getEntityIDsByEntityClassFullName(clazz).stream()
                 .map(entityID -> {
                     T entity = entityManager.getEntityWithFetchLazy(entityID);
-                    repository.updateEntityAfterFetch(entity);
+                    entity.afterFetch(this);
                     return entity;
                 }).collect(Collectors.toList());
     }
@@ -645,7 +622,8 @@ public class EntityContextImpl implements EntityContext {
                 pureRepositories.remove(repository.getEntityClass().getSimpleName());
             }
             context.getBeansOfType(AbstractRepository.class).keySet().forEach(ar -> repositories.remove(ar));
-            repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
+
+            rebuildRepositoryByPrefixMap();
             updateBeans(bundleContext, bundleContext.getApplicationContext(), false);
         }
     }
@@ -653,7 +631,7 @@ public class EntityContextImpl implements EntityContext {
     private void addBundle(BundleContext bundleContext, Map<String, BundleContext> artifactIdToContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
             if (!bundleContext.isLoaded()) {
-                ui().addHeaderErrorNotification("fail-bundle-" + bundleContext.getBundleID(),
+                ui().addBellErrorNotification("fail-bundle-" + bundleContext.getBundleID(),
                         bundleContext.getBundleFriendlyName(), "Unable to load bundle");
                 return;
             }
@@ -692,7 +670,8 @@ public class EntityContextImpl implements EntityContext {
             repositories.keySet().removeAll(context.getBeansOfType(AbstractRepository.class).keySet());
         }
         baseEntityNameToClass = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
-        repositoriesByPrefix = repositories.values().stream().collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
+
+        rebuildRepositoryByPrefixMap();
 
         Lang.DEFAULT_LANG = setting().getValue(SystemLanguageSetting.class).name();
         applicationContext.getBean(ConsoleController.class).postConstruct();
@@ -712,6 +691,13 @@ public class EntityContextImpl implements EntityContext {
         }
 
         log.info("Finish update all app bundles");
+    }
+
+    private void rebuildRepositoryByPrefixMap() {
+        repositoriesByPrefix = new HashMap<>();
+        for (Class<? extends BaseEntity> baseEntity : baseEntityNameToClass.values()) {
+            repositoriesByPrefix.put(TouchHomeUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
+        }
     }
 
     private void fetchSettingPlugins(BundleContext bundleContext, boolean addBundle) {
@@ -748,12 +734,12 @@ public class EntityContextImpl implements EntityContext {
     private void fetchReleaseVersion() {
         try {
             log.info("Try fetch latest version from server");
-            ui().addHeaderInfoNotification("version", "app", "version: " + touchHomeProperties.getVersion());
+            ui().addBellInfoNotification("version", "app", "version: " + touchHomeProperties.getVersion());
             this.latestVersion = Curl.get(GIT_HUB_URL + "/releases/latest", Map.class).get("tag_name").toString();
 
             if (!touchHomeProperties.getVersion().equals(this.latestVersion)) {
                 log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion, touchHomeProperties.getVersion());
-                ui().addHeaderErrorNotification("version", "app", "Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion);
+                ui().addBellErrorNotification("version", "app", "Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion);
                 this.event().fireEvent("app-release", this.latestVersion);
             }
         } catch (Exception ex) {
@@ -770,16 +756,6 @@ public class EntityContextImpl implements EntityContext {
         }
         if (!EntityContext.isLinuxOrDockerEnvironment()) {
             setFeatureState("SSH", false);
-        }
-    }
-
-    private <T extends HasEntityIdentifier> void notifyEntityListeners(Map<String, List<BiConsumer>> entityListeners, T saved, T oldEntity) {
-        Class entityClass = saved.getClass();
-        while (!entityClass.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
-            for (BiConsumer consumer : entityListeners.getOrDefault(entityClass.getName(), Collections.emptyList())) {
-                consumer.accept(saved, oldEntity);
-            }
-            entityClass = entityClass.getSuperclass();
         }
     }
 

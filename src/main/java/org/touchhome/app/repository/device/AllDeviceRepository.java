@@ -11,7 +11,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {
 
     public AllDeviceRepository() {
-        super(DeviceBaseEntity.class, "od_");
+        super(DeviceBaseEntity.class);
     }
 
     @Override

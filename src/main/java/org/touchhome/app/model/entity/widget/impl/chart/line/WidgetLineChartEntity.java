@@ -5,48 +5,96 @@ import lombok.Setter;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartPeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.LineInterpolation;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 
-import javax.persistence.*;
-import java.util.Set;
+import javax.persistence.Entity;
 
 @Getter
 @Setter
 @Entity
-public class WidgetLineChartEntity extends ChartBaseEntity<WidgetLineChartEntity> {
+public class WidgetLineChartEntity extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity> {
+
+    public static final String PREFIX = "lcw_";
 
     @UIField(order = 12)
-    @Enumerated(EnumType.STRING)
-    private ChartPeriod chartPeriod = ChartPeriod.All;
+    public ChartPeriod getChartPeriod() {
+        return getJsonDataEnum("chartPeriod", ChartPeriod.All);
+    }
+
+    public WidgetLineChartEntity setChartPeriod(ChartPeriod value) {
+        setJsonData("chartPeriod", value);
+        return this;
+    }
 
     @UIField(order = 33, showInContextMenu = true)
-    private Boolean showButtons = Boolean.FALSE;
+    public Boolean getShowButtons() {
+        return getJsonData("showButtons", Boolean.FALSE);
+    }
 
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetLineChartEntity")
-    @UIField(order = 30, onlyEdit = true)
-    @OrderBy("priority asc")
-    private Set<WidgetLineChartSeriesEntity> series;
-
-    @UIField(order = 28)
-    private Boolean showAxisX = Boolean.TRUE;
-
-    @UIField(order = 29)
-    private Boolean showAxisY = Boolean.TRUE;
-
-    @UIField(order = 30)
-    private String axisLabelX = "Date";
+    public WidgetLineChartEntity setShowButtons(Boolean value) {
+        setJsonData("showButtons", value);
+        return this;
+    }
 
     @UIField(order = 31)
-    private String axisLabelY = "Value";
+    public Boolean getShowAxisX() {
+        return getJsonData("showAxisX", Boolean.TRUE);
+    }
+
+    public WidgetLineChartEntity setShowAxisX(Boolean value) {
+        setJsonData("showAxisX", value);
+        return this;
+    }
 
     @UIField(order = 32)
-    private Boolean timeline = Boolean.TRUE;
+    public Boolean getShowAxisY() {
+        return getJsonData("showAxisY", Boolean.TRUE);
+    }
+
+    public WidgetLineChartEntity setShowAxisY(Boolean value) {
+        setJsonData("showAxisY", value);
+        return this;
+    }
 
     @UIField(order = 33)
-    @Enumerated(EnumType.STRING)
-    private LineInterpolation lineInterpolation = LineInterpolation.curveLinear;
+    public String getAxisLabelX() {
+        return getJsonData("axisLabelX", "Date");
+    }
+
+    public WidgetLineChartEntity setAxisLabelX(String value) {
+        setJsonData("axisLabelX", value);
+        return this;
+    }
+
+    @UIField(order = 34)
+    public String getAxisLabelY() {
+        return getJsonData("axisLabelY", "Value");
+    }
+
+    public WidgetLineChartEntity setAxisLabelY(String value) {
+        setJsonData("axisLabelY", value);
+        return this;
+    }
+
+    @UIField(order = 32)
+    public Boolean getTimeline() {
+        return getJsonData("timeline", Boolean.TRUE);
+    }
+
+    public WidgetLineChartEntity setTimeline(String value) {
+        setJsonData("timeline", value);
+        return this;
+    }
+
+    @UIField(order = 33)
+    public LineInterpolation getLineInterpolation() {
+        return getJsonDataEnum("lineInterpolation", LineInterpolation.curveLinear);
+    }
+
+    public WidgetLineChartEntity setLineInterpolation(LineInterpolation value) {
+        setJsonData("lineInterpolation", value);
+        return this;
+    }
 
     @Override
     public String getImage() {
@@ -54,13 +102,7 @@ public class WidgetLineChartEntity extends ChartBaseEntity<WidgetLineChartEntity
     }
 
     @Override
-    public boolean updateRelations(EntityContext entityContext) {
-        return validateSeries(series, entityContext);
-    }
-
-    @Override
-    public void copy() {
-        super.copy();
-        series.forEach(BaseEntity::copy);
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 }

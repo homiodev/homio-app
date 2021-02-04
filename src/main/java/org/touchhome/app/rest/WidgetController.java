@@ -14,11 +14,9 @@ import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetButtonSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartPeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
-import org.touchhome.app.repository.widget.impl.chart.WidgetBarChartSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity;
@@ -34,10 +32,17 @@ import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntit
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.repository.widget.HasFetchChartSeries;
 import org.touchhome.app.repository.widget.HasLastNumberValueRepository;
+import org.touchhome.app.repository.widget.impl.chart.WidgetBarChartSeriesEntity;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
+import org.touchhome.app.videoStream.entity.BaseVideoCameraEntity;
+import org.touchhome.app.videoStream.entity.BaseVideoStreamEntity;
+import org.touchhome.app.videoStream.ui.CameraAction;
+import org.touchhome.app.videoStream.widget.WidgetLiveStreamEntity;
+import org.touchhome.app.videoStream.widget.WidgetLiveStreamSeriesEntity;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.entity.widget.WidgetTabEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
@@ -53,7 +58,8 @@ import org.touchhome.bundle.api.widget.WidgetJSBaseTemplate;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIVILEGED_USER_ROLE;
+import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 
 @Log4j2
 @RestController
@@ -89,6 +95,51 @@ public class WidgetController {
             options.add(extraWidgets);
         }
         return options;
+    }
+
+    @GetMapping("/camera/{entityID}")
+    public List<CameraEntityResponse> getCameraData(@PathVariable("entityID") String entityID) {
+        WidgetLiveStreamEntity entity = entityContext.getEntity(entityID);
+        List<CameraEntityResponse> result = new ArrayList<>();
+        for (WidgetLiveStreamSeriesEntity item : entity.getSeries()) {
+            BaseVideoStreamEntity baseVideoStreamEntity = entityContext.getEntity(item.getDataSource());
+            if (baseVideoStreamEntity != null) {
+                result.add(new CameraEntityResponse(entityContext.getEntity(item.getDataSource())));
+            } else {
+                log.warn("Camera entity: <{}> not found", item.getDataSource());
+            }
+        }
+        return result;
+    }
+
+    @PostMapping("/camera/{entityID}/series/{seriesEntityID}/action")
+    public void fireCameraAction(@PathVariable("entityID") String entityID,
+                                 @PathVariable("seriesEntityID") String seriesEntityID,
+                                 @RequestBody CameraActionRequest cameraActionRequest) {
+        WidgetLiveStreamEntity entity = entityContext.getEntity(entityID);
+        WidgetLiveStreamSeriesEntity series = entity.getSeries().stream().filter(s -> s.getEntityID().equals(seriesEntityID)).findAny().orElse(null);
+        if (series == null) {
+            throw new NotFoundException("Unable to find series: " + seriesEntityID + " for entity: " + entity.getTitle());
+        }
+        BaseVideoCameraEntity baseVideoCameraEntity = entityContext.getEntity(series.getDataSource());
+        if (baseVideoCameraEntity == null) {
+            throw new NotFoundException("Unable to find base camera for series: " + series.getTitle());
+        }
+        List<CameraAction> cameraActions = baseVideoCameraEntity.getCameraHandler().getCameraActions(false);
+        CameraAction cameraAction = cameraActions.stream().filter(ca -> ca.getName().equals(cameraActionRequest.name)).findAny().orElseThrow(
+                () -> new RuntimeException("No camera action " + cameraActionRequest.name + "found"));
+        cameraAction.getAction().accept(cameraActionRequest.value);
+    }
+
+    @Getter
+    private static class CameraEntityResponse {
+        private final BaseVideoStreamEntity source;
+        private final List<CameraAction> actions;
+
+        public CameraEntityResponse(BaseVideoStreamEntity source) {
+            this.source = source;
+            this.actions = source.getActions(true);
+        }
     }
 
     @GetMapping("/button/{entityID}/handle")
@@ -350,7 +401,7 @@ public class WidgetController {
 
     @SneakyThrows
     @PostMapping("/tab/{name}")
-    public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
+    public OptionModel createWidgetTab(@PathVariable("name") String name) {
         BaseEntity<?> widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
             widgetTab = entityContext.save(new WidgetTabEntity().computeEntityID(() -> name));
@@ -361,8 +412,8 @@ public class WidgetController {
 
     @SneakyThrows
     @PutMapping("/tab/{tabId}/{name}")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
-    public void renameWorkspaceTab(@PathVariable("tabId") String tabId, @PathVariable("name") String name) {
+    @Secured(ADMIN_ROLE)
+    public void renameWidgetTab(@PathVariable("tabId") String tabId, @PathVariable("name") String name) {
         if (!WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(name)) {
 
             WidgetTabEntity entity = getWidgetTabEntity(tabId);
@@ -375,8 +426,8 @@ public class WidgetController {
     }
 
     @DeleteMapping("/tab/{tabId}")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
-    public void deleteWorkspaceTab(@PathVariable("tabId") String tabId) {
+    @Secured(ADMIN_ROLE)
+    public void deleteWidgetTab(@PathVariable("tabId") String tabId) {
         WidgetTabEntity widgetTabEntity = getWidgetTabEntity(tabId);
         if (!WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(widgetTabEntity.getName())) {
             entityContext.delete(widgetTabEntity);
@@ -504,6 +555,12 @@ public class WidgetController {
     @Setter
     private static class IntegerValue {
         private Integer value;
+    }
+
+    @Setter
+    private static class CameraActionRequest {
+        private String name;
+        private String value;
     }
 
     @Setter

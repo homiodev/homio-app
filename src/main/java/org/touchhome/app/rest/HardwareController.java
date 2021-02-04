@@ -13,7 +13,7 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.Collection;
 
-import static org.touchhome.bundle.api.util.TouchHomeUtils.ADMIN_ROLE;
+import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 
 @RestController
 @RequestMapping("/rest/hardware")

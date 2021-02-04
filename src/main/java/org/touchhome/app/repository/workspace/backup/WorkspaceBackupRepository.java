@@ -18,7 +18,7 @@ public class WorkspaceBackupRepository extends AbstractRepository<WorkspaceBacku
         implements HasFetchChartSeries, HasLastNumberValueRepository<WorkspaceBackupEntity> {
 
     public WorkspaceBackupRepository() {
-        super(WorkspaceBackupEntity.class, WorkspaceBackupEntity.PREFIX);
+        super(WorkspaceBackupEntity.class);
     }
 
     @Override

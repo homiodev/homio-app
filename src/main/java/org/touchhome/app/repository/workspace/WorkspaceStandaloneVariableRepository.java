@@ -10,7 +10,7 @@ public class WorkspaceStandaloneVariableRepository extends AbstractRepository<Wo
         implements HasLastNumberValueRepository<WorkspaceStandaloneVariableEntity> {
 
     public WorkspaceStandaloneVariableRepository() {
-        super(WorkspaceStandaloneVariableEntity.class, WorkspaceStandaloneVariableEntity.PREFIX);
+        super(WorkspaceStandaloneVariableEntity.class);
     }
 
     @Override

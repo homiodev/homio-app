@@ -4,7 +4,7 @@ import org.json.JSONObject;
 import org.touchhome.app.setting.CoreSettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginButton;
 
-import static org.touchhome.bundle.api.util.TouchHomeUtils.DANGER_COLOR;
+import static org.touchhome.bundle.api.util.Constants.DANGER_COLOR;
 
 public class SystemClearCacheButtonSetting implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 

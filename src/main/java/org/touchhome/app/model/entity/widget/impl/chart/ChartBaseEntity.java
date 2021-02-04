@@ -1,38 +1,74 @@
 package org.touchhome.app.model.entity.widget.impl.chart;
 
-import lombok.Getter;
-import lombok.Setter;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 
-@Getter
-@Setter
 @Entity
-public abstract class ChartBaseEntity<T extends WidgetBaseEntity> extends WidgetBaseEntity<T> {
+public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
+        extends WidgetBaseEntityAndSeries<T, S> {
 
     @UIField(order = 20)
-    @Enumerated(EnumType.STRING)
-    private UpdateInterval updateInterval = UpdateInterval.Never;
+    public UpdateInterval getUpdateInterval() {
+        return getJsonDataEnum("updateInterval", UpdateInterval.Never);
+    }
+
+    public T setUpdateInterval(UpdateInterval value) {
+        setJsonData("updateInterval", value);
+        return (T) this;
+    }
 
     @UIField(order = 21)
-    private String legendTitle = "Legend";
+    public String getLegendTitle() {
+        return getJsonData("legendTitle", "Legend");
+    }
+
+    public T setLegendTitle(String value) {
+        setJsonData("legendTitle", value);
+        return (T) this;
+    }
 
     @UIField(order = 22)
-    @Enumerated(EnumType.STRING)
-    private LegendPosition legendPosition = LegendPosition.right;
+    public LegendPosition getLegendPosition() {
+        return getJsonDataEnum("legendPosition", LegendPosition.right);
+    }
+
+    public T setLegendPosition(LegendPosition value) {
+        setJsonData("legendPosition", value);
+        return (T) this;
+    }
 
     @UIField(order = 23, showInContextMenu = true)
-    private Boolean showLegend = Boolean.TRUE;
+    public Boolean getShowLegend() {
+        return getJsonData("showLegend", Boolean.TRUE);
+    }
+
+    public T setShowLegend(Boolean value) {
+        setJsonData("showLegend", value);
+        return (T) this;
+    }
 
     @UIField(order = 24)
-    private Boolean tooltipDisabled = Boolean.FALSE;
+    public Boolean getTooltipDisabled() {
+        return getJsonData("tooltipDisabled", Boolean.FALSE);
+    }
+
+    public T setTooltipDisabled(Boolean value) {
+        setJsonData("tooltipDisabled", value);
+        return (T) this;
+    }
 
     @UIField(order = 25)
-    private Boolean animations = Boolean.FALSE;
+    public Boolean getAnimations() {
+        return getJsonData("animations", Boolean.FALSE);
+    }
+
+    public T setAnimations(Boolean value) {
+        setJsonData("animations", value);
+        return (T) this;
+    }
 
     public enum LegendPosition {
         right,

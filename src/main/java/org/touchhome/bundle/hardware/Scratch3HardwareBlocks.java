@@ -6,7 +6,7 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.hardware.wifi.WirelessHardwareRepository;
+import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.*;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
@@ -33,13 +33,13 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block serverTime;
     private final Scratch3Block settingChangeCommand;
     private final BroadcastLockManagerImpl broadcastLockManager;
-    private final WirelessHardwareRepository wirelessHardwareRepository;
+    private final NetworkHardwareRepository networkHardwareRepository;
     private final Scratch3Block hardwareEventCommand;
 
-    public Scratch3HardwareBlocks(EntityContext entityContext, BroadcastLockManagerImpl broadcastLockManager, WirelessHardwareRepository wirelessHardwareRepository) {
+    public Scratch3HardwareBlocks(EntityContext entityContext, BroadcastLockManagerImpl broadcastLockManager, NetworkHardwareRepository networkHardwareRepository) {
         super("#51633C", entityContext, null, "hardware");
         this.broadcastLockManager = broadcastLockManager;
-        this.wirelessHardwareRepository = wirelessHardwareRepository;
+        this.networkHardwareRepository = networkHardwareRepository;
 
         // Menu
         this.settingsMenu = MenuBlock.ofServer("settingsMenu", "rest/setting/name");
@@ -65,7 +65,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
 
         entityContext.bgp().runOnceOnInternetUp("scratch3-hardware", () -> {
             this.ipGeoLocation.addArgument("IP", getByIP(null));
-            this.cityGeoLocation.addArgument("CITY", wirelessHardwareRepository.getIpGeoLocation(wirelessHardwareRepository.getOuterIpAddress()).getCity());
+            this.cityGeoLocation.addArgument("CITY", networkHardwareRepository.getIpGeoLocation(networkHardwareRepository.getOuterIpAddress()).getCity());
         });
 
         this.postConstruct();
@@ -93,14 +93,14 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     }
 
     private String getByIP(WorkspaceBlock workspaceBlock) {
-        return this.wirelessHardwareRepository.getOuterIpAddress();
+        return this.networkHardwareRepository.getOuterIpAddress();
     }
 
     private JSONObject getIPGeoLocation(WorkspaceBlock workspaceBlock) {
-        return new JSONObject(this.wirelessHardwareRepository.getIpGeoLocation(workspaceBlock.getInputString("IP")));
+        return new JSONObject(this.networkHardwareRepository.getIpGeoLocation(workspaceBlock.getInputString("IP")));
     }
 
     private JSONObject getCityGeoLocation(WorkspaceBlock workspaceBlock) {
-        return new JSONObject(this.wirelessHardwareRepository.findCityGeolocation(workspaceBlock.getInputString("CITY")));
+        return new JSONObject(this.networkHardwareRepository.findCityGeolocation(workspaceBlock.getInputString("CITY")));
     }
 }

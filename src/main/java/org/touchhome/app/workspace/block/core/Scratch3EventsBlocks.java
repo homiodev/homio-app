@@ -55,7 +55,7 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
     }
 
     public void fireBroadcastEvent(String broadcastRefEntityID) {
-        WorkspaceBroadcastEntity entity = entityContext.getEntity(WorkspaceBroadcastRepository.PREFIX + broadcastRefEntityID);
+        WorkspaceBroadcastEntity entity = entityContext.getEntity(WorkspaceBroadcastEntity.PREFIX + broadcastRefEntityID);
         entityContext.save(new WorkspaceBroadcastValueCrudEntity().setCreationTime(new Date()).setWorkspaceBroadcastEntity(entity));
 
         broadcastLockManager.signalAll(broadcastRefEntityID);

@@ -3,15 +3,12 @@ package org.touchhome.app.model.entity.widget.impl.js;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.Lob;
 import javax.persistence.Transient;
 
 @Entity
@@ -20,18 +17,37 @@ import javax.persistence.Transient;
 @Accessors(chain = true)
 public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
 
-    @Lob
-    @Column(length = 1048576)
+    public static final String PREFIX = "wtjs_";
+
     @UIField(order = 13)
     @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript)
-    private String javaScript;
+    public String getJavaScript() {
+        return getJsonData("js");
+    }
 
-    @Lob
-    @Column(length = 1048576)
+    public WidgetJsEntity setJavaScript(String value) {
+        setJsonData("js", value);
+        return this;
+    }
+
     @UIField(order = 12, type = UIFieldType.Json)
-    private String javaScriptParameters;
+    public String getJavaScriptParameters() {
+        return getJsonData("jsp");
+    }
 
-    private boolean javaScriptParametersReadOnly;
+    public WidgetJsEntity setJavaScriptParameters(String value) {
+        setJsonData("jsp", value);
+        return this;
+    }
+
+    public Boolean getJavaScriptParametersReadOnly() {
+        return getJsonData("jspro", Boolean.FALSE);
+    }
+
+    public WidgetJsEntity setJavaScriptParametersReadOnly(Boolean value) {
+        setJsonData("jspro", value);
+        return this;
+    }
 
     @Transient
     private String javaScriptResponse;
@@ -45,7 +61,7 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
     }
 
     @Override
-    public boolean updateRelations(EntityContext entityContext) {
-        return false;
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 }

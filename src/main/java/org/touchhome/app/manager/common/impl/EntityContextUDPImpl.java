@@ -42,7 +42,7 @@ public class EntityContextUDPImpl implements EntityContextUDP {
                 }, true);
                 scheduleFuture.setDescription("Listen udp: " + hostPortKey);
             } catch (Exception ex) {
-                entityContext.ui().addHeaderErrorNotification(hostPortKey, "UDP " + hostPortKey, Lang.getServerMessage("UDP_ERROR",
+                entityContext.ui().addBellErrorNotification(hostPortKey, "UDP " + hostPortKey, Lang.getServerMessage("UDP_ERROR",
                         FlowMap.of("key", hostPortKey, "msg", ex.getMessage())));
                 log.error("Unable to listen udp host:port: <{}>", hostPortKey);
                 return;

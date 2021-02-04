@@ -4,8 +4,6 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import java.util.List;
@@ -14,11 +12,8 @@ import java.util.List;
 @Repository
 public class WidgetRepository extends AbstractRepository<WidgetBaseEntity> {
 
-    private EntityContext entityContext;
-
-    public WidgetRepository(EntityContext entityContext) {
-        super(WidgetBaseEntity.class, "ow_");
-        this.entityContext = entityContext;
+    public WidgetRepository() {
+        super(WidgetBaseEntity.class);
     }
 
     @Override
@@ -31,20 +26,5 @@ public class WidgetRepository extends AbstractRepository<WidgetBaseEntity> {
     @Transactional(readOnly = true)
     public List listAll() {
         return super.listAll();
-    }
-
-    @Override
-    public WidgetBaseEntity save(WidgetBaseEntity entity) {
-        if (entity.getWidgetTabEntity() == null) {
-            throw new ServerException("Unable to save widget without attach to tab");
-        }
-        return super.save(entity);
-    }
-
-    @Override
-    public void updateEntityAfterFetch(WidgetBaseEntity widgetBaseEntity) {
-        if (widgetBaseEntity.updateRelations(entityContext)) {
-            save(widgetBaseEntity);
-        }
     }
 }

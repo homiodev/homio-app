@@ -7,31 +7,34 @@ import com.pivovarit.function.ThrowingSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.NotNull;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.EntityContextBGP;
+import org.touchhome.bundle.api.model.HasEntityIdentifier;
 
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static org.touchhome.bundle.api.util.TouchHomeUtils.getErrorMessage;
 
 @Log4j2
 public class EntityContextBGPImpl implements EntityContextBGP {
-    private final ScheduledExecutorService scheduleService = Executors.newScheduledThreadPool(1000, r -> new Thread(r, "entity-manager"));
+    private final ScheduledExecutorService scheduleService = Executors.newScheduledThreadPool(1000, r -> new Thread(r, "th-async-"));
 
     @Getter
     private final EntityContextImpl entityContext;
 
     @Getter
-    private final Map<String, ThreadContextImpl<?>> schedulers = new HashMap<>();
+    private final Map<String, ThreadContextImpl<?>> schedulers = new ConcurrentHashMap<>();
+
+    private final Map<String, BatchRunContext<?>> batchRunContextMap = new ConcurrentHashMap<>();
 
     private ThreadContext<Boolean> internetThreadContext;
 
@@ -42,12 +45,14 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public ThreadContext<Void> schedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
-        return addSchedule(name, timeout, timeUnit, command, showOnUI);
+    public ThreadContext<Void> schedule(@NotNull String name, int timeout, @NotNull TimeUnit timeUnit,
+                                        @NotNull ThrowingRunnable<Exception> command, boolean showOnUI,
+                                        boolean hideOnUIAfterCancel) {
+        return addSchedule(name, timeout, timeUnit, command, showOnUI, hideOnUIAfterCancel);
     }
 
     @Override
-    public void runOnceOnInternetUp(String name, ThrowingRunnable<Exception> command) {
+    public void runOnceOnInternetUp(@NotNull String name, @NotNull ThrowingRunnable<Exception> command) {
         this.internetThreadContext.addValueListener(name, (isInternetUp, ignore) -> {
             if (isInternetUp) {
                 log.info("Internet up. Run <" + name + "> listener.");
@@ -59,12 +64,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public <T> ThreadContext<T> run(String name, ThrowingSupplier<T, Exception> command, boolean showOnUI) {
-        return addSchedule(name, 0, TimeUnit.MILLISECONDS, threadContext -> command.get(), EntityContextBGPImpl.ScheduleType.SINGLE, showOnUI);
+    public <T> ThreadContext<T> runAndGet(@NotNull String name, @NotNull ThrowingSupplier<T, Exception> command, boolean showOnUI) {
+        return addSchedule(name, 0, TimeUnit.MILLISECONDS, threadContext -> command.get(), EntityContextBGPImpl.ScheduleType.SINGLE, showOnUI, true);
     }
 
     @Override
-    public ThreadContext<Void> runInfinite(String name, ThrowingRunnable<Exception> command, boolean showOnUI, int delay, boolean stopOnException) {
+    public ThreadContext<Void> runInfinite(@NotNull String name, @NotNull ThrowingRunnable<Exception> command, boolean showOnUI, int delay, boolean stopOnException) {
         return new ThreadContextImpl<>(name, context -> {
             while (!context.isStopped())
                 try {
@@ -78,21 +83,73 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     }
                 }
             return null;
-        }, EntityContextBGPImpl.ScheduleType.SINGLE, null, showOnUI);
+        }, EntityContextBGPImpl.ScheduleType.SINGLE, null, showOnUI, true);
     }
 
     @Override
-    public void cancelThread(String name) {
-        if (name != null) {
-            ThreadContextImpl<?> context = this.schedulers.remove(name);
-            if (context != null) {
-                context.cancel();
+    public void cancelThread(@NotNull String name) {
+        ThreadContextImpl<?> context = this.schedulers.remove(name);
+        if (context != null) {
+            log.info("Cancel process: <{}>", context.getName());
+            context.cancel();
+        } else if (this.batchRunContextMap.containsKey(name)) {
+            log.info("Stop batch process: <{}>", name);
+            this.batchRunContextMap.get(name).executor.shutdownNow();
+        } else {
+            for (Map.Entry<String, BatchRunContext<?>> entry : this.batchRunContextMap.entrySet()) {
+                if (entry.getValue().processes.containsKey(name)) {
+                    log.info("Stop single process <{}> in batch <{}", name, entry.getKey());
+                    Future<?> future = entry.getValue().processes.get(name);
+                    if (future.isDone()) {
+                        log.warn("Process {} already done", name);
+                    } else {
+                        future.cancel(true);
+                    }
+                }
             }
         }
     }
 
+    @RequiredArgsConstructor
+    private static class BatchRunContext<T> {
+
+        private final ThreadPoolExecutor executor;
+        private Map<String, Future<T>> processes = new HashMap<>();
+    }
+
     @Override
-    public boolean isThreadExists(String name, boolean checkOnlyRunningThreads) {
+    public <P extends HasEntityIdentifier, T> void runInBatch(@NotNull String batchName, int maxTerminateTimeoutInSeconds,
+                                                              @NotNull Collection<P> batchItems,
+                                                              @NotNull Function<P, Callable<T>> callableProducer,
+                                                              @NotNull Consumer<Integer> progressConsumer,
+                                                              @NotNull Consumer<List<T>> finallyProcessBlockHandler) {
+        BatchRunContext<T> batchRunContext = prepareBatchProcessContext(batchName, batchItems.size());
+        for (P batchItem : batchItems) {
+            Callable<T> callable = callableProducer.apply(batchItem);
+            if (callable != null) {
+                batchRunContext.processes.put(batchItem.getEntityID(), batchRunContext.executor.submit(callable));
+            }
+        }
+        run("batch-wait_" + batchName, () -> {
+            List<T> result = waitBatchToDone(batchName, maxTerminateTimeoutInSeconds, progressConsumer, batchRunContext);
+            finallyProcessBlockHandler.accept(result);
+        }, true);
+    }
+
+    @SneakyThrows
+    @Override
+    public <T> List<T> runInBatchAndGet(@NotNull String batchName, int maxTerminateTimeoutInSeconds,
+                                        int threadsCount, @NotNull Map<String, Callable<T>> runnableTasks,
+                                        @NotNull Consumer<Integer> progressConsumer) {
+        BatchRunContext<T> batchRunContext = prepareBatchProcessContext(batchName, threadsCount);
+        for (Map.Entry<String, Callable<T>> entry : runnableTasks.entrySet()) {
+            batchRunContext.processes.put(entry.getKey(), batchRunContext.executor.submit(entry.getValue()));
+        }
+        return waitBatchToDone(batchName, maxTerminateTimeoutInSeconds, progressConsumer, batchRunContext);
+    }
+
+    @Override
+    public boolean isThreadExists(@NotNull String name, boolean checkOnlyRunningThreads) {
         ThreadContextImpl<?> threadContext = this.schedulers.get(name);
         if (checkOnlyRunningThreads) {
             return threadContext != null && !threadContext.stopped;
@@ -100,17 +157,65 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         return threadContext != null;
     }
 
-    private ThreadContext<Void> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI) {
+    private <T> EntityContextBGPImpl.BatchRunContext<T> prepareBatchProcessContext(String batchName, int threadsCount) {
+        if (batchRunContextMap.containsKey(batchName)) {
+            throw new IllegalStateException("Batch processes with name " + batchName + " already in progress");
+        }
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadsCount);
+        BatchRunContext<T> batchRunContext = new BatchRunContext<>(executor);
+        batchRunContextMap.put(batchName, batchRunContext);
+        return batchRunContext;
+    }
+
+    private <T> List<T> waitBatchToDone(String batchName, int maxTerminateTimeoutInSeconds, Consumer<Integer> progressConsumer, BatchRunContext<T> batchRunContext) throws InterruptedException, ExecutionException {
+        ThreadPoolExecutor executor = batchRunContext.executor;
+        executor.shutdown();
+        int maxTerminateTimeoutInMilliseconds = maxTerminateTimeoutInSeconds * 1000;
+        long batchStarted = System.currentTimeMillis();
+        try {
+            while (!executor.isTerminated()) {
+                try {
+                    executor.awaitTermination(1, TimeUnit.SECONDS);
+                    long completedTaskCount = executor.getCompletedTaskCount();
+                    progressConsumer.accept((int) completedTaskCount);
+
+                    if (System.currentTimeMillis() - batchStarted > maxTerminateTimeoutInMilliseconds) {
+                        log.warn("Exceeded await limit for batch run <{}> (Max {} sec.)", batchName, maxTerminateTimeoutInSeconds);
+                        executor.shutdownNow();
+                    }
+                } catch (Exception ignore) {
+                    log.error("Error while await termination for batch run: <{}>", batchName);
+                    executor.shutdownNow();
+                }
+            }
+            List<T> list = new ArrayList<>();
+            for (Map.Entry<String, Future<T>> entry : batchRunContext.processes.entrySet()) {
+                try {
+                    if (entry.getValue().isDone()) { // in case of cancellation from UI
+                        list.add(entry.getValue().get());
+                    }
+                } catch (CancellationException ex) {
+                    log.warn("Process <{}> in batch <{}> has been cancelled. Ignore result", entry.getKey(), batchName);
+                }
+            }
+            return list;
+        } finally {
+            batchRunContextMap.remove(batchName);
+            log.info("Finish batch run <{}>", batchName);
+        }
+    }
+
+    private ThreadContext<Void> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI, boolean hideOnUIAfterCancel) {
         return addSchedule(name, timeout, timeUnit, voidThreadContext -> {
             command.run();
             return null;
-        }, EntityContextBGPImpl.ScheduleType.DELAY, showOnUI);
+        }, EntityContextBGPImpl.ScheduleType.DELAY, showOnUI, hideOnUIAfterCancel);
     }
 
     private <T> ThreadContext<T> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingFunction<ThreadContext<T>, T, Exception> command,
-                                             ScheduleType scheduleType, boolean showOnUI) {
+                                             ScheduleType scheduleType, boolean showOnUI, boolean hideOnUIAfterCancel) {
         this.cancelThread(name);
-        ThreadContextImpl<T> threadContext = new ThreadContextImpl<T>(name, command, scheduleType, timeout > 0 ? timeUnit.toMillis(timeout) : null, showOnUI);
+        ThreadContextImpl<T> threadContext = new ThreadContextImpl<>(name, command, scheduleType, timeout > 0 ? timeUnit.toMillis(timeout) : null, showOnUI, hideOnUIAfterCancel);
         this.schedulers.put(name, threadContext);
 
         Runnable runnable = () -> {
@@ -159,7 +264,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             } catch (Exception ex) {
                 return false;
             }
-        }, ScheduleType.DELAY, true);
+        }, ScheduleType.DELAY, true, false);
 
         this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
             if (isInternetUp != isInternetWasUp) {
@@ -176,12 +281,13 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @Getter
     @RequiredArgsConstructor
-    public static class ThreadContextImpl<T> implements ThreadContext<T> {
+    public class ThreadContextImpl<T> implements ThreadContext<T> {
         private final String name;
         private final ThrowingFunction<ThreadContext<T>, T, Exception> command;
         private final ScheduleType scheduleType;
         private final Long period;
         private final boolean showOnUI;
+        private final boolean hideOnUIAfterCancel;
         public T retValue;
         private ScheduledFuture<T> scheduledFuture;
         @Setter
@@ -208,21 +314,24 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         public void cancel() {
             if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
                 stopped = true;
+                if (hideOnUIAfterCancel) {
+                    EntityContextBGPImpl.this.schedulers.remove(name);
+                }
             }
         }
 
         @Override
-        public T await(long timeout, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+        public T await(long timeout, @NotNull TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
             return scheduledFuture.get(timeout, timeUnit);
         }
 
         @Override
-        public void onError(Consumer<Exception> errorListener) {
+        public void onError(@NotNull Consumer<Exception> errorListener) {
             this.errorListener = errorListener;
         }
 
         @Override
-        public boolean addValueListener(String name, ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
+        public boolean addValueListener(@NotNull String name, @NotNull ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
             if (this.valueListeners == null) {
                 this.valueListeners = new ConcurrentHashMap<>();
             }

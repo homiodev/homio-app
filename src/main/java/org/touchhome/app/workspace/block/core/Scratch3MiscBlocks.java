@@ -1,25 +1,23 @@
 package org.touchhome.app.workspace.block.core;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.ScriptManager;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 
 @Log4j2
 @Getter
 @Component
 public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
 
-    private final ObjectMapper objectMapper;
     private final ScriptManager scriptManager;
 
     private final Scratch3Block logToConsoleBlock;
@@ -27,10 +25,8 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block runScriptValueBlock;
     private final Scratch3Block runScriptBlock;
 
-    public Scratch3MiscBlocks(ObjectMapper objectMapper, EntityContext entityContext, ScriptManager scriptManager) {
+    public Scratch3MiscBlocks(EntityContext entityContext, ScriptManager scriptManager) {
         super("misc", entityContext);
-
-        this.objectMapper = objectMapper;
         this.scriptManager = scriptManager;
 
         // Blocks
@@ -67,7 +63,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
     private void printHandler(WorkspaceBlock workspaceBlock) {
         Object value = workspaceBlock.getInput("VALUE", true);
         String str = value == null ? "NULL" : value instanceof byte[] ? new String((byte[]) value) : value.toString();
-        ObjectNode node = objectMapper.createObjectNode().put("block", workspaceBlock.getId()).put("value", str);
+        JSONObject node = new JSONObject().put("block", workspaceBlock.getId()).put("value", str);
         entityContext.ui().sendNotification("-workspace-block-update", node);
     }
 }

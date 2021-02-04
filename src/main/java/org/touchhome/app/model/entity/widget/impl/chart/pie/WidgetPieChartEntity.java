@@ -1,52 +1,95 @@
 package org.touchhome.app.model.entity.widget.impl.chart.pie;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartPeriod;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 
-import javax.persistence.*;
-import java.util.Set;
+import javax.persistence.Entity;
 
-@Getter
-@Setter
 @Entity
-public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity> {
+public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity> {
+
+    public static final String PREFIX = "piew_";
 
     @UIField(order = 12)
-    @Enumerated(EnumType.STRING)
-    private ChartPeriod chartPeriod = ChartPeriod.All;
+    public ChartPeriod getChartPeriod() {
+        return getJsonDataEnum("chartPeriod", ChartPeriod.All);
+    }
+
+    public WidgetPieChartEntity setChartPeriod(ChartPeriod value) {
+        setJsonData("chartPeriod", value);
+        return this;
+    }
 
     @UIField(order = 33, showInContextMenu = true)
-    private Boolean showButtons = Boolean.FALSE;
+    public Boolean getShowButtons() {
+        return getJsonData("showButtons", Boolean.FALSE);
+    }
+
+    public WidgetPieChartEntity setShowButtons(Boolean value) {
+        setJsonData("showButtons", value);
+        return this;
+    }
+
+    @UIField(order = 34)
+    public String getLabelFormatting() {
+        return getJsonData("labelFormatting", "#LABEL#");
+    }
+
+    public WidgetPieChartEntity setLabelFormatting(String value) {
+        setJsonData("labelFormatting", value);
+        return this;
+    }
 
     @UIField(order = 35)
-    private String labelFormatting = "#LABEL#";
+    public String getValueFormatting() {
+        return getJsonData("valueFormatting", "#VALUE#");
+    }
+
+    public WidgetPieChartEntity setValueFormatting(String value) {
+        setJsonData("valueFormatting", value);
+        return this;
+    }
 
     @UIField(order = 36)
-    private String valueFormatting = "#VALUE#";
+    public Boolean getDoughnut() {
+        return getJsonData("doughnut", Boolean.FALSE);
+    }
 
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetPieChartEntity")
-    @UIField(order = 30, onlyEdit = true)
-    @OrderBy("priority asc")
-    private Set<WidgetPieChartSeriesEntity> series;
+    public WidgetPieChartEntity setDoughnut(Boolean value) {
+        setJsonData("doughnut", value);
+        return this;
+    }
 
-    @UIField(order = 33)
-    private Boolean doughnut = Boolean.FALSE;
+    @UIField(order = 37, showInContextMenu = true)
+    public Boolean getShowLabels() {
+        return getJsonData("showLabels", Boolean.TRUE);
+    }
 
-    @UIField(order = 33, showInContextMenu = true)
-    private Boolean showLabels = Boolean.TRUE;
+    public WidgetPieChartEntity setShowLabels(Boolean value) {
+        setJsonData("showLabels", value);
+        return this;
+    }
 
-    @UIField(order = 35)
-    @Enumerated(EnumType.STRING)
-    private PieChartValueType pieChartValueType = PieChartValueType.Count;
+    @UIField(order = 38)
+    public PieChartValueType getPieChartValueType() {
+        return getJsonDataEnum("pieChartValueType", PieChartValueType.Count);
+    }
 
-    @UIField(order = 35)
-    @Enumerated(EnumType.STRING)
-    private PieChartType displayType = PieChartType.Regular;
+    public WidgetPieChartEntity setPieChartValueType(PieChartValueType value) {
+        setJsonData("pieChartValueType", value);
+        return this;
+    }
+
+    @UIField(order = 39)
+    public PieChartType getDisplayType() {
+        return getJsonDataEnum("displayType", PieChartType.Regular);
+    }
+
+    public WidgetPieChartEntity setDisplayType(PieChartType value) {
+        setJsonData("displayType", value);
+        return this;
+    }
 
     @Override
     public String getImage() {
@@ -54,14 +97,8 @@ public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity> 
     }
 
     @Override
-    public boolean updateRelations(EntityContext entityContext) {
-        return validateSeries(series, entityContext);
-    }
-
-    @Override
-    public void copy() {
-        super.copy();
-        series.forEach(BaseEntity::copy);
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 
     public enum PieChartValueType {

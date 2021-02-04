@@ -10,6 +10,6 @@ public class WorkspaceRepository extends AbstractRepository<WorkspaceEntity> {
     public static final String GENERAL_WORKSPACE_TAB_NAME = "main";
 
     public WorkspaceRepository() {
-        super(WorkspaceEntity.class, WorkspaceEntity.PREFIX);
+        super(WorkspaceEntity.class);
     }
 }

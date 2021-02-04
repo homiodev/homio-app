@@ -7,6 +7,8 @@ import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.bluetooth.BluetoothBundleEntryPoint;
 
+import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
+
 @RestController
 @RequestMapping("/rest/device")
 @RequiredArgsConstructor
@@ -20,7 +22,7 @@ public class DeviceController {
     }
 
     @PutMapping("/characteristic/{uuid}")
-    @Secured(TouchHomeUtils.ADMIN_ROLE)
+    @Secured(ADMIN_ROLE)
     public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
         bluetoothBundleEntrypoint.setDeviceCharacteristic(uuid, value);
     }

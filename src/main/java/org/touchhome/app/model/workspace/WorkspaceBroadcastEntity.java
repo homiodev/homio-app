@@ -23,6 +23,9 @@ import java.util.Set;
                         "AND e.creationTime <= :to")
 })
 public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntity> {
+
+    public static final String PREFIX = "brc_";
+
     @Setter
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "workspaceBroadcastEntity", cascade = CascadeType.REMOVE)
     private Set<WorkspaceBroadcastValueCrudEntity> values;
@@ -30,5 +33,10 @@ public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntit
     @Override
     public String getTitle() {
         return "Broadcast event: " + this.getName();
+    }
+
+    @Override
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 }
