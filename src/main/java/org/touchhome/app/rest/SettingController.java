@@ -5,7 +5,7 @@ import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
-import org.touchhome.app.manager.BundleManager;
+import org.touchhome.app.manager.BundleService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.model.entity.SettingEntity;
@@ -36,7 +36,7 @@ import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 public class SettingController {
 
     private final ConsoleController consoleController;
-    private final BundleManager bundleManager;
+    private final BundleService bundleService;
 
     private Map<String, Set<String>> settingToPages;
     private Set<SettingEntity> descriptionSettings;
@@ -231,7 +231,7 @@ public class SettingController {
             return SettingRepository.getSettingBundleName(entityContext, plugin.getClass());
         }).filter(Objects::nonNull).collect(Collectors.toSet());
 
-        for (BundleEntryPoint bundleEntrypoint : bundleManager.getBundles()) {
+        for (BundleEntryPoint bundleEntrypoint : bundleService.getBundles()) {
             if (bundleSettings.contains(bundleEntrypoint.getBundleId())) {
                 // find if description exists inside lang.json
                 String descriptionKey = bundleEntrypoint.getBundleId() + ".setting.description";
@@ -239,6 +239,7 @@ public class SettingController {
                 if (description != null) {
                     this.descriptionSettings.add(new SettingEntity().setSettingType(SettingPlugin.SettingType.Description)
                             .setBundle(bundleEntrypoint.getBundleId())
+                            .setVisible(true)
                             .setEntityID(SettingEntity.PREFIX + bundleEntrypoint.getBundleId() + "_Description")
                             .setValue(descriptionKey).setOrder(1));
                 }

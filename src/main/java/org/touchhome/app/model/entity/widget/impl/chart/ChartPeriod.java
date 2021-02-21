@@ -1,9 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.chart;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.data.util.Pair;
 
@@ -14,7 +11,6 @@ import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-@JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum ChartPeriod {
     Minute {
         @Override
@@ -114,14 +110,8 @@ public enum ChartPeriod {
         }
     };
 
-    @JsonCreator
     public static ChartPeriod fromValue(String value) {
         return Stream.of(ChartPeriod.values()).filter(e -> e.name().equals(value)).findFirst().orElse(null);
-    }
-
-    @JsonValue
-    public String toValue() {
-        return name();
     }
 
     @JsonIgnore

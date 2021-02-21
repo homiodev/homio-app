@@ -8,14 +8,13 @@ import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.hibernate.engine.spi.EntityEntry;
+import org.hibernate.engine.spi.Status;
 import org.hibernate.event.internal.PostDeleteEventListenerStandardImpl;
 import org.hibernate.event.internal.PostInsertEventListenerStandardImpl;
 import org.hibernate.event.internal.PostUpdateEventListenerStandardImpl;
 import org.hibernate.event.service.spi.EventListenerRegistry;
-import org.hibernate.event.spi.EventType;
-import org.hibernate.event.spi.PostDeleteEvent;
-import org.hibernate.event.spi.PostInsertEvent;
-import org.hibernate.event.spi.PostUpdateEvent;
+import org.hibernate.event.spi.*;
 import org.hibernate.internal.SessionFactoryImpl;
 import org.hibernate.metamodel.spi.MetamodelImplementor;
 import org.hibernate.persister.entity.Joinable;
@@ -23,6 +22,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -47,7 +47,6 @@ import org.touchhome.app.setting.system.SystemLanguageSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.app.utils.HardwareUtils;
-import org.touchhome.app.videoStream.CameraController;
 import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
@@ -69,6 +68,9 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
+import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
+import org.touchhome.bundle.api.ui.field.action.UIActionResponse;
+import org.touchhome.bundle.api.ui.field.action.impl.DynamicContextMenuAction;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
@@ -76,6 +78,8 @@ import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import javax.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.text.DateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -94,8 +98,8 @@ public class EntityContextImpl implements EntityContext {
     public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
     public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
-    private static EntityManager entityManager;
     public static Map<String, AbstractRepository> repositoriesByPrefix;
+    private static EntityManager entityManager;
     private static Map<String, PureRepository> pureRepositories = new HashMap<>();
     private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchhome-core";
     private final EntityContextUIImpl entityContextUI;
@@ -126,7 +130,8 @@ public class EntityContextImpl implements EntityContext {
 
     private Set<ApplicationContext> allApplicationContexts = new HashSet<>();
 
-    public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, SimpMessagingTemplate messagingTemplate,
+    public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, ThreadPoolTaskScheduler taskScheduler,
+                             SimpMessagingTemplate messagingTemplate,
                              BroadcastLockManager broadcastLockManager, TouchHomeProperties touchHomeProperties) {
         this.classFinder = classFinder;
         this.cacheService = cacheService;
@@ -136,14 +141,14 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextUI = new EntityContextUIImpl(messagingTemplate, this);
         this.entityContextUDP = new EntityContextUDPImpl(this);
         this.entityContextEvent = new EntityContextEventImpl(broadcastLockManager);
-        this.entityContextBGP = new EntityContextBGPImpl(this, touchHomeProperties);
+        this.entityContextBGP = new EntityContextBGPImpl(this, touchHomeProperties, taskScheduler);
         this.entityContextSetting = new EntityContextSettingImpl(this);
     }
 
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
-        MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
+        MACHINE_IP_ADDRESS = getInternalIpAddress();
 
         this.transactionManager = this.applicationContext.getBean(PlatformTransactionManager.class);
         this.entityManagerFactory = this.applicationContext.getBean(EntityManagerFactory.class);
@@ -156,14 +161,14 @@ public class EntityContextImpl implements EntityContext {
         updateBeans(null, applicationContext, true);
 
         applicationContext.getBean(JwtTokenProvider.class).postConstruct(this);
-        applicationContext.getBean(LoggerManager.class).postConstruct();
+        applicationContext.getBean(LoggerService.class).postConstruct();
         applicationContext.getBean(LogService.class).setEntityContext(this);
 
         registerEntityListeners();
 
         createUser();
 
-        applicationContext.getBean(ScriptManager.class).postConstruct();
+        applicationContext.getBean(ScriptService.class).postConstruct();
 
         setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", cacheService::clearCache);
 
@@ -184,11 +189,7 @@ public class EntityContextImpl implements EntityContext {
         applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
         applicationContext.getBean(WorkspaceManager.class).loadWorkspace();
         applicationContext.getBean(WorkspaceController.class).postConstruct(this);
-        applicationContext.getBean(WidgetManager.class).postConstruct();
-
-
-        applicationContext.getBean(CameraController.class).init();
-
+        applicationContext.getBean(WidgetService.class).postConstruct();
 
         // trigger handlers when variables changed
         this.event().addEntityUpdateListener(WorkspaceVariableEntity.class, "workspace-var-change-listener",
@@ -223,7 +224,8 @@ public class EntityContextImpl implements EntityContext {
         this.event().addEventAndFire("app-started", "App started");
 
         // install autossh. Should refactor to move somewhere else
-        this.bgp().runOnceOnInternetUp("install-software", () -> {
+        this.bgp().runOnceOnInternetUp("internal-ctx", () -> {
+            MACHINE_IP_ADDRESS = getInternalIpAddress();
             MachineHardwareRepository repository = getBean(MachineHardwareRepository.class);
             if (!repository.isSoftwareInstalled("autossh")) {
                 repository.installSoftware("autossh");
@@ -293,7 +295,7 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     public <T extends HasEntityIdentifier> void updateDelayed(T entity, Consumer<T> consumer) {
-        Map<String, Object> changeFields = new HashMap<>();
+        Map<String, Object[]> changeFields = new HashMap<>();
         MethodInterceptor handler = (obj, method, args, proxy) -> {
             String setName = method.getName();
             if (setName.startsWith("set")) {
@@ -306,8 +308,9 @@ public class EntityContextImpl implements EntityContext {
                 } catch (NoSuchMethodException ex) {
                     oldValue = MethodUtils.invokeMethod(entity, method.getName().replaceFirst("set", "is"));
                 }
-                if (!Objects.equals(oldValue, args[0])) {
-                    changeFields.put(setName, args[0]);
+                Object newValue = setName.startsWith("setJsonData") ? args[1] : args[0];
+                if (!Objects.equals(oldValue, newValue)) {
+                    changeFields.put(setName, args);
                 }
             }
             if (method.getReturnType().isAssignableFrom(entity.getClass())) {
@@ -330,7 +333,7 @@ public class EntityContextImpl implements EntityContext {
         sendEntityUpdateNotification(entity, ItemAction.Update);
     }
 
-    private void putToCache(HasEntityIdentifier entity, Map<String, Object> changeFields) {
+    private void putToCache(HasEntityIdentifier entity, Map<String, Object[]> changeFields) {
         PureRepository repository;
         if (entity instanceof BaseEntity) {
             repository = classFinder.getRepositoryByClass(((BaseEntity) entity).getClass());
@@ -559,6 +562,15 @@ public class EntityContextImpl implements EntityContext {
             @Override
             public void onPostUpdate(PostUpdateEvent event) {
                 super.onPostUpdate(event);
+                Object entity = event.getEntity();
+                EventSource eventSource = event.getSession();
+                EntityEntry entry = eventSource.getPersistenceContextInternal().getEntry(entity);
+                // mimic the preUpdate filter
+                if (Status.DELETED != entry.getStatus()) {
+                    if (entity instanceof BaseEntity) {
+                        ((BaseEntity) entity).afterUpdate(EntityContextImpl.this);
+                    }
+                }
                 updateCacheEntity(event.getEntity(), ItemAction.Update);
             }
         });
@@ -567,6 +579,10 @@ public class EntityContextImpl implements EntityContext {
             @Override
             public void onPostDelete(PostDeleteEvent event) {
                 super.onPostDelete(event);
+                Object entity = event.getEntity();
+                if (entity instanceof BaseEntity) {
+                    ((BaseEntity) entity).afterDelete(EntityContextImpl.this);
+                }
                 updateCacheEntity(event.getEntity(), ItemAction.Remove);
             }
         });
@@ -583,31 +599,33 @@ public class EntityContextImpl implements EntityContext {
         }
     }
 
-    private void sendEntityUpdateNotification(Object entity, ItemAction type) {
+    private Map<Class, Boolean> entityClassToHasUISidebarMenu = new HashMap<>();
+
+    public void sendEntityUpdateNotification(Object entity, ItemAction type) {
         // send info if item changed and it could be shown on page.
-        //check super ie. if we have group of items under same parent object i.e. IpCameraEntity has no UISidebarMenu but parent has this annotation
-        if (entity.getClass().isAnnotationPresent(UISidebarMenu.class) ||
-                entity.getClass().getSuperclass().isAnnotationPresent(UISidebarMenu.class)) {
-            ui().sendNotification("-global", new JSONObject().put("type", type.name).put("value", entity));
+        Boolean hasUISidebarMenu = entityClassToHasUISidebarMenu.computeIfAbsent(entity.getClass(), cursor -> {
+            while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
+                if (cursor.isAnnotationPresent(UISidebarMenu.class)) {
+                    return true;
+                }
+                cursor = cursor.getSuperclass();
+            }
+            return false;
+        });
+        if (hasUISidebarMenu) {
+            JSONObject metadata = new JSONObject().put("type", type.name).put("value", entity);
+            if (entity instanceof HasDynamicContextMenuActions) {
+                Set<DynamicContextMenuAction> actions = ((HasDynamicContextMenuActions) entity).getActions(this);
+                if (actions != null && !actions.isEmpty()) {
+                    metadata.put("actions", actions.stream()
+                            .map(UIActionResponse::new).collect(Collectors.toSet()));
+                }
+            }
+            ui().sendNotification("-global", metadata);
         }
         if (showEntityState) {
             type.messageEvent.accept(this);
         }
-    }
-
-    @AllArgsConstructor
-    private enum ItemAction {
-        Insert("addItem", context -> {
-            context.ui().sendInfoMessage("TOASTR.ENTITY_INSERTED");
-        }),
-        Update("addItem", context -> {
-            context.ui().sendInfoMessage("TOASTR.ENTITY_UPDATED");
-        }),
-        Remove("removeItem", context -> {
-            context.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED");
-        });
-        private final String name;
-        private final Consumer<EntityContextImpl> messageEvent;
     }
 
     private void removeBundle(BundleContext bundleContext) {
@@ -675,7 +693,7 @@ public class EntityContextImpl implements EntityContext {
 
         Lang.DEFAULT_LANG = setting().getValue(SystemLanguageSetting.class).name();
         applicationContext.getBean(ConsoleController.class).postConstruct();
-        applicationContext.getBean(BundleManager.class).postConstruct(this);
+        applicationContext.getBean(BundleService.class).postConstruct(this);
         applicationContext.getBean(SettingController.class).postConstruct(this);
         /*if (!addBundle) {
             applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
@@ -684,7 +702,7 @@ public class EntityContextImpl implements EntityContext {
         applicationContext.getBean(WorkspaceController.class).postConstruct(this);
         applicationContext.getBean(ItemController.class).postConstruct();
         applicationContext.getBean(Scratch3OtherBlocks.class).postConstruct();
-        applicationContext.getBean(PortManager.class).postConstruct();
+        applicationContext.getBean(PortService.class).postConstruct();
 
         if (bundleContext != null) {
             applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addBundle);
@@ -759,6 +777,21 @@ public class EntityContextImpl implements EntityContext {
         }
     }
 
+    @AllArgsConstructor
+    public enum ItemAction {
+        Insert("addItem", context -> {
+            context.ui().sendInfoMessage("TOASTR.ENTITY_INSERTED");
+        }),
+        Update("addItem", context -> {
+            context.ui().sendInfoMessage("TOASTR.ENTITY_UPDATED");
+        }),
+        Remove("removeItem", context -> {
+            context.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED");
+        });
+        private final String name;
+        private final Consumer<EntityContextImpl> messageEvent;
+    }
+
     public static class InternalBundleContext {
         @Getter
         private final BundleEntryPoint bundleEntrypoint;
@@ -775,5 +808,19 @@ public class EntityContextImpl implements EntityContext {
                 }
             }
         }
+    }
+
+    private String getInternalIpAddress() {
+        return StringUtils.defaultString(googleConnect(),
+                applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress());
+    }
+
+    public String googleConnect() {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(touchHomeProperties.getCheckConnectivityURL(), 80));
+            return socket.getLocalAddress().getHostAddress();
+        } catch (Exception ignore) {
+        }
+        return null;
     }
 }

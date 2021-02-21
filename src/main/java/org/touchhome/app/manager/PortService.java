@@ -9,8 +9,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
-import org.touchhome.bundle.api.setting.SettingPluginOptions;
 import org.touchhome.bundle.api.setting.SettingPlugin;
+import org.touchhome.bundle.api.setting.SettingPluginOptions;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class PortManager {
+public class PortService {
     private final EntityContextImpl entityContext;
 
     private Map<Class<? extends SettingPlugin<SerialPort>>, Pair<String, Boolean>> portListeners = new HashMap<>();

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule;
 import com.pi4j.io.gpio.Pin;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControlHandlerInterceptor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
@@ -32,6 +33,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -51,14 +53,15 @@ import org.touchhome.app.json.jsog.JSOGResolver;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.repository.crud.base.CrudRepositoryFactoryBean;
 import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.block.Scratch3Space;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostHandler;
+import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostProcessor;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
@@ -90,6 +93,20 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     private ApplicationContext applicationContext;
 
     private boolean applicationReady;
+
+    @Bean
+    public ThreadPoolTaskScheduler threadPoolTaskScheduler() {
+        ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
+        threadPoolTaskScheduler.setPoolSize(100);
+        threadPoolTaskScheduler.setThreadNamePrefix("th-async-");
+        threadPoolTaskScheduler.setRemoveOnCancelPolicy(true);
+        return threadPoolTaskScheduler;
+    }
+
+    @Bean
+    public HardwareRepositoryFactoryPostProcessor.HardwareRepositoryThreadPool hardwareRepositoryThreadPool(ThreadPoolTaskScheduler scheduler) {
+        return (name, runnable) -> scheduler.submit(runnable);
+    }
 
     @Bean
     public WebMvcRegistrations mvcRegistrations() {

@@ -9,7 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
-import org.touchhome.app.manager.BundleManager;
+import org.touchhome.app.manager.BundleService;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.rest.BundleController;
 import org.touchhome.app.workspace.block.Scratch3Space;
@@ -22,13 +22,13 @@ import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.HasWorkspaceVariableLinkAbility;
+import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.hardware.Scratch3HardwareBlocks;
-import org.touchhome.bundle.http.Scratch3HTTPBlocks;
+import org.touchhome.bundle.http.Scratch3NetworkBlocks;
 import org.touchhome.bundle.ui.Scratch3UIBlocks;
 
 import java.io.InputStream;
@@ -49,11 +49,11 @@ public class WorkspaceController {
             Scratch3DataBlocks.class, Scratch3EventsBlocks.class, Scratch3OperatorBlocks.class, Scratch3MutatorBlocks.class);
 
     private static final List<Class> inlineScratches = Arrays.asList(Scratch3OtherBlocks.class,
-            Scratch3HTTPBlocks.class, Scratch3HardwareBlocks.class, Scratch3UIBlocks.class);
+            Scratch3NetworkBlocks.class, Scratch3HardwareBlocks.class, Scratch3UIBlocks.class);
 
     private final BundleController bundleController;
     private final EntityContext entityContext;
-    private final BundleManager bundleManager;
+    private final BundleService bundleService;
     private final WorkspaceManager workspaceManager;
 
     private List<Scratch3ExtensionImpl> extensions;
@@ -62,8 +62,10 @@ public class WorkspaceController {
         List<Scratch3ExtensionImpl> oldExtension = this.extensions == null ? Collections.emptyList() : this.extensions;
         this.extensions = new ArrayList<>();
         for (Scratch3ExtensionBlocks scratch3ExtensionBlock : entityContext.getBeansOfType(Scratch3ExtensionBlocks.class)) {
+            scratch3ExtensionBlock.init();
+
             if (!ID_PATTERN.matcher(scratch3ExtensionBlock.getId()).matches()) {
-                throw new IllegalArgumentException("Wrong Scratch3Extension: <" + scratch3ExtensionBlock.getId() + ">. Must contains [a-z], '-' or '_");
+                throw new IllegalArgumentException("Wrong Scratch3Extension: <" + scratch3ExtensionBlock.getId() + ">. Must contains [a-z] or '-'");
             }
 
             if (!systemScratches.contains(scratch3ExtensionBlock.getClass())) {
@@ -79,7 +81,7 @@ public class WorkspaceController {
                 } else {
                     order = bundleEntrypoint.order();
                 }
-                Scratch3ExtensionImpl scratch3ExtensionImpl = new Scratch3ExtensionImpl(scratch3ExtensionBlock.getId(), scratch3ExtensionBlock, order);
+                Scratch3ExtensionImpl scratch3ExtensionImpl = new Scratch3ExtensionImpl(scratch3ExtensionBlock, order);
 
                 if (!oldExtension.contains(scratch3ExtensionImpl)) {
                     insertScratch3Spaces(scratch3ExtensionBlock);
@@ -97,7 +99,7 @@ public class WorkspaceController {
 
     @GetMapping("/extension/{bundleID}.png")
     public ResponseEntity<InputStreamResource> getExtensionImage(@PathVariable("bundleID") String bundleID) {
-        BundleEntryPoint bundleEntrypoint = bundleManager.getBundle(bundleID);
+        BundleEntryPoint bundleEntrypoint = bundleService.getBundle(bundleID);
         InputStream stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream("extensions/" + bundleEntrypoint.getBundleId() + ".png");
         if (stream == null) {
             stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream(bundleEntrypoint.getBundleImage());

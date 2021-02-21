@@ -5,13 +5,14 @@ import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.workspace.WorkspaceBlockImpl;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.workspace.BroadcastLock;
+import org.touchhome.bundle.api.workspace.BroadcastLockManager;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.workspace.WorkspaceBlock;
-import org.touchhome.bundle.api.workspace.BroadcastLock;
-import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +32,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block ifBlock;
     private final Scratch3Block ifElseBlock;
     private final Scratch3Block stopBlock;
+    private final Scratch3Block stopInTimeoutBlock;
     private final Scratch3Block waitUntilBlock;
     private final Scratch3Block repeatUntilBlock;
     private final Scratch3Block whenConditionChangedBlock;
@@ -38,6 +40,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block scheduleBlock;
 
     private final BroadcastLockManager broadcastLockManager;
+    private final Scratch3Block scheduleCronBlock;
 
     public Scratch3ControlBlocks(BroadcastLockManager broadcastLockManager, EntityContext entityContext) {
         super("control", entityContext);
@@ -46,30 +49,46 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         // Blocks
         this.foreverBlock = Scratch3Block.ofHandler("forever", BlockType.command, this::foreverHandler);
         this.scheduleBlock = Scratch3Block.ofHandler("schedule", BlockType.command, this::scheduleHandler);
+        this.scheduleCronBlock = Scratch3Block.ofHandler("schedule_cron", BlockType.command, this::scheduleCronHandler);
         this.repeatBlock = Scratch3Block.ofHandler("repeat", BlockType.command, this::repeatHandler);
         this.ifBlock = Scratch3Block.ofHandler("if", BlockType.command, this::ifHandler);
         this.ifElseBlock = Scratch3Block.ofHandler("if_else", BlockType.command, this::ifElseHandler);
         this.stopBlock = Scratch3Block.ofHandler("stop", BlockType.command, this::stopHandler);
+        this.stopInTimeoutBlock = Scratch3Block.ofHandler("stop_timeout", BlockType.command, this::stopInTimeoutHandler);
+
         this.waitBlock = Scratch3Block.ofHandler("wait", BlockType.command, this::waitHandler);
         this.waitUntilBlock = Scratch3Block.ofHandler("wait_until", BlockType.command, this::waitUntilHandler);
         this.repeatUntilBlock = Scratch3Block.ofHandler("repeat_until", BlockType.command, this::repeatUntilHandler);
         this.whenConditionChangedBlock = Scratch3Block.ofHandler("when_condition_changed", BlockType.command, this::whenConditionChangedHandler);
         this.whenValueChangedBlock = Scratch3Block.ofHandler("when_value_changed", BlockType.command, this::whenValueChangedHandler);
+    }
 
-        this.postConstruct();
+    private void scheduleCronHandler(WorkspaceBlock workspaceBlock) {
+        if (workspaceBlock.hasInput(SUBSTACK)) {
+            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+            String cron = workspaceBlock.getInputString("SEC") + " " +
+                    workspaceBlock.getInputString("MIN") + " " +
+                    workspaceBlock.getInputString("HOUR") + " " +
+                    workspaceBlock.getInputString("DAY") + " " +
+                    workspaceBlock.getInputString("MONTH") + " " +
+                    workspaceBlock.getInputString("DOW");
+            EntityContextBGP.ThreadContext<Void> schedule = entityContext.bgp().schedule("workspace-schedule-" + workspaceBlock.getId(), cron,
+                    child::handle, true, true);
+            workspaceBlock.onRelease(schedule::cancel);
+        }
     }
 
     @SneakyThrows
     private void scheduleHandler(WorkspaceBlock workspaceBlock) {
         if (workspaceBlock.hasInput(SUBSTACK)) {
             Integer time = workspaceBlock.getInputInteger("TIME");
-            String unit = workspaceBlock.getInputString("UNIT");
+            TimeUnit timeUnit = TimeUnit.valueOf(workspaceBlock.getInputString("UNIT"));
             WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
             while (!workspaceBlock.isDestroyed()) {
                 workspaceBlock.setState("execute");
                 child.handle();
                 workspaceBlock.setState("Wait next event");
-                Thread.sleep(TimeUnit.valueOf(unit).toMillis(time));
+                Thread.sleep(timeUnit.toMillis(time));
             }
         }
     }
@@ -127,6 +146,18 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private void stopHandler(WorkspaceBlock workspaceBlock) {
         ((WorkspaceBlockImpl) workspaceBlock).release();
         Thread.currentThread().interrupt();
+    }
+
+    private void stopInTimeoutHandler(WorkspaceBlock workspaceBlock) {
+        int timeout = workspaceBlock.getInputInteger("TIMES");
+        TimeUnit timeUnit = TimeUnit.valueOf(workspaceBlock.getField("UNIT"));
+        Thread thread = Thread.currentThread();
+        entityContext.bgp().run("stop-in-timeout" + workspaceBlock.getId(), timeUnit.toMillis(timeout), () -> {
+            if (thread.isAlive()) {
+                ((WorkspaceBlockImpl) workspaceBlock).release();
+                thread.interrupt();
+            }
+        }, false);
     }
 
     private void ifElseHandler(WorkspaceBlock workspaceBlock) {

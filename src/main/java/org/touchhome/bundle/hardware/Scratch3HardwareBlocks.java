@@ -7,9 +7,12 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
-import org.touchhome.bundle.api.workspace.WorkspaceBlock;
-import org.touchhome.bundle.api.workspace.scratch.*;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
+import org.touchhome.bundle.api.workspace.scratch.BlockType;
+import org.touchhome.bundle.api.workspace.scratch.MenuBlock;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -27,16 +30,17 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     private final MenuBlock.ServerMenuBlock settingsMenu;
     private final MenuBlock.ServerMenuBlock hardwareEventsMenu;
 
-    private final Scratch3Block cityGeoLocation;
-    private final Scratch3Block ipGeoLocation;
-    private final Scratch3Block myIp;
-    private final Scratch3Block serverTime;
-    private final Scratch3Block settingChangeCommand;
+    private final Scratch3Block cityGeoLocationReporter;
+    private final Scratch3Block ipGeoLocationReporter;
+    private final Scratch3Block myIpReporter;
+    private final Scratch3Block serverTimeReporter;
+    private final Scratch3Block settingChangeHat;
     private final BroadcastLockManagerImpl broadcastLockManager;
     private final NetworkHardwareRepository networkHardwareRepository;
-    private final Scratch3Block hardwareEventCommand;
+    private final Scratch3Block hardwareEventHat;
 
-    public Scratch3HardwareBlocks(EntityContext entityContext, BroadcastLockManagerImpl broadcastLockManager, NetworkHardwareRepository networkHardwareRepository) {
+    public Scratch3HardwareBlocks(EntityContext entityContext, BroadcastLockManagerImpl broadcastLockManager,
+                                  NetworkHardwareRepository networkHardwareRepository) {
         super("#51633C", entityContext, null, "hardware");
         this.broadcastLockManager = broadcastLockManager;
         this.networkHardwareRepository = networkHardwareRepository;
@@ -46,44 +50,42 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         this.hardwareEventsMenu = MenuBlock.ofServer("hardwareEventsMenu", "rest/hardware/event");
 
         // Blocks
-        this.myIp = Scratch3Block.ofEvaluate(50, "my_ip", BlockType.reporter, "my ip", this::getByIP);
-        this.serverTime = Scratch3Block.ofEvaluate(60, "server_time", BlockType.reporter, "server time | format [FORMAT]", this::getServerTime);
-        this.serverTime.addArgument("FORMAT");
+        this.myIpReporter = Scratch3Block.ofEvaluate(50, "my_ip", BlockType.reporter, "my ip", this::fireGetByIP);
+        this.serverTimeReporter = Scratch3Block.ofEvaluate(60, "server_time", BlockType.reporter, "time | format [FORMAT]", this::fireGetServerTimeReporter);
+        this.serverTimeReporter.addArgument("FORMAT");
 
-        this.cityGeoLocation = Scratch3Block.ofEvaluate(100, "city_geo_location", BlockType.reporter, "City geo [CITY] | json", this::getCityGeoLocation);
-        this.cityGeoLocation.addArgument("CITY", "unknown city");
+        this.cityGeoLocationReporter = Scratch3Block.ofEvaluate(100, "city_geo_location", BlockType.reporter, "City geo [CITY] | json", this::fireGetCityGeoLocationReporter);
+        this.cityGeoLocationReporter.addArgument("CITY", "unknown city");
 
-        this.ipGeoLocation = Scratch3Block.ofEvaluate(200, "ip_geo_location", BlockType.reporter, "IP geo [IP] | json", this::getIPGeoLocation);
-        this.ipGeoLocation.addArgument("IP", "127.0.0.1");
+        this.ipGeoLocationReporter = Scratch3Block.ofEvaluate(200, "ip_geo_location", BlockType.reporter, "IP geo [IP] | json", this::fireGetIPGeoLocation);
+        this.ipGeoLocationReporter.addArgument("IP", "127.0.0.1");
 
-        this.settingChangeCommand = Scratch3Block.ofHandler(300, "setting_change", BlockType.hat, "Setting [SETTING] changed to [VALUE]", this::settingChangeEvent);
-        this.settingChangeCommand.addArgument(SETTING, this.settingsMenu);
-        this.settingChangeCommand.addArgument(VALUE);
+        this.settingChangeHat = Scratch3Block.ofHandler(300, "setting_change", BlockType.hat, "Setting [SETTING] changed to [VALUE]", this::fireSettingChangeHatEvent);
+        this.settingChangeHat.addArgument(SETTING, this.settingsMenu);
+        this.settingChangeHat.addArgument(VALUE);
 
-        this.hardwareEventCommand = Scratch3Block.ofHandler(400, "hardware_event", BlockType.hat, "Hardware event [EVENT]", this::hardwareEvent);
-        this.hardwareEventCommand.addArgument(EVENT, this.hardwareEventsMenu);
+        this.hardwareEventHat = Scratch3Block.ofHandler(400, "hardware_event", BlockType.hat, "Hardware event [EVENT]", this::fireHardwareHatEvent);
+        this.hardwareEventHat.addArgument(EVENT, this.hardwareEventsMenu);
 
         entityContext.bgp().runOnceOnInternetUp("scratch3-hardware", () -> {
-            this.ipGeoLocation.addArgument("IP", getByIP(null));
-            this.cityGeoLocation.addArgument("CITY", networkHardwareRepository.getIpGeoLocation(networkHardwareRepository.getOuterIpAddress()).getCity());
+            this.ipGeoLocationReporter.addArgument("IP", fireGetByIP(null));
+            this.cityGeoLocationReporter.addArgument("CITY", networkHardwareRepository.getIpGeoLocation(networkHardwareRepository.getOuterIpAddress()).getCity());
         });
-
-        this.postConstruct();
     }
 
-    private Object getServerTime(WorkspaceBlock workspaceBlock) {
+    private Object fireGetServerTimeReporter(WorkspaceBlock workspaceBlock) {
         String format = workspaceBlock.getInputString("FORMAT");
         return isEmpty(format) ? System.currentTimeMillis() : new SimpleDateFormat(format).format(new Date());
     }
 
-    private void hardwareEvent(WorkspaceBlock workspaceBlock) {
+    private void fireHardwareHatEvent(WorkspaceBlock workspaceBlock) {
         workspaceBlock.getNextOrThrow();
         String eventName = workspaceBlock.getMenuValue(EVENT, this.hardwareEventsMenu);
         BroadcastLock<String> lock = broadcastLockManager.getOrCreateLock(workspaceBlock, eventName);
         workspaceBlock.subscribeToLock(lock);
     }
 
-    private void settingChangeEvent(WorkspaceBlock workspaceBlock) {
+    private void fireSettingChangeHatEvent(WorkspaceBlock workspaceBlock) {
         workspaceBlock.getNextOrThrow();
         String settingName = workspaceBlock.getMenuValue(SETTING, this.settingsMenu);
         String value = workspaceBlock.getInputString(VALUE);
@@ -92,15 +94,15 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         workspaceBlock.subscribeToLock(lock, lockValue -> isEmpty(value) || value.equals(lockValue));
     }
 
-    private String getByIP(WorkspaceBlock workspaceBlock) {
+    private String fireGetByIP(WorkspaceBlock workspaceBlock) {
         return this.networkHardwareRepository.getOuterIpAddress();
     }
 
-    private JSONObject getIPGeoLocation(WorkspaceBlock workspaceBlock) {
+    private JSONObject fireGetIPGeoLocation(WorkspaceBlock workspaceBlock) {
         return new JSONObject(this.networkHardwareRepository.getIpGeoLocation(workspaceBlock.getInputString("IP")));
     }
 
-    private JSONObject getCityGeoLocation(WorkspaceBlock workspaceBlock) {
+    private JSONObject fireGetCityGeoLocationReporter(WorkspaceBlock workspaceBlock) {
         return new JSONObject(this.networkHardwareRepository.findCityGeolocation(workspaceBlock.getInputString("CITY")));
     }
 }

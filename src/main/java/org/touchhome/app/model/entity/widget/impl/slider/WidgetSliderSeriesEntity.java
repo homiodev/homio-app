@@ -1,8 +1,5 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;

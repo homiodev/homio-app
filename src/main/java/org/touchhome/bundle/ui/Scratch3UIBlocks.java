@@ -8,9 +8,9 @@ import org.touchhome.app.setting.SendBroadcastSetting;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.util.NotificationLevel;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.*;
-import org.touchhome.bundle.api.util.NotificationLevel;
 
 import java.util.function.BiConsumer;
 
@@ -19,6 +19,7 @@ import java.util.function.BiConsumer;
 @Component
 public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
+    private static final String COLOR = "#417505";
     private final MenuBlock.StaticMenuBlock<PopupType> popupType;
 
     private final Scratch3Block popupCommand;
@@ -47,18 +48,16 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
         this.topHeaderCommand = Scratch3Block.ofHandler(40, "top_header", BlockType.command,
                 "Top header [MSG]/[COLOR] for [DURATION] sec. | Click event [BROADCAST]", this::topHeaderHandler);
         this.topHeaderCommand.addArgument("MSG", "message");
-        this.topHeaderCommand.addArgument("COLOR", ArgumentType.color, "#1F4131");
+        this.topHeaderCommand.addArgument("COLOR", ArgumentType.color, COLOR);
         this.topHeaderCommand.addArgument("DURATION", 60);
         this.topHeaderCommand.addArgument("BROADCAST", ArgumentType.broadcast);
 
         this.topImageHeaderCommand = Scratch3Block.ofHandler(50, "top_img_header", BlockType.command,
                 "Top header [MSG][COLOR]/[ICON] | Click event [BROADCAST]", this::topImageHeaderHandler);
         this.topImageHeaderCommand.addArgument("MSG", "message");
-        this.topImageHeaderCommand.addArgument("COLOR", ArgumentType.color, "#1F4131");
+        this.topImageHeaderCommand.addArgument("COLOR", ArgumentType.color, COLOR);
         this.topImageHeaderCommand.addArgument("ICON", ArgumentType.icon, "cog");
         this.topImageHeaderCommand.addArgument("BROADCAST", ArgumentType.broadcast);
-
-        this.postConstruct();
 
         entityContext.setting().listenValue(SendBroadcastSetting.class, "listen-ui-header-click", json -> {
             String workspaceEntityID = json.getString("entityID");

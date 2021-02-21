@@ -8,7 +8,6 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.EntityContext;
@@ -20,10 +19,7 @@ import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.*;
-import org.touchhome.bundle.api.ui.field.action.ActionInputParameter;
-import org.touchhome.bundle.api.ui.field.action.UIActionButton;
-import org.touchhome.bundle.api.ui.field.action.UIActionInput;
-import org.touchhome.bundle.api.ui.field.action.UIContextMenuAction;
+import org.touchhome.bundle.api.ui.field.action.*;
 import org.touchhome.bundle.api.ui.field.color.*;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImage;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImageSrc;
@@ -107,8 +103,8 @@ public class UIFieldUtils {
         return Collections.emptyList();
     }
 
-    public static List<UIActionDescription> fetchUIActionsFromClass(Class<?> clazz) {
-        List<UIActionDescription> actions = new ArrayList<>();
+    public static List<UIActionResponse> fetchUIActionsFromClass(Class<?> clazz) {
+        List<UIActionResponse> actions = new ArrayList<>();
         if (clazz != null) {
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuAction.class)) {
                 UIContextMenuAction action = method.getDeclaredAnnotation(UIContextMenuAction.class);
@@ -116,86 +112,11 @@ public class UIFieldUtils {
                 for (UIActionInput actionInput : action.inputs()) {
                     inputs.put(new ActionInputParameter(actionInput).toJson());
                 }
-                JSONObject metadata = inputs.isEmpty() ? null : new JSONObject().put("inputs", inputs);
-                actions.add(new UIActionDescription().setType(UIActionDescription.Type.method)
-                        .setIcon(action.icon()).setIconColor(action.iconColor())
-                        .setMetadata(metadata).setName(action.value()));
+                actions.add(new UIActionResponse(action.value()).setIcon(action.icon()).setIconColor(action.iconColor())
+                        .putOpt("inputs", inputs));
             }
         }
         return actions;
-    }
-
-    public interface UIFieldContext {
-        String getName();
-
-        Class<?> getType();
-
-        UIField getUIField();
-
-        Type getGenericType();
-
-        String getSourceName();
-
-        default boolean isAnnotationPresent(Class<? extends Annotation> annotationClass) {
-            return getDeclaredAnnotation(annotationClass) != null;
-        }
-
-        Object getDefaultValue(Object instance);
-
-        <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass);
-
-        <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass);
-    }
-
-    @RequiredArgsConstructor
-    public static class UIFieldFieldContext implements UIFieldContext {
-
-        private final Field field;
-        private final List<Method> fieldGetterMethods;
-
-        @Override
-        public String getName() {
-            return StringUtils.defaultIfEmpty(field.getAnnotation(UIField.class).name(), field.getName());
-        }
-
-        @Override
-        public Class<?> getType() {
-            return field.getType();
-        }
-
-        @Override
-        public UIField getUIField() {
-            return field.getAnnotation(UIField.class);
-        }
-
-        @Override
-        public Type getGenericType() {
-            return field.getGenericType();
-        }
-
-        @Override
-        public String getSourceName() {
-            return field.getName();
-        }
-
-        @Override
-        @SneakyThrows
-        public Object getDefaultValue(Object instance) {
-            return fieldGetterMethods.isEmpty() ? FieldUtils.readField(field, instance, true) : fieldGetterMethods.get(0).invoke(instance);
-        }
-
-        @Override
-        public <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass) {
-            A annotation = UIFieldUtils.getDeclaredAnnotationFromMethods(annotationClass, fieldGetterMethods);
-            return annotation == null ? field.getDeclaredAnnotation(annotationClass) : annotation;
-        }
-
-        @Override
-        public <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass) {
-            List<A> result = UIFieldUtils.getDeclaredAnnotationsByType(annotationClass, fieldGetterMethods);
-            result.addAll(Arrays.asList(field.getDeclaredAnnotationsByType(annotationClass)));
-            return result;
-        }
     }
 
     @SneakyThrows
@@ -218,15 +139,22 @@ public class UIFieldUtils {
     public static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet) {
         Map<String, List<Method>> fieldNameToGetters = new HashMap<>();
         Class<?> cursor = instance.getClass();
-        if (!BaseEntity.class.isAssignableFrom(cursor)) {
+        if (!HasEntityIdentifier.class.isAssignableFrom(cursor)) {
             throw new RuntimeException("Unable to fill UIFields with no parent as BaseEntity class");
         }
-        while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
+        while (!cursor.getSimpleName().equals(Object.class.getSimpleName())) {
             for (Method declaredMethod : cursor.getDeclaredMethods()) {
                 fieldNameToGetters.putIfAbsent(declaredMethod.getName(), new ArrayList<>());
                 fieldNameToGetters.get(declaredMethod.getName()).add(declaredMethod);
             }
             cursor = cursor.getSuperclass();
+        }
+        // fetch methods from interfaces
+        for (Class<?> clazz : instance.getClass().getInterfaces()) {
+            for (Method declaredMethod : clazz.getDeclaredMethods()) {
+                fieldNameToGetters.putIfAbsent(declaredMethod.getName(), new ArrayList<>());
+                fieldNameToGetters.get(declaredMethod.getName()).add(declaredMethod);
+            }
         }
         // filter methods with @UIField
         Map<String, UIFieldMethodContext> uiFieldNameToGetters = new HashMap<>();
@@ -249,7 +177,6 @@ public class UIFieldUtils {
                 String capitalizeMethodName = StringUtils.capitalize(field.getName());
                 List<Method> fieldGetterMethods = fieldNameToGetters.getOrDefault("get" + capitalizeMethodName, new ArrayList<>());
                 fieldGetterMethods.addAll(fieldNameToGetters.getOrDefault("is" + capitalizeMethodName, Collections.emptyList()));
-
                 generateUIField(instance, entityUIMetaDataSet, new UIFieldFieldContext(field, fieldGetterMethods));
             }
         });
@@ -319,6 +246,21 @@ public class UIFieldUtils {
             }
         } else {
             entityUIMetaData.setType(uiField.type().name());
+        }
+
+        if (uiField.fullWidth()) {
+            jsonTypeMetadata.put("fw", true);
+        }
+        if (uiField.hideLabelInFullWidth()) {
+            jsonTypeMetadata.put("showLabelInFw", true);
+        }
+        if (StringUtils.isNotEmpty(uiField.bg())) {
+            jsonTypeMetadata.put("bg", uiField.bg());
+        }
+
+        UIFieldGroup uiFieldGroup = uiFieldContext.getDeclaredAnnotation(UIFieldGroup.class);
+        if (uiFieldGroup != null) {
+            jsonTypeMetadata.put("group", uiFieldGroup.value());
         }
 
         Pattern pattern = uiFieldContext.getDeclaredAnnotation(Pattern.class);
@@ -453,6 +395,10 @@ public class UIFieldUtils {
             entityUIMetaData.setType("CodeEditor");
         }
 
+        if (uiFieldContext.isAnnotationPresent(UIFieldRenderAsHTML.class)) {
+            entityUIMetaData.setType("HTML");
+        }
+
         if (uiField.showInContextMenu() && entityUIMetaData.getType().equals(Boolean.class.getSimpleName())) {
             entityUIMetaData.setShowInContextMenu(true);
         }
@@ -496,6 +442,96 @@ public class UIFieldUtils {
         return null;
     }
 
+    private static <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass, List<Method> methods) {
+        List<A> result = new ArrayList<>();
+        for (Method method : methods) {
+            result.addAll(Arrays.asList(method.getDeclaredAnnotationsByType(annotationClass)));
+        }
+        return result;
+    }
+
+    private static <A extends Annotation> A getDeclaredAnnotationFromMethods(Class<A> annotationClass, List<Method> methods) {
+        for (Method method : methods) {
+            if (method.isAnnotationPresent(annotationClass)) {
+                return method.getDeclaredAnnotation(annotationClass);
+            }
+        }
+        return null;
+    }
+
+    public interface UIFieldContext {
+        String getName();
+
+        Class<?> getType();
+
+        UIField getUIField();
+
+        Type getGenericType();
+
+        String getSourceName();
+
+        default boolean isAnnotationPresent(Class<? extends Annotation> annotationClass) {
+            return getDeclaredAnnotation(annotationClass) != null;
+        }
+
+        Object getDefaultValue(Object instance);
+
+        <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass);
+
+        <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass);
+    }
+
+    @RequiredArgsConstructor
+    public static class UIFieldFieldContext implements UIFieldContext {
+
+        private final Field field;
+        private final List<Method> fieldGetterMethods;
+
+        @Override
+        public String getName() {
+            return StringUtils.defaultIfEmpty(field.getAnnotation(UIField.class).name(), field.getName());
+        }
+
+        @Override
+        public Class<?> getType() {
+            return field.getType();
+        }
+
+        @Override
+        public UIField getUIField() {
+            return field.getAnnotation(UIField.class);
+        }
+
+        @Override
+        public Type getGenericType() {
+            return field.getGenericType();
+        }
+
+        @Override
+        public String getSourceName() {
+            return field.getName();
+        }
+
+        @Override
+        @SneakyThrows
+        public Object getDefaultValue(Object instance) {
+            return fieldGetterMethods.isEmpty() ? FieldUtils.readField(field, instance, true) : fieldGetterMethods.get(0).invoke(instance);
+        }
+
+        @Override
+        public <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass) {
+            A annotation = UIFieldUtils.getDeclaredAnnotationFromMethods(annotationClass, fieldGetterMethods);
+            return annotation == null ? field.getDeclaredAnnotation(annotationClass) : annotation;
+        }
+
+        @Override
+        public <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass) {
+            List<A> result = UIFieldUtils.getDeclaredAnnotationsByType(annotationClass, fieldGetterMethods);
+            result.addAll(Arrays.asList(field.getDeclaredAnnotationsByType(annotationClass)));
+            return result;
+        }
+    }
+
     public static class UIFieldMethodContext implements UIFieldContext {
 
         private final String name;
@@ -504,8 +540,6 @@ public class UIFieldUtils {
         private final List<Method> methods = new ArrayList<>();
 
         public UIFieldMethodContext(Method uiFieldMethod, List<Method> allMethods) {
-            this.name = uiFieldMethod.getAnnotation(UIField.class).name();
-            this.methodName = InternalUtil.getMethodShortName(uiFieldMethod);
             for (Method method : allMethods) {
                 // when we see @UIFieldIgnoreParent than ignore super annotations
                 if (method.isAnnotationPresent(UIFieldIgnoreParent.class)) {
@@ -513,6 +547,8 @@ public class UIFieldUtils {
                 }
                 methods.add(method);
             }
+            this.name = getDeclaredAnnotation(UIField.class).name();
+            this.methodName = InternalUtil.getMethodShortName(uiFieldMethod);
         }
 
         @Override
@@ -555,22 +591,5 @@ public class UIFieldUtils {
         public <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass) {
             return UIFieldUtils.getDeclaredAnnotationsByType(annotationClass, methods);
         }
-    }
-
-    private static <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass, List<Method> methods) {
-        List<A> result = new ArrayList<>();
-        for (Method method : methods) {
-            result.addAll(Arrays.asList(method.getDeclaredAnnotationsByType(annotationClass)));
-        }
-        return result;
-    }
-
-    private static <A extends Annotation> A getDeclaredAnnotationFromMethods(Class<A> annotationClass, List<Method> methods) {
-        for (Method method : methods) {
-            if (method.isAnnotationPresent(annotationClass)) {
-                return method.getDeclaredAnnotation(annotationClass);
-            }
-        }
-        return null;
     }
 }

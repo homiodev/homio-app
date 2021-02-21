@@ -25,10 +25,11 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
 @Getter
 @Component
-public class Scratch3HTTPBlocks extends Scratch3ExtensionBlocks {
+public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
     private final DatagramSocket udpSocket = new DatagramSocket();
 
     private final MenuBlock.StaticMenuBlock<HttpMethod> methodMenu;
+
     private final Scratch3Block httpRequestCommand;
     private final Scratch3Block httpRequestHeaderCommand;
     private final Scratch3Block httpBasicAuthCommand;
@@ -37,8 +38,8 @@ public class Scratch3HTTPBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block onUDPEventCommand;
     private final Scratch3Block sendUDPCCommand;
 
-    public Scratch3HTTPBlocks(EntityContext entityContext, TouchHomeProperties touchHomeProperties) throws SocketException {
-        super("#B8C39B", entityContext, null, "http");
+    public Scratch3NetworkBlocks(EntityContext entityContext, TouchHomeProperties touchHomeProperties) throws SocketException {
+        super("#B8C39B", entityContext, null, "net");
         this.udpSocket.setBroadcast(true);
 
         // Menu
@@ -51,35 +52,36 @@ public class Scratch3HTTPBlocks extends Scratch3ExtensionBlocks {
         this.httpRequestCommand.addArgument("RAW", ArgumentType.checkbox);
 
         this.httpRequestHeaderCommand = Scratch3Block.ofHandler(20, HttpApplyHandler.update_header.name(), BlockType.command,
-                "Header [KEY]/[VALUE]", this::httpRequestHeaderHandler);
+                "HTTP Header [KEY]/[VALUE]", this::httpRequestHeaderHandler);
         this.httpRequestHeaderCommand.addArgument("KEY", "key");
         this.httpRequestHeaderCommand.addArgument(VALUE, "value");
 
         this.httpBasicAuthCommand = Scratch3Block.ofHandler(30, HttpApplyHandler.update_basic_auth.name(), BlockType.command,
-                "Basic auth [USER]/[PWD]", this::httpBasicAuthHandler);
+                "HTTP Basic auth [USER]/[PWD]", this::httpBasicAuthHandler);
         this.httpBasicAuthCommand.addArgument("USER", "user");
         this.httpBasicAuthCommand.addArgument("PWD", "password");
 
         this.httpBearerAuthCommand = Scratch3Block.ofHandler(40, HttpApplyHandler.update_bearer_auth.name(), BlockType.command,
-                "Bearer auth [TOKEN]", this::httpBearerAuthHandler);
+                "HTTP Bearer auth [TOKEN]", this::httpBearerAuthHandler);
         this.httpBearerAuthCommand.addArgument("TOKEN", "token");
 
         this.httpPayloadCommand = Scratch3Block.ofHandler(50, HttpApplyHandler.update_payload.name(), BlockType.command,
-                "Body payload [PAYLOAD]", this::httpPayloadHandler);
+                "HTTP Body payload [PAYLOAD]", this::httpPayloadHandler);
         this.httpPayloadCommand.addArgument("PAYLOAD");
+        this.httpPayloadCommand.appendSpace();
 
         this.onUDPEventCommand = Scratch3Block.ofHandler(60, "udp_listener", BlockType.hat,
                 "UDP in [HOST]/[PORT]", this::onUdpEventHandler);
         this.onUDPEventCommand.addArgument("HOST", "0.0.0.0");
         this.onUDPEventCommand.addArgument("PORT", 8888);
+        //   this.onUDPEventCommand.overrideColor("#A4B96C");
 
         this.sendUDPCCommand = Scratch3Block.ofHandler(70, "udp_send", BlockType.command,
                 "UDP text [VALUE] out [HOST]/[PORT]", this::sendUDPHandler);
         this.sendUDPCCommand.addArgument("HOST", "255.255.255.255");
         this.sendUDPCCommand.addArgument("PORT", 8888);
         this.sendUDPCCommand.addArgument(VALUE, "payload");
-
-        this.postConstruct();
+        //  this.sendUDPCCommand.overrideColor("#A4B96C");
     }
 
     @SneakyThrows
@@ -121,7 +123,7 @@ public class Scratch3HTTPBlocks extends Scratch3ExtensionBlocks {
         if (workspaceBlock.getInputBoolean("RAW")) {
             workspaceBlock.setValue(IOUtils.toByteArray(response.getEntity().getContent()));
         } else {
-            workspaceBlock.setValue(IOUtils.toString(response.getEntity().getContent()));
+            workspaceBlock.setValue(IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8));
         }
     }
 

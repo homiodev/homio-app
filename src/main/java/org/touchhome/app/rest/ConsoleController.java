@@ -9,13 +9,11 @@ import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
-import org.springframework.context.ApplicationContext;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.LogService;
 import org.touchhome.app.console.LogsConsolePlugin;
 import org.touchhome.app.console.NamedConsolePlugin;
-import org.touchhome.app.json.UIActionDescription;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
@@ -33,13 +31,13 @@ import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.service.SshProvider;
 import org.touchhome.bundle.api.setting.console.header.ConsoleHeaderSettingPlugin;
+import org.touchhome.bundle.api.ui.field.action.UIActionResponse;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.tritonus.share.ArraySet;
 
 import java.util.*;
 
 import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
-import static org.touchhome.bundle.api.util.TouchHomeUtils.putOpt;
 
 @RestController
 @RequestMapping("/rest/console")
@@ -48,32 +46,27 @@ public class ConsoleController {
 
     private final LogService logService;
     private final EntityContext entityContext;
-    private final ApplicationContext applicationContext;
     private final Set<ConsoleTab> tabs = new ArraySet<>();
     @Getter
     private Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
     private Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
 
     @SneakyThrows
-    static List<UIActionDescription> fetchUIHeaderActions(ConsolePlugin<?> consolePlugin) {
-        List<UIActionDescription> actions = new ArrayList<>();
+    static List<UIActionResponse> fetchUIHeaderActions(ConsolePlugin<?> consolePlugin) {
+        List<UIActionResponse> actions = new ArrayList<>();
         Map<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
         if (actionMap != null) {
             for (Map.Entry<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
                 Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
-                JSONObject metadata = new JSONObject().put("ref", SettingEntity.getKey(settingClass));
-                ConsoleHeaderSettingPlugin<?> plugin = TouchHomeUtils.newInstance(settingClass);
-                putOpt(metadata, "fabc", plugin.fireActionsBeforeChange());
-
-                actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName(entry.getKey())
-                        .setMetadata(metadata));
+                actions.add(new UIActionResponse(entry.getKey())
+                        .putOpt("fabc", TouchHomeUtils.newInstance(settingClass).fireActionsBeforeChange())
+                        .putOpt("ref", SettingEntity.getKey(settingClass)));
             }
         }
         if (consolePlugin instanceof ConsolePluginEditor) {
             Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction = ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
             if (nameHeaderAction != null) {
-                actions.add(new UIActionDescription().setType(UIActionDescription.Type.header).setName("name")
-                        .setMetadata(new JSONObject().put("ref", SettingEntity.getKey(nameHeaderAction))));
+                actions.add(new UIActionResponse("name").putOpt("ref", SettingEntity.getKey(nameHeaderAction)));
             }
         }
         return actions;
@@ -106,7 +99,7 @@ public class ConsoleController {
     }
 
     @GetMapping("/tab/{tab}/actions")
-    public List<UIActionDescription> getConsoleTabActions(@PathVariable("tab") String tab) {
+    public List<UIActionResponse> getConsoleTabActions(@PathVariable("tab") String tab) {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         return consolePlugin == null ? Collections.emptyList() : fetchUIHeaderActions(consolePlugin);
     }
@@ -142,7 +135,7 @@ public class ConsoleController {
         if (consolePlugin instanceof ConsolePluginTable) {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-            return ItemController.executeAction(actionRequestModel, identifier, applicationContext, entityContext.getEntity(identifier.getEntityID()));
+            return ItemController.executeAction(entityContext, actionRequestModel, identifier, entityContext.getEntity(identifier.getEntityID()));
         } else if (consolePlugin instanceof ConsolePluginCommunicator) {
             return ((ConsolePluginCommunicator) consolePlugin).commandReceived(actionRequestModel.getName());
         } else if (consolePlugin instanceof ConsolePluginEditor) {
@@ -260,6 +253,6 @@ public class ConsoleController {
     public static class EntityContent {
         Collection<?> list;
         List<EntityUIMetaData> uiFields;
-        List<UIActionDescription> actions;
+        List<UIActionResponse> actions;
     }
 }

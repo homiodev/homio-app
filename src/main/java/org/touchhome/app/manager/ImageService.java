@@ -24,7 +24,7 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.resolvePath;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class ImageManager {
+public class ImageService {
 
     static Path imagesDir = resolvePath("images");
 

@@ -34,7 +34,7 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.resolvePath;
 @Log4j2
 @Controller
 @RequiredArgsConstructor
-public class LoggerManager {
+public class LoggerService {
 
     private static Path logsDir = resolvePath("logs");
 

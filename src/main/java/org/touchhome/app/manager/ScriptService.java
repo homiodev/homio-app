@@ -28,10 +28,10 @@ import java.util.concurrent.*;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class ScriptManager {
+public class ScriptService {
 
     private final NashornScriptEngineFactory nashornScriptEngineFactory = new NashornScriptEngineFactory();
-    private final LoggerManager loggerManager;
+    private final LoggerService loggerService;
     private final EntityContext entityContext;
     private final BundleClassLoaderHolder bundleClassLoaderHolder;
 
@@ -125,7 +125,7 @@ public class ScriptManager {
     public CompileScriptContext createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream) {
         ScriptEngine engine = nashornScriptEngineFactory.getScriptEngine(new String[]{"--global-per-engine"}, bundleClassLoaderHolder);
         if (logPrintStream != null) {
-            engine.put(JavaScriptBinder.log.name(), loggerManager.getLogger(logPrintStream));
+            engine.put(JavaScriptBinder.log.name(), loggerService.getLogger(logPrintStream));
         }
         engine.put(JavaScriptBinder.entityContext.name(), entityContext);
         engine.put(JavaScriptBinder.script.name(), scriptEntity);

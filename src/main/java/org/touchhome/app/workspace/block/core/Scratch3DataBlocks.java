@@ -15,16 +15,14 @@ import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupValueCrud
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableBackupValueCrudEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.api.workspace.BroadcastLock;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.workspace.WorkspaceBlock;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.api.workspace.BroadcastLock;
 
 import java.util.Date;
-
-import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
 @Getter
 @Component
@@ -72,8 +70,8 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         this.isBoolVariableTrueBlock = Scratch3Block.ofEvaluate("bool_variables", BlockType.reporter, this::isBoolVariableTrueReporter);
         this.setBooleanBlock = Scratch3Block.ofHandler("set_boolean", BlockType.command, this::setBooleanHandler);
         this.inverseBooleanBlock = Scratch3Block.ofHandler("inverse_boolean", BlockType.command, this::inverseBooleanHandler);
-        this.booleanEventChangesBlock = Scratch3Block.ofHandler("boolean_event_changes", BlockType.hat, this::booleanEventChangesHandler);
-        this.booleanLink = Scratch3Block.ofHandler("boolean_link", BlockType.hat, this::booleanLinkHandler);
+        this.booleanEventChangesBlock = Scratch3Block.ofHandler("boolean_event_changes", BlockType.hat, this::booleanChangeHatEvent);
+        this.booleanLink = Scratch3Block.ofHandler("boolean_link", BlockType.hat, this::booleanLinkHatEvent);
 
         this.setVariableToBlock = Scratch3Block.ofHandler("setvariableto", BlockType.command, this::setVariableToHandler);
         this.changeVariableByBlock = Scratch3Block.ofHandler("changevariableby", BlockType.command, this::changeVariableByHandler);
@@ -88,9 +86,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         this.setGroupVariableBlock = Scratch3Block.ofHandler("set_group_variable", BlockType.command, this::setGroupVariableHandler);
         this.changeGroupVariableBlock = Scratch3Block.ofHandler("change_group_variable", BlockType.command, this::changeGroupVariableHandler);
         this.setAndBackupGroupVariableBlock = Scratch3Block.ofHandler("set_group_variable_and_backup", BlockType.command, this::setAndBackupGroupVariableHandler);
-        this.variableGroupLink = Scratch3Block.ofHandler("group_variable_link", BlockType.hat, this::variableGroupLinkHandler);
-
-        this.postConstruct();
+        this.variableGroupLink = Scratch3Block.ofHandler("group_variable_link", BlockType.hat, this::variableGroupLinkHatEvent);
     }
 
     private Object getPreviousValue(WorkspaceBlock workspaceBlock) {
@@ -98,14 +94,14 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         return workspaceBlockImpl.getLastValue();
     }
 
-    private Object getJsonVariableToReporter(WorkspaceBlock workspaceBlock) {
+    private JSONObject getJsonVariableToReporter(WorkspaceBlock workspaceBlock) {
         WorkspaceJsonVariableEntity entity = entityContext.getEntity(WorkspaceJsonVariableEntity.PREFIX
                 + workspaceBlock.getFieldId("json_variables"));
         String query = workspaceBlock.getInputString("ITEM");
         return Scratch3MutatorBlocks.reduceJSON(entity.getValue().toString(), query);
     }
 
-    private void variableGroupLinkHandler(WorkspaceBlock workspaceBlock) {
+    private void variableGroupLinkHatEvent(WorkspaceBlock workspaceBlock) {
         try {
             WorkspaceBlock source = getWorkspaceBlockToLink(workspaceBlock);
             ((WorkspaceBlockImpl) source).linkVariable(workspaceBlock.getFieldId("group_variables_group"));
@@ -115,7 +111,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         }
     }
 
-    private void booleanLinkHandler(WorkspaceBlock workspaceBlock) {
+    private void booleanLinkHatEvent(WorkspaceBlock workspaceBlock) {
         try {
             WorkspaceBlock source = getWorkspaceBlockToLink(workspaceBlock);
             ((WorkspaceBlockImpl) source).linkBoolean(workspaceBlock.getFieldId("bool_variables_group"));
@@ -133,7 +129,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         return source;
     }
 
-    private void booleanEventChangesHandler(WorkspaceBlock workspaceBlock) {
+    private void booleanChangeHatEvent(WorkspaceBlock workspaceBlock) {
         workspaceBlock.getNextOrThrow();
         String varRefId = workspaceBlock.getFieldId("bool_variables_group");
         BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, WorkspaceBooleanEntity.PREFIX + varRefId);
@@ -244,18 +240,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
 
     private void setJsonVariableToHandler(WorkspaceBlock workspaceBlock) throws JsonProcessingException {
         String variableId = workspaceBlock.getFieldId("json_variables");
-        Object item = workspaceBlock.getInput("ITEM", true);
-        JSONObject value = null;
-        if (item != null) {
-            if (JSONObject.class.isAssignableFrom(item.getClass())) {
-                value = (JSONObject) item;
-            } else if (item instanceof String) {
-                value = new JSONObject((String) item);
-            } else {
-                value = new JSONObject(OBJECT_MAPPER.writeValueAsString(item));
-            }
-        }
-
+        JSONObject value = workspaceBlock.getInputJSON("ITEM");
         WorkspaceJsonVariableEntity workspaceJsonVariableEntity = entityContext.getEntity(WorkspaceJsonVariableEntity.PREFIX + variableId);
         if (workspaceJsonVariableEntity != null) {
             entityContext.save(workspaceJsonVariableEntity.setValue(value));

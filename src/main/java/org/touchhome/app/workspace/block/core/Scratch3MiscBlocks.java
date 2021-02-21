@@ -5,7 +5,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
-import org.touchhome.app.manager.ScriptManager;
+import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
@@ -18,24 +18,22 @@ import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 @Component
 public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
 
-    private final ScriptManager scriptManager;
+    private final ScriptService scriptService;
 
     private final Scratch3Block logToConsoleBlock;
     private final Scratch3Block printBlock;
     private final Scratch3Block runScriptValueBlock;
     private final Scratch3Block runScriptBlock;
 
-    public Scratch3MiscBlocks(EntityContext entityContext, ScriptManager scriptManager) {
+    public Scratch3MiscBlocks(EntityContext entityContext, ScriptService scriptService) {
         super("misc", entityContext);
-        this.scriptManager = scriptManager;
+        this.scriptService = scriptService;
 
         // Blocks
         this.printBlock = Scratch3Block.ofHandler("print", BlockType.command, this::printHandler);
         this.logToConsoleBlock = Scratch3Block.ofHandler("log_to_console", BlockType.command, this::logHandler);
         this.runScriptBlock = Scratch3Block.ofHandler("run_code", BlockType.command, this::runCodeHandler);
         this.runScriptValueBlock = Scratch3Block.ofEvaluate("run_code_value", BlockType.reporter, this::runCodeValueEvaluate);
-
-        this.postConstruct();
     }
 
     private void runCodeHandler(WorkspaceBlock workspaceBlock) {
@@ -49,7 +47,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
         if (scriptEntity == null) {
             entityContext.ui().sendErrorMessage("WORKSPACE.SCRIPT_NOT_FOUND", scriptEntityId);
         } else {
-            Object result = scriptManager.executeJavaScriptOnce(scriptEntity, scriptEntity.getJavaScriptParameters(), null, false);
+            Object result = scriptService.executeJavaScriptOnce(scriptEntity, scriptEntity.getJavaScriptParameters(), null, false);
             return result == null ? null : result.toString();
         }
         return "";
@@ -61,8 +59,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
 
     @SneakyThrows
     private void printHandler(WorkspaceBlock workspaceBlock) {
-        Object value = workspaceBlock.getInput("VALUE", true);
-        String str = value == null ? "NULL" : value instanceof byte[] ? new String((byte[]) value) : value.toString();
+        String str = workspaceBlock.getInputString("VALUE", "NULL");
         JSONObject node = new JSONObject().put("block", workspaceBlock.getId()).put("value", str);
         entityContext.ui().sendNotification("-workspace-block-update", node);
     }

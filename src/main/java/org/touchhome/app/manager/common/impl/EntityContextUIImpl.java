@@ -15,6 +15,7 @@ import org.touchhome.app.json.ProgressNotification;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.bundle.api.EntityContextUI;
+import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.setting.SettingPluginButton;
 import org.touchhome.bundle.api.setting.SettingPluginStatus;
 import org.touchhome.bundle.api.ui.BellNotification;
@@ -48,6 +49,11 @@ public class EntityContextUIImpl implements EntityContextUI {
     public void removeBellNotification(@NotNull String entityID) {
         bellNotifications.remove(entityID);
         sendGlobal(GlobalSendType.bell, entityID, null, null, new JSONObject().put("remove", true));
+    }
+
+    @Override
+    public <T extends BaseEntity> void sendEntityUpdated(T entity) {
+        entityContext.sendEntityUpdateNotification(entity, EntityContextImpl.ItemAction.Update);
     }
 
     @Override

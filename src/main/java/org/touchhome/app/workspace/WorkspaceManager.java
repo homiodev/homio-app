@@ -54,7 +54,7 @@ public class WorkspaceManager {
 
     private void reloadWorkspace(WorkspaceEntity workspaceEntity) {
         log.debug("Reloading workspace <{}>...", workspaceEntity.getName());
-        tabs.putIfAbsent(workspaceEntity.getEntityID(), new TabHolder());
+        boolean workspaceStartedBefore = tabs.putIfAbsent(workspaceEntity.getEntityID(), new TabHolder()) != null;
 
         TabHolder tabHolder = releaseWorkspaceEntity(workspaceEntity);
 
@@ -63,6 +63,12 @@ public class WorkspaceManager {
 
         if (StringUtils.isNotEmpty(workspaceEntity.getContent())) {
             try {
+                // wait to finish all nested processes if workspace started before
+                if (workspaceStartedBefore) {
+                    log.info("Wait workspace <{}> to able to finish old one", workspaceEntity.getTitle());
+                    Thread.sleep(3000);
+                }
+
                 tabHolder.tab2WorkspaceBlocks = parseWorkspace(workspaceEntity);
                 tabHolder.tab2WorkspaceBlocks.values().stream()
                         .filter(workspaceBlock -> workspaceBlock.isTopLevel() && !workspaceBlock.isShadow())

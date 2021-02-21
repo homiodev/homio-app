@@ -10,13 +10,13 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.scheduling.support.CronTrigger;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
@@ -26,10 +26,10 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.getErrorMessage;
 
 @Log4j2
 public class EntityContextBGPImpl implements EntityContextBGP {
-    private final ScheduledExecutorService scheduleService = Executors.newScheduledThreadPool(1000, r -> new Thread(r, "th-async-"));
 
     @Getter
     private final EntityContextImpl entityContext;
+    private final ThreadPoolTaskScheduler taskScheduler;
 
     @Getter
     private final Map<String, ThreadContextImpl<?>> schedulers = new ConcurrentHashMap<>();
@@ -38,17 +38,21 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     private ThreadContext<Boolean> internetThreadContext;
 
-    public EntityContextBGPImpl(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
+    public EntityContextBGPImpl(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties,
+                                ThreadPoolTaskScheduler taskScheduler) {
         this.entityContext = entityContext;
-        ((ScheduledThreadPoolExecutor) this.scheduleService).setRemoveOnCancelPolicy(true);
+        this.taskScheduler = taskScheduler;
         listenInternetStatus(entityContext, touchHomeProperties);
     }
 
     @Override
-    public ThreadContext<Void> schedule(@NotNull String name, int timeout, @NotNull TimeUnit timeUnit,
+    public ThreadContext<Void> schedule(@NotNull String name, int initialDelay, int timeout, @NotNull TimeUnit timeUnit,
                                         @NotNull ThrowingRunnable<Exception> command, boolean showOnUI,
                                         boolean hideOnUIAfterCancel) {
-        return addSchedule(name, timeout, timeUnit, command, showOnUI, hideOnUIAfterCancel);
+        return addSchedule(name, initialDelay, timeout, timeUnit, context -> {
+            command.run();
+            return null;
+        }, showOnUI, hideOnUIAfterCancel);
     }
 
     @Override
@@ -64,12 +68,16 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public <T> ThreadContext<T> runAndGet(@NotNull String name, @NotNull ThrowingSupplier<T, Exception> command, boolean showOnUI) {
-        return addSchedule(name, 0, TimeUnit.MILLISECONDS, threadContext -> command.get(), EntityContextBGPImpl.ScheduleType.SINGLE, showOnUI, true);
+    public <T> ThreadContext<T> runAndGet(@NotNull String name, long initialDelayInMillis,
+                                          @NotNull ThrowingSupplier<T, Exception> command, boolean showOnUI) {
+        return addSchedule(name, initialDelayInMillis, threadContext -> command.get(),
+                EntityContextBGPImpl.ScheduleType.SINGLE, showOnUI, true,
+                runnable -> taskScheduler.schedule(runnable, new Date(System.currentTimeMillis() + initialDelayInMillis)));
     }
 
     @Override
-    public ThreadContext<Void> runInfinite(@NotNull String name, @NotNull ThrowingRunnable<Exception> command, boolean showOnUI, int delay, boolean stopOnException) {
+    public ThreadContext<Void> runInfinite(@NotNull String name, @NotNull ThrowingRunnable<Exception> command,
+                                           boolean showOnUI, int delay, boolean stopOnException) {
         return new ThreadContextImpl<>(name, context -> {
             while (!context.isStopped())
                 try {
@@ -88,7 +96,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @Override
     public void cancelThread(@NotNull String name) {
-        ThreadContextImpl<?> context = this.schedulers.remove(name);
+        ThreadContextImpl<?> context = this.schedulers.get(name);
         if (context != null) {
             log.info("Cancel process: <{}>", context.getName());
             context.cancel();
@@ -108,13 +116,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 }
             }
         }
-    }
-
-    @RequiredArgsConstructor
-    private static class BatchRunContext<T> {
-
-        private final ThreadPoolExecutor executor;
-        private Map<String, Future<T>> processes = new HashMap<>();
     }
 
     @Override
@@ -167,7 +168,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         return batchRunContext;
     }
 
-    private <T> List<T> waitBatchToDone(String batchName, int maxTerminateTimeoutInSeconds, Consumer<Integer> progressConsumer, BatchRunContext<T> batchRunContext) throws InterruptedException, ExecutionException {
+    private <T> List<T> waitBatchToDone(String batchName, int maxTerminateTimeoutInSeconds,
+                                        Consumer<Integer> progressConsumer, BatchRunContext<T> batchRunContext) throws InterruptedException, ExecutionException {
         ThreadPoolExecutor executor = batchRunContext.executor;
         executor.shutdown();
         int maxTerminateTimeoutInMilliseconds = maxTerminateTimeoutInSeconds * 1000;
@@ -205,17 +207,30 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
     }
 
-    private ThreadContext<Void> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingRunnable<Exception> command, boolean showOnUI, boolean hideOnUIAfterCancel) {
-        return addSchedule(name, timeout, timeUnit, voidThreadContext -> {
-            command.run();
-            return null;
-        }, EntityContextBGPImpl.ScheduleType.DELAY, showOnUI, hideOnUIAfterCancel);
+    private <T> ThreadContext<T> addSchedule(String name, int initialDelay, int timeout, TimeUnit timeUnit,
+                                             ThrowingFunction<ThreadContext<T>, T, Exception> command,
+                                             boolean showOnUI, boolean hideOnUIAfterCancel) {
+        return addSchedule(name, timeUnit.toMillis(timeout), command, EntityContextBGPImpl.ScheduleType.DELAY,
+                showOnUI, hideOnUIAfterCancel, runnable -> {
+                    Date startDate = new Date(System.currentTimeMillis() + timeUnit.toMillis(initialDelay));
+                    return taskScheduler.scheduleWithFixedDelay(runnable, startDate, timeUnit.toMillis(timeout));
+                });
     }
 
-    private <T> ThreadContext<T> addSchedule(String name, int timeout, TimeUnit timeUnit, ThrowingFunction<ThreadContext<T>, T, Exception> command,
-                                             ScheduleType scheduleType, boolean showOnUI, boolean hideOnUIAfterCancel) {
+    @Override
+    public <T> ThreadContext<T> schedule(@NotNull String name, @NotNull String cron,
+                                         @NotNull ThrowingFunction<ThreadContext<T>, T, Exception> command,
+                                         boolean showOnUI, boolean hideOnUIAfterCancel) {
+        return addSchedule(name, -1L, command, ScheduleType.CRON, showOnUI, hideOnUIAfterCancel,
+                runnable -> taskScheduler.schedule(runnable, new CronTrigger(cron)));
+    }
+
+    private <T> ThreadContext<T> addSchedule(@NotNull String name, Long period, @NotNull ThrowingFunction<ThreadContext<T>, T, Exception> command,
+                                             @NotNull ScheduleType scheduleType, boolean showOnUI, boolean hideOnUIAfterCancel,
+                                             @NotNull Function<Runnable, ScheduledFuture<?>> scheduleHandler) {
+
         this.cancelThread(name);
-        ThreadContextImpl<T> threadContext = new ThreadContextImpl<>(name, command, scheduleType, timeout > 0 ? timeUnit.toMillis(timeout) : null, showOnUI, hideOnUIAfterCancel);
+        ThreadContextImpl<T> threadContext = new ThreadContextImpl<>(name, command, scheduleType, period, showOnUI, hideOnUIAfterCancel);
         this.schedulers.put(name, threadContext);
 
         Runnable runnable = () -> {
@@ -228,7 +243,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 threadContext.state = "FINISHED_WITH_ERROR";
                 threadContext.stopped = true;
 
-                log.error("Exception in thread: <{}>. Message: <{}>", name, getErrorMessage(ex));
+                log.error("Exception in thread: <{}>. Message: <{}>", name, getErrorMessage(ex), ex);
                 entityContext.ui().sendErrorMessage(ex);
                 if (threadContext.errorListener != null) {
                     try {
@@ -239,32 +254,14 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 }
             }
         };
-        ScheduledFuture<?> scheduledFuture = null;
-        switch (scheduleType) {
-            case DELAY:
-                scheduledFuture = scheduleService.scheduleWithFixedDelay(runnable, 0, timeout, timeUnit);
-                break;
-            case RATE:
-                scheduledFuture = scheduleService.scheduleAtFixedRate(runnable, 0, timeout, timeUnit);
-                break;
-            case SINGLE:
-                scheduledFuture = scheduleService.schedule(runnable, 0, TimeUnit.MILLISECONDS);
-                break;
-        }
-        threadContext.scheduledFuture = (ScheduledFuture<T>) scheduledFuture;
+        threadContext.scheduledFuture = (ScheduledFuture<T>) scheduleHandler.apply(runnable);
         return threadContext;
     }
 
     private void listenInternetStatus(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
-        this.internetThreadContext = this.addSchedule("internet-test", 10, TimeUnit.SECONDS, booleanThreadContext -> {
-            try {
-                URLConnection connection = new URL(touchHomeProperties.getCheckConnectivityURL()).openConnection();
-                connection.connect();
-                return true;
-            } catch (Exception ex) {
-                return false;
-            }
-        }, ScheduleType.DELAY, true, false);
+        this.internetThreadContext = this.addSchedule("internet-test", 10, 10, TimeUnit.SECONDS, context -> {
+            return getEntityContext().googleConnect() != null;
+        }, true, false);
 
         this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
             if (isInternetUp != isInternetWasUp) {
@@ -276,7 +273,14 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @RequiredArgsConstructor
     public enum ScheduleType {
-        DELAY, RATE, SINGLE
+        DELAY, RATE, SINGLE, CRON
+    }
+
+    @RequiredArgsConstructor
+    private static class BatchRunContext<T> {
+
+        private final ThreadPoolExecutor executor;
+        private Map<String, Future<T>> processes = new HashMap<>();
     }
 
     @Getter
@@ -314,7 +318,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         public void cancel() {
             if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
                 stopped = true;
-                if (hideOnUIAfterCancel) {
+                if (!showOnUI || hideOnUIAfterCancel) {
                     EntityContextBGPImpl.this.schedulers.remove(name);
                 }
             }

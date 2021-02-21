@@ -12,14 +12,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.touchhome.app.manager.BundleManager;
+import org.touchhome.app.manager.BundleService;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,50 +31,41 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BundleController {
 
-    private final BundleManager bundleManager;
+    private final BundleService bundleService;
+    private final List<Scratch3ExtensionBlocks> scratch3ExtensionBlocks;
 
     @GetMapping("/{bundleID}/icon")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID) throws IOException {
-        BundleEntryPoint bundleEntrypoint;
-        String bundleImage;
-        try {
-            bundleEntrypoint = bundleManager.getBundle(bundleID);
-            bundleImage = bundleEntrypoint.getBundleImage();
-        } catch (Exception ex) {
-            if (bundleID.contains("-")) {
-                bundleEntrypoint = bundleManager.getBundle(bundleID.substring(0, bundleID.indexOf("-")));
-                bundleImage = bundleID + ".png";
-            } else {
-                throw new IllegalArgumentException("Unable to find bundle with id: " + bundleID);
-            }
+        BundleEntryPoint bundleEntryPoint = bundleService.getBundle(bundleID.contains("-") ? bundleID.substring(0, bundleID.indexOf("-")) : bundleID);
+        URL imageUrl = bundleEntryPoint.getResource(bundleID + ".png");
+        if (imageUrl == null) {
+            imageUrl = bundleEntryPoint.getBundleImageURL();
         }
-        URL imageUrl = bundleEntrypoint.getBundleImageURL();
-        InputStream imageStream = imageUrl == null ? null : imageUrl.openStream();
-        if (imageStream == null) {
-            throw new NotFoundException("Unable to find bundle image: " + bundleImage + " of bundle: " + bundleID);
+        if (imageUrl == null) {
+            throw new NotFoundException("Unable to find bundle image of bundle: " + bundleID);
         }
-        return TouchHomeUtils.inputStreamToResource(imageStream, MediaType.IMAGE_PNG);
+        return TouchHomeUtils.inputStreamToResource(imageUrl.openStream(), MediaType.IMAGE_PNG);
     }
 
     @GetMapping
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<BundleJson> getBundles() {
         List<BundleJson> bundles = new ArrayList<>();
-        for (BundleEntryPoint bundle : bundleManager.getBundles()) {
-            bundles.add(new BundleJson(bundle.getBundleId(), bundleManager.getBundleColor(bundle.getBundleId()), bundle.order()));
+        for (BundleEntryPoint bundle : bundleService.getBundles()) {
+            bundles.add(new BundleJson(bundle.getBundleId(), bundleService.getBundleColor(bundle.getBundleId()), bundle.order()));
         }
         Collections.sort(bundles);
         return bundles;
     }
 
     public BundleEntryPoint getBundle(String id) {
-        return bundleManager.getBundles().stream().filter(s -> s.getBundleId().equals(id)).findAny().orElse(null);
+        return bundleService.getBundles().stream().filter(s -> s.getBundleId().equals(id)).findAny().orElse(null);
     }
 
     @Getter
     @RequiredArgsConstructor
-    private static class BundleJson implements Comparable<BundleJson> {
+    static class BundleJson implements Comparable<BundleJson> {
         private final String id;
         private final String color;
         private final int order;

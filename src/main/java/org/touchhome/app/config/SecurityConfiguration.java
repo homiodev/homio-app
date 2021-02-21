@@ -48,7 +48,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
         // Entry points
-        if(touchHomeProperties.isDisableSecurity()) {
+        if (touchHomeProperties.isDisableSecurity()) {
             log.warn("!!! TouchHome security disabled !!!");
             http.authorizeRequests().antMatchers(WebSocketConfig.ENDPOINT, "/rest/**").permitAll();
         } else {

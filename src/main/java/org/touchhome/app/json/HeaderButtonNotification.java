@@ -14,17 +14,12 @@ import java.util.Set;
 @Accessors(chain = true)
 public class HeaderButtonNotification extends BaseNotificationModel<HeaderButtonNotification> {
 
-    private String color;
-
-    private Integer duration;
-
-    private String icon;
-
-    private boolean iconRotate;
-
-    private String stopAction;
-
     private final Set<EntityContextUIImpl.ConfirmationRequestModel> confirmations = new LinkedHashSet<>();
+    private String color;
+    private Integer duration;
+    private String icon;
+    private boolean iconRotate;
+    private String stopAction;
 
     public HeaderButtonNotification(String entityID) {
         super(entityID);

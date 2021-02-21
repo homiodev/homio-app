@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.bundle.api.model.OptionModel;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.bluetooth.BluetoothBundleEntryPoint;
 
 import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;

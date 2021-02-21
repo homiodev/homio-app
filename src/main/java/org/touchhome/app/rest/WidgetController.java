@@ -10,7 +10,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.util.Pair;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
-import org.touchhome.app.manager.ScriptManager;
+import org.touchhome.app.manager.ScriptService;
+import org.touchhome.app.manager.WidgetService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
@@ -34,11 +35,6 @@ import org.touchhome.app.repository.widget.HasFetchChartSeries;
 import org.touchhome.app.repository.widget.HasLastNumberValueRepository;
 import org.touchhome.app.repository.widget.impl.chart.WidgetBarChartSeriesEntity;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
-import org.touchhome.app.videoStream.entity.BaseVideoCameraEntity;
-import org.touchhome.app.videoStream.entity.BaseVideoStreamEntity;
-import org.touchhome.app.videoStream.ui.CameraAction;
-import org.touchhome.app.videoStream.widget.WidgetLiveStreamEntity;
-import org.touchhome.app.videoStream.widget.WidgetLiveStreamSeriesEntity;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -70,76 +66,15 @@ public class WidgetController {
     private final List<WidgetBaseEntity<?>> widgetBaseEntities;
     private final EntityContext entityContext;
     private final Scratch3EventsBlocks scratch3EventsBlocks;
-    private final ScriptManager scriptManager;
+    private final ScriptService scriptService;
     private final ObjectMapper objectMapper;
+    private final WidgetService widgetService;
 
     @SneakyThrows
     @GetMapping("/plugins")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public List<AvailableWidget> getAvailableWidgets() {
-        List<AvailableWidget> options = new ArrayList<>();
-        for (WidgetBaseEntity<?> entity : this.widgetBaseEntities) {
-            options.add(new AvailableWidget(entity.getType(), entity.getImage(), null));
-        }
-        AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", new ArrayList<>());
-        for (Map.Entry<String, Collection<WidgetBaseTemplate>> entry : entityContext.getBeansOfTypeByBundles(WidgetBaseTemplate.class).entrySet()) {
-            AvailableWidget bundleExtraWidget = new AvailableWidget(entry.getKey(), "http", new ArrayList<>());
-            for (WidgetBaseTemplate widgetBase : entry.getValue()) {
-                bundleExtraWidget.children.add(new AvailableWidget(widgetBase.getClass().getSimpleName(), widgetBase.getIcon(), null));
-            }
-            if (!bundleExtraWidget.children.isEmpty()) {
-                extraWidgets.children.add(bundleExtraWidget);
-            }
-        }
-        if (!extraWidgets.children.isEmpty()) {
-            options.add(extraWidgets);
-        }
-        return options;
-    }
-
-    @GetMapping("/camera/{entityID}")
-    public List<CameraEntityResponse> getCameraData(@PathVariable("entityID") String entityID) {
-        WidgetLiveStreamEntity entity = entityContext.getEntity(entityID);
-        List<CameraEntityResponse> result = new ArrayList<>();
-        for (WidgetLiveStreamSeriesEntity item : entity.getSeries()) {
-            BaseVideoStreamEntity baseVideoStreamEntity = entityContext.getEntity(item.getDataSource());
-            if (baseVideoStreamEntity != null) {
-                result.add(new CameraEntityResponse(entityContext.getEntity(item.getDataSource())));
-            } else {
-                log.warn("Camera entity: <{}> not found", item.getDataSource());
-            }
-        }
-        return result;
-    }
-
-    @PostMapping("/camera/{entityID}/series/{seriesEntityID}/action")
-    public void fireCameraAction(@PathVariable("entityID") String entityID,
-                                 @PathVariable("seriesEntityID") String seriesEntityID,
-                                 @RequestBody CameraActionRequest cameraActionRequest) {
-        WidgetLiveStreamEntity entity = entityContext.getEntity(entityID);
-        WidgetLiveStreamSeriesEntity series = entity.getSeries().stream().filter(s -> s.getEntityID().equals(seriesEntityID)).findAny().orElse(null);
-        if (series == null) {
-            throw new NotFoundException("Unable to find series: " + seriesEntityID + " for entity: " + entity.getTitle());
-        }
-        BaseVideoCameraEntity baseVideoCameraEntity = entityContext.getEntity(series.getDataSource());
-        if (baseVideoCameraEntity == null) {
-            throw new NotFoundException("Unable to find base camera for series: " + series.getTitle());
-        }
-        List<CameraAction> cameraActions = baseVideoCameraEntity.getCameraHandler().getCameraActions(false);
-        CameraAction cameraAction = cameraActions.stream().filter(ca -> ca.getName().equals(cameraActionRequest.name)).findAny().orElseThrow(
-                () -> new RuntimeException("No camera action " + cameraActionRequest.name + "found"));
-        cameraAction.getAction().accept(cameraActionRequest.value);
-    }
-
-    @Getter
-    private static class CameraEntityResponse {
-        private final BaseVideoStreamEntity source;
-        private final List<CameraAction> actions;
-
-        public CameraEntityResponse(BaseVideoStreamEntity source) {
-            this.source = source;
-            this.actions = source.getActions(true);
-        }
+    public List<WidgetService.AvailableWidget> getAvailableWidgets() {
+        return widgetService.getAvailableWidgets();
     }
 
     @GetMapping("/button/{entityID}/handle")
@@ -302,6 +237,13 @@ public class WidgetController {
         }
     }
 
+    @GetMapping("/{entityID}")
+    public WidgetBaseEntity getWidget(@PathVariable("entityID") String entityID) {
+        WidgetBaseEntity widget = entityContext.getEntity(entityID);
+        updateWidgetBeforeReturnToUI(widget);
+        return widget;
+    }
+
     @GetMapping("/{tabId}/widget")
     public List<WidgetBaseEntity> getWidgets(@PathVariable("tabId") String tabId) {
         List<WidgetBaseEntity> widgets = entityContext.findAll(WidgetBaseEntity.class)
@@ -315,24 +257,28 @@ public class WidgetController {
             widgets = entityContext.findAll(WidgetBaseEntity.class);
         }
         for (WidgetBaseEntity<?> widget : widgets) {
-            if (widget instanceof WidgetJsEntity) {
-                WidgetJsEntity jsEntity = (WidgetJsEntity) widget;
-                try {
-                    jsEntity.setJavaScriptErrorResponse(null);
-                    ScriptEntity scriptEntity = new ScriptEntity()
-                            .setJavaScript(jsEntity.getJavaScript())
-                            .setJavaScriptParameters(jsEntity.getJavaScriptParameters());
-
-                    CompileScriptContext compileScriptContext = scriptManager.createCompiledScript(scriptEntity, null);
-                    jsEntity.setJavaScriptResponse(scriptManager.runJavaScript(compileScriptContext));
-
-                } catch (Exception ex) {
-                    jsEntity.setJavaScriptErrorResponse(TouchHomeUtils.getErrorMessage(ex));
-                }
-            }
+            updateWidgetBeforeReturnToUI(widget);
         }
 
         return widgets;
+    }
+
+    private void updateWidgetBeforeReturnToUI(WidgetBaseEntity<?> widget) {
+        if (widget instanceof WidgetJsEntity) {
+            WidgetJsEntity jsEntity = (WidgetJsEntity) widget;
+            try {
+                jsEntity.setJavaScriptErrorResponse(null);
+                ScriptEntity scriptEntity = new ScriptEntity()
+                        .setJavaScript(jsEntity.getJavaScript())
+                        .setJavaScriptParameters(jsEntity.getJavaScriptParameters());
+
+                CompileScriptContext compileScriptContext = scriptService.createCompiledScript(scriptEntity, null);
+                jsEntity.setJavaScriptResponse(scriptService.runJavaScript(compileScriptContext));
+
+            } catch (Exception ex) {
+                jsEntity.setJavaScriptErrorResponse(TouchHomeUtils.getErrorMessage(ex));
+            }
+        }
     }
 
     @Secured(PRIVILEGED_USER_ROLE)
@@ -544,23 +490,9 @@ public class WidgetController {
         }
     }
 
-    @Getter
-    @RequiredArgsConstructor
-    private static class AvailableWidget {
-        private final String key;
-        private final String image;
-        private final List<AvailableWidget> children;
-    }
-
     @Setter
     private static class IntegerValue {
         private Integer value;
-    }
-
-    @Setter
-    private static class CameraActionRequest {
-        private String name;
-        private String value;
     }
 
     @Setter

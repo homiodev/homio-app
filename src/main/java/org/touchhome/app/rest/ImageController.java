@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.touchhome.app.manager.ImageManager;
+import org.touchhome.app.manager.ImageService;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.ImageEntity;
 
@@ -18,7 +18,7 @@ import org.touchhome.bundle.api.entity.ImageEntity;
 @RequiredArgsConstructor
 public class ImageController {
 
-    private final ImageManager imageManager;
+    private final ImageService imageService;
     private final EntityContext entityContext;
 
     @GetMapping("/{imagePath:.+}")
@@ -28,7 +28,7 @@ public class ImageController {
         if (imageEntity != null) {
             return getImage(imageEntity.toPath().toString());
         } else {
-            return imageManager.getImage(imagePath);
+            return imageService.getImage(imagePath);
         }
     }
 }

@@ -1,8 +1,5 @@
 package org.touchhome.app.repository.widget.impl.chart;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
 import org.touchhome.bundle.api.EntityContext;

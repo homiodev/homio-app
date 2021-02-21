@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 @Log4j2
 @Component
-public class BundleManager {
+public class BundleService {
     private Map<String, String> bundleColorMap;
     private Map<String, BundleEntryPoint> bundleMap;
     private Collection<BundleEntryPoint> bundleEntryPoints;

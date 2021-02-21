@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -17,13 +18,15 @@ import org.touchhome.app.js.assistant.impl.CodeParser;
 import org.touchhome.app.js.assistant.impl.ParserContext;
 import org.touchhome.app.js.assistant.model.Completion;
 import org.touchhome.app.js.assistant.model.CompletionRequest;
-import org.touchhome.app.manager.ScriptManager;
+import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.Lang;
 import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.fs.BaseFileSystemEntity;
+import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -35,19 +38,23 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import java.util.Stack;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
+import static org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks.ENTITY;
 
+@Log4j2
 @RestController
 @RequestMapping("/rest")
 @RequiredArgsConstructor
 public class UtilsController {
 
     private final EntityContextImpl entityContext;
-    private final ScriptManager scriptManager;
+    private final ScriptService scriptService;
     private final CodeParser codeParser;
 
     @PostMapping("/github/readme")
@@ -60,6 +67,28 @@ public class UtilsController {
         } catch (Exception ex) {
             throw new ServerException("No readme found");
         }
+    }
+
+    @GetMapping("/fs/file")
+    public Collection<OptionModel> getFiles(@RequestParam(name = ENTITY, required = false) String fsEntityId) {
+        if (fsEntityId != null) {
+            BaseFileSystemEntity entity = entityContext.getEntity(fsEntityId);
+            if (entity != null) {
+                return entity.getFileSystem(entityContext).getAllFiles(true);
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    @GetMapping("/fs/folder")
+    public Collection<OptionModel> getFolders(@RequestParam(name = ENTITY, required = false) String fsEntityId) {
+        if (fsEntityId != null) {
+            BaseFileSystemEntity entity = entityContext.getEntity(fsEntityId);
+            if (entity != null) {
+                return entity.getFileSystem(entityContext).getAllFolders(true);
+            }
+        }
+        return Collections.emptyList();
     }
 
     @GetMapping("/notifications")
@@ -100,7 +129,7 @@ public class UtilsController {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintStream logOutputStream = new PrintStream(outputStream);
         try {
-            runScriptOnceJSON.result = scriptManager.executeJavaScriptOnce(scriptEntity, scriptEntity.getJavaScriptParameters(), logOutputStream, false);
+            runScriptOnceJSON.result = scriptService.executeJavaScriptOnce(scriptEntity, scriptEntity.getJavaScriptParameters(), logOutputStream, false);
         } catch (Exception ex) {
             runScriptOnceJSON.error = ExceptionUtils.getStackTrace(ex);
         }

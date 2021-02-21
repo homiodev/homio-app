@@ -77,7 +77,7 @@ public class CacheService {
         Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME)).clear(); // need remove all because entity may create alos another entities
     }
 
-    public void putToCache(PureRepository repository, HasEntityIdentifier entity, Map<String, Object> changeFields) {
+    public void putToCache(PureRepository repository, HasEntityIdentifier entity, Map<String, Object[]> changeFields) {
         String identifier = entity.getIdentifier();
         if (identifier == null) {
             throw new ServerException("Unable update state without id" + entity);
@@ -96,7 +96,7 @@ public class CacheService {
     public void merge(BaseEntity baseEntity) {
         UpdateStatement updateStatement = entityCache.get(baseEntity.getIdentifier());
         if (updateStatement != null && updateStatement.changeFields != null) {
-            for (Map.Entry<String, Object> entry : updateStatement.changeFields.entrySet()) {
+            for (Map.Entry<String, Object[]> entry : updateStatement.changeFields.entrySet()) {
                 MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
             }
         }
@@ -115,7 +115,7 @@ public class CacheService {
                     try {
                         if (updateStatement.changeFields != null) {
                             HasEntityIdentifier baseEntity = entityContext.getEntity(updateStatement.entityID, false);
-                            for (Map.Entry<String, Object> entry : updateStatement.changeFields.entrySet()) {
+                            for (Map.Entry<String, Object[]> entry : updateStatement.changeFields.entrySet()) {
                                 MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
                             }
                             updateStatement.repository.flushCashedEntity(baseEntity);
@@ -146,6 +146,6 @@ public class CacheService {
     private static class UpdateStatement {
         String entityID;
         PureRepository repository;
-        Map<String, Object> changeFields;
+        Map<String, Object[]> changeFields;
     }
 }

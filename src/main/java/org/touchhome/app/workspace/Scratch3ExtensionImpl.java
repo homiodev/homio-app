@@ -10,14 +10,16 @@ import java.util.Objects;
 @Getter
 public final class Scratch3ExtensionImpl implements Comparable<Scratch3ExtensionImpl> {
 
+    private final String parent;
     private String extensionId;
     private boolean featured = true;
     private Scratch3ExtensionBlocks getInfo;
     @JsonIgnore
     private int order;
 
-    Scratch3ExtensionImpl(String extensionId, Scratch3ExtensionBlocks scratch3BaseBlock, int order) {
-        this.extensionId = extensionId;
+    Scratch3ExtensionImpl(Scratch3ExtensionBlocks scratch3BaseBlock, int order) {
+        this.extensionId = scratch3BaseBlock.getId();
+        this.parent = scratch3BaseBlock.getParent();
         this.getInfo = scratch3BaseBlock;
         this.order = order;
     }

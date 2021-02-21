@@ -1,7 +1,5 @@
 package org.touchhome.app.model.entity.widget.impl.button;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.bundle.api.ui.field.UIField;
 

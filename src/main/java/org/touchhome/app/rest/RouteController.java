@@ -4,10 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.common.ClassFinder;
+import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 
@@ -20,9 +22,33 @@ import java.util.stream.Stream;
 public class RouteController {
 
     private final List<Class<?>> uiSidebarMenuClasses;
+    private final BundleController bundleController;
+    private final SettingController settingController;
 
-    public RouteController(ClassFinder classFinder) {
+    public RouteController(ClassFinder classFinder, BundleController bundleController,
+                           SettingController settingController) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
+        this.bundleController = bundleController;
+        this.settingController = settingController;
+    }
+
+    private static class BootstrapContext {
+        public List<RouteJSON> routes;
+        public Map<String, List<SidebarMenuItem>> menu;
+        public List<BundleController.BundleJson> bundles;
+        public List<SettingEntity> settings;
+    }
+
+    @GetMapping("bootstrap")
+    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
+    public BootstrapContext getBootstrap() {
+        BootstrapContext context = new BootstrapContext();
+        context.routes = getRoutes();
+        context.menu = getMenu();
+        context.bundles = bundleController.getBundles();
+        context.settings = settingController.getSettings();
+
+        return context;
     }
 
     @GetMapping
@@ -62,9 +88,10 @@ public class RouteController {
     }
 
     private void addRouteFromUISideBarMenu(List<RouteJSON> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
-        String href = aClass.getSimpleName();
+        String href = StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), aClass.getSimpleName());
         RouteJSON route = new RouteJSON(uiSidebarMenu.parent().name().toLowerCase() + "/" + href);
-        route.type = href;
+        route.type = aClass.getSimpleName();
+        route.path = href;
         route.itemType = UISidebarMenu.class.isAssignableFrom(uiSidebarMenu.itemType()) ? aClass : uiSidebarMenu.itemType();
         route.allowCreateNewItems = uiSidebarMenu.allowCreateNewItems();
         route.sidebarButtons = new ArrayList<>();
@@ -93,7 +120,7 @@ public class RouteController {
 
         static SidebarMenuItem fromAnnotation(Class<?> clazz, UISidebarMenu uiSidebarMenu) {
             return new SidebarMenuItem(
-                    clazz.getSimpleName(),
+                    StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), clazz.getSimpleName()),
                     uiSidebarMenu.icon(),
                     uiSidebarMenu.bg(),
                     clazz.getSimpleName(),
@@ -105,6 +132,7 @@ public class RouteController {
     @Getter
     public static class RouteJSON {
 
+        private String path;
         private String url;
         private String type;
         private Class<?> itemType;

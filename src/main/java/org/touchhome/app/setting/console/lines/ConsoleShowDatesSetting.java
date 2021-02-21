@@ -1,7 +1,6 @@
 package org.touchhome.app.setting.console.lines;
 
 import org.touchhome.bundle.api.console.ConsolePlugin;
-
 import org.touchhome.bundle.api.setting.SettingPluginBoolean;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 

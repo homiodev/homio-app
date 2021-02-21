@@ -7,4 +7,9 @@ public class SendBroadcastSetting implements SettingPluginButton {
     public int order() {
         return 0;
     }
+
+    @Override
+    public String getIcon() {
+        return "fas fa-play";
+    }
 }

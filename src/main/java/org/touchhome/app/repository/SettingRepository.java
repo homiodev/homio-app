@@ -1,5 +1,6 @@
 package org.touchhome.app.repository;
 
+import lombok.SneakyThrows;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
@@ -11,10 +12,7 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
-import org.touchhome.bundle.api.setting.SettingPlugin;
-import org.touchhome.bundle.api.setting.SettingPluginOptions;
-import org.touchhome.bundle.api.setting.SettingPluginOptionsRemovable;
-import org.touchhome.bundle.api.setting.SettingPluginToggle;
+import org.touchhome.bundle.api.setting.*;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 
@@ -66,7 +64,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             entity.setAdvanced(plugin.isAdvanced());
             entity.setStorable(plugin.isStorable());
             entity.setColor(plugin.getIconColor());
-            entity.setIcon(plugin.getIcon());
+            entity.setIcon(getIcon(plugin));
             if (plugin instanceof SettingPluginToggle) {
                 entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon());
             }
@@ -104,6 +102,23 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
                 }
             }
         }
+    }
+
+    @SneakyThrows
+    private static String getIcon(SettingPlugin<?> plugin) {
+        if (plugin instanceof SettingPluginButton) {
+            return ((SettingPluginButton) plugin).getIcon();
+        }
+        if (plugin instanceof ConsoleSettingPlugin) {
+            return ((ConsoleSettingPlugin<?>) plugin).getIcon();
+        }
+        if (plugin instanceof SettingPluginToggle) {
+            return ((SettingPluginToggle) plugin).getIcon();
+        }
+        if (plugin instanceof SettingPluginOptionsFileExplorer) {
+            return ((SettingPluginOptionsFileExplorer) plugin).getIcon();
+        }
+        return null;
     }
 
     /**

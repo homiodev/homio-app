@@ -3,10 +3,10 @@ package org.touchhome.app.workspace.block.core;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -66,8 +66,6 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
         this.notBlock = Scratch3Block.ofEvaluate("not", BlockType.reporter, this::notEvaluateEvaluate);
         this.mathOpBlock = Scratch3Block.ofEvaluate("mathop", BlockType.reporter, this::mathOpEvaluateEvaluate);
         this.boolToNum = Scratch3Block.ofEvaluate("bool_to_num", BlockType.reporter, this::boolToNumberEvaluate);
-
-        this.postConstruct();
     }
 
     private Object boolToNumberEvaluate(WorkspaceBlock workspaceBlock) {

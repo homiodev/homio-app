@@ -19,6 +19,12 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
 
     public static final String PREFIX = "wtjs_";
 
+    @Transient
+    private String javaScriptResponse;
+
+    @Transient
+    private String javaScriptErrorResponse;
+
     @UIField(order = 13)
     @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript)
     public String getJavaScript() {
@@ -32,7 +38,7 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
 
     @UIField(order = 12, type = UIFieldType.Json)
     public String getJavaScriptParameters() {
-        return getJsonData("jsp");
+        return getJsonData("jsp", "{}");
     }
 
     public WidgetJsEntity setJavaScriptParameters(String value) {
@@ -49,12 +55,6 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
         return this;
     }
 
-    @Transient
-    private String javaScriptResponse;
-
-    @Transient
-    private String javaScriptErrorResponse;
-
     @Override
     public String getImage() {
         return "fab fa-js-square";
@@ -63,5 +63,12 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
     @Override
     public String getEntityPrefix() {
         return PREFIX;
+    }
+
+    @Override
+    protected void beforePersist() {
+        super.beforePersist();
+        setJavaScriptParameters("{\"text\":\"Hello world!\"}");
+        setJavaScript("function run() {\n\treturn params.get('text');\n}");
     }
 }
