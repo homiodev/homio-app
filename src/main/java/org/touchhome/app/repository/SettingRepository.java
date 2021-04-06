@@ -15,6 +15,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.setting.*;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
+import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import java.util.*;
 
@@ -74,8 +75,8 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             entity.setDisabled(plugin.isDisabled(entityContext) ? true : null);
             entity.setRequired(plugin.isRequired());
             if (entity.isStorable()) {
-                if (entity.getSettingType().equals(SettingPlugin.SettingType.SelectBoxButton.name())
-                        || entity.getSettingType().equals(SettingPlugin.SettingType.SelectBox.name())) {
+                if (entity.getSettingType().equals(UIFieldType.SelectBoxButton.name())
+                        || entity.getSettingType().equals(UIFieldType.SelectBox.name())) {
                     entity.setAvailableValues(SettingRepository.getOptions((SettingPluginOptions<?>) plugin, entityContext));
                 }
             }

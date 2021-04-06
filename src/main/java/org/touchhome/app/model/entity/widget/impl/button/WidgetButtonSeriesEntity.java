@@ -26,7 +26,7 @@ public class WidgetButtonSeriesEntity extends WidgetSeriesEntity<WidgetButtonEnt
         return getJsonData("ds");
     }
 
-    @UIField(order = 17, type = UIFieldType.Color)
+    @UIField(order = 17, type = UIFieldType.ColorPicker)
     public String getColor() {
         return getJsonData("color", "#FFFFFF");
     }
@@ -44,7 +44,7 @@ public class WidgetButtonSeriesEntity extends WidgetSeriesEntity<WidgetButtonEnt
     public static class ButtonsSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext, String[] staticParameters) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceBooleanEntity.class)
                     .add(WorkspaceBroadcastEntity.class)

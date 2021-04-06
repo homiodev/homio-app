@@ -5,14 +5,15 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.setting.SettingPluginOptions;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
+import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import java.util.List;
 
 public class ConsoleLinesTextWrapSetting implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
 
     @Override
-    public SettingType getSettingType() {
-        return SettingType.SelectBoxButton;
+    public UIFieldType getSettingType() {
+        return UIFieldType.SelectBoxButton;
     }
 
     @Override

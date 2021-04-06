@@ -84,7 +84,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
         return this;
     }
 
-    @UIField(order = 20, type = UIFieldType.Color)
+    @UIField(order = 20, type = UIFieldType.ColorPicker)
     public String getForeground() {
         return getJsonData("fg", "#009688");
     }
@@ -94,7 +94,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
         return this;
     }
 
-    @UIField(order = 21, type = UIFieldType.Color)
+    @UIField(order = 21, type = UIFieldType.ColorPicker)
     public String getBackground() {
         return getJsonData("bg", "rgba(0, 0, 0, 0.1)");
     }
@@ -135,7 +135,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
     }
 
     @UIField(order = 25)
-    @UIKeyValueField(maxSize = 5, keyType = UIFieldType.Float, valueType = UIFieldType.Color, defaultKey = "0", defaultValue = "#FFFFFF")
+    @UIKeyValueField(maxSize = 5, keyType = UIFieldType.Float, valueType = UIFieldType.ColorPicker, defaultKey = "0", defaultValue = "#FFFFFF")
     public String getThreshold() {
         return getJsonData("threshold", "{}");
     }
@@ -176,7 +176,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
     public static class GaugeDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext, String[] staticParameters) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceStandaloneVariableEntity.class)
                     .add(WorkspaceVariableEntity.class)

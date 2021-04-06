@@ -1,6 +1,5 @@
 package org.touchhome.app.workspace.block.core;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Getter;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
@@ -65,9 +64,9 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         this.broadcastLockManager = broadcastLockManager;
 
         // Blocks
-        this.getPrevVariableBlock = Scratch3Block.ofEvaluate("prev_variable", BlockType.reporter, this::getPreviousValue);
+        this.getPrevVariableBlock = Scratch3Block.ofReporter("prev_variable", this::getPreviousValue);
 
-        this.isBoolVariableTrueBlock = Scratch3Block.ofEvaluate("bool_variables", BlockType.reporter, this::isBoolVariableTrueReporter);
+        this.isBoolVariableTrueBlock = Scratch3Block.ofReporter("bool_variables", this::isBoolVariableTrueReporter);
         this.setBooleanBlock = Scratch3Block.ofHandler("set_boolean", BlockType.command, this::setBooleanHandler);
         this.inverseBooleanBlock = Scratch3Block.ofHandler("inverse_boolean", BlockType.command, this::inverseBooleanHandler);
         this.booleanEventChangesBlock = Scratch3Block.ofHandler("boolean_event_changes", BlockType.hat, this::booleanChangeHatEvent);
@@ -77,12 +76,12 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         this.changeVariableByBlock = Scratch3Block.ofHandler("changevariableby", BlockType.command, this::changeVariableByHandler);
 
         this.setJsonVariableToBlock = Scratch3Block.ofHandler("set_json", BlockType.command, this::setJsonVariableToHandler);
-        this.getJsonVariableToBlock = Scratch3Block.ofEvaluate("get_json", BlockType.reporter, this::getJsonVariableToReporter);
+        this.getJsonVariableToBlock = Scratch3Block.ofReporter("get_json", this::getJsonVariableToReporter);
 
-        this.lastBackupBlock = Scratch3Block.ofEvaluate("last_backup_value", BlockType.reporter, this::lastBackupValueReporter);
+        this.lastBackupBlock = Scratch3Block.ofReporter("last_backup_value", this::lastBackupValueReporter);
         this.backupBlock = Scratch3Block.ofHandler("addtobackup", BlockType.command, this::backupHandler);
 
-        this.groupVariableBlock = Scratch3Block.ofEvaluate("group_variable", BlockType.reporter, this::groupVariableReporter);
+        this.groupVariableBlock = Scratch3Block.ofReporter("group_variable", this::groupVariableReporter);
         this.setGroupVariableBlock = Scratch3Block.ofHandler("set_group_variable", BlockType.command, this::setGroupVariableHandler);
         this.changeGroupVariableBlock = Scratch3Block.ofHandler("change_group_variable", BlockType.command, this::changeGroupVariableHandler);
         this.setAndBackupGroupVariableBlock = Scratch3Block.ofHandler("set_group_variable_and_backup", BlockType.command, this::setAndBackupGroupVariableHandler);
@@ -130,11 +129,12 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void booleanChangeHatEvent(WorkspaceBlock workspaceBlock) {
-        workspaceBlock.getNextOrThrow();
-        String varRefId = workspaceBlock.getFieldId("bool_variables_group");
-        BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, WorkspaceBooleanEntity.PREFIX + varRefId);
+        workspaceBlock.handleNext(next -> {
+            String varRefId = workspaceBlock.getFieldId("bool_variables_group");
+            BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, WorkspaceBooleanEntity.PREFIX + varRefId);
 
-        workspaceBlock.subscribeToLock(lock);
+            workspaceBlock.subscribeToLock(lock, next::handle);
+        });
     }
 
     private void inverseBooleanHandler(WorkspaceBlock workspaceBlock) {
@@ -238,7 +238,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         }
     }
 
-    private void setJsonVariableToHandler(WorkspaceBlock workspaceBlock) throws JsonProcessingException {
+    private void setJsonVariableToHandler(WorkspaceBlock workspaceBlock) {
         String variableId = workspaceBlock.getFieldId("json_variables");
         JSONObject value = workspaceBlock.getInputJSON("ITEM");
         WorkspaceJsonVariableEntity workspaceJsonVariableEntity = entityContext.getEntity(WorkspaceJsonVariableEntity.PREFIX + variableId);

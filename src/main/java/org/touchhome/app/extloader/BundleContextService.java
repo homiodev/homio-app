@@ -2,6 +2,7 @@ package org.touchhome.app.extloader;
 
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FileUtils;
 import org.reflections.scanners.ResourcesScanner;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.scanners.TypeAnnotationsScanner;
@@ -10,12 +11,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.util.Constants;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -138,6 +139,7 @@ public class BundleContextService {
         return Files.list(basePath).filter(path -> path.getFileName().toString().endsWith(".jar")).collect(Collectors.toList());
     }
 
+    @SneakyThrows
     public void installBundle(String bundleId, String bundleUrl, String version) {
         BundleContext context = this.bundleContextMap.get(bundleId);
         if (context != null) {
@@ -147,7 +149,7 @@ public class BundleContextService {
             removeBundle(bundleId);
         }
         Path path = TouchHomeUtils.getBundlePath().resolve(bundleId + ".jar");
-        Curl.downloadToFile(bundleUrl, path);
+        FileUtils.copyURLToFile(new URL(bundleUrl), path.toFile(), 30000, 30000);
         loadBundlesFromPath(path);
     }
 

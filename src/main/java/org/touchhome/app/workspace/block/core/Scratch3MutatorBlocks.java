@@ -12,7 +12,6 @@ import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.WorkspaceEventListener;
-import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
@@ -35,9 +34,9 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks implements Wo
         this.scriptService = scriptService;
 
         // Blocks
-        this.joinStringBlock = Scratch3Block.ofEvaluate("join", BlockType.reporter, this::joinStringEvaluate);
-        this.jsonReduce = Scratch3Block.ofEvaluate("json_reduce", BlockType.reporter, this::jsonReduceEvaluate);
-        this.mapBlock = Scratch3Block.ofEvaluate("map", BlockType.reporter, this::mapEvaluate);
+        this.joinStringBlock = Scratch3Block.ofReporter("join", this::joinStringEvaluate);
+        this.jsonReduce = Scratch3Block.ofReporter("json_reduce", this::jsonReduceEvaluate);
+        this.mapBlock = Scratch3Block.ofReporter("map", this::mapEvaluate);
     }
 
     public static JSONObject reduceJSON(String json, String query) {

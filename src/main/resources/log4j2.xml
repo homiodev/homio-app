@@ -62,6 +62,23 @@
             </DefaultRolloverStrategy>
         </RollingFile>
 
+        <RollingFile name="cameraLog"
+                     fileName="${logBaseDir}/camera.log"
+                     filePattern="${logBaseDir}/old/camera.%d{yyyy-MM-dd}.log.gz"
+                     append="true">
+            <PatternLayout pattern="${pattern}"/>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${logBaseDir}/old" maxDepth="1">
+                    <IfFileName glob="*/camera-*.log.gz"/>
+                    <IfLastModified age="5d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
     </Appenders>
     <Loggers>
         <Logger name="org.touchhome" additivity="false" level="info">
@@ -70,26 +87,24 @@
         </Logger>
 
         <Logger name="org.touchhome.bundle.zigbee" additivity="false" level="info">
-            <AppenderRef ref="appLog"/>
             <AppenderRef ref="zigBeeLog"/>
-            <AppenderRef ref="Console"/>
         </Logger>
 
         <Logger name="org.touchhome.app.workspace" additivity="false" level="info">
-            <AppenderRef ref="appLog"/>
             <AppenderRef ref="workspaceLog"/>
-            <AppenderRef ref="Console"/>
         </Logger>
 
         <Logger name="org.touchhome.bundle.api.workspace" additivity="false" level="info">
-            <AppenderRef ref="appLog"/>
             <AppenderRef ref="workspaceLog"/>
-            <AppenderRef ref="Console"/>
         </Logger>
 
         <logger name="org.springframework.web.socket.messaging.StompSubProtocolHandler" level="fatal">
             <AppenderRef ref="appLog"/>
             <AppenderRef ref="Console"/>
+        </logger>
+
+        <logger name="org.touchhome.bundle.camera" level="info">
+            <AppenderRef ref="cameraLog"/>
         </logger>
 
         <Root level="INFO">

@@ -26,7 +26,7 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
         return getJsonData("ds");
     }
 
-    @UIField(order = 15, type = UIFieldType.Color)
+    @UIField(order = 15, type = UIFieldType.ColorPicker)
     public String getColor() {
         return getJsonData("color", "#FFFFFF");
     }
@@ -44,7 +44,7 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     public static class ChartSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext, String[] staticParameters) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceBackupEntity.class)
                     .add(WorkspaceBroadcastEntity.class)

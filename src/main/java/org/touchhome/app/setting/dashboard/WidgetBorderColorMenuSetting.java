@@ -1,6 +1,7 @@
 package org.touchhome.app.setting.dashboard;
 
 import org.touchhome.app.setting.CoreSettingPlugin;
+import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 public class WidgetBorderColorMenuSetting implements CoreSettingPlugin<String> {
 
@@ -25,8 +26,8 @@ public class WidgetBorderColorMenuSetting implements CoreSettingPlugin<String> {
     }
 
     @Override
-    public SettingType getSettingType() {
-        return SettingType.ColorPicker;
+    public UIFieldType getSettingType() {
+        return UIFieldType.ColorPicker;
     }
 
     @Override

@@ -45,7 +45,7 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
         return this;
     }
 
-    @UIField(order = 17, type = UIFieldType.Color)
+    @UIField(order = 17, type = UIFieldType.ColorPicker)
     public String getColor() {
         return getJsonData("color", "#FFFFFF");
     }
@@ -63,7 +63,7 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
     public static class ToggleSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext, String[] staticParameters) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceBooleanEntity.class)
                     .build(entityContext);

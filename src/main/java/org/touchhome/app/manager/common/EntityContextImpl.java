@@ -45,7 +45,6 @@ import org.touchhome.app.rest.SettingController;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemLanguageSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
-import org.touchhome.app.utils.Curl;
 import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
@@ -71,6 +70,7 @@ import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.UIActionResponse;
 import org.touchhome.bundle.api.ui.field.action.impl.DynamicContextMenuAction;
+import org.touchhome.bundle.api.util.Curl;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
@@ -322,7 +322,8 @@ public class EntityContextImpl implements EntityContext {
 
         T proxyInstance = (T) Enhancer.create(entity.getClass(), handler);
 
-        entityUpdate(null, this.event().getEntityUpdateListeners(), (Supplier<HasEntityIdentifier>) () -> {
+        BaseEntity oldEntity = entityManager.getEntityNoCache(entity.getEntityID());
+        entityUpdate(oldEntity, this.event().getEntityUpdateListeners(), (Supplier<HasEntityIdentifier>) () -> {
             consumer.accept(proxyInstance);
             return entity;
         });
@@ -391,13 +392,13 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     public <T extends BaseEntity> List<T> findAll(Class<T> clazz) {
-        return findAllByRepository((Class<BaseEntity>) clazz, getRepository(clazz));
+        return findAllByRepository((Class<BaseEntity>) clazz);
     }
 
     @Override
     public <T extends BaseEntity> List<T> findAllByPrefix(String prefix) {
         AbstractRepository<? extends BaseEntity> repository = getRepositoryByPrefix(prefix);
-        return findAllByRepository((Class<BaseEntity>) repository.getEntityClass(), repository);
+        return findAllByRepository((Class<BaseEntity>) repository.getEntityClass());
     }
 
     @Override
@@ -528,13 +529,15 @@ public class EntityContextImpl implements EntityContext {
         return o;
     }
 
-    private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz, AbstractRepository repository) {
+    private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz) {
         return entityManager.getEntityIDsByEntityClassFullName(clazz).stream()
                 .map(entityID -> {
                     T entity = entityManager.getEntityWithFetchLazy(entityID);
-                    entity.afterFetch(this);
+                    if (entity != null) {
+                        entity.afterFetch(this);
+                    }
                     return entity;
-                }).collect(Collectors.toList());
+                }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     private void createUser() {
@@ -615,10 +618,9 @@ public class EntityContextImpl implements EntityContext {
         if (hasUISidebarMenu) {
             JSONObject metadata = new JSONObject().put("type", type.name).put("value", entity);
             if (entity instanceof HasDynamicContextMenuActions) {
-                Set<DynamicContextMenuAction> actions = ((HasDynamicContextMenuActions) entity).getActions(this);
+                Set<? extends DynamicContextMenuAction> actions = ((HasDynamicContextMenuActions) entity).getActions(this);
                 if (actions != null && !actions.isEmpty()) {
-                    metadata.put("actions", actions.stream()
-                            .map(UIActionResponse::new).collect(Collectors.toSet()));
+                    metadata.put("actions", actions.stream().map(UIActionResponse::new).collect(Collectors.toSet()));
                 }
             }
             ui().sendNotification("-global", metadata);

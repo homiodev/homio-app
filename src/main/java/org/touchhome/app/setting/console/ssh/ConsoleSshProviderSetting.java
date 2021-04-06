@@ -1,15 +1,15 @@
 package org.touchhome.app.setting.console.ssh;
 
 import org.touchhome.app.service.ssh.TmateSshProvider;
-import org.touchhome.bundle.api.service.SshProvider;
+import org.touchhome.bundle.api.service.SshProviderService;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsBean;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
-public class ConsoleSshProviderSetting implements ConsoleSettingPlugin<SshProvider>, SettingPluginOptionsBean<SshProvider> {
+public class ConsoleSshProviderSetting implements ConsoleSettingPlugin<SshProviderService>, SettingPluginOptionsBean<SshProviderService> {
 
     @Override
-    public Class<SshProvider> getType() {
-        return SshProvider.class;
+    public Class<SshProviderService> getType() {
+        return SshProviderService.class;
     }
 
     @Override

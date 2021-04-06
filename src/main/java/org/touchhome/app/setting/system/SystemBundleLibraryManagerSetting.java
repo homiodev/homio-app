@@ -6,10 +6,10 @@ import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleContextService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.setting.CoreSettingPlugin;
-import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.ProgressBar;
 import org.touchhome.bundle.api.setting.SettingPluginPackageInstall;
+import org.touchhome.bundle.api.util.Curl;
 
 import java.util.List;
 import java.util.stream.Collectors;

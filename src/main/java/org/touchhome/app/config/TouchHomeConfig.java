@@ -11,7 +11,6 @@ import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule;
 import com.pi4j.io.gpio.Pin;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControlHandlerInterceptor;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
@@ -82,9 +81,7 @@ import java.util.concurrent.Executors;
 @EnableScheduling
 @EntityScan(basePackages = {"org.touchhome"})
 @ComponentScan({"org.touchhome"})
-@Import(value = {
-        WebSocketConfig.class
-})
+@Import(value = {WebSocketConfig.class})
 @EnableJpaRepositories(basePackages = "org.touchhome.app.repository.crud", repositoryFactoryBeanClass = CrudRepositoryFactoryBean.class)
 @EnableTransactionManagement(proxyTargetClass = true)
 public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {

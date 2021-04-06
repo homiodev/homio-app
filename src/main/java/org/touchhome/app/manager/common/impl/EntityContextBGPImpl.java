@@ -46,10 +46,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public ThreadContext<Void> schedule(@NotNull String name, int initialDelay, int timeout, @NotNull TimeUnit timeUnit,
+    public ThreadContext<Void> schedule(@NotNull String name, int initialDelayInMillis, int timeout, @NotNull TimeUnit timeUnit,
                                         @NotNull ThrowingRunnable<Exception> command, boolean showOnUI,
                                         boolean hideOnUIAfterCancel) {
-        return addSchedule(name, initialDelay, timeout, timeUnit, context -> {
+        return addSchedule(name, initialDelayInMillis, timeout, timeUnit, context -> {
             command.run();
             return null;
         }, showOnUI, hideOnUIAfterCancel);
@@ -207,12 +207,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
     }
 
-    private <T> ThreadContext<T> addSchedule(String name, int initialDelay, int timeout, TimeUnit timeUnit,
+    private <T> ThreadContext<T> addSchedule(String name, int initialDelayInMillis, int timeout, TimeUnit timeUnit,
                                              ThrowingFunction<ThreadContext<T>, T, Exception> command,
                                              boolean showOnUI, boolean hideOnUIAfterCancel) {
         return addSchedule(name, timeUnit.toMillis(timeout), command, EntityContextBGPImpl.ScheduleType.DELAY,
                 showOnUI, hideOnUIAfterCancel, runnable -> {
-                    Date startDate = new Date(System.currentTimeMillis() + timeUnit.toMillis(initialDelay));
+                    Date startDate = new Date(System.currentTimeMillis() + initialDelayInMillis);
                     return taskScheduler.scheduleWithFixedDelay(runnable, startDate, timeUnit.toMillis(timeout));
                 });
     }

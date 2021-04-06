@@ -5,6 +5,7 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.setting.SettingPluginOptions;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
+import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,8 +14,8 @@ import java.util.List;
 public class ConsoleRefreshContentPeriodSetting implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
 
     @Override
-    public SettingType getSettingType() {
-        return SettingType.SelectBoxButton;
+    public UIFieldType getSettingType() {
+        return UIFieldType.SelectBoxButton;
     }
 
     @Override

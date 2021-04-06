@@ -1,6 +1,7 @@
 package org.touchhome.app.setting.workspace;
 
 import org.touchhome.app.setting.CoreSettingPlugin;
+import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 public class WorkspaceToolboxColorSetting implements CoreSettingPlugin<String> {
 
@@ -20,8 +21,8 @@ public class WorkspaceToolboxColorSetting implements CoreSettingPlugin<String> {
     }
 
     @Override
-    public SettingType getSettingType() {
-        return SettingType.ColorPicker;
+    public UIFieldType getSettingType() {
+        return UIFieldType.ColorPicker;
     }
 
     @Override

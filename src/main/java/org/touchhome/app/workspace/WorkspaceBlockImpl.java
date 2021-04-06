@@ -4,13 +4,13 @@ import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
-import org.apache.tika.parser.txt.CharsetDetector;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.state.RawType;
 import org.touchhome.bundle.api.state.State;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
@@ -104,7 +104,9 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     @Override
     public void logWarn(String message, Object... params) {
-        log(Level.WARN, message, params);
+        String msg = log.getMessageFactory().newMessage(message, params).getFormattedMessage();
+        log(Level.WARN, msg);
+        this.entityContext.ui().sendWarningMessage(msg);
     }
 
     @Override
@@ -542,10 +544,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             if (content instanceof State) {
                 return ((State) content).stringValue();
             } else if (content instanceof byte[]) {
-                CharsetDetector detector = new CharsetDetector();
-                detector.setText((byte[]) content);
-                detector.detect();
-                return detector.getString((byte[]) content, "UTF-8");
+                return RawType.detectByteToString((byte[]) content);
             } else {
                 return content.toString();
             }

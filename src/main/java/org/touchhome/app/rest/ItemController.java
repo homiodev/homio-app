@@ -31,7 +31,7 @@ import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.UISidebarButton;
-import org.touchhome.bundle.api.ui.UISidebarMenu;
+import org.touchhome.bundle.api.ui.UISidebarChildren;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
@@ -49,6 +49,7 @@ import java.awt.image.BufferedImage;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -98,9 +99,12 @@ public class ItemController {
             }
         }
         if (actionHolder instanceof HasDynamicContextMenuActions) {
-            Set<DynamicContextMenuAction> actions = ((HasDynamicContextMenuActions) actionHolder).getActions(entityContext);
+            Set<? extends DynamicContextMenuAction> actions = ((HasDynamicContextMenuActions) actionHolder).getActions(entityContext);
             DynamicContextMenuAction action = actions.stream().filter(a -> a.getName().equals(actionRequestModel.name)).findAny().orElse(null);
             if (action != null) {
+                if (action.isDisabled()) {
+                    throw new IllegalArgumentException("Unable to invoke disabled action");
+                }
                 action.getAction().accept(actionRequestModel.params);
                 return null;
             }
@@ -319,9 +323,9 @@ public class ItemController {
         for (BaseEntity item : items) {
             Set<UIActionResponse> actions = Collections.emptySet();
             if (item instanceof HasDynamicContextMenuActions) {
-                Set<DynamicContextMenuAction> dynamicContextMenuActions = ((HasDynamicContextMenuActions) item).getActions(entityContext);
+                Set<? extends DynamicContextMenuAction> dynamicContextMenuActions = ((HasDynamicContextMenuActions) item).getActions(entityContext);
                 if (dynamicContextMenuActions != null) {
-                    actions = dynamicContextMenuActions.stream().map(UIActionResponse::new).collect(Collectors.toSet());
+                    actions = dynamicContextMenuActions.stream().map(UIActionResponse::new).collect(Collectors.toCollection(LinkedHashSet::new));
                 }
             }
             contextActions.add(actions);
@@ -480,8 +484,12 @@ public class ItemController {
     }
 
     private OptionModel getUISideBarMenuOption(Class<?> aClass) {
-        UISidebarMenu uiSidebarMenu = aClass.getAnnotation(UISidebarMenu.class);
-        return uiSidebarMenu == null ? OptionModel.key(aClass.getSimpleName()) : OptionModel.key(aClass.getSimpleName());
+        OptionModel optionModel = OptionModel.key(aClass.getSimpleName());
+        UISidebarChildren uiSidebarChildren = aClass.getAnnotation(UISidebarChildren.class);
+        if (uiSidebarChildren != null) {
+            optionModel.json(json -> json.put("icon", uiSidebarChildren.icon()).put("color", uiSidebarChildren.color()));
+        }
+        return optionModel;
     }
 
     // set synchronized to avoid calculate multiple times
@@ -491,7 +499,13 @@ public class ItemController {
             Class<? extends BaseEntity> baseEntityByName = baseEntitySimpleClasses.get(type);
             if (baseEntityByName != null) {
                 if (Modifier.isAbstract(baseEntityByName.getModifiers())) {
-                    typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(baseEntityByName));
+                    typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(baseEntityByName).stream().filter((Predicate<Class>) child -> {
+                        if (child.isAnnotationPresent(UISidebarChildren.class)) {
+                            UISidebarChildren uiSidebarChildren = (UISidebarChildren) child.getDeclaredAnnotation(UISidebarChildren.class);
+                            return uiSidebarChildren.allowCreateItem();
+                        }
+                        return true;
+                    }).collect(Collectors.toList()));
                 } else {
                     typeToEntityClassNames.get(type).add(baseEntityByName);
                 }
@@ -569,7 +583,7 @@ public class ItemController {
 
         // if Class has only one selection and only one filtered method - use it
         long count = FieldUtils.getFieldsListWithAnnotation(entity.getClass(), UIField.class).stream().map(p -> p.getAnnotation(UIField.class).type())
-                .filter(f -> f == UIFieldType.Selection).count();
+                .filter(f -> f == UIFieldType.SelectBox).count();
         if (count == 1) {
             List<Method> methodsListWithAnnotation = Stream.of(entity.getClass().getDeclaredMethods())
                     .filter(m -> m.isAnnotationPresent(UIFilterOptions.class))

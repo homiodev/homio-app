@@ -4,9 +4,5 @@
     "TITLE": "Found device: {{NAME}}",
     "NAME": "Name   '{{NAME}}'",
     "URL": "URL    '{{URL}}'"
-  },
-  "VIDEO_STREAM": {
-    "PORT": "Port   {{PORT}}",
-    "NEW_DEVICE_QUESTION": "Do you want create new video stream?"
   }
 }

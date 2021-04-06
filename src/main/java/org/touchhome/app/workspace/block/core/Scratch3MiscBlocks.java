@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.state.RawType;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
@@ -33,7 +34,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
         this.printBlock = Scratch3Block.ofHandler("print", BlockType.command, this::printHandler);
         this.logToConsoleBlock = Scratch3Block.ofHandler("log_to_console", BlockType.command, this::logHandler);
         this.runScriptBlock = Scratch3Block.ofHandler("run_code", BlockType.command, this::runCodeHandler);
-        this.runScriptValueBlock = Scratch3Block.ofEvaluate("run_code_value", BlockType.reporter, this::runCodeValueEvaluate);
+        this.runScriptValueBlock = Scratch3Block.ofReporter("run_code_value", this::runCodeValueEvaluate);
     }
 
     private void runCodeHandler(WorkspaceBlock workspaceBlock) {
@@ -54,13 +55,17 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void logHandler(WorkspaceBlock workspaceBlock) {
-        log.info(workspaceBlock.getInputString("VALUE"));
+        log.info(workspaceBlock.getInputString(VALUE));
     }
 
     @SneakyThrows
     private void printHandler(WorkspaceBlock workspaceBlock) {
-        String str = workspaceBlock.getInputString("VALUE", "NULL");
-        JSONObject node = new JSONObject().put("block", workspaceBlock.getId()).put("value", str);
+        RawType rawType = workspaceBlock.getInputRawType(VALUE);
+        if (rawType == null) {
+            rawType = RawType.ofPlainText("NULL");
+        }
+        JSONObject node = new JSONObject().put("block", workspaceBlock.getId()).put("value", rawType.toFullString())
+                .put("mimeType", rawType.getMimeType()).put("name", rawType.getName());
         entityContext.ui().sendNotification("-workspace-block-update", node);
     }
 }

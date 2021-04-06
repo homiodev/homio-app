@@ -13,7 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 @Log4j2
-public class BroadcastLockImpl<T> implements BroadcastLock<T> {
+public class BroadcastLockImpl implements BroadcastLock {
     private final Condition condition;
     private final ReentrantLock lock;
     private String key;
@@ -22,7 +22,7 @@ public class BroadcastLockImpl<T> implements BroadcastLock<T> {
     private List<Consumer<Object>> signalListener;
 
     @Getter
-    private T value;
+    private Object value;
 
     public BroadcastLockImpl(String id, Object expectedValue) {
         this.key = id;
@@ -57,7 +57,7 @@ public class BroadcastLockImpl<T> implements BroadcastLock<T> {
         return false;
     }
 
-    public void signalAll(T value) {
+    public void signalAll(Object value) {
         if (expectedValue != null && !Objects.equals(expectedValue, value)) {
             return;
         }

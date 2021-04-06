@@ -28,6 +28,7 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldClassSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectValueOnEmpty;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 import org.touchhome.bundle.api.ui.method.UIFieldCreateWorkspaceVariableOnEmpty;
+import org.touchhome.bundle.api.util.SecureString;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.persistence.OneToMany;
@@ -79,7 +80,8 @@ public class UIFieldUtils {
             dynamicOptionLoader = (DynamicOptionLoader) TouchHomeUtils.newInstance(targetClass);
         }
         if (dynamicOptionLoader != null) {
-            return dynamicOptionLoader.loadOptions(entity instanceof BaseEntity ? (BaseEntity<?>) entity : null, entityContext);
+            return dynamicOptionLoader.loadOptions(entity instanceof BaseEntity ? (BaseEntity<?>) entity : null,
+                    entityContext, uiFieldTargetSelection.staticParameters());
         }
 
         if (targetClass.isEnum()) {
@@ -207,6 +209,9 @@ public class UIFieldUtils {
         if (uiField.inlineEdit()) {
             entityUIMetaData.setInlineEdit(true);
         }
+        if (uiField.inlineEditWhenEmpty()) {
+            entityUIMetaData.setInlineEditWhenEmpty(true);
+        }
         entityUIMetaData.setColor(trimToNull(uiField.color()));
         if (uiField.readOnly()) {
             entityUIMetaData.setReadOnly(true);
@@ -225,7 +230,7 @@ public class UIFieldUtils {
                     uiFieldContext.isAnnotationPresent(UIFieldSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldClassSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldBeanSelection.class)) {
-                entityUIMetaData.setType(uiField.readOnly() ? UIFieldType.String.name() : UIFieldType.Selection.name());
+                entityUIMetaData.setType(uiField.readOnly() ? UIFieldType.String.name() : UIFieldType.SelectBox.name());
             } else {
                 if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
                     Type argument = ((ParameterizedType) genericType).getActualTypeArguments()[0];
@@ -235,13 +240,16 @@ public class UIFieldUtils {
                     }
                 } else {
                     if (type.equals(boolean.class)) {
-                        type = Boolean.class;
+                        entityUIMetaData.setType(UIFieldType.Boolean.name());
                     } else if (type.equals(float.class)) {
-                        type = Float.class;
+                        entityUIMetaData.setType(UIFieldType.Float.name());
                     } else if (type.equals(int.class)) {
-                        type = Integer.class;
+                        entityUIMetaData.setType(UIFieldType.Integer.name());
+                    } else if (type.equals(SecureString.class)) {
+                        entityUIMetaData.setType(UIFieldType.String.name());
+                    } else {
+                        entityUIMetaData.setType(type.getSimpleName());
                     }
-                    entityUIMetaData.setType(type.getSimpleName());
                 }
             }
         } else {
@@ -579,6 +587,9 @@ public class UIFieldUtils {
         @Override
         @SneakyThrows
         public Object getDefaultValue(Object instance) {
+            if (methods.get(0).isAnnotationPresent(UIFieldIgnoreGetDefault.class)) {
+                return null;
+            }
             return methods.get(0).invoke(instance);
         }
 

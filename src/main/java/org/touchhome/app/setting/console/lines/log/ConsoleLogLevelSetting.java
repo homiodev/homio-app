@@ -5,13 +5,14 @@ import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Level;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsEnum;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
+import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 public class ConsoleLogLevelSetting implements ConsoleSettingPlugin<ConsoleLogLevelSetting.LogLevel>,
         SettingPluginOptionsEnum<ConsoleLogLevelSetting.LogLevel> {
 
     @Override
-    public SettingType getSettingType() {
-        return SettingType.SelectBoxButton;
+    public UIFieldType getSettingType() {
+        return UIFieldType.SelectBoxButton;
     }
 
     @Override

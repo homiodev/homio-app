@@ -44,11 +44,12 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
 
     @SneakyThrows
     private void receiveEventHandler(WorkspaceBlock workspaceBlock) {
-        workspaceBlock.getNextOrThrow();
-        String broadcastRefEntityID = workspaceBlock.getFieldId("BROADCAST_OPTION");
-        BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, broadcastRefEntityID);
+        workspaceBlock.handleNext(next -> {
+            String broadcastRefEntityID = workspaceBlock.getFieldId("BROADCAST_OPTION");
+            BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, broadcastRefEntityID);
 
-        workspaceBlock.subscribeToLock(lock);
+            workspaceBlock.subscribeToLock(lock, next::handle);
+        });
     }
 
     public void fireBroadcastEvent(String broadcastRefEntityID) {

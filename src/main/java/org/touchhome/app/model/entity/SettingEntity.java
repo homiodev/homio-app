@@ -12,6 +12,7 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
+import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -107,7 +108,7 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
         this.settingType = settingTypeRaw;
     }
 
-    public SettingEntity setSettingType(SettingPlugin.SettingType settingType) {
+    public SettingEntity setSettingType(UIFieldType settingType) {
         this.settingType = settingType.name();
         return this;
     }

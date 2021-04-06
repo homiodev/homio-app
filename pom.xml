@@ -27,11 +27,21 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.apache.tika</groupId>
-            <artifactId>tika-parsers</artifactId>
-            <version>1.25</version>
+       <!--<dependency>
+            <groupId>org.touchhome.bundle.extra</groupId>
+            <artifactId>touchhome-bundle-gdrive</artifactId>
+            <version>1.1.0-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>org.touchhome.bundle.extra</groupId>
+            <artifactId>touchhome-bundle-dropbox</artifactId>
+            <version>1.1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.touchhome.bundle.extra</groupId>
+            <artifactId>touchhome-bundle-ftp</artifactId>
+            <version>1.1.0-SNAPSHOT</version>
+        </dependency>-->
 
         <dependency>
             <groupId>org.jetbrains</groupId>
@@ -100,22 +110,6 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>30.0-jre</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.touchhome.bundle.extra</groupId>
-            <artifactId>touchhome-bundle-gdrive</artifactId>
-            <version>1.1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.touchhome.bundle.extra</groupId>
-            <artifactId>touchhome-bundle-dropbox</artifactId>
-            <version>1.1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.touchhome.bundle.extra</groupId>
-            <artifactId>touchhome-bundle-ftp</artifactId>
-            <version>1.1.0-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -433,15 +427,4 @@
 
         </profile>
     </profiles>
-
-    <repositories>
-        <repository>
-            <id>bintray-touchhome-maven-repo</id>
-            <url>https://dl.bintray.com/touchhome/maven-repo</url>
-        </repository>
-        <repository>
-            <id>bintray-touchhome-maven-repo-bundle-extra</id>
-            <url>https://dl.bintray.com/touchhome/maven-repo-extra-bundles</url>
-        </repository>
-    </repositories>
 </project>

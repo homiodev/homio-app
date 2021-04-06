@@ -43,7 +43,7 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
         return this;
     }
 
-    @UIField(order = 35, type = UIFieldType.Color)
+    @UIField(order = 35, type = UIFieldType.ColorPicker)
     public String getLabelColor() {
         return getJsonData("lc", "#e65100");
     }

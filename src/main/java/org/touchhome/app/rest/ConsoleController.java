@@ -29,7 +29,7 @@ import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.FileModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
-import org.touchhome.bundle.api.service.SshProvider;
+import org.touchhome.bundle.api.service.SshProviderService;
 import org.touchhome.bundle.api.setting.console.header.ConsoleHeaderSettingPlugin;
 import org.touchhome.bundle.api.ui.field.action.UIActionResponse;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -209,7 +209,7 @@ public class ConsoleController {
 
     @PostMapping("/ssh")
     @Secured(ADMIN_ROLE)
-    public SshProvider.SshSession openSshSession() {
+    public SshProviderService.SshSession openSshSession() {
         return this.entityContext.setting().getValue(ConsoleSshProviderSetting.class).openSshSession();
     }
 
@@ -220,7 +220,7 @@ public class ConsoleController {
     }
 
     @GetMapping("/ssh/{token}")
-    public SshProvider.SessionStatusModel getSshStatus(@PathVariable("token") String token) {
+    public SshProviderService.SessionStatusModel getSshStatus(@PathVariable("token") String token) {
         return this.entityContext.setting().getValue(ConsoleSshProviderSetting.class).getSshStatus(token);
     }
 

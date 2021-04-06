@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static org.touchhome.bundle.api.workspace.scratch.Scratch3Block.CONDITION;
-import static org.touchhome.bundle.api.workspace.scratch.Scratch3Block.SUBSTACK;
 
 @Getter
 @Component
@@ -64,8 +63,8 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void scheduleCronHandler(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasInput(SUBSTACK)) {
-            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+        if (workspaceBlock.hasChild()) {
+            WorkspaceBlock child = workspaceBlock.getChild();
             String cron = workspaceBlock.getInputString("SEC") + " " +
                     workspaceBlock.getInputString("MIN") + " " +
                     workspaceBlock.getInputString("HOUR") + " " +
@@ -80,10 +79,10 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     @SneakyThrows
     private void scheduleHandler(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasInput(SUBSTACK)) {
+        if (workspaceBlock.hasChild()) {
             Integer time = workspaceBlock.getInputInteger("TIME");
             TimeUnit timeUnit = TimeUnit.valueOf(workspaceBlock.getInputString("UNIT"));
-            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+            WorkspaceBlock child = workspaceBlock.getChild();
             while (!workspaceBlock.isDestroyed()) {
                 workspaceBlock.setState("execute");
                 child.handle();
@@ -95,8 +94,8 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     private void whenValueChangedHandler(WorkspaceBlock workspaceBlock) {
         AtomicReference<Object> ref = new AtomicReference<>();
-        lockForEvent(workspaceBlock, "VALUE", () -> {
-            Object value = workspaceBlock.getInput("VALUE", true);
+        lockForEvent(workspaceBlock, VALUE, () -> {
+            Object value = workspaceBlock.getInput(VALUE, true);
             if (!Objects.equals(ref.get(), value)) {
                 ref.set(value);
                 return true;
@@ -117,24 +116,22 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void lockForEvent(WorkspaceBlock workspaceBlock, String inputName, Supplier<Boolean> supplier) {
-        if (workspaceBlock.hasInput(inputName) && workspaceBlock.hasInput(SUBSTACK)) {
-            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
-            BroadcastLock lock = broadcastLockManager.listenEvent(workspaceBlock, supplier);
-            while (!workspaceBlock.isDestroyed()) {
-                if (lock.await(workspaceBlock)) {
-                    child.handle();
-                }
+        workspaceBlock.handleChildOptional(child -> {
+            if (workspaceBlock.hasInput(inputName)) {
+                BroadcastLock lock = broadcastLockManager.listenEvent(workspaceBlock, supplier);
+                workspaceBlock.subscribeToLock(lock, child::handle);
             }
-        }
+        });
     }
 
     private void repeatUntilHandler(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasInput(SUBSTACK) && workspaceBlock.hasInput(CONDITION)) {
-            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
-            while (workspaceBlock.getInputBoolean(CONDITION)) {
-                child.handle();
+        workspaceBlock.handleChildOptional(child -> {
+            if (workspaceBlock.hasInput(CONDITION)) {
+                while (workspaceBlock.getInputBoolean(CONDITION)) {
+                    child.handle();
+                }
             }
-        }
+        });
     }
 
     @SneakyThrows
@@ -161,9 +158,9 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void ifElseHandler(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasInput(SUBSTACK) && workspaceBlock.hasInput("SUBSTACK2") && workspaceBlock.hasInput(CONDITION)) {
+        if (workspaceBlock.hasChild() && workspaceBlock.hasInput("SUBSTACK2") && workspaceBlock.hasInput(CONDITION)) {
             if (workspaceBlock.getInputBoolean(CONDITION)) {
-                workspaceBlock.getInputWorkspaceBlock(SUBSTACK).handle();
+                workspaceBlock.getChild().handle();
             } else {
                 workspaceBlock.getInputWorkspaceBlock("SUBSTACK2").handle();
             }
@@ -171,21 +168,22 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void ifHandler(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasInput(CONDITION) && workspaceBlock.hasInput(SUBSTACK)) {
-            if (workspaceBlock.getInputBoolean(CONDITION)) {
-                workspaceBlock.getInputWorkspaceBlock(SUBSTACK).handle();
+        workspaceBlock.handleChildOptional(child -> {
+            if (workspaceBlock.hasInput(CONDITION)) {
+                if (workspaceBlock.getInputBoolean(CONDITION)) {
+                    child.handle();
+                }
             }
-        }
+        });
     }
 
     private void repeatHandler(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasInput(SUBSTACK)) {
-            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+        workspaceBlock.handleChildOptional(child -> {
             int times = workspaceBlock.getInputInteger("TIMES");
             for (int i = 0; i < times; i++) {
                 child.handle();
             }
-        }
+        });
     }
 
     @SneakyThrows
@@ -199,13 +197,12 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     @SneakyThrows
     private void foreverHandler(WorkspaceBlock workspaceBlock) {
-        if (workspaceBlock.hasInput(SUBSTACK)) {
-            WorkspaceBlock child = workspaceBlock.getInputWorkspaceBlock(SUBSTACK);
+        workspaceBlock.handleChildOptional(child -> {
             while (!workspaceBlock.isDestroyed()) {
                 child.handle();
 
                 Thread.sleep(100); // wait at least 100ms for 'clumsy hands'
             }
-        }
+        });
     }
 }

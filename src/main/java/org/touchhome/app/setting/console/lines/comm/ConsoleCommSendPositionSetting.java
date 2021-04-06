@@ -5,13 +5,14 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.model.KeyValueEnum;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsEnum;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
+import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 public class ConsoleCommSendPositionSetting implements ConsoleSettingPlugin<ConsoleCommSendPositionSetting.Position>,
         SettingPluginOptionsEnum<ConsoleCommSendPositionSetting.Position> {
 
     @Override
-    public SettingType getSettingType() {
-        return SettingType.SelectBoxButton;
+    public UIFieldType getSettingType() {
+        return UIFieldType.SelectBoxButton;
     }
 
     @Override

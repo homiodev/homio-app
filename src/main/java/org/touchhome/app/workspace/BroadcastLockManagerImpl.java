@@ -45,9 +45,9 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     }
 
     @Override
-    public <T> BroadcastLockImpl<T> getOrCreateLock(WorkspaceBlock workspaceBlock, String key, T expectedValue) {
+    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key, Object expectedValue) {
         Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
-        BroadcastLockImpl<T> lock = new BroadcastLockImpl<>(key, expectedValue);
+        BroadcastLockImpl lock = new BroadcastLockImpl(key, expectedValue);
         listenerHolder.broadcastListeners.putIfAbsent(key, new ArrayList<>());
         listenerHolder.broadcastListeners.get(key).add(lock);
         ((WorkspaceBlockImpl) workspaceBlock).addLock(lock);
@@ -55,19 +55,19 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     }
 
     @Override
-    public <T> BroadcastLockImpl<T> getOrCreateLock(WorkspaceBlock workspaceBlock) {
+    public  BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock) {
         return getOrCreateLock(workspaceBlock, workspaceBlock.getId(), null);
     }
 
     @Override
-    public <T> BroadcastLockImpl<T> getOrCreateLock(WorkspaceBlock workspaceBlock, String key) {
+    public  BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key) {
         return getOrCreateLock(workspaceBlock, key, null);
     }
 
     @Override
-    public <T> BroadcastLock<T> listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
+    public  BroadcastLock listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
         Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
-        BroadcastLockImpl<T> lock = getOrCreateLock(workspaceBlock);
+        BroadcastLockImpl lock = getOrCreateLock(workspaceBlock);
         listenerHolder.broadcastListenersMap.put(workspaceBlock.getId(), Pair.of(lock, supplier));
         if (listenerHolder.thread == null) {
             listenerHolder.thread = new Thread(runnable, Thread.currentThread().getName());

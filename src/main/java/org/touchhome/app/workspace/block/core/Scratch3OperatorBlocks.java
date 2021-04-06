@@ -4,7 +4,6 @@ import lombok.Getter;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
-import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
@@ -53,19 +52,19 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
         super("operator", entityContext);
 
         // Blocks
-        this.addBlock = Scratch3Block.ofEvaluate("add", BlockType.reporter, this::addEvaluateEvaluate);
-        this.subtractBlock = Scratch3Block.ofEvaluate("subtract", BlockType.reporter, this::subtractEvaluateEvaluate);
-        this.multiplyBlock = Scratch3Block.ofEvaluate("multiply", BlockType.reporter, this::multiplyEvaluateEvaluate);
-        this.divideBlock = Scratch3Block.ofEvaluate("divide", BlockType.reporter, this::divideEvaluateEvaluate);
-        this.randomBlock = Scratch3Block.ofEvaluate("random", BlockType.reporter, this::randomEvaluateEvaluate);
-        this.ltBlock = Scratch3Block.ofEvaluate("lt", BlockType.reporter, this::ltEvaluateEvaluate);
-        this.equalsBlock = Scratch3Block.ofEvaluate("equals", BlockType.reporter, this::equalsEvaluateEvaluate);
-        this.gtBlock = Scratch3Block.ofEvaluate("gt", BlockType.reporter, this::gtEvaluateEvaluate);
-        this.andBlock = Scratch3Block.ofEvaluate("and", BlockType.reporter, this::andEvaluateEvaluate);
-        this.orBlock = Scratch3Block.ofEvaluate("or", BlockType.reporter, this::orEvaluateEvaluate);
-        this.notBlock = Scratch3Block.ofEvaluate("not", BlockType.reporter, this::notEvaluateEvaluate);
-        this.mathOpBlock = Scratch3Block.ofEvaluate("mathop", BlockType.reporter, this::mathOpEvaluateEvaluate);
-        this.boolToNum = Scratch3Block.ofEvaluate("bool_to_num", BlockType.reporter, this::boolToNumberEvaluate);
+        this.addBlock = Scratch3Block.ofReporter("add", this::addEvaluateEvaluate);
+        this.subtractBlock = Scratch3Block.ofReporter("subtract", this::subtractEvaluateEvaluate);
+        this.multiplyBlock = Scratch3Block.ofReporter("multiply", this::multiplyEvaluateEvaluate);
+        this.divideBlock = Scratch3Block.ofReporter("divide", this::divideEvaluateEvaluate);
+        this.randomBlock = Scratch3Block.ofReporter("random", this::randomEvaluateEvaluate);
+        this.ltBlock = Scratch3Block.ofReporter("lt", this::ltEvaluateEvaluate);
+        this.equalsBlock = Scratch3Block.ofReporter("equals", this::equalsEvaluateEvaluate);
+        this.gtBlock = Scratch3Block.ofReporter("gt", this::gtEvaluateEvaluate);
+        this.andBlock = Scratch3Block.ofReporter("and", this::andEvaluateEvaluate);
+        this.orBlock = Scratch3Block.ofReporter("or", this::orEvaluateEvaluate);
+        this.notBlock = Scratch3Block.ofReporter("not", this::notEvaluateEvaluate);
+        this.mathOpBlock = Scratch3Block.ofReporter("mathop", this::mathOpEvaluateEvaluate);
+        this.boolToNum = Scratch3Block.ofReporter("bool_to_num", this::boolToNumberEvaluate);
     }
 
     private Object boolToNumberEvaluate(WorkspaceBlock workspaceBlock) {

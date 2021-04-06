@@ -28,7 +28,7 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         return getJsonData("ds");
     }
 
-    @UIField(order = 20, type = UIFieldType.Color)
+    @UIField(order = 20, type = UIFieldType.ColorPicker)
     public String getForeground() {
         return getJsonData("fg", "#009688");
     }
@@ -38,7 +38,7 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         return this;
     }
 
-    @UIField(order = 21, type = UIFieldType.Color)
+    @UIField(order = 21, type = UIFieldType.ColorPicker)
     public String getBackground() {
         return getJsonData("bg", "rgba(0, 0, 0, 0.1)");
     }
@@ -87,7 +87,7 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     public static class DisplayDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext, String[] staticParameters) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceStandaloneVariableEntity.class)
                     .add(WorkspaceVariableEntity.class)

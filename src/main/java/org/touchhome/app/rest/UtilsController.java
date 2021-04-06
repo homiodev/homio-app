@@ -22,11 +22,11 @@ import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
-import org.touchhome.app.utils.Curl;
 import org.touchhome.bundle.api.Lang;
 import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.fs.BaseFileSystemEntity;
 import org.touchhome.bundle.api.model.OptionModel;
+import org.touchhome.bundle.api.util.Curl;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.ByteArrayOutputStream;

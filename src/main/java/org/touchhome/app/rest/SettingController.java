@@ -22,6 +22,7 @@ import org.touchhome.bundle.api.setting.SettingPluginOptionsRemovable;
 import org.touchhome.bundle.api.setting.SettingPluginPackageInstall;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
+import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -237,7 +238,7 @@ public class SettingController {
                 String descriptionKey = bundleEntrypoint.getBundleId() + ".setting.description";
                 String description = Lang.findPathText(descriptionKey);
                 if (description != null) {
-                    this.descriptionSettings.add(new SettingEntity().setSettingType(SettingPlugin.SettingType.Description)
+                    this.descriptionSettings.add(new SettingEntity().setSettingType(UIFieldType.Description)
                             .setBundle(bundleEntrypoint.getBundleId())
                             .setVisible(true)
                             .setEntityID(SettingEntity.PREFIX + bundleEntrypoint.getBundleId() + "_Description")

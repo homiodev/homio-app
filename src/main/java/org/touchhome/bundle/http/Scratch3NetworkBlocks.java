@@ -49,7 +49,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
                 "HTTP [METHOD] url [URL] | RAW: [RAW] ", this::httpRequestHandler);
         this.httpRequestCommand.addArgument("METHOD", this.methodMenu);
         this.httpRequestCommand.addArgument("URL", touchHomeProperties.getServerSiteURL() + "/sample");
-        this.httpRequestCommand.addArgument("RAW", ArgumentType.checkbox);
+        this.httpRequestCommand.addArgument("RAW", false);
 
         this.httpRequestHeaderCommand = Scratch3Block.ofHandler(20, HttpApplyHandler.update_header.name(), BlockType.command,
                 "HTTP Header [KEY]/[VALUE]", this::httpRequestHeaderHandler);
@@ -70,7 +70,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         this.httpPayloadCommand.addArgument("PAYLOAD");
         this.httpPayloadCommand.appendSpace();
 
-        this.onUDPEventCommand = Scratch3Block.ofHandler(60, "udp_listener", BlockType.hat,
+        this.onUDPEventCommand = Scratch3Block.ofHat(60, "udp_listener",
                 "UDP in [HOST]/[PORT]", this::onUdpEventHandler);
         this.onUDPEventCommand.addArgument("HOST", "0.0.0.0");
         this.onUDPEventCommand.addArgument("PORT", 8888);

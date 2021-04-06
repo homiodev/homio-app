@@ -59,7 +59,7 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
         return this;
     }
 
-    @UIField(order = 15, type = UIFieldType.Color)
+    @UIField(order = 15, type = UIFieldType.ColorPicker)
     public String getColor() {
         return getJsonData("color", "#FFFFFF");
     }
@@ -77,7 +77,7 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
     public static class SliderSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext) {
+        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext, String[] staticParameters) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceStandaloneVariableEntity.class)
                     .add(WorkspaceVariableEntity.class)
