@@ -86,17 +86,15 @@ public class Scratch3ImageBlocks extends Scratch3ExtensionBlocks {
         this.overlayImageCommand.addArgument("W", -1);
         this.overlayImageCommand.addArgument("H", -1);
 
-        this.brightnessImageCommand = img(99, "brightness", "Set contrast [VALUE](0-2.0) and brightness [OFFSET](0-255) of image [IMAGE])",
+        this.brightnessImageCommand = img(99, "brightness", "Set brightness [VALUE] of image [IMAGE])",
                 this::brightnessImageCommand);
-        this.brightnessImageCommand.addArgument(VALUE, 1.2);
-        this.brightnessImageCommand.addArgument("OFFSET", 10);
+        this.brightnessImageCommand.addArgument(VALUE, 1);
     }
 
     private RawType brightnessImageCommand(WorkspaceBlock workspaceBlock) {
         return handle(workspaceBlock, (formatType, image) ->
                 entityContext.setting().getValue(ImageDefaultProcessingSetting.class).setBrightness(image,
-                        workspaceBlock.getInputFloat(VALUE),
-                        workspaceBlock.getInputInteger("OFFSET"), formatType));
+                        workspaceBlock.getInputFloat(VALUE), formatType));
     }
 
     private RawType overlayImageCommand(WorkspaceBlock workspaceBlock) {

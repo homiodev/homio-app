@@ -14,7 +14,6 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
-import java.awt.image.RescaleOp;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
@@ -43,14 +42,41 @@ public class AwtImageProviderService implements ImageProviderService {
     }
 
     @Override
-    public byte[] setBrightness(byte[] image, float contrast, int bright, String formatType) {
+    public byte[] setBrightness(byte[] image, float brightnessPercentage, String formatType) {
+        if (brightnessPercentage == 1F) {
+            return image;
+        }
         return handleChangeImage(image, formatType, bufferedImage -> {
             if (bufferedImage.getType() == BufferedImage.TYPE_BYTE_INDEXED) {
                 bufferedImage = copyImage(bufferedImage, "png".equals(formatType) ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
             }
             BufferedImage targetImage = copyImage(bufferedImage, "png".equals(formatType) ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
-            RescaleOp op = new RescaleOp(contrast, bright, null);
-            return op.filter(bufferedImage, targetImage);
+            int[] pixel = {0, 0, 0, 0};
+            float[] hsbvals = {0, 0, 0};
+            // recalculare every pixel, changing the brightness
+            for (int i = 0; i < targetImage.getHeight(); i++) {
+                for (int j = 0; j < targetImage.getWidth(); j++) {
+
+                    // get the pixel data
+                    targetImage.getRaster().getPixel(j, i, pixel);
+
+                    // converts its data to hsb to change brightness
+                    Color.RGBtoHSB(pixel[0], pixel[1], pixel[2], hsbvals);
+
+                    // calculates the brightness component.
+                    float newBrightness = hsbvals[2] * brightnessPercentage;
+                    if (newBrightness > 1f) {
+                        newBrightness = 1f;
+                    }
+
+                    // create a new color with the new brightness
+                    Color c = new Color(Color.HSBtoRGB(hsbvals[0], hsbvals[1], newBrightness));
+
+                    // set the new pixel
+                    targetImage.getRaster().setPixel(j, i, new int[]{c.getRed(), c.getGreen(), c.getBlue(), pixel[3]});
+                }
+            }
+            return targetImage;
         });
     }
 
