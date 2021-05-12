@@ -8,7 +8,7 @@ import org.touchhome.bundle.api.hquery.api.HardwareRepositoryAnnotation;
 public interface SshHardwareRepository {
 
     @HardwareQuery(name = "Download tmate", printOutput = true,
-            value = "wget https://bintray.com/touchhome/touchhome/download_file?file_path=tmate-2.4.0-static-linux-:armv.tar.xz -O ${rootDir}/tmate.tar.xz")
+            value = "wget ${artifactoryFilesURL}/tmate-2.4.0-static-linux-:armv.tar.xz -O ${rootDir}/tmate.tar.xz")
     @HardwareQuery(name = "Unzip tmate", printOutput = true,
             value = "tar -C ${rootDir} -xvf ${rootDir}/tmate.tar.xz && rm -rf ${rootDir}/tmate.tar.xz && mkdir -p ${rootDir}/ssh")
     @HardwareQuery(name = "Install tmate", printOutput = true,

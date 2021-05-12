@@ -24,7 +24,7 @@ public class ConsoleVisibleTabsSetting implements ConsoleSettingPlugin<String>, 
     }
 
     @Override
-    public Collection<OptionModel> getOptions(EntityContext entityContext) {
+    public Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
         Map<String, OptionModel> result = new HashMap<>();
         result.put("logs", OptionModel.key("logs").json(json -> json.put("available", true)));
         Map<String, ConsolePlugin<?>> map = entityContext.getBean(ConsoleController.class).getConsolePluginsMap();

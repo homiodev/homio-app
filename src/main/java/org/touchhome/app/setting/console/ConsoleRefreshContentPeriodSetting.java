@@ -1,5 +1,6 @@
 package org.touchhome.app.setting.console;
 
+import org.json.JSONObject;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -9,6 +10,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 public class ConsoleRefreshContentPeriodSetting implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
@@ -34,7 +36,7 @@ public class ConsoleRefreshContentPeriodSetting implements ConsoleSettingPlugin<
     }
 
     @Override
-    public List<OptionModel> getOptions(EntityContext entityContext) {
+    public Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
         return new ArrayList<>(Arrays.asList(
                 OptionModel.of("0", "time.NEVER"),
                 OptionModel.of("5", "time.SEC_5"),

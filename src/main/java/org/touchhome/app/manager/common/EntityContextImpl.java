@@ -21,6 +21,7 @@ import org.hibernate.persister.entity.Joinable;
 import org.json.JSONObject;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.env.Environment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -107,6 +108,7 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextEventImpl entityContextEvent;
     private final EntityContextBGPImpl entityContextBGP;
     private final EntityContextSettingImpl entityContextSetting;
+    private final Environment environment;
 
     private final ClassFinder classFinder;
     private final CacheService cacheService;
@@ -131,9 +133,10 @@ public class EntityContextImpl implements EntityContext {
     private Set<ApplicationContext> allApplicationContexts = new HashSet<>();
 
     public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, ThreadPoolTaskScheduler taskScheduler,
-                             SimpMessagingTemplate messagingTemplate,
+                             SimpMessagingTemplate messagingTemplate, Environment environment,
                              BroadcastLockManager broadcastLockManager, TouchHomeProperties touchHomeProperties) {
         this.classFinder = classFinder;
+        this.environment = environment;
         this.cacheService = cacheService;
         this.broadcastLockManager = broadcastLockManager;
         this.touchHomeProperties = touchHomeProperties;
@@ -824,5 +827,9 @@ public class EntityContextImpl implements EntityContext {
         } catch (Exception ignore) {
         }
         return null;
+    }
+
+    public <T> T getEnv(String key, Class<T> classType, T defaultValue) {
+        return environment.getProperty(key, classType, defaultValue);
     }
 }

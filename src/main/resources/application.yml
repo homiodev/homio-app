@@ -1,4 +1,5 @@
 rootDir: /opt/touchhome
+artifactoryFilesURL: https://touchhome.jfrog.io/artifactory/files-remote
 
 touchhome:
   disableSecurity: false

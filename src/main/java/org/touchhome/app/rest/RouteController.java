@@ -10,8 +10,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.model.entity.SettingEntity;
+import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.condition.TrueCondition;
 import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,15 +24,17 @@ import java.util.stream.Stream;
 @RequestMapping("/rest/route")
 public class RouteController {
 
+    private final EntityContext entityContext;
     private final List<Class<?>> uiSidebarMenuClasses;
     private final BundleController bundleController;
     private final SettingController settingController;
 
     public RouteController(ClassFinder classFinder, BundleController bundleController,
-                           SettingController settingController) {
+                           SettingController settingController, EntityContext entityContext) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
         this.bundleController = bundleController;
         this.settingController = settingController;
+        this.entityContext = entityContext;
     }
 
     private static class BootstrapContext {
@@ -96,8 +101,10 @@ public class RouteController {
         route.allowCreateNewItems = uiSidebarMenu.allowCreateNewItems();
         route.sidebarButtons = new ArrayList<>();
         for (UISidebarButton button : aClass.getAnnotationsByType(UISidebarButton.class)) {
-            route.sidebarButtons.add(new SidebarButton(button.buttonIcon(), button.buttonTitle(), button.buttonText(),
-                    button.buttonIconColor(), button.confirm(), button.handlerClass().getSimpleName()));
+            if (button.conditionalClass().isAssignableFrom(TrueCondition.class) || TouchHomeUtils.newInstance(button.conditionalClass()).test(entityContext)) {
+                route.sidebarButtons.add(new SidebarButton(button.buttonIcon(), button.buttonTitle(), button.buttonText(),
+                        button.buttonIconColor(), button.confirm(), button.handlerClass().getSimpleName()));
+            }
         }
         routes.add(route);
     }

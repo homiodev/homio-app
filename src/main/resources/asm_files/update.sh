@@ -57,8 +57,8 @@ fi
 
 PROGRAM_NAME="touchhome"
 PROGRAM_PATH=/opt/${PROGRAM_NAME}.jar
-EXPECTED_CHECKSUM="$(wget -qO- https://bintray.com/touchhome/touchhome/download_file?file_path=touchhome.jar.md5)"
-RELEASE_PROGRAM_URL="https://bintray.com/touchhome/touchhome/download_file?file_path=touchhome.jar"
+EXPECTED_CHECKSUM="$(wget -qO- https://touchhome.jfrog.io/artifactory/files-remote/touchhome.jar.md5)"
+RELEASE_PROGRAM_URL="https://touchhome.jfrog.io/artifactory/files-remote/touchhome.jar"
 
 PROGRAM_NAME="touchhome"
 PID=$(ps aux | grep -v -e 'grep ' | grep ${PROGRAM_NAME} | tr -s " " | cut -d " " -f 2)

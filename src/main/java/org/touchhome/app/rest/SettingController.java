@@ -3,6 +3,7 @@ package org.touchhome.app.rest;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.manager.BundleService;
@@ -66,9 +67,10 @@ public class SettingController {
     }
 
     @GetMapping("/{entityID}/options")
-    public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID) {
+    public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID,
+                                                              @PathVariable("param0") String param0) {
         SettingPluginOptions<?> settingPlugin = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
-        return SettingRepository.getOptions(settingPlugin, entityContext);
+        return SettingRepository.getOptions(settingPlugin, entityContext, new JSONObject().put("param0", param0));
     }
 
     @GetMapping("/{entityID}/packages/all")

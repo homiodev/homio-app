@@ -16,13 +16,6 @@ deploy:
     on:
       tags: true
 
-  - provider: bintray
-    skip_cleanup: true
-    user: $BINTRAY_USER
-    key:  $BINTRAY_KEY
-    file: 'bintray.json'
-    on:
-      tags: true
   - provider: script
     skip_cleanup: true
     script: bash docker-push.sh $TRAVIS_TAG

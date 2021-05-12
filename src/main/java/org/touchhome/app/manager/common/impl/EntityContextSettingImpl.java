@@ -37,7 +37,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         String entityID = SettingEntity.getKey(settingPlugin);
         SettingPluginOptions<?> pluginOptions = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
 
-        Collection<OptionModel> options = SettingRepository.getOptions(pluginOptions, entityContext);
+        Collection<OptionModel> options = SettingRepository.getOptions(pluginOptions, entityContext, null);
         entityContext.ui().sendGlobal(EntityContextUI.GlobalSendType.setting, entityID, options, null,
                 new JSONObject().put("subType", "list"));
     }

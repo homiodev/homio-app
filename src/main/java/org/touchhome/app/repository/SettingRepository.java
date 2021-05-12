@@ -1,6 +1,7 @@
 package org.touchhome.app.repository;
 
 import lombok.SneakyThrows;
+import org.json.JSONObject;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
@@ -42,8 +43,8 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         return settingEntity;
     }
 
-    public static Collection<OptionModel> getOptions(SettingPluginOptions<?> plugin, EntityContext entityContext) {
-        Collection<OptionModel> options = plugin.getOptions(entityContext);
+    public static Collection<OptionModel> getOptions(SettingPluginOptions<?> plugin, EntityContext entityContext, JSONObject param) {
+        Collection<OptionModel> options = plugin.getOptions(entityContext, param);
         if (plugin instanceof SettingPluginOptionsRemovable) {
             for (OptionModel option : options) {
                 if (((SettingPluginOptionsRemovable<?>) plugin).removableOption(option)) {
@@ -77,7 +78,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             if (entity.isStorable()) {
                 if (entity.getSettingType().equals(UIFieldType.SelectBoxButton.name())
                         || entity.getSettingType().equals(UIFieldType.SelectBox.name())) {
-                    entity.setAvailableValues(SettingRepository.getOptions((SettingPluginOptions<?>) plugin, entityContext));
+                    entity.setAvailableValues(SettingRepository.getOptions((SettingPluginOptions<?>) plugin, entityContext, null));
                 }
             }
 
