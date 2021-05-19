@@ -68,7 +68,7 @@ public class SettingController {
 
     @GetMapping("/{entityID}/options")
     public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID,
-                                                              @PathVariable("param0") String param0) {
+                                                              @RequestParam(value = "param0", required = false) String param0) {
         SettingPluginOptions<?> settingPlugin = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         return SettingRepository.getOptions(settingPlugin, entityContext, new JSONObject().put("param0", param0));
     }
@@ -170,6 +170,10 @@ public class SettingController {
             } else if (SettingPluginPackageInstall.class.isAssignableFrom(entry.getKey())) {
                 settingEntity.setSettingTypeRaw("BundleInstaller");
             }
+            for (String key : settingEntity.getJsonData().keySet()) {
+                settingEntity.getParameters().put(key, settingEntity.getJsonData().get(key));
+            }
+
             settings.add(settingEntity);
         }
 

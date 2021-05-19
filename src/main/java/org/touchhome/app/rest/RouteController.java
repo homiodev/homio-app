@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.common.ClassFinder;
+import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.condition.TrueCondition;
@@ -42,9 +43,10 @@ public class RouteController {
         public Map<String, List<SidebarMenuItem>> menu;
         public List<BundleController.BundleJson> bundles;
         public List<SettingEntity> settings;
+        public EntityContextUIImpl.NotificationResponse notifications;
     }
 
-    @GetMapping("bootstrap")
+    @GetMapping("/bootstrap")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public BootstrapContext getBootstrap() {
         BootstrapContext context = new BootstrapContext();
@@ -52,6 +54,7 @@ public class RouteController {
         context.menu = getMenu();
         context.bundles = bundleController.getBundles();
         context.settings = settingController.getSettings();
+        context.notifications = ((EntityContextUIImpl) entityContext.ui()).getNotifications();
 
         return context;
     }

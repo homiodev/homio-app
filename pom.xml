@@ -175,6 +175,12 @@
 
         <dependency>
             <groupId>org.touchhome.bundle</groupId>
+            <artifactId>touchhome-bundle-mail</artifactId>
+            <version>${touchhome-bundle.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.touchhome.bundle</groupId>
             <artifactId>touchhome-bundle-zigbee</artifactId>
             <version>${touchhome-bundle.version}</version>
         </dependency>

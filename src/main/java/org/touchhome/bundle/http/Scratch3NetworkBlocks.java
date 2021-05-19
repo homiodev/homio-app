@@ -39,7 +39,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block sendUDPCCommand;
 
     public Scratch3NetworkBlocks(EntityContext entityContext, TouchHomeProperties touchHomeProperties) throws SocketException {
-        super("#B8C39B", entityContext, null, "net");
+        super("#595F4B", entityContext, null, "net");
         this.udpSocket.setBroadcast(true);
 
         // Menu
@@ -52,21 +52,21 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         this.httpRequestCommand.addArgument("RAW", false);
 
         this.httpRequestHeaderCommand = Scratch3Block.ofHandler(20, HttpApplyHandler.update_header.name(), BlockType.command,
-                "HTTP Header [KEY]/[VALUE]", this::httpRequestHeaderHandler);
+                "HTTP Header [KEY]/[VALUE]", this::skipCommand);
         this.httpRequestHeaderCommand.addArgument("KEY", "key");
         this.httpRequestHeaderCommand.addArgument(VALUE, "value");
 
         this.httpBasicAuthCommand = Scratch3Block.ofHandler(30, HttpApplyHandler.update_basic_auth.name(), BlockType.command,
-                "HTTP Basic auth [USER]/[PWD]", this::httpBasicAuthHandler);
+                "HTTP Basic auth [USER]/[PWD]", this::skipCommand);
         this.httpBasicAuthCommand.addArgument("USER", "user");
         this.httpBasicAuthCommand.addArgument("PWD", "password");
 
         this.httpBearerAuthCommand = Scratch3Block.ofHandler(40, HttpApplyHandler.update_bearer_auth.name(), BlockType.command,
-                "HTTP Bearer auth [TOKEN]", this::httpBearerAuthHandler);
+                "HTTP Bearer auth [TOKEN]", this::skipCommand);
         this.httpBearerAuthCommand.addArgument("TOKEN", "token");
 
         this.httpPayloadCommand = Scratch3Block.ofHandler(50, HttpApplyHandler.update_payload.name(), BlockType.command,
-                "HTTP Body payload [PAYLOAD]", this::httpPayloadHandler);
+                "HTTP Body payload [PAYLOAD]", this::skipCommand);
         this.httpPayloadCommand.addArgument("PAYLOAD");
         this.httpPayloadCommand.appendSpace();
 
@@ -127,19 +127,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         }
     }
 
-    private void httpPayloadHandler(WorkspaceBlock workspaceBlock) {
-        // skip execution
-    }
-
-    private void httpBearerAuthHandler(WorkspaceBlock workspaceBlock) {
-        // skip execution
-    }
-
-    private void httpBasicAuthHandler(WorkspaceBlock workspaceBlock) {
-        // skip execution
-    }
-
-    private void httpRequestHeaderHandler(WorkspaceBlock workspaceBlock) {
+    private void skipCommand(WorkspaceBlock workspaceBlock) {
         // skip execution
     }
 

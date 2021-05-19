@@ -90,7 +90,16 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             }
 
             if (plugin instanceof DynamicConsoleHeaderSettingPlugin) {
-                entity.setTitle(((DynamicConsoleHeaderSettingPlugin<?>) plugin).getTitle());
+                entity.setName(((DynamicConsoleHeaderSettingPlugin<?>) plugin).getTitle());
+            }
+
+            if (plugin instanceof SettingPluginOptionsFileExplorer) {
+                if (((SettingPluginOptionsFileExplorer) plugin).allowSelectDirs()) {
+                    entity.getJsonData().put("ASD", true);
+                }
+                if (((SettingPluginOptionsFileExplorer) plugin).allowSelectFiles()) {
+                    entity.getJsonData().put("ASF", true);
+                }
             }
 
             if (plugin instanceof ConsoleSettingPlugin) {

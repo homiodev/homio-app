@@ -91,11 +91,6 @@ public class UtilsController {
         return Collections.emptyList();
     }
 
-    @GetMapping("/notifications")
-    public EntityContextUIImpl.NotificationResponse getNotifications() {
-        return entityContext.ui().getNotifications();
-    }
-
     @PostMapping("/getCompletions")
     public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest) throws NoSuchMethodException {
         ParserContext context = ParserContext.noneContext();
