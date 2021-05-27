@@ -403,10 +403,6 @@ public class UIFieldUtils {
             entityUIMetaData.setType("CodeEditor");
         }
 
-        if (uiFieldContext.isAnnotationPresent(UIFieldRenderAsHTML.class)) {
-            entityUIMetaData.setType("HTML");
-        }
-
         if (uiField.showInContextMenu() && entityUIMetaData.getType().equals(Boolean.class.getSimpleName())) {
             entityUIMetaData.setShowInContextMenu(true);
         }
@@ -553,7 +549,10 @@ public class UIFieldUtils {
                 if (method.isAnnotationPresent(UIFieldIgnoreParent.class)) {
                     break;
                 }
-                methods.add(method);
+                // add only methods with zero argument count
+                if(method.getParameterCount() == 0) {
+                    methods.add(method);
+                }
             }
             this.name = getDeclaredAnnotation(UIField.class).name();
             this.methodName = InternalUtil.getMethodShortName(uiFieldMethod);

@@ -82,9 +82,9 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
         String color = workspaceBlock.getInputString("COLOR");
         // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
         if (isFetchDuration) {
-            entityContext.ui().addHeaderButton(workspaceBlock.getId(), title, color, workspaceBlock.getInputInteger("DURATION"), SendBroadcastSetting.class);
+            entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title, null, false, true, workspaceBlock.getInputInteger("DURATION"), null, SendBroadcastSetting.class);
         } else {
-            entityContext.ui().addHeaderButton(workspaceBlock.getId(), title, "fas fa-" + workspaceBlock.getInputString("ICON"), color, false, SendBroadcastSetting.class);
+            entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title, "fas fa-" + workspaceBlock.getInputString("ICON"), false, true, null, null, SendBroadcastSetting.class);
         }
         workspaceBlock.onRelease(() -> entityContext.ui().removeHeaderButton(workspaceBlock.getId()));
     }

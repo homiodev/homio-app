@@ -46,6 +46,7 @@ public class ConsoleController {
 
     private final LogService logService;
     private final EntityContext entityContext;
+    private final ItemController itemController;
     private final Set<ConsoleTab> tabs = new ArraySet<>();
     @Getter
     private Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
@@ -135,7 +136,7 @@ public class ConsoleController {
         if (consolePlugin instanceof ConsolePluginTable) {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-            return ItemController.executeAction(entityContext, actionRequestModel, identifier, entityContext.getEntity(identifier.getEntityID()));
+            return itemController.executeAction(actionRequestModel, identifier, entityContext.getEntity(identifier.getEntityID()));
         } else if (consolePlugin instanceof ConsolePluginCommunicator) {
             return ((ConsolePluginCommunicator) consolePlugin).commandReceived(actionRequestModel.getName());
         } else if (consolePlugin instanceof ConsolePluginEditor) {

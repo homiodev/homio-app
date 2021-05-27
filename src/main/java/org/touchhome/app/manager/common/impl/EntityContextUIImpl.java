@@ -1,6 +1,5 @@
 package org.touchhome.app.manager.common.impl;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -19,9 +18,14 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.setting.SettingPluginButton;
 import org.touchhome.bundle.api.setting.SettingPluginStatus;
 import org.touchhome.bundle.api.ui.BellNotification;
+import org.touchhome.bundle.api.ui.DialogModel;
+import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.util.NotificationLevel;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -30,7 +34,7 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 @Log4j2
 @RequiredArgsConstructor
 public class EntityContextUIImpl implements EntityContextUI {
-    private final Map<String, ConfirmationRequestModel> confirmationRequest = new ConcurrentHashMap<>();
+    private final Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
     private final Map<String, BellNotification> bellNotifications = new ConcurrentHashMap<>();
     private final Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
     private final Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
@@ -67,22 +71,24 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public void sendConfirmation(@NotNull String key, @NotNull String title, @NotNull Runnable confirmHandler,
-                                 @NotNull Collection<String> messages, String headerButtonAttachTo) {
-        if (!confirmationRequest.containsKey(key)) {
-            JSONObject params = null;
-            ConfirmationRequestModel confirmationRequestModel = new ConfirmationRequestModel(title, key, confirmHandler, messages);
-            if (StringUtils.isNotEmpty(headerButtonAttachTo)) {
-                HeaderButtonNotification notificationModel = headerButtonNotifications.get(headerButtonAttachTo);
+    public void sendDialogRequest(@NotNull DialogModel dialogModel) {
+        dialogRequest.computeIfAbsent(dialogModel.getEntityID(), key -> {
+            if (StringUtils.isNotEmpty(dialogModel.getHeaderButtonAttachTo())) {
+                HeaderButtonNotification notificationModel = headerButtonNotifications.get(dialogModel.getHeaderButtonAttachTo());
                 if (notificationModel != null) {
-                    notificationModel.getConfirmations().add(confirmationRequestModel);
-                    params = new JSONObject().put("attachTo", headerButtonAttachTo);
+                    notificationModel.getDialogs().add(dialogModel);
                 }
             }
 
-            confirmationRequest.put(key, confirmationRequestModel);
-            sendGlobal(GlobalSendType.confirmation, key, String.join("~~", messages), title, params);
-        }
+            if (dialogModel.getMaxTimeoutInSec() > 0) {
+                entityContext.bgp().run(key + "-dialog-timeout", dialogModel.getMaxTimeoutInSec() * 1000, () ->
+                        handleDialog(key, DialogResponseType.Timeout, null, null), true);
+            }
+
+            sendGlobal(GlobalSendType.dialog, key, dialogModel, null, null);
+
+            return dialogModel;
+        });
     }
 
     @Override
@@ -96,27 +102,26 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public void addHeaderButton(@NotNull String entityID, String title, @NotNull String icon, @NotNull String color,
-                                boolean rotate, Class<? extends SettingPluginButton> stopAction) {
-        addHeaderButton(entityID, title, icon, color, rotate, null, stopAction);
-    }
-
-    @Override
-    public void addHeaderButton(@NotNull String entityID, String title, @NotNull String color, int duration, Class<? extends SettingPluginButton> stopAction) {
-        addHeaderButton(entityID, title, null, color, false, duration, stopAction);
-    }
-
-    private void addHeaderButton(String entityID, String title, String icon, String color,
-                                 boolean rotate, Integer duration, Class<? extends SettingPluginButton> stopAction) {
+    public void addHeaderButton(@NotNull String entityID, @NotNull String color, @Nullable String title,
+                                @Nullable String icon, boolean rotate, boolean border,
+                                @Nullable Integer duration, @Nullable Class<? extends BaseEntity> page,
+                                @Nullable Class<? extends SettingPluginButton> hideAction) {
         HeaderButtonNotification topJson = new HeaderButtonNotification(entityID).setIcon(icon).setColor(color)
-                .setTitle(title).setColor(color).setDuration(duration).setIconRotate(rotate);
-        if (stopAction != null) {
-            topJson.setStopAction("st_" + stopAction.getSimpleName());
+                .setTitle(title).setColor(color).setDuration(duration).setIconRotate(rotate).setBorder(border);
+        if (page != null) {
+            if (!page.isAnnotationPresent(UISidebarMenu.class)) {
+                throw new IllegalArgumentException("Trying add header button to page without annotation UISidebarMenu");
+            }
+            page.getDeclaredAnnotation(UISidebarMenu.class);
+            topJson.setPage(StringUtils.defaultIfEmpty(page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(), page.getSimpleName()));
+        }
+        if (hideAction != null) {
+            topJson.setStopAction("st_" + hideAction.getSimpleName());
         }
         HeaderButtonNotification existedModel = headerButtonNotifications.get(entityID);
         // preserve confirmations
         if (existedModel != null) {
-            topJson.getConfirmations().addAll(existedModel.getConfirmations());
+            topJson.getDialogs().addAll(existedModel.getDialogs());
         }
         headerButtonNotifications.put(entityID, topJson);
         sendHeaderButtonToUI(topJson, null);
@@ -126,14 +131,18 @@ public class EntityContextUIImpl implements EntityContextUI {
     public void removeHeaderButton(@NotNull String entityID, @Nullable String icon, boolean forceRemove) {
         HeaderButtonNotification notification = headerButtonNotifications.get(entityID);
         if (notification != null) {
-            if (notification.getConfirmations().isEmpty()) {
+            if (notification.getDialogs().isEmpty()) {
                 headerButtonNotifications.remove(entityID);
             } else {
                 notification.setIconRotate(false);
                 notification.setIcon(icon == null ? notification.getIcon() : icon);
             }
-            sendHeaderButtonToUI(notification, jsonObject -> jsonObject.put("remove", true).put("forceRemove", forceRemove));
+            sendHeaderButtonToUI(notification, jsonObject -> jsonObject.put("action", forceRemove ? "forceRemove" : "remove"));
         }
+    }
+
+    public void disableHeaderButton(String entityID, boolean disable) {
+        sendGlobal(GlobalSendType.headerButton, entityID, null, null, new JSONObject().put("action", "toggle").put("disable", disable));
     }
 
     private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<JSONObject> additionalSupplier) {
@@ -141,8 +150,8 @@ public class EntityContextUIImpl implements EntityContextUI {
                 .put("creationTime", notification.getCreationTime())
                 .put("duration", notification.getDuration())
                 .put("color", notification.getColor())
-                .put("iconRotate", notification.isIconRotate())
-                .put("confirmations", notification.getConfirmations())
+                .put("iconRotate", notification.getIconRotate())
+                .put("confirmations", notification.getDialogs())
                 .put("stopAction", notification.getStopAction());
         if (additionalSupplier != null) {
             additionalSupplier.accept(jsonObject);
@@ -158,6 +167,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         });
 
         NotificationResponse notificationResponse = new NotificationResponse();
+        notificationResponse.dialogs = dialogRequest.values();
         notificationResponse.bellNotifications.addAll(bellNotifications.values());
         notificationResponse.headerButtonNotifications = headerButtonNotifications.values();
         notificationResponse.progress = progressMap.values();
@@ -179,38 +189,19 @@ public class EntityContextUIImpl implements EntityContextUI {
         return notificationResponse;
     }
 
-    public ConfirmationRequestModel removeConfirmation(String entityID) {
-        ConfirmationRequestModel confirmationRequestModel = confirmationRequest.remove(entityID);
-        if (confirmationRequestModel != null) {
+    public void handleDialog(String entityID, DialogResponseType dialogResponseType, String pressedButton, JSONObject params) {
+        DialogModel model = dialogRequest.remove(entityID);
+        if (model != null) {
+            model.getActionHandler().handle(dialogResponseType, pressedButton, params);
+            if (dialogResponseType != DialogResponseType.Timeout && model.getMaxTimeoutInSec() > 0) {
+                entityContext.bgp().cancelThread(entityID + "dialog-timeout");
+            }
+
             for (HeaderButtonNotification notificationModel : headerButtonNotifications.values()) {
-                if (notificationModel.getConfirmations().remove(confirmationRequestModel) && notificationModel.getConfirmations().isEmpty()) {
+                if (notificationModel.getDialogs().remove(model) && notificationModel.getDialogs().isEmpty()) {
                     this.removeHeaderButton(notificationModel.getEntityID()); // request to remove header button if no confirmation exists
                 }
             }
-        }
-        return confirmationRequestModel;
-    }
-
-    @Getter
-    @RequiredArgsConstructor
-    public static class ConfirmationRequestModel {
-        final String title;
-        final String key;
-        @JsonIgnore
-        final Runnable handler;
-        final Collection<String> messages;
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            ConfirmationRequestModel that = (ConfirmationRequestModel) o;
-            return key.equals(that.key);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(key);
         }
     }
 
@@ -219,5 +210,6 @@ public class EntityContextUIImpl implements EntityContextUI {
         private final Set<BellNotification> bellNotifications = new TreeSet<>();
         private Collection<HeaderButtonNotification> headerButtonNotifications;
         private Collection<ProgressNotification> progress;
+        private Collection<DialogModel> dialogs;
     }
 }

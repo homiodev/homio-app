@@ -81,7 +81,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private void scheduleHandler(WorkspaceBlock workspaceBlock) {
         if (workspaceBlock.hasChild()) {
             Integer time = workspaceBlock.getInputInteger("TIME");
-            TimeUnit timeUnit = TimeUnit.valueOf(workspaceBlock.getInputString("UNIT"));
+            TimeUnit timeUnit = TimeUnit.valueOf(workspaceBlock.getField("UNIT"));
             WorkspaceBlock child = workspaceBlock.getChild();
             while (!workspaceBlock.isDestroyed()) {
                 workspaceBlock.setState("execute");

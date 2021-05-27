@@ -25,7 +25,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         if (HttpStatus.INTERNAL_SERVER_ERROR.equals(status)) {
             request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex, WebRequest.SCOPE_REQUEST);
         }
-        String msg = StringUtils.defaultString(ex.getMessage(), ex.toString());
+        String msg = TouchHomeUtils.getErrorMessage(ex);
         if (ex instanceof NullPointerException) {
             msg += ". src: " + ex.getStackTrace()[0].toString();
         }

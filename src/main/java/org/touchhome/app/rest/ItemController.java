@@ -32,6 +32,8 @@ import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarChildren;
+import org.touchhome.bundle.api.ui.UISidebarMenu;
+import org.touchhome.bundle.api.ui.action.UIActionHandler;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
@@ -63,7 +65,7 @@ import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 public class ItemController {
 
     private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
-    private final Map<String, DependencyInstallersContext> typeToRequireDependencies = new HashMap<>();
+    private final Map<String, TypeToRequireDependenciesContext> typeToRequireDependencies = new HashMap<>();
     private final Map<String, List<ItemContext>> itemsBootstrapContextMap = new HashMap<>();
 
     private final ObjectMapper objectMapper;
@@ -73,9 +75,21 @@ public class ItemController {
     private final ImageService imageService;
 
     private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
+    private Map<Class<? extends UIActionHandler>, UIActionHandler> sidebarClassButtonToInstance = new HashMap<>();
+
+    @RequiredArgsConstructor
+    private static class TypeToRequireDependenciesContext {
+        private final Class<? extends BaseEntity> typeClass;
+        private final List<DependencyExecutableInstaller> installers;
+    }
+
+    public <T extends UIActionHandler> T getOrCreateUIActionHandler(Class<T> actionHandlerClass) {
+        return (T) sidebarClassButtonToInstance.computeIfAbsent(actionHandlerClass, handlerClass ->
+                entityContext.getBean((Class<UIActionHandler>) handlerClass, () -> TouchHomeUtils.newInstance(handlerClass)));
+    }
 
     @SneakyThrows
-    static ActionResponseModel executeAction(EntityContext entityContext, ActionRequestModel actionRequestModel,
+    public ActionResponseModel executeAction(ActionRequestModel actionRequestModel,
                                              Object actionHolder, BaseEntity actionEntity) {
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuAction.class)) {
             UIContextMenuAction menuAction = method.getDeclaredAnnotation(UIContextMenuAction.class);
@@ -93,7 +107,7 @@ public class ItemController {
             if (field != null) {
                 for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
                     if (actionButton.name().equals(actionRequestModel.name)) {
-                        return TouchHomeUtils.newInstance(actionButton.actionHandler()).apply(entityContext, actionRequestModel.params);
+                        return getOrCreateUIActionHandler(actionButton.actionHandler()).handleAction(entityContext, actionRequestModel.params);
                     }
                 }
             }
@@ -184,7 +198,7 @@ public class ItemController {
                 return Collections.emptySet();
             }
         }
-        Set<OptionModel> list = fetchCreateItemTypes(entityClassByType);
+        Set<OptionModel> list = entityClassByType == null ? new HashSet<>() : fetchCreateItemTypes(entityClassByType);
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
             list.add(getUISideBarMenuOption(aClass));
         }
@@ -203,36 +217,32 @@ public class ItemController {
         return list;
     }
 
-    private void reloadItems(String type) {
+    public void reloadItems(Collection<String> type) {
         entityContext.ui().sendNotification("-global", new JSONObject().put("type", "reloadItems")
                 .put("value", type));
     }
 
-    @PostMapping(value = "{type}/installDep/{dependency}")
+    @PostMapping(value = "/{type}/installDep/{dependency}")
     public void installDep(@PathVariable("type") String type, @PathVariable("dependency") String dependency) {
         if (this.typeToRequireDependencies.containsKey(type)) {
-            DependencyInstallersContext context = this.typeToRequireDependencies.get(type);
-            DependencyExecutableInstaller installer = context.installerContexts.stream()
-                    .filter(c -> c.requireDependency.equals(dependency))
-                    .map(c -> c.installer).findAny().orElse(null);
-            if (installer != null) {
-                if (installer.isRequireInstallDependencies(entityContext)) {
-                    entityContext.bgp().runWithProgress("install-deps-" + dependency, false,
-                            progressBar -> {
-                                installer.installDependency(entityContext, progressBar);
-                                typeToRequireDependencies.get(type).installerContexts.removeIf(ctx -> ctx.requireDependency.equals(dependency));
-                                reloadItems(type);
-                            }, null,
-                            () -> new RuntimeException("INSTALL_DEPENDENCY_IN_PROGRESS"));
-                }
+            List<DependencyExecutableInstaller> installers = this.typeToRequireDependencies.get(type).installers;
+            DependencyExecutableInstaller installer = installers.stream()
+                    .filter(c -> c.getName().equals(dependency)).findAny().orElse(null);
+            if (installer != null && installer.isRequireInstallDependencies(entityContext, false)) {
+                entityContext.bgp().runWithProgress("install-deps-" + dependency, false,
+                        progressBar -> {
+                            installer.installDependency(entityContext, progressBar);
+                            reloadItems(Collections.singletonList(type));
+                        }, null,
+                        () -> new RuntimeException("INSTALL_DEPENDENCY_IN_PROGRESS"));
             }
         }
     }
 
-    @PostMapping(value = "{entityID}/action")
+    @PostMapping(value = "/{entityID}/action")
     public ActionResponseModel callAction(@PathVariable("entityID") String entityID, @RequestBody ActionRequestModel actionRequestModel) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
-        return ItemController.executeAction(entityContext, actionRequestModel, entity, entity);
+        return executeAction(actionRequestModel, entity, entity);
     }
 
     @GetMapping("/{type}/actions")
@@ -314,9 +324,10 @@ public class ItemController {
 
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
             items.addAll(entityContext.findAll(aClass));
-            DependencyInstallersContext installersContext = typeToRequireDependencies.get(aClass.getSimpleName());
-            if (installersContext != null) {
-                typeDependencies.add(new ItemsByTypeResponse.TypeDependency(aClass.getSimpleName(), installersContext.getAllRequireDependencies()));
+            TypeToRequireDependenciesContext dependenciesContext = typeToRequireDependencies.get(aClass.getSimpleName());
+            if (dependenciesContext != null) {
+                Set<String> notInstalledDependencies = dependenciesContext.installers.stream().filter(i -> i.isEnabled(entityContext)).map(DependencyExecutableInstaller::getName).collect(Collectors.toSet());
+                typeDependencies.add(new ItemsByTypeResponse.TypeDependency(aClass.getSimpleName(), notInstalledDependencies));
             }
         }
         List<Set<UIActionResponse>> contextActions = new ArrayList<>();
@@ -333,7 +344,7 @@ public class ItemController {
         return new ItemsByTypeResponse(items, contextActions, typeDependencies);
     }
 
-    @GetMapping("type/{type}")
+    @GetMapping("/type/{type}")
     public List<BaseEntity> getItemsByType(@PathVariable("type") String type) {
         putTypeToEntityIfNotExists(type);
         List<BaseEntity> list = new ArrayList<>();
@@ -349,7 +360,7 @@ public class ItemController {
         Class<? extends BaseEntity> aClass = baseEntitySimpleClasses.get(routeActionRequest.type);
         for (UISidebarButton button : aClass.getAnnotationsByType(UISidebarButton.class)) {
             if (button.handlerClass().getSimpleName().equals(routeActionRequest.handlerClass)) {
-                return TouchHomeUtils.newInstance(button.handlerClass()).apply(entityContext, null);
+                return getOrCreateUIActionHandler(button.handlerClass()).handleAction(entityContext, null);
             }
         }
         return null;
@@ -431,7 +442,12 @@ public class ItemController {
                                                      @RequestParam("fieldFetchType") String fieldFetchType) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
         if (entity == null) {
-            entity = getInstanceByClass(entityID); // i.e in case we load Widget
+            // i.e in case we load Widget
+            Class<?> aClass = entityManager.getClassByType(entityID);
+            entity = (BaseEntity<?>) TouchHomeUtils.newInstance(aClass);
+            if (entity == null) {
+                throw new IllegalArgumentException("Unable find class: " + entityID);
+            }
         }
         Class<?> entityClass = entity.getClass();
         if (StringUtils.isNotEmpty(fieldFetchType)) {
@@ -522,26 +538,16 @@ public class ItemController {
     }
 
     private void computeRequireDependenciesForType(String type, Class<? extends BaseEntity> baseEntityByName) {
-        Map<String, Pair<RequireExecutableDependency, Set<Class<? extends BaseEntity>>>> dependencyMap = new HashMap<>();
         // assemble all dependencies
         for (Class<? extends BaseEntity> entityClass : typeToEntityClassNames.get(type)) {
+            List<DependencyExecutableInstaller> installers = new ArrayList<>();
+
             for (Class<?> baseClass : ClassFinder.findAllParentClasses(entityClass, baseEntityByName)) {
                 for (RequireExecutableDependency dependency : baseClass.getAnnotationsByType(RequireExecutableDependency.class)) {
-                    dependencyMap.putIfAbsent(dependency.name(), Pair.of(dependency, new HashSet<>()));
-                    dependencyMap.get(dependency.name()).getSecond().add(entityClass);
+                    installers.add(getOrCreateUIActionHandler(dependency.installer()));
                 }
             }
-        }
-        // check if dependencies require to install
-        for (Pair<RequireExecutableDependency, Set<Class<? extends BaseEntity>>> entry : dependencyMap.values()) {
-            DependencyExecutableInstaller installer = TouchHomeUtils.newInstance(entry.getFirst().installer());
-            if (installer.isRequireInstallDependencies(entityContext)) {
-                for (Class<? extends BaseEntity> entityClass : entry.getSecond()) {
-                    typeToRequireDependencies.putIfAbsent(entityClass.getSimpleName(), new DependencyInstallersContext());
-                    typeToRequireDependencies.get(entityClass.getSimpleName()).installerContexts.add(
-                            new DependencyInstallersContext.SingleInstallerContext(installer, entry.getFirst().name()));
-                }
-            }
+            typeToRequireDependencies.put(entityClass.getSimpleName(), new TypeToRequireDependenciesContext(baseEntityByName, installers));
         }
     }
 
@@ -596,15 +602,6 @@ public class ItemController {
         return null;
     }
 
-    private BaseEntity<?> getInstanceByClass(String className) {
-        Class<?> aClass = entityManager.getClassByType(className);
-        BaseEntity<?> instance = (BaseEntity<?>) TouchHomeUtils.newInstance(aClass);
-        if (instance == null) {
-            throw new IllegalArgumentException("Unable find class: " + className);
-        }
-        return instance;
-    }
-
     private List<Class<?>> findAllClassImplementationsByType(String type) {
         Class<?> classByType = entityManager.getClassByType(type);
         List<Class<?>> classTypes = new ArrayList<>();
@@ -620,6 +617,34 @@ public class ItemController {
         return classTypes;
     }
 
+    public void reloadItemsRelatedToDependency(DependencyExecutableInstaller installer) {
+        Set<String> typesToReload = new HashSet<>();
+        Set<String> headerButtonsUpdateStatus = new HashSet<>();
+        for (Map.Entry<String, TypeToRequireDependenciesContext> entry : typeToRequireDependencies.entrySet()) {
+            List<DependencyExecutableInstaller> installers = entry.getValue().installers;
+            if (installers.stream().anyMatch(i -> i.getName().equals(installer.getName()))) {
+                typesToReload.add(entry.getKey());
+
+                // some BaseEntity has @UISidebarButton with ability to install dependency from header UI. So we should reflect them also
+                for (Pair<Class, List<UISidebarButton>> classListEntry : ClassFinder.findAllAnnotationsToParentAnnotation(entry.getValue().typeClass, UISidebarButton.class, UISidebarMenu.class)) {
+                    for (UISidebarButton uiSidebarButton : classListEntry.getSecond()) {
+                        // find only header buttons that belong to dependency installer
+                        if (installer.getClass().isAssignableFrom(uiSidebarButton.handlerClass())) {
+                            headerButtonsUpdateStatus.add(classListEntry.getFirst().getSimpleName() + "_" + uiSidebarButton.handlerClass().getSimpleName());
+                        }
+                    }
+                }
+            }
+        }
+        // fire reload items
+        reloadItems(typesToReload);
+        // send to ui to reflect header dependencies
+        boolean requireInstallDependencies = installer.isRequireInstallDependencies(entityContext, true);
+        for (String entityID : headerButtonsUpdateStatus) {
+            entityContext.ui().disableHeaderButton(entityID, !requireInstallDependencies);
+        }
+    }
+
     @Getter
     @RequiredArgsConstructor
     private static class ItemsByTypeResponse {
@@ -632,20 +657,6 @@ public class ItemController {
         private static class TypeDependency {
             private String name;
             private Set<String> dependencies;
-        }
-    }
-
-    private static class DependencyInstallersContext {
-        private final List<SingleInstallerContext> installerContexts = new ArrayList<>();
-
-        public Set<String> getAllRequireDependencies() {
-            return installerContexts.stream().map(c -> c.requireDependency).collect(Collectors.toSet());
-        }
-
-        @RequiredArgsConstructor
-        private static class SingleInstallerContext {
-            private final DependencyExecutableInstaller installer;
-            private final String requireDependency;
         }
     }
 

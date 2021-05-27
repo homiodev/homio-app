@@ -57,6 +57,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     private final BroadcastLockManagerImpl broadcastLockManager;
 
     private final Scratch3Block getPrevVariableBlock;
+  //  private final InfluxDB influxDB;
 
     public Scratch3DataBlocks(EntityContext entityContext, WorkspaceBackupRepository workspaceBackupRepository, BroadcastLockManagerImpl broadcastLockManager) {
         super("data", entityContext);
@@ -86,6 +87,13 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         this.changeGroupVariableBlock = Scratch3Block.ofHandler("change_group_variable", BlockType.command, this::changeGroupVariableHandler);
         this.setAndBackupGroupVariableBlock = Scratch3Block.ofHandler("set_group_variable_and_backup", BlockType.command, this::setAndBackupGroupVariableHandler);
         this.variableGroupLink = Scratch3Block.ofHandler("group_variable_link", BlockType.hat, this::variableGroupLinkHatEvent);
+
+      /*  influxDB = InfluxDBFactory.connect("databaseURL", "admin", "admin");
+        influxDB.query(new Query("CREATE DATABASE touchhome", ""));
+        influxDB.query(new Query("CREATE RETENTION POLICY defaultPolicy on touchhome DURATION 30d REPLICATION 1 DEFAULT", ""));
+
+        influxDB.disableBatch();
+        influxDB.setLogLevel(InfluxDB.LogLevel.BASIC);*/
     }
 
     private Object getPreviousValue(WorkspaceBlock workspaceBlock) {

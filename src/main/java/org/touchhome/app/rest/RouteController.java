@@ -12,10 +12,9 @@ import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.condition.TrueCondition;
 import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.api.ui.action.UIActionHandler;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,11 +28,14 @@ public class RouteController {
     private final List<Class<?>> uiSidebarMenuClasses;
     private final BundleController bundleController;
     private final SettingController settingController;
+    private final ItemController itemController;
 
     public RouteController(ClassFinder classFinder, BundleController bundleController,
+                           ItemController itemController,
                            SettingController settingController, EntityContext entityContext) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
         this.bundleController = bundleController;
+        this.itemController = itemController;
         this.settingController = settingController;
         this.entityContext = entityContext;
     }
@@ -95,6 +97,7 @@ public class RouteController {
         sidebarMenus.get(parent).add(SidebarMenuItem.fromAnnotation(item, uiSidebarMenu));
     }
 
+
     private void addRouteFromUISideBarMenu(List<RouteJSON> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
         String href = StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), aClass.getSimpleName());
         RouteJSON route = new RouteJSON(uiSidebarMenu.parent().name().toLowerCase() + "/" + href);
@@ -104,9 +107,11 @@ public class RouteController {
         route.allowCreateNewItems = uiSidebarMenu.allowCreateNewItems();
         route.sidebarButtons = new ArrayList<>();
         for (UISidebarButton button : aClass.getAnnotationsByType(UISidebarButton.class)) {
-            if (button.conditionalClass().isAssignableFrom(TrueCondition.class) || TouchHomeUtils.newInstance(button.conditionalClass()).test(entityContext)) {
-                route.sidebarButtons.add(new SidebarButton(button.buttonIcon(), button.buttonTitle(), button.buttonText(),
-                        button.buttonIconColor(), button.confirm(), button.handlerClass().getSimpleName()));
+            UIActionHandler actionHandler = itemController.getOrCreateUIActionHandler(button.handlerClass());
+            if (actionHandler.isEnabled(entityContext)) {
+                String key = aClass.getSimpleName() + "_" + button.handlerClass().getSimpleName();
+                route.sidebarButtons.add(new SidebarButton(key, button.buttonIcon(), button.buttonTitle(), button.buttonText(),
+                        button.buttonIconColor(), button.confirm(), actionHandler.getClass().getSimpleName()));
             }
         }
         routes.add(route);
@@ -157,6 +162,7 @@ public class RouteController {
     @Getter
     @AllArgsConstructor
     public static class SidebarButton {
+        private final String entityID;
         private final String icon;
         private final String title;
         private final String text;

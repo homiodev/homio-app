@@ -14,7 +14,6 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 @Log4j2
@@ -34,11 +33,13 @@ public class EntityContextUDPImpl implements EntityContextUDP {
                 DatagramSocket socket = new DatagramSocket(host == null ? new InetSocketAddress(port) : new InetSocketAddress(host, port));
                 DatagramPacket datagramPacket = new DatagramPacket(new byte[255], 255);
 
-                scheduleFuture = entityContext.bgp().schedule("listen-udp-" + hostPortKey, 1, TimeUnit.SECONDS, () -> {
-                    socket.receive(datagramPacket);
-                    byte[] data = datagramPacket.getData();
-                    String text = new String(data, 0, datagramPacket.getLength());
-                    listenUdpMap.get(hostPortKey).handle(datagramPacket, text);
+                scheduleFuture = entityContext.bgp().run("listen-udp-" + hostPortKey, () -> {
+                    while (!Thread.currentThread().isInterrupted()) {
+                        socket.receive(datagramPacket);
+                        byte[] data = datagramPacket.getData();
+                        String text = new String(data, 0, datagramPacket.getLength());
+                        listenUdpMap.get(hostPortKey).handle(datagramPacket, text);
+                    }
                 }, true);
                 scheduleFuture.setDescription("Listen udp: " + hostPortKey);
             } catch (Exception ex) {

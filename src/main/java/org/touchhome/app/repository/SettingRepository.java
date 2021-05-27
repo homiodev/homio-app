@@ -94,12 +94,8 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             }
 
             if (plugin instanceof SettingPluginOptionsFileExplorer) {
-                if (((SettingPluginOptionsFileExplorer) plugin).allowSelectDirs()) {
-                    entity.getJsonData().put("ASD", true);
-                }
-                if (((SettingPluginOptionsFileExplorer) plugin).allowSelectFiles()) {
-                    entity.getJsonData().put("ASF", true);
-                }
+                entity.getParameters().put("ASD", ((SettingPluginOptionsFileExplorer) plugin).allowSelectDirs());
+                entity.getParameters().put("ASF", ((SettingPluginOptionsFileExplorer) plugin).allowSelectFiles());
             }
 
             if (plugin instanceof ConsoleSettingPlugin) {
@@ -156,14 +152,12 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
 
     @Transactional
     public void postConstruct() {
-        for (SettingPlugin<?> settingPlugin : EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
-            if (!settingPlugin.transientState()) {
-                SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
-                if (settingEntity == null) {
-                    settingEntity = new SettingEntity();
-                    createSettingEntityFromPlugin(settingPlugin, settingEntity, entityContext);
-                    entityContext.save(settingEntity);
-                }
+        for (SettingPlugin settingPlugin : EntityContextSettingImpl.settingPluginsBy(p -> !p.transientState())) {
+            SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
+            if (settingEntity == null) {
+                settingEntity = new SettingEntity();
+                createSettingEntityFromPlugin(settingPlugin, settingEntity, entityContext);
+                entityContext.save(settingEntity);
             }
         }
     }

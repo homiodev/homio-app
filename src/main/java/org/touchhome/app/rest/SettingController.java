@@ -113,7 +113,7 @@ public class SettingController {
                 packagesInProgress.put(packageRequest.getName(), false);
                 entityContext.ui().runWithProgress("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(),
                         false, progressBar -> ((SettingPluginPackageInstall) settingPlugin).unInstallPackage(entityContext, packageRequest, progressBar),
-                        (ex) -> packagesInProgress.remove(packageRequest.getName()));
+                        ex -> packagesInProgress.remove(packageRequest.getName()));
             }
         }
     }
@@ -128,7 +128,7 @@ public class SettingController {
                 packagesInProgress.put(packageRequest.getName(), true);
                 entityContext.ui().runWithProgress("Install " + packageRequest.getName() + "/" + packageRequest.getVersion(),
                         false, progressBar -> ((SettingPluginPackageInstall) settingPlugin).installPackage(entityContext, packageRequest, progressBar),
-                        (ex) -> packagesInProgress.remove(packageRequest.getName()));
+                        ex -> packagesInProgress.remove(packageRequest.getName()));
             }
         }
     }
@@ -159,23 +159,7 @@ public class SettingController {
     @GetMapping
     public List<SettingEntity> getSettings() {
         List<SettingEntity> settings = entityContext.findAll(SettingEntity.class);
-        for (Map.Entry<Class<? extends SettingPlugin<?>>, SettingEntity> entry : transientSettings.entrySet()) {
-            SettingEntity settingEntity = entry.getValue();
-            settingEntity.setValue(entityContext.setting().getRawValue((Class) entry.getKey()));
-            SettingRepository.fulfillEntityFromPlugin(settingEntity, entityContext, null);
-            if (DynamicConsoleHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
-                settingEntity.setSettingTypeRaw("Container");
-                List<SettingEntity> options = EntityContextSettingImpl.dynamicHeaderSettings.get(entry.getKey());
-                settingEntity.getParameters().put("dynamicOptions", options);
-            } else if (SettingPluginPackageInstall.class.isAssignableFrom(entry.getKey())) {
-                settingEntity.setSettingTypeRaw("BundleInstaller");
-            }
-            for (String key : settingEntity.getJsonData().keySet()) {
-                settingEntity.getParameters().put(key, settingEntity.getJsonData().get(key));
-            }
-
-            settings.add(settingEntity);
-        }
+        assembleTransientSettings(settings);
 
         UserEntity userEntity = entityContext.getUser(true);
 
@@ -212,6 +196,26 @@ public class SettingController {
         settings.addAll(descriptionSettings);
         Collections.sort(settings);
         return settings;
+    }
+
+    private void assembleTransientSettings(List<SettingEntity> settings) {
+        for (Map.Entry<Class<? extends SettingPlugin<?>>, SettingEntity> entry : transientSettings.entrySet()) {
+            SettingEntity settingEntity = entry.getValue();
+            settingEntity.setValue(entityContext.setting().getRawValue((Class) entry.getKey()));
+            SettingRepository.fulfillEntityFromPlugin(settingEntity, entityContext, null);
+            if (DynamicConsoleHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
+                settingEntity.setSettingTypeRaw("Container");
+                List<SettingEntity> options = EntityContextSettingImpl.dynamicHeaderSettings.get(entry.getKey());
+                settingEntity.getParameters().put("dynamicOptions", options);
+            } else if (SettingPluginPackageInstall.class.isAssignableFrom(entry.getKey())) {
+                settingEntity.setSettingTypeRaw("BundleInstaller");
+            }
+            for (String key : settingEntity.getJsonData().keySet()) {
+                settingEntity.getParameters().put(key, settingEntity.getJsonData().get(key));
+            }
+
+            settings.add(settingEntity);
+        }
     }
 
     private void updateSettingToPages(List<SettingEntity> settings) {

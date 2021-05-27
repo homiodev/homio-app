@@ -20,17 +20,23 @@ import javax.validation.constraints.NotNull;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Log4j2
 @RequiredArgsConstructor
+
 public class EntityContextSettingImpl implements EntityContextSetting {
     private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
-    public static Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
-    public static Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
-    private static Map<String, SettingPlugin> settingPluginsByPluginClass = new HashMap<>();
+    public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
+    public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
+    private static final Map<String, SettingPlugin> settingPluginsByPluginClass = new HashMap<>();
+    private final Map<String, Map<String, Consumer<?>>> settingListeners = new HashMap<>();
     private final EntityContextImpl entityContext;
-    private Map<String, Map<String, Consumer<?>>> settingListeners = new HashMap<>();
+
+    public static List<SettingPlugin> settingPluginsBy(Predicate<SettingPlugin> predicate) {
+        return settingPluginsByPluginKey.values().stream().filter(predicate).collect(Collectors.toList());
+    }
 
     @Override
     public void reloadSettings(Class<? extends SettingPluginOptions> settingPlugin) {
@@ -77,9 +83,22 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     @Override
-    public <T> void listenValue(Class<? extends SettingPlugin<T>> SettingPluginClazz, String key, Consumer<T> listener) {
-        settingListeners.putIfAbsent(SettingPluginClazz.getName(), new HashMap<>());
-        settingListeners.get(SettingPluginClazz.getName()).put(key, listener);
+    public <T> void listenValue(Class<? extends SettingPlugin<T>> settingClass, String key, Consumer<T> listener) {
+        settingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
+        settingListeners.get(settingClass.getName()).put(key, listener);
+    }
+
+    @Override
+    public <T> void unListenValue(Class<? extends SettingPlugin<T>> settingClass, String key) {
+        if (settingListeners.containsKey(settingClass.getName())) {
+            settingListeners.get(settingClass.getName()).remove(key);
+        }
+    }
+
+    public void unListenWithPrefix(String prefix) {
+        for (Map<String, Consumer<?>> entryMap : settingListeners.values()) {
+            entryMap.keySet().removeIf(s -> s.startsWith(prefix));
+        }
     }
 
     @Override

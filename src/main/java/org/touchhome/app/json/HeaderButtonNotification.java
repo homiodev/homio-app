@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.bundle.api.ui.BaseNotificationModel;
+import org.touchhome.bundle.api.ui.DialogModel;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -14,30 +15,18 @@ import java.util.Set;
 @Accessors(chain = true)
 public class HeaderButtonNotification extends BaseNotificationModel<HeaderButtonNotification> {
 
-    private final Set<EntityContextUIImpl.ConfirmationRequestModel> confirmations = new LinkedHashSet<>();
+    private final Set<DialogModel> dialogs = new LinkedHashSet<>();
     private String color;
     private Integer duration;
     private String icon;
-    private boolean iconRotate;
+    private Boolean iconRotate;
+    private Boolean border;
     private String stopAction;
+    private String page;
 
     public HeaderButtonNotification(String entityID) {
         super(entityID);
     }
-
-   /* public HeaderButtonNotificationModel(NotificationModel json, String color, Integer duration, String icon) {
-        this(json);
-        this.color = color;
-        this.duration = duration;
-        this.icon = icon;
-    }
-
-    public HeaderButtonNotificationModel(NotificationModel json) {
-        super(json.getEntityID());
-        setTitle(json.getTitle());
-        setValue(json.getValue());
-        setLevel(json.getLevel());
-    }*/
 
     @Override
     public HeaderButtonNotification setTitle(String name) {

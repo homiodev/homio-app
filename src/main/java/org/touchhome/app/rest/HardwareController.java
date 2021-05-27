@@ -25,7 +25,7 @@ public class HardwareController {
 
     @GetMapping("/event")
     public Collection<OptionModel> getHardwareEvents() {
-        return entityContext.event().getEvents().keySet();
+        return entityContext.event().getEvents();
     }
 
     @PostMapping("/app/update")

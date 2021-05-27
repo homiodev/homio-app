@@ -1,6 +1,8 @@
 package org.touchhome.app.manager.common.impl;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextEvent;
@@ -9,10 +11,7 @@ import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -26,7 +25,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     private final EntityListener entityRemoveListeners = new EntityListener();
 
     @Getter
-    private final Map<OptionModel, Object> events = new HashMap<>();
+    private final Set<OptionModel> events = new HashSet<>();
     private final Map<String, Object> lastValues = new ConcurrentHashMap<>();
     private final Map<String, Consumer<Object>> listeners = new HashMap<>();
 
@@ -39,25 +38,25 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
     @Override
     public void removeEvents(String... keys) {
-
+        for (String key : keys) {
+            listeners.remove(key);
+            lastValues.remove(key);
+        }
     }
 
     @Override
     public void setListener(String key, Consumer<Object> listener) {
-        if (events.containsKey(OptionModel.key(key))) {
-            listeners.put(key, listener);
-        } else {
-            throw new IllegalArgumentException("Unable to listen unknown event: " + key);
-        }
+        listeners.put(key, listener);
     }
 
     @Override
-    public void fireEvent(String key, Object value) {
-        if (key == null) {
-            return;
+    public void fireEvent(String key, Object value, boolean compareValues) {
+        addEvent(key);
+        if (StringUtils.isEmpty(key)) {
+            throw new IllegalArgumentException("Unable to fire event with empty key");
         }
         if (value != null) {
-            if (Objects.equals(value, lastValues.get(key))) {
+            if (compareValues && Objects.equals(value, lastValues.get(key))) {
                 return;
             }
             lastValues.put(key, value);
@@ -72,14 +71,18 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
     @Override
     public String addEvent(String key, String name) {
-        this.events.put(OptionModel.of(key, name), "");
-        return key;
-    }
+        if (StringUtils.isEmpty(key)) {
+            throw new IllegalArgumentException("Unable to add event with empty key");
+        }
+        // update event name if event already added and name not empty and name not equals key
+        if (!this.events.add(OptionModel.of(key, name)) && (StringUtils.isNotEmpty(name) && !name.equals(key))) {
+            for (OptionModel event : events) {
+                if (event.getKey().equals(key)) {
+                    event.setTitle(name);
+                }
+            }
+        }
 
-    @Override
-    public String addEventAndFire(String key, String name, Object value) {
-        this.events.put(OptionModel.of(key, name), "");
-        this.fireEvent(key, value);
         return key;
     }
 

@@ -182,7 +182,10 @@ public class WorkspaceManager {
         Map<String, WorkspaceBlock> workspaceMap = new HashMap<>();
 
         for (String blockId : blocks.keySet()) {
-            JSONObject block = blocks.getJSONObject(blockId);
+            JSONObject block = blocks.optJSONObject(blockId);
+            if (block == null) {
+                continue;
+            }
 
             if (!workspaceMap.containsKey(blockId)) {
                 workspaceMap.put(blockId, new WorkspaceBlockImpl(blockId, workspaceMap, scratch3Blocks, entityContext));

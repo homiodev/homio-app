@@ -56,6 +56,7 @@ import org.touchhome.bundle.api.Lang;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.UserEntity;
+import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
@@ -224,7 +225,7 @@ public class EntityContextImpl implements EntityContext {
         // create indexes on tables
         //  this.createTableIndexes();
         this.bgp().schedule("check-app-version", 1, TimeUnit.DAYS, this::fetchReleaseVersion, true);
-        this.event().addEventAndFire("app-started", "App started");
+        this.event().fireEvent("app-started", "App started");
 
         // install autossh. Should refactor to move somewhere else
         this.bgp().runOnceOnInternetUp("internal-ctx", () -> {
@@ -713,7 +714,22 @@ public class EntityContextImpl implements EntityContext {
             applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addBundle);
         }
 
+        reloadListenDependencyInstallSettings();
+
         log.info("Finish update all app bundles");
+    }
+
+    private void reloadListenDependencyInstallSettings() {
+        setting().unListenWithPrefix("item-controller-listen-change-");
+
+        // listen when setting value has been changed and fire event that dependency may be installed
+        for (DependencyExecutableInstaller installer : getBeansOfType(DependencyExecutableInstaller.class)) {
+            setting().listenValue(installer.getDependencyPluginSettingClass(), "listen-" + installer.getDependencyPluginSettingClass(),
+                    (value) -> {
+                            event().fireEvent(installer.getName() + "-dependency-installed", !installer.isRequireInstallDependencies(this, false), false);
+                        getBean(ItemController.class).reloadItemsRelatedToDependency(installer);
+                    });
+        }
     }
 
     private void rebuildRepositoryByPrefixMap() {

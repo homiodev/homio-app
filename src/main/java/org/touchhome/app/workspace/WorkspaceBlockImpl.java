@@ -437,7 +437,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     private String sendScratch3ExtensionNotFound(String extensionId) {
         String msg = "No scratch extension <" + extensionId + "> found";
-        entityContext.ui().sendErrorMessage("WORKSPACE.SCRATCH_NOT_FOUND", extensionId);
+        entityContext.ui().sendErrorMessage(msg, extensionId);
         return msg;
     }
 

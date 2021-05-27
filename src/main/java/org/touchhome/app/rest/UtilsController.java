@@ -8,6 +8,7 @@ import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.json.JSONObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +21,11 @@ import org.touchhome.app.js.assistant.model.Completion;
 import org.touchhome.app.js.assistant.model.CompletionRequest;
 import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
+import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.Lang;
+import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.exception.ServerException;
-import org.touchhome.bundle.api.fs.BaseFileSystemEntity;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.Curl;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -144,17 +145,21 @@ public class UtilsController {
         return Lang.getLangJson(lang);
     }
 
-    @PostMapping("/confirm/{entityID}")
-    public void confirm(@PathVariable("entityID") String entityID) {
-        EntityContextUIImpl.ConfirmationRequestModel confirmationRequestModel = entityContext.ui().removeConfirmation(entityID);
-        if (confirmationRequestModel != null) {
-            confirmationRequestModel.getHandler().run();
-        }
+    @PostMapping("/dialog/{entityID}")
+    public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
+        entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Accepted,
+                dialogRequest.pressedButton, new JSONObject(dialogRequest.params));
     }
 
-    @DeleteMapping("/confirm/{entityID}")
-    public void notConfirm(@PathVariable("entityID") String entityID) {
-        entityContext.ui().removeConfirmation(entityID);
+    @DeleteMapping("/dialog/{entityID}")
+    public void discardDialog(@PathVariable("entityID") String entityID) {
+        entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
+    }
+
+    @Getter
+    private static class DialogRequest {
+        private String pressedButton;
+        private String params;
     }
 
     @Getter

@@ -9,6 +9,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.AssignableTypeFilter;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.extloader.BundleClassLoaderHolder;
 import org.touchhome.bundle.api.EntityContext;
@@ -18,8 +19,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -48,6 +48,23 @@ public class ClassFinder {
             childClass = childClass.getSuperclass();
         }
         return result;
+    }
+
+    public static <T extends Annotation> List<Pair<Class, List<T>>> findAllAnnotationsToParentAnnotation(Class typeClass, Class<T> aAnnotation, Class<? extends Annotation> bAnnotation) {
+        Class cursor = typeClass;
+        List<Pair<Class, List<T>>> typeToAnnotations = new ArrayList<>();
+        while (cursor != null) {
+            T[] annotations = (T[]) typeClass.getDeclaredAnnotationsByType(aAnnotation);
+            if (annotations.length > 0) {
+                typeToAnnotations.add(Pair.of(cursor, Arrays.asList(annotations)));
+            }
+            // we need allow to handle class with annotation bAnnotation, that's why this not in while block
+            if (cursor.isAnnotationPresent(bAnnotation)) {
+                break;
+            }
+            cursor = cursor.getSuperclass();
+        }
+        return typeToAnnotations;
     }
 
     private <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation, boolean includeInterfaces) {

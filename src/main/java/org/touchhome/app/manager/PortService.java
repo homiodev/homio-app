@@ -37,11 +37,8 @@ public class PortService {
     }
 
     public void listenPortAvailability() {
-        Collection<SettingPlugin> settingPlugins = EntityContextSettingImpl.settingPluginsByPluginKey.values();
-        this.portSettingPlugins = settingPlugins
-                .stream().filter(sp -> SerialPort.class.equals(sp.getType()))
-                .map(sp -> (SettingPluginOptions<SerialPort>) sp)
-                .collect(Collectors.toList());
+        this.portSettingPlugins = EntityContextSettingImpl.settingPluginsBy(sp -> SerialPort.class.equals(sp.getType()))
+                .stream().map(sp -> (SettingPluginOptions<SerialPort>) sp).collect(Collectors.toList());
 
         for (SettingPlugin<SerialPort> portSettingPlugin : portSettingPlugins) {
             Class<? extends SettingPlugin<SerialPort>> clazz = (Class<? extends SettingPlugin<SerialPort>>) portSettingPlugin.getClass();
