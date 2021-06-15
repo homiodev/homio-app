@@ -11,11 +11,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 @Log4j2
 public class BroadcastLockImpl implements BroadcastLock {
     private final Condition condition;
     private final ReentrantLock lock;
+    private Predicate<Object> valueCheck;
     private String key;
     private Object expectedValue;
     private Map<String, Runnable> releaseListeners;
@@ -27,6 +30,13 @@ public class BroadcastLockImpl implements BroadcastLock {
     public BroadcastLockImpl(String id, Object expectedValue) {
         this.key = id;
         this.expectedValue = expectedValue;
+        if (this.expectedValue == null) {
+            this.valueCheck = o -> true;
+        } else if (this.expectedValue instanceof Pattern) {
+            this.valueCheck = o -> ((Pattern) this.expectedValue).matcher(Objects.toString(value)).matches();
+        } else {
+            this.valueCheck = o -> Objects.equals(o, this.expectedValue);
+        }
         this.lock = new ReentrantLock();
         this.condition = lock.newCondition();
         log.debug("Creating broadcast lock: <{}>", key);
@@ -58,7 +68,7 @@ public class BroadcastLockImpl implements BroadcastLock {
     }
 
     public void signalAll(Object value) {
-        if (expectedValue != null && !Objects.equals(expectedValue, value)) {
+        if (!this.valueCheck.test(value)) {
             return;
         }
         try {

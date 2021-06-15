@@ -42,6 +42,8 @@ import org.touchhome.bundle.api.ui.field.action.UIActionButton;
 import org.touchhome.bundle.api.ui.field.action.UIActionResponse;
 import org.touchhome.bundle.api.ui.field.action.UIContextMenuAction;
 import org.touchhome.bundle.api.ui.field.action.impl.DynamicContextMenuAction;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import javax.persistence.Entity;
@@ -440,30 +442,82 @@ public class ItemController {
     public Collection<OptionModel> loadSelectOptions(@PathVariable("entityID") String entityID,
                                                      @PathVariable("fieldName") String fieldName,
                                                      @RequestParam("fieldFetchType") String fieldFetchType) {
-        BaseEntity<?> entity = entityContext.getEntity(entityID);
-        if (entity == null) {
+        Object classEntity = entityContext.getEntity(entityID);
+        if (classEntity == null) {
             // i.e in case we load Widget
             Class<?> aClass = entityManager.getClassByType(entityID);
-            entity = (BaseEntity<?>) TouchHomeUtils.newInstance(aClass);
-            if (entity == null) {
+            if (aClass == null) {
+                List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
+                aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.get(0);
+            }
+            classEntity = TouchHomeUtils.newInstance(aClass);
+            if (classEntity == null) {
                 throw new IllegalArgumentException("Unable find class: " + entityID);
             }
         }
-        Class<?> entityClass = entity.getClass();
+        Class<?> entityClass = classEntity.getClass();
         if (StringUtils.isNotEmpty(fieldFetchType)) {
             String[] bundleAndClassName = fieldFetchType.split(":");
             entityClass = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
         }
 
-        List<OptionModel> options = getEntityOptions(fieldName, entity, entityClass);
+        List<OptionModel> options = getEntityOptions(fieldName, classEntity, entityClass);
         if (options != null) {
             return options;
         }
 
-        return UIFieldUtils.loadOptions(entity, entityContext, fieldName);
+        return UIFieldUtils.loadOptions(classEntity, entityContext, fieldName, null);
     }
 
-    private List<OptionModel> getEntityOptions(String fieldName, BaseEntity<?> entity, Class<?> entityClass) {
+    @GetMapping("/{entityID}/{fieldName}/{selectedEntityID}/dynamicParameterOptions")
+    public Collection<OptionModel> getDynamicParameterOptions(@PathVariable("entityID") String entityID,
+                                                              @PathVariable("fieldName") String fieldName,
+                                                              @PathVariable("selectedEntityID") String selectedEntityID) {
+        Object classEntity = entityContext.getEntity(entityID);
+        if (classEntity == null) {
+            throw NotFoundException.entityNotFound(entityID);
+        }
+        Object selectedClassEntity = entityContext.getEntity(selectedEntityID);
+        if (selectedClassEntity == null) {
+            throw NotFoundException.entityNotFound(selectedEntityID);
+        }
+
+        if (!(selectedClassEntity instanceof SelectionWithDynamicParameterFields)) {
+            throw new IllegalStateException("SelectedEntity must implement interface <" + SelectionWithDynamicParameterFields.class.getSimpleName() + ">");
+        }
+        DynamicParameterFields dynamicParameterFields = ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(classEntity);
+        if(dynamicParameterFields == null) {
+            throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
+        }
+        return UIFieldUtils.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity);
+
+        /*if (classEntity == null) {
+            // i.e in case we load Widget
+            Class<?> aClass = entityManager.getClassByType(entityID);
+            if (aClass == null) {
+                List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
+                aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.get(0);
+            }
+            classEntity = TouchHomeUtils.newInstance(aClass);
+            if (classEntity == null) {
+                throw new IllegalArgumentException("Unable find class: " + entityID);
+            }
+        }
+        Class<?> entityClass = classEntity.getClass();
+        if (StringUtils.isNotEmpty(fieldFetchType)) {
+            String[] bundleAndClassName = fieldFetchType.split(":");
+            entityClass = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
+        }
+
+        List<OptionModel> options = getEntityOptions(fieldName, classEntity, entityClass);
+        if (options != null) {
+            return options;
+        }
+
+        return UIFieldUtils.loadOptions(classEntity, entityContext, fieldName);*/
+    }
+
+    private List<OptionModel> getEntityOptions(String fieldName, Object classEntity, Class<?> entityClass) {
         Field field = FieldUtils.getField(entityClass, fieldName, true);
         Class<?> returnType = field == null ? null : field.getType();
         if (returnType == null) {
@@ -479,11 +533,11 @@ public class ItemController {
             List<OptionModel> options = selectedOptions.stream().map(t -> OptionModel.of(t.getEntityID(), t.getTitle())).collect(Collectors.toList());
 
             // make filtering/add messages/etc...
-            Method filterOptionMethod = findFilterOptionMethod(fieldName, entity);
+            Method filterOptionMethod = findFilterOptionMethod(fieldName, classEntity);
             if (filterOptionMethod != null) {
                 try {
                     filterOptionMethod.setAccessible(true);
-                    filterOptionMethod.invoke(entity, selectedOptions, options);
+                    filterOptionMethod.invoke(classEntity, selectedOptions, options);
                 } catch (Exception ignore) {
                 }
             }
@@ -613,6 +667,9 @@ public class ItemController {
             classTypes.addAll(typeToEntityClassNames.getOrDefault(type, Collections.emptyList()));
         } else {
             classTypes.add(classByType);
+        }
+        if (classTypes.isEmpty()) {
+            classTypes.addAll(classFinder.getClassesWithParent(DynamicParameterFields.class));
         }
         return classTypes;
     }

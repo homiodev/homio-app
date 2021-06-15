@@ -109,6 +109,7 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextEventImpl entityContextEvent;
     private final EntityContextBGPImpl entityContextBGP;
     private final EntityContextSettingImpl entityContextSetting;
+    private final EntityContextWidgetImpl entityContextWidget;
     private final Environment environment;
 
     private final ClassFinder classFinder;
@@ -147,6 +148,7 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextEvent = new EntityContextEventImpl(broadcastLockManager);
         this.entityContextBGP = new EntityContextBGPImpl(this, touchHomeProperties, taskScheduler);
         this.entityContextSetting = new EntityContextSettingImpl(this);
+        this.entityContextWidget = new EntityContextWidgetImpl(this);
     }
 
     @SneakyThrows
@@ -260,6 +262,10 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public EntityContextSettingImpl setting() {
         return entityContextSetting;
+    }
+
+    public EntityContextWidgetImpl widget() {
+        return this.entityContextWidget;
     }
 
     @Override
@@ -602,7 +608,7 @@ public class EntityContextImpl implements EntityContext {
                 sendEntityUpdateNotification(entity, type);
             }
         } catch (Exception ex) {
-            log.error("Unable to update cache entity <{}> for entity: <{}>", type, entity);
+            log.error("Unable to update cache entity <{}> for entity: <{}>. Msg: <{}>", type, entity, TouchHomeUtils.getErrorMessage(ex));
         }
     }
 
@@ -726,9 +732,21 @@ public class EntityContextImpl implements EntityContext {
         for (DependencyExecutableInstaller installer : getBeansOfType(DependencyExecutableInstaller.class)) {
             setting().listenValue(installer.getDependencyPluginSettingClass(), "listen-" + installer.getDependencyPluginSettingClass(),
                     (value) -> {
-                            event().fireEvent(installer.getName() + "-dependency-installed", !installer.isRequireInstallDependencies(this, false), false);
+                        event().fireEvent(installer.getName() + "-dependency-installed", !installer.isRequireInstallDependencies(this, false), false);
                         getBean(ItemController.class).reloadItemsRelatedToDependency(installer);
                     });
+            if (installer.getInstallButton() != null) {
+                setting().listenValue(installer.getInstallButton(), "listen-install-ui-" + installer.getName(), () -> {
+                    if (installer.isRequireInstallDependencies(this, false)) {
+                        bgp().runWithProgress("install-deps-" + installer.getName(), false,
+                                progressBar -> {
+                                    installer.installDependency(this, progressBar);
+                                    ui().reloadWindow("Mongo db installed");
+                                }, null,
+                                () -> new RuntimeException("INSTALL_DEPENDENCY_IN_PROGRESS"));
+                    }
+                });
+            }
         }
     }
 

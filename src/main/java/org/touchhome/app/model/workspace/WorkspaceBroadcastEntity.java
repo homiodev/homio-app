@@ -2,10 +2,17 @@ package org.touchhome.app.model.workspace;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.json.JSONObject;
+import org.touchhome.app.repository.workspace.WorkspaceBroadcastRepository;
+import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.HasLineChartSeries;
+import org.touchhome.bundle.api.entity.widget.HasPieChartSeries;
+import org.touchhome.bundle.api.entity.widget.HasPushButtonSeries;
 
 import javax.persistence.*;
-import java.util.Set;
+import java.util.*;
 
 @Getter
 @Entity
@@ -22,7 +29,8 @@ import java.util.Set;
                         "AND e.creationTime >= :from " +
                         "AND e.creationTime <= :to")
 })
-public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntity> {
+public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntity> implements HasLineChartSeries,
+        HasPieChartSeries, HasPushButtonSeries {
 
     public static final String PREFIX = "brc_";
 
@@ -38,5 +46,25 @@ public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntit
     @Override
     public String getEntityPrefix() {
         return PREFIX;
+    }
+
+    @Override
+    public double getPieSumChartSeries(EntityContext entityContext, Date from, Date to, String dateFromNow) {
+        return entityContext.getBean(WorkspaceBroadcastRepository.class).getPieSumChartSeries(this, from, to);
+    }
+
+    @Override
+    public double getPieCountChartSeries(EntityContext entityContext, Date from, Date to, String dateFromNow) {
+        return entityContext.getBean(WorkspaceBroadcastRepository.class).getPieCountChartSeries(this, from, to);
+    }
+
+    @Override
+    public void pushButton(EntityContext entityContext) {
+        entityContext.getBean(Scratch3EventsBlocks.class).broadcastEvent(this);
+    }
+
+    @Override
+    public Map<LineChartDescription, List<Object[]>> getLineChartSeries(EntityContext entityContext, JSONObject parameters, Date from, Date to, String dateFromNow) {
+        return Collections.singletonMap(new LineChartDescription(), entityContext.getBean(WorkspaceBroadcastRepository.class).getLineChartSeries(this, from, to));
     }
 }

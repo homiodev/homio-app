@@ -16,6 +16,7 @@ import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -71,8 +72,12 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
                     workspaceBlock.getInputString("DAY") + " " +
                     workspaceBlock.getInputString("MONTH") + " " +
                     workspaceBlock.getInputString("DOW");
+            AtomicInteger index = new AtomicInteger();
             EntityContextBGP.ThreadContext<Void> schedule = entityContext.bgp().schedule("workspace-schedule-" + workspaceBlock.getId(), cron,
-                    child::handle, true, true);
+                    () -> {
+                        workspaceBlock.setValue("index", index.getAndIncrement());
+                        child.handle();
+                    }, true, true);
             workspaceBlock.onRelease(schedule::cancel);
         }
     }
@@ -83,8 +88,10 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
             Integer time = workspaceBlock.getInputInteger("TIME");
             TimeUnit timeUnit = TimeUnit.valueOf(workspaceBlock.getField("UNIT"));
             WorkspaceBlock child = workspaceBlock.getChild();
+            int index = 0;
             while (!workspaceBlock.isDestroyed()) {
                 workspaceBlock.setState("execute");
+                workspaceBlock.setValue("index", index++);
                 child.handle();
                 workspaceBlock.setState("Wait next event");
                 Thread.sleep(timeUnit.toMillis(time));
@@ -127,8 +134,12 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private void repeatUntilHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleChildOptional(child -> {
             if (workspaceBlock.hasInput(CONDITION)) {
+                int index = 0;
                 while (workspaceBlock.getInputBoolean(CONDITION)) {
+                    workspaceBlock.setValue("index", index++);
                     child.handle();
+
+                    Thread.sleep(100); // wait at least 100ms for 'clumsy hands'
                 }
             }
         });
@@ -169,10 +180,8 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     private void ifHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleChildOptional(child -> {
-            if (workspaceBlock.hasInput(CONDITION)) {
-                if (workspaceBlock.getInputBoolean(CONDITION)) {
-                    child.handle();
-                }
+            if (workspaceBlock.hasInput(CONDITION) && workspaceBlock.getInputBoolean(CONDITION)) {
+                child.handle();
             }
         });
     }
@@ -180,7 +189,8 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private void repeatHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleChildOptional(child -> {
             int times = workspaceBlock.getInputInteger("TIMES");
-            for (int i = 0; i < times; i++) {
+            for (int index = 0; index < times; index++) {
+                workspaceBlock.setValue("index", index);
                 child.handle();
             }
         });
@@ -198,7 +208,9 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     @SneakyThrows
     private void foreverHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleChildOptional(child -> {
+            int index = 0;
             while (!workspaceBlock.isDestroyed()) {
+                workspaceBlock.setValue("index", index++);
                 child.handle();
 
                 Thread.sleep(100); // wait at least 100ms for 'clumsy hands'

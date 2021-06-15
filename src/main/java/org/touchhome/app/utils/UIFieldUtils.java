@@ -1,5 +1,6 @@
 package org.touchhome.app.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -23,10 +24,9 @@ import org.touchhome.bundle.api.ui.field.action.*;
 import org.touchhome.bundle.api.ui.field.color.*;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImage;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImageSrc;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldClassSelection;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectValueOnEmpty;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
+import org.touchhome.bundle.api.ui.field.selection.*;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.touchhome.bundle.api.ui.method.UIFieldCreateWorkspaceVariableOnEmpty;
 import org.touchhome.bundle.api.util.SecureString;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -44,33 +44,35 @@ import static org.apache.commons.lang3.StringUtils.trimToNull;
 
 public class UIFieldUtils {
 
-    public static Collection<OptionModel> loadOptions(HasEntityIdentifier entity, EntityContext entityContext, String fieldName) {
-        Method method = InternalUtil.findMethodByName(entity.getClass(), fieldName);
+    public static Collection<OptionModel> loadOptions(Object classEntity, EntityContext entityContext, String fieldName,
+                                                      Object classEntityForDynamicOptionLoader) {
+        Method method = InternalUtil.findMethodByName(classEntity.getClass(), fieldName);
         if (method != null) {
             UIFieldSelection uiFieldSelection = method.getDeclaredAnnotation(UIFieldSelection.class);
             if (uiFieldSelection != null) {
-                return loadOptions(method, entityContext, method.getReturnType(), entity);
+                return loadOptions(method, entityContext, method.getReturnType(), classEntity, classEntityForDynamicOptionLoader);
             }
-            Collection<OptionModel> options = loadOptions(method, entityContext, method.getReturnType(), entity);
+            Collection<OptionModel> options = loadOptions(method, entityContext, method.getReturnType(), classEntity, classEntityForDynamicOptionLoader);
             if (!options.isEmpty()) {
                 return options;
             }
         }
-        Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
+        Field field = FieldUtils.getField(classEntity.getClass(), fieldName, true);
         if (field != null) {
             UIFieldSelection uiFieldSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
             if (uiFieldSelection != null) {
-                return loadOptions(field, entityContext, field.getType(), entity);
+                return loadOptions(field, entityContext, field.getType(), classEntity, classEntityForDynamicOptionLoader);
             }
-            return loadOptions(field, entityContext, field.getType(), entity);
+            return loadOptions(field, entityContext, field.getType(), classEntity, classEntityForDynamicOptionLoader);
         }
-        throw new ServerException("Unable to find select handler for entity type: " + entity.getClass().getSimpleName()
+        throw new ServerException("Unable to find select handler for entity type: " + classEntity.getClass().getSimpleName()
                 + " and fieldName: " + fieldName);
     }
 
     @SneakyThrows
     private static Collection<OptionModel> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass,
-                                                       HasEntityIdentifier entity) {
+                                                       Object classEntity, Object classEntityForDynamicOptionLoader) {
+        classEntityForDynamicOptionLoader = classEntityForDynamicOptionLoader == null ? classEntity : classEntityForDynamicOptionLoader;
         UIFieldSelection uiFieldTargetSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
         if (uiFieldTargetSelection != null) {
             targetClass = uiFieldTargetSelection.value();
@@ -78,9 +80,13 @@ public class UIFieldUtils {
         DynamicOptionLoader dynamicOptionLoader = null;
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
             dynamicOptionLoader = (DynamicOptionLoader) TouchHomeUtils.newInstance(targetClass);
+            if (dynamicOptionLoader == null) {
+                throw new RuntimeException("Unable to instantiate DynamicOptionLoader class: " + targetClass.getName() +
+                        ". Does class has public modifier and no args constructor?");
+            }
         }
         if (dynamicOptionLoader != null) {
-            return dynamicOptionLoader.loadOptions(entity instanceof BaseEntity ? (BaseEntity<?>) entity : null,
+            return dynamicOptionLoader.loadOptions(classEntityForDynamicOptionLoader instanceof BaseEntity ? (BaseEntity<?>) classEntityForDynamicOptionLoader : null,
                     entityContext, uiFieldTargetSelection.staticParameters());
         }
 
@@ -100,9 +106,42 @@ public class UIFieldUtils {
             }
             Predicate<Class<?>> predicate = TouchHomeUtils.newInstance(uiFieldClassSelection.filter());
             return list.stream().filter(predicate).map(c -> OptionModel.of(c.getName(), c.getSimpleName())).collect(Collectors.toList());
+        } else if (field.isAnnotationPresent(UIFieldClassWithFeatureSelection.class)) {
+            UIFieldClassWithFeatureSelection uiFieldClassSelection = field.getDeclaredAnnotation(UIFieldClassWithFeatureSelection.class);
+            List<OptionModel> list = new ArrayList<>();
+            for (Class<? extends HasEntityIdentifier> foundTargetType : entityContext.getClassesWithParent(uiFieldClassSelection.value(), uiFieldClassSelection.basePackages())) {
+                if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
+                    for (BaseEntity baseEntity : entityContext.findAll((Class<BaseEntity>) foundTargetType)) {
+                        list.add(addEntityToSelection(baseEntity));
+                    }
+                }
+            }
+            return list;
         }
 
         return Collections.emptyList();
+    }
+
+    private static OptionModel addEntityToSelection(HasEntityIdentifier entityIdentifier) {
+        OptionModel optionModel = OptionModel.of(entityIdentifier.getEntityID(), entityIdentifier.getTitle());
+        if (entityIdentifier instanceof SelectionWithDynamicParameterFields) {
+            optionModel.json(params -> {
+                DynamicParameterFields dynamicParameterFields = ((SelectionWithDynamicParameterFields) entityIdentifier).getDynamicParameterFields(null);
+                if (dynamicParameterFields != null) {
+                    try {
+                        params.put("dynamicParameter", new JSONObject()
+                                .put("groupName", dynamicParameterFields.getGroupName())
+                                .put("borderColor", dynamicParameterFields.getBorderColor())
+                                .put("defaultValues", TouchHomeUtils.OBJECT_MAPPER.writeValueAsString(dynamicParameterFields))
+                                .put("class", dynamicParameterFields.getClass().getSimpleName())
+                                .put("holder", dynamicParameterFields.getHolderField()));
+                    } catch (JsonProcessingException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            });
+        }
+        return optionModel;
     }
 
     public static List<UIActionResponse> fetchUIActionsFromClass(Class<?> clazz) {
@@ -141,9 +180,6 @@ public class UIFieldUtils {
     public static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet) {
         Map<String, List<Method>> fieldNameToGetters = new HashMap<>();
         Class<?> cursor = instance.getClass();
-        if (!HasEntityIdentifier.class.isAssignableFrom(cursor)) {
-            throw new RuntimeException("Unable to fill UIFields with no parent as BaseEntity class");
-        }
         while (!cursor.getSimpleName().equals(Object.class.getSimpleName())) {
             for (Method declaredMethod : cursor.getDeclaredMethods()) {
                 fieldNameToGetters.putIfAbsent(declaredMethod.getName(), new ArrayList<>());
@@ -228,9 +264,13 @@ public class UIFieldUtils {
         if (uiField.type().equals(UIFieldType.AutoDetect)) {
             if (type.isEnum() ||
                     uiFieldContext.isAnnotationPresent(UIFieldSelection.class) ||
+                    uiFieldContext.isAnnotationPresent(UIFieldClassWithFeatureSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldClassSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldBeanSelection.class)) {
                 entityUIMetaData.setType(uiField.readOnly() ? UIFieldType.String.name() : UIFieldType.SelectBox.name());
+                if (Collection.class.isAssignableFrom(type)) {
+                    jsonTypeMetadata.put("multiple", true);
+                }
             } else {
                 if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
                     Type argument = ((ParameterizedType) genericType).getActualTypeArguments()[0];
@@ -550,7 +590,7 @@ public class UIFieldUtils {
                     break;
                 }
                 // add only methods with zero argument count
-                if(method.getParameterCount() == 0) {
+                if (method.getParameterCount() == 0) {
                     methods.add(method);
                 }
             }

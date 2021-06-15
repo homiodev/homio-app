@@ -16,7 +16,10 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
-import org.touchhome.bundle.api.workspace.scratch.*;
+import org.touchhome.bundle.api.workspace.scratch.BlockType;
+import org.touchhome.bundle.api.workspace.scratch.MenuBlock;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import java.net.*;
 import java.nio.charset.StandardCharsets;

@@ -1,19 +1,12 @@
 package org.touchhome.app.model.entity.widget.impl.button;
 
-import org.touchhome.app.model.entity.widget.SeriesBuilder;
-import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.HasPushButtonSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
-import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
-import org.touchhome.bundle.api.model.OptionModel;
-import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldClassWithFeatureSelection;
 
 import javax.persistence.Entity;
-import java.util.List;
 
 @Entity
 public class WidgetButtonSeriesEntity extends WidgetSeriesEntity<WidgetButtonEntity> {
@@ -21,7 +14,7 @@ public class WidgetButtonSeriesEntity extends WidgetSeriesEntity<WidgetButtonEnt
     public static final String PREFIX = "wtbs_";
 
     @UIField(order = 14, required = true)
-    @UIFieldSelection(ButtonsSeriesDataSourceDynamicOptionLoader.class)
+    @UIFieldClassWithFeatureSelection(HasPushButtonSeries.class)
     public String getDataSource() {
         return getJsonData("ds");
     }
@@ -39,16 +32,5 @@ public class WidgetButtonSeriesEntity extends WidgetSeriesEntity<WidgetButtonEnt
     @Override
     public String getEntityPrefix() {
         return PREFIX;
-    }
-
-    public static class ButtonsSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
-
-        @Override
-        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext, String[] staticParameters) {
-            return SeriesBuilder.seriesOptions()
-                    .add(WorkspaceBooleanEntity.class)
-                    .add(WorkspaceBroadcastEntity.class)
-                    .build(entityContext);
-        }
     }
 }

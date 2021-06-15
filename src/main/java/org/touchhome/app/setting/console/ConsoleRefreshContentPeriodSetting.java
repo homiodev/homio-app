@@ -11,7 +11,6 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
 public class ConsoleRefreshContentPeriodSetting implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
 

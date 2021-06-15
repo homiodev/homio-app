@@ -173,7 +173,7 @@ public class ConsoleController {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID))
                     .findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-            return UIFieldUtils.loadOptions(identifier, entityContext, fieldName);
+            return UIFieldUtils.loadOptions(identifier, entityContext, fieldName, null);
         }
         return null;
     }

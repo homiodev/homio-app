@@ -1,21 +1,15 @@
 package org.touchhome.app.model.entity.widget.impl.gauge;
 
-import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.HasGaugeSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
-import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
-import org.touchhome.bundle.api.model.OptionModel;
-import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldNumber;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIKeyValueField;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldClassWithFeatureSelection;
 
 import javax.persistence.Entity;
-import java.util.List;
 
 @Entity
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
@@ -23,7 +17,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
     public static final String PREFIX = "wtgg_";
 
     @UIField(order = 14, required = true)
-    @UIFieldSelection(GaugeDataSourceDynamicOptionLoader.class)
+    @UIFieldClassWithFeatureSelection(HasGaugeSeries.class)
     public String getDataSource() {
         return getJsonData("ds");
     }
@@ -171,16 +165,5 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
 
     public enum LineType {
         round, butt
-    }
-
-    public static class GaugeDataSourceDynamicOptionLoader implements DynamicOptionLoader {
-
-        @Override
-        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext, String[] staticParameters) {
-            return SeriesBuilder.seriesOptions()
-                    .add(WorkspaceStandaloneVariableEntity.class)
-                    .add(WorkspaceVariableEntity.class)
-                    .build(entityContext);
-        }
     }
 }

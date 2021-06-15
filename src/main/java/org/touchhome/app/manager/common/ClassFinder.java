@@ -19,7 +19,9 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor

@@ -61,7 +61,7 @@ public class DemoConfiguration {
 
     private void clearWidgets() {
         for (WidgetTabEntity tab : entityContext.findAll(WidgetTabEntity.class)) {
-            if (!WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(tab.getName()) && tab.getWidgetBaseEntities().isEmpty()) {
+            if (!WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(tab.getEntityID()) && tab.getWidgetBaseEntities().isEmpty()) {
                 entityContext.delete(tab);
             }
         }

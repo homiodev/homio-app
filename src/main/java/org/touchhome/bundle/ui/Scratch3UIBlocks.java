@@ -91,7 +91,8 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
     private void headerHandler(WorkspaceBlock workspaceBlock) {
         entityContext.ui().addBellNotification(workspaceBlock.getId(), workspaceBlock.getInputString("NAME"),
-                workspaceBlock.getInputString("MSG"), workspaceBlock.getMenuValue("TYPE", this.popupType).level);
+                workspaceBlock.getInputString("MSG"), workspaceBlock.getMenuValue("TYPE", this.popupType).level,
+                null);
         workspaceBlock.onRelease(() -> entityContext.ui().removeBellNotification(workspaceBlock.getId()));
     }
 

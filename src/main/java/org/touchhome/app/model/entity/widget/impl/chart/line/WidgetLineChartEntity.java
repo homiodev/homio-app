@@ -5,6 +5,7 @@ import lombok.Setter;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartPeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.LineInterpolation;
+import org.touchhome.bundle.api.EntityContextWidget;
 import org.touchhome.bundle.api.ui.field.UIField;
 
 import javax.persistence.Entity;
@@ -13,8 +14,6 @@ import javax.persistence.Entity;
 @Setter
 @Entity
 public class WidgetLineChartEntity extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity> {
-
-    public static final String PREFIX = "lcw_";
 
     @UIField(order = 12)
     public ChartPeriod getChartPeriod() {
@@ -103,6 +102,6 @@ public class WidgetLineChartEntity extends ChartBaseEntity<WidgetLineChartEntity
 
     @Override
     public String getEntityPrefix() {
-        return PREFIX;
+        return EntityContextWidget.LINE_CHART_WIDGET_PREFIX;
     }
 }

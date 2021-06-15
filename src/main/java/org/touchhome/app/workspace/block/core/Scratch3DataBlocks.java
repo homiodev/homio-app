@@ -3,7 +3,6 @@ package org.touchhome.app.workspace.block.core;
 import lombok.Getter;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
-import org.touchhome.app.repository.workspace.backup.WorkspaceBackupRepository;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.app.workspace.WorkspaceBlockImpl;
 import org.touchhome.bundle.api.EntityContext;
@@ -14,6 +13,7 @@ import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupValueCrud
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableBackupValueCrudEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
+import org.touchhome.bundle.api.repository.WorkspaceBackupRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
@@ -57,7 +57,6 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     private final BroadcastLockManagerImpl broadcastLockManager;
 
     private final Scratch3Block getPrevVariableBlock;
-  //  private final InfluxDB influxDB;
 
     public Scratch3DataBlocks(EntityContext entityContext, WorkspaceBackupRepository workspaceBackupRepository, BroadcastLockManagerImpl broadcastLockManager) {
         super("data", entityContext);
@@ -87,18 +86,11 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         this.changeGroupVariableBlock = Scratch3Block.ofHandler("change_group_variable", BlockType.command, this::changeGroupVariableHandler);
         this.setAndBackupGroupVariableBlock = Scratch3Block.ofHandler("set_group_variable_and_backup", BlockType.command, this::setAndBackupGroupVariableHandler);
         this.variableGroupLink = Scratch3Block.ofHandler("group_variable_link", BlockType.hat, this::variableGroupLinkHatEvent);
-
-      /*  influxDB = InfluxDBFactory.connect("databaseURL", "admin", "admin");
-        influxDB.query(new Query("CREATE DATABASE touchhome", ""));
-        influxDB.query(new Query("CREATE RETENTION POLICY defaultPolicy on touchhome DURATION 30d REPLICATION 1 DEFAULT", ""));
-
-        influxDB.disableBatch();
-        influxDB.setLogLevel(InfluxDB.LogLevel.BASIC);*/
     }
 
     private Object getPreviousValue(WorkspaceBlock workspaceBlock) {
         WorkspaceBlockImpl workspaceBlockImpl = (WorkspaceBlockImpl) workspaceBlock;
-        return workspaceBlockImpl.getLastValue();
+        return ((WorkspaceBlockImpl) workspaceBlockImpl.getParent()).getLastValue();
     }
 
     private JSONObject getJsonVariableToReporter(WorkspaceBlock workspaceBlock) {

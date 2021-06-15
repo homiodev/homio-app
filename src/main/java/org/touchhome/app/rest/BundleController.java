@@ -20,6 +20,7 @@ import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,7 +35,7 @@ public class BundleController {
     private final BundleService bundleService;
     private final List<Scratch3ExtensionBlocks> scratch3ExtensionBlocks;
 
-    @GetMapping("/{bundleID}/icon")
+    @GetMapping("/image/{bundleID}")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID) throws IOException {
         BundleEntryPoint bundleEntryPoint = bundleService.getBundle(bundleID.contains("-") ? bundleID.substring(0, bundleID.indexOf("-")) : bundleID);
@@ -46,6 +47,18 @@ public class BundleController {
             throw new NotFoundException("Unable to find bundle image of bundle: " + bundleID);
         }
         return TouchHomeUtils.inputStreamToResource(imageUrl.openStream(), MediaType.IMAGE_PNG);
+    }
+
+    @GetMapping("/image/{bundleID}/{baseEntityType:.+}")
+    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
+    public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID,
+                                                              @PathVariable String baseEntityType) {
+        BundleEntryPoint bundleEntrypoint = bundleService.getBundle(bundleID);
+        InputStream stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream("images/" + baseEntityType);
+        if (stream == null) {
+            throw new NotFoundException("Unable to find image <" + baseEntityType + "> of bundle: " + bundleID);
+        }
+        return TouchHomeUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
     }
 
     @GetMapping

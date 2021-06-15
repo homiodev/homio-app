@@ -1,10 +1,8 @@
-package org.touchhome.app.json;
+package org.touchhome.app.notification;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
-import org.touchhome.bundle.api.ui.BaseNotificationModel;
 import org.touchhome.bundle.api.ui.DialogModel;
 
 import java.util.LinkedHashSet;

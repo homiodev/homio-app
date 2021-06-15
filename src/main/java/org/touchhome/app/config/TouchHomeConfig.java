@@ -6,14 +6,11 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.BeanSerializer;
-import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module;
 import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule;
 import com.pi4j.io.gpio.Pin;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControlHandlerInterceptor;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
@@ -60,12 +57,12 @@ import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.block.Scratch3Space;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.entity.BaseEntityIdentifier;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostHandler;
 import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostProcessor;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
+import org.touchhome.bundle.api.util.SecureString;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import javax.servlet.Filter;
@@ -175,6 +172,12 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
         hibernate5Module.disable(Hibernate5Module.Feature.USE_TRANSIENT_ANNOTATION);
 
         SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addSerializer(SecureString.class, new JsonSerializer<SecureString>() {
+            @Override
+            public void serialize(SecureString secureString, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+                jsonGenerator.writeString(secureString.toString());
+            }
+        });
         simpleModule.addSerializer(Pin.class, new JsonSerializer<Pin>() {
             @Override
             public void serialize(Pin pin, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {

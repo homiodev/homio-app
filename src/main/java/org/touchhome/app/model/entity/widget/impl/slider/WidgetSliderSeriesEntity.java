@@ -1,20 +1,13 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
-import org.touchhome.app.model.entity.widget.SeriesBuilder;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.HasSliderSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
-import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
-import org.touchhome.bundle.api.model.OptionModel;
-import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldNumber;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldClassWithFeatureSelection;
 
 import javax.persistence.Entity;
-import java.util.List;
 
 @Entity
 public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity> {
@@ -22,7 +15,7 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
     public static final String PREFIX = "wtsls_";
 
     @UIField(order = 14, required = true)
-    @UIFieldSelection(SliderSeriesDataSourceDynamicOptionLoader.class)
+    @UIFieldClassWithFeatureSelection(HasSliderSeries.class)
     public String getDataSource() {
         return getJsonData("ds");
     }
@@ -72,16 +65,5 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
     @Override
     public String getEntityPrefix() {
         return PREFIX;
-    }
-
-    public static class SliderSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
-
-        @Override
-        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext, String[] staticParameters) {
-            return SeriesBuilder.seriesOptions()
-                    .add(WorkspaceStandaloneVariableEntity.class)
-                    .add(WorkspaceVariableEntity.class)
-                    .build(entityContext);
-        }
     }
 }

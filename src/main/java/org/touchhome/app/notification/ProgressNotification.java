@@ -1,9 +1,8 @@
-package org.touchhome.app.json;
+package org.touchhome.app.notification;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.ui.BaseNotificationModel;
 
 @Getter
 @Setter

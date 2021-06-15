@@ -7,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
 import org.springframework.data.util.Pair;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
@@ -30,29 +31,21 @@ import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
-import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
-import org.touchhome.app.repository.widget.HasFetchChartSeries;
-import org.touchhome.app.repository.widget.HasLastNumberValueRepository;
 import org.touchhome.app.repository.widget.impl.chart.WidgetBarChartSeriesEntity;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
-import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
-import org.touchhome.bundle.api.entity.widget.WidgetTabEntity;
-import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
-import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
+import org.touchhome.bundle.api.entity.widget.*;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
-import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.widget.WidgetJSBaseTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
@@ -63,9 +56,7 @@ import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 @RequiredArgsConstructor
 public class WidgetController {
 
-    private final List<WidgetBaseEntity<?>> widgetBaseEntities;
     private final EntityContext entityContext;
-    private final Scratch3EventsBlocks scratch3EventsBlocks;
     private final ScriptService scriptService;
     private final ObjectMapper objectMapper;
     private final WidgetService widgetService;
@@ -81,11 +72,8 @@ public class WidgetController {
     public void handleButtonClick(@PathVariable("entityID") String entityID) {
         WidgetButtonSeriesEntity entity = entityContext.getEntity(entityID);
         BaseEntity<?> source = entityContext.getEntity(entity.getDataSource());
-        if (source instanceof WorkspaceBroadcastEntity) {
-            scratch3EventsBlocks.broadcastEvent((WorkspaceBroadcastEntity) source);
-        } else if (source instanceof WorkspaceBooleanEntity) {
-            WorkspaceBooleanEntity wbEntity = (WorkspaceBooleanEntity) source;
-            entityContext.save(wbEntity.inverseValue());
+        if (source instanceof HasPushButtonSeries) {
+            ((HasPushButtonSeries) source).pushButton(entityContext);
         } else {
             throw new ServerException("Unable to find handler for button");
         }
@@ -102,12 +90,13 @@ public class WidgetController {
         for (WidgetBarChartSeriesEntity item : entity.getSeries()) {
             if (item.getDataSource() != null) {
                 BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
-                HasLastNumberValueRepository repository = getRepository(source, HasLastNumberValueRepository.class);
-                double value = repository.getLastNumberValue(source);
-                BarSeries barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()), value);
-                int i = 1;
-                while (!series.add(barSeries)) {
-                    barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()) + "(" + i++ + ")", value);
+                if (source instanceof HasBarChartSeries) {
+                    double value = ((HasBarChartSeries) source).getBarValue(entityContext);
+                    BarSeries barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()), value);
+                    int i = 1;
+                    while (!series.add(barSeries)) {
+                        barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()) + "(" + i++ + ")", value);
+                    }
                 }
             }
         }
@@ -121,22 +110,70 @@ public class WidgetController {
         List<ChartSeries> series = new ArrayList<>();
         for (WidgetLineChartSeriesEntity item : entity.getSeries()) {
             BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
-            HasFetchChartSeries repository = getRepository(source, HasFetchChartSeries.class);
+            if (source instanceof HasLineChartSeries) {
+                ChartPeriod chartPeriod = ChartPeriod.fromValue(period);
+                Pair<Date, Date> range = chartPeriod.getDateRange();
+                JSONObject dynamicParameterFields = item.getDynamicParameterFieldsHolder();
+                Map<HasLineChartSeries.LineChartDescription, List<Object[]>> result = ((HasLineChartSeries) source).getLineChartSeries(entityContext,
+                        dynamicParameterFields, range.getFirst(), range.getSecond(), chartPeriod.getDateFromNow());
 
-            ChartPeriod chartPeriod = ChartPeriod.fromValue(period);
-            Pair<Date, Date> range = chartPeriod.getDateRange();
+                for (Map.Entry<HasLineChartSeries.LineChartDescription, List<Object[]>> entry : result.entrySet()) {
+                    List<Object[]> chartItems = entry.getValue();
 
-            List<Object[]> chartItems = repository.getLineChartSeries(source, range.getFirst(), range.getSecond());
-            if (!chartItems.isEmpty()) {
-                chartItems.add(new Object[]{new Date(), chartItems.get(chartItems.size() - 1)[1]});
+                    // convert chartItem[0] to long if it's a Date type
+                    if (!chartItems.isEmpty() && chartItems.get(0)[0] instanceof Date) {
+                        for (Object[] chartItem : chartItems) {
+                            chartItem[0] = ((Date) chartItem[0]).getTime();
+                        }
+                    }
+                    EvaluateDatesAndValues evaluateDatesAndValues = new EvaluateDatesAndValues(chartPeriod, chartItems).invoke(item);
+
+                    // aggregation
+                    List<Float> finalValues = evaluateDatesAndValues.getValues().stream()
+                            .map(items -> item.getAggregateFunction().getAggregateFn().apply(items))
+                            .collect(Collectors.toList());
+
+                    String title = StringUtils.defaultString(entry.getKey().getName(), source.getTitle());
+                    series.add(new ChartSeries(title + "(" + chartItems.size() + ")", entry.getKey().getColor(), evaluateDatesAndValues.getDates(), finalValues));
+                }
             }
-
-            List<Date> dateList = chartItems.stream().map(p -> (Date) p[0]).collect(Collectors.toList());
-            Float[] values = chartItems.stream().map(p -> (Float) p[1]).toArray(Float[]::new);
-
-            series.add(new ChartSeries(source.getTitle(), dateList, values));
         }
         return series;
+    }
+
+    private List<List<Float>> fulfillValues(List<Date> dates, List<Object[]> chartItems, Boolean fillMissingValues) {
+        List<List<Float>> values = new ArrayList<>(dates.size());
+        IntStream.range(0, dates.size()).forEach(value -> values.add(new ArrayList<>()));
+
+        // push values to date between buckets
+        for (Object[] chartItem : chartItems) {
+            long time = chartItem[0] instanceof Date ? ((Date) chartItem[0]).getTime() : (Long) chartItem[0];
+            int index = getDateIndex(dates, time);
+            values.get(index).add((Float) chartItem[1]);
+        }
+
+        // remove empty values
+        if (!fillMissingValues) {
+            Iterator<Date> dateIterator = dates.iterator();
+            for (Iterator<List<Float>> iterator = values.iterator(); iterator.hasNext(); ) {
+                List<Float> filledValues = iterator.next();
+                dateIterator.next();
+                if (filledValues.isEmpty()) {
+                    iterator.remove();
+                    dateIterator.remove();
+                }
+            }
+        }
+        return values;
+    }
+
+    private int getDateIndex(List<Date> dateList, long time) {
+        for (int i = 0; i < dateList.size(); i++) {
+            if (time < dateList.get(i).getTime()) {
+                return i - 1;
+            }
+        }
+        return dateList.size() - 1;
     }
 
     @GetMapping("/pie/{entityID}/series")
@@ -145,13 +182,19 @@ public class WidgetController {
         List<PieSeries> series = new ArrayList<>();
         for (WidgetPieChartSeriesEntity item : entity.getSeries()) {
             BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
-            HasFetchChartSeries repository = getRepository(source, HasFetchChartSeries.class);
+            if (source instanceof HasPieChartSeries) {
+                ChartPeriod chartPeriod = ChartPeriod.fromValue(period);
+                Pair<Date, Date> range = chartPeriod.getDateRange();
 
-            ChartPeriod chartPeriod = ChartPeriod.fromValue(period);
-            Pair<Date, Date> range = chartPeriod.getDateRange();
-
-            Object value = repository.getPieChartSeries(source, range.getFirst(), range.getSecond(), entity.getPieChartValueType());
-            series.add(new PieSeries(source.getTitle(), value, new PieSeries.Extra(item.getTitle())));
+                double value;
+                if (entity.getPieChartValueType() == WidgetPieChartEntity.PieChartValueType.Sum) {
+                    value = ((HasPieChartSeries) source).getPieSumChartSeries(entityContext, range.getFirst(), range.getSecond(), chartPeriod.getDateFromNow());
+                } else {
+                    value = ((HasPieChartSeries) source).getPieCountChartSeries(entityContext, range.getFirst(),
+                            range.getSecond(), chartPeriod.getDateFromNow());
+                }
+                series.add(new PieSeries(source.getTitle(), value, new PieSeries.Extra(item.getTitle())));
+            }
         }
         return series;
     }
@@ -159,7 +202,8 @@ public class WidgetController {
     @GetMapping("/gauge/{entityID}/value")
     public Float getGaugeValue(@PathVariable("entityID") String entityID) {
         WidgetGaugeEntity entity = entityContext.getEntity(entityID);
-        return fetchVariableValue(entityContext.getEntity(entity.getDataSource()));
+        BaseEntity baseEntity = entityContext.getEntity(entity.getDataSource());
+        return baseEntity instanceof HasGaugeSeries ? ((HasGaugeSeries) baseEntity).getGaugeValue() : null;
     }
 
     @GetMapping("/slider/{entityID}/values")
@@ -168,7 +212,9 @@ public class WidgetController {
         List<Float> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetSliderSeriesEntity item : entity.getSeries()) {
             BaseEntity<?> dataSource = entityContext.getEntity(item.getDataSource());
-            values.add(fetchVariableValue(dataSource));
+            if (dataSource instanceof HasSliderSeries) {
+                values.add(((HasSliderSeries) dataSource).getSliderValue());
+            }
         }
         return values;
     }
@@ -179,8 +225,8 @@ public class WidgetController {
         List<Boolean> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetToggleSeriesEntity item : entity.getSeries()) {
             BaseEntity<?> dataSource = entityContext.getEntity(item.getDataSource());
-            if (dataSource instanceof WorkspaceBooleanEntity) {
-                values.add(((WorkspaceBooleanEntity) dataSource).getValue());
+            if (dataSource instanceof HasToggleSeries) {
+                values.add(((HasToggleSeries) dataSource).getToggleValue());
             } else {
                 throw new ServerException("Unable to find handler for fetch value from <Data Source>: " + dataSource.getTitle());
             }
@@ -194,13 +240,12 @@ public class WidgetController {
         List<Pair<Object, Date>> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetDisplaySeriesEntity item : entity.getSeries()) {
             BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
-            Object val;
-            if (source instanceof WorkspaceBooleanEntity) {
-                val = ((WorkspaceBooleanEntity) source).getValue();
-            } else {
-                val = fetchVariableValue(source);
+            if (source instanceof HasDisplaySeries) {
+                Object val = ((HasDisplaySeries) source).getDisplayValue();
+                if (val != null) {
+                    values.add(Pair.of(val, source.getUpdateTime()));
+                }
             }
-            values.add(Pair.of(val, source.getUpdateTime()));
         }
         return values;
     }
@@ -213,12 +258,9 @@ public class WidgetController {
             throw new NotFoundException("Unable to find series: " + seriesEntityID + " for entity: " + entity.getTitle());
         }
         BaseEntity<?> source = entityContext.getEntity(series.getDataSource());
-        if (source instanceof WorkspaceStandaloneVariableEntity) {
-            entityContext.save(((WorkspaceStandaloneVariableEntity) source).setValue(integerValue.value));
-        } else if (source instanceof WorkspaceVariableEntity) {
-            entityContext.save(((WorkspaceVariableEntity) source).setValue(integerValue.value));
-        } else {
-            throw new ServerException("Unable to find handler for set value for slider");
+        if (source instanceof HasSliderSeries) {
+            ((HasSliderSeries) source).setSliderValue(integerValue.value);
+            entityContext.save(source);
         }
     }
 
@@ -230,8 +272,9 @@ public class WidgetController {
             throw new NotFoundException("Unable to find series: " + seriesEntityID + " for entity: " + entity.getTitle());
         }
         BaseEntity<?> source = entityContext.getEntity(series.getDataSource());
-        if (source instanceof WorkspaceBooleanEntity) {
-            entityContext.save(((WorkspaceBooleanEntity) source).setValue(booleanValue.value));
+        if (source instanceof HasToggleSeries) {
+            ((HasToggleSeries) source).setToggleValue(booleanValue.value);
+            entityContext.save(source);
         } else {
             throw new ServerException("Unable to find handler for set value for slider");
         }
@@ -360,24 +403,22 @@ public class WidgetController {
     @PutMapping("/tab/{tabId}/{name}")
     @Secured(ADMIN_ROLE)
     public void renameWidgetTab(@PathVariable("tabId") String tabId, @PathVariable("name") String name) {
-        if (!WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(name)) {
+        WidgetTabEntity entity = getWidgetTabEntity(tabId);
+        WidgetTabEntity newEntity = entityContext.getEntityByName(name, WidgetTabEntity.class);
 
-            WidgetTabEntity entity = getWidgetTabEntity(tabId);
-            WidgetTabEntity newEntity = entityContext.getEntityByName(name, WidgetTabEntity.class);
-
-            if (newEntity == null) {
-                entityContext.save(entity.setName(name));
-            }
+        if (newEntity == null) {
+            entityContext.save(entity.setName(name));
         }
     }
 
     @DeleteMapping("/tab/{tabId}")
     @Secured(ADMIN_ROLE)
     public void deleteWidgetTab(@PathVariable("tabId") String tabId) {
-        WidgetTabEntity widgetTabEntity = getWidgetTabEntity(tabId);
-        if (!WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(widgetTabEntity.getName())) {
-            entityContext.delete(widgetTabEntity);
+        if (WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(tabId)) {
+            throw new IllegalStateException("Unable to delete main tab");
         }
+        WidgetTabEntity widgetTabEntity = getWidgetTabEntity(tabId);
+        entityContext.delete(widgetTabEntity);
     }
 
     private WidgetTabEntity getWidgetTabEntity(String tabId) {
@@ -386,24 +427,6 @@ public class WidgetController {
             return (WidgetTabEntity) baseEntity;
         }
         throw new ServerException("Unable to find widget tab with id: " + tabId);
-    }
-
-    private Float fetchVariableValue(BaseEntity<?> dataSource) {
-        if (dataSource instanceof WorkspaceStandaloneVariableEntity) {
-            return ((WorkspaceStandaloneVariableEntity) dataSource).getValue();
-        } else if (dataSource instanceof WorkspaceVariableEntity) {
-            return ((WorkspaceVariableEntity) dataSource).getValue();
-        } else {
-            throw new ServerException("Unable to find handler for fetch value from <Data Source>: " + dataSource.getTitle());
-        }
-    }
-
-    private <T> T getRepository(BaseEntity<?> source, Class<T> repositoryAbility) {
-        AbstractRepository<?> abstractRepository = entityContext.getRepository(source).orElseThrow(() -> new NotFoundException("Repository not found"));
-        if (!repositoryAbility.isAssignableFrom(abstractRepository.getClass())) {
-            throw new ServerException("Repository: " + abstractRepository.getClass().getSimpleName() + " must implement <" + repositoryAbility.getSimpleName() + "> interface");
-        }
-        return (T) abstractRepository;
     }
 
    /* @RequestMapping(value = "/getWidget", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -452,8 +475,9 @@ public class WidgetController {
     @AllArgsConstructor
     private static class ChartSeries {
         private String name;
+        private String color;
         private List<Date> dates;
-        private Float[] values;
+        private List<Float> values;
     }
 
     @Getter
@@ -498,5 +522,40 @@ public class WidgetController {
     @Setter
     private static class BooleanValue {
         private Boolean value;
+    }
+
+    @RequiredArgsConstructor
+    private class EvaluateDatesAndValues {
+        private final ChartPeriod chartPeriod;
+        private final List<Object[]> chartItems;
+        @Getter
+        private List<Date> dates;
+        @Getter
+        private List<List<Float>> values;
+
+        public EvaluateDatesAndValues invoke(WidgetLineChartSeriesEntity item) {
+            // get dates split by algorithm
+            dates = chartPeriod.getDates(chartItems);
+            List<Date> initialDates = new ArrayList<>(dates);
+            // minimum number not 0 values to fit requirements
+            int minDateSize = initialDates.size() / 2;
+            // fill values with remove 0 points. Attention: dates are modified by iterator
+            values = WidgetController.this.fulfillValues(dates, chartItems, item.getFillMissingValues());
+            int index = 2;
+            int prevDates = -1; // prevDates uses to avoid extra iterations if prevDates == datesWithMultiplier
+            while (index != 5 && prevDates != dates.size()) {
+                prevDates = dates.size();
+                dates = new ArrayList<>(initialDates.size() * index);
+                for (int i = 0; i < initialDates.size() - 1; i++) {
+                    dates.add(initialDates.get(i));
+                    dates.add(new Date(((initialDates.get(i + 1).getTime() + initialDates.get(i).getTime())) / 2));
+                }
+                dates.add(initialDates.get(initialDates.size() - 1));
+                initialDates = new ArrayList<>(dates);
+                values = WidgetController.this.fulfillValues(dates, chartItems, item.getFillMissingValues());
+                index++;
+            }
+            return this;
+        }
     }
 }

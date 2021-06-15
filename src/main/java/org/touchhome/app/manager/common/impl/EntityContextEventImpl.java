@@ -2,7 +2,6 @@ package org.touchhome.app.manager.common.impl;
 
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONObject;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextEvent;

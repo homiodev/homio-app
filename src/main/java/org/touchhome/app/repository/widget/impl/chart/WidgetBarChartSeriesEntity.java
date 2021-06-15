@@ -4,6 +4,7 @@ import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.HasBarChartSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupEntity;
@@ -11,6 +12,7 @@ import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldClassWithFeatureSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 
 import javax.persistence.Entity;
@@ -22,6 +24,7 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
     public static final String PREFIX = "barsw_";
 
     @UIField(order = 14, required = true)
+    @UIFieldClassWithFeatureSelection(HasBarChartSeries.class)
     @UIFieldSelection(BarSeriesDataSourceDynamicOptionLoader.class)
     public String getDataSource() {
         return getJsonData("ds");

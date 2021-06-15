@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
-import org.touchhome.app.rest.WidgetController;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.entity.widget.WidgetTabEntity;
@@ -24,8 +23,8 @@ public class WidgetService {
     private final List<WidgetBaseEntity<?>> widgetBaseEntities;
 
     public void postConstruct() {
-        if (entityContext.getEntity(WidgetTabEntity.PREFIX + WidgetTabEntity.GENERAL_WIDGET_TAB_NAME) == null) {
-            entityContext.save(new WidgetTabEntity().computeEntityID(() -> WidgetTabEntity.GENERAL_WIDGET_TAB_NAME));
+        if (entityContext.getEntity(WidgetTabEntity.GENERAL_WIDGET_TAB_NAME) == null) {
+            entityContext.save(new WidgetTabEntity().setEntityID(WidgetTabEntity.GENERAL_WIDGET_TAB_NAME).setName("MainTab"));
         }
     }
 

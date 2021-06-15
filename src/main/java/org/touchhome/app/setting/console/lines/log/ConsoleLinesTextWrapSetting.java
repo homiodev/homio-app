@@ -9,7 +9,6 @@ import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import java.util.Collection;
-import java.util.List;
 
 public class ConsoleLinesTextWrapSetting implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
 

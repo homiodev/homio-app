@@ -1,5 +1,6 @@
 package org.touchhome.app.workspace;
 
+import com.pivovarit.function.ThrowingRunnable;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -75,11 +76,11 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     private List<BroadcastLockImpl> acquiredLocks;
 
-    private AtomicReference<Object> lastValue;
+    private Map<String, Object> values = new HashMap<>();
     private AtomicReference<Object> lastChildValue;
 
     private boolean destroy;
-    private List<Runnable> releaseListeners;
+    private List<ThrowingRunnable> releaseListeners;
 
     WorkspaceBlockImpl(String id, Map<String, WorkspaceBlock> allBlocks, Map<String, Scratch3ExtensionBlocks> scratch3Blocks, EntityContext entityContext) {
         this.id = id;
@@ -191,8 +192,11 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     }
 
     @Override
-    public void setValue(Object value) {
-        this.lastValue = new AtomicReference<>(value);
+    public void setValue(String key, Object value) {
+        if (key == null) {
+            logErrorAndThrow("Trying set value for workspace block with null key");
+        }
+        this.values.put(key, value);
     }
 
     @Override
@@ -226,7 +230,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         return this.handleInternal(scratch3Block -> {
             try {
                 Object value = scratch3Block.getEvaluateHandler().handle(this);
-                this.lastValue = new AtomicReference<>(value);
+                this.setValue("value", value);
                 return value;
             } catch (Exception ex) {
                 entityContext.ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
@@ -260,10 +264,10 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     }
 
     @Override
-    public Float getInputFloat(String key) {
+    public Float getInputFloat(String key, Float defaultValue) {
         Object value = getInput(key, true);
         if (value == null) {
-            return 0F;
+            return defaultValue;
         }
         if (value instanceof Number) {
             return ((Number) value).floatValue();
@@ -272,7 +276,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             return Float.parseFloat(valueToStr(value, "0"));
         } catch (NumberFormatException ex) {
             logErrorAndThrow("Unable parse value <" + key + "> to double for block: <" + this.opcode + ">. Actual value: <" + value + ">.");
-            return null;
+            return defaultValue;
         }
     }
 
@@ -295,6 +299,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public String getInputString(String key, String defaultValue) {
         return valueToStr(getInput(key, true), defaultValue);
+    }
+
+    @Override
+    public Object getValue(String key) {
+        if (values.containsKey(key)) {
+            return values.get(key);
+        }
+        return parent == null ? null : parent.getValue(key);
     }
 
     @Override
@@ -420,7 +432,13 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     public void release() {
         this.destroy = true;
         if (this.releaseListeners != null) {
-            this.releaseListeners.forEach(Runnable::run);
+            this.releaseListeners.forEach(t -> {
+                try {
+                    t.run();
+                } catch (Exception ex) {
+                    log.error("Error occurs while release listener: <%s>", ex);
+                }
+            });
         }
         if (this.parent != null) {
             ((WorkspaceBlockImpl) this.parent).release();
@@ -428,7 +446,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     }
 
     @Override
-    public void onRelease(Runnable listener) {
+    public void onRelease(ThrowingRunnable listener) {
         if (this.releaseListeners == null) {
             this.releaseListeners = new ArrayList<>();
             this.releaseListeners.add(listener);
@@ -479,8 +497,9 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     public Object getLastValue() {
         WorkspaceBlockImpl parent = (WorkspaceBlockImpl) this.parent;
         while (parent != null) {
-            if (parent.lastValue != null || parent.lastChildValue != null) {
-                return parent.lastValue == null ? parent.lastChildValue.get() : parent.lastValue.get();
+            Object lastValue = parent.getValue("value");
+            if (lastValue != null || parent.lastChildValue != null) {
+                return lastValue == null ? parent.lastChildValue.get() : lastValue;
             }
             parent = (WorkspaceBlockImpl) parent.parent;
         }
@@ -493,7 +512,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         }
         this.acquiredLocks.add(broadcastLock);
         broadcastLock.addSignalListener(value -> {
-            this.lastValue = new AtomicReference<>(value);
+            this.setValue("value", value);
         });
     }
 
