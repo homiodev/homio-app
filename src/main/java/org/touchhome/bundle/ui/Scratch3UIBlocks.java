@@ -40,7 +40,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
         this.popupCommand.addArgument("TYPE", this.popupType);
 
         this.headerCommand = Scratch3Block.ofHandler(20, "header", BlockType.command,
-                "Notification [NAME]/[MSG] [TYPE]", this::headerHandler);
+                "Bell [TYPE] notification [NAME]/[MSG]", this::headerHandler);
         this.headerCommand.addArgument("NAME", "name");
         this.headerCommand.addArgument("MSG", "message");
         this.headerCommand.addArgument("TYPE", this.popupType);
@@ -82,9 +82,9 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
         String color = workspaceBlock.getInputString("COLOR");
         // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
         if (isFetchDuration) {
-            entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title, null, false, true, workspaceBlock.getInputInteger("DURATION"), null, SendBroadcastSetting.class);
+            entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title, null, false, 3, workspaceBlock.getInputInteger("DURATION"), null, SendBroadcastSetting.class);
         } else {
-            entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title, "fas fa-" + workspaceBlock.getInputString("ICON"), false, true, null, null, SendBroadcastSetting.class);
+            entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title, "fas fa-" + workspaceBlock.getInputString("ICON"), false, 3, null, null, SendBroadcastSetting.class);
         }
         workspaceBlock.onRelease(() -> entityContext.ui().removeHeaderButton(workspaceBlock.getId()));
     }

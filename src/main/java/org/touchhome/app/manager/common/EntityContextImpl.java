@@ -36,6 +36,7 @@ import org.touchhome.app.config.ExtRequestMappingHandlerMapping;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleContextService;
+import org.touchhome.app.hardware.StartupHardwareRepository;
 import org.touchhome.app.manager.*;
 import org.touchhome.app.manager.common.impl.*;
 import org.touchhome.app.repository.crud.base.BaseCrudRepository;
@@ -64,14 +65,14 @@ import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
+import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
-import org.touchhome.bundle.api.ui.field.action.UIActionResponse;
-import org.touchhome.bundle.api.ui.field.action.impl.DynamicContextMenuAction;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.util.Curl;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
@@ -92,6 +93,7 @@ import java.util.stream.Collectors;
 import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.util.Constants.*;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.MACHINE_IP_ADDRESS;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIMARY_COLOR;
 
 @Log4j2
 @Component
@@ -111,6 +113,7 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextSettingImpl entityContextSetting;
     private final EntityContextWidgetImpl entityContextWidget;
     private final Environment environment;
+    private final StartupHardwareRepository startupHardwareRepository;
 
     private final ClassFinder classFinder;
     private final CacheService cacheService;
@@ -136,10 +139,12 @@ public class EntityContextImpl implements EntityContext {
 
     public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, ThreadPoolTaskScheduler taskScheduler,
                              SimpMessagingTemplate messagingTemplate, Environment environment,
-                             BroadcastLockManager broadcastLockManager, TouchHomeProperties touchHomeProperties) {
+                             StartupHardwareRepository startupHardwareRepository, BroadcastLockManager broadcastLockManager,
+                             TouchHomeProperties touchHomeProperties) {
         this.classFinder = classFinder;
         this.environment = environment;
         this.cacheService = cacheService;
+        this.startupHardwareRepository = startupHardwareRepository;
         this.broadcastLockManager = broadcastLockManager;
         this.touchHomeProperties = touchHomeProperties;
 
@@ -628,10 +633,12 @@ public class EntityContextImpl implements EntityContext {
         if (hasUISidebarMenu) {
             JSONObject metadata = new JSONObject().put("type", type.name).put("value", entity);
             if (entity instanceof HasDynamicContextMenuActions) {
-                Set<? extends DynamicContextMenuAction> actions = ((HasDynamicContextMenuActions) entity).getActions(this);
-                if (actions != null && !actions.isEmpty()) {
+                UIInputBuilder uiInputBuilder = ui().inputBuilder();
+                ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
+                metadata.put("actions", uiInputBuilder.buildAll());
+                /* TODO: if (actions != null && !actions.isEmpty()) {
                     metadata.put("actions", actions.stream().map(UIActionResponse::new).collect(Collectors.toSet()));
-                }
+                }*/
             }
             ui().sendNotification("-global", metadata);
         }
@@ -796,7 +803,10 @@ public class EntityContextImpl implements EntityContext {
 
             if (!touchHomeProperties.getVersion().equals(this.latestVersion)) {
                 log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion, touchHomeProperties.getVersion());
-                ui().addBellErrorNotification("version", "app", "Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion);
+                String description = "Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion;
+                ui().addBellErrorNotification("version", "app", description, uiInputBuilder ->
+                        uiInputBuilder.addButton("handle-version", "fas fa-registered", PRIMARY_COLOR, (entityContext, params) ->
+                                ActionResponseModel.showInfo(startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath()))).setText("Update"));
                 this.event().fireEvent("app-release", this.latestVersion);
             }
         } catch (Exception ex) {

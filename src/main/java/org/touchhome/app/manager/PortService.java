@@ -102,7 +102,6 @@ public class PortService {
 
     private void addPortNotAvailableNotification(Class<? extends SettingPlugin<SerialPort>> settingPluginClass, String portName) {
         log.warn("Port became not available: <{}>", portName);
-        entityContext.ui().addBellErrorNotification(settingPluginClass.getSimpleName(), portName,
-                "Port unavailable: " + settingPluginClass.getSimpleName());
+        entityContext.ui().addBellErrorNotification(settingPluginClass.getSimpleName(), "Port not works", "Port '" + portName + "' unavailable");
     }
 }

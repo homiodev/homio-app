@@ -3,6 +3,8 @@ package org.touchhome.app.setting.workspace;
 import org.touchhome.app.setting.CoreSettingPlugin;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
+import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIMARY_COLOR;
+
 public class WorkspaceGridColorSetting implements CoreSettingPlugin<String> {
 
     @Override
@@ -17,7 +19,7 @@ public class WorkspaceGridColorSetting implements CoreSettingPlugin<String> {
 
     @Override
     public String getDefaultValue() {
-        return "#E65100";
+        return PRIMARY_COLOR;
     }
 
     @Override

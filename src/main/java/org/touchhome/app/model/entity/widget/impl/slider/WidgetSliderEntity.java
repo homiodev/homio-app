@@ -8,6 +8,8 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.Entity;
 
+import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIMARY_COLOR;
+
 @Entity
 public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity> {
 
@@ -45,7 +47,7 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
 
     @UIField(order = 35, type = UIFieldType.ColorPicker)
     public String getLabelColor() {
-        return getJsonData("lc", "#e65100");
+        return getJsonData("lc", PRIMARY_COLOR);
     }
 
     public WidgetSliderEntity setLabelColor(String value) {

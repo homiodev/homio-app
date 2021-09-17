@@ -4,12 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.touchhome.app.manager.common.ClassFinder;
+import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
+import org.touchhome.app.manager.common.v1.layout.UIDialogLayoutBuilderImpl;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -20,7 +23,12 @@ import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.*;
-import org.touchhome.bundle.api.ui.field.action.*;
+import org.touchhome.bundle.api.ui.field.action.ActionInputParameter;
+import org.touchhome.bundle.api.ui.field.action.UIActionButton;
+import org.touchhome.bundle.api.ui.field.action.UIActionInput;
+import org.touchhome.bundle.api.ui.field.action.UIContextMenuAction;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.ui.field.color.*;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImage;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImageSrc;
@@ -144,20 +152,25 @@ public class UIFieldUtils {
         return optionModel;
     }
 
-    public static List<UIActionResponse> fetchUIActionsFromClass(Class<?> clazz) {
-        List<UIActionResponse> actions = new ArrayList<>();
+    public static Collection<UIInputEntity> fetchUIActionsFromClass(Class<?> clazz, EntityContext entityContext) {
         if (clazz != null) {
+            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuAction.class)) {
                 UIContextMenuAction action = method.getDeclaredAnnotation(UIContextMenuAction.class);
-                JSONArray inputs = new JSONArray();
-                for (UIActionInput actionInput : action.inputs()) {
-                    inputs.put(new ActionInputParameter(actionInput).toJson());
+                if (action.inputs().length > 0) {
+                    ((UIInputBuilderImpl)uiInputBuilder).addOpenDialogSelectableButtonInternal(
+                            action.value(), action.icon(), action.iconColor(), null, null).editDialog(dialogLayoutBuilder -> {
+                        for (UIActionInput actionInput : action.inputs()) {
+                            ((UIDialogLayoutBuilderImpl) dialogLayoutBuilder).addInput(actionInput);
+                        }
+                    });
+                } else {
+                    uiInputBuilder.addSelectableButton(action.value(), action.icon(), action.iconColor(), null);
                 }
-                actions.add(new UIActionResponse(action.value()).setIcon(action.icon()).setIconColor(action.iconColor())
-                        .putOpt("inputs", inputs));
             }
+            return uiInputBuilder.buildAll();
         }
-        return actions;
+        return Collections.emptyList();
     }
 
     @SneakyThrows
@@ -179,21 +192,16 @@ public class UIFieldUtils {
 
     public static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet) {
         Map<String, List<Method>> fieldNameToGetters = new HashMap<>();
-        Class<?> cursor = instance.getClass();
-        while (!cursor.getSimpleName().equals(Object.class.getSimpleName())) {
+
+        List<Class<?>> classes = getAllSuperclassesAndInterfaces(instance.getClass());
+        classes.add(0, instance.getClass());
+        for (final Class<?> cursor : classes) {
             for (Method declaredMethod : cursor.getDeclaredMethods()) {
                 fieldNameToGetters.putIfAbsent(declaredMethod.getName(), new ArrayList<>());
                 fieldNameToGetters.get(declaredMethod.getName()).add(declaredMethod);
             }
-            cursor = cursor.getSuperclass();
         }
-        // fetch methods from interfaces
-        for (Class<?> clazz : instance.getClass().getInterfaces()) {
-            for (Method declaredMethod : clazz.getDeclaredMethods()) {
-                fieldNameToGetters.putIfAbsent(declaredMethod.getName(), new ArrayList<>());
-                fieldNameToGetters.get(declaredMethod.getName()).add(declaredMethod);
-            }
-        }
+
         // filter methods with @UIField
         Map<String, UIFieldMethodContext> uiFieldNameToGetters = new HashMap<>();
         for (Method uiFieldMethod : MethodUtils.getMethodsListWithAnnotation(instance.getClass(), UIField.class, true, false)) {
@@ -331,6 +339,7 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("maxHeight", uiFieldImageSrc.maxHeight());
         }
 
+        // TODO: MAKE IT WORKS
         List<UIActionButton> uiActionButtons = uiFieldContext.getDeclaredAnnotationsByType(UIActionButton.class);
         if (!uiActionButtons.isEmpty()) {
             JSONArray actionButtons = new JSONArray();
@@ -641,5 +650,33 @@ public class UIFieldUtils {
         public <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass) {
             return UIFieldUtils.getDeclaredAnnotationsByType(annotationClass, methods);
         }
+    }
+
+    /**
+     * Fully copied from MethodUtils.java commons-lang3 because it's private static
+     */
+    private static List<Class<?>> getAllSuperclassesAndInterfaces(final Class<?> cls) {
+        if (cls == null) {
+            return null;
+        }
+
+        final List<Class<?>> allSuperClassesAndInterfaces = new ArrayList<>();
+        final List<Class<?>> allSuperclasses = ClassUtils.getAllSuperclasses(cls);
+        int superClassIndex = 0;
+        final List<Class<?>> allInterfaces = ClassUtils.getAllInterfaces(cls);
+        int interfaceIndex = 0;
+        while (interfaceIndex < allInterfaces.size() ||
+                superClassIndex < allSuperclasses.size()) {
+            final Class<?> acls;
+            if (interfaceIndex >= allInterfaces.size()) {
+                acls = allSuperclasses.get(superClassIndex++);
+            } else if ((superClassIndex >= allSuperclasses.size()) || (interfaceIndex < superClassIndex) || !(superClassIndex < interfaceIndex)) {
+                acls = allInterfaces.get(interfaceIndex++);
+            } else {
+                acls = allSuperclasses.get(superClassIndex++);
+            }
+            allSuperClassesAndInterfaces.add(acls);
+        }
+        return allSuperClassesAndInterfaces;
     }
 }

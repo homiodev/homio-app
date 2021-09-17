@@ -53,7 +53,7 @@ public class WidgetService {
     @RequiredArgsConstructor
     public static class AvailableWidget {
         private final String key;
-        private final String image;
+        private final String icon;
         private final List<AvailableWidget> children;
     }
 }

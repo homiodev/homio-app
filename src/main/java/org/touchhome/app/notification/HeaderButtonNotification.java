@@ -18,7 +18,7 @@ public class HeaderButtonNotification extends BaseNotificationModel<HeaderButton
     private Integer duration;
     private String icon;
     private Boolean iconRotate;
-    private Boolean border;
+    private Integer border;
     private String stopAction;
     private String page;
 

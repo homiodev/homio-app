@@ -19,6 +19,7 @@ import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.app.utils.UIFieldUtils;
+import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.ImageEntity;
@@ -39,9 +40,9 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIFilterOptions;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.UIActionButton;
-import org.touchhome.bundle.api.ui.field.action.UIActionResponse;
 import org.touchhome.bundle.api.ui.field.action.UIContextMenuAction;
-import org.touchhome.bundle.api.ui.field.action.impl.DynamicContextMenuAction;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -115,13 +116,15 @@ public class ItemController {
             }
         }
         if (actionHolder instanceof HasDynamicContextMenuActions) {
-            Set<? extends DynamicContextMenuAction> actions = ((HasDynamicContextMenuActions) actionHolder).getActions(entityContext);
-            DynamicContextMenuAction action = actions.stream().filter(a -> a.getName().equals(actionRequestModel.name)).findAny().orElse(null);
-            if (action != null) {
-                if (action.isDisabled()) {
+            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            ((HasDynamicContextMenuActions) actionHolder).assembleActions(uiInputBuilder);
+
+            UIActionHandler actionHandler = uiInputBuilder.findActionHandler(actionRequestModel.name);
+            if (actionHandler != null) {
+                if (!actionHandler.isEnabled(entityContext)) {
                     throw new IllegalArgumentException("Unable to invoke disabled action");
                 }
-                action.getAction().accept(actionRequestModel.params);
+                actionHandler.handleAction(entityContext, actionRequestModel.params);
                 return null;
             }
         }
@@ -164,6 +167,7 @@ public class ItemController {
     public List<ItemContext> getItemsBootstrapContext(@PathVariable("type") String type,
                                                       @RequestParam(value = "subType", required = false) String subType) {
         String key = type + subType;
+        itemsBootstrapContextMap.clear(); // TODO: remove this
         itemsBootstrapContextMap.computeIfAbsent(key, s -> {
             List<ItemContext> itemContexts = new ArrayList<>();
 
@@ -180,7 +184,7 @@ public class ItemController {
                     entityUIMetaData.addAll(subTypeFieldMetadata);
                 }
                 // fetch type actions
-                List<UIActionResponse> actions = UIFieldUtils.fetchUIActionsFromClass(classType);
+                Collection<UIInputEntity> actions = UIFieldUtils.fetchUIActionsFromClass(classType, entityContext);
                 itemContexts.add(new ItemContext(classType.getSimpleName(), entityUIMetaData, actions));
             }
 
@@ -249,9 +253,9 @@ public class ItemController {
 
     @GetMapping("/{type}/actions")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public List<UIActionResponse> getItemsActions(@PathVariable("type") String type) {
+    public Collection<UIInputEntity> getItemsActions(@PathVariable("type") String type) {
         Class<?> entityClassByType = entityManager.getClassByType(type);
-        return UIFieldUtils.fetchUIActionsFromClass(entityClassByType);
+        return UIFieldUtils.fetchUIActionsFromClass(entityClassByType, entityContext);
     }
 
     @PostMapping("/{type}")
@@ -332,16 +336,19 @@ public class ItemController {
                 typeDependencies.add(new ItemsByTypeResponse.TypeDependency(aClass.getSimpleName(), notInstalledDependencies));
             }
         }
-        List<Set<UIActionResponse>> contextActions = new ArrayList<>();
+        List<Collection<UIInputEntity>> contextActions = new ArrayList<>();
         for (BaseEntity item : items) {
-            Set<UIActionResponse> actions = Collections.emptySet();
+            //TODO: Set<UIActionResponse> actions = Collections.emptySet();
+            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             if (item instanceof HasDynamicContextMenuActions) {
-                Set<? extends DynamicContextMenuAction> dynamicContextMenuActions = ((HasDynamicContextMenuActions) item).getActions(entityContext);
-                if (dynamicContextMenuActions != null) {
+                ((HasDynamicContextMenuActions) item).assembleActions(uiInputBuilder);
+                // Set<? extends DynamicContextMenuAction> dynamicContextMenuActions = ((HasDynamicContextMenuActions) item).getActions(entityContext);
+                /*if (dynamicContextMenuActions != null) {
                     actions = dynamicContextMenuActions.stream().map(UIActionResponse::new).collect(Collectors.toCollection(LinkedHashSet::new));
-                }
+                }*/
             }
-            contextActions.add(actions);
+            contextActions.add(uiInputBuilder.buildAll());
+            item.setBundle(BundleEntryPoint.getBundleName(item.getClass()));
         }
         return new ItemsByTypeResponse(items, contextActions, typeDependencies);
     }
@@ -486,7 +493,7 @@ public class ItemController {
             throw new IllegalStateException("SelectedEntity must implement interface <" + SelectionWithDynamicParameterFields.class.getSimpleName() + ">");
         }
         DynamicParameterFields dynamicParameterFields = ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(classEntity);
-        if(dynamicParameterFields == null) {
+        if (dynamicParameterFields == null) {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }
         return UIFieldUtils.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity);
@@ -706,7 +713,7 @@ public class ItemController {
     @RequiredArgsConstructor
     private static class ItemsByTypeResponse {
         private final List<BaseEntity> items;
-        private final List<Set<UIActionResponse>> contextActions;
+        private final List<Collection<UIInputEntity>> contextActions;
         private final List<TypeDependency> typeDependencies;
 
         @Getter
@@ -744,6 +751,6 @@ public class ItemController {
     private static class ItemContext {
         private final String type;
         private final List<EntityUIMetaData> fields;
-        private final List<UIActionResponse> actions;
+        private final Collection<UIInputEntity> actions;
     }
 }

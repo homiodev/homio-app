@@ -26,6 +26,7 @@ import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.Lang;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.Curl;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -145,6 +146,11 @@ public class UtilsController {
         return Lang.getLangJson(lang);
     }
 
+    @PostMapping("/notification/{entityID}/action")
+    public ActionResponseModel acceptNotificationAction(@PathVariable("entityID") String entityID, @RequestBody BellHeaderActionRequest actionRequest) {
+        return entityContext.ui().handleNotificationAction(entityID, actionRequest.entityID, actionRequest.value);
+    }
+
     @PostMapping("/dialog/{entityID}")
     public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
         entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Accepted,
@@ -154,6 +160,12 @@ public class UtilsController {
     @DeleteMapping("/dialog/{entityID}")
     public void discardDialog(@PathVariable("entityID") String entityID) {
         entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
+    }
+
+    @Getter
+    private static class BellHeaderActionRequest {
+        private String entityID;
+        private String value;
     }
 
     @Getter

@@ -9,23 +9,27 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.touchhome.app.config.WebSocketConfig;
-import org.touchhome.app.json.HeaderButtonNotification;
-import org.touchhome.app.json.ProgressNotification;
 import org.touchhome.app.manager.common.EntityContextImpl;
+import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
+import org.touchhome.app.manager.common.v1.item.UIInputEntityActionHandler;
+import org.touchhome.app.model.entity.SettingEntity;
+import org.touchhome.app.notification.BellNotification;
+import org.touchhome.app.notification.HeaderButtonNotification;
+import org.touchhome.app.notification.ProgressNotification;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.setting.SettingPluginButton;
 import org.touchhome.bundle.api.setting.SettingPluginStatus;
-import org.touchhome.bundle.api.ui.BellNotification;
 import org.touchhome.bundle.api.ui.DialogModel;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
+import org.touchhome.bundle.api.ui.action.UIActionHandler;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.util.NotificationLevel;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -38,21 +42,34 @@ public class EntityContextUIImpl implements EntityContextUI {
     private final Map<String, BellNotification> bellNotifications = new ConcurrentHashMap<>();
     private final Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
     private final Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
+    private Map<String, BellNotification> bundleEntryPointNotifications = new HashMap<>();
 
     private final SimpMessagingTemplate messagingTemplate;
     @Getter
     private final EntityContextImpl entityContext;
 
     @Override
-    public void addBellNotification(@NotNull String entityID, @NotNull String name, @NotNull String value, @NotNull NotificationLevel level) {
-        bellNotifications.put(entityID, new BellNotification(entityID).setValue(value).setTitle(name).setLevel(level));
+    public void addBellNotification(@NotNull String entityID, @NotNull String name, @NotNull String value,
+                                    @NotNull NotificationLevel level, @Nullable Consumer<UIInputBuilder> actionSupplier) {
+        BellNotification bellNotification = new BellNotification(entityID).setValue(value).setTitle(name).setLevel(level);
+        if (actionSupplier != null) {
+            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            actionSupplier.accept(uiInputBuilder);
+            bellNotification.setActions(uiInputBuilder.buildAll());
+        }
+        bellNotifications.put(entityID, bellNotification);
         sendGlobal(GlobalSendType.bell, entityID, value, name, new JSONObject().put("level", level.name()));
     }
 
     @Override
     public void removeBellNotification(@NotNull String entityID) {
         bellNotifications.remove(entityID);
-        sendGlobal(GlobalSendType.bell, entityID, null, null, new JSONObject().put("remove", true));
+        sendGlobal(GlobalSendType.bell, entityID, null, null, new JSONObject().put("action", "remove"));
+    }
+
+    @Override
+    public UIInputBuilder inputBuilder() {
+        return new UIInputBuilderImpl(entityContext);
     }
 
     @Override
@@ -103,7 +120,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     @Override
     public void addHeaderButton(@NotNull String entityID, @NotNull String color, @Nullable String title,
-                                @Nullable String icon, boolean rotate, boolean border,
+                                @Nullable String icon, boolean rotate, Integer border,
                                 @Nullable Integer duration, @Nullable Class<? extends BaseEntity> page,
                                 @Nullable Class<? extends SettingPluginButton> hideAction) {
         HeaderButtonNotification topJson = new HeaderButtonNotification(entityID).setIcon(icon).setColor(color)
@@ -146,13 +163,14 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<JSONObject> additionalSupplier) {
-        JSONObject jsonObject = new JSONObject().put("icon", notification.getIcon())
+        JSONObject jsonObject = new JSONObject()
                 .put("creationTime", notification.getCreationTime())
-                .put("duration", notification.getDuration())
-                .put("color", notification.getColor())
-                .put("iconRotate", notification.getIconRotate())
-                .put("confirmations", notification.getDialogs())
-                .put("stopAction", notification.getStopAction());
+                .putOpt("icon", notification.getIcon())
+                .putOpt("duration", notification.getDuration())
+                .putOpt("color", notification.getColor())
+                .putOpt("iconRotate", notification.getIconRotate())
+                .putOpt("border", notification.getBorder())
+                .putOpt("stopAction", notification.getStopAction());
         if (additionalSupplier != null) {
             additionalSupplier.accept(jsonObject);
         }
@@ -172,21 +190,65 @@ public class EntityContextUIImpl implements EntityContextUI {
         notificationResponse.headerButtonNotifications = headerButtonNotifications.values();
         notificationResponse.progress = progressMap.values();
 
+        this.bundleEntryPointNotifications = assembleBundleNotifications();
+        notificationResponse.bellNotifications.addAll(this.bundleEntryPointNotifications.values());
+        return notificationResponse;
+    }
+
+    private void addBellNotification(Map<String, BellNotification> map, BellNotification bellNotification) {
+        String entityID = bellNotification.getEntityID();
+        if (map.containsKey(entityID)) {
+            entityID += "~~~" + bellNotification.getCreationTime();
+        }
+        bellNotification.setEntityID(entityID);
+        map.put(entityID, bellNotification);
+    }
+
+    private Map<String, BellNotification> assembleBundleNotifications() {
+        Map<String, BellNotification> map = new LinkedHashMap<>();
         for (EntityContextImpl.InternalBundleContext bundleContext : entityContext.getBundles().values()) {
-            Set<BellNotification> notifications = bundleContext.getBundleEntrypoint().getBellNotifications();
-            if (notifications != null) {
-                notificationResponse.bellNotifications.addAll(notifications);
-            }
+
+            bundleContext.getBundleEntrypoint().assembleBellNotifications((notificationLevel, entityID, title, value) -> {
+                addBellNotification(map, new BellNotification(entityID).setTitle(title).setValue(value).setLevel(notificationLevel));
+            });
+
             Class<? extends SettingPluginStatus> statusSettingClass = bundleContext.getBundleEntrypoint().getBundleStatusSetting();
             if (statusSettingClass != null) {
                 String bundleID = SettingRepository.getSettingBundleName(entityContext, statusSettingClass);
                 SettingPluginStatus.BundleStatusInfo bundleStatusInfo = entityContext.setting().getValue(statusSettingClass);
-                notificationResponse.bellNotifications.add(new BellNotification(bundleID + "-status")
-                        .setLevel(bundleStatusInfo.getLevel())
-                        .setTitle(bundleID).setValue(defaultIfEmpty(bundleStatusInfo.getMessage(), bundleStatusInfo.getStatus().name())));
+                SettingPluginStatus settingPlugin = (SettingPluginStatus) EntityContextSettingImpl.settingPluginsByPluginKey.get(SettingEntity.getKey(statusSettingClass));
+                String statusEntityID = bundleID + "-status";
+                if (bundleStatusInfo != null) {
+                    BellNotification bundleStatusNotification = new BellNotification(statusEntityID)
+                            .setLevel(bundleStatusInfo.getLevel())
+                            .setTitle(bundleID).setValue(defaultIfEmpty(bundleStatusInfo.getMessage(), bundleStatusInfo.getStatus().name()));
+
+                    UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+                    settingPlugin.setActions(uiInputBuilder);
+                    bundleStatusNotification.setActions(uiInputBuilder.buildAll());
+
+                    addBellNotification(map, bundleStatusNotification);
+                }
+
+                List<SettingPluginStatus.BundleStatusInfo> transientStatuses = settingPlugin.getTransientStatuses(entityContext);
+                if (transientStatuses != null) {
+                    for (SettingPluginStatus.BundleStatusInfo transientStatus : transientStatuses) {
+                        BellNotification bundleStatusNotification = new BellNotification(statusEntityID)
+                                .setLevel(transientStatus.getLevel())
+                                .setTitle(bundleID).setValue(defaultIfEmpty(transientStatus.getMessage(), transientStatus.getStatus().name()));
+
+                        if (transientStatus.getActionHandler() != null) {
+                            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+                            transientStatus.getActionHandler().accept(uiInputBuilder);
+                            bundleStatusNotification.setActions(uiInputBuilder.buildAll());
+                        }
+
+                        addBellNotification(map, bundleStatusNotification);
+                    }
+                }
             }
         }
-        return notificationResponse;
+        return map;
     }
 
     public void handleDialog(String entityID, DialogResponseType dialogResponseType, String pressedButton, JSONObject params) {
@@ -203,6 +265,25 @@ public class EntityContextUIImpl implements EntityContextUI {
                 }
             }
         }
+    }
+
+    public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, String value) {
+        BellNotification bellNotification = bellNotifications.get(entityID);
+        if (bellNotification == null) {
+            bellNotification = this.bundleEntryPointNotifications.get(entityID);
+        }
+        if (bellNotification == null) {
+            throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
+        }
+        UIInputEntity action = bellNotification.getActions().stream().filter(a -> a.getEntityID().equals(actionEntityID)).findAny().orElseThrow(() ->
+                new IllegalStateException("Unable to find action: <" + entityID + ">"));
+        if (action instanceof UIInputEntityActionHandler) {
+            UIActionHandler actionHandler = ((UIInputEntityActionHandler) action).getActionHandler();
+            if (actionHandler != null) {
+                return actionHandler.handleAction(entityContext, new JSONObject().put("value", value));
+            }
+        }
+        throw new RuntimeException("Action: " + entityID + " has incorrect format");
     }
 
     @Getter

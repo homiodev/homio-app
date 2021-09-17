@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.LogService;
 import org.touchhome.app.console.LogsConsolePlugin;
 import org.touchhome.app.console.NamedConsolePlugin;
+import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
@@ -31,7 +32,8 @@ import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.service.SshProviderService;
 import org.touchhome.bundle.api.setting.console.header.ConsoleHeaderSettingPlugin;
-import org.touchhome.bundle.api.ui.field.action.UIActionResponse;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.tritonus.share.ArraySet;
 
@@ -53,24 +55,28 @@ public class ConsoleController {
     private Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
 
     @SneakyThrows
-    static List<UIActionResponse> fetchUIHeaderActions(ConsolePlugin<?> consolePlugin) {
-        List<UIActionResponse> actions = new ArrayList<>();
+    static void fetchUIHeaderActions(ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
         Map<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
         if (actionMap != null) {
             for (Map.Entry<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
                 Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
-                actions.add(new UIActionResponse(entry.getKey())
+                ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(
+                        entry.getKey(),
+                        TouchHomeUtils.newInstance(settingClass).fireActionsBeforeChange(),
+                        SettingEntity.getKey(settingClass), 0);
+
+                /* TODO: actions.add(new UIActionResponse(entry.getKey())
                         .putOpt("fabc", TouchHomeUtils.newInstance(settingClass).fireActionsBeforeChange())
-                        .putOpt("ref", SettingEntity.getKey(settingClass)));
+                        .putOpt("ref", SettingEntity.getKey(settingClass)));*/
             }
         }
         if (consolePlugin instanceof ConsolePluginEditor) {
             Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction = ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
             if (nameHeaderAction != null) {
-                actions.add(new UIActionResponse("name").putOpt("ref", SettingEntity.getKey(nameHeaderAction)));
+                ((UIInputBuilderImpl) uiInputBuilder).addReferenceAction("name", SettingEntity.getKey(nameHeaderAction), 1);
+                // TODO: actions.add(new UIActionResponse("name").putOpt("ref", SettingEntity.getKey(nameHeaderAction)));
             }
         }
-        return actions;
     }
 
     public void postConstruct() {
@@ -100,9 +106,13 @@ public class ConsoleController {
     }
 
     @GetMapping("/tab/{tab}/actions")
-    public List<UIActionResponse> getConsoleTabActions(@PathVariable("tab") String tab) {
+    public Collection<UIInputEntity> getConsoleTabActions(@PathVariable("tab") String tab) {
+        UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
-        return consolePlugin == null ? Collections.emptyList() : fetchUIHeaderActions(consolePlugin);
+        if (consolePlugin != null) {
+            fetchUIHeaderActions(consolePlugin, uiInputBuilder);
+        }
+        return uiInputBuilder.buildAll();
     }
 
     @GetMapping("/tab/{tab}/content")
@@ -121,7 +131,7 @@ public class ConsoleController {
 
             return new EntityContent()
                     .setList(baseEntities)
-                    .setActions(UIFieldUtils.fetchUIActionsFromClass(clazz))
+                    .setActions(UIFieldUtils.fetchUIActionsFromClass(clazz, entityContext))
                     .setUiFields(UIFieldUtils.fillEntityUIMetadataList(clazz));
         }
         return consolePlugin.getValue();
@@ -254,6 +264,6 @@ public class ConsoleController {
     public static class EntityContent {
         Collection<?> list;
         List<EntityUIMetaData> uiFields;
-        List<UIActionResponse> actions;
+        Collection<UIInputEntity> actions;
     }
 }
