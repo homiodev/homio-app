@@ -1,6 +1,7 @@
 package org.touchhome.app.workspace.block.core;
 
 import lombok.Getter;
+import org.apache.commons.lang3.tuple.Pair;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
@@ -17,11 +18,14 @@ import org.touchhome.bundle.api.repository.WorkspaceBackupRepository;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
+import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import java.util.Date;
+import java.util.Objects;
+import java.util.function.Function;
 
 @Getter
 @Component
@@ -48,6 +52,8 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     // single variable
     private final Scratch3Block setVariableToBlock;
     private final Scratch3Block changeVariableByBlock;
+    private final Scratch3Block onChangeVariableBlock;
+    private final Scratch3Block onChangeVariableToBlock;
 
     // json
     private final Scratch3Block setJsonVariableToBlock;
@@ -69,11 +75,14 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         this.isBoolVariableTrueBlock = Scratch3Block.ofReporter("bool_variables", this::isBoolVariableTrueReporter);
         this.setBooleanBlock = Scratch3Block.ofHandler("set_boolean", BlockType.command, this::setBooleanHandler);
         this.inverseBooleanBlock = Scratch3Block.ofHandler("inverse_boolean", BlockType.command, this::inverseBooleanHandler);
-        this.booleanEventChangesBlock = Scratch3Block.ofHandler("boolean_event_changes", BlockType.hat, this::booleanChangeHatEvent);
+        this.booleanEventChangesBlock = Scratch3Block.ofHandler("boolean_event_changes", BlockType.hat, this::onBooleanChangeHat);
         this.booleanLink = Scratch3Block.ofHandler("boolean_link", BlockType.hat, this::booleanLinkHatEvent);
 
         this.setVariableToBlock = Scratch3Block.ofHandler("setvariableto", BlockType.command, this::setVariableToHandler);
         this.changeVariableByBlock = Scratch3Block.ofHandler("changevariableby", BlockType.command, this::changeVariableByHandler);
+
+        this.onChangeVariableBlock = Scratch3Block.ofHandler("onchangevariable", BlockType.hat, this::onChangeVariableHat);
+        this.onChangeVariableToBlock = Scratch3Block.ofHandler("onchangevariableto", BlockType.hat, this::onChangeVariableHatTo);
 
         this.setJsonVariableToBlock = Scratch3Block.ofHandler("set_json", BlockType.command, this::setJsonVariableToHandler);
         this.getJsonVariableToBlock = Scratch3Block.ofReporter("get_json", this::getJsonVariableToReporter);
@@ -85,7 +94,36 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         this.setGroupVariableBlock = Scratch3Block.ofHandler("set_group_variable", BlockType.command, this::setGroupVariableHandler);
         this.changeGroupVariableBlock = Scratch3Block.ofHandler("change_group_variable", BlockType.command, this::changeGroupVariableHandler);
         this.setAndBackupGroupVariableBlock = Scratch3Block.ofHandler("set_group_variable_and_backup", BlockType.command, this::setAndBackupGroupVariableHandler);
-        this.variableGroupLink = Scratch3Block.ofHandler("group_variable_link", BlockType.hat, this::variableGroupLinkHatEvent);
+        this.variableGroupLink = Scratch3Block.ofHandler("group_variable_link", BlockType.hat, this::onVariableGroupLinkHat);
+    }
+
+    private void onChangeVariableHatTo(WorkspaceBlock workspaceBlock) {
+        workspaceBlock.handleNext(next -> {
+            String varRefId = workspaceBlock.getFieldId("VARIABLE");
+            String expectedValue = workspaceBlock.getFieldId("VALUE");
+            BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, WorkspaceStandaloneVariableEntity.PREFIX + varRefId);
+            workspaceBlock.subscribeToLock(lock, new Function<Object, Boolean>() {
+                @Override
+                public Boolean apply(Object o) {
+                    return String.valueOf(o).equals(expectedValue);
+                }
+            }, next::handle);
+        });
+    }
+
+    private void onChangeVariableHat(WorkspaceBlock workspaceBlock) {
+        workspaceBlock.handleNext(next -> {
+            String varRefId = workspaceBlock.getFieldId("VARIABLE");
+            BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, WorkspaceStandaloneVariableEntity.PREFIX + varRefId);
+            if (workspaceBlock.getFieldBoolean("DP")) {
+                workspaceBlock.subscribeToLock(lock, next::handle);
+            } else {
+                workspaceBlock.subscribeToLock(lock, o -> {
+                    Pair<Boolean, Boolean> changes = (Pair<Boolean, Boolean>) o;
+                    return !Objects.equals(changes.getLeft(), changes.getRight());
+                }, next::handle);
+            }
+        });
     }
 
     private Object getPreviousValue(WorkspaceBlock workspaceBlock) {
@@ -100,7 +138,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         return Scratch3MutatorBlocks.reduceJSON(entity.getValue().toString(), query);
     }
 
-    private void variableGroupLinkHatEvent(WorkspaceBlock workspaceBlock) {
+    private void onVariableGroupLinkHat(WorkspaceBlock workspaceBlock) {
         try {
             WorkspaceBlock source = getWorkspaceBlockToLink(workspaceBlock);
             ((WorkspaceBlockImpl) source).linkVariable(workspaceBlock.getFieldId("group_variables_group"));
@@ -128,12 +166,19 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         return source;
     }
 
-    private void booleanChangeHatEvent(WorkspaceBlock workspaceBlock) {
+    private void onBooleanChangeHat(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleNext(next -> {
             String varRefId = workspaceBlock.getFieldId("bool_variables_group");
             BroadcastLock lock = broadcastLockManager.getOrCreateLock(workspaceBlock, WorkspaceBooleanEntity.PREFIX + varRefId);
 
-            workspaceBlock.subscribeToLock(lock, next::handle);
+            if (workspaceBlock.getFieldBoolean("DP")) {
+                workspaceBlock.subscribeToLock(lock, next::handle);
+            } else {
+                workspaceBlock.subscribeToLock(lock, o -> {
+                    Pair<Boolean, Boolean> changes = (Pair<Boolean, Boolean>) o;
+                    return !Objects.equals(changes.getLeft(), changes.getRight());
+                }, next::handle);
+            }
         });
     }
 
@@ -186,7 +231,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
 
     private void setBooleanHandler(WorkspaceBlock workspaceBlock) {
         String boolVariableId = workspaceBlock.getFieldId("bool_variables_group");
-        Boolean value = Boolean.parseBoolean(workspaceBlock.getField("status"));
+        Boolean value = workspaceBlock.getFieldBoolean("status");
         WorkspaceBooleanEntity entity = entityContext.getEntity(WorkspaceBooleanEntity.PREFIX + boolVariableId);
         entityContext.save(entity.setValue(value));
     }

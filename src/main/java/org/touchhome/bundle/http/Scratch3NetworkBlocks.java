@@ -102,12 +102,13 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
     private void onUdpEventHandler(WorkspaceBlock workspaceBlock) {
         WorkspaceBlock substack = workspaceBlock.getNext();
         if (substack != null) {
-            entityContext.udp().listenUdp(workspaceBlock.getId(), workspaceBlock.getInputString("HOST"),
-                    workspaceBlock.getInputInteger("PORT"), (datagramPacket, output) -> {
-                        workspaceBlock.setValue(output);
-                        substack.getNext().handle();
-                    });
-            workspaceBlock.onRelease(() -> entityContext.udp().stopListenUdp(workspaceBlock.getId()));
+            workspaceBlock.handleAndRelease(
+                    () -> entityContext.udp().listenUdp(workspaceBlock.getId(), workspaceBlock.getInputString("HOST"),
+                            workspaceBlock.getInputInteger("PORT"), (datagramPacket, output) -> {
+                                workspaceBlock.setValue(output);
+                                substack.getNext().handle();
+                            }),
+                    () -> entityContext.udp().stopListenUdp(workspaceBlock.getId()));
         }
     }
 

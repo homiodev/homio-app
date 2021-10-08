@@ -266,6 +266,7 @@ public class UIFieldUtils {
         if (uiField.onlyEdit()) {
             entityUIMetaData.setOnlyEdit(true);
         }
+        entityUIMetaData.setStyle(uiField.style());
         entityUIMetaData.setDefaultValue(uiFieldContext.getDefaultValue(instance));
 
         JSONObject jsonTypeMetadata = new JSONObject();

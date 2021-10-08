@@ -24,6 +24,7 @@ public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
     private Boolean inlineEdit;
     private Boolean inlineEditWhenEmpty;
     private String color;
+    private String style;
 
     @Override
     public int compareTo(@NotNull EntityUIMetaData entityUIMetaData) {

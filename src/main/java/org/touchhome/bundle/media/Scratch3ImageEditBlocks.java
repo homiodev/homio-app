@@ -26,7 +26,7 @@ import java.util.function.BiFunction;
 @Log4j2
 @Getter
 @Component
-public class Scratch3ImageBlocks extends Scratch3ExtensionBlocks {
+public class Scratch3ImageEditBlocks extends Scratch3ExtensionBlocks {
 
     private static final String IMAGE = "IMAGE";
     private final MenuBlock.StaticMenuBlock<StylePosition> textPositionMenu;
@@ -41,7 +41,7 @@ public class Scratch3ImageBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block overlayImageCommand;
     private final Scratch3Block brightnessImageCommand;
 
-    public Scratch3ImageBlocks(EntityContext entityContext) {
+    public Scratch3ImageEditBlocks(EntityContext entityContext) {
         super("#3C6360", entityContext, null, "imageeditor");
         setParent("media");
         // Menu

@@ -2,7 +2,6 @@ package org.touchhome.app.console;
 
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.manager.common.impl.EntityContextBGPImpl;
 
 @Component
 public class SingleThreadConsolePlugin extends BaseProcessesConsolePlugin implements NamedConsolePlugin {
@@ -12,12 +11,12 @@ public class SingleThreadConsolePlugin extends BaseProcessesConsolePlugin implem
     }
 
     @Override
-    protected boolean matchProcess(EntityContextBGPImpl.ThreadContextImpl threadContext) {
-        return threadContext.getPeriod() == null;
+    public String getName() {
+        return "thread";
     }
 
     @Override
-    public String getName() {
-        return "thread";
+    protected boolean handleThreads() {
+        return true;
     }
 }

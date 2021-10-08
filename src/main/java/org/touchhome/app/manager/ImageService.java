@@ -19,20 +19,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.touchhome.bundle.api.util.TouchHomeUtils.resolvePath;
-
 @Log4j2
 @Component
 @RequiredArgsConstructor
 public class ImageService {
 
-    static Path imagesDir = resolvePath("images");
-
     private final ImageRepository imageRepository;
     private final EntityContext entityContext;
 
     public ResponseEntity<InputStreamResource> getImage(String fileName) {
-        return getImage(imagesDir.resolve(fileName));
+        return getImage(TouchHomeUtils.getImagePath().resolve(fileName));
     }
 
     @SneakyThrows
@@ -59,7 +55,7 @@ public class ImageService {
 
     public ImageEntity upload(String entityID, BufferedImage bufferedImage) {
         try {
-            Path imagePath = imagesDir.resolve(entityID);
+            Path imagePath = TouchHomeUtils.getImagePath().resolve(entityID);
             String ext = entityID.substring(entityID.length() - 3);
             ImageIO.write(bufferedImage, ext, imagePath.toFile());
             ImageEntity imageEntity = imageRepository.getByPath(imagePath.toAbsolutePath().toString());

@@ -60,7 +60,6 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entity.getEntityID());
         }
         if (plugin != null) {
-            entity.setBundle(getSettingBundleName(entityContext, plugin.getClass()));
             entity.setDefaultValue(plugin.getDefaultValue());
             entity.setOrder(plugin.order());
             entity.setAdvanced(plugin.isAdvanced());

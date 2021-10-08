@@ -348,7 +348,6 @@ public class ItemController {
                 }*/
             }
             contextActions.add(uiInputBuilder.buildAll());
-            item.setBundle(BundleEntryPoint.getBundleName(item.getClass()));
         }
         return new ItemsByTypeResponse(items, contextActions, typeDependencies);
     }

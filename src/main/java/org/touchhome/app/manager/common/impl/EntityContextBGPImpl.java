@@ -10,12 +10,14 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -33,6 +35,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @Getter
     private final Map<String, ThreadContextImpl<?>> schedulers = new ConcurrentHashMap<>();
+
+    // not all threads may be run inside ThreadContextImpl so we need bundle able to register custom threads to show them on ui
+    @Getter
+    private final Map<String, Consumer<ThreadPuller>> threadsPullers = new ConcurrentHashMap<>();
 
     private final Map<String, BatchRunContext<?>> batchRunContextMap = new ConcurrentHashMap<>();
 
@@ -68,11 +74,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public <T> ThreadContext<T> runAndGet(@NotNull String name, long initialDelayInMillis,
+    public <T> ThreadContext<T> runAndGet(@NotNull String name, @Nullable Long initialDelayInMillis,
                                           @NotNull ThrowingSupplier<T, Exception> command, boolean showOnUI) {
         return addSchedule(name, initialDelayInMillis, threadContext -> command.get(),
                 EntityContextBGPImpl.ScheduleType.SINGLE, showOnUI, true,
-                runnable -> taskScheduler.schedule(runnable, new Date(System.currentTimeMillis() + initialDelayInMillis)));
+                runnable -> taskScheduler.schedule(runnable, initialDelayInMillis == null ?
+                        new Date() : new Date(System.currentTimeMillis() + initialDelayInMillis)));
     }
 
     @Override
@@ -116,6 +123,11 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 }
             }
         }
+    }
+
+    @Override
+    public void registerThreadsPuller(String entityId, Consumer<ThreadPuller> threadPullerConsumer) {
+        this.threadsPullers.put(entityId, threadPullerConsumer);
     }
 
     @Override
@@ -242,6 +254,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             } catch (Exception ex) {
                 threadContext.state = "FINISHED_WITH_ERROR";
                 threadContext.stopped = true;
+                threadContext.error = TouchHomeUtils.getErrorMessage(ex);
 
                 log.error("Exception in thread: <{}>. Message: <{}>", name, getErrorMessage(ex), ex);
                 entityContext.ui().sendErrorMessage(ex);
@@ -292,7 +305,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private final Long period;
         private final boolean showOnUI;
         private final boolean hideOnUIAfterCancel;
-        public T retValue;
+        private T retValue;
+        private String error;
         private ScheduledFuture<T> scheduledFuture;
         @Setter
         private String state;
@@ -301,7 +315,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private boolean stopped;
         @Setter
         private int runCount;
-        @Getter
         private Date creationTime = new Date();
         private Map<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
 

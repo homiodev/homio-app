@@ -248,11 +248,18 @@ public class SettingController {
                 String descriptionKey = bundleEntrypoint.getBundleId() + ".setting.description";
                 String description = Lang.findPathText(descriptionKey);
                 if (description != null) {
-                    this.descriptionSettings.add(new SettingEntity().setSettingType(UIFieldType.Description)
-                            .setBundle(bundleEntrypoint.getBundleId())
+                    SettingEntity settingEntity = new SettingEntity() {
+                        @Override
+                        public String getBundle() {
+                            return bundleEntrypoint.getBundleId();
+                        }
+                    };
+                    settingEntity
+                            .setSettingType(UIFieldType.Description)
                             .setVisible(true)
                             .setEntityID(SettingEntity.PREFIX + bundleEntrypoint.getBundleId() + "_Description")
-                            .setValue(descriptionKey).setOrder(1));
+                            .setValue(descriptionKey).setOrder(1);
+                    this.descriptionSettings.add(settingEntity);
                 }
             }
         }

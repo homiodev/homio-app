@@ -182,12 +182,14 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     protected void from(UIInputBuilder source) {
         UIBaseLayoutBuilderImpl sourceBuilder = (UIInputBuilderImpl) source;
-        this.inputBuilders.putAll(sourceBuilder.inputBuilders);
-        if (sourceBuilder.styleMap != null) {
-            if (this.styleMap == null) {
-                this.styleMap = new HashMap<>();
+        if (sourceBuilder != null) {
+            this.inputBuilders.putAll(sourceBuilder.inputBuilders);
+            if (sourceBuilder.styleMap != null) {
+                if (this.styleMap == null) {
+                    this.styleMap = new HashMap<>();
+                }
+                this.styleMap.putAll(sourceBuilder.styleMap);
             }
-            this.styleMap.putAll(sourceBuilder.styleMap);
         }
     }
 }

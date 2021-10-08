@@ -31,6 +31,7 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.touchhome.app.LogService;
+import org.touchhome.app.audio.AudioService;
 import org.touchhome.app.auth.JwtTokenProvider;
 import org.touchhome.app.config.ExtRequestMappingHandlerMapping;
 import org.touchhome.app.config.TouchHomeProperties;
@@ -70,6 +71,8 @@ import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.setting.SettingPlugin;
+import org.touchhome.bundle.api.state.DecimalType;
+import org.touchhome.bundle.api.state.OnOffType;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
@@ -205,24 +208,18 @@ public class EntityContextImpl implements EntityContext {
         // trigger handlers when variables changed
         this.event().addEntityUpdateListener(WorkspaceVariableEntity.class, "workspace-var-change-listener",
                 (source, oldSource) -> {
-                    if (oldSource == null || source.getValue() != oldSource.getValue()) {
-                        Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
-                        broadcastLockManager.signalAll(source.getEntityID());
-                    }
+                    Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
+                    broadcastLockManager.signalAll(source.getEntityID(), new DecimalType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
                 });
         this.event().addEntityUpdateListener(WorkspaceStandaloneVariableEntity.class, "workspace-stand-var-change-listener",
                 (source, oldSource) -> {
-                    if (oldSource == null || source.getValue() != oldSource.getValue()) {
-                        Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
-                        broadcastLockManager.signalAll(source.getEntityID());
-                    }
+                    Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
+                    broadcastLockManager.signalAll(source.getEntityID(), new DecimalType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
                 });
         this.event().addEntityUpdateListener(WorkspaceBooleanEntity.class, "workspace-var-bool-change-listener",
                 (source, oldSource) -> {
-                    if (oldSource == null || source.getValue() != oldSource.getValue()) {
-                        Scratch3ExtensionBlocks.sendWorkspaceBooleanValueChangeValue(this, source, source.getValue());
-                        broadcastLockManager.signalAll(source.getEntityID());
-                    }
+                    Scratch3ExtensionBlocks.sendWorkspaceBooleanValueChangeValue(this, source, source.getValue());
+                    broadcastLockManager.signalAll(source.getEntityID(), new OnOffType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
                 });
 
         // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
@@ -722,6 +719,7 @@ public class EntityContextImpl implements EntityContext {
         applicationContext.getBean(ItemController.class).postConstruct();
         applicationContext.getBean(Scratch3OtherBlocks.class).postConstruct();
         applicationContext.getBean(PortService.class).postConstruct();
+        applicationContext.getBean(AudioService.class).postConstruct();
 
         if (bundleContext != null) {
             applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addBundle);

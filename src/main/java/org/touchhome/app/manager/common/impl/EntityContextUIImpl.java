@@ -67,6 +67,10 @@ public class EntityContextUIImpl implements EntityContextUI {
         sendGlobal(GlobalSendType.bell, entityID, null, null, new JSONObject().put("action", "remove"));
     }
 
+    public void sendAudio(String url) {
+        sendGlobal(GlobalSendType.audio, String.valueOf(url.hashCode()), url);
+    }
+
     @Override
     public UIInputBuilder inputBuilder() {
         return new UIInputBuilderImpl(entityContext);

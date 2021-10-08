@@ -182,6 +182,11 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     }
 
     @Override
+    public boolean getFieldBoolean(String fieldName) {
+        return this.fields.get(fieldName).getBoolean(0);
+    }
+
+    @Override
     public String getFieldId(String fieldName) {
         return this.fields.get(fieldName).getString(1);
     }

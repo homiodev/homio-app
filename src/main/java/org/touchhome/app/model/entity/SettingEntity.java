@@ -6,6 +6,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
+import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
@@ -52,7 +53,7 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
 
     @Transient
     private String subGroupKey;
-    
+
     @Transient
     private boolean visible;
 
@@ -135,5 +136,11 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     @Override
     public String getEntityPrefix() {
         return PREFIX;
+    }
+
+    @Override
+    public String getBundle() {
+        SettingPlugin plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
+        return SettingRepository.getSettingBundleName(getEntityContext(), plugin.getClass());
     }
 }

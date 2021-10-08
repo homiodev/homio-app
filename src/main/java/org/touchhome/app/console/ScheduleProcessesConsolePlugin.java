@@ -12,12 +12,12 @@ public class ScheduleProcessesConsolePlugin extends BaseProcessesConsolePlugin i
     }
 
     @Override
-    public boolean matchProcess(EntityContextBGPImpl.ThreadContextImpl<?> threadContext) {
-        return threadContext.getPeriod() != null;
+    public String getName() {
+        return "schedule";
     }
 
     @Override
-    public String getName() {
-        return "schedule";
+    protected boolean handleThreads() {
+        return false;
     }
 }

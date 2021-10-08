@@ -55,6 +55,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
             http.authorizeRequests()//
                     .antMatchers(
                             WebSocketConfig.ENDPOINT,
+                            "/rest/media/audio/**/play",
                             "/rest/auth/status",
                             "/rest/auth/login",
                             "/rest/bundle/image/**",
