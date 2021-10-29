@@ -167,7 +167,7 @@ public class ItemController {
     public List<ItemContext> getItemsBootstrapContext(@PathVariable("type") String type,
                                                       @RequestParam(value = "subType", required = false) String subType) {
         String key = type + subType;
-        itemsBootstrapContextMap.clear(); // TODO: remove this
+        // itemsBootstrapContextMap.clear(); // TODO: remove this
         itemsBootstrapContextMap.computeIfAbsent(key, s -> {
             List<ItemContext> itemContexts = new ArrayList<>();
 

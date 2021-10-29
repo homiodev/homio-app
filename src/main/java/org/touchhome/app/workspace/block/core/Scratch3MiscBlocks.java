@@ -63,8 +63,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
         RawType rawType = workspaceBlock.getInputRawType(VALUE);
         if (rawType == null) {
             rawType = RawType.ofPlainText("NULL");
-        }
-        if ("text/plain".equals(rawType.getMimeType())) {
+        } else if ("text/plain".equals(rawType.getMimeType())) {
             rawType = new RawType(workspaceBlock.getInputStringRequiredWithContext(VALUE).getBytes());
         }
         JSONObject node = new JSONObject().put("block", workspaceBlock.getId()).put("value", rawType.toFullString())

@@ -1,7 +1,6 @@
 package org.touchhome.app.workspace.block.core;
 
 import lombok.Getter;
-import org.apache.commons.lang3.tuple.Pair;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
@@ -15,16 +14,16 @@ import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableBackupValueCrudEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.repository.WorkspaceBackupRepository;
+import org.touchhome.bundle.api.state.DecimalType;
+import org.touchhome.bundle.api.state.OnOffType;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
-import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import java.util.Date;
-import java.util.Objects;
 import java.util.function.Function;
 
 @Getter
@@ -118,10 +117,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
             if (workspaceBlock.getFieldBoolean("DP")) {
                 workspaceBlock.subscribeToLock(lock, next::handle);
             } else {
-                workspaceBlock.subscribeToLock(lock, o -> {
-                    Pair<Boolean, Boolean> changes = (Pair<Boolean, Boolean>) o;
-                    return !Objects.equals(changes.getLeft(), changes.getRight());
-                }, next::handle);
+                workspaceBlock.subscribeToLock(lock, o -> !((DecimalType) o).equalToOldValue(), next::handle);
             }
         });
     }
@@ -174,10 +170,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
             if (workspaceBlock.getFieldBoolean("DP")) {
                 workspaceBlock.subscribeToLock(lock, next::handle);
             } else {
-                workspaceBlock.subscribeToLock(lock, o -> {
-                    Pair<Boolean, Boolean> changes = (Pair<Boolean, Boolean>) o;
-                    return !Objects.equals(changes.getLeft(), changes.getRight());
-                }, next::handle);
+                workspaceBlock.subscribeToLock(lock, o -> !((OnOffType) o).equalToOldValue(), next::handle);
             }
         });
     }

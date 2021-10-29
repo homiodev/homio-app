@@ -21,10 +21,7 @@ import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -517,6 +514,18 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         }
         this.acquiredLocks.add(broadcastLock);
         broadcastLock.addSignalListener(value -> {
+            if (value instanceof Collection && ((Collection) value).size() > 1) {
+                Collection col = (Collection) value;
+                String key = null;
+                for (Object item : col) {
+                    if (key == null) {
+                        key = (String) item;
+                    } else {
+                        this.setValue(key, item);
+                        key = null;
+                    }
+                }
+            }
             this.setValue("value", value);
         });
     }
