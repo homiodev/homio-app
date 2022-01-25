@@ -3,9 +3,9 @@ package org.touchhome.app.model.entity.widget.impl.chart.line;
 import lombok.Getter;
 import lombok.Setter;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
-import org.touchhome.app.model.entity.widget.impl.chart.ChartPeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.LineInterpolation;
 import org.touchhome.bundle.api.EntityContextWidget;
+import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.UIField;
 
 import javax.persistence.Entity;
@@ -16,12 +16,12 @@ import javax.persistence.Entity;
 public class WidgetLineChartEntity extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity> {
 
     @UIField(order = 12)
-    public ChartPeriod getChartPeriod() {
-        return getJsonDataEnum("chartPeriod", ChartPeriod.All);
+    public TimePeriod getTimePeriod() {
+        return getJsonDataEnum("timePeriod", TimePeriod.All);
     }
 
-    public WidgetLineChartEntity setChartPeriod(ChartPeriod value) {
-        setJsonData("chartPeriod", value);
+    public WidgetLineChartEntity setTimePeriod(TimePeriod value) {
+        setJsonData("timePeriod", value);
         return this;
     }
 

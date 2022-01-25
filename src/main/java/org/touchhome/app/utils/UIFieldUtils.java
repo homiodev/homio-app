@@ -54,7 +54,7 @@ public class UIFieldUtils {
 
     public static Collection<OptionModel> loadOptions(Object classEntity, EntityContext entityContext, String fieldName,
                                                       Object classEntityForDynamicOptionLoader) {
-        Method method = InternalUtil.findMethodByName(classEntity.getClass(), fieldName);
+        Method method = InternalUtil.findMethodByName(classEntity.getClass(), fieldName, UIFieldSelection.class);
         if (method != null) {
             UIFieldSelection uiFieldSelection = method.getDeclaredAnnotation(UIFieldSelection.class);
             if (uiFieldSelection != null) {
@@ -158,7 +158,7 @@ public class UIFieldUtils {
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuAction.class)) {
                 UIContextMenuAction action = method.getDeclaredAnnotation(UIContextMenuAction.class);
                 if (action.inputs().length > 0) {
-                    ((UIInputBuilderImpl)uiInputBuilder).addOpenDialogSelectableButtonInternal(
+                    ((UIInputBuilderImpl) uiInputBuilder).addOpenDialogSelectableButtonInternal(
                             action.value(), action.icon(), action.iconColor(), null, null).editDialog(dialogLayoutBuilder -> {
                         for (UIActionInput actionInput : action.inputs()) {
                             ((UIDialogLayoutBuilderImpl) dialogLayoutBuilder).addInput(actionInput);

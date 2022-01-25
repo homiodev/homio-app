@@ -66,7 +66,11 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         this.internetThreadContext.addValueListener(name, (isInternetUp, ignore) -> {
             if (isInternetUp) {
                 log.info("Internet up. Run <" + name + "> listener.");
-                command.run();
+                try {
+                    command.run();
+                } catch (Exception ex) {
+                    log.error("Error occurs while run command: " + name, ex);
+                }
                 return true;
             }
             return false;
@@ -279,6 +283,13 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
             if (isInternetUp != isInternetWasUp) {
                 entityContext.event().fireEvent(isInternetUp ? "internet-up" : "internet-down");
+                if (isInternetUp) {
+                    entityContext.ui().removeBellNotification("internet-connection");
+                    entityContext.ui().addBellInfoNotification("internet-connection", "Internet Connection", "Internet up");
+                } else {
+                    entityContext.ui().removeBellNotification("internet-up");
+                    entityContext.ui().addBellErrorNotification("internet-connection", "Internet Connection", "Internet down");
+                }
             }
             return null;
         });

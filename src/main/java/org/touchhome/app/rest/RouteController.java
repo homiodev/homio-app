@@ -2,8 +2,6 @@ package org.touchhome.app.rest;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import net.rossillo.spring.web.mvc.CacheControl;
-import net.rossillo.spring.web.mvc.CachePolicy;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,7 +47,6 @@ public class RouteController {
     }
 
     @GetMapping("/bootstrap")
-    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public BootstrapContext getBootstrap() {
         BootstrapContext context = new BootstrapContext();
         context.routes = getRoutes();
@@ -61,21 +58,7 @@ public class RouteController {
         return context;
     }
 
-    @GetMapping
-    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public List<RouteJSON> getRoutes() {
-        List<RouteJSON> routes = new ArrayList<>();
-        for (Class<?> aClass : this.uiSidebarMenuClasses) {
-            addRouteFromUISideBarMenu(routes, aClass, aClass.getAnnotation(UISidebarMenu.class));
-        }
-
-        routes.addAll(Stream.of("dashboard").map(RouteJSON::new).collect(Collectors.toList()));
-        return routes;
-    }
-
-    @GetMapping("/menu")
-    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public Map<String, List<SidebarMenuItem>> getMenu() {
+    private Map<String, List<SidebarMenuItem>> getMenu() {
         Map<String, List<SidebarMenuItem>> sidebarMenus = new HashMap<>();
 
         for (Class<?> item : this.uiSidebarMenuClasses) {
@@ -97,6 +80,15 @@ public class RouteController {
         sidebarMenus.get(parent).add(SidebarMenuItem.fromAnnotation(item, uiSidebarMenu));
     }
 
+    private List<RouteJSON> getRoutes() {
+        List<RouteJSON> routes = new ArrayList<>();
+        for (Class<?> aClass : this.uiSidebarMenuClasses) {
+            addRouteFromUISideBarMenu(routes, aClass, aClass.getAnnotation(UISidebarMenu.class));
+        }
+
+        routes.addAll(Stream.of("dashboard").map(RouteJSON::new).collect(Collectors.toList()));
+        return routes;
+    }
 
     private void addRouteFromUISideBarMenu(List<RouteJSON> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
         String href = StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), aClass.getSimpleName());

@@ -33,12 +33,17 @@ public class BundleService {
         this.bundleColorMap = new HashMap<>();
 
         for (BundleEntryPoint bundleEntrypoint : bundleEntryPoints) {
-            URL imageURL = bundleEntrypoint.getBundleImageURL();
-            BufferedImage img = ImageIO.read(Objects.requireNonNull(imageURL));
-            MMCQ.CMap result = ColorThief.getColorMap(img, 5);
-            MMCQ.VBox dominantColor = result.vboxes.get(bundleEntrypoint.getBundleImageColorIndex().ordinal());
-            int[] rgb = dominantColor.avg(false);
-            bundleColorMap.put(bundleEntrypoint.getBundleId(), RGBUtil.toRGBHexString(rgb));
+            try {
+                URL imageURL = bundleEntrypoint.getBundleImageURL();
+                BufferedImage img = ImageIO.read(Objects.requireNonNull(imageURL));
+                MMCQ.CMap result = ColorThief.getColorMap(img, 5);
+                MMCQ.VBox dominantColor = result.vboxes.get(bundleEntrypoint.getBundleImageColorIndex().ordinal());
+                int[] rgb = dominantColor.avg(false);
+                bundleColorMap.put(bundleEntrypoint.getBundleId(), RGBUtil.toRGBHexString(rgb));
+            } catch (Exception ex) {
+                log.error("Unable to start app due error in bundle: <{}>", bundleEntrypoint.getBundleId(), ex);
+                throw ex;
+            }
         }
     }
 

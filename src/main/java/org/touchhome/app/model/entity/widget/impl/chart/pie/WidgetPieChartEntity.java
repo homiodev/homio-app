@@ -1,7 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.chart.pie;
 
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
-import org.touchhome.app.model.entity.widget.impl.chart.ChartPeriod;
+import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.UIField;
 
 import javax.persistence.Entity;
@@ -12,12 +12,12 @@ public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity, 
     public static final String PREFIX = "piew_";
 
     @UIField(order = 12)
-    public ChartPeriod getChartPeriod() {
-        return getJsonDataEnum("chartPeriod", ChartPeriod.All);
+    public TimePeriod getTimePeriod() {
+        return getJsonDataEnum("timePeriod", TimePeriod.All);
     }
 
-    public WidgetPieChartEntity setChartPeriod(ChartPeriod value) {
-        setJsonData("chartPeriod", value);
+    public WidgetPieChartEntity setTimePeriod(TimePeriod value) {
+        setJsonData("timePeriod", value);
         return this;
     }
 

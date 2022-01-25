@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
 
 @Log4j2
 @RequiredArgsConstructor
-
 public class EntityContextSettingImpl implements EntityContextSetting {
     private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
     public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
@@ -58,6 +57,18 @@ public class EntityContextSettingImpl implements EntityContextSetting {
                 dynamicEntities, null, new JSONObject().put("subType", "dynamic"));
     }
 
+    public Object getObjectValue(Class<?> settingPluginClazz) {
+        SettingPlugin<?> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
+        String value;
+        if (pluginFor.transientState()) {
+            value = settingTransientState.get(pluginFor);
+        } else {
+            SettingEntity settingEntity = entityContext.getEntity(SettingEntity.getKey(pluginFor));
+            value = settingEntity == null ? null : settingEntity.getValue();
+        }
+        return pluginFor.parseValue(entityContext, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
+    }
+
     @Override
     public <T> T getValue(Class<? extends SettingPlugin<T>> settingPluginClazz) {
         SettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
@@ -84,6 +95,11 @@ public class EntityContextSettingImpl implements EntityContextSetting {
 
     @Override
     public <T> void listenValue(Class<? extends SettingPlugin<T>> settingClass, String key, Consumer<T> listener) {
+        settingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
+        settingListeners.get(settingClass.getName()).put(key, listener);
+    }
+
+    public void listenObjectValue(Class<?> settingClass, String key, Consumer<Object> listener) {
         settingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
         settingListeners.get(settingClass.getName()).put(key, listener);
     }

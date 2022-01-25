@@ -61,8 +61,6 @@ public class BundleController {
         return TouchHomeUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
     }
 
-    @GetMapping
-    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<BundleJson> getBundles() {
         List<BundleJson> bundles = new ArrayList<>();
         for (BundleEntryPoint bundle : bundleService.getBundles()) {

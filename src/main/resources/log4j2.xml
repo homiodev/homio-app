@@ -81,21 +81,22 @@
 
     </Appenders>
     <Loggers>
-        <Logger name="org.touchhome" additivity="false" level="info">
+        <Logger name="org.touchhome.bundle.zigbee" additivity="false" level="info">
+            <AppenderRef ref="zigBeeLog"/>
             <AppenderRef ref="appLog"/>
             <AppenderRef ref="Console"/>
         </Logger>
 
-        <Logger name="org.touchhome.bundle.zigbee" additivity="false" level="info">
-            <AppenderRef ref="zigBeeLog"/>
-        </Logger>
-
         <Logger name="org.touchhome.app.workspace" additivity="false" level="info">
             <AppenderRef ref="workspaceLog"/>
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
         </Logger>
 
         <Logger name="org.touchhome.bundle.api.workspace" additivity="false" level="info">
             <AppenderRef ref="workspaceLog"/>
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
         </Logger>
 
         <logger name="org.springframework.web.socket.messaging.StompSubProtocolHandler" level="fatal">
@@ -105,6 +106,8 @@
 
         <logger name="org.touchhome.bundle.camera" level="info">
             <AppenderRef ref="cameraLog"/>
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
         </logger>
 
         <Root level="INFO">

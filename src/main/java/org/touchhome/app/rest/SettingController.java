@@ -156,7 +156,6 @@ public class SettingController {
         return OptionModel.list(entityContext.findAll(SettingEntity.class));
     }
 
-    @GetMapping
     public List<SettingEntity> getSettings() {
         List<SettingEntity> settings = entityContext.findAll(SettingEntity.class);
         assembleTransientSettings(settings);

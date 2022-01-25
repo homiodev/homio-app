@@ -70,6 +70,10 @@ public class JwtTokenProvider {
     }
 
     public boolean validateToken(String token) {
+        // in case if postConstruct not yet fired but ui send request to backend
+        if (this.jwtParser == null) {
+            return false;
+        }
         try {
             this.jwtParser.parseClaimsJws(token);
             return true;

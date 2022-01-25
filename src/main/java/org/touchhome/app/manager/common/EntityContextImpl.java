@@ -7,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.Status;
@@ -18,7 +19,12 @@ import org.hibernate.event.spi.*;
 import org.hibernate.internal.SessionFactoryImpl;
 import org.hibernate.metamodel.spi.MetamodelImplementor;
 import org.hibernate.persister.entity.Joinable;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+import org.springframework.aop.framework.Advised;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
@@ -29,6 +35,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.touchhome.app.LogService;
 import org.touchhome.app.audio.AudioService;
@@ -78,19 +85,21 @@ import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.util.Curl;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.api.util.UpdatableSetting;
+import org.touchhome.bundle.api.util.UpdatableValue;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 import javax.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.text.DateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
@@ -119,6 +128,7 @@ public class EntityContextImpl implements EntityContext {
     private final StartupHardwareRepository startupHardwareRepository;
 
     private final ClassFinder classFinder;
+    @Getter
     private final CacheService cacheService;
 
     @Getter
@@ -186,17 +196,21 @@ public class EntityContextImpl implements EntityContext {
 
         setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", cacheService::clearCache);
 
-        // reset device 'status' and 'joined' values
-        this.allDeviceRepository.resetDeviceStatuses();
-
         // loadWorkspace modules
-        log.info("Initialize bundles");
-        ArrayList<BundleEntryPoint> bundleEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntryPoint.class).values());
-        Collections.sort(bundleEntrypoints);
-        for (BundleEntryPoint bundleEntrypoint : bundleEntrypoints) {
+        log.info("Initialize bundles...");
+        ArrayList<BundleEntryPoint> bundleEntryPoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntryPoint.class).values());
+        Collections.sort(bundleEntryPoints);
+        for (BundleEntryPoint bundleEntrypoint : bundleEntryPoints) {
             this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, null));
-            bundleEntrypoint.init();
+            log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
+            try {
+                bundleEntrypoint.init();
+            } catch (Exception ex) {
+                log.fatal("Unable to init bundle: " + bundleEntrypoint.getBundleId(), ex);
+                throw ex;
+            }
         }
+        log.info("Done initialize bundles");
 
         applicationContext.getBean(BundleContextService.class).loadBundlesFromPath();
 
@@ -333,12 +347,14 @@ public class EntityContextImpl implements EntityContext {
         };
 
         T proxyInstance = (T) Enhancer.create(entity.getClass(), handler);
+        consumer.accept(proxyInstance);
 
-        BaseEntity oldEntity = entityManager.getEntityNoCache(entity.getEntityID());
-        entityUpdate(oldEntity, this.event().getEntityUpdateListeners(), (Supplier<HasEntityIdentifier>) () -> {
-            consumer.accept(proxyInstance);
-            return entity;
-        });
+        // fire entityUpdateListeners only if method called not from transaction
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+            BaseEntity oldEntity = entityManager.getEntityNoCache(entity.getEntityID());
+            runUpdateNotifyListeners(entity, oldEntity, event().getEntityUpdateListeners());
+        }
+
         if (!changeFields.isEmpty()) {
             putToCache(entity, changeFields);
         }
@@ -362,17 +378,11 @@ public class EntityContextImpl implements EntityContext {
         pureRepository.save(entity);
     }
 
-    private <T extends HasEntityIdentifier> T entityUpdate(T oldEntity, EntityContextEventImpl.EntityListener entityListener,
-                                                           Supplier<T> updateHandler) {
-        T saved = null;
-        try {
-            saved = updateHandler.get();
-        } finally {
-            if (saved != null) {
-                entityListener.notify(saved, oldEntity);
-            }
+    private <T extends HasEntityIdentifier> void runUpdateNotifyListeners(@Nullable T updatedEntity, T oldEntity, EntityContextEventImpl.EntityListener entityListener) {
+        if (updatedEntity != null) {
+            bgp().run("entity-" + updatedEntity.getEntityID() + "-updated", () ->
+                    entityListener.notify(updatedEntity, oldEntity), false);
         }
-        return saved;
     }
 
     @Override
@@ -384,22 +394,25 @@ public class EntityContextImpl implements EntityContext {
         T oldEntity = entity.getEntityID() == null ? null :
                 entityUpdateListeners.isRequireFetchOldEntity(entity) ? getEntity(entity.getEntityID(), false) : null;
 
-        T merge = transactionTemplate.execute(status ->
-                entityUpdate(oldEntity, entityUpdateListeners, () -> {
+        T updatedEntity = transactionTemplate.execute(status ->
+                {
                     T t = (T) repository.save(entity);
                     t.afterFetch(this);
                     return t;
-                }));
+                }
+        );
+
+        runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners);
 
         if (StringUtils.isEmpty(entity.getEntityID())) {
-            entity.setEntityID(merge.getEntityID());
-            entity.setId(merge.getId());
+            entity.setEntityID(updatedEntity.getEntityID());
+            entity.setId(updatedEntity.getId());
         }
 
         // post save
         cacheService.entityUpdated(entity);
 
-        return merge;
+        return updatedEntity;
     }
 
     @Override
@@ -415,10 +428,10 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     public BaseEntity<? extends BaseEntity> delete(String entityId) {
-        return entityUpdate(null, this.event().getEntityRemoveListeners(), () -> {
-            cacheService.delete(entityId);
-            return entityManager.delete(entityId);
-        });
+        BaseEntity<? extends BaseEntity> deletedEntity = entityManager.delete(entityId);
+        cacheService.delete(entityId);
+        runUpdateNotifyListeners(null, deletedEntity, this.event().getEntityRemoveListeners());
+        return deletedEntity;
     }
 
     @Override
@@ -682,12 +695,14 @@ public class EntityContextImpl implements EntityContext {
             updateBeans(bundleContext, context, true);
 
             for (BundleEntryPoint bundleEntrypoint : context.getBeansOfType(BundleEntryPoint.class).values()) {
+                log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
                 bundleEntrypoint.init();
                 this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, bundleContext));
             }
         }
     }
 
+    @SneakyThrows
     private void updateBeans(BundleContext bundleContext, ApplicationContext context, boolean addBundle) {
         log.info("Starting update all app bundles");
         Lang.clear();
@@ -727,7 +742,40 @@ public class EntityContextImpl implements EntityContext {
 
         reloadListenDependencyInstallSettings();
 
+        registerUpdatableSettings(context);
+
         log.info("Finish update all app bundles");
+    }
+
+    private void registerUpdatableSettings(ApplicationContext context) throws IllegalAccessException {
+        for (String name : context.getBeanDefinitionNames()) {
+            if (!name.contains(".")) {
+                Object bean = context.getBean(name);
+
+                Object proxy = this.getTargetObject(bean);
+                for (Field field : FieldUtils.getFieldsWithAnnotation(proxy.getClass(), UpdatableSetting.class)) {
+                    Class<?> settingClass = field.getDeclaredAnnotation(UpdatableSetting.class).value();
+                    Class valueType = ((SettingPlugin) TouchHomeUtils.newInstance(settingClass)).getType();
+                    Object value = entityContextSetting.getObjectValue(settingClass);
+                    UpdatableValue<Object> updatableValue = UpdatableValue.ofNullable(value, proxy.getClass().getSimpleName() + "_" + field.getName(), valueType);
+                    entityContextSetting.listenObjectValue(settingClass, updatableValue.getName(),
+                            updatableValue::update);
+
+                    FieldUtils.writeField(field, proxy, updatableValue, true);
+                }
+            }
+        }
+    }
+
+    private Object getTargetObject(Object proxy) throws BeansException {
+        if (AopUtils.isJdkDynamicProxy(proxy)) {
+            try {
+                return ((Advised) proxy).getTargetSource().getTarget();
+            } catch (Exception e) {
+                throw new FatalBeanException("Error getting target of JDK proxy", e);
+            }
+        }
+        return proxy;
     }
 
     private void reloadListenDependencyInstallSettings() {

@@ -3,10 +3,12 @@ package org.touchhome.app.rest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.util.WebUtils;
@@ -29,6 +31,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
             msg += ". src: " + ex.getStackTrace()[0].toString();
         }
         log.error("Error <{}>", msg, ex);
+        ((ServletWebRequest) request).getResponse().setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         return new ResponseEntity<>(new ErrorHolderModel("Error", msg, ex), headers, status);
     }
 

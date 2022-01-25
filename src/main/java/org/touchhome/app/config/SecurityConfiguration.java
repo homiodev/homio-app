@@ -4,10 +4,8 @@ import lombok.AllArgsConstructor;
 import org.apache.catalina.filters.RequestFilter;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -21,12 +19,6 @@ import org.touchhome.app.auth.JwtTokenFilterConfigurer;
 import org.touchhome.app.auth.JwtTokenProvider;
 import org.touchhome.app.auth.UserEntityDetailsService;
 import org.touchhome.bundle.api.repository.UserRepository;
-
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
@@ -56,6 +48,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                     .antMatchers(
                             WebSocketConfig.ENDPOINT,
                             "/rest/media/audio/**/play",
+                            "/rest/media/video/playback/**/download",
+                            "/rest/media/video/playback/**/thumbnail/**",
                             "/rest/auth/status",
                             "/rest/auth/login",
                             "/rest/bundle/image/**",
@@ -90,7 +84,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         auth.authenticationProvider(authenticationProvider(null));
     }
 
-    @Bean
+    /*@Bean
     public FilterRegistrationBean remoteAddressFilter() {
         FilterRegistrationBean<RequestFilter> filterRegistrationBean = new FilterRegistrationBean<>();
         RequestFilter filter = new RequestFilter() {
@@ -118,5 +112,5 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
         return filterRegistrationBean;
 
-    }
+    }*/
 }

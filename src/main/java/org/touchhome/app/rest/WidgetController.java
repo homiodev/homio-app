@@ -17,7 +17,6 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetButtonSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.chart.ChartPeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartSeriesEntity;
@@ -39,6 +38,7 @@ import org.touchhome.bundle.api.entity.widget.*;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
+import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.widget.WidgetJSBaseTemplate;
@@ -111,11 +111,11 @@ public class WidgetController {
         for (WidgetLineChartSeriesEntity item : entity.getSeries()) {
             BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
             if (source instanceof HasLineChartSeries) {
-                ChartPeriod chartPeriod = ChartPeriod.fromValue(period);
-                Pair<Date, Date> range = chartPeriod.getDateRange();
+                TimePeriod timePeriod = TimePeriod.fromValue(period);
+                Pair<Date, Date> range = timePeriod.getDateRange();
                 JSONObject dynamicParameterFields = item.getDynamicParameterFieldsHolder();
                 Map<HasLineChartSeries.LineChartDescription, List<Object[]>> result = ((HasLineChartSeries) source).getLineChartSeries(entityContext,
-                        dynamicParameterFields, range.getFirst(), range.getSecond(), chartPeriod.getDateFromNow());
+                        dynamicParameterFields, range.getFirst(), range.getSecond(), timePeriod.getDateFromNow());
 
                 for (Map.Entry<HasLineChartSeries.LineChartDescription, List<Object[]>> entry : result.entrySet()) {
                     List<Object[]> chartItems = entry.getValue();
@@ -126,7 +126,7 @@ public class WidgetController {
                             chartItem[0] = ((Date) chartItem[0]).getTime();
                         }
                     }
-                    EvaluateDatesAndValues evaluateDatesAndValues = new EvaluateDatesAndValues(chartPeriod, chartItems).invoke(item);
+                    EvaluateDatesAndValues evaluateDatesAndValues = new EvaluateDatesAndValues(timePeriod, chartItems).invoke(item);
 
                     // aggregation
                     List<Float> finalValues = evaluateDatesAndValues.getValues().stream()
@@ -183,15 +183,15 @@ public class WidgetController {
         for (WidgetPieChartSeriesEntity item : entity.getSeries()) {
             BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
             if (source instanceof HasPieChartSeries) {
-                ChartPeriod chartPeriod = ChartPeriod.fromValue(period);
-                Pair<Date, Date> range = chartPeriod.getDateRange();
+                TimePeriod timePeriod = TimePeriod.fromValue(period);
+                Pair<Date, Date> range = timePeriod.getDateRange();
 
                 double value;
                 if (entity.getPieChartValueType() == WidgetPieChartEntity.PieChartValueType.Sum) {
-                    value = ((HasPieChartSeries) source).getPieSumChartSeries(entityContext, range.getFirst(), range.getSecond(), chartPeriod.getDateFromNow());
+                    value = ((HasPieChartSeries) source).getPieSumChartSeries(entityContext, range.getFirst(), range.getSecond(), timePeriod.getDateFromNow());
                 } else {
                     value = ((HasPieChartSeries) source).getPieCountChartSeries(entityContext, range.getFirst(),
-                            range.getSecond(), chartPeriod.getDateFromNow());
+                            range.getSecond(), timePeriod.getDateFromNow());
                 }
                 series.add(new PieSeries(source.getTitle(), value, new PieSeries.Extra(item.getTitle())));
             }
@@ -526,7 +526,7 @@ public class WidgetController {
 
     @RequiredArgsConstructor
     private class EvaluateDatesAndValues {
-        private final ChartPeriod chartPeriod;
+        private final TimePeriod timePeriod;
         private final List<Object[]> chartItems;
         @Getter
         private List<Date> dates;
@@ -535,7 +535,7 @@ public class WidgetController {
 
         public EvaluateDatesAndValues invoke(WidgetLineChartSeriesEntity item) {
             // get dates split by algorithm
-            dates = chartPeriod.getDates(chartItems);
+            dates = timePeriod.getDates(chartItems);
             List<Date> initialDates = new ArrayList<>(dates);
             // minimum number not 0 values to fit requirements
             int minDateSize = initialDates.size() / 2;

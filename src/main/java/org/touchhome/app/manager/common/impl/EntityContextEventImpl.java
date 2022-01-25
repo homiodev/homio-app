@@ -30,7 +30,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
     public EntityContextEventImpl(BroadcastLockManager broadcastLockManager) {
         this.broadcastLockManager = broadcastLockManager;
-        this.addEvent("internet-down", "Internet down");
+        this.addEvent("internet-connection", "Internet connection");
         this.addEvent("internet-up", "Internet up");
         this.addEvent("app-release", "Found new app release");
     }

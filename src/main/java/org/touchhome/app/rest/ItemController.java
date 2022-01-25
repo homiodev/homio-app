@@ -19,7 +19,6 @@ import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.app.utils.UIFieldUtils;
-import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.ImageEntity;
@@ -284,7 +283,16 @@ public class ItemController {
 
     @GetMapping("/{entityID}/dependencies")
     public List<String> canRemove(@PathVariable("entityID") String entityID) {
-        AbstractRepository repository = entityContext.getRepository(entityContext.getEntity(entityID)).get();
+        BaseEntity entity = entityContext.getEntity(entityID);
+        if (entity == null) {
+            entity = entityContext.getEntity(entityID, false);
+            if (entity == null) {
+                entityContext.getCacheService().clearCache();
+                entityContext.ui().reloadWindow("Clear cache");
+                return Collections.emptyList();
+            }
+        }
+        AbstractRepository repository = entityContext.getRepository(entity).get();
         List<BaseEntity<?>> usages = getUsages(entityID, repository);
         return usages.stream().map(Object::toString).collect(Collectors.toList());
     }
@@ -295,6 +303,7 @@ public class ItemController {
         JSONObject jsonObject = new JSONObject(json);
         BaseEntity<?> resultField = null;
         for (String entityId : jsonObject.keySet()) {
+            log.info("Put update item: <{}>", entityId);
             BaseEntity<?> entity = entityContext.getEntity(entityId);
 
             if (entity == null) {

@@ -50,7 +50,8 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         this.audioService = audioService;
         setParent("media");
 
-        this.audioMenu = MenuBlock.ofServer("audioMenu", "rest/media/audio");
+        this.audioMenu = MenuBlock.ofServer("audioMenu", "rest/media/audio").setUIDelimiter("/");
+
         this.sinkMenu = MenuBlock.ofServer("sinkMenu", "rest/media/sink");
         // this.audioSourceMenu = MenuBlock.ofServer("asMenu", "rest/media/audioSource");
 
@@ -90,23 +91,25 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     }
 
     private float getLengthReporter(WorkspaceBlock workspaceBlock) throws Exception {
-        return handleFile(workspaceBlock, file -> getAudioLength(AudioFileIO.read(file).getAudioHeader()), 0F);
+        return handleFile(workspaceBlock, file -> getAudioLength(AudioFileIO.read(file).getAudioHeader()));
     }
 
     private long getBitrateReporter(WorkspaceBlock workspaceBlock) throws Exception {
-        return handleFile(workspaceBlock, file -> AudioFileIO.read(file).getAudioHeader().getBitRateAsNumber(), 0L);
+        return handleFile(workspaceBlock, file -> AudioFileIO.read(file).getAudioHeader().getBitRateAsNumber());
     }
 
     private int getSampleRateReporter(WorkspaceBlock workspaceBlock) throws Exception {
-        return handleFile(workspaceBlock, file -> AudioFileIO.read(file).getAudioHeader().getSampleRateAsNumber(), 0);
+        return handleFile(workspaceBlock, file -> AudioFileIO.read(file).getAudioHeader().getSampleRateAsNumber());
     }
 
-    private <T> T handleFile(WorkspaceBlock workspaceBlock, ThrowingFunction<File, T, Exception> handler, T defaultValue) throws Exception {
-        File file = new File(workspaceBlock.getMenuValue("FILE", this.audioMenu));
+    private <T> T handleFile(WorkspaceBlock workspaceBlock, ThrowingFunction<File, T, Exception> handler) throws Exception {
+        String[] keys = workspaceBlock.getMenuValue("FILE", this.audioMenu).split("~~~");
+        File file = new File(keys[keys.length - 1]);
         if (file.exists() && file.canRead()) {
             return handler.apply(file);
+        } else {
+            throw new RuntimeException("Unable to find file: " + file.getName());
         }
-        return defaultValue;
     }
 
     private void stopCommand(WorkspaceBlock workspaceBlock) {
@@ -139,7 +142,7 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
 
             playAudio(file, workspaceBlock, Math.abs(from), Math.abs(to));
             return null;
-        }, null);
+        });
     }
 
     private float getAudioLength(AudioHeader audioHeader) {
@@ -164,7 +167,7 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         handleFile(workspaceBlock, (ThrowingFunction<File, Void, Exception>) file -> {
             playAudio(file, workspaceBlock, null, null);
             return null;
-        }, null);
+        });
     }
 
     private void playAudio(File file, WorkspaceBlock workspaceBlock, Integer from, Integer to) throws Exception {
