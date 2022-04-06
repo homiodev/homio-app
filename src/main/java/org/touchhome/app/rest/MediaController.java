@@ -11,7 +11,6 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tika.Tika;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -55,9 +54,6 @@ public class MediaController {
     private final EntityContext entityContext;
     private final AudioService audioService;
 
-    @Value("classpath:image/no_image.jpg")
-    private Resource noImageResource;
-
     @UpdatableSetting(FFMPEGInstallPathSetting.class)
     private UpdatableValue<Path> ffmpegLocation;
 
@@ -99,11 +95,12 @@ public class MediaController {
         List<String> result = new ArrayList<>();
         for (Map.Entry<String, Path> entry : filePathList.entrySet()) {
             Path filePath = entry.getValue();
-            if (!Files.exists(filePath)) {
-                filePath = noImageResource.getFile().toPath();
+            if (filePath == null || !Files.exists(filePath)) {
+                result.add(entry.getKey() + "~~~");
+            } else {
+                result.add(entry.getKey() + "~~~data:image/jpg;base64," + Base64.getEncoder().encodeToString(
+                        Files.readAllBytes(filePath)));
             }
-            result.add(entry.getKey() + "~~~data:image/jpg;base64," + Base64.getEncoder().encodeToString(
-                    Files.readAllBytes(filePath)));
         }
 
         return new ResponseEntity<>(result, HttpStatus.OK);
@@ -120,7 +117,7 @@ public class MediaController {
                                                           @PathVariable("fileId") String fileId,
                                                           @RequestParam(value = "size", defaultValue = "800x600") String size) throws Exception {
         Path path = getPlaybackThumbnailPath(entityID, fileId, size);
-        return new ResponseEntity<>(Files.readAllBytes(path), HttpStatus.OK);
+        return new ResponseEntity<>(path == null ? new byte[0] : Files.readAllBytes(path), HttpStatus.OK);
     }
 
     @GetMapping("/video/playback/{entityID}/{fileId}/download")
@@ -137,8 +134,17 @@ public class MediaController {
         if (Files.exists(path)) {
             downloadFile = new VideoPlaybackStorage.DownloadFile(new UrlResource(path.toUri()), Files.size(path), fileId);
         } else {
-            downloadFile = Failsafe.with(PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY).get(() ->
-                    entity.downloadPlaybackFile(entityContext, "main", fileId, path));
+            downloadFile = Failsafe.with(PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY)
+                    .onFailure(event -> {
+                        log.error("Unable to download playback file: <{}>. <{}>. Msg: <{}>",
+                                entity.getTitle(),
+                                fileId,
+                                TouchHomeUtils.getErrorMessage(event.getFailure()));
+                    })
+                    .get(context -> {
+                        log.info("Reply <{}>. Download playback video file <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
+                        return entity.downloadPlaybackFile(entityContext, "main", fileId, path);
+                    });
         }
 
         ResourceRegion region = resourceRegion(downloadFile.stream, downloadFile.size, headers);
@@ -216,20 +222,23 @@ public class MediaController {
         URI uri = entity.getPlaybackVideoURL(entityContext, fileId);
         String uriStr = uri.getScheme().equals("file") ? Paths.get(uri).toString() : uri.toString();
 
-        Fallback<Path> fallback = Fallback.of(noImageResource.getFile().toPath());
-        return Failsafe.with(PLAYBACK_THUMBNAIL_RETRY_POLICY, fallback).onComplete(res -> {
-            if (res.getFailure() != null) {
-                log.error("Error while get frame from video: <{}>", TouchHomeUtils.getErrorMessage(res.getFailure()));
-            }
-        }).get(() -> {
-            entityContext.getBean(FfmpegInputDeviceHardwareRepository.class).fireFfmpeg(
-                    ffmpegLocation.getValue().toString(),
-                    "-y",
-                    "\"" + uriStr + "\"",
-                    "-frames:v 1 -vf scale=" + size + " -q:v 3 " + path.toString(), // q:v - jpg quality
-                    60);
-            return path;
-        });
+        Fallback<Path> fallback = Fallback.of((Path) null);
+        return Failsafe.with(PLAYBACK_THUMBNAIL_RETRY_POLICY, fallback)
+                .onFailure(event -> {
+                    log.error("Unable to get playback img: <{}>. Msg: <{}>",
+                            entity.getTitle(),
+                            TouchHomeUtils.getErrorMessage(event.getFailure()));
+                })
+                .get(context -> {
+                    log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
+                    entityContext.getBean(FfmpegInputDeviceHardwareRepository.class).fireFfmpeg(
+                            ffmpegLocation.getValue().toString(),
+                            "-y",
+                            "\"" + uriStr + "\"",
+                            "-frames:v 1 -vf scale=" + size + " -q:v 3 " + path.toString(), // q:v - jpg quality
+                            60);
+                    return path;
+                });
     }
 
     private ResourceRegion resourceRegion(Resource video, long contentLength, HttpHeaders headers) {
@@ -240,8 +249,8 @@ public class MediaController {
             long rangeLength = Math.min(1024 * 1024, end - start + 1);
             return new ResourceRegion(video, start, rangeLength);
         } else {
-            long rangeLength = Math.min(1024 * 1024, contentLength);
-            return new ResourceRegion(video, 0, rangeLength);
+            // long rangeLength = Math.min(1024 * 1024, contentLength);
+            return new ResourceRegion(video, 0, contentLength);
         }
     }
 }

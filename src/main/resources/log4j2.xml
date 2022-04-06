@@ -107,7 +107,6 @@
         <logger name="org.touchhome.bundle.camera" level="info">
             <AppenderRef ref="cameraLog"/>
             <AppenderRef ref="appLog"/>
-            <AppenderRef ref="Console"/>
         </logger>
 
         <Root level="INFO">

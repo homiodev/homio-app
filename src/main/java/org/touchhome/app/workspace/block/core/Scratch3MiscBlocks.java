@@ -65,7 +65,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
             rawType = RawType.ofPlainText("NULL");
         } else if ("text/plain".equals(rawType.getMimeType())) {
             rawType = new RawType(workspaceBlock.getInputStringRequiredWithContext(VALUE).getBytes());
-        }
+    }
         JSONObject node = new JSONObject().put("block", workspaceBlock.getId()).put("value", rawType.toFullString())
                 .put("mimeType", rawType.getMimeType()).put("name", rawType.getName());
         entityContext.ui().sendNotification("-workspace-block-update", node);
