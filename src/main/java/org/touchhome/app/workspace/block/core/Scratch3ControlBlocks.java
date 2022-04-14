@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.workspace.WorkspaceBlockImpl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
-import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;

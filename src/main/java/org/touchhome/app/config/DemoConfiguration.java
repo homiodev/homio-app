@@ -26,7 +26,7 @@ import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
-import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
+import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
 @Log4j2
 @Profile("demo")

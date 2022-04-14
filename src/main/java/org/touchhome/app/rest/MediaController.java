@@ -28,10 +28,11 @@ import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsFileExplorer;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.util.UpdatableSetting;
-import org.touchhome.bundle.api.util.UpdatableValue;
 import org.touchhome.bundle.api.video.VideoPlaybackStorage;
 import org.touchhome.bundle.camera.ffmpeg.FfmpegInputDeviceHardwareRepository;
 import org.touchhome.bundle.camera.setting.FFMPEGInstallPathSetting;
+import org.touchhome.common.model.UpdatableValue;
+import org.touchhome.common.util.CommonUtils;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -135,12 +136,11 @@ public class MediaController {
             downloadFile = new VideoPlaybackStorage.DownloadFile(new UrlResource(path.toUri()), Files.size(path), fileId);
         } else {
             downloadFile = Failsafe.with(PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY)
-                    .onFailure(event -> {
-                        log.error("Unable to download playback file: <{}>. <{}>. Msg: <{}>",
-                                entity.getTitle(),
-                                fileId,
-                                TouchHomeUtils.getErrorMessage(event.getFailure()));
-                    })
+                    .onFailure(event ->
+                            log.error("Unable to download playback file: <{}>. <{}>. Msg: <{}>",
+                                    entity.getTitle(),
+                                    fileId,
+                                    CommonUtils.getErrorMessage(event.getFailure())))
                     .get(context -> {
                         log.info("Reply <{}>. Download playback video file <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
                         return entity.downloadPlaybackFile(entityContext, "main", fileId, path);
@@ -216,7 +216,7 @@ public class MediaController {
         if (Files.exists(path) && Files.size(path) > 0) {
             return path;
         }
-        TouchHomeUtils.createDirectoriesIfNotExists(path.getParent());
+        CommonUtils.createDirectoriesIfNotExists(path.getParent());
         Files.deleteIfExists(path);
 
         URI uri = entity.getPlaybackVideoURL(entityContext, fileId);
@@ -224,11 +224,10 @@ public class MediaController {
 
         Fallback<Path> fallback = Fallback.of((Path) null);
         return Failsafe.with(PLAYBACK_THUMBNAIL_RETRY_POLICY, fallback)
-                .onFailure(event -> {
-                    log.error("Unable to get playback img: <{}>. Msg: <{}>",
-                            entity.getTitle(),
-                            TouchHomeUtils.getErrorMessage(event.getFailure()));
-                })
+                .onFailure(event ->
+                        log.error("Unable to get playback img: <{}>. Msg: <{}>",
+                                entity.getTitle(),
+                                CommonUtils.getErrorMessage(event.getFailure())))
                 .get(context -> {
                     log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
                     entityContext.getBean(FfmpegInputDeviceHardwareRepository.class).fireFfmpeg(

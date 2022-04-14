@@ -11,8 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.UserEntity;
-import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.repository.UserRepository;
+import org.touchhome.common.exception.ServerException;
 
 import javax.validation.Valid;
 import java.security.Principal;

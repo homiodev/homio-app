@@ -35,13 +35,14 @@ import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.widget.*;
-import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.common.exception.NotFoundException;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.widget.WidgetJSBaseTemplate;
+import org.touchhome.common.util.CommonUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -319,7 +320,7 @@ public class WidgetController {
                 jsEntity.setJavaScriptResponse(scriptService.runJavaScript(compileScriptContext));
 
             } catch (Exception ex) {
-                jsEntity.setJavaScriptErrorResponse(TouchHomeUtils.getErrorMessage(ex));
+                jsEntity.setJavaScriptErrorResponse(CommonUtils.getErrorMessage(ex));
             }
         }
     }

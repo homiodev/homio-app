@@ -2,7 +2,7 @@ package org.touchhome.app.json.jsog;
 
 import com.fasterxml.jackson.annotation.ObjectIdGenerator;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.common.exception.ServerException;
 
 /**
  * Use this as an object id generator and your class will serialize as jsog.

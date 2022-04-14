@@ -8,10 +8,10 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.service.SshProviderService;
-import org.touchhome.bundle.api.util.Curl;
+import org.touchhome.common.util.Curl;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;

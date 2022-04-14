@@ -61,7 +61,6 @@ import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.Lang;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.UserEntity;
@@ -70,7 +69,6 @@ import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
-import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.model.ActionResponseModel;
@@ -83,13 +81,16 @@ import org.touchhome.bundle.api.state.OnOffType;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
-import org.touchhome.bundle.api.util.Curl;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.util.UpdatableSetting;
-import org.touchhome.bundle.api.util.UpdatableValue;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.common.exception.NotFoundException;
+import org.touchhome.common.model.UpdatableValue;
+import org.touchhome.common.util.CommonUtils;
+import org.touchhome.common.util.Curl;
+import org.touchhome.common.util.Lang;
 
 import javax.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
@@ -623,7 +624,7 @@ public class EntityContextImpl implements EntityContext {
                 sendEntityUpdateNotification(entity, type);
             }
         } catch (Exception ex) {
-            log.error("Unable to update cache entity <{}> for entity: <{}>. Msg: <{}>", type, entity, TouchHomeUtils.getErrorMessage(ex));
+            log.error("Unable to update cache entity <{}> for entity: <{}>. Msg: <{}>", type, entity, CommonUtils.getErrorMessage(ex));
         }
     }
 
@@ -755,7 +756,7 @@ public class EntityContextImpl implements EntityContext {
                 Object proxy = this.getTargetObject(bean);
                 for (Field field : FieldUtils.getFieldsWithAnnotation(proxy.getClass(), UpdatableSetting.class)) {
                     Class<?> settingClass = field.getDeclaredAnnotation(UpdatableSetting.class).value();
-                    Class valueType = ((SettingPlugin) TouchHomeUtils.newInstance(settingClass)).getType();
+                    Class valueType = ((SettingPlugin) CommonUtils.newInstance(settingClass)).getType();
                     Object value = entityContextSetting.getObjectValue(settingClass);
                     UpdatableValue<Object> updatableValue = UpdatableValue.ofNullable(value, proxy.getClass().getSimpleName() + "_" + field.getName(), valueType);
                     entityContextSetting.listenObjectValue(settingClass, updatableValue.getName(),
@@ -806,7 +807,7 @@ public class EntityContextImpl implements EntityContext {
     private void rebuildRepositoryByPrefixMap() {
         repositoriesByPrefix = new HashMap<>();
         for (Class<? extends BaseEntity> baseEntity : baseEntityNameToClass.values()) {
-            repositoriesByPrefix.put(TouchHomeUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
+            repositoriesByPrefix.put(CommonUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
         }
     }
 

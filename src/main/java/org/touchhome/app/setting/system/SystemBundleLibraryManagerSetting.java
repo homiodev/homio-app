@@ -7,9 +7,9 @@ import org.touchhome.app.extloader.BundleContextService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.setting.CoreSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.model.ProgressBar;
 import org.touchhome.bundle.api.setting.SettingPluginPackageInstall;
-import org.touchhome.bundle.api.util.Curl;
+import org.touchhome.common.model.ProgressBar;
+import org.touchhome.common.util.Curl;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -53,7 +53,8 @@ public class SystemBundleLibraryManagerSetting implements SettingPluginPackageIn
     }
 
     @Override
-    public void installPackage(EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
+    public void installPackage(EntityContext entityContext, PackageRequest packageRequest,
+                               ProgressBar progressBar) {
         entityContext.getBean(BundleContextService.class).installBundle(packageRequest.getName(),
                 packageRequest.getUrl(),
                 packageRequest.getVersion());

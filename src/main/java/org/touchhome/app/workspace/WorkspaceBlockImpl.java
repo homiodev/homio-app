@@ -10,7 +10,7 @@ import org.json.JSONObject;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.state.RawType;
 import org.touchhome.bundle.api.state.State;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -19,6 +19,7 @@ import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.MenuBlock;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.common.util.CommonUtils;
 
 import java.nio.charset.Charset;
 import java.util.*;
@@ -29,8 +30,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
 @Setter
 @Log4j2
@@ -207,7 +206,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             try {
                 scratch3Block.getHandler().handle(this);
             } catch (Exception ex) {
-                String err = "Workspace " + scratch3Block.getOpcode() + " scratch error\n" + TouchHomeUtils.getErrorMessage(ex);
+                String err = "Workspace " + scratch3Block.getOpcode() + " scratch error\n" + CommonUtils.getErrorMessage(ex);
                 entityContext.ui().sendErrorMessage(err, ex);
                 log.error(err);
                 return null;
@@ -292,7 +291,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             } else if (item instanceof String) {
                 return new JSONObject((String) item);
             } else {
-                return new JSONObject(OBJECT_MAPPER.writeValueAsString(item));
+                return new JSONObject(CommonUtils.OBJECT_MAPPER.writeValueAsString(item));
             }
         }
         return defaultValue;
@@ -484,7 +483,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         try {
             scratch3Block.getAllowLinkBoolean().accept(variableId, this);
         } catch (Exception ex) {
-            logErrorAndThrow("Error when linking boolean variable to scratch block: " + scratch3Block.getOpcode() + TouchHomeUtils.getErrorMessage(ex));
+            logErrorAndThrow("Error when linking boolean variable to scratch block: " + scratch3Block.getOpcode() + CommonUtils.getErrorMessage(ex));
         }
     }
 

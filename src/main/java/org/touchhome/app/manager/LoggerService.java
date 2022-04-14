@@ -15,8 +15,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.util.CommonUtils;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -71,7 +72,7 @@ public class LoggerService {
                         try {
                             Files.delete(file);
                         } catch (Exception ex) {
-                            log.error("Can't delete lock file: <{}>", TouchHomeUtils.getErrorMessage(ex), ex);
+                            log.error("Can't delete lock file: <{}>", CommonUtils.getErrorMessage(ex), ex);
                         }
                     }
                     return FileVisitResult.CONTINUE;

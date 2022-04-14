@@ -16,8 +16,6 @@ import org.touchhome.app.manager.common.v1.layout.UIDialogLayoutBuilderImpl;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
@@ -37,7 +35,9 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicParameterField
 import org.touchhome.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.touchhome.bundle.api.ui.method.UIFieldCreateWorkspaceVariableOnEmpty;
 import org.touchhome.bundle.api.util.SecureString;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.exception.NotFoundException;
+import org.touchhome.common.exception.ServerException;
+import org.touchhome.common.util.CommonUtils;
 
 import javax.persistence.OneToMany;
 import javax.validation.constraints.Max;
@@ -73,7 +73,7 @@ public class UIFieldUtils {
             }
             return loadOptions(field, entityContext, field.getType(), classEntity, classEntityForDynamicOptionLoader);
         }
-        throw new ServerException("Unable to find select handler for entity type: " + classEntity.getClass().getSimpleName()
+        throw new NotFoundException("Unable to find select handler for entity type: " + classEntity.getClass().getSimpleName()
                 + " and fieldName: " + fieldName);
     }
 
@@ -87,7 +87,7 @@ public class UIFieldUtils {
         }
         DynamicOptionLoader dynamicOptionLoader = null;
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
-            dynamicOptionLoader = (DynamicOptionLoader) TouchHomeUtils.newInstance(targetClass);
+            dynamicOptionLoader = (DynamicOptionLoader) CommonUtils.newInstance(targetClass);
             if (dynamicOptionLoader == null) {
                 throw new RuntimeException("Unable to instantiate DynamicOptionLoader class: " + targetClass.getName() +
                         ". Does class has public modifier and no args constructor?");
@@ -112,7 +112,7 @@ public class UIFieldUtils {
             for (String basePackage : uiFieldClassSelection.basePackages()) {
                 list.addAll(classFinder.getClassesWithParent(uiFieldClassSelection.value(), null, basePackage));
             }
-            Predicate<Class<?>> predicate = TouchHomeUtils.newInstance(uiFieldClassSelection.filter());
+            Predicate<Class<?>> predicate = CommonUtils.newInstance(uiFieldClassSelection.filter());
             return list.stream().filter(predicate).map(c -> OptionModel.of(c.getName(), c.getSimpleName())).collect(Collectors.toList());
         } else if (field.isAnnotationPresent(UIFieldClassWithFeatureSelection.class)) {
             UIFieldClassWithFeatureSelection uiFieldClassSelection = field.getDeclaredAnnotation(UIFieldClassWithFeatureSelection.class);
@@ -140,7 +140,7 @@ public class UIFieldUtils {
                         params.put("dynamicParameter", new JSONObject()
                                 .put("groupName", dynamicParameterFields.getGroupName())
                                 .put("borderColor", dynamicParameterFields.getBorderColor())
-                                .put("defaultValues", TouchHomeUtils.OBJECT_MAPPER.writeValueAsString(dynamicParameterFields))
+                                .put("defaultValues", CommonUtils.OBJECT_MAPPER.writeValueAsString(dynamicParameterFields))
                                 .put("class", dynamicParameterFields.getClass().getSimpleName())
                                 .put("holder", dynamicParameterFields.getHolderField()));
                     } catch (JsonProcessingException ex) {
@@ -183,7 +183,7 @@ public class UIFieldUtils {
         if (entityClassByType == null) {
             return Collections.emptyList();
         }
-        Object instance = TouchHomeUtils.newInstance(entityClassByType);
+        Object instance = CommonUtils.newInstance(entityClassByType);
         if (instance == null) {
             throw new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName());
         }

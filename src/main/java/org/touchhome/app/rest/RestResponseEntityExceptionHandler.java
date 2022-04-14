@@ -15,6 +15,7 @@ import org.springframework.web.util.WebUtils;
 import org.touchhome.bundle.api.hquery.api.HardwareException;
 import org.touchhome.bundle.api.model.ErrorHolderModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.util.CommonUtils;
 
 @Log4j2
 @ControllerAdvice
@@ -26,7 +27,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         if (HttpStatus.INTERNAL_SERVER_ERROR.equals(status)) {
             request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex, WebRequest.SCOPE_REQUEST);
         }
-        String msg = TouchHomeUtils.getErrorMessage(ex);
+        String msg = CommonUtils.getErrorMessage(ex);
         if (ex instanceof NullPointerException) {
             msg += ". src: " + ex.getStackTrace()[0].toString();
         }
@@ -37,7 +38,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
 
     @ExceptionHandler({HardwareException.class})
     public ErrorHolderModel handleHardwareException(HardwareException ex) {
-        log.error("Error <{}>", TouchHomeUtils.getErrorMessage(ex));
+        log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
         return new ErrorHolderModel("Hardware error", String.join("; ", ex.getInputs()), ex);
     }
 

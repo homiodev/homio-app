@@ -8,7 +8,7 @@ import org.touchhome.app.utils.color.MMCQ;
 import org.touchhome.app.utils.color.RGBUtil;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.common.exception.NotFoundException;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

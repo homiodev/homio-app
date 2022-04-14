@@ -16,7 +16,7 @@ import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
-import org.touchhome.bundle.api.util.SpringUtils;
+import org.touchhome.common.util.SpringUtils;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;

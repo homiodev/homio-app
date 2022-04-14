@@ -17,14 +17,12 @@ import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.util.CommonUtils;
 
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
-import static org.touchhome.bundle.api.util.TouchHomeUtils.getErrorMessage;
 
 @Log4j2
 public class EntityContextBGPImpl implements EntityContextBGP {
@@ -258,15 +256,15 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             } catch (Exception ex) {
                 threadContext.state = "FINISHED_WITH_ERROR";
                 threadContext.stopped = true;
-                threadContext.error = TouchHomeUtils.getErrorMessage(ex);
+                threadContext.error = CommonUtils.getErrorMessage(ex);
 
-                log.error("Exception in thread: <{}>. Message: <{}>", name, getErrorMessage(ex), ex);
+                log.error("Exception in thread: <{}>. Message: <{}>", name, CommonUtils.getErrorMessage(ex), ex);
                 entityContext.ui().sendErrorMessage(ex);
                 if (threadContext.errorListener != null) {
                     try {
                         threadContext.errorListener.accept(ex);
                     } catch (Exception uex) {
-                        log.error("Unexpected error in thread error listener <{}>", getErrorMessage(uex));
+                        log.error("Unexpected error in thread error listener <{}>", CommonUtils.getErrorMessage(uex));
                     }
                 }
             }

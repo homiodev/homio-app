@@ -14,9 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.BundleService;
 import org.touchhome.bundle.api.BundleEntryPoint;
-import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.common.exception.NotFoundException;
 
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
@@ -33,7 +32,6 @@ import java.util.List;
 public class BundleController {
 
     private final BundleService bundleService;
-    private final List<Scratch3ExtensionBlocks> scratch3ExtensionBlocks;
 
     @GetMapping("/image/{bundleID}")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)

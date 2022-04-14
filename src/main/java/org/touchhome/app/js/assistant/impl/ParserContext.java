@@ -1,6 +1,6 @@
 package org.touchhome.app.js.assistant.impl;
 
-import org.touchhome.bundle.api.util.UpdatableValue;
+import org.touchhome.common.model.UpdatableValue;
 
 import java.util.function.Consumer;
 

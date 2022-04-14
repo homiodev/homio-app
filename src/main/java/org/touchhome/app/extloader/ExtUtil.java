@@ -4,7 +4,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.util.ResourceUtils;
-import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.common.exception.ServerException;
 
 import java.net.URL;
 import java.net.URLClassLoader;

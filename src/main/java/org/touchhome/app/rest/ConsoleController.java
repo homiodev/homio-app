@@ -25,7 +25,6 @@ import org.touchhome.bundle.api.console.ConsolePluginCommunicator;
 import org.touchhome.bundle.api.console.ConsolePluginEditor;
 import org.touchhome.bundle.api.console.ConsolePluginTable;
 import org.touchhome.bundle.api.console.dependency.ConsolePluginRequireZipDependency;
-import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.FileModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
@@ -35,6 +34,8 @@ import org.touchhome.bundle.api.setting.console.header.ConsoleHeaderSettingPlugi
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.exception.NotFoundException;
+import org.touchhome.common.util.CommonUtils;
 import org.tritonus.share.ArraySet;
 
 import java.util.*;
@@ -62,11 +63,11 @@ public class ConsoleController {
                 Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
                 ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(
                         entry.getKey(),
-                        TouchHomeUtils.newInstance(settingClass).fireActionsBeforeChange(),
+                        CommonUtils.newInstance(settingClass).fireActionsBeforeChange(),
                         SettingEntity.getKey(settingClass), 0);
 
                 /* TODO: actions.add(new UIActionResponse(entry.getKey())
-                        .putOpt("fabc", TouchHomeUtils.newInstance(settingClass).fireActionsBeforeChange())
+                        .putOpt("fabc", CommonUtils.newInstance(settingClass).fireActionsBeforeChange())
                         .putOpt("ref", SettingEntity.getKey(settingClass)));*/
             }
         }

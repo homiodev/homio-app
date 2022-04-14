@@ -24,8 +24,6 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.ImageEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.dependency.RequireExecutableDependency;
-import org.touchhome.bundle.api.exception.NotFoundException;
-import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -45,6 +43,9 @@ import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.exception.NotFoundException;
+import org.touchhome.common.exception.ServerException;
+import org.touchhome.common.util.CommonUtils;
 
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
@@ -87,7 +88,7 @@ public class ItemController {
 
     public <T extends UIActionHandler> T getOrCreateUIActionHandler(Class<T> actionHandlerClass) {
         return (T) sidebarClassButtonToInstance.computeIfAbsent(actionHandlerClass, handlerClass ->
-                entityContext.getBean((Class<UIActionHandler>) handlerClass, () -> TouchHomeUtils.newInstance(handlerClass)));
+                entityContext.getBean((Class<UIActionHandler>) handlerClass, () -> CommonUtils.newInstance(handlerClass)));
     }
 
     @SneakyThrows
@@ -264,7 +265,7 @@ public class ItemController {
         if (typeClass == null) {
             throw new IllegalArgumentException("Unable to find base entity with type: " + type);
         }
-        BaseEntity<?> baseEntity = TouchHomeUtils.newInstance(typeClass);
+        BaseEntity<?> baseEntity = CommonUtils.newInstance(typeClass);
         return entityContext.save(baseEntity);
     }
 
@@ -465,7 +466,7 @@ public class ItemController {
                 List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
                 aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.get(0);
             }
-            classEntity = TouchHomeUtils.newInstance(aClass);
+            classEntity = CommonUtils.newInstance(aClass);
             if (classEntity == null) {
                 throw new IllegalArgumentException("Unable find class: " + entityID);
             }
@@ -513,7 +514,7 @@ public class ItemController {
                 List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
                 aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.get(0);
             }
-            classEntity = TouchHomeUtils.newInstance(aClass);
+            classEntity = CommonUtils.newInstance(aClass);
             if (classEntity == null) {
                 throw new IllegalArgumentException("Unable find class: " + entityID);
             }

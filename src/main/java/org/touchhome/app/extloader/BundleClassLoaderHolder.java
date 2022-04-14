@@ -6,6 +6,7 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.util.CommonUtils;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -20,12 +21,12 @@ public class BundleClassLoaderHolder extends ClassLoader {
     private Map<String, SingleBundleClassLoader> bundleJarClassLoaders = new HashMap<>();
 
     public void setClassLoaders(String bundleId, ClassLoader classLoader) {
-        TouchHomeUtils.addClassLoader(bundleId, classLoader);
+        CommonUtils.addClassLoader(bundleId, classLoader);
         bundleJarClassLoaders.put(bundleId, (SingleBundleClassLoader) classLoader);
     }
 
     void destroy(String bundleName) {
-        TouchHomeUtils.removeClassLoader(bundleName);
+        CommonUtils.removeClassLoader(bundleName);
         bundleJarClassLoaders.remove(bundleName).destroy();
     }
 

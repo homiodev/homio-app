@@ -16,9 +16,10 @@ import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
-import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.util.CommonUtils;
 
 import javax.script.*;
 import java.io.PrintStream;
@@ -61,7 +62,7 @@ public class ScriptService {
                     runJavaScript(compiledScriptContext);
                 }, true);
                 threadContext.onError(ex ->
-                        entityContext.updateDelayed(scriptEntity, s -> s.setStatus(Status.ERROR).setError(TouchHomeUtils.getErrorMessage(ex))));
+                        entityContext.updateDelayed(scriptEntity, s -> s.setStatus(Status.ERROR).setError(CommonUtils.getErrorMessage(ex))));
             }
         }
     }
@@ -146,7 +147,7 @@ public class ScriptService {
                 future.cancel(true);
                 createCompiledScriptSingleCallExecutorService.shutdownNow();
                 createCompiledScriptSingleCallExecutorService = Executors.newSingleThreadExecutor();
-                throw new ExecutionException("Script evaluation stuck. Got TimeoutException: " + TouchHomeUtils.getErrorMessage(ex), ex);
+                throw new ExecutionException("Script evaluation stuck. Got TimeoutException: " + CommonUtils.getErrorMessage(ex), ex);
             }
         } catch (Exception ex) {
             log.error("Can not compile script: <{}>. Msg: <{}>", scriptEntity.getEntityID(), ex.getMessage());
@@ -164,7 +165,7 @@ public class ScriptService {
             return threadContext.await(maxJavaScriptOnceCallBeforeInterruptInSec, TimeUnit.SECONDS);
         } catch (TimeoutException ex) {
             threadContext.cancel();
-            throw new ExecutionException("Script stuck. Got TimeoutException: " + TouchHomeUtils.getErrorMessage(ex), ex);
+            throw new ExecutionException("Script stuck. Got TimeoutException: " + CommonUtils.getErrorMessage(ex), ex);
         }
     }
 }

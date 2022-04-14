@@ -15,6 +15,7 @@ import org.touchhome.bundle.api.hardware.other.GPIOHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.PostgreSQLHardwareRepository;
 import org.touchhome.bundle.api.hquery.api.HardwareException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.util.CommonUtils;
 
 import javax.sql.DataSource;
 import java.io.File;
@@ -83,7 +84,7 @@ public final class HardwareUtils {
             dataSource.getConnection();
             log.info("Db check connection success");
         } catch (Exception ex) {
-            log.warn("Db connection not alive. url: <{}>. Msg: <{}>", url, TouchHomeUtils.getErrorMessage(ex));
+            log.warn("Db connection not alive. url: <{}>. Msg: <{}>", url, CommonUtils.getErrorMessage(ex));
 
             // try install postgresql if url points to localhost
             if (Objects.requireNonNull(url).startsWith("jdbc:postgresql://localhost:5432")) {
@@ -130,7 +131,7 @@ public final class HardwareUtils {
                                     Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
                                     if (path.getFileName().toString().endsWith(".zip")) {
                                         log.info("Unzip resource <{}>", path.getFileName());
-                                        TouchHomeUtils.unzip(resolve, resolve.getParent());
+                                        CommonUtils.unzip(resolve, resolve.getParent());
                                         log.info("Done unzip resource <{}>", path.getFileName());
                                     }
                                     log.info("Done copy resource <{}>", path.getFileName());

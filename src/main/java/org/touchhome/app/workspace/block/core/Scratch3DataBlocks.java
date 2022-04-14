@@ -22,6 +22,7 @@ import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.common.util.CommonUtils;
 
 import java.util.Date;
 import java.util.function.Function;
@@ -140,7 +141,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
             ((WorkspaceBlockImpl) source).linkVariable(workspaceBlock.getFieldId("group_variables_group"));
         } catch (Exception ex) {
             workspaceBlock.logError("Unable to link variable to wb: <{}>", workspaceBlock.getOpcode() +
-                    TouchHomeUtils.getErrorMessage(ex));
+                    CommonUtils.getErrorMessage(ex));
         }
     }
 
@@ -150,7 +151,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
             ((WorkspaceBlockImpl) source).linkBoolean(workspaceBlock.getFieldId("bool_variables_group"));
         } catch (Exception ex) {
             workspaceBlock.logError("Unable to link bool variable to wb: <{}>", workspaceBlock.getOpcode() +
-                    TouchHomeUtils.getErrorMessage(ex));
+                    CommonUtils.getErrorMessage(ex));
         }
     }
 

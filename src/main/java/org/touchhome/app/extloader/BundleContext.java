@@ -18,8 +18,8 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.touchhome.bundle.api.BundleConfiguration;
 import org.touchhome.bundle.api.BundleEntryPoint;
-import org.touchhome.bundle.api.exception.ServerException;
-import org.touchhome.bundle.api.util.SpringUtils;
+import org.touchhome.common.exception.ServerException;
+import org.touchhome.common.util.SpringUtils;
 import sun.reflect.ReflectionFactory;
 
 import java.io.FileInputStream;
