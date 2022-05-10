@@ -13,7 +13,6 @@ import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.LogService;
 import org.touchhome.app.console.LogsConsolePlugin;
-import org.touchhome.app.console.NamedConsolePlugin;
 import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
@@ -33,7 +32,6 @@ import org.touchhome.bundle.api.service.SshProviderService;
 import org.touchhome.bundle.api.setting.console.header.ConsoleHeaderSettingPlugin;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.util.CommonUtils;
 import org.tritonus.share.ArraySet;
@@ -94,15 +92,7 @@ public class ConsoleController {
         List<ConsolePlugin> consolePlugins = new ArrayList<>(entityContext.getBeansOfType(ConsolePlugin.class));
         Collections.sort(consolePlugins);
         for (ConsolePlugin consolePlugin : consolePlugins) {
-            String bundleName = consolePlugin.getEntityID();
-            if (bundleName == null) {
-                if (!(consolePlugin instanceof NamedConsolePlugin)) {
-                    throw new IllegalArgumentException("Unable to find ConsolePlugin name for class: "
-                            + consolePlugin.getClass().getSimpleName());
-                }
-                bundleName = ((NamedConsolePlugin) consolePlugin).getName();
-            }
-            this.consolePluginsMap.put(bundleName, consolePlugin);
+            this.consolePluginsMap.put(consolePlugin.getName(), consolePlugin);
         }
     }
 

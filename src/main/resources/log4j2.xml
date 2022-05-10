@@ -104,6 +104,11 @@
             <AppenderRef ref="Console"/>
         </logger>
 
+        <logger name="org.freedesktop" level="warn">
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="appLog"/>
+        </logger>
+
         <logger name="org.touchhome.bundle.camera" level="info">
             <AppenderRef ref="cameraLog"/>
             <AppenderRef ref="appLog"/>

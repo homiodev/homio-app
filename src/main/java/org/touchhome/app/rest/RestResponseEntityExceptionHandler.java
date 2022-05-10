@@ -14,7 +14,6 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import org.springframework.web.util.WebUtils;
 import org.touchhome.bundle.api.hquery.api.HardwareException;
 import org.touchhome.bundle.api.model.ErrorHolderModel;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.common.util.CommonUtils;
 
 @Log4j2

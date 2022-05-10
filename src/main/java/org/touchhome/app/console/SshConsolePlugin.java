@@ -7,7 +7,7 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 
 @Component
 @RequiredArgsConstructor
-public class SshConsolePlugin implements ConsolePlugin<Object>, NamedConsolePlugin {
+public class SshConsolePlugin implements ConsolePlugin<Object> {
 
     private final EntityContext entityContext;
 

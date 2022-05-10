@@ -23,7 +23,7 @@ import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
 
 @Component
 @RequiredArgsConstructor
-public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePlugin.HardwarePluginEntity>, NamedConsolePlugin {
+public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePlugin.HardwarePluginEntity> {
 
     private final EntityContext entityContext;
     private final MachineHardwareRepository machineHardwareRepository;
@@ -57,7 +57,6 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
                 ". Version: " + SystemUtils.OS_VERSION + ". Arch: " + SystemUtils.OS_ARCH));
 
         list.add(new HardwarePluginEntity("IP address", networkHardwareRepository.getIPAddress()));
-        list.add(new HardwarePluginEntity("Router IP address", networkHardwareRepository.getGatewayIpAddress()));
         list.add(new HardwarePluginEntity("Device model", EntityContext.isLinuxEnvironment() ? machineHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
         list.add(new HardwarePluginEntity("Cloud status", this.entityContext.setting().getValue(ConsoleCloudProviderSetting.class).getStatus()));
         list.add(new HardwarePluginEntity("Cloud keystore", user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));

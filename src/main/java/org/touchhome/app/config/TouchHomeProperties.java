@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "touchhome")
 public class TouchHomeProperties {
-    private String version;
+    private int version;
     private int httpPort;
     private String serverSiteURL;
     private String checkConnectivityURL;

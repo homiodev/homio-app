@@ -14,7 +14,6 @@ import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.UserEntity;
-import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginOptions;
@@ -23,6 +22,7 @@ import org.touchhome.bundle.api.setting.SettingPluginPackageInstall;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.Lang;
 
 import java.util.*;
@@ -51,9 +51,6 @@ public class SettingController {
     @SneakyThrows
     public void postConstruct(EntityContextImpl entityContext) {
         this.entityContext = entityContext;
-        SettingRepository settingRepository = entityContext.getBean(SettingRepository.class);
-        settingRepository.postConstruct();
-
         this.transientSettings = new HashMap<>();
         for (SettingPlugin<?> settingPlugin : EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {

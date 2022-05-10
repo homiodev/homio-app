@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextImpl;
 
 @Component
-public class SingleThreadConsolePlugin extends BaseProcessesConsolePlugin implements NamedConsolePlugin {
+public class SingleThreadConsolePlugin extends BaseProcessesConsolePlugin {
 
     public SingleThreadConsolePlugin(EntityContextImpl entityContextImpl) {
         super(entityContextImpl);

@@ -111,7 +111,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     @Override
     public DialogEntity<UIDialogLayoutBuilder> addOpenDialogActionButton(@NotNull String name, String icon, String iconColor, Integer width, int order) {
         String entityID = getText(name);
-        UIDialogLayoutBuilderImpl dialogEntityBuilder = new UIDialogLayoutBuilderImpl(entityID + "_dialog", width);
+        UIDialogLayoutBuilderImpl dialogEntityBuilder = new UIDialogLayoutBuilderImpl(entityID, width);
         UIButtonItemBuilderImpl buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, iconColor, null, order))
                 .setDialogEntityBuilder(dialogEntityBuilder);
         return new DialogEntity<UIDialogLayoutBuilder>() {

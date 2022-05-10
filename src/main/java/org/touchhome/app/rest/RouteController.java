@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.SettingEntity;
@@ -27,18 +28,22 @@ public class RouteController {
     private final BundleController bundleController;
     private final SettingController settingController;
     private final ItemController itemController;
+    private final TouchHomeProperties touchHomeProperties;
 
     public RouteController(ClassFinder classFinder, BundleController bundleController,
                            ItemController itemController,
+                           TouchHomeProperties touchHomeProperties,
                            SettingController settingController, EntityContext entityContext) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
         this.bundleController = bundleController;
         this.itemController = itemController;
         this.settingController = settingController;
         this.entityContext = entityContext;
+        this.touchHomeProperties = touchHomeProperties;
     }
 
     private static class BootstrapContext {
+        public int appVersion;
         public List<RouteJSON> routes;
         public Map<String, List<SidebarMenuItem>> menu;
         public List<BundleController.BundleJson> bundles;
@@ -49,6 +54,7 @@ public class RouteController {
     @GetMapping("/bootstrap")
     public BootstrapContext getBootstrap() {
         BootstrapContext context = new BootstrapContext();
+        context.appVersion = touchHomeProperties.getVersion();
         context.routes = getRoutes();
         context.menu = getMenu();
         context.bundles = bundleController.getBundles();

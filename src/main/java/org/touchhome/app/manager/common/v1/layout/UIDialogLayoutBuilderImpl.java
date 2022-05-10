@@ -2,7 +2,6 @@ package org.touchhome.app.manager.common.v1.layout;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
@@ -21,17 +20,13 @@ import org.touchhome.bundle.api.ui.field.action.v1.item.UISliderItemBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.item.UITextInputItemBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.ui.field.action.ActionInputParameter.NAME_PATTERN;
 
 @Getter
-@RequiredArgsConstructor
 @Accessors(chain = true)
 public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
@@ -39,10 +34,11 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
     private final String entityID;
 
     private final Integer width;
-    private final Map<String, UIEntityBuilder> inputBuilders = new HashMap<>();
+    private final Map<String, UIEntityBuilder> inputBuilders = new LinkedHashMap<>();
 
     private String title;
-    private String titleColor;
+    private String icon;
+    private String iconColor;
 
     // this order only for flex
     @Setter
@@ -51,15 +47,24 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
     @JsonIgnore
     private Map<String, String> styleMap;
 
+    public UIDialogLayoutBuilderImpl(String entityID, Integer width) {
+        this.entityID = entityID + "_dialog";
+        this.title = entityID + "_title";
+        this.width = width;
+    }
+
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{" + getEntityID() + ":" + getOrder() + "}";
     }
 
     @Override
-    public UIDialogLayoutBuilder setTitle(@NotNull String title, String color) {
-        this.title = title;
-        this.titleColor = color;
+    public UIDialogLayoutBuilder setTitle(String title, String icon, String iconColor) {
+        if (title != null) {
+            this.title = title;
+        }
+        this.icon = icon;
+        this.iconColor = iconColor;
         return this;
     }
 
@@ -159,6 +164,6 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
     public UIInputEntity buildEntity() {
         List<UIInputEntity> entities = getInputBuilders().values().stream().map(UIEntityBuilder::buildEntity)
                 .sorted(Comparator.comparingInt(UIInputEntity::getOrder)).collect(Collectors.toList());
-        return new UIDialogInputEntity(entityID, this.order, UIItemType.Dialog.name(), title, titleColor, getStyle(), width, entities);
+        return new UIDialogInputEntity(entityID, this.order, UIItemType.Dialog.name(), title, icon, iconColor, getStyle(), width, entities);
     }
 }

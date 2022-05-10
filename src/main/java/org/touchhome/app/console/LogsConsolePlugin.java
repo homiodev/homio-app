@@ -8,7 +8,7 @@ import org.touchhome.bundle.api.console.ConsolePluginLines;
 import java.util.List;
 
 @RequiredArgsConstructor
-public class LogsConsolePlugin implements ConsolePluginLines, NamedConsolePlugin {
+public class LogsConsolePlugin implements ConsolePluginLines {
 
     private final LogService logService;
     private final String name;

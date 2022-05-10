@@ -14,9 +14,8 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.extloader.BundleClassLoaderHolder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.repository.AbstractRepository;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
 
 import java.lang.annotation.Annotation;

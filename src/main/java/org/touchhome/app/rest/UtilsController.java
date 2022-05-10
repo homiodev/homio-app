@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
@@ -23,11 +24,12 @@ import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContextUI;
+import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
-import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.Curl;
 import org.touchhome.common.util.Lang;
 
@@ -40,12 +42,10 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
+import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 import static org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks.ENTITY;
 
@@ -58,6 +58,16 @@ public class UtilsController {
     private final EntityContextImpl entityContext;
     private final ScriptService scriptService;
     private final CodeParser codeParser;
+
+    @GetMapping("/app/config")
+    public DeviceConfig getAppConfiguration() {
+        DeviceConfig deviceConfig = new DeviceConfig();
+        UserEntity userEntity = entityContext.getEntity(ADMIN_USER);
+        deviceConfig.hasKeystore = userEntity.getKeystore() != null;
+        deviceConfig.keystoreDate = userEntity.getKeystoreDate();
+        deviceConfig.hasUserPassword = entityContext.getEntity(ADMIN_USER) != null;
+        return deviceConfig;
+    }
 
     @PostMapping("/github/readme")
     public GitHubReadme getUrlContent(@RequestBody String url) {
@@ -187,5 +197,15 @@ public class UtilsController {
         private String log;
         private String error;
         private String logUrl;
+    }
+
+    @Getter
+    @Setter
+    private static class DeviceConfig {
+        private final boolean bootOnly = true;
+        public boolean hasUserPassword;
+        private boolean hasKeystore;
+        private Date keystoreDate;
+        private final boolean hasApp = true;
     }
 }

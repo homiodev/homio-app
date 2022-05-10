@@ -42,7 +42,6 @@ import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
@@ -105,7 +104,7 @@ public class ItemController {
             String fieldName = actionRequestModel.metadata.getString("field");
 
             AccessibleObject field = Optional.ofNullable((AccessibleObject)
-                    FieldUtils.getField(actionHolder.getClass(), fieldName, true))
+                            FieldUtils.getField(actionHolder.getClass(), fieldName, true))
                     .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
             if (field != null) {
                 for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
@@ -137,7 +136,9 @@ public class ItemController {
                                                    BaseEntity actionEntity, JSONObject params) {
         List<Object> objects = new ArrayList<>();
         for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
-            if (BaseEntity.class.isAssignableFrom((Class) parameterType.getType())) {
+            if (actionHolder.getClass().isAssignableFrom((Class) parameterType.getType())) {
+                objects.add(actionHolder);
+            } else if (BaseEntity.class.isAssignableFrom((Class) parameterType.getType())) {
                 objects.add(actionEntity);
             } else if (JSONObject.class.isAssignableFrom((Class<?>) parameterType.getType())) {
                 objects.add(params);

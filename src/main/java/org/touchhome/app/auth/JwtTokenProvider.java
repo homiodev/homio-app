@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.setting.system.SystemDisableAuthTokenOnRestartSetting;
 import org.touchhome.app.setting.system.SystemJWTTokenValidSetting;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.Date;
 import java.util.Set;
@@ -53,7 +54,7 @@ public class JwtTokenProvider {
                 .setClaims(claims)
                 .setIssuedAt(now)
                 .setExpiration(validity)
-                .signWith(SignatureAlgorithm.HS256, requireAppID ? EntityContext.APP_ID : STATIC_KEY)
+                .signWith(SignatureAlgorithm.HS256, requireAppID ? TouchHomeUtils.APP_UUID : STATIC_KEY)
                 .compact();
     }
 
@@ -87,6 +88,6 @@ public class JwtTokenProvider {
     }
 
     private void createJWTParser() {
-        this.jwtParser = Jwts.parser().setSigningKey(requireAppID ? EntityContext.APP_ID : STATIC_KEY);
+        this.jwtParser = Jwts.parser().setSigningKey(requireAppID ? TouchHomeUtils.APP_UUID : STATIC_KEY);
     }
 }

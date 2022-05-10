@@ -11,9 +11,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.util.Constants;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.exception.ServerException;
 
 import java.io.IOException;
 import java.net.URL;

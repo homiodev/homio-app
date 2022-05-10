@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.repository.ImageRepository;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.ImageEntity;
-import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.exception.ServerException;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

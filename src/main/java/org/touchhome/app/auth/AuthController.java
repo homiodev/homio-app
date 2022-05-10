@@ -36,8 +36,7 @@ public class AuthController {
 
     @GetMapping("/status")
     public int getStatus(Principal user) {
-        UserEntity userEntity = entityContext.getEntity(ADMIN_USER);
-        return user == null ? (userEntity == null || userEntity.isPasswordNotSet(passwordEncoder) ? 402 : 401) : 200;
+        return user == null ? 401 : 200;
     }
 
     @GetMapping("/user")

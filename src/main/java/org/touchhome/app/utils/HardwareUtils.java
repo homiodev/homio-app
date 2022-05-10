@@ -4,26 +4,15 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.core.env.Environment;
-import org.touchhome.app.hardware.HotSpotHardwareRepository;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
-import org.touchhome.bundle.api.hardware.other.GPIOHardwareRepository;
-import org.touchhome.bundle.api.hardware.other.PostgreSQLHardwareRepository;
-import org.touchhome.bundle.api.hquery.api.HardwareException;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.common.util.CommonUtils;
 
-import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.Collections;
-import java.util.Objects;
 
 @Log4j2
 public final class HardwareUtils {
@@ -38,72 +27,7 @@ public final class HardwareUtils {
             return;
         }
         hardwareChecked = true;
-        checkDatabaseInstalled(beanFactory);
         copyResources();
-        if (EntityContext.isLinuxEnvironment()) {
-            checkWiringPi(beanFactory);
-            checkHotSpotAndWifi(beanFactory);
-        }
-    }
-
-    private static void checkHotSpotAndWifi(ConfigurableListableBeanFactory beanFactory) {
-        HotSpotHardwareRepository repository = beanFactory.getBean(HotSpotHardwareRepository.class);
-        NetworkHardwareRepository wifiRepository = beanFactory.getBean(NetworkHardwareRepository.class);
-        String iface = wifiRepository.getActiveNetworkInterface();
-        if (iface != null) {
-            wifiRepository.setWifiPowerSaveOff(iface);
-        }
-
-        if (!repository.isAutoHotSpotServiceExists()) {
-            repository.installAutoHotSpot(TouchHomeUtils.getFilesPath().resolve("hotspot").toAbsolutePath().toString());
-        }
-    }
-
-    private static void checkWiringPi(ConfigurableListableBeanFactory beanFactory) {
-        GPIOHardwareRepository repository = beanFactory.getBean(GPIOHardwareRepository.class);
-        if (!repository.printWiringPiInfo()) {
-            log.warn("Unable to get wiring PI info");
-            repository.installWiringPiAuto();
-            if (!repository.printWiringPiInfo()) {
-                log.error("Unable to install wiring PI");
-            }
-        }
-    }
-
-    private static void checkDatabaseInstalled(BeanFactory beanFactory) {
-        PostgreSQLHardwareRepository repository = beanFactory.getBean(PostgreSQLHardwareRepository.class);
-        Environment env = beanFactory.getBean(Environment.class);
-        String url = env.getProperty("spring.datasource.url");
-        String pwd = env.getProperty("spring.datasource.password");
-        DataSource dataSource = DataSourceBuilder.create().url(url)
-                .driverClassName(env.getProperty("spring.datasource.driver-class-name"))
-                .username(env.getProperty("spring.datasource.username")).password(pwd).build();
-        try {
-            log.debug("Check db connection");
-            // check that we able connect to target db
-            dataSource.getConnection();
-            log.info("Db check connection success");
-        } catch (Exception ex) {
-            log.warn("Db connection not alive. url: <{}>. Msg: <{}>", url, CommonUtils.getErrorMessage(ex));
-
-            // try install postgresql if url points to localhost
-            if (Objects.requireNonNull(url).startsWith("jdbc:postgresql://localhost:5432")) {
-                log.debug("Database url require local postgres. Trying start/install it");
-                try {
-                    log.info("PostgreSQL already installed <{}>", repository.getPostgreSQLVersion());
-                    if (!repository.isPostgreSQLRunning()) {
-                        repository.startPostgreSQLService();
-                    }
-                    repository.changePostgresPassword(pwd);
-                } catch (HardwareException he) {
-                    log.warn("PostgreSQL not installed. Installing it...");
-                    repository.installPostgreSQL();
-                    log.info("PostgreSQL installed successfully.");
-                    repository.startPostgreSQLService();
-                    repository.changePostgresPassword(pwd);
-                }
-            }
-        }
     }
 
     @SneakyThrows

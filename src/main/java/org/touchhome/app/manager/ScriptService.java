@@ -16,9 +16,8 @@ import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
-import org.touchhome.common.exception.ServerException;
 import org.touchhome.bundle.api.model.Status;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
 
 import javax.script.*;

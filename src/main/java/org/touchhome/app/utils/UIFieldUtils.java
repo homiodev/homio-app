@@ -282,10 +282,14 @@ public class UIFieldUtils {
                 }
             } else {
                 if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
-                    Type argument = ((ParameterizedType) genericType).getActualTypeArguments()[0];
-                    if (!trySetListType(argument, entityUIMetaData, uiFieldContext, jsonTypeMetadata)) {
-                        argument = findClassGenericClass(argument, instance);
-                        trySetListType(argument, entityUIMetaData, uiFieldContext, jsonTypeMetadata);
+                    Type firstArgument = ((ParameterizedType) genericType).getActualTypeArguments()[0];
+                    if (!trySetListType(firstArgument, entityUIMetaData, uiFieldContext, jsonTypeMetadata)) {
+                        Type subArgument = findClassGenericClass(firstArgument, instance);
+                        if (!trySetListType(subArgument, entityUIMetaData, uiFieldContext, jsonTypeMetadata)) {
+                            // otherwise Set<String>, Set<Integer> set as Chips
+                            entityUIMetaData.setType(UIFieldType.Chips.name());
+                            jsonTypeMetadata.put("type", ((Class) firstArgument).getSimpleName());
+                        }
                     }
                 } else {
                     if (type.equals(boolean.class)) {
@@ -485,12 +489,14 @@ public class UIFieldUtils {
     }
 
     private static Type findClassGenericClass(Type argument, Object instance) {
-        String genericTypeName = ((TypeVariable) argument).getName();
-        Type[] classGenericTypes = ((ParameterizedType) instance.getClass().getGenericSuperclass()).getActualTypeArguments();
-        TypeVariable<? extends Class<?>>[] parameters = instance.getClass().getSuperclass().getTypeParameters();
-        for (int i = 0; i < parameters.length; i++) {
-            if (parameters[i].getName().equals(genericTypeName)) {
-                return classGenericTypes[i];
+        if (argument instanceof TypeVariable) {
+            String genericTypeName = ((TypeVariable) argument).getName();
+            Type[] classGenericTypes = ((ParameterizedType) instance.getClass().getGenericSuperclass()).getActualTypeArguments();
+            TypeVariable<? extends Class<?>>[] parameters = instance.getClass().getSuperclass().getTypeParameters();
+            for (int i = 0; i < parameters.length; i++) {
+                if (parameters[i].getName().equals(genericTypeName)) {
+                    return classGenericTypes[i];
+                }
             }
         }
         return null;

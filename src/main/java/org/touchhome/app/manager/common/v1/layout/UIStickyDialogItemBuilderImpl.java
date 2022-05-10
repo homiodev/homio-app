@@ -41,6 +41,6 @@ public class UIStickyDialogItemBuilderImpl extends UIBaseLayoutBuilderImpl imple
     public UIInputEntity buildEntity() {
         List<UIInputEntity> entities = getUiEntityBuilders(false).stream().map(UIEntityBuilder::buildEntity)
                 .sorted(Comparator.comparingInt(UIInputEntity::getOrder)).collect(Collectors.toList());
-        return new UIDialogInputEntity(entityID, 0, itemType, getTitle(), null, getStyle(), null, entities);
+        return new UIDialogInputEntity(entityID, 0, itemType, getTitle(), null, null, getStyle(), null, entities);
     }
 }

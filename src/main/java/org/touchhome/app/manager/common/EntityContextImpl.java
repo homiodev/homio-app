@@ -30,7 +30,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -47,6 +46,7 @@ import org.touchhome.app.extloader.BundleContextService;
 import org.touchhome.app.hardware.StartupHardwareRepository;
 import org.touchhome.app.manager.*;
 import org.touchhome.app.manager.common.impl.*;
+import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.repository.crud.base.BaseCrudRepository;
 import org.touchhome.app.repository.device.AllDeviceRepository;
 import org.touchhome.app.rest.ConsoleController;
@@ -63,18 +63,17 @@ import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
-import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
-import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
+import org.touchhome.bundle.api.repository.UserRepository;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.state.DecimalType;
 import org.touchhome.bundle.api.state.OnOffType;
@@ -103,8 +102,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
-import static org.touchhome.bundle.api.util.Constants.*;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.MACHINE_IP_ADDRESS;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIMARY_COLOR;
 
@@ -191,7 +188,7 @@ public class EntityContextImpl implements EntityContext {
 
         registerEntityListeners();
 
-        createUser();
+        getBean(UserRepository.class).ensureUserExists();
 
         applicationContext.getBean(ScriptService.class).postConstruct();
 
@@ -247,13 +244,8 @@ public class EntityContextImpl implements EntityContext {
         this.event().fireEvent("app-started", "App started");
 
         // install autossh. Should refactor to move somewhere else
-        this.bgp().runOnceOnInternetUp("internal-ctx", () -> {
-            MACHINE_IP_ADDRESS = getInternalIpAddress();
-            MachineHardwareRepository repository = getBean(MachineHardwareRepository.class);
-            if (!repository.isSoftwareInstalled("autossh")) {
-                repository.installSoftware("autossh");
-            }
-        });
+        this.bgp().runOnceOnInternetUp("internal-ctx", () ->
+                MACHINE_IP_ADDRESS = getInternalIpAddress());
     }
 
     @Override
@@ -566,15 +558,6 @@ public class EntityContextImpl implements EntityContext {
                 }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    private void createUser() {
-        UserEntity userEntity = getEntity(ADMIN_USER, false);
-        if (userEntity == null) {
-            save(new UserEntity().computeEntityID(() -> ADMIN_USER)
-                    .setPassword("admin123", getBean(PasswordEncoder.class)).setUserId("admin@gmail.com")
-                    .setRoles(new HashSet<>(Arrays.asList(ADMIN_ROLE, PRIVILEGED_USER_ROLE, GUEST_ROLE))));
-        }
-    }
-
     private void registerEntityListeners() {
         setting().listenValueAndGet(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
 
@@ -726,6 +709,7 @@ public class EntityContextImpl implements EntityContext {
         Lang.DEFAULT_LANG = setting().getValue(SystemLanguageSetting.class).name();
         applicationContext.getBean(ConsoleController.class).postConstruct();
         applicationContext.getBean(BundleService.class).postConstruct(this);
+        applicationContext.getBean(SettingRepository.class).postConstruct();
         applicationContext.getBean(SettingController.class).postConstruct(this);
         /*if (!addBundle) {
             applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
@@ -848,7 +832,7 @@ public class EntityContextImpl implements EntityContext {
             ui().addBellInfoNotification("version", "app", "version: " + touchHomeProperties.getVersion());
             this.latestVersion = Curl.get(GIT_HUB_URL + "/releases/latest", Map.class).get("tag_name").toString();
 
-            if (!touchHomeProperties.getVersion().equals(this.latestVersion)) {
+            if (!String.valueOf(touchHomeProperties.getVersion()).equals(this.latestVersion)) {
                 log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion, touchHomeProperties.getVersion());
                 String description = "Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion;
                 ui().addBellErrorNotification("version", "app", description, uiInputBuilder ->
