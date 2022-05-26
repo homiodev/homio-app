@@ -1,6 +1,7 @@
 package org.touchhome.app.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -18,13 +19,11 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
+import org.touchhome.bundle.api.setting.SettingPluginOptionsFileExplorer;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.*;
-import org.touchhome.bundle.api.ui.field.action.ActionInputParameter;
-import org.touchhome.bundle.api.ui.field.action.UIActionButton;
-import org.touchhome.bundle.api.ui.field.action.UIActionInput;
-import org.touchhome.bundle.api.ui.field.action.UIContextMenuAction;
+import org.touchhome.bundle.api.ui.field.action.*;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.ui.field.color.*;
@@ -44,47 +43,180 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Pattern;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 
 public class UIFieldUtils {
 
-    public static Collection<OptionModel> loadOptions(Object classEntity, EntityContext entityContext, String fieldName,
-                                                      Object classEntityForDynamicOptionLoader) {
-        Method method = InternalUtil.findMethodByName(classEntity.getClass(), fieldName, UIFieldSelection.class);
-        if (method != null) {
-            UIFieldSelection uiFieldSelection = method.getDeclaredAnnotation(UIFieldSelection.class);
-            if (uiFieldSelection != null) {
-                return loadOptions(method, entityContext, method.getReturnType(), classEntity, classEntityForDynamicOptionLoader);
+    @RequiredArgsConstructor
+    private enum SelectHandler {
+        simple(UIFieldSelection.class, params -> {
+            params.classEntityForDynamicOptionLoader =
+                    params.classEntityForDynamicOptionLoader == null ? params.classEntity :
+                            params.classEntityForDynamicOptionLoader;
+            UIFieldSelection uiFieldTargetSelection = params.field.getDeclaredAnnotation(UIFieldSelection.class);
+            if (uiFieldTargetSelection != null) {
+                params.targetClass = uiFieldTargetSelection.value();
             }
-            Collection<OptionModel> options = loadOptions(method, entityContext, method.getReturnType(), classEntity, classEntityForDynamicOptionLoader);
-            if (!options.isEmpty()) {
+            Collection<OptionModel> options =
+                    fetchOptionsFromDynamicOptionLoader(params.targetClass, params.classEntityForDynamicOptionLoader,
+                            params.entityContext, uiFieldTargetSelection, params.deps);
+            if (options != null) {
+                return options;
+            }
+
+            if (params.targetClass.isEnum()) {
+                return OptionModel.enumList((Class<? extends Enum>) params.targetClass);
+            }
+            return null;
+        }),
+        file(UIFieldFileSelection.class, params -> {
+            UIFieldFileSelection annotation = params.field.getDeclaredAnnotation(UIFieldFileSelection.class);
+            boolean firstLevel = StringUtils.isEmpty(params.param0);
+            String pathStr = StringUtils.defaultIfEmpty(params.param0, annotation.rootPath());
+            Path rootPath = StringUtils.isEmpty(pathStr) ? CommonUtils.getRootPath() : Paths.get(pathStr);
+            return SettingPluginOptionsFileExplorer.getFilePath(rootPath, annotation.levels(), annotation.flatStructure(), true,
+                    annotation.skipRootInTreeStructure(), Comparator.comparing(OptionModel::getTitleOrKey),
+                    SettingPluginOptionsFileExplorer::visitDirectoryDefault, path -> true, (path, basicFileAttributes) -> {
+                        if (Files.isDirectory(path)) {
+                            return true;
+                        }
+                        if (Files.exists(path) && Files.isReadable(path)) {
+                            if (!annotation.allowSelectFiles() && Files.isRegularFile(path)) {
+                                return false;
+                            }
+                            String name = path.getFileName() == null ? path.toString() : path.getFileName().toString();
+                            if (name.startsWith("$") || name.startsWith(".")) {
+                                return false;
+                            }
+                            if (annotation.extensions().length > 0) {
+                                for (String extension : annotation.extensions()) {
+                                    if (name.endsWith(extension)) {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            }
+                            return true;
+                        }
+                        return false;
+                    }, (path, path2) -> null, path ->
+                            firstLevel ? path.toString() : path.getFileName().toString());
+        }),
+        bean(UIFieldBeanSelection.class,
+                params -> params.entityContext.getBeansOfTypeWithBeanName(params.targetClass).keySet().stream()
+                        .map(OptionModel::key)
+                        .collect(Collectors.toList())),
+        clazz(UIFieldClassSelection.class,
+                params -> {
+                    ClassFinder classFinder = params.entityContext.getBean(ClassFinder.class);
+                    UIFieldClassSelection uiFieldClassSelection = params.field.getDeclaredAnnotation(UIFieldClassSelection.class);
+                    List<Class<?>> list = new ArrayList<>();
+                    for (String basePackage : uiFieldClassSelection.basePackages()) {
+                        list.addAll(classFinder.getClassesWithParent(uiFieldClassSelection.value(), null, basePackage));
+                    }
+                    Predicate<Class<?>> predicate = CommonUtils.newInstance(uiFieldClassSelection.filter());
+                    return list.stream().filter(predicate).map(c -> OptionModel.of(c.getName(), c.getSimpleName()))
+                            .collect(Collectors.toList());
+                }),
+        clazzWithFeature(UIFieldClassWithFeatureSelection.class, params -> {
+            UIFieldClassWithFeatureSelection uiFieldClassSelection =
+                    params.field.getDeclaredAnnotation(UIFieldClassWithFeatureSelection.class);
+            List<OptionModel> list = new ArrayList<>();
+            for (Class<? extends HasEntityIdentifier> foundTargetType : params.entityContext.getClassesWithParent(
+                    uiFieldClassSelection.value(), uiFieldClassSelection.basePackages())) {
+                if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
+                    for (BaseEntity baseEntity : params.entityContext.findAll((Class<BaseEntity>) foundTargetType)) {
+                        list.add(addEntityToSelection(baseEntity));
+                    }
+                }
+            }
+            return list;
+        });
+
+        private final Class<? extends Annotation> selectClass;
+        private final Function<LoadOptionsParameters, Collection<OptionModel>> handler;
+    }
+
+    public static Collection<OptionModel> loadOptions(Object classEntity, EntityContext entityContext, String fieldName,
+                                                      Object classEntityForDynamicOptionLoader, String selectType,
+                                                      Map<String, String> deps, String param0) {
+        List<? extends Class<? extends Annotation>> selectAnnotations =
+                Stream.of(SelectHandler.values()).map(h -> h.selectClass).collect(Collectors.toList());
+        Method method = findMethodByName(classEntity.getClass(), fieldName, selectAnnotations);
+        if (method == null) {
+            // maybe method returns enum for selection
+            method = getMethod(classEntity.getClass(), fieldName);
+        }
+        if (method != null) {
+            Collection<OptionModel> options =
+                    loadOptions(method, entityContext, method.getReturnType(), classEntity, classEntityForDynamicOptionLoader,
+                            selectType, deps, param0);
+            if (options != null) {
                 return options;
             }
         }
         Field field = FieldUtils.getField(classEntity.getClass(), fieldName, true);
         if (field != null) {
-            UIFieldSelection uiFieldSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
-            if (uiFieldSelection != null) {
-                return loadOptions(field, entityContext, field.getType(), classEntity, classEntityForDynamicOptionLoader);
-            }
-            return loadOptions(field, entityContext, field.getType(), classEntity, classEntityForDynamicOptionLoader);
+            return loadOptions(field, entityContext, field.getType(), classEntity, classEntityForDynamicOptionLoader,
+                    selectType, deps, param0);
         }
-        throw new NotFoundException("Unable to find select handler for entity type: " + classEntity.getClass().getSimpleName()
-                + " and fieldName: " + fieldName);
+        throw new NotFoundException(
+                "Unable to find select handler for entity type: " + classEntity.getClass().getSimpleName() + " and fieldName: " +
+                        fieldName);
+    }
+
+    @AllArgsConstructor
+    private static class LoadOptionsParameters {
+        private AccessibleObject field;
+        private EntityContext entityContext;
+        private Class<?> targetClass;
+        private Object classEntityForDynamicOptionLoader;
+        private Object classEntity;
+        private Map<String, String> deps;
+        private String param0;
     }
 
     @SneakyThrows
     private static Collection<OptionModel> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass,
-                                                       Object classEntity, Object classEntityForDynamicOptionLoader) {
-        classEntityForDynamicOptionLoader = classEntityForDynamicOptionLoader == null ? classEntity : classEntityForDynamicOptionLoader;
-        UIFieldSelection uiFieldTargetSelection = field.getDeclaredAnnotation(UIFieldSelection.class);
-        if (uiFieldTargetSelection != null) {
-            targetClass = uiFieldTargetSelection.value();
+                                                       Object classEntity, Object classEntityForDynamicOptionLoader,
+                                                       String selectType, Map<String, String> deps, String param0) {
+        LoadOptionsParameters param =
+                new LoadOptionsParameters(field, entityContext, targetClass, classEntity, classEntityForDynamicOptionLoader,
+                        deps, param0);
+
+        if (selectType != null) {
+            SelectHandler selectHandler = SelectHandler.valueOf(selectType);
+            if (field.isAnnotationPresent(selectHandler.selectClass)) {
+                Collection<OptionModel> result = selectHandler.handler.apply(param);
+                if (result != null) {
+                    return result;
+                }
+            }
         }
+
+        for (SelectHandler selectHandler : SelectHandler.values()) {
+            if (field.isAnnotationPresent(selectHandler.selectClass)) {
+                return selectHandler.handler.apply(param);
+            }
+        }
+
+        return null;
+    }
+
+    private static Collection<OptionModel> fetchOptionsFromDynamicOptionLoader(Class<?> targetClass,
+                                                                               Object classEntityForDynamicOptionLoader,
+                                                                               EntityContext entityContext,
+                                                                               UIFieldSelection uiFieldTargetSelection,
+                                                                               Map<String, String> deps) {
         DynamicOptionLoader dynamicOptionLoader = null;
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
             dynamicOptionLoader = (DynamicOptionLoader) CommonUtils.newInstance(targetClass);
@@ -94,51 +226,25 @@ public class UIFieldUtils {
             }
         }
         if (dynamicOptionLoader != null) {
-            return dynamicOptionLoader.loadOptions(classEntityForDynamicOptionLoader instanceof BaseEntity ? (BaseEntity<?>) classEntityForDynamicOptionLoader : null,
-                    entityContext, uiFieldTargetSelection.staticParameters());
+            BaseEntity<?> baseEntity =
+                    classEntityForDynamicOptionLoader instanceof BaseEntity ? (BaseEntity<?>) classEntityForDynamicOptionLoader :
+                            null;
+            return dynamicOptionLoader.loadOptions(
+                    new DynamicOptionLoader.DynamicOptionLoaderParameters(baseEntity, entityContext,
+                            uiFieldTargetSelection.staticParameters(), deps));
         }
-
-        if (targetClass.isEnum()) {
-            return OptionModel.enumList((Class<? extends Enum>) targetClass);
-        }
-
-        if (field.isAnnotationPresent(UIFieldBeanSelection.class)) {
-            return entityContext.getBeansOfTypeWithBeanName(targetClass).keySet()
-                    .stream().map(OptionModel::key).collect(Collectors.toList());
-        } else if (field.isAnnotationPresent(UIFieldClassSelection.class)) {
-            ClassFinder classFinder = entityContext.getBean(ClassFinder.class);
-            UIFieldClassSelection uiFieldClassSelection = field.getDeclaredAnnotation(UIFieldClassSelection.class);
-            List<Class<?>> list = new ArrayList<>();
-            for (String basePackage : uiFieldClassSelection.basePackages()) {
-                list.addAll(classFinder.getClassesWithParent(uiFieldClassSelection.value(), null, basePackage));
-            }
-            Predicate<Class<?>> predicate = CommonUtils.newInstance(uiFieldClassSelection.filter());
-            return list.stream().filter(predicate).map(c -> OptionModel.of(c.getName(), c.getSimpleName())).collect(Collectors.toList());
-        } else if (field.isAnnotationPresent(UIFieldClassWithFeatureSelection.class)) {
-            UIFieldClassWithFeatureSelection uiFieldClassSelection = field.getDeclaredAnnotation(UIFieldClassWithFeatureSelection.class);
-            List<OptionModel> list = new ArrayList<>();
-            for (Class<? extends HasEntityIdentifier> foundTargetType : entityContext.getClassesWithParent(uiFieldClassSelection.value(), uiFieldClassSelection.basePackages())) {
-                if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
-                    for (BaseEntity baseEntity : entityContext.findAll((Class<BaseEntity>) foundTargetType)) {
-                        list.add(addEntityToSelection(baseEntity));
-                    }
-                }
-            }
-            return list;
-        }
-
-        return Collections.emptyList();
+        return null;
     }
 
     private static OptionModel addEntityToSelection(HasEntityIdentifier entityIdentifier) {
         OptionModel optionModel = OptionModel.of(entityIdentifier.getEntityID(), entityIdentifier.getTitle());
         if (entityIdentifier instanceof SelectionWithDynamicParameterFields) {
             optionModel.json(params -> {
-                DynamicParameterFields dynamicParameterFields = ((SelectionWithDynamicParameterFields) entityIdentifier).getDynamicParameterFields(null);
+                DynamicParameterFields dynamicParameterFields =
+                        ((SelectionWithDynamicParameterFields) entityIdentifier).getDynamicParameterFields(null);
                 if (dynamicParameterFields != null) {
                     try {
-                        params.put("dynamicParameter", new JSONObject()
-                                .put("groupName", dynamicParameterFields.getGroupName())
+                        params.put("dynamicParameter", new JSONObject().put("groupName", dynamicParameterFields.getGroupName())
                                 .put("borderColor", dynamicParameterFields.getBorderColor())
                                 .put("defaultValues", CommonUtils.OBJECT_MAPPER.writeValueAsString(dynamicParameterFields))
                                 .put("class", dynamicParameterFields.getClass().getSimpleName())
@@ -158,8 +264,8 @@ public class UIFieldUtils {
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuAction.class)) {
                 UIContextMenuAction action = method.getDeclaredAnnotation(UIContextMenuAction.class);
                 if (action.inputs().length > 0) {
-                    ((UIInputBuilderImpl) uiInputBuilder).addOpenDialogSelectableButtonInternal(
-                            action.value(), action.icon(), action.iconColor(), null, null).editDialog(dialogLayoutBuilder -> {
+                    ((UIInputBuilderImpl) uiInputBuilder).addOpenDialogSelectableButtonInternal(action.value(), action.icon(),
+                            action.iconColor(), null, null).editDialog(dialogLayoutBuilder -> {
                         for (UIActionInput actionInput : action.inputs()) {
                             ((UIDialogLayoutBuilderImpl) dialogLayoutBuilder).addInput(actionInput);
                         }
@@ -167,6 +273,11 @@ public class UIFieldUtils {
                 } else {
                     uiInputBuilder.addSelectableButton(action.value(), action.icon(), action.iconColor(), null);
                 }
+            }
+            for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuUploadAction.class)) {
+                UIContextMenuUploadAction action = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
+                uiInputBuilder.addUploadButton(action.value(), action.icon(), action.iconColor(), action.supportedFormats(), null,
+                        0);
             }
             return uiInputBuilder.buildAll();
         }
@@ -179,7 +290,8 @@ public class UIFieldUtils {
     }
 
     @SneakyThrows
-    public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType, Set<EntityUIMetaData> entityUIMetaDataSet) {
+    public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType,
+                                                                  Set<EntityUIMetaData> entityUIMetaDataSet) {
         if (entityClassByType == null) {
             return Collections.emptyList();
         }
@@ -215,13 +327,14 @@ public class UIFieldUtils {
             generateUIField(instance, entityUIMetaDataSet, uiFieldMethodContext);
         }
 
-        Set<String> processedMethods = uiFieldNameToGetters.values().stream()
-                .map(UIFieldMethodContext::getMethodName).collect(Collectors.toSet());
+        Set<String> processedMethods =
+                uiFieldNameToGetters.values().stream().map(UIFieldMethodContext::getMethodName).collect(Collectors.toSet());
 
         FieldUtils.getFieldsListWithAnnotation(instance.getClass(), UIField.class).forEach(field -> {
             if (!processedMethods.contains(field.getName())) { // skip if already managed by methods
                 String capitalizeMethodName = StringUtils.capitalize(field.getName());
-                List<Method> fieldGetterMethods = fieldNameToGetters.getOrDefault("get" + capitalizeMethodName, new ArrayList<>());
+                List<Method> fieldGetterMethods =
+                        fieldNameToGetters.getOrDefault("get" + capitalizeMethodName, new ArrayList<>());
                 fieldGetterMethods.addAll(fieldNameToGetters.getOrDefault("is" + capitalizeMethodName, Collections.emptyList()));
                 generateUIField(instance, entityUIMetaDataSet, new UIFieldFieldContext(field, fieldGetterMethods));
             }
@@ -234,8 +347,7 @@ public class UIFieldUtils {
     }
 
     @SneakyThrows
-    private static void generateUIField(Object instance,
-                                        Set<EntityUIMetaData> entityUIMetaDataList,
+    private static void generateUIField(Object instance, Set<EntityUIMetaData> entityUIMetaDataList,
                                         UIFieldContext uiFieldContext) {
         EntityUIMetaData entityUIMetaData = new EntityUIMetaData();
         entityUIMetaData.setEntityName(uiFieldContext.getName());
@@ -244,7 +356,7 @@ public class UIFieldUtils {
         Class<?> type = uiFieldContext.getType();
         UIField uiField = uiFieldContext.getUIField();
 
-        if (uiFieldContext.isAnnotationPresent(UIFieldIgnore.class)) {
+        if (uiFieldContext.isAnnotationPresent(UIFieldIgnore.class, true)) {
             entityUIMetaDataList.remove(entityUIMetaData);
             return; // skip transparent UIFields
         }
@@ -271,12 +383,29 @@ public class UIFieldUtils {
 
         JSONObject jsonTypeMetadata = new JSONObject();
         if (uiField.type().equals(UIFieldType.AutoDetect)) {
-            if (type.isEnum() ||
+            if (type.isEnum() || uiFieldContext.isAnnotationPresent(UIFieldFileSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldSelection.class) ||
+                    uiFieldContext.isAnnotationPresent(UIFieldStaticSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldClassWithFeatureSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldClassSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldBeanSelection.class)) {
-                entityUIMetaData.setType(uiField.readOnly() ? UIFieldType.String.name() : UIFieldType.SelectBox.name());
+                // detect types
+                UIFieldType uiFieldType = uiField.readOnly() ? UIFieldType.String : UIFieldType.SelectBox;
+
+                if (uiFieldContext.isAnnotationPresent(UIFieldSelection.class) &&
+                        uiFieldContext.getDeclaredAnnotation(UIFieldSelection.class).allowInputRawText()) {
+                    uiFieldType = UIFieldType.TextSelectBoxDynamic;
+                }
+                if (uiFieldContext.isAnnotationPresent(UIFieldStaticSelection.class) &&
+                        uiFieldContext.getDeclaredAnnotation(UIFieldStaticSelection.class).allowInputRawText()) {
+                    uiFieldType = UIFieldType.TextSelectBoxDynamic;
+                }
+                if (uiFieldContext.isAnnotationPresent(UIFieldFileSelection.class) &&
+                        uiFieldContext.getDeclaredAnnotation(UIFieldFileSelection.class).allowInputRawText()) {
+                    uiFieldType = UIFieldType.TextSelectBoxDynamic;
+                }
+
+                entityUIMetaData.setType(uiFieldType.name());
                 if (Collection.class.isAssignableFrom(type)) {
                     jsonTypeMetadata.put("multiple", true);
                 }
@@ -292,7 +421,9 @@ public class UIFieldUtils {
                         }
                     }
                 } else {
-                    if (type.equals(boolean.class)) {
+                    if (type.equals(UIFieldProgress.Progress.class)) {
+                        entityUIMetaData.setType("Progress");
+                    } else if (type.equals(boolean.class)) {
                         entityUIMetaData.setType(UIFieldType.Boolean.name());
                     } else if (type.equals(float.class)) {
                         entityUIMetaData.setType(UIFieldType.Float.name());
@@ -319,15 +450,79 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("bg", uiField.bg());
         }
 
+        UIFieldBeanSelection uiFieldBeanSelection = uiFieldContext.getDeclaredAnnotation(UIFieldBeanSelection.class);
+        if (uiFieldBeanSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
+            meta.put("selectType", "bean");
+        }
+
+        UIFieldClassWithFeatureSelection uiFieldClassWithFeatureSelection =
+                uiFieldContext.getDeclaredAnnotation(UIFieldClassWithFeatureSelection.class);
+        if (uiFieldClassWithFeatureSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
+            meta.put("selectType", "classWithFeature");
+        }
+
+        UIFieldClassSelection uiFieldClassSelection = uiFieldContext.getDeclaredAnnotation(UIFieldClassSelection.class);
+        if (uiFieldClassSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
+            meta.put("selectType", "static");
+        }
+
+        UIFieldStaticSelection uiFieldStaticSelection = uiFieldContext.getDeclaredAnnotation(UIFieldStaticSelection.class);
+        if (uiFieldStaticSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
+            meta.put("selectOptions", uiFieldStaticSelection.value());
+            meta.put("selectType", "static");
+            if (uiFieldStaticSelection.dependencyFields().length > 0) {
+                jsonTypeMetadata.put("depFields", uiFieldStaticSelection.dependencyFields());
+            }
+        }
+
+        UIFieldSelection uiFieldSelection = uiFieldContext.getDeclaredAnnotation(UIFieldSelection.class);
+        if (uiFieldSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
+            meta.put("selectType", "simple");
+            meta.put("lazyLoading", uiFieldSelection.lazyLoading());
+            meta.put("parentChildJoiner", uiFieldSelection.parentChildJoiner());
+
+            if (uiFieldSelection.dependencyFields().length > 0) {
+                jsonTypeMetadata.put("depFields", uiFieldSelection.dependencyFields());
+            }
+        }
+
+        UIFieldFileSelection uiFieldFileSelection = uiFieldContext.getDeclaredAnnotation(UIFieldFileSelection.class);
+        if (uiFieldFileSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
+            meta.put("lazyLoading", true);
+            meta.put("selectType", "file");
+            meta.put("parentChildJoiner", "/");
+            meta.put("ASD", uiFieldFileSelection.allowSelectDirs());
+            meta.put("ASF", uiFieldFileSelection.allowSelectFiles());
+            meta.put("icon", uiFieldFileSelection.icon());
+            meta.put("iconColor", uiFieldFileSelection.iconColor());
+        }
+
         UIFieldGroup uiFieldGroup = uiFieldContext.getDeclaredAnnotation(UIFieldGroup.class);
         if (uiFieldGroup != null) {
             jsonTypeMetadata.put("group", uiFieldGroup.value());
+            jsonTypeMetadata.put("borderColor", uiFieldGroup.borderColor());
         }
 
         Pattern pattern = uiFieldContext.getDeclaredAnnotation(Pattern.class);
         if (pattern != null) {
             jsonTypeMetadata.put("regexp", pattern.regexp());
             jsonTypeMetadata.put("regexpMsg", pattern.message());
+        }
+
+        UIFieldProgress uiFieldProgress = uiFieldContext.getDeclaredAnnotation(UIFieldProgress.class);
+        if (uiFieldProgress != null) {
+            entityUIMetaData.setType("Progress");
+            jsonTypeMetadata.put("color", uiFieldProgress.color());
+            jsonTypeMetadata.put("bgColor", uiFieldProgress.fillColor());
+            jsonTypeMetadata.put("colorChange", Arrays.stream(uiFieldProgress.colorChange()).collect(
+                    Collectors.toMap(UIFieldProgress.UIFieldProgressColorChange::color,
+                            UIFieldProgress.UIFieldProgressColorChange::whenMoreThan)));
         }
 
         UIFieldImage uiFieldImage = uiFieldContext.getDeclaredAnnotation(UIFieldImage.class);
@@ -381,7 +576,9 @@ public class UIFieldUtils {
             colors.put("ONLINE", uiFieldColorStatusMatch.online());
             colors.put("UNKNOWN", uiFieldColorStatusMatch.unknown());
             colors.put("ERROR", uiFieldColorStatusMatch.error());
+            colors.put("REQUIRE_AUTH", uiFieldColorStatusMatch.requireAuth());
             jsonTypeMetadata.put("valueColor", colors);
+            jsonTypeMetadata.put("valueColorPrefix", uiFieldColorStatusMatch.handlePrefixes());
         }
 
         UIFieldColorBooleanMatch uiFieldColorBooleanMatch = uiFieldContext.getDeclaredAnnotation(UIFieldColorBooleanMatch.class);
@@ -410,12 +607,14 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("rc", sourceName);
         }
 
-        UIFieldCreateWorkspaceVariableOnEmpty uiFieldCreateWorkspaceVariable = uiFieldContext.getDeclaredAnnotation(UIFieldCreateWorkspaceVariableOnEmpty.class);
+        UIFieldCreateWorkspaceVariableOnEmpty uiFieldCreateWorkspaceVariable =
+                uiFieldContext.getDeclaredAnnotation(UIFieldCreateWorkspaceVariableOnEmpty.class);
         if (uiFieldCreateWorkspaceVariable != null) {
             jsonTypeMetadata.put("cwvoe", "true");
         }
 
-        UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty = uiFieldContext.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
+        UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty =
+                uiFieldContext.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
         if (uiFieldSelectValueOnEmpty != null) {
             jsonTypeMetadata.put("sveColor", uiFieldSelectValueOnEmpty.color());
             jsonTypeMetadata.put("sveLabel", uiFieldSelectValueOnEmpty.label());
@@ -452,6 +651,7 @@ public class UIFieldUtils {
 
         UIFieldCodeEditor uiFieldCodeEditor = uiFieldContext.getDeclaredAnnotation(UIFieldCodeEditor.class);
         if (uiFieldCodeEditor != null) {
+            jsonTypeMetadata.put("wordWrap", uiFieldCodeEditor.wordWrap());
             jsonTypeMetadata.put("autoFormat", uiFieldCodeEditor.autoFormat());
             jsonTypeMetadata.put("editorType", uiFieldCodeEditor.editorType());
             entityUIMetaData.setType("CodeEditor");
@@ -475,7 +675,22 @@ public class UIFieldUtils {
         entityUIMetaDataList.add(entityUIMetaData);
     }
 
-    private static boolean trySetListType(Type argument, EntityUIMetaData entityUIMetaData, UIFieldContext uiFieldContext, JSONObject jsonTypeMetadata) {
+    private static JSONObject getTextBoxSelections(EntityUIMetaData entityUIMetaData, UIFieldContext uiFieldContext,
+                                                   JSONObject jsonTypeMetadata) {
+        if (entityUIMetaData.getType().equals(UIFieldType.TextSelectBoxDynamic.name())) {
+            if (!jsonTypeMetadata.has("textBoxSelections")) {
+                jsonTypeMetadata.put("textBoxSelections", new JSONArray());
+            }
+            JSONArray jsonArray = jsonTypeMetadata.getJSONArray("textBoxSelections");
+            JSONObject subMeta = new JSONObject();
+            jsonArray.put(subMeta);
+            return subMeta;
+        }
+        return jsonTypeMetadata;
+    }
+
+    private static boolean trySetListType(Type argument, EntityUIMetaData entityUIMetaData, UIFieldContext uiFieldContext,
+                                          JSONObject jsonTypeMetadata) {
         if (argument instanceof Class && BaseEntity.class.isAssignableFrom((Class<?>) argument)) {
             entityUIMetaData.setType("List");
             if (uiFieldContext.isAnnotationPresent(Max.class)) {
@@ -534,9 +749,17 @@ public class UIFieldUtils {
             return getDeclaredAnnotation(annotationClass) != null;
         }
 
+        default boolean isAnnotationPresent(Class<? extends Annotation> annotationClass, boolean isOnlyFirstOccurrence) {
+            return getDeclaredAnnotation(annotationClass, isOnlyFirstOccurrence) != null;
+        }
+
         Object getDefaultValue(Object instance);
 
-        <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass);
+        default <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass) {
+            return getDeclaredAnnotation(annotationClass, false);
+        }
+
+        <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass, boolean isOnlyFirstOccurrence);
 
         <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass);
     }
@@ -575,11 +798,12 @@ public class UIFieldUtils {
         @Override
         @SneakyThrows
         public Object getDefaultValue(Object instance) {
-            return fieldGetterMethods.isEmpty() ? FieldUtils.readField(field, instance, true) : fieldGetterMethods.get(0).invoke(instance);
+            return fieldGetterMethods.isEmpty() ? FieldUtils.readField(field, instance, true) :
+                    fieldGetterMethods.get(0).invoke(instance);
         }
 
         @Override
-        public <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass) {
+        public <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass, boolean isOnlyFirstOccurrence) {
             A annotation = UIFieldUtils.getDeclaredAnnotationFromMethods(annotationClass, fieldGetterMethods);
             return annotation == null ? field.getDeclaredAnnotation(annotationClass) : annotation;
         }
@@ -626,7 +850,8 @@ public class UIFieldUtils {
 
         @Override
         public UIField getUIField() {
-            return methods.stream().filter(m -> m.isAnnotationPresent(UIField.class)).findFirst().get().getDeclaredAnnotation(UIField.class);
+            return methods.stream().filter(m -> m.isAnnotationPresent(UIField.class)).findFirst().get()
+                    .getDeclaredAnnotation(UIField.class);
         }
 
         @Override
@@ -649,7 +874,15 @@ public class UIFieldUtils {
         }
 
         @Override
-        public <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass) {
+        public <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass, boolean isOnlyFirstOccurrence) {
+            if (isOnlyFirstOccurrence) {
+                if (!methods.isEmpty()) {
+                    if (methods.get(0).isAnnotationPresent(annotationClass)) {
+                        return methods.get(0).getDeclaredAnnotation(annotationClass);
+                    }
+                }
+                return null;
+            }
             return UIFieldUtils.getDeclaredAnnotationFromMethods(annotationClass, methods);
         }
 
@@ -672,12 +905,12 @@ public class UIFieldUtils {
         int superClassIndex = 0;
         final List<Class<?>> allInterfaces = ClassUtils.getAllInterfaces(cls);
         int interfaceIndex = 0;
-        while (interfaceIndex < allInterfaces.size() ||
-                superClassIndex < allSuperclasses.size()) {
+        while (interfaceIndex < allInterfaces.size() || superClassIndex < allSuperclasses.size()) {
             final Class<?> acls;
             if (interfaceIndex >= allInterfaces.size()) {
                 acls = allSuperclasses.get(superClassIndex++);
-            } else if ((superClassIndex >= allSuperclasses.size()) || (interfaceIndex < superClassIndex) || !(superClassIndex < interfaceIndex)) {
+            } else if ((superClassIndex >= allSuperclasses.size()) || (interfaceIndex < superClassIndex) ||
+                    !(superClassIndex < interfaceIndex)) {
                 acls = allInterfaces.get(interfaceIndex++);
             } else {
                 acls = allSuperclasses.get(superClassIndex++);
@@ -685,5 +918,33 @@ public class UIFieldUtils {
             allSuperClassesAndInterfaces.add(acls);
         }
         return allSuperClassesAndInterfaces;
+    }
+
+    private static Method findMethodByName(Class clz, String name,
+                                           List<? extends Class<? extends Annotation>> annotationClasses) {
+        Method method = getMethod(clz, name);
+        if (method != null) {
+            for (Class<? extends Annotation> annotationClass : annotationClasses) {
+                if (method.isAnnotationPresent(annotationClass)) {
+                    return method;
+                }
+            }
+            if (clz.getSuperclass() != null) {
+                Method superMethod = findMethodByName(clz.getSuperclass(), name, annotationClasses);
+                if (superMethod != null) {
+                    return superMethod;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static Method getMethod(Class clz, String name) {
+        String capitalizeName = StringUtils.capitalize(name);
+        Method method = MethodUtils.getAccessibleMethod(clz, "get" + capitalizeName);
+        if (method == null) {
+            method = MethodUtils.getAccessibleMethod(clz, "is" + capitalizeName);
+        }
+        return method;
     }
 }

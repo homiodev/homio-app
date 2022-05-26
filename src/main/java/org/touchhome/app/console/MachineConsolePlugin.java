@@ -19,8 +19,6 @@ import javax.validation.constraints.NotNull;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
-
 @Component
 @RequiredArgsConstructor
 public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePlugin.HardwarePluginEntity> {
@@ -37,7 +35,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     @Override
     @SneakyThrows
     public Collection<HardwarePluginEntity> getValue() {
-        UserEntity user = entityContext.getEntity(ADMIN_USER);
+        UserEntity user = entityContext.getUser(false);
 
         List<HardwarePluginEntity> list = new ArrayList<>();
 

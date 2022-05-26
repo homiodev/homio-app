@@ -59,10 +59,8 @@ public class ConsoleController {
         if (actionMap != null) {
             for (Map.Entry<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
                 Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
-                ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(
-                        entry.getKey(),
-                        CommonUtils.newInstance(settingClass).fireActionsBeforeChange(),
-                        SettingEntity.getKey(settingClass), 0);
+                ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(entry.getKey(),
+                        CommonUtils.newInstance(settingClass).fireActionsBeforeChange(), SettingEntity.getKey(settingClass), 0);
 
                 /* TODO: actions.add(new UIActionResponse(entry.getKey())
                         .putOpt("fabc", CommonUtils.newInstance(settingClass).fireActionsBeforeChange())
@@ -70,7 +68,8 @@ public class ConsoleController {
             }
         }
         if (consolePlugin instanceof ConsolePluginEditor) {
-            Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction = ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
+            Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction =
+                    ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
             if (nameHeaderAction != null) {
                 ((UIInputBuilderImpl) uiInputBuilder).addReferenceAction("name", SettingEntity.getKey(nameHeaderAction), 1);
                 // TODO: actions.add(new UIActionResponse("name").putOpt("ref", SettingEntity.getKey(nameHeaderAction)));
@@ -116,12 +115,12 @@ public class ConsoleController {
             }
         }
         if (consolePlugin instanceof ConsolePluginTable) {
-            ConsolePluginTable<? extends HasEntityIdentifier> tableConsolePlugin = (ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin;
+            ConsolePluginTable<? extends HasEntityIdentifier> tableConsolePlugin =
+                    (ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin;
             Collection<? extends HasEntityIdentifier> baseEntities = tableConsolePlugin.getValue();
             Class<? extends HasEntityIdentifier> clazz = tableConsolePlugin.getEntityClass();
 
-            return new EntityContent()
-                    .setList(baseEntities)
+            return new EntityContent().setList(baseEntities)
                     .setActions(UIFieldUtils.fetchUIActionsFromClass(clazz, entityContext))
                     .setUiFields(UIFieldUtils.fillEntityUIMetadataList(clazz));
         }
@@ -130,14 +129,16 @@ public class ConsoleController {
 
     @PostMapping("/tab/{tab}/{entityID}/action")
     @Secured(ADMIN_ROLE)
-    public ActionResponseModel executeAction(@PathVariable("tab") String tab,
-                                             @PathVariable("entityID") String entityID,
+    public ActionResponseModel executeAction(@PathVariable("tab") String tab, @PathVariable("entityID") String entityID,
                                              @RequestBody ItemController.ActionRequestModel actionRequestModel) {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
-            Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
-            HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-            return itemController.executeAction(actionRequestModel, identifier, entityContext.getEntity(identifier.getEntityID()));
+            Collection<? extends HasEntityIdentifier> baseEntities =
+                    ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
+            HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny()
+                    .orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
+            return itemController.executeAction(actionRequestModel, identifier,
+                    entityContext.getEntity(identifier.getEntityID()));
         } else if (consolePlugin instanceof ConsolePluginCommunicator) {
             return ((ConsolePluginCommunicator) consolePlugin).commandReceived(actionRequestModel.getName());
         } else if (consolePlugin instanceof ConsolePluginEditor) {
@@ -146,7 +147,8 @@ public class ConsoleController {
             }
             if (StringUtils.isNotEmpty(actionRequestModel.getName()) && actionRequestModel.getMetadata().has("content")) {
                 return ((ConsolePluginEditor) consolePlugin).save(
-                        new FileModel(actionRequestModel.getName(), actionRequestModel.getMetadata().getString("content"), null, false));
+                        new FileModel(actionRequestModel.getName(), actionRequestModel.getMetadata().getString("content"), null,
+                                false));
             }
         }
         throw new IllegalArgumentException("Unable to handle action for tab: " + tab);
@@ -158,23 +160,23 @@ public class ConsoleController {
         if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
             ConsolePluginRequireZipDependency dependency = (ConsolePluginRequireZipDependency) consolePlugin;
             if (dependency.requireInstallDependencies()) {
-                entityContext.bgp().runWithProgress("install-deps-" + dependency.getClass().getSimpleName(),
-                        false, progressBar -> dependency.installDependency(entityContext, progressBar), null,
+                entityContext.bgp().runWithProgress("install-deps-" + dependency.getClass().getSimpleName(), false,
+                        progressBar -> dependency.installDependency(entityContext, progressBar), null,
                         () -> new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"));
             }
         }
     }
 
     @GetMapping("/tab/{tab}/{entityID}/{fieldName}/options")
-    public Collection<OptionModel> loadSelectOptions(@PathVariable("tab") String tab,
-                                                     @PathVariable("entityID") String entityID,
+    public Collection<OptionModel> loadSelectOptions(@PathVariable("tab") String tab, @PathVariable("entityID") String entityID,
                                                      @PathVariable("fieldName") String fieldName) {
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
-            Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
-            HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID))
-                    .findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-            return UIFieldUtils.loadOptions(identifier, entityContext, fieldName, null);
+            Collection<? extends HasEntityIdentifier> baseEntities =
+                    ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
+            HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny()
+                    .orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
+            return UIFieldUtils.loadOptions(identifier, entityContext, fieldName, null, null, null, null);
         }
         return null;
     }
@@ -194,7 +196,8 @@ public class ConsoleController {
                 ConsoleTab consoleTab = new ConsoleTab(entry.getKey(), consolePlugin.getRenderType(), consolePlugin.getOptions());
 
                 if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
-                    consoleTab.getOptions().put("reqDeps", ((ConsolePluginRequireZipDependency<?>) consolePlugin).requireInstallDependencies());
+                    consoleTab.getOptions()
+                            .put("reqDeps", ((ConsolePluginRequireZipDependency<?>) consolePlugin).requireInstallDependencies());
                 }
 
                 if (parentName != null) {

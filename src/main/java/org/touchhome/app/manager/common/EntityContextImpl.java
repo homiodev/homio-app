@@ -74,6 +74,7 @@ import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.repository.UserRepository;
+import org.touchhome.bundle.api.service.EntityService;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.state.DecimalType;
 import org.touchhome.bundle.api.state.OnOffType;
@@ -729,6 +730,11 @@ public class EntityContextImpl implements EntityContext {
 
         registerUpdatableSettings(context);
 
+        // test all services
+        for (EntityService entityService : getEntityServices()) {
+            entityService.getOrCreateService(this, false, true);
+        }
+
         log.info("Finish update all app bundles");
     }
 
@@ -855,6 +861,11 @@ public class EntityContextImpl implements EntityContext {
         if (!EntityContext.isLinuxOrDockerEnvironment()) {
             setFeatureState("SSH", false);
         }
+    }
+
+    public List<EntityService> getEntityServices() {
+        return allDeviceRepository.listAll().stream().filter(e -> e instanceof EntityService)
+                .map(e -> (EntityService) e).collect(Collectors.toList());
     }
 
     @AllArgsConstructor

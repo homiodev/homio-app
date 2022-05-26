@@ -3,6 +3,7 @@ package org.touchhome.app.manager.common.v1;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 import org.touchhome.app.manager.common.v1.item.*;
 import org.touchhome.app.manager.common.v1.layout.UIDialogLayoutBuilderImpl;
 import org.touchhome.app.manager.common.v1.layout.UIFlexLayoutBuilderImpl;
@@ -162,6 +163,13 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     @Override
     public UIButtonItemBuilder addButton(@NotNull String name, String icon, String iconColor, UIActionHandler action, int order) {
         return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, icon, iconColor, order, action));
+    }
+
+    @Override
+    public UIButtonItemBuilder addUploadButton(@NotNull String name, @Nullable String icon, @Nullable String iconColor,
+                                               String[] supportedFormats, UIActionHandler action, int order) {
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.UploadButton, name, icon, iconColor, order, action)
+                .setMetadata(new JSONObject().put("supportedFormats", supportedFormats)));
     }
 
     public <T extends UIEntityBuilder> T addEntity(T entityBuilder) {

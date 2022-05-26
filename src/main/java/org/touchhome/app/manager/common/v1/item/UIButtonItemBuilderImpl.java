@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 import org.touchhome.app.manager.common.v1.UIBaseEntityItemBuilderImpl;
 import org.touchhome.app.manager.common.v1.UIItemType;
 import org.touchhome.bundle.api.ui.action.UIActionHandler;
@@ -17,6 +18,7 @@ public class UIButtonItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UIButto
 
     private String[] fireActionsBeforeChange;
     private String actionReference;
+    private JSONObject metadata;
 
     private UIDialogLayoutBuilder dialogEntityBuilder;
     @Getter
@@ -26,6 +28,11 @@ public class UIButtonItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UIButto
         super(uiItemType, entityID, order, actionHandler);
         setValue(entityID);
         setIcon(icon, iconColor);
+    }
+
+    public UIButtonItemBuilderImpl setMetadata(JSONObject metadata) {
+        this.metadata = metadata;
+        return this;
     }
 
     public UIButtonItemBuilderImpl setDialogEntityBuilder(UIDialogLayoutBuilder dialogEntityBuilder) {
@@ -55,12 +62,23 @@ public class UIButtonItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UIButto
 
     @Override
     public UIInputEntity buildEntity() {
-        return new UIButtonEntity(getActionHandler(), getEntityID(), getValue(), getTitle(), getItemType(), getOrder(),
+        return new UIButtonEntity(
+                getActionHandler(),
+                getEntityID(),
+                getValue(),
+                getTitle(),
+                getItemType(),
+                getOrder(),
                 dialogEntityBuilder == null ? (stickyDialogBuilder == null ? null : stickyDialogBuilder.buildEntity()) :
                         dialogEntityBuilder.buildEntity(),
                 this.stickyDialogBuilder != null,
-                this.actionReference, this.fireActionsBeforeChange, getIcon(),
-                getIconColor(), getColor(), isDisabled());
+                this.actionReference,
+                this.fireActionsBeforeChange,
+                getIcon(),
+                getIconColor(),
+                getColor(),
+                isDisabled(),
+                metadata);
     }
 
     @Getter
@@ -84,6 +102,7 @@ public class UIButtonItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UIButto
         private final String iconColor;
         private final String color;
         private final boolean disabled;
+        private final JSONObject metadata;
 
         @Override
         public String toString() {

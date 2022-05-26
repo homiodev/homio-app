@@ -1,7 +1,7 @@
 package org.touchhome.app.repository;
 
 import org.springframework.stereotype.Repository;
-import org.touchhome.bundle.api.entity.CommunicationEntity;
+import org.touchhome.bundle.api.entity.types.CommunicationEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 @Repository("communicationRepository")

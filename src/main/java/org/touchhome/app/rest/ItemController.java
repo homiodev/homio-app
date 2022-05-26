@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -12,11 +13,15 @@ import org.json.JSONObject;
 import org.springframework.data.util.Pair;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.touchhome.app.manager.ImageService;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.model.rest.EntityUIMetaData;
+import org.touchhome.app.repository.device.AllDeviceRepository;
+import org.touchhome.app.setting.system.SystemShowEntityCreateTimeSetting;
+import org.touchhome.app.setting.system.SystemShowEntityUpdateTimeSetting;
 import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.app.utils.UIFieldUtils;
 import org.touchhome.bundle.api.EntityContext;
@@ -28,6 +33,7 @@ import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
+import org.touchhome.bundle.api.service.EntityService;
 import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarChildren;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
@@ -38,6 +44,7 @@ import org.touchhome.bundle.api.ui.field.UIFilterOptions;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.UIActionButton;
 import org.touchhome.bundle.api.ui.field.action.UIContextMenuAction;
+import org.touchhome.bundle.api.ui.field.action.UIContextMenuUploadAction;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
@@ -99,6 +106,12 @@ public class ItemController {
                 return executeMethodAction(method, actionHolder, entityContext, actionEntity, actionRequestModel.getParams());
             }
         }
+        for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuUploadAction.class)) {
+            UIContextMenuUploadAction menuAction = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
+            if (menuAction.value().equals(actionRequestModel.getName())) {
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, actionRequestModel.getParams());
+            }
+        }
         // in case when action attached to field or method
         if (actionRequestModel.metadata != null && actionRequestModel.metadata.has("field")) {
             String fieldName = actionRequestModel.metadata.getString("field");
@@ -109,7 +122,8 @@ public class ItemController {
             if (field != null) {
                 for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
                     if (actionButton.name().equals(actionRequestModel.name)) {
-                        return getOrCreateUIActionHandler(actionButton.actionHandler()).handleAction(entityContext, actionRequestModel.params);
+                        return getOrCreateUIActionHandler(actionButton.actionHandler()).handleAction(entityContext,
+                                actionRequestModel.params);
                     }
                 }
             }
@@ -161,6 +175,11 @@ public class ItemController {
                 cursor = cursor.getSuperclass();
             }
         }
+        // invalidate UIField cache scenarios
+        entityContext.setting().listenValue(SystemShowEntityCreateTimeSetting.class, "invalidate-uifield-createTime-cache",
+                this.itemsBootstrapContextMap::clear);
+        entityContext.setting().listenValue(SystemShowEntityUpdateTimeSetting.class, "invalidate-uifield-updateTime-cache",
+                this.itemsBootstrapContextMap::clear);
     }
 
     @GetMapping("/{type}/context")
@@ -176,13 +195,24 @@ public class ItemController {
                 List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>());
                 if (subType != null && subType.contains(":")) {
                     String[] bundleAndClassName = subType.split(":");
-                    Object subClassObject = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]);
-                    List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>());
-                    // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json parameter)
+                    Object subClassObject =
+                            entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]);
+                    List<EntityUIMetaData> subTypeFieldMetadata =
+                            UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>());
+                    // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json
+                    // parameter)
                     for (EntityUIMetaData data : subTypeFieldMetadata) {
-                        data.setTypeMetaData(new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());
+                        data.setTypeMetaData(
+                                new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true)
+                                        .toString());
                     }
                     entityUIMetaData.addAll(subTypeFieldMetadata);
+                }
+                if (!entityContext.setting().getValue(SystemShowEntityCreateTimeSetting.class)) {
+                    entityUIMetaData.removeIf(field -> field.getEntityName().equals("creationTime"));
+                }
+                if (!entityContext.setting().getValue(SystemShowEntityUpdateTimeSetting.class)) {
+                    entityUIMetaData.removeIf(field -> field.getEntityName().equals("updateTime"));
                 }
                 // fetch type actions
                 Collection<UIInputEntity> actions = UIFieldUtils.fetchUIActionsFromClass(classType, entityContext);
@@ -247,9 +277,22 @@ public class ItemController {
     }
 
     @PostMapping(value = "/{entityID}/action")
-    public ActionResponseModel callAction(@PathVariable("entityID") String entityID, @RequestBody ActionRequestModel actionRequestModel) {
-        BaseEntity<?> entity = entityContext.getEntity(entityID);
-        return executeAction(actionRequestModel, entity, entity);
+    public ActionResponseModel callAction(@PathVariable("entityID") String entityID,
+                                          @RequestBody ActionRequestModel requestModel) {
+        return callActionWithBinary(entityID, requestModel, null);
+    }
+
+    @PostMapping(value = "/{entityID}/actionWithBinary")
+    public ActionResponseModel callActionWithBinary(@PathVariable("entityID") String entityID,
+                                                    @RequestPart ActionRequestModel actionRequestModel,
+                                                    @RequestParam("data") MultipartFile[] files) {
+        try {
+            BaseEntity<?> entity = entityContext.getEntity(entityID);
+            actionRequestModel.params.put("files", files);
+            return executeAction(actionRequestModel, entity, entity);
+        } catch (Exception ex) {
+            return ActionResponseModel.showError(ex);
+        }
     }
 
     @GetMapping("/{type}/actions")
@@ -343,7 +386,9 @@ public class ItemController {
             items.addAll(entityContext.findAll(aClass));
             TypeToRequireDependenciesContext dependenciesContext = typeToRequireDependencies.get(aClass.getSimpleName());
             if (dependenciesContext != null) {
-                Set<String> notInstalledDependencies = dependenciesContext.installers.stream().filter(i -> i.isEnabled(entityContext)).map(DependencyExecutableInstaller::getName).collect(Collectors.toSet());
+                Set<String> notInstalledDependencies =
+                        dependenciesContext.installers.stream().filter(i -> i.isEnabled(entityContext))
+                                .map(DependencyExecutableInstaller::getName).collect(Collectors.toSet());
                 typeDependencies.add(new ItemsByTypeResponse.TypeDependency(aClass.getSimpleName(), notInstalledDependencies));
             }
         }
@@ -353,14 +398,33 @@ public class ItemController {
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             if (item instanceof HasDynamicContextMenuActions) {
                 ((HasDynamicContextMenuActions) item).assembleActions(uiInputBuilder);
-                // Set<? extends DynamicContextMenuAction> dynamicContextMenuActions = ((HasDynamicContextMenuActions) item).getActions(entityContext);
+                // Set<? extends DynamicContextMenuAction> dynamicContextMenuActions = ((HasDynamicContextMenuActions) item)
+                // .getActions(entityContext);
                 /*if (dynamicContextMenuActions != null) {
-                    actions = dynamicContextMenuActions.stream().map(UIActionResponse::new).collect(Collectors.toCollection(LinkedHashSet::new));
+                    actions = dynamicContextMenuActions.stream().map(UIActionResponse::new).collect(Collectors.toCollection
+                    (LinkedHashSet::new));
                 }*/
             }
             contextActions.add(uiInputBuilder.buildAll());
         }
         return new ItemsByTypeResponse(items, contextActions, typeDependencies);
+    }
+
+    @GetMapping("/service/{esName}")
+    public List<EntityService> getItemsByEntityServiceType(@PathVariable("esName") String esName) {
+        return entityContext.getEntityServices().stream().filter(e -> {
+            for (Class<?> anInterface : ClassUtils.getAllInterfaces(((EntityService<?, ?>) e).getEntityServiceItemClass())) {
+                if (anInterface.getSimpleName().equals(esName)) {
+                    return true;
+                }
+            }
+            for (Class<?> anInterface : ClassUtils.getAllSuperclasses(((EntityService<?, ?>) e).getEntityServiceItemClass())) {
+                if (anInterface.getSimpleName().equals(esName)) {
+                    return true;
+                }
+            }
+            return false;
+        }).collect(Collectors.toList());
     }
 
     @GetMapping("/type/{type}")
@@ -455,10 +519,19 @@ public class ItemController {
         }
     }
 
-    @GetMapping("/{entityID}/{fieldName}/options")
+    @Getter
+    @Setter
+    public static class GetOptionsRequest {
+        private String fieldFetchType;
+        private String selectType;
+        private String param0; // for lazy loading
+        private Map<String, String> deps;
+    }
+
+    @PostMapping("/{entityID}/{fieldName}/options")
     public Collection<OptionModel> loadSelectOptions(@PathVariable("entityID") String entityID,
                                                      @PathVariable("fieldName") String fieldName,
-                                                     @RequestParam("fieldFetchType") String fieldFetchType) {
+                                                     @RequestBody GetOptionsRequest optionsRequest) {
         Object classEntity = entityContext.getEntity(entityID);
         if (classEntity == null) {
             // i.e in case we load Widget
@@ -473,8 +546,8 @@ public class ItemController {
             }
         }
         Class<?> entityClass = classEntity.getClass();
-        if (StringUtils.isNotEmpty(fieldFetchType)) {
-            String[] bundleAndClassName = fieldFetchType.split(":");
+        if (StringUtils.isNotEmpty(optionsRequest.getFieldFetchType())) {
+            String[] bundleAndClassName = optionsRequest.getFieldFetchType().split(":");
             entityClass = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
         }
 
@@ -483,7 +556,8 @@ public class ItemController {
             return options;
         }
 
-        return UIFieldUtils.loadOptions(classEntity, entityContext, fieldName, null);
+        return UIFieldUtils.loadOptions(classEntity, entityContext, fieldName,
+                null, optionsRequest.getSelectType(), optionsRequest.getDeps(), optionsRequest.getParam0());
     }
 
     @GetMapping("/{entityID}/{fieldName}/{selectedEntityID}/dynamicParameterOptions")
@@ -500,13 +574,16 @@ public class ItemController {
         }
 
         if (!(selectedClassEntity instanceof SelectionWithDynamicParameterFields)) {
-            throw new IllegalStateException("SelectedEntity must implement interface <" + SelectionWithDynamicParameterFields.class.getSimpleName() + ">");
+            throw new IllegalStateException(
+                    "SelectedEntity must implement interface <" + SelectionWithDynamicParameterFields.class.getSimpleName() +
+                            ">");
         }
-        DynamicParameterFields dynamicParameterFields = ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(classEntity);
+        DynamicParameterFields dynamicParameterFields =
+                ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(classEntity);
         if (dynamicParameterFields == null) {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }
-        return UIFieldUtils.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity);
+        return UIFieldUtils.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity, null, null, null);
 
         /*if (classEntity == null) {
             // i.e in case we load Widget
@@ -547,7 +624,8 @@ public class ItemController {
         if (returnType.getDeclaredAnnotation(Entity.class) != null) {
             Class<BaseEntity<?>> clazz = (Class<BaseEntity<?>>) returnType;
             List<? extends BaseEntity> selectedOptions = entityContext.findAll(clazz);
-            List<OptionModel> options = selectedOptions.stream().map(t -> OptionModel.of(t.getEntityID(), t.getTitle())).collect(Collectors.toList());
+            List<OptionModel> options =
+                    selectedOptions.stream().map(t -> OptionModel.of(t.getEntityID(), t.getTitle())).collect(Collectors.toList());
 
             // make filtering/add messages/etc...
             Method filterOptionMethod = findFilterOptionMethod(fieldName, classEntity);
@@ -586,13 +664,15 @@ public class ItemController {
             Class<? extends BaseEntity> baseEntityByName = baseEntitySimpleClasses.get(type);
             if (baseEntityByName != null) {
                 if (Modifier.isAbstract(baseEntityByName.getModifiers())) {
-                    typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(baseEntityByName).stream().filter((Predicate<Class>) child -> {
-                        if (child.isAnnotationPresent(UISidebarChildren.class)) {
-                            UISidebarChildren uiSidebarChildren = (UISidebarChildren) child.getDeclaredAnnotation(UISidebarChildren.class);
-                            return uiSidebarChildren.allowCreateItem();
-                        }
-                        return true;
-                    }).collect(Collectors.toList()));
+                    typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(baseEntityByName).stream()
+                            .filter((Predicate<Class>) child -> {
+                                if (child.isAnnotationPresent(UISidebarChildren.class)) {
+                                    UISidebarChildren uiSidebarChildren =
+                                            (UISidebarChildren) child.getDeclaredAnnotation(UISidebarChildren.class);
+                                    return uiSidebarChildren.allowCreateItem();
+                                }
+                                return true;
+                            }).collect(Collectors.toList()));
                 } else {
                     typeToEntityClassNames.get(type).add(baseEntityByName);
                 }
@@ -618,7 +698,8 @@ public class ItemController {
                     installers.add(getOrCreateUIActionHandler(dependency.installer()));
                 }
             }
-            typeToRequireDependencies.put(entityClass.getSimpleName(), new TypeToRequireDependenciesContext(baseEntityByName, installers));
+            typeToRequireDependencies.put(entityClass.getSimpleName(),
+                    new TypeToRequireDependenciesContext(baseEntityByName, installers));
         }
     }
 
@@ -653,13 +734,15 @@ public class ItemController {
 
     private Method findFilterOptionMethod(String fieldName, Object entity) {
         for (Method declaredMethod : entity.getClass().getDeclaredMethods()) {
-            if (declaredMethod.isAnnotationPresent(UIFilterOptions.class) && declaredMethod.getAnnotation(UIFilterOptions.class).value().equals(fieldName)) {
+            if (declaredMethod.isAnnotationPresent(UIFilterOptions.class) &&
+                    declaredMethod.getAnnotation(UIFilterOptions.class).value().equals(fieldName)) {
                 return declaredMethod;
             }
         }
 
         // if Class has only one selection and only one filtered method - use it
-        long count = FieldUtils.getFieldsListWithAnnotation(entity.getClass(), UIField.class).stream().map(p -> p.getAnnotation(UIField.class).type())
+        long count = FieldUtils.getFieldsListWithAnnotation(entity.getClass(), UIField.class).stream()
+                .map(p -> p.getAnnotation(UIField.class).type())
                 .filter(f -> f == UIFieldType.SelectBox).count();
         if (count == 1) {
             List<Method> methodsListWithAnnotation = Stream.of(entity.getClass().getDeclaredMethods())
@@ -699,12 +782,15 @@ public class ItemController {
             if (installers.stream().anyMatch(i -> i.getName().equals(installer.getName()))) {
                 typesToReload.add(entry.getKey());
 
-                // some BaseEntity has @UISidebarButton with ability to install dependency from header UI. So we should reflect them also
-                for (Pair<Class, List<UISidebarButton>> classListEntry : ClassFinder.findAllAnnotationsToParentAnnotation(entry.getValue().typeClass, UISidebarButton.class, UISidebarMenu.class)) {
+                // some BaseEntity has @UISidebarButton with ability to install dependency from header UI. So we should reflect
+                // them also
+                for (Pair<Class, List<UISidebarButton>> classListEntry : ClassFinder.findAllAnnotationsToParentAnnotation(
+                        entry.getValue().typeClass, UISidebarButton.class, UISidebarMenu.class)) {
                     for (UISidebarButton uiSidebarButton : classListEntry.getSecond()) {
                         // find only header buttons that belong to dependency installer
                         if (installer.getClass().isAssignableFrom(uiSidebarButton.handlerClass())) {
-                            headerButtonsUpdateStatus.add(classListEntry.getFirst().getSimpleName() + "_" + uiSidebarButton.handlerClass().getSimpleName());
+                            headerButtonsUpdateStatus.add(classListEntry.getFirst().getSimpleName() + "_" +
+                                    uiSidebarButton.handlerClass().getSimpleName());
                         }
                     }
                 }

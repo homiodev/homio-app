@@ -8,6 +8,7 @@ import org.json.JSONObject;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
+import org.touchhome.app.setting.system.SystemFFMPEGInstallPathSetting;
 import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -18,6 +19,7 @@ import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHea
 
 import javax.validation.constraints.NotNull;
 import java.lang.reflect.Modifier;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -128,6 +130,16 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     @Override
     public <T> void setValueSilenceRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value) {
         setValueSilenceRaw(settingPluginsByPluginClass.get(settingPluginClazz.getName()), value);
+    }
+
+    @Override
+    public Path getFFMPEGInstallPath() {
+        return getValue(SystemFFMPEGInstallPathSetting.class);
+    }
+
+    @Override
+    public void listenFFMPEGInstallPathAndGet(String key, Consumer<Path> listener) {
+        listenValueAndGet(SystemFFMPEGInstallPathSetting.class, key, listener);
     }
 
     private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value,

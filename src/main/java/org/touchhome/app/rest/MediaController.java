@@ -10,7 +10,6 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.tika.Tika;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -27,11 +26,9 @@ import org.touchhome.bundle.api.entity.ImageEntity;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsFileExplorer;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.api.util.UpdatableSetting;
+import org.touchhome.bundle.api.video.DownloadFile;
 import org.touchhome.bundle.api.video.VideoPlaybackStorage;
-import org.touchhome.bundle.camera.ffmpeg.FfmpegInputDeviceHardwareRepository;
-import org.touchhome.bundle.camera.setting.FFMPEGInstallPathSetting;
-import org.touchhome.common.model.UpdatableValue;
+import org.touchhome.bundle.api.video.ffmpeg.FfmpegInputDeviceHardwareRepository;
 import org.touchhome.common.util.CommonUtils;
 
 import javax.servlet.http.HttpServletResponse;
@@ -55,32 +52,67 @@ public class MediaController {
     private final EntityContext entityContext;
     private final AudioService audioService;
 
-    @UpdatableSetting(FFMPEGInstallPathSetting.class)
-    private UpdatableValue<Path> ffmpegLocation;
-
     private RetryPolicy<Path> PLAYBACK_THUMBNAIL_RETRY_POLICY = RetryPolicy.<Path>builder()
             .handle(Exception.class)
             .withDelay(Duration.ofSeconds(3))
             .withMaxRetries(3)
             .build();
 
-    private RetryPolicy<VideoPlaybackStorage.DownloadFile> PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY = RetryPolicy.<VideoPlaybackStorage.DownloadFile>builder()
-            .handle(Exception.class)
-            .withDelay(Duration.ofSeconds(5))
-            .withMaxRetries(3)
-            .build();
+    private RetryPolicy<DownloadFile> PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY =
+            RetryPolicy.<DownloadFile>builder()
+                    .handle(Exception.class)
+                    .withDelay(Duration.ofSeconds(5))
+                    .withMaxRetries(3)
+                    .build();
+
+    private static final Map<String, String> fileIdToLocalStorage = new HashMap<>();
+
+    public static String createVideoLink(String dataSource) {
+        String id = "file_" + System.currentTimeMillis();
+        fileIdToLocalStorage.put(id, dataSource);
+        return "$DEVICE_URL/rest/media/video/" + id + "/play";
+    }
+
+    @GetMapping("/video/{fileId}/play")
+    public ResponseEntity<ResourceRegion> downloadFile(@PathVariable("fileId") String fileId,
+                                                       @RequestHeader HttpHeaders headers) throws IOException {
+        String source = fileIdToLocalStorage.get(fileId);
+        if (source == null) {
+            throw new IllegalArgumentException("Unable to find source for fileId: " + fileId);
+        }
+        Path path = Paths.get(source);
+
+        DownloadFile downloadFile;
+        if (Files.exists(path)) {
+            downloadFile = new DownloadFile(new UrlResource(path.toUri()), Files.size(path), fileId, null);
+        } else {
+            throw new IllegalArgumentException("File: " + path + " not exists");
+        }
+
+        ResourceRegion region = resourceRegion(downloadFile.getStream(), downloadFile.getSize(), headers);
+        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                .contentType(MediaTypeFactory
+                        .getMediaType(downloadFile.getStream())
+                        .orElse(MediaType.APPLICATION_OCTET_STREAM))
+                .body(region);
+    }
 
     @GetMapping("/video/playback/days/{entityID}/{from}/{to}")
     public LinkedHashMap<Long, Boolean> getAvailableDaysPlaybacks(@PathVariable("entityID") String entityID,
-                                                                  @PathVariable(value = "from") @DateTimeFormat(pattern = "yyyyMMdd") Date from,
-                                                                  @PathVariable(value = "to") @DateTimeFormat(pattern = "yyyyMMdd") Date to) throws Exception {
+                                                                  @PathVariable(value = "from")
+                                                                  @DateTimeFormat(pattern = "yyyyMMdd") Date from,
+                                                                  @PathVariable(value = "to")
+                                                                  @DateTimeFormat(pattern = "yyyyMMdd") Date to)
+            throws Exception {
         VideoPlaybackStorage entity = entityContext.getEntity(entityID);
         return entity.getAvailableDaysPlaybacks(entityContext, "main", from, to);
     }
 
     @GetMapping("/video/playback/files/{entityID}/{date}")
     public List<VideoPlaybackStorage.PlaybackFile> getPlaybackFiles(@PathVariable("entityID") String entityID,
-                                                                    @PathVariable(value = "date") @DateTimeFormat(pattern = "yyyyMMdd") Date date) throws Exception {
+                                                                    @PathVariable(value = "date")
+                                                                    @DateTimeFormat(pattern = "yyyyMMdd") Date date)
+            throws Exception {
         VideoPlaybackStorage entity = entityContext.getEntity(entityID);
         return entity.getPlaybackFiles(entityContext, "main", date, new Date(date.getTime() + TimeUnit.DAYS.toMillis(1) - 1));
     }
@@ -88,7 +120,8 @@ public class MediaController {
     @PostMapping("/video/playback/{entityID}/thumbnails/base64")
     public ResponseEntity<List<String>> getPlaybackThumbnailsBase64(@PathVariable("entityID") String entityID,
                                                                     @RequestBody ThumbnailRequest thumbnailRequest,
-                                                                    @RequestParam(value = "size", defaultValue = "800x600") String size) throws Exception {
+                                                                    @RequestParam(value = "size", defaultValue = "800x600")
+                                                                    String size) throws Exception {
         Map<String, Path> filePathList = thumbnailRequest.fileIds.stream().sequential().collect(Collectors.toMap(id -> id, id ->
                 getPlaybackThumbnailPath(entityID, id, size)));
 
@@ -116,7 +149,8 @@ public class MediaController {
     @GetMapping(value = "/video/playback/{entityID}/{fileId}/thumbnail/jpg", produces = MediaType.IMAGE_JPEG_VALUE)
     public ResponseEntity<byte[]> getPlaybackThumbnailJpg(@PathVariable("entityID") String entityID,
                                                           @PathVariable("fileId") String fileId,
-                                                          @RequestParam(value = "size", defaultValue = "800x600") String size) throws Exception {
+                                                          @RequestParam(value = "size", defaultValue = "800x600") String size)
+            throws Exception {
         Path path = getPlaybackThumbnailPath(entityID, fileId, size);
         return new ResponseEntity<>(path == null ? new byte[0] : Files.readAllBytes(path), HttpStatus.OK);
     }
@@ -130,10 +164,10 @@ public class MediaController {
         Path path = TouchHomeUtils.getMediaPath().resolve("camera").resolve(entityID).resolve("playback")
                 .resolve(fileId + "." + ext);
 
-        VideoPlaybackStorage.DownloadFile downloadFile;
+        DownloadFile downloadFile;
 
         if (Files.exists(path)) {
-            downloadFile = new VideoPlaybackStorage.DownloadFile(new UrlResource(path.toUri()), Files.size(path), fileId);
+            downloadFile = new DownloadFile(new UrlResource(path.toUri()), Files.size(path), fileId, null);
         } else {
             downloadFile = Failsafe.with(PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY)
                     .onFailure(event ->
@@ -142,15 +176,16 @@ public class MediaController {
                                     fileId,
                                     CommonUtils.getErrorMessage(event.getFailure())))
                     .get(context -> {
-                        log.info("Reply <{}>. Download playback video file <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
+                        log.info("Reply <{}>. Download playback video file <{}>. <{}>", context.getAttemptCount(),
+                                entity.getTitle(), fileId);
                         return entity.downloadPlaybackFile(entityContext, "main", fileId, path);
                     });
         }
 
-        ResourceRegion region = resourceRegion(downloadFile.stream, downloadFile.size, headers);
+        ResourceRegion region = resourceRegion(downloadFile.getStream(), downloadFile.getSize(), headers);
         return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
                 .contentType(MediaTypeFactory
-                        .getMediaType(downloadFile.stream)
+                        .getMediaType(downloadFile.getStream())
                         .orElse(MediaType.APPLICATION_OCTET_STREAM))
                 .body(region);
     }
@@ -174,7 +209,11 @@ public class MediaController {
     public Collection<OptionModel> getAudioFiles() {
         return SettingPluginOptionsFileExplorer.getFilePath(TouchHomeUtils.getAudioPath(), 7, false,
                 false, true, null, null,
-                null, (path, basicFileAttributes) -> new Tika().detect(path).startsWith("audio/"), null,
+                null, (path, basicFileAttributes) -> {
+                    // return new Tika().detect(path).startsWith("audio/");
+                    String name = path.getFileName().toString();
+                    return name.endsWith(".mp4") || name.endsWith(".wav") || name.endsWith(".mp3");
+                }, null,
                 path -> path.getFileName() == null ? path.toString() : path.getFileName().toString());
     }
 
@@ -231,10 +270,10 @@ public class MediaController {
                 .get(context -> {
                     log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
                     entityContext.getBean(FfmpegInputDeviceHardwareRepository.class).fireFfmpeg(
-                            ffmpegLocation.getValue().toString(),
+                            entityContext.setting().getFFMPEGInstallPath().toString(),
                             "-y",
                             "\"" + uriStr + "\"",
-                            "-frames:v 1 -vf scale=" + size + " -q:v 3 " + path.toString(), // q:v - jpg quality
+                            "-frames:v 1 -vf scale=" + size + " -q:v 3 " + path, // q:v - jpg quality
                             60);
                     return path;
                 });

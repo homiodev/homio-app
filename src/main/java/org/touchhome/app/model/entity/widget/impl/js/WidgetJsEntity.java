@@ -6,7 +6,6 @@ import lombok.experimental.Accessors;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
-import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
@@ -36,7 +35,8 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
         return this;
     }
 
-    @UIField(order = 12, type = UIFieldType.Json)
+    @UIField(order = 12)
+    @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.json, autoFormat = true)
     public String getJavaScriptParameters() {
         return getJsonData("jsp", "{}");
     }

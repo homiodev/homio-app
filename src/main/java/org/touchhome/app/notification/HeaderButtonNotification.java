@@ -3,7 +3,7 @@ package org.touchhome.app.notification;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.ui.DialogModel;
+import org.touchhome.bundle.api.ui.dialog.DialogModel;
 
 import java.util.LinkedHashSet;
 import java.util.Set;

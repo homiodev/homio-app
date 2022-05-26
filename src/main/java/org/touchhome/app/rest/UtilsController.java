@@ -29,6 +29,7 @@ import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.Curl;
 import org.touchhome.common.util.Lang;
@@ -40,12 +41,12 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
-import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 import static org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks.ENTITY;
 
@@ -62,10 +63,9 @@ public class UtilsController {
     @GetMapping("/app/config")
     public DeviceConfig getAppConfiguration() {
         DeviceConfig deviceConfig = new DeviceConfig();
-        UserEntity userEntity = entityContext.getEntity(ADMIN_USER);
+        UserEntity userEntity = entityContext.getUser(false);
         deviceConfig.hasKeystore = userEntity.getKeystore() != null;
         deviceConfig.keystoreDate = userEntity.getKeystoreDate();
-        deviceConfig.hasUserPassword = entityContext.getEntity(ADMIN_USER) != null;
         return deviceConfig;
     }
 
@@ -115,7 +115,10 @@ public class UtilsController {
 
     @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
     public ResponseEntity<StreamingResponseBody> downloadFile(@PathVariable("fileName") String fileName) {
-        Path outputPath = TouchHomeUtils.fromTmpFile(fileName);
+        Path outputPath = TouchHomeUtils.getTmpPath().resolve(fileName);
+        if (!Files.exists(outputPath)) {
+            throw new NotFoundException("Unable to find file: " + fileName);
+        }
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, String.format("attachment; filename=\"%s\"", outputPath.getFileName()));
         headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
@@ -142,7 +145,10 @@ public class UtilsController {
         }
         int size = outputStream.size();
         if (size > 50000) {
-            runScriptOnceJSON.logUrl = TouchHomeUtils.toTmpFile(scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___", ".log", outputStream);
+            String name = scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___.log";
+            Path tempFile = TouchHomeUtils.getTmpPath().resolve(name);
+            Files.copy(tempFile, outputStream);
+            runScriptOnceJSON.logUrl = "rest/download/tmp/" + TouchHomeUtils.getTmpPath().relativize(tempFile);
         } else {
             runScriptOnceJSON.log = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
         }
@@ -202,10 +208,11 @@ public class UtilsController {
     @Getter
     @Setter
     private static class DeviceConfig {
-        private final boolean bootOnly = true;
-        public boolean hasUserPassword;
+        private final boolean bootOnly = false;
+        public final boolean hasUserPassword = true;
         private boolean hasKeystore;
         private Date keystoreDate;
         private final boolean hasApp = true;
+        private final boolean hasInitSetup = true;
     }
 }

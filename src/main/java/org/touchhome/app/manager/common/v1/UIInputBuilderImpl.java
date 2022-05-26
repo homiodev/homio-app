@@ -109,7 +109,7 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButtonInternal(String name, String icon, String color, Integer dialogWidth, UIActionHandler action) {
         UIDialogLayoutBuilderImpl uiDialogLayoutBuilder = new UIDialogLayoutBuilderImpl(name, dialogWidth);
         UIDialogLayoutBuilderImpl dialogEntityBuilder = addEntity(uiDialogLayoutBuilder);
-        UIButtonItemBuilder entityBuilder = ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, color, null))
+        UIButtonItemBuilder entityBuilder = ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, color, action))
                 .setActionReference(dialogEntityBuilder.getEntityID());
         return new UIInputBuilder.DialogEntity<UIButtonItemBuilder>() {
             @Override

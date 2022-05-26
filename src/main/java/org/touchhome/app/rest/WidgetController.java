@@ -30,6 +30,9 @@ import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoEntity;
+import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
 import org.touchhome.app.repository.widget.impl.chart.WidgetBarChartSeriesEntity;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.bundle.api.EntityContext;
@@ -37,6 +40,9 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.widget.*;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.TimePeriod;
+import org.touchhome.bundle.api.ui.action.UIActionHandler;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
+import org.touchhome.bundle.api.video.BaseFFMPEGVideoStreamEntity;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.widget.WidgetJSBaseTemplate;
 import org.touchhome.common.exception.NotFoundException;
@@ -60,12 +66,60 @@ public class WidgetController {
     private final ScriptService scriptService;
     private final ObjectMapper objectMapper;
     private final WidgetService widgetService;
+    private final List<WidgetVideoSourceResolver> videoSourceResolvers;
 
     @SneakyThrows
     @GetMapping("/plugins")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<WidgetService.AvailableWidget> getAvailableWidgets() {
         return widgetService.getAvailableWidgets();
+    }
+
+    @GetMapping("/video/{entityID}")
+    public List<WidgetVideoSourceResolver.VideoEntityResponse> getCameraData(@PathVariable("entityID") String entityID) {
+        WidgetVideoEntity entity = entityContext.getEntity(entityID);
+        List<WidgetVideoSourceResolver.VideoEntityResponse> result = new ArrayList<>();
+        for (WidgetVideoSeriesEntity item : entity.getSeries()) {
+            for (WidgetVideoSourceResolver videoSourceResolver : videoSourceResolvers) {
+                WidgetVideoSourceResolver.VideoEntityResponse response = videoSourceResolver.resolveDataSource(item);
+                if (response != null) {
+                    result.add(response);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    @PostMapping("/video/{entityID}/series/{seriesEntityID}/action")
+    public void fireVideoAction(@PathVariable("entityID") String entityID,
+                                @PathVariable("seriesEntityID") String seriesEntityID,
+                                @RequestBody VideoActionRequest videoActionRequest) {
+        WidgetVideoEntity entity = entityContext.getEntity(entityID);
+        WidgetVideoSeriesEntity series =
+                entity.getSeries().stream().filter(s -> s.getEntityID().equals(seriesEntityID)).findAny().orElse(null);
+        if (series == null) {
+            throw new NotFoundException("Unable to find series: " + seriesEntityID + " for entity: " + entity.getTitle());
+        }
+        BaseFFMPEGVideoStreamEntity streamEntity = entityContext.getEntity(series.getDataSource());
+        if (streamEntity == null) {
+            throw new NotFoundException("Unable to find base video for series: " + series.getTitle());
+        }
+
+        UIInputBuilder uiInputBuilder = streamEntity.getVideoHandler().assembleActions();
+        UIActionHandler actionHandler = uiInputBuilder.findActionHandler(videoActionRequest.name);
+        if (actionHandler == null) {
+            throw new RuntimeException("No video action " + videoActionRequest.name + "found");
+        }
+        actionHandler.handleAction(entityContext, new JSONObject().put("value", videoActionRequest.value));
+
+        /*TODO: Set<StatefulContextMenuAction> statefulContextMenuActions = streamEntity.getVideoHandler().getCameraActions
+           (false);
+
+        StatefulContextMenuAction statefulContextMenuAction = statefulContextMenuActions.stream()
+                .filter(ca -> ca.getName().equals(cameraActionRequest.name)).findAny().orElseThrow(
+                        () -> new RuntimeException("No camera action " + cameraActionRequest.name + "found"));
+        statefulContextMenuAction.getAction().accept(new JSONObject().put("value", cameraActionRequest.value));*/
     }
 
     @GetMapping("/button/{entityID}/handle")
@@ -81,7 +135,8 @@ public class WidgetController {
 
     @GetMapping("/bar/{entityID}/series")
     public Set<BarSeries> getBarSeries(@PathVariable("entityID") String entityID,
-                                       @RequestParam(value = "liveEntity", required = false) String liveEntity) throws JsonProcessingException {
+                                       @RequestParam(value = "liveEntity", required = false) String liveEntity)
+            throws JsonProcessingException {
         WidgetBarChartEntity entity = entityContext.getEntity(entityID);
         if (liveEntity != null) {
             entity = objectMapper.readValue(liveEntity, entity.getClass());
@@ -95,7 +150,8 @@ public class WidgetController {
                     BarSeries barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()), value);
                     int i = 1;
                     while (!series.add(barSeries)) {
-                        barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()) + "(" + i++ + ")", value);
+                        barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()) + "(" + i++ + ")",
+                                value);
                     }
                 }
             }
@@ -114,8 +170,9 @@ public class WidgetController {
                 TimePeriod timePeriod = TimePeriod.fromValue(period);
                 Pair<Date, Date> range = timePeriod.getDateRange();
                 JSONObject dynamicParameterFields = item.getDynamicParameterFieldsHolder();
-                Map<HasLineChartSeries.LineChartDescription, List<Object[]>> result = ((HasLineChartSeries) source).getLineChartSeries(entityContext,
-                        dynamicParameterFields, range.getFirst(), range.getSecond(), timePeriod.getDateFromNow());
+                Map<HasLineChartSeries.LineChartDescription, List<Object[]>> result =
+                        ((HasLineChartSeries) source).getLineChartSeries(entityContext,
+                                dynamicParameterFields, range.getFirst(), range.getSecond(), timePeriod.getDateFromNow());
 
                 for (Map.Entry<HasLineChartSeries.LineChartDescription, List<Object[]>> entry : result.entrySet()) {
                     List<Object[]> chartItems = entry.getValue();
@@ -126,7 +183,8 @@ public class WidgetController {
                             chartItem[0] = ((Date) chartItem[0]).getTime();
                         }
                     }
-                    EvaluateDatesAndValues evaluateDatesAndValues = new EvaluateDatesAndValues(timePeriod, chartItems).invoke(item);
+                    EvaluateDatesAndValues evaluateDatesAndValues =
+                            new EvaluateDatesAndValues(timePeriod, chartItems).invoke(item);
 
                     // aggregation
                     List<Float> finalValues = evaluateDatesAndValues.getValues().stream()
@@ -134,7 +192,8 @@ public class WidgetController {
                             .collect(Collectors.toList());
 
                     String title = StringUtils.defaultString(entry.getKey().getName(), source.getTitle());
-                    series.add(new ChartSeries(title + "(" + chartItems.size() + ")", entry.getKey().getColor(), evaluateDatesAndValues.getDates(), finalValues));
+                    series.add(new ChartSeries(title + "(" + chartItems.size() + ")", entry.getKey().getColor(),
+                            evaluateDatesAndValues.getDates(), finalValues));
                 }
             }
         }
@@ -188,7 +247,8 @@ public class WidgetController {
 
                 double value;
                 if (entity.getPieChartValueType() == WidgetPieChartEntity.PieChartValueType.Sum) {
-                    value = ((HasPieChartSeries) source).getPieSumChartSeries(entityContext, range.getFirst(), range.getSecond(), timePeriod.getDateFromNow());
+                    value = ((HasPieChartSeries) source).getPieSumChartSeries(entityContext, range.getFirst(), range.getSecond(),
+                            timePeriod.getDateFromNow());
                 } else {
                     value = ((HasPieChartSeries) source).getPieCountChartSeries(entityContext, range.getFirst(),
                             range.getSecond(), timePeriod.getDateFromNow());
@@ -251,9 +311,11 @@ public class WidgetController {
     }
 
     @PostMapping("/slider/{entityID}/series/{seriesEntityID}")
-    public void updateSliderValue(@PathVariable("entityID") String entityID, @PathVariable("seriesEntityID") String seriesEntityID, @RequestBody IntegerValue integerValue) {
+    public void updateSliderValue(@PathVariable("entityID") String entityID,
+                                  @PathVariable("seriesEntityID") String seriesEntityID, @RequestBody IntegerValue integerValue) {
         WidgetSliderEntity entity = entityContext.getEntity(entityID);
-        WidgetSliderSeriesEntity series = entity.getSeries().stream().filter(s -> s.getEntityID().equals(seriesEntityID)).findAny().orElse(null);
+        WidgetSliderSeriesEntity series =
+                entity.getSeries().stream().filter(s -> s.getEntityID().equals(seriesEntityID)).findAny().orElse(null);
         if (series == null) {
             throw new NotFoundException("Unable to find series: " + seriesEntityID + " for entity: " + entity.getTitle());
         }
@@ -265,9 +327,11 @@ public class WidgetController {
     }
 
     @PostMapping("/toggle/{entityID}/series/{seriesEntityID}")
-    public void updateToggleValue(@PathVariable("entityID") String entityID, @PathVariable("seriesEntityID") String seriesEntityID, @RequestBody BooleanValue booleanValue) {
+    public void updateToggleValue(@PathVariable("entityID") String entityID,
+                                  @PathVariable("seriesEntityID") String seriesEntityID, @RequestBody BooleanValue booleanValue) {
         WidgetToggleEntity entity = entityContext.getEntity(entityID);
-        WidgetToggleSeriesEntity series = entity.getSeries().stream().filter(s -> s.getEntityID().equals(seriesEntityID)).findAny().orElse(null);
+        WidgetToggleSeriesEntity series =
+                entity.getSeries().stream().filter(s -> s.getEntityID().equals(seriesEntityID)).findAny().orElse(null);
         if (series == null) {
             throw new NotFoundException("Unable to find series: " + seriesEntityID + " for entity: " + entity.getTitle());
         }
@@ -342,7 +406,8 @@ public class WidgetController {
 
     @Secured(PRIVILEGED_USER_ROLE)
     @PostMapping("/create/{tabId}/{type}/{bundle}")
-    public BaseEntity<?> createExtraWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type, @PathVariable("bundle") String bundle) {
+    public BaseEntity<?> createExtraWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type,
+                                           @PathVariable("bundle") String bundle) {
         log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, bundle: <{}>", type, tabId, bundle);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
         if (widgetTabEntity == null) {
@@ -442,7 +507,8 @@ public class WidgetController {
             } catch (Exception ex) {
                 retValue = "<pre style='max-width:600px;max-height:400px;'>" + ExceptionUtils.getStackTrace(ex) + "</pre>";
             }
-            chartBuilder.withXAxis().data(Collections.singletonList(retValue == null ? "script returns no value" : retValue.toString()));
+            chartBuilder.withXAxis().data(Collections.singletonList(retValue == null ? "script returns no value" : retValue
+            .toString()));
         }
 
         return chartBuilder.build();
@@ -453,19 +519,23 @@ public class WidgetController {
         ChartPieWidgetEntity chartPieWidgetEntity = chartPieWidgetRepository.getByEntityID(entityID);
         ChartBuilder chartBuilder = ChartBuilder.create(chartPieWidgetEntity);
 
-        final ChartBuilder.LegendBuilder legendBuilder = chartPieWidgetEntity.getShowLegend() ? chartBuilder.withLegend().withOrient(chartPieWidgetEntity.getLegendOrient()) : new ChartBuilder.LegendBuilder();
-        ChartBuilder.SeriesBuilder seriesBuilder = chartBuilder.withSeries("pie", chartPieWidgetEntity.getTitle()).withRadius(50, 70);
+        final ChartBuilder.LegendBuilder legendBuilder = chartPieWidgetEntity.getShowLegend() ? chartBuilder.withLegend()
+        .withOrient(chartPieWidgetEntity.getLegendOrient()) : new ChartBuilder.LegendBuilder();
+        ChartBuilder.SeriesBuilder seriesBuilder = chartBuilder.withSeries("pie", chartPieWidgetEntity.getTitle()).withRadius
+        (50, 70);
 
         if (chartPieWidgetEntity.getBehaviourType() == ChartPieWidgetEntity.ChartPieBehaviourType.ItemsCount) {
             // ALL
             if (chartPieWidgetEntity.getTargetItems().contains(""))
                 entityManager.getRepositories().stream()
-                        .filter(abstractRepository -> abstractRepository.getEntityClass().getDeclaredAnnotation(UISidebarMenu.class) != null)
+                        .filter(abstractRepository -> abstractRepository.getEntityClass().getDeclaredAnnotation(UISidebarMenu
+                        .class) != null)
                         .forEach(abstractRepository -> {
                             Class<?> clazz = abstractRepository.getEntityClass();
                             String href = SidebarMenuItem.getHref(clazz);
                             legendBuilder.withData(href);
-                            seriesBuilder.withData(abstractRepository.size().intValue(), href).withItemStyleColor(TouchHomeUtils.randomColor());
+                            seriesBuilder.withData(abstractRepository.size().intValue(), href).withItemStyleColor
+                            (TouchHomeUtils.randomColor());
                         });
         }
         return chartBuilder.build();
@@ -557,5 +627,11 @@ public class WidgetController {
             }
             return this;
         }
+    }
+
+    @Setter
+    private static class VideoActionRequest {
+        private String name;
+        private String value;
     }
 }

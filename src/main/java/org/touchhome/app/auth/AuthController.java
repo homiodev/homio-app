@@ -19,7 +19,6 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.HashSet;
 
-import static org.touchhome.bundle.api.entity.UserEntity.ADMIN_USER;
 import static org.touchhome.bundle.api.util.Constants.*;
 
 @Log4j2
@@ -41,7 +40,7 @@ public class AuthController {
 
     @GetMapping("/user")
     public UserEntity getUser() {
-        return entityContext.getEntity(ADMIN_USER);
+        return entityContext.getUser(false);
     }
 
     @PostMapping("/login")

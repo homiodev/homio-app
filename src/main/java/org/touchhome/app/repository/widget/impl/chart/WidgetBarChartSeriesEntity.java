@@ -48,11 +48,11 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
     public static class BarSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
         @Override
-        public List<OptionModel> loadOptions(BaseEntity baseEntity, EntityContext entityContext, String[] staticParameters) {
+        public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             return SeriesBuilder.seriesOptions()
                     .add(WorkspaceStandaloneVariableEntity.class)
                     .add(WorkspaceBackupEntity.class)
-                    .build(entityContext);
+                    .build(parameters.getEntityContext());
         }
     }
 }

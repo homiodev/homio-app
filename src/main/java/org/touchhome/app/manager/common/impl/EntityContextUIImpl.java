@@ -22,9 +22,9 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.setting.SettingPluginButton;
 import org.touchhome.bundle.api.setting.SettingPluginStatus;
-import org.touchhome.bundle.api.ui.DialogModel;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.action.UIActionHandler;
+import org.touchhome.bundle.api.ui.dialog.DialogModel;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.util.NotificationLevel;
@@ -102,7 +102,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             }
 
             if (dialogModel.getMaxTimeoutInSec() > 0) {
-                entityContext.bgp().run(key + "-dialog-timeout", dialogModel.getMaxTimeoutInSec() * 1000, () ->
+                entityContext.bgp().run(key + "-dialog-timeout", dialogModel.getMaxTimeoutInSec() * 1000L, () ->
                         handleDialog(key, DialogResponseType.Timeout, null, null), true);
             }
 

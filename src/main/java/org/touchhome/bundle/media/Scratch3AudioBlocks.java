@@ -13,6 +13,8 @@ import org.touchhome.app.audio.AudioService;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.audio.AudioSink;
 import org.touchhome.bundle.api.audio.stream.FileAudioStream;
+import org.touchhome.bundle.api.service.TextToSpeechEntityService;
+import org.touchhome.bundle.api.state.RawType;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.MenuBlock;
@@ -23,6 +25,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
 
@@ -32,12 +35,14 @@ import java.util.Objects;
 public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
 
     private final MenuBlock.ServerMenuBlock audioMenu;
+    private final MenuBlock.ServerMenuBlock ttsMenu;
     // private final MenuBlock.ServerMenuBlock audioSourceMenu;
     private final MenuBlock.ServerMenuBlock sinkMenu;
     private final AudioService audioService;
     private final Scratch3Block stopCommand;
     private final Scratch3Block playPartFileCommand;
 
+    private final Scratch3Block textToAudioReporter;
     private final Scratch3Block lengthReporter;
     private final Scratch3Block bitrateReporter;
     private final Scratch3Block sampleRateReporter;
@@ -50,6 +55,7 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         this.audioService = audioService;
         setParent("media");
 
+        this.ttsMenu = MenuBlock.ofServerServiceItems("tts", TextToSpeechEntityService.class);
         this.audioMenu = MenuBlock.ofServer("audioMenu", "rest/media/audio").setUIDelimiter("/");
 
         this.sinkMenu = MenuBlock.ofServer("sinkMenu", "rest/media/sink");
@@ -85,9 +91,18 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         this.lengthReporter = withFile(Scratch3Block.ofReporter(100, "length", "[FILE] Length", this::getLengthReporter));
         this.bitrateReporter = withFile(Scratch3Block.ofReporter(110, "bitrate", "[FILE] BitRate", this::getBitrateReporter));
         this.sampleRateReporter = withFile(Scratch3Block.ofReporter(120, "samplerate", "[FILE] SampleRate", this::getSampleRateReporter));
+        this.textToAudioReporter = Scratch3Block.ofReporter(130, "tts", "text [VALUE] to audio [TTS]", this::getTextToAudioReporter);
+        this.textToAudioReporter.addArgument(VALUE, "Hello world");
+        this.textToAudioReporter.addArgument("TTS", this.ttsMenu);
     }
 
-    private void playSourceCommand(WorkspaceBlock workspaceBlock) {
+    private RawType getTextToAudioReporter(WorkspaceBlock workspaceBlock) {
+        String text = workspaceBlock.getInputString(VALUE);
+        if (!text.isEmpty()) {
+            TextToSpeechEntityService ttsService = workspaceBlock.getEntityService("TTS", this.ttsMenu, TextToSpeechEntityService.class);
+            return new RawType(ttsService.synthesizeSpeech(text, true), "audio/mp3");
+        }
+        return null;
     }
 
     private float getLengthReporter(WorkspaceBlock workspaceBlock) throws Exception {
@@ -103,13 +118,8 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     }
 
     private <T> T handleFile(WorkspaceBlock workspaceBlock, ThrowingFunction<File, T, Exception> handler) throws Exception {
-        String[] keys = workspaceBlock.getMenuValue("FILE", this.audioMenu).split("~~~");
-        File file = new File(keys[keys.length - 1]);
-        if (file.exists() && file.canRead()) {
-            return handler.apply(file);
-        } else {
-            throw new RuntimeException("Unable to find file: " + file.getName());
-        }
+        Path path = workspaceBlock.getFile("FILE", this.audioMenu, true);
+        return handler.apply(path.toFile());
     }
 
     private void stopCommand(WorkspaceBlock workspaceBlock) {

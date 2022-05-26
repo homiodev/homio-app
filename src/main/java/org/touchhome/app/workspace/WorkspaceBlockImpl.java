@@ -21,6 +21,9 @@ import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
 
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -164,6 +167,26 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         }
         logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
         return null; // unreachable block
+    }
+
+    @Override
+    public Path getFile(String key, MenuBlock menuBlock, boolean required) {
+        WorkspaceBlock refBlock = getInputWorkspaceBlock(key);
+        Path result = null;
+        if (refBlock.hasField(menuBlock.getName())) {
+            String[] keys = getMenuValue(key, menuBlock, String.class).split("~~~");
+            result = Paths.get(keys[keys.length - 1]);
+        } else {
+            Object evaluate = refBlock.evaluate();
+            if (evaluate instanceof RawType) {
+                RawType rawType = (RawType) evaluate;
+                result = rawType.toPath();
+            }
+        }
+        if (required && (result == null || !Files.isReadable(result))) {
+            logErrorAndThrow("Unable to evaluate file for: <{}>", this.opcode);
+        }
+        return result;
     }
 
     @Override
@@ -575,7 +598,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             if (content instanceof State) {
                 return ((State) content).stringValue();
             } else if (content instanceof byte[]) {
-                return RawType.detectByteToString((byte[]) content);
+                return new String((byte[]) content);
             } else {
                 return content.toString();
             }

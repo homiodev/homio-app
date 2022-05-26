@@ -15,7 +15,6 @@ import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
-import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.common.util.SpringUtils;
 
 import javax.persistence.Column;
@@ -44,7 +43,8 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
     @Getter
     @Setter
-    @UIField(order = 13, type = UIFieldType.Json)
+    @UIField(order = 13)
+    @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript, autoFormat = true)
     private String javaScriptParameters = "{}";
 
     @Getter
@@ -61,7 +61,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @Setter
     @UIField(order = 30)
     @Column(length = 1048576)
-    @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript)
+    @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript, autoFormat = true)
     private String javaScript = "function before() { };\nfunction run() { };\nfunction after() { };";
 
     @Transient
@@ -79,7 +79,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
     public static Set<String> getFunctionsWithPrefix(String javaScript, String prefix) {
         Set<String> functions = new HashSet<>();
-        int i = javaScript.indexOf("function " + prefix, 0);
+        int i = javaScript.indexOf("function " + prefix);
         while (i >= 0) {
             int endIndex = i + 1;
             int countOfBrakets = 0;

@@ -1,7 +1,7 @@
 package org.touchhome.app.repository;
 
 import org.springframework.stereotype.Repository;
-import org.touchhome.bundle.api.entity.storage.StorageEntity;
+import org.touchhome.bundle.api.entity.types.StorageEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 @Repository("storageRepository")

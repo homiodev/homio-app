@@ -48,6 +48,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                     .antMatchers(
                             WebSocketConfig.ENDPOINT,
                             "/rest/media/audio/**/play",
+                            "/rest/media/video/**/play",
                             "/rest/media/video/playback/**/download",
                             "/rest/media/video/playback/**/thumbnail/**",
                             "/rest/auth/status",
