@@ -412,7 +412,7 @@ public class ItemController {
 
     @GetMapping("/service/{esName}")
     public List<EntityService> getItemsByEntityServiceType(@PathVariable("esName") String esName) {
-        return entityContext.getEntityServices().stream().filter(e -> {
+        return entityContext.getEntityServices(EntityService.class).stream().filter(e -> {
             for (Class<?> anInterface : ClassUtils.getAllInterfaces(((EntityService<?, ?>) e).getEntityServiceItemClass())) {
                 if (anInterface.getSimpleName().equals(esName)) {
                     return true;

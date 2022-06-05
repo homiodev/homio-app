@@ -276,7 +276,7 @@ public class UIFieldUtils {
             }
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuUploadAction.class)) {
                 UIContextMenuUploadAction action = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
-                uiInputBuilder.addUploadButton(action.value(), action.icon(), action.iconColor(), action.supportedFormats(), null,
+                uiInputBuilder.addSimpleUploadButton(action.value(), action.icon(), action.iconColor(), action.supportedFormats(), null,
                         0);
             }
             return uiInputBuilder.buildAll();

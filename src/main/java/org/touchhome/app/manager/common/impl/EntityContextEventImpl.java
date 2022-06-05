@@ -1,11 +1,12 @@
 package org.touchhome.app.manager.common.impl;
 
 import lombok.Getter;
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextEvent;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.BaseEntityIdentifier;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
@@ -14,11 +15,16 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import static java.util.Collections.emptyMap;
+
 public class EntityContextEventImpl implements EntityContextEvent {
     private final BroadcastLockManager broadcastLockManager;
 
     @Getter
     private final EntityListener entityUpdateListeners = new EntityListener();
+
+    @Getter
+    private final EntityListener entityCreateListeners = new EntityListener();
 
     @Getter
     private final EntityListener entityRemoveListeners = new EntityListener();
@@ -103,37 +109,46 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public <T extends BaseEntity> void addEntityUpdateListener(String entityID, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> void addEntityUpdateListener(String entityID, String key, Consumer<T> listener) {
         this.entityUpdateListeners.idListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityUpdateListeners.idListeners.get(entityID).put(key, listener);
     }
 
     @Override
-    public <T extends BaseEntity> void addEntityUpdateListener(String entityID, String key, EntityContext.EntityUpdateListener<T> listener) {
+    public <T extends BaseEntityIdentifier> void addEntityUpdateListener(String entityID, String key,
+                                                                         EntityContext.EntityUpdateListener<T> listener) {
         this.entityUpdateListeners.idBiListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityUpdateListeners.idBiListeners.get(entityID).put(key, listener);
     }
 
     @Override
-    public <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> void addEntityUpdateListener(Class<T> entityClass, String key, Consumer<T> listener) {
         this.entityUpdateListeners.typeListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityUpdateListeners.typeListeners.get(entityClass.getName()).put(key, listener);
     }
 
     @Override
-    public <T extends BaseEntity> void addEntityUpdateListener(Class<T> entityClass, String key, EntityContext.EntityUpdateListener<T> listener) {
+    public <T extends BaseEntityIdentifier> void addEntityUpdateListener(Class<T> entityClass, String key,
+                                                                         EntityContext.EntityUpdateListener<T> listener) {
         this.entityUpdateListeners.typeBiListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityUpdateListeners.typeBiListeners.get(entityClass.getName()).put(key, listener);
     }
 
     @Override
-    public <T extends BaseEntity> void addEntityRemovedListener(String entityID, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> void addEntityCreateListener(Class<T> entityClass, String key, Consumer<T> listener) {
+        this.entityCreateListeners.typeListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
+        this.entityCreateListeners.typeListeners.get(entityClass.getName()).put(key, listener);
+    }
+
+    @Override
+    public <T extends BaseEntityIdentifier> void addEntityRemovedListener(String entityID, String key, Consumer<T> listener) {
         this.entityRemoveListeners.idListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityRemoveListeners.idListeners.get(entityID).put(key, listener);
     }
 
     @Override
-    public <T extends BaseEntity> void addEntityRemovedListener(Class<T> entityClass, String key, Consumer<T> listener) {
+    public <T extends BaseEntityIdentifier> void addEntityRemovedListener(Class<T> entityClass, String key,
+                                                                          Consumer<T> listener) {
         this.entityRemoveListeners.typeListeners.putIfAbsent(entityClass.getName(), new HashMap<>());
         this.entityRemoveListeners.typeListeners.get(entityClass.getName()).put(key, listener);
     }
@@ -148,35 +163,42 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
         public <T extends HasEntityIdentifier> void notify(T saved, T oldEntity) {
             // notify by entityID
-            for (Consumer listener : idListeners.getOrDefault(saved.getEntityID(), Collections.emptyMap()).values()) {
+            String entityId = saved == null ? oldEntity.getEntityID() : saved.getEntityID();
+            for (Consumer listener : idListeners.getOrDefault(entityId, emptyMap()).values()) {
                 listener.accept(saved);
             }
-            for (EntityContext.EntityUpdateListener listener : idBiListeners.getOrDefault(saved.getEntityID(), Collections.emptyMap()).values()) {
+            for (EntityContext.EntityUpdateListener listener : idBiListeners.getOrDefault(entityId, emptyMap()).values()) {
                 listener.entityUpdated(saved, oldEntity);
             }
 
             // notify by class type
-            for (Class<?> entityClass : ClassFinder.findAllParentClasses(saved.getClass(), BaseEntity.class)) {
+            Class typeClass = saved == null ? oldEntity.getClass() : saved.getClass();
+
+            for (Class<?> entityClass : ClassUtils.getAllInterfaces(typeClass)) {
+                this.notifyByType(entityClass.getName(), saved, oldEntity);
+            }
+            for (Class<?> entityClass : ClassUtils.getAllSuperclasses(typeClass)) {
                 this.notifyByType(entityClass.getName(), saved, oldEntity);
             }
         }
 
         private <T extends HasEntityIdentifier> void notifyByType(String name, T saved, T oldEntity) {
-            for (EntityContext.EntityUpdateListener listener : typeBiListeners.getOrDefault(name, Collections.emptyMap()).values()) {
+            for (EntityContext.EntityUpdateListener listener : typeBiListeners.getOrDefault(name, emptyMap())
+                    .values()) {
                 listener.entityUpdated(saved, oldEntity);
             }
-            for (Consumer listener : typeListeners.getOrDefault(name, Collections.emptyMap()).values()) {
+            for (Consumer listener : typeListeners.getOrDefault(name, emptyMap()).values()) {
                 listener.accept(saved);
             }
         }
 
         public <T extends BaseEntity> boolean isRequireFetchOldEntity(T entity) {
-            if (!idBiListeners.getOrDefault(entity.getEntityID(), Collections.emptyMap()).isEmpty()) {
+            if (!idBiListeners.getOrDefault(entity.getEntityID(), emptyMap()).isEmpty()) {
                 return true;
             }
             Class<?> cursor = entity.getClass();
             while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
-                if (!typeBiListeners.getOrDefault(cursor.getName(), Collections.emptyMap()).isEmpty()) {
+                if (!typeBiListeners.getOrDefault(cursor.getName(), emptyMap()).isEmpty()) {
                     return true;
                 }
                 cursor = cursor.getSuperclass();

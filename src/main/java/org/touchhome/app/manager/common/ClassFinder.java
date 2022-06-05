@@ -40,19 +40,22 @@ public class ClassFinder {
         return list;
     }
 
-    public static List<Class<?>> findAllParentClasses(Class<?> childClass, Class<?> topParentClass) {
+    public static List<Class<?>> findAllParentClasses(Class<?> childClass, Class<?> topClass) {
         List<Class<?>> result = new ArrayList<>();
-        if (!topParentClass.isAssignableFrom(childClass)) {
-            throw new RuntimeException("Class <" + childClass.getSimpleName() + "> isn't assigned of class <" + topParentClass.getSimpleName() + ">");
+        if (!topClass.isAssignableFrom(childClass)) {
+            throw new RuntimeException(
+                    "Class <" + childClass.getSimpleName() + "> isn't assigned of class <" + topClass.getSimpleName() + ">");
         }
-        while (!childClass.getSimpleName().equals(topParentClass.getSimpleName())) {
+        while (!childClass.getSimpleName().equals(topClass.getSimpleName())) {
             result.add(childClass);
             childClass = childClass.getSuperclass();
         }
         return result;
     }
 
-    public static <T extends Annotation> List<Pair<Class, List<T>>> findAllAnnotationsToParentAnnotation(Class typeClass, Class<T> aAnnotation, Class<? extends Annotation> bAnnotation) {
+    public static <T extends Annotation> List<Pair<Class, List<T>>> findAllAnnotationsToParentAnnotation(Class typeClass,
+                                                                                                         Class<T> aAnnotation,
+                                                                                                         Class<? extends Annotation> bAnnotation) {
         Class cursor = typeClass;
         List<Pair<Class, List<T>>> typeToAnnotations = new ArrayList<>();
         while (cursor != null) {
@@ -69,13 +72,16 @@ public class ClassFinder {
         return typeToAnnotations;
     }
 
-    private <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation, boolean includeInterfaces) {
+    private <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation,
+                                                                  boolean includeInterfaces) {
         List<Class<? extends T>> foundClasses = new ArrayList<>();
-        for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(includeInterfaces)) {
+        for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(
+                includeInterfaces)) {
             scanner.addIncludeFilter(new AnnotationTypeFilter(annotation));
             for (BeanDefinition bd : scanner.findCandidateComponents("org.touchhome")) {
                 try {
-                    foundClasses.add((Class<? extends T>) scanner.getResourceLoader().getClassLoader().loadClass(bd.getBeanClassName()));
+                    foundClasses.add(
+                            (Class<? extends T>) scanner.getResourceLoader().getClassLoader().loadClass(bd.getBeanClassName()));
                 } catch (ClassNotFoundException e) {
                     throw new ServerException(e);
                 }
@@ -101,7 +107,8 @@ public class ClassFinder {
         for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(false)) {
             scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
 
-            getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.touchhome"), className, scanner, foundClasses);
+            getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.touchhome"), className, scanner,
+                    foundClasses);
 
             if (foundClasses.isEmpty() && basePackage == null) {
                 getClassesWithParentFromPackage("com.pi4j", className, scanner, foundClasses);
@@ -155,12 +162,15 @@ public class ClassFinder {
         throw new ServerException("Unable find repository for entity class: " + clazz);
     }
 
-    private <T> void getClassesWithParentFromPackage(String basePackage, String className, ClassPathScanningCandidateComponentProvider scanner, List<Class<? extends T>> foundClasses) {
+    private <T> void getClassesWithParentFromPackage(String basePackage, String className,
+                                                     ClassPathScanningCandidateComponentProvider scanner,
+                                                     List<Class<? extends T>> foundClasses) {
         try {
             for (BeanDefinition bd : scanner.findCandidateComponents(basePackage)) {
                 if (className == null || bd.getBeanClassName().endsWith("." + className)) {
                     try {
-                        foundClasses.add((Class<? extends T>) scanner.getResourceLoader().getClassLoader().loadClass(bd.getBeanClassName()));
+                        foundClasses.add((Class<? extends T>) scanner.getResourceLoader().getClassLoader()
+                                .loadClass(bd.getBeanClassName()));
                     } catch (ClassNotFoundException ignore) {
                     }
                 }

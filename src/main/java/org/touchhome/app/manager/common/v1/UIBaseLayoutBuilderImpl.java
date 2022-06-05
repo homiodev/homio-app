@@ -66,7 +66,8 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
                 if (entityBuilder instanceof UILayoutBuilder) {
                     builders.addAll(((UILayoutBuilder) entityBuilder).getUiEntityBuilders(flat));
                 } else if (entityBuilder instanceof UIButtonItemBuilder) {
-                    UIStickyDialogItemBuilder stickyDialogBuilder = ((UIButtonItemBuilderImpl) entityBuilder).getStickyDialogBuilder();
+                    UIStickyDialogItemBuilder stickyDialogBuilder =
+                            ((UIButtonItemBuilderImpl) entityBuilder).getStickyDialogBuilder();
                     if (stickyDialogBuilder != null) {
                         builders.addAll(stickyDialogBuilder.getUiEntityBuilders(flat));
                     }
@@ -83,7 +84,8 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public DialogEntity<UIStickyDialogItemBuilder> addStickyDialogButton(@NotNull String name, String icon, String iconColor, int order) {
+    public DialogEntity<UIStickyDialogItemBuilder> addStickyDialogButton(@NotNull String name, String icon, String iconColor,
+                                                                         int order) {
         UIStickyDialogItemBuilderImpl stickyDialogBuilder;
         UIButtonItemBuilderImpl buttonItemBuilder;
         if (inputBuilders.containsKey(name)) {
@@ -110,7 +112,8 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public DialogEntity<UIDialogLayoutBuilder> addOpenDialogActionButton(@NotNull String name, String icon, String iconColor, Integer width, int order) {
+    public DialogEntity<UIDialogLayoutBuilder> addOpenDialogActionButton(@NotNull String name, String icon, String iconColor,
+                                                                         Integer width, int order) {
         String entityID = getText(name);
         UIDialogLayoutBuilderImpl dialogEntityBuilder = new UIDialogLayoutBuilderImpl(entityID, width);
         UIButtonItemBuilderImpl buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, iconColor, null, order))
@@ -166,9 +169,9 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public UIButtonItemBuilder addUploadButton(@NotNull String name, @Nullable String icon, @Nullable String iconColor,
-                                               String[] supportedFormats, UIActionHandler action, int order) {
-        return addEntity(new UIButtonItemBuilderImpl(UIItemType.UploadButton, name, icon, iconColor, order, action)
+    public UIButtonItemBuilder addSimpleUploadButton(@NotNull String name, @Nullable String icon, @Nullable String iconColor,
+                                                     String[] supportedFormats, UIActionHandler action, int order) {
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.SimpleUploadButton, name, icon, iconColor, order, action)
                 .setMetadata(new JSONObject().put("supportedFormats", supportedFormats)));
     }
 

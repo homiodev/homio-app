@@ -6,13 +6,14 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.common.util.ArchiveUtil;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.Collections;
+import java.util.regex.Pattern;
 
 @Log4j2
 public final class HardwareUtils {
@@ -49,13 +50,15 @@ public final class HardwareUtils {
                         try {
                             Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
                             Files.createDirectories(resolve.getParent());
-                            if (!Files.exists(resolve) || (Files.exists(resolve) && Files.getLastModifiedTime(resolve).compareTo(Files.getLastModifiedTime(path)) < 0)) {
+                            if (!Files.exists(resolve) || (Files.exists(resolve) &&
+                                    Files.getLastModifiedTime(resolve).compareTo(Files.getLastModifiedTime(path)) < 0)) {
                                 if (mayCopyResource(path.getFileName().toString())) {
                                     log.info("Copy resource <{}>", path.getFileName());
                                     Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
-                                    if (path.getFileName().toString().endsWith(".zip")) {
+                                    if (ArchiveUtil.isArchive(path)) {
                                         log.info("Unzip resource <{}>", path.getFileName());
-                                        CommonUtils.unzip(resolve, resolve.getParent());
+                                        ArchiveUtil.unzip(resolve, resolve.getParent(),
+                                                ArchiveUtil.UnzipFileIssueHandler.replace);
                                         log.info("Done unzip resource <{}>", path.getFileName());
                                     }
                                     log.info("Done copy resource <{}>", path.getFileName());
@@ -76,13 +79,13 @@ public final class HardwareUtils {
         }
     }
 
-    // not to smart but works well :)
+    // not smart at all but works well :)
     private static boolean mayCopyResource(String fileName) {
-        if (fileName.endsWith("_filter.zip")) {
-            if (SystemUtils.IS_OS_LINUX && !fileName.endsWith(".avr_filter.zip")) {
+        if (Pattern.matches(".*_filter\\.(zip|7z)", fileName)) {
+            if (SystemUtils.IS_OS_LINUX && !Pattern.matches(".*\\.avr_filter\\.(zip|7z)", fileName)) {
                 return false;
             }
-            return !SystemUtils.IS_OS_WINDOWS || fileName.endsWith(".win_filter.zip");
+            return !SystemUtils.IS_OS_WINDOWS || Pattern.matches(".*\\.win_filter\\.(zip|7z)", fileName);
         }
         return true;
     }

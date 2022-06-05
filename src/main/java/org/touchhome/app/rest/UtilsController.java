@@ -31,6 +31,7 @@ import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.exception.ServerException;
+import org.touchhome.common.util.CommonUtils;
 import org.touchhome.common.util.Curl;
 import org.touchhome.common.util.Lang;
 
@@ -81,28 +82,6 @@ public class UtilsController {
         }
     }
 
-    @GetMapping("/fs/file")
-    public Collection<OptionModel> getFiles(@RequestParam(name = ENTITY, required = false) String fsEntityId) {
-        if (fsEntityId != null) {
-            BaseFileSystemEntity entity = entityContext.getEntity(fsEntityId);
-            if (entity != null) {
-                return entity.getFileSystem(entityContext).getAllFiles(true);
-            }
-        }
-        return Collections.emptyList();
-    }
-
-    @GetMapping("/fs/folder")
-    public Collection<OptionModel> getFolders(@RequestParam(name = ENTITY, required = false) String fsEntityId) {
-        if (fsEntityId != null) {
-            BaseFileSystemEntity entity = entityContext.getEntity(fsEntityId);
-            if (entity != null) {
-                return entity.getFileSystem(entityContext).getAllFolders(true);
-            }
-        }
-        return Collections.emptyList();
-    }
-
     @PostMapping("/getCompletions")
     public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest) throws NoSuchMethodException {
         ParserContext context = ParserContext.noneContext();
@@ -115,7 +94,7 @@ public class UtilsController {
 
     @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
     public ResponseEntity<StreamingResponseBody> downloadFile(@PathVariable("fileName") String fileName) {
-        Path outputPath = TouchHomeUtils.getTmpPath().resolve(fileName);
+        Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
         if (!Files.exists(outputPath)) {
             throw new NotFoundException("Unable to find file: " + fileName);
         }
@@ -146,9 +125,9 @@ public class UtilsController {
         int size = outputStream.size();
         if (size > 50000) {
             String name = scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___.log";
-            Path tempFile = TouchHomeUtils.getTmpPath().resolve(name);
+            Path tempFile = CommonUtils.getTmpPath().resolve(name);
             Files.copy(tempFile, outputStream);
-            runScriptOnceJSON.logUrl = "rest/download/tmp/" + TouchHomeUtils.getTmpPath().relativize(tempFile);
+            runScriptOnceJSON.logUrl = "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
         } else {
             runScriptOnceJSON.log = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
         }

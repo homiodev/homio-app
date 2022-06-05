@@ -16,13 +16,16 @@ import org.touchhome.bundle.api.hquery.api.HardwareException;
 import org.touchhome.bundle.api.model.ErrorHolderModel;
 import org.touchhome.common.util.CommonUtils;
 
+import java.nio.file.DirectoryNotEmptyException;
+
 @Log4j2
 @ControllerAdvice
 @RestController
 public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
 
     @Override
-    protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers, HttpStatus status, WebRequest request) {
+    protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers, HttpStatus status,
+                                                             WebRequest request) {
         if (HttpStatus.INTERNAL_SERVER_ERROR.equals(status)) {
             request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex, WebRequest.SCOPE_REQUEST);
         }
@@ -39,6 +42,12 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
     public ErrorHolderModel handleHardwareException(HardwareException ex) {
         log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
         return new ErrorHolderModel("Hardware error", String.join("; ", ex.getInputs()), ex);
+    }
+
+    @ExceptionHandler({DirectoryNotEmptyException.class})
+    public ErrorHolderModel handleDirectoryNotEmptyException(DirectoryNotEmptyException ex) {
+        String msg = CommonUtils.getErrorMessage(ex);
+        return new ErrorHolderModel("Unable remove directory", "Directory " + msg + " not empty", ex);
     }
 
     @ExceptionHandler({Exception.class})

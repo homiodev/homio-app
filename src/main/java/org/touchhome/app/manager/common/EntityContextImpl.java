@@ -50,6 +50,7 @@ import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.repository.crud.base.BaseCrudRepository;
 import org.touchhome.app.repository.device.AllDeviceRepository;
 import org.touchhome.app.rest.ConsoleController;
+import org.touchhome.app.rest.FileSystemController;
 import org.touchhome.app.rest.ItemController;
 import org.touchhome.app.rest.SettingController;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
@@ -197,7 +198,8 @@ public class EntityContextImpl implements EntityContext {
 
         // loadWorkspace modules
         log.info("Initialize bundles...");
-        ArrayList<BundleEntryPoint> bundleEntryPoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntryPoint.class).values());
+        ArrayList<BundleEntryPoint> bundleEntryPoints =
+                new ArrayList<>(applicationContext.getBeansOfType(BundleEntryPoint.class).values());
         Collections.sort(bundleEntryPoints);
         for (BundleEntryPoint bundleEntrypoint : bundleEntryPoints) {
             this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, null));
@@ -219,20 +221,23 @@ public class EntityContextImpl implements EntityContext {
         applicationContext.getBean(WidgetService.class).postConstruct();
 
         // trigger handlers when variables changed
-        this.event().addEntityUpdateListener(WorkspaceVariableEntity.class, "workspace-var-change-listener",
-                (source, oldSource) -> {
+        this.event()
+                .addEntityUpdateListener(WorkspaceVariableEntity.class, "workspace-var-change-listener", (source, oldSource) -> {
                     Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
-                    broadcastLockManager.signalAll(source.getEntityID(), new DecimalType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
+                    broadcastLockManager.signalAll(source.getEntityID(),
+                            new DecimalType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
                 });
         this.event().addEntityUpdateListener(WorkspaceStandaloneVariableEntity.class, "workspace-stand-var-change-listener",
                 (source, oldSource) -> {
                     Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
-                    broadcastLockManager.signalAll(source.getEntityID(), new DecimalType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
+                    broadcastLockManager.signalAll(source.getEntityID(),
+                            new DecimalType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
                 });
         this.event().addEntityUpdateListener(WorkspaceBooleanEntity.class, "workspace-var-bool-change-listener",
                 (source, oldSource) -> {
                     Scratch3ExtensionBlocks.sendWorkspaceBooleanValueChangeValue(this, source, source.getValue());
-                    broadcastLockManager.signalAll(source.getEntityID(), new OnOffType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
+                    broadcastLockManager.signalAll(source.getEntityID(),
+                            new OnOffType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
                 });
 
         // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
@@ -245,8 +250,7 @@ public class EntityContextImpl implements EntityContext {
         this.event().fireEvent("app-started", "App started");
 
         // install autossh. Should refactor to move somewhere else
-        this.bgp().runOnceOnInternetUp("internal-ctx", () ->
-                MACHINE_IP_ADDRESS = getInternalIpAddress());
+        this.bgp().runOnceOnInternetUp("internal-ctx", () -> MACHINE_IP_ADDRESS = getInternalIpAddress());
     }
 
     @Override
@@ -372,31 +376,38 @@ public class EntityContextImpl implements EntityContext {
         pureRepository.save(entity);
     }
 
-    private <T extends HasEntityIdentifier> void runUpdateNotifyListeners(@Nullable T updatedEntity, T oldEntity, EntityContextEventImpl.EntityListener entityListener) {
-        if (updatedEntity != null) {
-            bgp().run("entity-" + updatedEntity.getEntityID() + "-updated", () ->
-                    entityListener.notify(updatedEntity, oldEntity), false);
+    private <T extends HasEntityIdentifier> void runUpdateNotifyListeners(@Nullable T updatedEntity, T oldEntity,
+                                                                          EntityContextEventImpl.EntityListener... entityListeners) {
+        if (updatedEntity != null || oldEntity != null) {
+            bgp().run("entity-" + (updatedEntity == null ? oldEntity : updatedEntity).getEntityID() + "-updated", () -> {
+                for (EntityContextEventImpl.EntityListener entityListener : entityListeners) {
+                    entityListener.notify(updatedEntity, oldEntity);
+                }
+            }, false);
         }
     }
 
     @Override
     public <T extends BaseEntity> T save(T entity) {
         AbstractRepository foundRepo = classFinder.getRepositoryByClass(entity.getClass());
-        final AbstractRepository repository = foundRepo == null && entity instanceof DeviceBaseEntity ? allDeviceRepository : foundRepo;
+        final AbstractRepository repository =
+                foundRepo == null && entity instanceof DeviceBaseEntity ? allDeviceRepository : foundRepo;
         EntityContextEventImpl.EntityListener entityUpdateListeners = this.event().getEntityUpdateListeners();
 
         T oldEntity = entity.getEntityID() == null ? null :
                 entityUpdateListeners.isRequireFetchOldEntity(entity) ? getEntity(entity.getEntityID(), false) : null;
 
-        T updatedEntity = transactionTemplate.execute(status ->
-                {
-                    T t = (T) repository.save(entity);
-                    t.afterFetch(this);
-                    return t;
-                }
-        );
+        T updatedEntity = transactionTemplate.execute(status -> {
+            T t = (T) repository.save(entity);
+            t.afterFetch(this);
+            return t;
+        });
 
-        runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners);
+        if (oldEntity == null) {
+            runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners, this.event().getEntityCreateListeners());
+        } else {
+            runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners);
+        }
 
         if (StringUtils.isEmpty(entity.getEntityID())) {
             entity.setEntityID(updatedEntity.getEntityID());
@@ -549,18 +560,18 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz) {
-        return entityManager.getEntityIDsByEntityClassFullName(clazz).stream()
-                .map(entityID -> {
-                    T entity = entityManager.getEntityWithFetchLazy(entityID);
-                    if (entity != null) {
-                        entity.afterFetch(this);
-                    }
-                    return entity;
-                }).filter(Objects::nonNull).collect(Collectors.toList());
+        return entityManager.getEntityIDsByEntityClassFullName(clazz).stream().map(entityID -> {
+            T entity = entityManager.getEntityWithFetchLazy(entityID);
+            if (entity != null) {
+                entity.afterFetch(this);
+            }
+            return entity;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     private void registerEntityListeners() {
-        setting().listenValueAndGet(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
+        setting().listenValueAndGet(SystemShowEntityStateSetting.class, "im-show-entity-states",
+                value -> this.showEntityState = value);
 
         SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
         EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
@@ -608,7 +619,8 @@ public class EntityContextImpl implements EntityContext {
                 sendEntityUpdateNotification(entity, type);
             }
         } catch (Exception ex) {
-            log.error("Unable to update cache entity <{}> for entity: <{}>. Msg: <{}>", type, entity, CommonUtils.getErrorMessage(ex));
+            log.error("Unable to update cache entity <{}> for entity: <{}>. Msg: <{}>", type, entity,
+                    CommonUtils.getErrorMessage(ex));
         }
     }
 
@@ -663,8 +675,8 @@ public class EntityContextImpl implements EntityContext {
     private void addBundle(BundleContext bundleContext, Map<String, BundleContext> artifactIdToContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
             if (!bundleContext.isLoaded()) {
-                ui().addBellErrorNotification("fail-bundle-" + bundleContext.getBundleID(),
-                        bundleContext.getBundleFriendlyName(), "Unable to load bundle");
+                ui().addBellErrorNotification("fail-bundle-" + bundleContext.getBundleID(), bundleContext.getBundleFriendlyName(),
+                        "Unable to load bundle");
                 return;
             }
             allApplicationContexts.add(bundleContext.getApplicationContext());
@@ -693,8 +705,8 @@ public class EntityContextImpl implements EntityContext {
         Lang.clear();
         fetchSettingPlugins(bundleContext, addBundle);
 
-        Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values()
-                .stream().collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
+        Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values().stream()
+                .collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
 
         if (addBundle) {
             pureRepositories.putAll(pureRepositoryMap);
@@ -703,7 +715,8 @@ public class EntityContextImpl implements EntityContext {
             pureRepositories.keySet().removeAll(pureRepositoryMap.keySet());
             repositories.keySet().removeAll(context.getBeansOfType(AbstractRepository.class).keySet());
         }
-        baseEntityNameToClass = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
+        baseEntityNameToClass = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream()
+                .collect(Collectors.toMap(Class::getSimpleName, s -> s));
 
         rebuildRepositoryByPrefixMap();
 
@@ -721,6 +734,7 @@ public class EntityContextImpl implements EntityContext {
         applicationContext.getBean(Scratch3OtherBlocks.class).postConstruct();
         applicationContext.getBean(PortService.class).postConstruct();
         applicationContext.getBean(AudioService.class).postConstruct();
+        applicationContext.getBean(FileSystemController.class).postConstruct();
 
         if (bundleContext != null) {
             applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addBundle);
@@ -731,7 +745,7 @@ public class EntityContextImpl implements EntityContext {
         registerUpdatableSettings(context);
 
         // test all services
-        for (EntityService entityService : getEntityServices()) {
+        for (EntityService entityService : getEntityServices(EntityService.class)) {
             entityService.getOrCreateService(this, false, true);
         }
 
@@ -748,9 +762,9 @@ public class EntityContextImpl implements EntityContext {
                     Class<?> settingClass = field.getDeclaredAnnotation(UpdatableSetting.class).value();
                     Class valueType = ((SettingPlugin) CommonUtils.newInstance(settingClass)).getType();
                     Object value = entityContextSetting.getObjectValue(settingClass);
-                    UpdatableValue<Object> updatableValue = UpdatableValue.ofNullable(value, proxy.getClass().getSimpleName() + "_" + field.getName(), valueType);
-                    entityContextSetting.listenObjectValue(settingClass, updatableValue.getName(),
-                            updatableValue::update);
+                    UpdatableValue<Object> updatableValue =
+                            UpdatableValue.ofNullable(value, proxy.getClass().getSimpleName() + "_" + field.getName(), valueType);
+                    entityContextSetting.listenObjectValue(settingClass, updatableValue.getName(), updatableValue::update);
 
                     FieldUtils.writeField(field, proxy, updatableValue, true);
                 }
@@ -774,20 +788,19 @@ public class EntityContextImpl implements EntityContext {
 
         // listen when setting value has been changed and fire event that dependency may be installed
         for (DependencyExecutableInstaller installer : getBeansOfType(DependencyExecutableInstaller.class)) {
-            setting().listenValue(installer.getDependencyPluginSettingClass(), "listen-" + installer.getDependencyPluginSettingClass(),
-                    (value) -> {
-                        event().fireEvent(installer.getName() + "-dependency-installed", !installer.isRequireInstallDependencies(this, false), false);
+            setting().listenValue(installer.getDependencyPluginSettingClass(),
+                    "listen-" + installer.getDependencyPluginSettingClass(), (value) -> {
+                        event().fireEvent(installer.getName() + "-dependency-installed",
+                                !installer.isRequireInstallDependencies(this, false), false);
                         getBean(ItemController.class).reloadItemsRelatedToDependency(installer);
                     });
             if (installer.getInstallButton() != null) {
                 setting().listenValue(installer.getInstallButton(), "listen-install-ui-" + installer.getName(), () -> {
                     if (installer.isRequireInstallDependencies(this, false)) {
-                        bgp().runWithProgress("install-deps-" + installer.getName(), false,
-                                progressBar -> {
-                                    installer.installDependency(this, progressBar);
-                                    ui().reloadWindow("Mongo db installed");
-                                }, null,
-                                () -> new RuntimeException("INSTALL_DEPENDENCY_IN_PROGRESS"));
+                        bgp().runWithProgress("install-deps-" + installer.getName(), false, progressBar -> {
+                            installer.installDependency(this, progressBar);
+                            ui().reloadWindow("Mongo db installed");
+                        }, null, () -> new RuntimeException("INSTALL_DEPENDENCY_IN_PROGRESS"));
                     }
                 });
             }
@@ -803,14 +816,15 @@ public class EntityContextImpl implements EntityContext {
 
     private void fetchSettingPlugins(BundleContext bundleContext, boolean addBundle) {
         String basePackage = bundleContext == null ? null : bundleContext.getBasePackage();
-        for (Class<? extends SettingPlugin> settingPlugin : classFinder.getClassesWithParent(SettingPlugin.class, null, basePackage)) {
+        for (Class<? extends SettingPlugin> settingPlugin : classFinder.getClassesWithParent(SettingPlugin.class, null,
+                basePackage)) {
             setting().updatePlugins(settingPlugin, addBundle);
         }
     }
 
     private void createTableIndexes() {
-        List<Class<? extends BaseEntity>> list = classFinder.getClassesWithParent(BaseEntity.class, null, null)
-                .stream().filter(l -> !(WidgetBaseEntity.class.isAssignableFrom(l) || DeviceBaseEntity.class.isAssignableFrom(l)))
+        List<Class<? extends BaseEntity>> list = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream()
+                .filter(l -> !(WidgetBaseEntity.class.isAssignableFrom(l) || DeviceBaseEntity.class.isAssignableFrom(l)))
                 .collect(Collectors.toList());
         list.add(DeviceBaseEntity.class);
         list.add(WidgetBaseEntity.class);
@@ -823,7 +837,8 @@ public class EntityContextImpl implements EntityContext {
                 for (Class<? extends BaseEntity> aClass : list) {
                     String tableName = ((Joinable) meta.entityPersister(aClass)).getTableName();
                     try {
-                        em.createNativeQuery(String.format(CREATE_TABLE_INDEX, aClass.getSimpleName(), tableName)).executeUpdate();
+                        em.createNativeQuery(String.format(CREATE_TABLE_INDEX, aClass.getSimpleName(), tableName))
+                                .executeUpdate();
                     } catch (Exception ex) {
                         log.error("Error while creating index for table: <{}>", tableName, ex);
                     }
@@ -839,11 +854,14 @@ public class EntityContextImpl implements EntityContext {
             this.latestVersion = Curl.get(GIT_HUB_URL + "/releases/latest", Map.class).get("tag_name").toString();
 
             if (!String.valueOf(touchHomeProperties.getVersion()).equals(this.latestVersion)) {
-                log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion, touchHomeProperties.getVersion());
-                String description = "Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion;
-                ui().addBellErrorNotification("version", "app", description, uiInputBuilder ->
-                        uiInputBuilder.addButton("handle-version", "fas fa-registered", PRIMARY_COLOR, (entityContext, params) ->
-                                ActionResponseModel.showInfo(startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath()))).setText("Update"));
+                log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion,
+                        touchHomeProperties.getVersion());
+                String description =
+                        "Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion;
+                ui().addBellErrorNotification("version", "app", description,
+                        uiInputBuilder -> uiInputBuilder.addButton("handle-version", "fas fa-registered", PRIMARY_COLOR,
+                                (entityContext, params) -> ActionResponseModel.showInfo(
+                                        startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath()))).setText("Update"));
                 this.event().fireEvent("app-release", this.latestVersion);
             }
         } catch (Exception ex) {
@@ -863,20 +881,18 @@ public class EntityContextImpl implements EntityContext {
         }
     }
 
-    public List<EntityService> getEntityServices() {
-        return allDeviceRepository.listAll().stream().filter(e -> e instanceof EntityService)
-                .map(e -> (EntityService) e).collect(Collectors.toList());
+    public <T> List<T> getEntityServices(Class<T> serviceClass) {
+        return allDeviceRepository.listAll().stream().filter(e -> serviceClass.isAssignableFrom(e.getClass())).map(e -> (T) e)
+                .collect(Collectors.toList());
     }
 
     @AllArgsConstructor
     public enum ItemAction {
         Insert("addItem", context -> {
             context.ui().sendInfoMessage("TOASTR.ENTITY_INSERTED");
-        }),
-        Update("addItem", context -> {
+        }), Update("addItem", context -> {
             context.ui().sendInfoMessage("TOASTR.ENTITY_UPDATED");
-        }),
-        Remove("removeItem", context -> {
+        }), Remove("removeItem", context -> {
             context.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED");
         });
         private final String name;
@@ -894,7 +910,8 @@ public class EntityContextImpl implements EntityContext {
             this.bundleEntrypoint = bundleEntrypoint;
             this.bundleContext = bundleContext;
             if (bundleContext != null) {
-                for (WidgetBaseTemplate widgetBaseTemplate : bundleContext.getApplicationContext().getBeansOfType(WidgetBaseTemplate.class).values()) {
+                for (WidgetBaseTemplate widgetBaseTemplate : bundleContext.getApplicationContext()
+                        .getBeansOfType(WidgetBaseTemplate.class).values()) {
                     fieldTypes.put(widgetBaseTemplate.getClass().getSimpleName(), widgetBaseTemplate);
                 }
             }
