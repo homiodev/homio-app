@@ -14,6 +14,7 @@ import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.rest.BundleController;
 import org.touchhome.app.workspace.block.Scratch3Space;
 import org.touchhome.app.workspace.block.core.*;
+import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -43,7 +44,7 @@ import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/rest/workspace")
-public class WorkspaceController {
+public class WorkspaceController implements BeanPostConstruct {
 
     private static final Pattern ID_PATTERN = Pattern.compile("[a-z-]*");
 
@@ -60,7 +61,8 @@ public class WorkspaceController {
 
     private List<Scratch3ExtensionImpl> extensions;
 
-    public void postConstruct(EntityContext entityContext) {
+    @Override
+    public void onContextUpdate(EntityContext entityContext) {
         List<Scratch3ExtensionImpl> oldExtension = this.extensions == null ? Collections.emptyList() : this.extensions;
         this.extensions = new ArrayList<>();
         for (Scratch3ExtensionBlocks scratch3ExtensionBlock : entityContext.getBeansOfType(Scratch3ExtensionBlocks.class)) {

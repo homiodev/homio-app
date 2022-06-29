@@ -11,6 +11,7 @@ import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.setting.system.SystemClearWorkspaceButtonSetting;
 import org.touchhome.app.setting.system.SystemClearWorkspaceVariablesButtonSetting;
+import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class WorkspaceManager {
+public class WorkspaceManager implements BeanPostConstruct {
 
     private final Set<String> ONCE_EXECUTION_BLOCKS = new HashSet<>(Arrays.asList("boolean_link", "group_variable_link"));
     private final BroadcastLockManagerImpl broadcastLockManager;
@@ -46,7 +47,8 @@ public class WorkspaceManager {
     private Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
     private Map<String, TabHolder> tabs = new HashMap<>();
 
-    public void postConstruct(EntityContext entityContext) {
+    @Override
+    public void onContextUpdate(EntityContext entityContext) {
         scratch3Blocks = entityContext.getBeansOfType(Scratch3ExtensionBlocks.class).stream()
                 .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
         workspaceEventListeners = entityContext.getBeansOfType(WorkspaceEventListener.class);

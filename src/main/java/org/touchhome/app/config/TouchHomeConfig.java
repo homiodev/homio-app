@@ -53,13 +53,11 @@ import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.repository.crud.base.CrudRepositoryFactoryBean;
-import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.block.Scratch3Space;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
-import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostHandler;
 import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostProcessor;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.api.util.SecureString;
@@ -287,11 +285,6 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
         configurer.favorPathExtension(false);
-    }
-
-    @Bean
-    public HardwareRepositoryFactoryPostHandler hardwareRepositoryFactoryPostHandler() {
-        return HardwareUtils::prepareHardware;
     }
 
     @Override

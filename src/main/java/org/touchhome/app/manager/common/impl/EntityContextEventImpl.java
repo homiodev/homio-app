@@ -180,6 +180,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
             for (Class<?> entityClass : ClassUtils.getAllSuperclasses(typeClass)) {
                 this.notifyByType(entityClass.getName(), saved, oldEntity);
             }
+            this.notifyByType(typeClass.getName(), saved, oldEntity);
         }
 
         private <T extends HasEntityIdentifier> void notifyByType(String name, T saved, T oldEntity) {

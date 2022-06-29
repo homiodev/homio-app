@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.setting.CoreSettingPlugin;
+import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
@@ -24,17 +25,16 @@ import static org.touchhome.app.model.entity.SettingEntity.getKey;
 import static org.touchhome.bundle.api.BundleEntryPoint.BUNDLE_PREFIX;
 
 @Repository
-public class SettingRepository extends AbstractRepository<SettingEntity> {
+public class SettingRepository extends AbstractRepository<SettingEntity> implements BeanPostConstruct {
 
     private final static Map<String, String> settingToBundleMap = new HashMap<>();
-    private final EntityContext entityContext;
 
-    public SettingRepository(EntityContext entityContext) {
+    public SettingRepository() {
         super(SettingEntity.class);
-        this.entityContext = entityContext;
     }
 
-    public static SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin, SettingEntity settingEntity, EntityContext entityContext) {
+    public static SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin, SettingEntity settingEntity,
+                                                              EntityContext entityContext) {
         settingEntity.computeEntityID(() -> getKey(settingPlugin));
         if (settingPlugin.transientState()) {
             settingEntity.setEntityID(getKey(settingPlugin));
@@ -43,7 +43,8 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         return settingEntity;
     }
 
-    public static Collection<OptionModel> getOptions(SettingPluginOptions<?> plugin, EntityContext entityContext, JSONObject param) {
+    public static Collection<OptionModel> getOptions(SettingPluginOptions<?> plugin, EntityContext entityContext,
+                                                     JSONObject param) {
         Collection<OptionModel> options = plugin.getOptions(entityContext, param);
         if (plugin instanceof SettingPluginOptionsRemovable) {
             for (OptionModel option : options) {
@@ -77,7 +78,8 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             if (entity.isStorable()) {
                 if (entity.getSettingType().equals(UIFieldType.SelectBoxButton.name())
                         || entity.getSettingType().equals(UIFieldType.SelectBox.name())) {
-                    entity.setAvailableValues(SettingRepository.getOptions((SettingPluginOptions<?>) plugin, entityContext, null));
+                    entity.setAvailableValues(
+                            SettingRepository.getOptions((SettingPluginOptions<?>) plugin, entityContext, null));
                 }
             }
 
@@ -93,6 +95,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
             }
 
             if (plugin instanceof SettingPluginOptionsFileExplorer) {
+                entity.getParameters().put("AUI", ((SettingPluginOptionsFileExplorer) plugin).allowUserInput());
                 entity.getParameters().put("ASD", ((SettingPluginOptionsFileExplorer) plugin).allowSelectDirs());
                 entity.getParameters().put("ASF", ((SettingPluginOptionsFileExplorer) plugin).allowSelectFiles());
             }
@@ -149,8 +152,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity> {
         });
     }
 
+    @Override
     @Transactional
-    public void postConstruct() {
+    public void onContextUpdate(EntityContext entityContext) {
         for (SettingPlugin settingPlugin : EntityContextSettingImpl.settingPluginsBy(p -> !p.transientState())) {
             SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
             if (settingEntity == null) {

@@ -11,7 +11,9 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
+import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.BundleEntryPoint;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -35,7 +37,7 @@ import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 @RestController
 @RequestMapping(value = "/rest/setting", produces = APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
-public class SettingController {
+public class SettingController implements BeanPostConstruct {
 
     private final ConsoleController consoleController;
     private final BundleService bundleService;
@@ -43,14 +45,14 @@ public class SettingController {
     private Map<String, Set<String>> settingToPages;
     private Set<SettingEntity> descriptionSettings;
 
-    private EntityContextImpl entityContext;
+    private final EntityContextImpl entityContext;
     private Map<Class<? extends SettingPlugin<?>>, SettingEntity> transientSettings;
     // true - installing, false removing
     private Map<String, Boolean> packagesInProgress = new ConcurrentHashMap<>();
 
+    @Override
     @SneakyThrows
-    public void postConstruct(EntityContextImpl entityContext) {
-        this.entityContext = entityContext;
+    public void onContextUpdate(EntityContext entityContext) {
         this.transientSettings = new HashMap<>();
         for (SettingPlugin<?> settingPlugin : EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {

@@ -10,7 +10,7 @@ public class WidgetButtonEntity extends WidgetBaseEntityAndSeries<WidgetButtonEn
 
     public static final String PREFIX = "wtbn_";
 
-    @UIField(order = 31, showInContextMenu = true)
+    @UIField(order = 31, showInContextMenu = true, icon = "fas fa-grip-vertical")
     public Boolean isVertical() {
         return getJsonData("vertical", Boolean.FALSE);
     }

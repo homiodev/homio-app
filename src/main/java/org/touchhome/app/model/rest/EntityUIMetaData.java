@@ -12,6 +12,7 @@ public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
     private String label;
     private Boolean readOnly;
     private Boolean hideOnEmpty;
+    private Boolean revert;
     private Boolean onlyEdit;
     private Object defaultValue;
     private String entityName;
@@ -22,8 +23,10 @@ public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
     private String navLink;
     private Boolean required;
     private Boolean inlineEdit;
+    private Boolean copyButton;
     private Boolean inlineEditWhenEmpty;
     private String color;
+    private String icon;
     private String style;
 
     @Override

@@ -2,8 +2,6 @@ package org.touchhome.app.repository.widget.impl.chart;
 
 import org.touchhome.app.model.entity.widget.SeriesBuilder;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.widget.HasBarChartSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;

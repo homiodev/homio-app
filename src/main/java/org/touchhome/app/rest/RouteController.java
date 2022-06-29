@@ -8,12 +8,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.manager.common.ClassFinder;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.action.UIActionHandler;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -44,6 +46,8 @@ public class RouteController {
 
     private static class BootstrapContext {
         public int appVersion;
+        public int runCount;
+        public int bundleUpdateCount;
         public List<RouteJSON> routes;
         public Map<String, List<SidebarMenuItem>> menu;
         public List<BundleController.BundleJson> bundles;
@@ -55,6 +59,8 @@ public class RouteController {
     public BootstrapContext getBootstrap() {
         BootstrapContext context = new BootstrapContext();
         context.appVersion = touchHomeProperties.getVersion();
+        context.runCount = TouchHomeUtils.RUN_COUNT;
+        context.bundleUpdateCount = EntityContextImpl.BUNDLE_UPDATE_COUNT;
         context.routes = getRoutes();
         context.menu = getMenu();
         context.bundles = bundleController.getBundles();

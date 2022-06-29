@@ -117,7 +117,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
             Environment env = entityContext.getBean(Environment.class);
             JSONObject params = new JSONObject(jsonParams);
-            String envFormattedJavaScript = SpringUtils.replaceEnvValues(javaScript, (key, defValue) -> {
+            String envFormattedJavaScript = SpringUtils.replaceEnvValues(javaScript, (key, defValue, prefix) -> {
                 if (params.has(key)) {
                     return params.get(key).toString();
                 }
@@ -142,7 +142,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
             String jsWithRplFunctions = sb.toString();
             CompiledScript cmpl = engine.compile(new StringReader(jsWithRplFunctions));
             cmpl.eval();
-            return SpringUtils.replaceHashValues(jsWithRplFunctions, (ThrowingBinaryOperator<String, Exception>) (s, s2) -> {
+            return SpringUtils.replaceHashValues(jsWithRplFunctions, (s, s2, prefix) -> {
                 Object ret = ((Invocable) cmpl.getEngine()).invokeFunction("rpl_" + Math.abs(s.hashCode()), params);
                 return ret == null ? "" : ret.toString();
             });

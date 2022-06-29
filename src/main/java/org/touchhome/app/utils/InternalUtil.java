@@ -4,7 +4,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 
 import java.beans.Introspector;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 public final class InternalUtil {

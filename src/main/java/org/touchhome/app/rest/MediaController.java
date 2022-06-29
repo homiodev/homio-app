@@ -26,6 +26,7 @@ import org.touchhome.bundle.api.entity.ImageEntity;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsFileExplorer;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.bundle.api.video.BaseFFMPEGVideoStreamHandler;
 import org.touchhome.bundle.api.video.DownloadFile;
 import org.touchhome.bundle.api.video.VideoPlaybackStorage;
 import org.touchhome.bundle.api.video.ffmpeg.FfmpegInputDeviceHardwareRepository;
@@ -270,7 +271,7 @@ public class MediaController {
                 .get(context -> {
                     log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
                     entityContext.getBean(FfmpegInputDeviceHardwareRepository.class).fireFfmpeg(
-                            entityContext.setting().getFFMPEGInstallPath().toString(),
+                            BaseFFMPEGVideoStreamHandler.getFfmpegLocation(),
                             "-y",
                             "\"" + uriStr + "\"",
                             "-frames:v 1 -vf scale=" + size + " -q:v 3 " + path, // q:v - jpg quality

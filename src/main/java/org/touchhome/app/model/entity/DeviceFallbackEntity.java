@@ -2,7 +2,6 @@ package org.touchhome.app.model.entity;
 
 import org.hibernate.mapping.PersistentClass;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
-import org.touchhome.bundle.api.entity.types.MiscEntity;
 import org.touchhome.bundle.api.ui.UISidebarChildren;
 
 import javax.persistence.DiscriminatorValue;

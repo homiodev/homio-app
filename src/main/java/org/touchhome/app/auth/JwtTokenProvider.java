@@ -22,23 +22,21 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JwtTokenProvider {
 
-    private static final String STATIC_KEY = "poorSecurity";
     private final UserEntityDetailsService userEntityDetailsService;
-    @Value("${security.jwt.token.expire-length:1800000}")
+    @Value("${spring.security.jwt-token-expire-min}")
     private long jwtValidityTimeout; // 30min
 
-
     private JwtParser jwtParser;
-    private boolean requireAppID;
+    private boolean regenerateSecurityIdOnRestart;
 
     public void postConstruct(EntityContext entityContext) {
-        this.requireAppID = entityContext.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);
-        createJWTParser();
+        this.regenerateSecurityIdOnRestart = entityContext.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);
+        this.jwtParser = Jwts.parser().setSigningKey(buildSecurityId());
         this.jwtValidityTimeout = entityContext.setting().getValue(SystemJWTTokenValidSetting.class);
         entityContext.setting().listenValue(SystemJWTTokenValidSetting.class, "jwt-valid", value -> this.jwtValidityTimeout = value);
         entityContext.setting().listenValue(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
-            this.requireAppID = value;
-            createJWTParser();
+            this.regenerateSecurityIdOnRestart = value;
+            this.jwtParser = Jwts.parser().setSigningKey(buildSecurityId());
         });
     }
 
@@ -49,12 +47,13 @@ public class JwtTokenProvider {
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + TimeUnit.MINUTES.toMillis(jwtValidityTimeout));
+        String securityId = buildSecurityId();
 
         return Jwts.builder()
                 .setClaims(claims)
                 .setIssuedAt(now)
                 .setExpiration(validity)
-                .signWith(SignatureAlgorithm.HS256, requireAppID ? TouchHomeUtils.APP_UUID : STATIC_KEY)
+                .signWith(SignatureAlgorithm.HS256, securityId)
                 .compact();
     }
 
@@ -87,7 +86,11 @@ public class JwtTokenProvider {
         return this.jwtParser.parseClaimsJws(token).getBody().getSubject();
     }
 
-    private void createJWTParser() {
-        this.jwtParser = Jwts.parser().setSigningKey(requireAppID ? TouchHomeUtils.APP_UUID : STATIC_KEY);
+    private String buildSecurityId() {
+        String securityId = TouchHomeUtils.APP_UUID;
+        if(regenerateSecurityIdOnRestart) {
+            securityId += "_" + TouchHomeUtils.RUN_COUNT;
+        }
+        return securityId;
     }
 }

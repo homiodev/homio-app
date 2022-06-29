@@ -24,6 +24,9 @@ import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity
 import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMEntity;
+import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
+import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
 import org.touchhome.app.model.entity.widget.impl.js.WidgetJsEntity;
 import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderEntity;
@@ -35,18 +38,22 @@ import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
 import org.touchhome.app.repository.widget.impl.chart.WidgetBarChartSeriesEntity;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.entity.widget.*;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.action.UIActionHandler;
+import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
+import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.video.BaseFFMPEGVideoStreamEntity;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.widget.WidgetJSBaseTemplate;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.exception.ServerException;
+import org.touchhome.common.fs.FileObject;
+import org.touchhome.common.fs.FileSystemProvider;
 import org.touchhome.common.util.CommonUtils;
 
 import java.util.*;
@@ -62,7 +69,7 @@ import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 @RequiredArgsConstructor
 public class WidgetController {
 
-    private final EntityContext entityContext;
+    private final EntityContextImpl entityContext;
     private final ScriptService scriptService;
     private final ObjectMapper objectMapper;
     private final WidgetService widgetService;
@@ -73,6 +80,62 @@ public class WidgetController {
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<WidgetService.AvailableWidget> getAvailableWidgets() {
         return widgetService.getAvailableWidgets();
+    }
+
+    @RequestMapping(value = "/fm/{entityID}", method = RequestMethod.HEAD)
+    public boolean requireUpdateFiles(@PathVariable("entityID") String entityID) {
+        return false;
+    }
+
+    @PostMapping("/fm/{entityID}")
+    public List<WidgetFMNodes> getWidgetFileManagerData(@PathVariable("entityID") String entityID,
+                                                        @RequestParam("w") int width, @RequestParam("h") int height,
+                                                        @RequestBody List<WidgetFMPrevSnapshot> prevValues) {
+        Map<String, Long> seriesToSnapValue = prevValues.stream().collect(Collectors.toMap(n -> n.sid, n -> n.sn));
+        WidgetFMEntity entity = entityContext.getEntity(entityID);
+        List<BaseFileSystemEntity> fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
+        List<WidgetFMNodes> nodes = new ArrayList<>();
+        for (WidgetFMSeriesEntity seriesEntity : entity.getSeries()) {
+            String[] path = seriesEntity.getDataSource().split("###");
+            String parentId = path[0];
+            String fs = path[1];
+            BaseFileSystemEntity fileSystemEntity =
+                    fileSystems.stream().filter(fileSystem -> fileSystem.getEntityID().equals(fs)).findAny().orElse(null);
+            if (fileSystemEntity != null) {
+                Long snapshot = seriesToSnapValue.get(seriesEntity.getEntityID());
+                FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(entityContext);
+                Long lastUpdated = fileSystem.toFileObject(parentId).getAttributes().getLastUpdated();
+                Set<WidgetFMNodeValue> items = null;
+                if (!Objects.equals(snapshot, lastUpdated)) {
+                    Set<FileObject> children = fileSystem.getChildren(parentId)
+                            .stream().filter(n -> !n.getAttributes().isDir()).collect(Collectors.toSet());
+                    items = children.stream().map(fileObject -> new WidgetFMNodeValue(fileObject, width, height)).collect(
+                            Collectors.toSet());
+
+                }
+                nodes.add(new WidgetFMNodes(fileSystemEntity.getTitle(), seriesEntity.getEntityID(),
+                        lastUpdated, items));
+            } else {
+                log.info("Unable to find fileSystem");
+            }
+        }
+        return nodes;
+    }
+
+    @Getter
+    @Setter
+    private static class WidgetFMPrevSnapshot {
+        private long sn;
+        private String sid;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private static class WidgetFMNodes {
+        private String title;
+        private String seriesEntityID;
+        private long snapshotHashCode;
+        private Set<WidgetFMNodeValue> nodes;
     }
 
     @GetMapping("/video/{entityID}")
@@ -351,8 +414,8 @@ public class WidgetController {
         return widget;
     }
 
-    @GetMapping("/{tabId}/widget")
-    public List<WidgetBaseEntity> getWidgets(@PathVariable("tabId") String tabId) {
+    @GetMapping("/tab/{tabId}")
+    public List<WidgetEntity> getWidgetsInTab(@PathVariable("tabId") String tabId) {
         List<WidgetBaseEntity> widgets = entityContext.findAll(WidgetBaseEntity.class)
                 .stream().filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId)).collect(Collectors.toList());
 
@@ -363,11 +426,19 @@ public class WidgetController {
         if (updated) {
             widgets = entityContext.findAll(WidgetBaseEntity.class);
         }
+
+        List<WidgetEntity> result = new ArrayList<>();
         for (WidgetBaseEntity<?> widget : widgets) {
             updateWidgetBeforeReturnToUI(widget);
+
+            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            if (widget instanceof HasDynamicContextMenuActions) {
+                ((HasDynamicContextMenuActions) widget).assembleActions(uiInputBuilder);
+            }
+            result.add(new WidgetEntity(widget, uiInputBuilder.buildAll()));
         }
 
-        return widgets;
+        return result;
     }
 
     private void updateWidgetBeforeReturnToUI(WidgetBaseEntity<?> widget) {
@@ -633,5 +704,12 @@ public class WidgetController {
     private static class VideoActionRequest {
         private String name;
         private String value;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private class WidgetEntity {
+        private WidgetBaseEntity widget;
+        private Collection<UIInputEntity> actions;
     }
 }

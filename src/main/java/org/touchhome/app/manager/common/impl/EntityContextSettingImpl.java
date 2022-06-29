@@ -8,7 +8,6 @@ import org.json.JSONObject;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
-import org.touchhome.app.setting.system.SystemFFMPEGInstallPathSetting;
 import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -19,7 +18,6 @@ import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHea
 
 import javax.validation.constraints.NotNull;
 import java.lang.reflect.Modifier;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -30,7 +28,8 @@ import java.util.stream.Collectors;
 public class EntityContextSettingImpl implements EntityContextSetting {
     private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
     public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
-    public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
+    public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>>
+            dynamicHeaderSettings = new HashMap<>();
     private static final Map<String, SettingPlugin> settingPluginsByPluginClass = new HashMap<>();
     private final Map<String, Map<String, Consumer<?>>> settingListeners = new HashMap<>();
     private final EntityContextImpl entityContext;
@@ -42,7 +41,8 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     @Override
     public void reloadSettings(Class<? extends SettingPluginOptions> settingPlugin) {
         String entityID = SettingEntity.getKey(settingPlugin);
-        SettingPluginOptions<?> pluginOptions = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        SettingPluginOptions<?> pluginOptions =
+                (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
 
         Collection<OptionModel> options = SettingRepository.getOptions(pluginOptions, entityContext, null);
         entityContext.ui().sendGlobal(EntityContextUI.GlobalSendType.setting, entityID, options, null,
@@ -50,12 +50,15 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     @Override
-    public void reloadSettings(Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass, List<? extends DynamicConsoleHeaderSettingPlugin> dynamicSettings) {
+    public void reloadSettings(Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass,
+                               List<? extends DynamicConsoleHeaderSettingPlugin> dynamicSettings) {
         List<SettingEntity> dynamicEntities = dynamicSettings.stream()
-                .map(s -> SettingRepository.createSettingEntityFromPlugin(s, new SettingEntity(), entityContext)).collect(Collectors.toList());
+                .map(s -> SettingRepository.createSettingEntityFromPlugin(s, new SettingEntity(), entityContext))
+                .collect(Collectors.toList());
         dynamicHeaderSettings.put(dynamicSettingPluginClass, dynamicEntities);
 
-        entityContext.ui().sendGlobal(EntityContextUI.GlobalSendType.setting, SettingEntity.PREFIX + dynamicSettingPluginClass.getSimpleName(),
+        entityContext.ui().sendGlobal(EntityContextUI.GlobalSendType.setting,
+                SettingEntity.PREFIX + dynamicSettingPluginClass.getSimpleName(),
                 dynamicEntities, null, new JSONObject().put("subType", "dynamic"));
     }
 
@@ -132,16 +135,6 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         setValueSilenceRaw(settingPluginsByPluginClass.get(settingPluginClazz.getName()), value);
     }
 
-    @Override
-    public Path getFFMPEGInstallPath() {
-        return getValue(SystemFFMPEGInstallPathSetting.class);
-    }
-
-    @Override
-    public void listenFFMPEGInstallPathAndGet(String key, Consumer<Path> listener) {
-        listenValueAndGet(SystemFFMPEGInstallPathSetting.class, key, listener);
-    }
-
     private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value,
                                         SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
         if (settingListeners.containsKey(settingPluginClazz.getName())) {
@@ -150,7 +143,8 @@ public class EntityContextSettingImpl implements EntityContextSetting {
                     consumer.accept(value);
                 } catch (Exception ex) {
                     entityContext.ui().sendErrorMessage(ex);
-                    log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value);
+                    log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(),
+                            value);
                 }
             }
         }
@@ -200,7 +194,8 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         setValueRaw(settingPluginClazz, value, true);
     }
 
-    public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value, boolean fireNotificationOnUI) {
+    public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value,
+                                boolean fireNotificationOnUI) {
         SettingPlugin<?> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
         T parsedValue = (T) pluginFor.parseValue(entityContext, value);
         String strValue = setValueSilence(pluginFor, parsedValue);

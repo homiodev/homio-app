@@ -29,6 +29,16 @@ public class WidgetButtonSeriesEntity extends WidgetSeriesEntity<WidgetButtonEnt
         return this;
     }
 
+    @UIField(order = 20, type = UIFieldType.IconPicker)
+    public String getIcon() {
+        return getJsonData("icon", "");
+    }
+
+    public WidgetButtonSeriesEntity setIcon(String value) {
+        setJsonData("icon", value);
+        return this;
+    }
+
     @Override
     public String getEntityPrefix() {
         return PREFIX;

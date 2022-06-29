@@ -3,12 +3,9 @@ package org.touchhome.app.model.entity.widget.impl.video.sourceResolver;
 import lombok.Getter;
 import lombok.Setter;
 import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
-import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.touchhome.bundle.api.video.BaseVideoStreamEntity;
 
 import java.util.Collection;
-import java.util.Collections;
 
 public interface WidgetVideoSourceResolver {
 

@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
-import net.rossillo.spring.web.mvc.CacheControl;
-import net.rossillo.spring.web.mvc.CachePolicy;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.security.access.annotation.Secured;
@@ -18,6 +16,7 @@ import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
 import org.touchhome.app.utils.UIFieldUtils;
+import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.console.ConsolePluginCommunicator;
@@ -43,7 +42,7 @@ import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 @RestController
 @RequestMapping("/rest/console")
 @RequiredArgsConstructor
-public class ConsoleController {
+public class ConsoleController implements BeanPostConstruct {
 
     private final LogService logService;
     private final EntityContext entityContext;
@@ -77,7 +76,8 @@ public class ConsoleController {
         }
     }
 
-    public void postConstruct() {
+    @Override
+    public void onContextUpdate(EntityContext entityContext) {
         this.consolePluginsMap.clear();
         this.tabs.clear();
 
@@ -88,7 +88,7 @@ public class ConsoleController {
         }
         this.tabs.add(log4j2Tab);
 
-        List<ConsolePlugin> consolePlugins = new ArrayList<>(entityContext.getBeansOfType(ConsolePlugin.class));
+        List<ConsolePlugin> consolePlugins = new ArrayList<>(this.entityContext.getBeansOfType(ConsolePlugin.class));
         Collections.sort(consolePlugins);
         for (ConsolePlugin consolePlugin : consolePlugins) {
             this.consolePluginsMap.put(consolePlugin.getName(), consolePlugin);
@@ -182,7 +182,6 @@ public class ConsoleController {
     }
 
     @GetMapping("/tab")
-    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Set<ConsoleTab> getTabs() {
         Set<ConsoleTab> tabs = new HashSet<>(this.tabs);
         Map<String, ConsoleTab> parens = new HashMap<>();

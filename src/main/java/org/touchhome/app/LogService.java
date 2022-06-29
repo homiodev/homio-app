@@ -108,7 +108,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
         private static String formatLogMessage(LogEvent event, String message) {
             return String.format("%s %-5s [%-25s] [%-25s] - %s",
-                    TouchHomeUtils.dateFormat.format(new Date(event.getTimeMillis())),
+                    TouchHomeUtils.DATE_TIME_FORMAT.format(new Date(event.getTimeMillis())),
                     event.getLevel(), maxLength(event.getThreadName()), maxLength(event.getLoggerName()), message);
         }
 

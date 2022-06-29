@@ -9,6 +9,8 @@ touchhome:
   checkConnectivityURL: www.google.com
 
 spring:
+  security:
+    jwt-token-expire-min: 30
   banner:
     location: classpath:/banner.txt
   datasource:

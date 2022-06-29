@@ -21,6 +21,8 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang3.StringUtils.defaultString;
+
 public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Getter
@@ -166,6 +168,15 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     @Override
     public UIButtonItemBuilder addButton(@NotNull String name, String icon, String iconColor, UIActionHandler action, int order) {
         return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, icon, iconColor, order, action));
+    }
+
+    @Override
+    public UIButtonItemBuilder addTableLayoutButton(@NotNull String name, int maxRows, int maxColumns, String value,
+                                                    @Nullable String icon, @Nullable String iconColor, UIActionHandler action,
+                                                    int order) {
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.TableLayout, name, defaultString(icon, "fas fa-table"),
+                iconColor, order, action).setMetadata(new JSONObject().put("maxRows", maxRows).put("maxColumns", maxColumns)
+                .put("value", value)));
     }
 
     @Override

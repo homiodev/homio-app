@@ -44,8 +44,8 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         this.networkHardwareRepository = networkHardwareRepository;
 
         // Menu
-        this.settingsMenu = MenuBlock.ofServer("settingsMenu", "rest/setting/name");
-        this.hardwareEventsMenu = MenuBlock.ofServer("hardwareEventsMenu", "rest/hardware/event");
+        this.settingsMenu = MenuBlock.ofServer("settingsMenu", "rest/setting/name", "Settings");
+        this.hardwareEventsMenu = MenuBlock.ofServer("hardwareEventsMenu", "rest/hardware/event", "Event");
 
         // Blocks
         this.myIpReporter = Scratch3Block.ofReporter(50, "my_ip", "my ip", this::fireGetByIP);

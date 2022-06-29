@@ -5,6 +5,8 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+
 @Getter
 @Setter
 @Component
@@ -15,4 +17,11 @@ public class TouchHomeProperties {
     private String serverSiteURL;
     private String checkConnectivityURL;
     private boolean disableSecurity;
+
+    public void setVersion(String version) {
+        if (version.endsWith("-SNAPSHOT")) {
+            version = version.substring(0, version.indexOf("-SNAPSHOT"));
+        }
+        this.version = Integer.parseInt(version.replaceAll("\\.", ""));
+    }
 }

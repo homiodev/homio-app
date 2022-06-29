@@ -87,7 +87,8 @@ public class BundleContext {
     }
 
     @SneakyThrows
-    void load(ConfigurationBuilder configurationBuilder, Environment env, ApplicationContext parentContext, ClassLoader classLoader) {
+    void load(ConfigurationBuilder configurationBuilder, Environment env, ApplicationContext parentContext,
+              ClassLoader classLoader) {
         URL bundleUrl = bundleContextFile.toUri().toURL();
         Reflections reflections = new Reflections(configurationBuilder.setUrls(bundleUrl));
 
@@ -166,7 +167,8 @@ public class BundleContext {
             return bundleEntrypoint.getBundleId();
         }
 
-        void configureSpringContext(Reflections reflections, ApplicationContext parentContext, String bundleID, ClassLoader classLoader) {
+        void configureSpringContext(Reflections reflections, ApplicationContext parentContext, String bundleID,
+                                    ClassLoader classLoader) {
             configClass = findBatchConfigurationClass(reflections);
             bundleClassLoaderHolder = parentContext.getBean(BundleClassLoaderHolder.class);
             bundleClassLoaderHolder.setClassLoaders(bundleID, classLoader);
@@ -181,10 +183,13 @@ public class BundleContext {
 
             // set custom environments
             Map<String, Object> customEnv = Stream.of(bundleConfiguration.env()).collect(
-                    Collectors.toMap(BundleConfiguration.Env::key, e -> SpringUtils.replaceEnvValues(e.value(), env::getProperty)));
+                    Collectors.toMap(BundleConfiguration.Env::key, e ->
+                            SpringUtils.replaceEnvValues(e.value(),
+                                    (key, defValue, fullPrefix) -> env.getProperty(key, defValue))));
 
             if (!customEnv.isEmpty()) {
-                ctx.getEnvironment().getPropertySources().addFirst(new MapPropertySource("BundleConfiguration PropertySource", customEnv));
+                ctx.getEnvironment().getPropertySources()
+                        .addFirst(new MapPropertySource("BundleConfiguration PropertySource", customEnv));
             }
 
             // wake up spring context
@@ -202,14 +207,18 @@ public class BundleContext {
             // find configuration class
             Set<Class<?>> springConfigClasses = reflections.getTypesAnnotatedWith(BundleConfiguration.class);
             if (springConfigClasses.isEmpty()) {
-                throw new ServerException("Configuration class with annotation @BundleConfiguration not found. Not possible to create spring context");
+                throw new ServerException(
+                        "Configuration class with annotation @BundleConfiguration not found. Not possible to create spring " +
+                                "context");
             }
             if (springConfigClasses.size() > 1) {
-                throw new ServerException("Configuration class with annotation @BundleConfiguration must be unique, but found: " + StringUtils.join(springConfigClasses, ", "));
+                throw new ServerException("Configuration class with annotation @BundleConfiguration must be unique, but found: " +
+                        StringUtils.join(springConfigClasses, ", "));
             }
             Class<?> batchConfigurationClass = springConfigClasses.iterator().next();
             if (batchConfigurationClass.getDeclaredAnnotation(BundleConfiguration.class) == null) {
-                throw new ServerException("Loaded batch definition has different ws-service-api.jar version and can not be instantiated");
+                throw new ServerException(
+                        "Loaded batch definition has different ws-service-api.jar version and can not be instantiated");
             }
             return batchConfigurationClass;
         }

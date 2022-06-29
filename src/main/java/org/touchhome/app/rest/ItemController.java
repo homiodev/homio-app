@@ -19,11 +19,11 @@ import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.model.rest.EntityUIMetaData;
-import org.touchhome.app.repository.device.AllDeviceRepository;
 import org.touchhome.app.setting.system.SystemShowEntityCreateTimeSetting;
 import org.touchhome.app.setting.system.SystemShowEntityUpdateTimeSetting;
 import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.app.utils.UIFieldUtils;
+import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.ImageEntity;
@@ -71,7 +71,7 @@ import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 @RestController
 @RequestMapping("/rest/item")
 @RequiredArgsConstructor
-public class ItemController {
+public class ItemController implements BeanPostConstruct {
 
     private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
     private final Map<String, TypeToRequireDependenciesContext> typeToRequireDependencies = new HashMap<>();
@@ -137,8 +137,7 @@ public class ItemController {
                 if (!actionHandler.isEnabled(entityContext)) {
                     throw new IllegalArgumentException("Unable to invoke disabled action");
                 }
-                actionHandler.handleAction(entityContext, actionRequestModel.params);
-                return null;
+                return actionHandler.handleAction(entityContext, actionRequestModel.params);
             }
         }
         throw new IllegalArgumentException("Execution method name: <" + actionRequestModel.getName() + "> not implemented");
@@ -164,7 +163,17 @@ public class ItemController {
         return (ActionResponseModel) method.invoke(actionHolder, objects.toArray());
     }
 
-    public void postConstruct() {
+    @Override
+    public void postConstruct(EntityContext entityContext) {
+        // invalidate UIField cache scenarios
+        entityContext.setting().listenValue(SystemShowEntityCreateTimeSetting.class, "invalidate-uifield-createTime-cache",
+                this.itemsBootstrapContextMap::clear);
+        entityContext.setting().listenValue(SystemShowEntityUpdateTimeSetting.class, "invalidate-uifield-updateTime-cache",
+                this.itemsBootstrapContextMap::clear);
+    }
+
+    @Override
+    public void onContextUpdate(EntityContext entityContext) {
         List<Class<? extends BaseEntity>> baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class, null, null);
         this.baseEntitySimpleClasses = baseEntityClasses.stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
 
@@ -175,11 +184,6 @@ public class ItemController {
                 cursor = cursor.getSuperclass();
             }
         }
-        // invalidate UIField cache scenarios
-        entityContext.setting().listenValue(SystemShowEntityCreateTimeSetting.class, "invalidate-uifield-createTime-cache",
-                this.itemsBootstrapContextMap::clear);
-        entityContext.setting().listenValue(SystemShowEntityUpdateTimeSetting.class, "invalidate-uifield-updateTime-cache",
-                this.itemsBootstrapContextMap::clear);
     }
 
     @GetMapping("/{type}/context")
@@ -394,16 +398,9 @@ public class ItemController {
         }
         List<Collection<UIInputEntity>> contextActions = new ArrayList<>();
         for (BaseEntity item : items) {
-            //TODO: Set<UIActionResponse> actions = Collections.emptySet();
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             if (item instanceof HasDynamicContextMenuActions) {
                 ((HasDynamicContextMenuActions) item).assembleActions(uiInputBuilder);
-                // Set<? extends DynamicContextMenuAction> dynamicContextMenuActions = ((HasDynamicContextMenuActions) item)
-                // .getActions(entityContext);
-                /*if (dynamicContextMenuActions != null) {
-                    actions = dynamicContextMenuActions.stream().map(UIActionResponse::new).collect(Collectors.toCollection
-                    (LinkedHashSet::new));
-                }*/
             }
             contextActions.add(uiInputBuilder.buildAll());
         }
@@ -637,6 +634,8 @@ public class ItemController {
                 }
             }
             return options;
+        } else if (returnType.isEnum()) {
+            return OptionModel.enumList((Class<? extends Enum>) returnType);
         }
         return null;
     }

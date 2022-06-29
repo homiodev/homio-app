@@ -3,7 +3,7 @@ package org.touchhome.app.rest;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.SneakyThrows;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
@@ -11,184 +11,207 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.touchhome.app.manager.common.EntityContextImpl;
+import org.touchhome.bundle.api.BeanPostConstruct;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
-import org.touchhome.bundle.api.entity.storage.VendorFileSystem;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.common.model.FileSystemItem;
+import org.touchhome.bundle.raspberry.entity.RaspberryDeviceEntity;
+import org.touchhome.bundle.raspberry.fs.RaspberryFileSystem;
+import org.touchhome.common.fs.FileObject;
+import org.touchhome.common.fs.FileSystemProvider;
+import org.touchhome.common.util.ArchiveUtil;
+import org.touchhome.common.util.CommonUtils;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.CopyOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks.ENTITY;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 @RestController
 @RequestMapping("/rest/fs")
 @RequiredArgsConstructor
-public class FileSystemController {
+public class FileSystemController implements BeanPostConstruct {
 
     private final EntityContextImpl entityContext;
     private List<BaseFileSystemEntity> fileSystems;
+    private RaspberryFileSystem localFileSystem;
 
-    public void postConstruct() {
+    @Override
+    public void postConstruct(EntityContext context) {
+        EntityContextImpl entityContext = (EntityContextImpl) context;
+        this.entityContext.event().addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove",
+                (e) -> this.fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class));
+        this.entityContext.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create",
+                (e) -> this.fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class));
+
+        RaspberryDeviceEntity raspberryDeviceEntity =
+                this.entityContext.getEntity(RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID);
+        this.localFileSystem = raspberryDeviceEntity.getFileSystem(entityContext);
+    }
+
+    @Override
+    public void onContextUpdate(EntityContext context) {
+        EntityContextImpl entityContext = (EntityContextImpl) context;
         this.fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
-
-        this.entityContext.event().addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove", (e) ->
-                this.fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class));
-        this.entityContext.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create", (e) ->
-                this.fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class));
     }
 
-    @GetMapping("")
-    public List<FileSystemConfiguration> getFileSystems() {
-        return fileSystems.stream().map(FileSystemConfiguration::new).collect(Collectors.toList());
-    }
-
-    @GetMapping("/file")
-    public Collection<OptionModel> getFiles(@RequestParam(name = ENTITY, required = false) String fsEntityId) {
-        if (fsEntityId != null) {
-            BaseFileSystemEntity entity = entityContext.getEntity(fsEntityId);
-            if (entity != null) {
-                Collection<FileSystemItem> allFiles = entity.getFileSystem(entityContext).getAllFiles(true);
-                return entity.getFileSystem(entityContext).getAllFiles(true);
+    @PostMapping("")
+    public List<FileSystemConfiguration> getFileSystems(@RequestBody GetFSRequest request) {
+        List<FileSystemConfiguration> configurations = new ArrayList<>();
+        for (BaseFileSystemEntity fileSystem : fileSystems) {
+            if (request.showOnlyLocalFS && !fileSystem.getEntityID().equals(this.localFileSystem.getEntity().getEntityID())) {
+                continue;
             }
-        }
-        return Collections.emptyList();
-    }
+            FileSystemConfiguration configuration = new FileSystemConfiguration(fileSystem);
 
-    @GetMapping("/folder")
-    public Collection<OptionModel> getFolders(@RequestParam(name = ENTITY, required = false) String fsEntityId) {
-        if (fsEntityId != null) {
-            BaseFileSystemEntity entity = entityContext.getEntity(fsEntityId);
-            if (entity != null) {
-                return entity.getFileSystem(entityContext).getAllFolders(true);
+            for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
+                if (selectedNode.fs.equals(fileSystem.getEntityID())) {
+                    configuration.children = fileSystem.getFileSystem(entityContext).loadTreeUpToChild(selectedNode.id);
+                }
             }
+            configurations.add(configuration);
         }
-        return Collections.emptyList();
+        return configurations;
     }
 
-    @GetMapping("/{fs}/list")
-    public Collection<FileSystemItem> list(@PathVariable("fs") String fs,
-                                           @RequestParam(value = "fileId", defaultValue = "") String fileId) {
-        VendorFileSystem fileSystem = getFileSystem(fs);
-        return fileSystem.getChild(fileId.split("~~~"));
+    /**
+     * Load children up to specific file path
+     */
+    @PostMapping("/load")
+    public FileSystemConfiguration load(@RequestBody ListRequest request) {
+        BaseFileSystemEntity baseFileSystemEntity = getFileSystemEntity(request.sourceFs);
+        FileSystemProvider fileSystem = baseFileSystemEntity.getFileSystem(entityContext);
+        FileSystemConfiguration fileSystemConfiguration = new FileSystemConfiguration(baseFileSystemEntity);
+        fileSystemConfiguration.children = fileSystem.loadTreeUpToChild(request.sourceFileId);
+        return fileSystemConfiguration;
     }
 
-    @SneakyThrows
+    @PostMapping("/list")
+    public Collection<FileObject> list(@RequestBody ListRequest request) {
+        return getFileSystem(request.sourceFs).getChildren(request.sourceFileId);
+    }
+
     @DeleteMapping
-    public void remove(@RequestBody RemoveFilesRequest request) {
-        VendorFileSystem fileSystem = getFileSystem(request.sourceFs);
-        List<String[]> sourcePathList =
-                request.getSourceFileIds().stream().map(id -> id.split("~~~")).collect(Collectors.toList());
-        fileSystem.delete(sourcePathList);
+    public FileObject remove(@RequestBody RemoveFilesRequest request) {
+        return getFileSystem(request.sourceFs).delete(request.sourceFileIds);
     }
 
-    @GetMapping("/{fs}/download")
-    public ResponseEntity<InputStreamResource> download(@PathVariable("fs") String fs,
-                                                        @RequestParam(value = "fileId") String fileId) throws Exception {
-        VendorFileSystem fileSystem = getFileSystem(fs);
-        VendorFileSystem.DownloadData data = fileSystem.download(fileId.split("~~~"), false, null);
+    @PostMapping("/download")
+    public ResponseEntity<InputStreamResource> download(@RequestBody DownloadRequest request) throws Exception {
+        FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
+        if (request.sourceFileIds.size() == 1) {
+            FileObject fileObject = fileSystem.toFileObject(request.sourceFileIds.iterator().next());
+            InputStream inputStream = fileSystem.getEntryInputStream(fileObject.getId());
 
-        MediaType mediaType;
-        try {
-            mediaType = MediaType.parseMediaType(data.getContentType());
-        } catch (Exception ex) {
-            mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            MediaType mediaType;
+            try {
+                mediaType = MediaType.parseMediaType(fileObject.getAttributes().getContentType());
+            } catch (Exception ex) {
+                mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            }
+            return TouchHomeUtils.inputStreamToResource(inputStream, mediaType);
+        } else {
+            Path zipFile = archiveSource(request.sourceFs, "zip", request.sourceFileIds, "downloadContent", null, null);
+            return TouchHomeUtils.inputStreamToResource(Files.newInputStream(zipFile), new MediaType("application", "zip"));
         }
-        return TouchHomeUtils.inputStreamToResource(data.getInputStream(), mediaType);
-    }
-
-    @PostMapping("/archiveEntries")
-    public FileSystemItem openArchive(@RequestBody OpenArchiveNodeRequest request) throws Exception {
-        return getFileSystem(request.sourceFs).getArchiveEntries(
-                request.sourceFileId.split("~~~"), request.password);
     }
 
     @PostMapping("/create")
-    public FileSystemItem createNode(@RequestBody CreateNodeRequest request) throws Exception {
-        VendorFileSystem fileSystem = getFileSystem(request.sourceFs);
-        if (request.dir) {
-            return fileSystem.createFolder(request.fileId.split("~~~"), request.name);
-        } else {
-            return fileSystem.upload(request.fileId.split("~~~"), request.name, new byte[0], false, false);
-        }
+    public FileObject createNode(@RequestBody CreateNodeRequest request) {
+        FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
+        return fileSystem.create(request.sourceFileId, request.name, request.dir, getUploadOption(request));
     }
 
     @PostMapping("/unarchive")
-    public FileSystemItem unarchiveNode(@RequestBody UnArchiveNodeRequest request) throws Exception {
-        if (request.sourceFs.equals(request.targetFs)) {
-            String[] targetPath = (request.targetDir).split("~~~");
-            return getFileSystem(request.sourceFs).unArchive(request.sourceFileId.split("~~~"), targetPath,
-                    request.password, request.removeSource, request.fileHandler);
+    public FileObject unarchive(@RequestBody UnArchiveNodeRequest request) {
+        FileSystemProvider sourceFs = getFileSystem(request.sourceFs);
+        FileSystemProvider targetFs = getFileSystem(request.targetFs);
+
+        Path archive = sourceFs.getArchiveAsLocalPath(request.sourceFileId);
+        // InputStream stream = sourceFs.getEntryInputStream(request.sourceFileId);
+        FileObject sourceItem = sourceFs.toFileObject(request.sourceFileId);
+
+        String fileExtension = CommonUtils.getExtension(sourceItem.getName());
+        String fileWithoutExtension = sourceItem.getName().substring(0, sourceItem.getName().length() - fileExtension.length());
+        Path targetPath = CommonUtils.getTmpPath().resolve(fileWithoutExtension);
+
+        ArchiveUtil.UnzipFileIssueHandler issueHandler = ArchiveUtil.UnzipFileIssueHandler.valueOf(request.fileHandler);
+        ArchiveUtil.ArchiveFormat zipFormat = ArchiveUtil.ArchiveFormat.getHandlerByExtension(fileExtension);
+        ArchiveUtil.unzip(archive, zipFormat, targetPath, null, null, issueHandler);
+        Set<String> ids = Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles()))
+                .map(File::toString).collect(Collectors.toSet());
+        FileObject fileSystemItem = targetFs.copy(localFileSystem.toFileObjects(ids), request.targetDir,
+                FileSystemProvider.UploadOption.Replace);
+
+        if (request.removeSource) {
+            sourceFs.delete(Collections.singleton(request.sourceFileId));
         }
-        throw new IllegalStateException("Not implemented exception");
+        return fileSystemItem;
     }
 
     @PostMapping("/archive")
-    public FileSystemItem archiveNode(@RequestBody ArchiveNodeRequest request) throws Exception {
-        List<String[]> sourcePathList =
-                request.getSourceFileIds().stream().map(id -> id.split("~~~")).collect(Collectors.toList());
-        if (request.sourceFs.equals(request.targetFs)) {
-            String[] targetPath = (request.targetDir + "~~~" + request.targetName).split("~~~");
-            return getFileSystem(request.sourceFs).archive(sourcePathList, targetPath, request.format, request.level,
-                    request.password, request.removeSource);
+    public FileObject archive(@RequestBody ArchiveNodeRequest request) throws Exception {
+        // make archive from requested files/folders
+        Path zipFile = archiveSource(request.sourceFs, request.format, request.sourceFileIds, request.targetName, request.level,
+                request.password);
+
+        try {
+            FileObject zipFileObject = FileObject.of(zipFile.toString(), zipFile, localFileSystem);
+
+            return getFileSystem(request.targetFs).copy(zipFileObject, request.targetDir,
+                    FileSystemProvider.UploadOption.Replace);
+        } finally {
+            Files.deleteIfExists(zipFile);
         }
-        throw new IllegalStateException("Not implemented exception");
     }
 
     @PostMapping("/copy")
-    public FileSystemItem copyNode(@RequestBody CopyNodeRequest request) throws Exception {
-        List<String[]> sourcePathList =
-                request.getSourceFileIds().stream().map(id -> id.split("~~~")).collect(Collectors.toList());
-        String[] targetPath = request.targetPath.split("~~~");
-        if (request.sourceFs.equals(request.targetFs)) {
-            return getFileSystem(request.sourceFs).copy(sourcePathList, targetPath, request.removeSource,
-                    request.replaceExisting);
-        }
-        VendorFileSystem sourceFileSystem = getFileSystem(request.targetFs);
-        VendorFileSystem targetFileSystem = getFileSystem(request.targetFs);
+    public FileObject copyNode(@RequestBody CopyNodeRequest request) {
+        FileSystemProvider sourceFs = getFileSystem(request.sourceFs);
+        FileSystemProvider targetFs = getFileSystem(request.targetFs);
 
-        List<FileSystemItem> items = new ArrayList<>(sourcePathList.size());
-        for (String[] sourcePath : sourcePathList) {
-            VendorFileSystem.DownloadData downloadData = sourceFileSystem.download(sourcePath, false, null);
-            items.add(targetFileSystem.upload(targetPath, sourcePath[sourcePath.length - 1], downloadData.getContent(),
-                    false, request.replaceExisting));
-            downloadData.close();
-        }
+        Set<FileObject> entries = sourceFs.toFileObjects(request.getSourceFileIds());
+        FileObject fileSystemItem = targetFs.copy(entries, request.targetPath, FileSystemProvider.UploadOption.Replace);
+
         if (request.removeSource) {
-            sourceFileSystem.delete(sourcePathList);
+            sourceFs.delete(request.getSourceFileIds());
         }
-        return null;
+        return fileSystemItem;
     }
 
-    @PostMapping("/{fs}/upload")
-    public FileSystemItem upload(@PathVariable("fs") String fs,
-                                 @RequestParam("fileId") String fileId,
-                                 @RequestParam("replace") boolean replace,
-                                 @RequestParam("data") MultipartFile[] files) throws Exception {
-        return getFileSystem(fs).upload(fileId.split("~~~"), files, replace);
+    @PostMapping("/upload")
+    public FileObject upload(@RequestParam("sourceFs") String sourceFs, @RequestParam("sourceFileId") String sourceFileId,
+                             @RequestParam("replace") boolean replace, @RequestParam("data") MultipartFile[] files) {
+        FileSystemProvider fileSystem = getFileSystem(sourceFs);
+        Set<FileObject> fileObjects = Stream.of(files).map(FileObject::of).collect(Collectors.toSet());
+        return fileSystem.copy(fileObjects, sourceFileId, FileSystemProvider.UploadOption.Replace);
     }
 
-    @PostMapping("/{fs}/rename")
-    public FileSystemItem rename(@PathVariable("fs") String fs,
-                                 @RequestBody RenameNodeRequest request) throws Exception {
-        VendorFileSystem fileSystem = getFileSystem(fs);
-        return fileSystem.rename(request.fileId.split("~~~"), request.newName);
+    @PostMapping("/rename")
+    public FileObject rename(@RequestBody RenameNodeRequest request) {
+        return getFileSystem(request.sourceFs).rename(request.sourceFileId, request.newName, getUploadOption(request));
     }
 
-    @GetMapping("/{fs}/search")
-    public List<FileSystemItem> search(@RequestParam("query") String query) throws IOException {
+    @GetMapping("/search")
+    public List<FileObject> search(@RequestParam("query") String query) {
         //  if (StringUtils.isEmpty(query)) {
         return null;
         // }
-        /*List<FileSystemItem> result = new ArrayList<>();
+        /*List<FileObject> result = new ArrayList<>();
         Files.walkFileTree(Paths.get(defaultPath), new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 if (file.getFileName().toString().contains(query)) {
-                    result.add(new FileSystemItem(file.toFile()));
+                    result.add(new FileObject(file.toFile()));
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -204,30 +227,26 @@ public class FileSystemController {
         // return result;
     }
 
-    private VendorFileSystem getFileSystem(String fs) {
+    private FileSystemProvider getFileSystem(String fs) {
+        return getFileSystemEntity(fs).getFileSystem(entityContext);
+    }
+
+    private BaseFileSystemEntity getFileSystemEntity(String fs) {
         return fileSystems.stream().filter(e -> e.getEntityID().equals(fs)).findAny()
-                .orElseThrow(() -> new IllegalArgumentException("Unable to find File system: " + fs))
-                .getFileSystem(entityContext);
+                .orElseThrow(() -> new IllegalArgumentException("Unable to find File system: " + fs));
     }
 
     @Getter
     @Setter
-    private static class RenameNodeRequest {
-        public String fileId;
-        public String newName;
-    }
-
-    @Getter
-    @Setter
-    private static class OpenArchiveNodeRequest extends BaseNodeRequest {
-        public String password;
+    private static class RenameNodeRequest extends BaseNodeRequest {
         private String sourceFileId;
+        private String newName;
     }
 
     @Getter
     @Setter
     private static class CreateNodeRequest extends BaseNodeRequest {
-        public String fileId;
+        public String sourceFileId;
         public String name;
         public boolean dir;
     }
@@ -236,7 +255,6 @@ public class FileSystemController {
     @Setter
     private static class UnArchiveNodeRequest extends BaseNodeRequest {
         public String targetDir;
-        public String password;
         public String fileHandler;
         private String sourceFileId;
         public boolean removeSource;
@@ -245,10 +263,9 @@ public class FileSystemController {
     @Getter
     @Setter
     private static class ArchiveNodeRequest extends BaseNodeRequest {
-        public List<String> sourceFileIds;
+        public Set<String> sourceFileIds;
         public String format;
         public String level;
-        public String password;
         public String targetDir;
         public String targetName;
         public boolean removeSource;
@@ -257,17 +274,41 @@ public class FileSystemController {
     @Getter
     @Setter
     private static class CopyNodeRequest extends BaseNodeRequest {
-        public List<String> sourceFileIds;
-        public String targetPath;
-        public boolean removeSource;
-        public boolean replaceExisting;
-        public boolean ignoreExisting;
+        private Set<String> sourceFileIds;
+        private String targetPath;
+        private boolean removeSource;
+    }
+
+    @Getter
+    @Setter
+    private static class DownloadRequest extends BaseNodeRequest {
+        public Set<String> sourceFileIds;
     }
 
     @Getter
     @Setter
     private static class RemoveFilesRequest extends BaseNodeRequest {
-        public List<String> sourceFileIds;
+        public Set<String> sourceFileIds;
+    }
+
+    @Getter
+    @Setter
+    private static class ListRequest extends BaseNodeRequest {
+        private String sourceFileId;
+    }
+
+    @Getter
+    @Setter
+    private static class GetFSRequest {
+        private boolean showOnlyLocalFS;
+        private SelectedNode[] selectedNodes;
+
+        @Getter
+        @Setter
+        private static class SelectedNode {
+            private String fs;
+            private String id;
+        }
     }
 
     @Getter
@@ -275,6 +316,8 @@ public class FileSystemController {
     private static class BaseNodeRequest {
         public String sourceFs;
         public String targetFs;
+        public String password;
+        public boolean replace;
     }
 
     @Getter
@@ -290,11 +333,12 @@ public class FileSystemController {
         public final boolean hasCreateFolder;
         public final List<String> editableExtensions;
         public final List<OptionModel> zipExtensions;
+        public Set<FileObject> children;
 
         public FileSystemConfiguration(BaseFileSystemEntity fs) {
             this.id = fs.getEntityID();
             DeviceBaseEntity entity = (DeviceBaseEntity) fs;
-            this.name = StringUtils.defaultIfEmpty(entity.getName(), entity.getShortTitle());
+            this.name = StringUtils.left(entity.getTitle(), 20);
             this.icon = fs.getIcon();
             this.color = fs.getIconColor();
             this.hasDelete = true;
@@ -303,13 +347,42 @@ public class FileSystemController {
             this.hasCreateFile = true;
             this.hasCreateFolder = true;
 
-            VendorFileSystem fileSystem = fs.getFileSystem(entityContext);
-            List<VendorFileSystem.ArchiveFormat> supportArchiveFormat = fileSystem.getSupportArchiveFormat();
-            this.zipExtensions = supportArchiveFormat.stream().map(f ->
-                            OptionModel.of(f.getId(), f.getName()).json(json -> json.put("extensions", f.getExtensions())))
-                    .collect(Collectors.toList());
-            this.editableExtensions = Arrays.asList("txt", "java", "cpp", "sh", "css", "scss", "js", "json", "xml", "html", "php",
-                    "py", "ts", "ino", "conf", "service", "md", "png", "jpg", "jpeg");
+            this.zipExtensions =
+                    Stream.of(ArchiveUtil.ArchiveFormat.values()).map(f -> OptionModel.of(f.getName()))
+                            .collect(Collectors.toList());
+            this.editableExtensions =
+                    Arrays.asList("txt", "java", "cpp", "sh", "css", "scss", "js", "json", "xml", "html", "php", "py", "ts",
+                            "ino", "conf", "service", "md", "png", "jpg", "jpeg");
         }
+    }
+
+    private Path archiveSource(String fs, String format, Set<String> sourceFileIds, String targetName, String level,
+                               String password) throws IOException {
+        FileSystemProvider sourceFs = getFileSystem(fs);
+
+        Collection<FileObject> entries = sourceFs.toFileObjects(sourceFileIds);
+        Path tmpArchiveAssemblerPath = CommonUtils.getTmpPath().resolve("tmp_archive_assembler_" + System.currentTimeMillis());
+
+        try {
+            if (!targetName.endsWith("." + format)) {
+                targetName = targetName + "." + format;
+            }
+            Path targetPath = CommonUtils.getTmpPath().resolve(targetName);
+
+            List<Path> result = new ArrayList<>();
+            localFileSystem.copyEntries(entries, tmpArchiveAssemblerPath, new CopyOption[]{REPLACE_EXISTING}, result);
+            List<Path> filesToArchive =
+                    Arrays.stream(Objects.requireNonNull(tmpArchiveAssemblerPath.toFile().listFiles())).map(File::toPath)
+                            .collect(Collectors.toList());
+
+            return ArchiveUtil.zip(filesToArchive, targetPath, ArchiveUtil.ArchiveFormat.getHandlerByExtension(format),
+                    level, password, null);
+        } finally {
+            FileUtils.deleteDirectory(tmpArchiveAssemblerPath.toFile());
+        }
+    }
+
+    private FileSystemProvider.UploadOption getUploadOption(BaseNodeRequest request) {
+        return request.replace ? FileSystemProvider.UploadOption.Replace : FileSystemProvider.UploadOption.Error;
     }
 }

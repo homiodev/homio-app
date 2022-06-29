@@ -2,91 +2,47 @@ package org.touchhome.app.utils;
 
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.SystemUtils;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.common.util.ArchiveUtil;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.Collections;
-import java.util.regex.Pattern;
 
 @Log4j2
 public final class HardwareUtils {
 
-    private static boolean hardwareChecked = false;
-
-    /**
-     * This method fires before ApplicationContext startup to make sure all related dependencies up
-     */
-    public static void prepareHardware(ConfigurableListableBeanFactory beanFactory) {
-        if (hardwareChecked) {
-            return;
-        }
-        hardwareChecked = true;
-        copyResources();
-    }
-
     @SneakyThrows
-    private static void copyResources() {
-        URL url = HardwareUtils.class.getClassLoader().getResource("asm_files");
-        if (url == null) {
-            throw new RuntimeException("Unable to find 'asm_files' directory.");
-        }
-        copyResources(url, "/BOOT-INF/classes/asm_files");
-    }
-
-    @SneakyThrows
-    public static void copyResources(URL url, String jarFiles) {
+    public static void copyResources(URL url) {
         if (url != null) {
             Path target = TouchHomeUtils.getFilesPath();
-            if (url.getProtocol().equals("jar")) {
-                try (FileSystem fs = FileSystems.newFileSystem(url.toURI(), Collections.emptyMap())) {
-                    Files.walk(fs.getPath(jarFiles)).filter(f -> Files.isRegularFile(f)).forEach((Path path) -> {
-                        try {
-                            Path resolve = target.resolve(path.toString().substring(jarFiles.length() + 1));
-                            Files.createDirectories(resolve.getParent());
-                            if (!Files.exists(resolve) || (Files.exists(resolve) &&
-                                    Files.getLastModifiedTime(resolve).compareTo(Files.getLastModifiedTime(path)) < 0)) {
-                                if (mayCopyResource(path.getFileName().toString())) {
-                                    log.info("Copy resource <{}>", path.getFileName());
-                                    Files.copy(path, resolve, StandardCopyOption.REPLACE_EXISTING);
-                                    if (ArchiveUtil.isArchive(path)) {
-                                        log.info("Unzip resource <{}>", path.getFileName());
-                                        ArchiveUtil.unzip(resolve, resolve.getParent(),
-                                                ArchiveUtil.UnzipFileIssueHandler.replace);
-                                        log.info("Done unzip resource <{}>", path.getFileName());
-                                    }
-                                    log.info("Done copy resource <{}>", path.getFileName());
-                                } else {
-                                    log.warn("Skip copying resource <{}>", path.getFileName());
-                                }
-                            } else {
-                                log.info("Skip copy resource <{}>", path.getFileName());
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
+            InputStream stream = HardwareUtils.class.getClassLoader().getResourceAsStream(url.toString());
+            FileSystem fileSystem = null;
+            if (stream == null) {
+                fileSystem = FileSystems.newFileSystem(url.toURI(), Collections.emptyMap());
+                Path filesPath = fileSystem.getPath("external_files.7z");
+                stream = Files.exists(filesPath) ? Files.newInputStream(filesPath) : null;
+            }
+            if (stream != null) {
+                String bundleJar = url.getFile().replaceAll(".jar!/", "_");
+                bundleJar = bundleJar.substring(bundleJar.lastIndexOf("/") + 1);
+                Path targetPath = target.resolve(target.resolve(bundleJar));
+                if (!Files.exists(targetPath) || Files.size(targetPath) != stream.available()) {
+                    // copy files
+                    log.info("Copy resource <{}>", url);
+                    Files.copy(stream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                    log.info("Unzip resource <{}>", targetPath);
+                    ArchiveUtil.unzip(targetPath, targetPath.getParent(), null, false, null,
+                            ArchiveUtil.UnzipFileIssueHandler.replace);
+                    // Files.move();
+                    log.info("Done copy resource <{}>", url);
                 }
-            } else {
-                FileUtils.copyDirectory(new File(url.toURI()), target.toFile(), false);
+                stream.close();
+                if (fileSystem != null) {
+                    fileSystem.close();
+                }
             }
         }
-    }
-
-    // not smart at all but works well :)
-    private static boolean mayCopyResource(String fileName) {
-        if (Pattern.matches(".*_filter\\.(zip|7z)", fileName)) {
-            if (SystemUtils.IS_OS_LINUX && !Pattern.matches(".*\\.avr_filter\\.(zip|7z)", fileName)) {
-                return false;
-            }
-            return !SystemUtils.IS_OS_WINDOWS || Pattern.matches(".*\\.win_filter\\.(zip|7z)", fileName);
-        }
-        return true;
     }
 }

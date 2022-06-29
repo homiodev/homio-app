@@ -80,7 +80,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     private boolean destroy;
     private List<ThrowingRunnable> releaseListeners;
 
-    WorkspaceBlockImpl(String id, Map<String, WorkspaceBlock> allBlocks, Map<String, Scratch3ExtensionBlocks> scratch3Blocks, EntityContext entityContext) {
+    WorkspaceBlockImpl(String id, Map<String, WorkspaceBlock> allBlocks, Map<String, Scratch3ExtensionBlocks> scratch3Blocks,
+                       EntityContext entityContext) {
         this.id = id;
         this.allBlocks = allBlocks;
         this.scratch3Blocks = scratch3Blocks;
@@ -149,6 +150,17 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     @Override
     public <P> P getMenuValue(String key, MenuBlock menuBlock, Class<P> type) {
+        P value = getMenuValueInternal(key, menuBlock, type);
+        if (menuBlock instanceof MenuBlock.ServerMenuBlock) {
+            MenuBlock.ServerMenuBlock smb = (MenuBlock.ServerMenuBlock) menuBlock;
+            if (smb.isRequire() && (value == null || value.toString().isEmpty() || value.toString().equals("-"))) {
+                logErrorAndThrow(smb.getFirstKey() + " menu value not found");
+            }
+        }
+        return value;
+    }
+
+    private <P> P getMenuValueInternal(String key, MenuBlock menuBlock, Class<P> type) {
         String menuId = this.inputs.get(key).getString(1);
         WorkspaceBlock refWorkspaceBlock = allBlocks.get(menuId);
         String fieldValue = refWorkspaceBlock.getField(menuBlock.getName());
@@ -298,7 +310,9 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         try {
             return Float.parseFloat(valueToStr(value, "0"));
         } catch (NumberFormatException ex) {
-            logErrorAndThrow("Unable parse value <" + key + "> to double for block: <" + this.opcode + ">. Actual value: <" + value + ">.");
+            logErrorAndThrow(
+                    "Unable parse value <" + key + "> to double for block: <" + this.opcode + ">. Actual value: <" + value +
+                            ">.");
             return defaultValue;
         }
     }
@@ -505,7 +519,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         try {
             scratch3Block.getAllowLinkBoolean().accept(variableId, this);
         } catch (Exception ex) {
-            logErrorAndThrow("Error when linking boolean variable to scratch block: " + scratch3Block.getOpcode() + CommonUtils.getErrorMessage(ex));
+            logErrorAndThrow("Error when linking boolean variable to scratch block: " + scratch3Block.getOpcode() +
+                    CommonUtils.getErrorMessage(ex));
         }
     }
 
@@ -571,7 +586,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             return array.get(2);
         }),
         VAR_PRIMITIVE(array -> array.get(2), (array, entityContext) -> {
-            WorkspaceStandaloneVariableEntity entity = entityContext.getEntity(WorkspaceStandaloneVariableEntity.PREFIX + array.get(2));
+            WorkspaceStandaloneVariableEntity entity =
+                    entityContext.getEntity(WorkspaceStandaloneVariableEntity.PREFIX + array.get(2));
             if (entity == null) {
                 throw new IllegalArgumentException("Unable to find variable with name: " + array.get(1));
             }

@@ -25,10 +25,7 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.entity.UserEntity;
-import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.model.ActionResponseModel;
-import org.touchhome.bundle.api.model.OptionModel;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
@@ -45,11 +42,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.*;
+import java.util.Date;
+import java.util.Set;
+import java.util.Stack;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
-import static org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks.ENTITY;
 
 @Log4j2
 @RestController

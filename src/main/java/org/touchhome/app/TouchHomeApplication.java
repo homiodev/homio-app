@@ -21,11 +21,15 @@ public class TouchHomeApplication implements WebMvcConfigurer {
     public static void main(String[] args) throws IOException {
         // copy resources from jars
         log.info("Copying resources");
-        for (URL resource : Collections.list(TouchHomeApplication.class.getClassLoader().getResources("files"))) {
-            HardwareUtils.copyResources(resource, "/files");
+        for (URL resource : Collections.list(TouchHomeApplication.class.getClassLoader().getResources("external_files.7z"))) {
+            HardwareUtils.copyResources(resource);
         }
         log.info("Copying resources done");
 
         new SpringApplicationBuilder(TouchHomeConfig.class).listeners(new LogService()).run(args);
     }
+
+    /*public static void main(String[] args) throws IOException {
+        System.out.println(DigestUtils.md5Hex(Files.newInputStream(Paths.get("target/touchhome-core.jar"))));
+    }*/
 }

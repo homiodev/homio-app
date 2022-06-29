@@ -9,6 +9,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
+import org.touchhome.bundle.api.BeanPostConstruct;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginOptions;
 
@@ -23,16 +25,21 @@ import java.util.stream.Collectors;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class PortService {
+public class PortService implements BeanPostConstruct {
     private final EntityContextImpl entityContext;
 
     private Map<Class<? extends SettingPlugin<SerialPort>>, Pair<String, Boolean>> portListeners = new HashMap<>();
     private Set<String> ports = new HashSet<>();
     private List<SettingPluginOptions<SerialPort>> portSettingPlugins;
 
-    public void postConstruct() {
+    @Override
+    public void onContextUpdate(EntityContext entityContext) {
         portListeners.clear();
         listenPortAvailability();
+    }
+
+    @Override
+    public void postConstruct(EntityContext entityContext) {
         entityContext.bgp().schedule("check-port", 10, TimeUnit.SECONDS, this::checkPortsAvailability, true);
     }
 
@@ -41,7 +48,8 @@ public class PortService {
                 .stream().map(sp -> (SettingPluginOptions<SerialPort>) sp).collect(Collectors.toList());
 
         for (SettingPlugin<SerialPort> portSettingPlugin : portSettingPlugins) {
-            Class<? extends SettingPlugin<SerialPort>> clazz = (Class<? extends SettingPlugin<SerialPort>>) portSettingPlugin.getClass();
+            Class<? extends SettingPlugin<SerialPort>> clazz =
+                    (Class<? extends SettingPlugin<SerialPort>>) portSettingPlugin.getClass();
             String portRawValue = entityContext.setting().getRawValue(clazz);
             if (StringUtils.isNotEmpty(portRawValue)) {
                 addPortToListening(clazz, portRawValue, entityContext.setting().getValue(clazz));
@@ -58,7 +66,8 @@ public class PortService {
         }
     }
 
-    private void addPortToListening(Class<? extends SettingPlugin<SerialPort>> clazz, String portRawValue, SerialPort serialPort) {
+    private void addPortToListening(Class<? extends SettingPlugin<SerialPort>> clazz, String portRawValue,
+                                    SerialPort serialPort) {
         portListeners.put(clazz, MutablePair.of(portRawValue, serialPort != null));
         if (serialPort == null) {
             addPortNotAvailableNotification(clazz, portRawValue);
@@ -102,6 +111,7 @@ public class PortService {
 
     private void addPortNotAvailableNotification(Class<? extends SettingPlugin<SerialPort>> settingPluginClass, String portName) {
         log.warn("Port became not available: <{}>", portName);
-        entityContext.ui().addBellErrorNotification(settingPluginClass.getSimpleName(), "Port not works", "Port '" + portName + "' unavailable");
+        entityContext.ui().addBellErrorNotification(settingPluginClass.getSimpleName(), "Port not works",
+                "Port '" + portName + "' unavailable");
     }
 }

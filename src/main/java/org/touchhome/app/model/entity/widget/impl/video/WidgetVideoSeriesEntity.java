@@ -103,7 +103,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
 
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
     @UIFieldSelection(value = VideoSeriesDataSourceDynamicOptionLoader.class, allowInputRawText = true)
-    @UIFieldFileSelection(extensions = {".mp4", ".m3u8"}, iconColor = "#14A669")
+    @UIFieldFileSelection(pattern = ".*(\\.mp4|\\.m3u8)", iconColor = "#14A669")
     public String getDataSource() {
         return getJsonData("ds");
     }

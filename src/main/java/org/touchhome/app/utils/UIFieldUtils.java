@@ -19,7 +19,6 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
-import org.touchhome.bundle.api.setting.SettingPluginOptionsFileExplorer;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.*;
@@ -43,9 +42,6 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Pattern;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -78,7 +74,7 @@ public class UIFieldUtils {
             }
             return null;
         }),
-        file(UIFieldFileSelection.class, params -> {
+        /*file(UIFieldFileSelection.class, params -> {
             UIFieldFileSelection annotation = params.field.getDeclaredAnnotation(UIFieldFileSelection.class);
             boolean firstLevel = StringUtils.isEmpty(params.param0);
             String pathStr = StringUtils.defaultIfEmpty(params.param0, annotation.rootPath());
@@ -110,7 +106,7 @@ public class UIFieldUtils {
                         return false;
                     }, (path, path2) -> null, path ->
                             firstLevel ? path.toString() : path.getFileName().toString());
-        }),
+        }),*/
         bean(UIFieldBeanSelection.class,
                 params -> params.entityContext.getBeansOfTypeWithBeanName(params.targetClass).keySet().stream()
                         .map(OptionModel::key)
@@ -276,7 +272,8 @@ public class UIFieldUtils {
             }
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuUploadAction.class)) {
                 UIContextMenuUploadAction action = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
-                uiInputBuilder.addSimpleUploadButton(action.value(), action.icon(), action.iconColor(), action.supportedFormats(), null,
+                uiInputBuilder.addSimpleUploadButton(action.value(), action.icon(), action.iconColor(), action.supportedFormats(),
+                        null,
                         0);
             }
             return uiInputBuilder.buildAll();
@@ -365,15 +362,23 @@ public class UIFieldUtils {
         if (uiField.inlineEdit()) {
             entityUIMetaData.setInlineEdit(true);
         }
+        if (uiField.copyButton()) {
+            entityUIMetaData.setCopyButton(true);
+        }
         if (uiField.inlineEditWhenEmpty()) {
             entityUIMetaData.setInlineEditWhenEmpty(true);
         }
         entityUIMetaData.setColor(trimToNull(uiField.color()));
+        entityUIMetaData.setIcon(trimToNull(uiField.icon()));
+
         if (uiField.readOnly()) {
             entityUIMetaData.setReadOnly(true);
         }
         if (uiField.hideOnEmpty()) {
             entityUIMetaData.setHideOnEmpty(true);
+        }
+        if (uiField.isRevert()) {
+            entityUIMetaData.setRevert(true);
         }
         if (uiField.onlyEdit()) {
             entityUIMetaData.setOnlyEdit(true);
@@ -469,6 +474,13 @@ public class UIFieldUtils {
             meta.put("selectType", "static");
         }
 
+        UIFieldTableLayout uiFieldTableLayout = uiFieldContext.getDeclaredAnnotation(UIFieldTableLayout.class);
+        if (uiFieldTableLayout != null) {
+            entityUIMetaData.setType("TableLayout");
+            jsonTypeMetadata.put("maxRows", uiFieldTableLayout.maxRows());
+            jsonTypeMetadata.put("maxColumns", uiFieldTableLayout.maxColumns());
+        }
+
         UIFieldStaticSelection uiFieldStaticSelection = uiFieldContext.getDeclaredAnnotation(UIFieldStaticSelection.class);
         if (uiFieldStaticSelection != null) {
             JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
@@ -494,11 +506,12 @@ public class UIFieldUtils {
         UIFieldFileSelection uiFieldFileSelection = uiFieldContext.getDeclaredAnnotation(UIFieldFileSelection.class);
         if (uiFieldFileSelection != null) {
             JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
-            meta.put("lazyLoading", true);
             meta.put("selectType", "file");
-            meta.put("parentChildJoiner", "/");
+            meta.put("SAFS", uiFieldFileSelection.showAllFileSystems());
             meta.put("ASD", uiFieldFileSelection.allowSelectDirs());
+            meta.put("AMS", uiFieldFileSelection.allowMultiSelect());
             meta.put("ASF", uiFieldFileSelection.allowSelectFiles());
+            meta.put("pattern", uiFieldFileSelection.pattern());
             meta.put("icon", uiFieldFileSelection.icon());
             meta.put("iconColor", uiFieldFileSelection.iconColor());
         }

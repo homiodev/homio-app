@@ -114,10 +114,9 @@ public class CommonUriStreamHandler extends BaseFFMPEGVideoStreamHandler<CommonV
     @RequiredArgsConstructor
     public enum VideoSourceType {
         HLS(""),
-        RTSP("-rtsp_transport tcp -stimeout " + TimeUnit.SECONDS.toMicros(10)),
+        RTSP("-rtsp_transport tcp -timeout " + TimeUnit.SECONDS.toMicros(10)),
         UNKNOWN("");
 
         private final String ffmpegInputOptions;
-
     }
 }

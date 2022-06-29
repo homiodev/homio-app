@@ -60,12 +60,14 @@ import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
 import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
+import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
@@ -87,6 +89,7 @@ import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.raspberry.repository.RaspberryDeviceRepository;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.model.UpdatableValue;
 import org.touchhome.common.util.CommonUtils;
@@ -110,6 +113,24 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIMARY_COLOR;
 @Log4j2
 @Component
 public class EntityContextImpl implements EntityContext {
+    // count how much addBundle/removeBundle invokes
+    public static int BUNDLE_UPDATE_COUNT = 0;
+
+    private static Set<Class<? extends BeanPostConstruct>> BEAN_UPDATE_CLASSES = new LinkedHashSet<>();
+
+    static {
+        BEAN_UPDATE_CLASSES.add(BundleService.class);
+        BEAN_UPDATE_CLASSES.add(ConsoleController.class);
+        BEAN_UPDATE_CLASSES.add(SettingRepository.class);
+        BEAN_UPDATE_CLASSES.add(SettingController.class);
+        BEAN_UPDATE_CLASSES.add(WorkspaceManager.class);
+        BEAN_UPDATE_CLASSES.add(WorkspaceController.class);
+        BEAN_UPDATE_CLASSES.add(ItemController.class);
+        BEAN_UPDATE_CLASSES.add(Scratch3OtherBlocks.class);
+        BEAN_UPDATE_CLASSES.add(PortService.class);
+        BEAN_UPDATE_CLASSES.add(AudioService.class);
+        BEAN_UPDATE_CLASSES.add(FileSystemController.class);
+    }
 
     public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
@@ -182,6 +203,14 @@ public class EntityContextImpl implements EntityContext {
         this.transactionTemplate = new TransactionTemplate(transactionManager);
 
         entityManager = applicationContext.getBean(EntityManager.class);
+
+        getBean(UserRepository.class).ensureUserExists();
+        getBean(RaspberryDeviceRepository.class).ensureDeviceExists();
+
+        rebuildAllRepositories(applicationContext, true);
+        for (Class<? extends BeanPostConstruct> beanUpdateClass : BEAN_UPDATE_CLASSES) {
+            applicationContext.getBean(beanUpdateClass).postConstruct(this);
+        }
         updateBeans(null, applicationContext, true);
 
         applicationContext.getBean(JwtTokenProvider.class).postConstruct(this);
@@ -189,8 +218,6 @@ public class EntityContextImpl implements EntityContext {
         applicationContext.getBean(LogService.class).setEntityContext(this);
 
         registerEntityListeners();
-
-        getBean(UserRepository.class).ensureUserExists();
 
         applicationContext.getBean(ScriptService.class).postConstruct();
 
@@ -206,6 +233,7 @@ public class EntityContextImpl implements EntityContext {
             log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
             try {
                 bundleEntrypoint.init();
+                bundleEntrypoint.onContextRefresh();
             } catch (Exception ex) {
                 log.fatal("Unable to init bundle: " + bundleEntrypoint.getBundleId(), ex);
                 throw ex;
@@ -538,6 +566,7 @@ public class EntityContextImpl implements EntityContext {
         for (String artifactId : artifactIdContextMap.keySet()) {
             this.addBundle(artifactIdContextMap.get(artifactId), artifactIdContextMap);
         }
+        BUNDLE_UPDATE_COUNT++;
     }
 
     public void removeBundle(String bundleId) {
@@ -662,13 +691,9 @@ public class EntityContextImpl implements EntityContext {
 
             this.cacheService.clearCache();
 
-            for (PureRepository repository : context.getBeansOfType(PureRepository.class).values()) {
-                pureRepositories.remove(repository.getEntityClass().getSimpleName());
-            }
-            context.getBeansOfType(AbstractRepository.class).keySet().forEach(ar -> repositories.remove(ar));
-
-            rebuildRepositoryByPrefixMap();
+            rebuildAllRepositories(bundleContext.getApplicationContext(), false);
             updateBeans(bundleContext, bundleContext.getApplicationContext(), false);
+            BUNDLE_UPDATE_COUNT++;
         }
     }
 
@@ -688,7 +713,9 @@ public class EntityContextImpl implements EntityContext {
 
             this.cacheService.clearCache();
 
-            HardwareUtils.copyResources(bundleContext.getBundleClassLoader().getResource("files"), "/files");
+            HardwareUtils.copyResources(bundleContext.getBundleClassLoader().getResource("external_files.7z"));
+
+            rebuildAllRepositories(context, true);
             updateBeans(bundleContext, context, true);
 
             for (BundleEntryPoint bundleEntrypoint : context.getBeansOfType(BundleEntryPoint.class).values()) {
@@ -705,36 +732,11 @@ public class EntityContextImpl implements EntityContext {
         Lang.clear();
         fetchSettingPlugins(bundleContext, addBundle);
 
-        Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values().stream()
-                .collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
-
-        if (addBundle) {
-            pureRepositories.putAll(pureRepositoryMap);
-            repositories.putAll(context.getBeansOfType(AbstractRepository.class));
-        } else {
-            pureRepositories.keySet().removeAll(pureRepositoryMap.keySet());
-            repositories.keySet().removeAll(context.getBeansOfType(AbstractRepository.class).keySet());
-        }
-        baseEntityNameToClass = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream()
-                .collect(Collectors.toMap(Class::getSimpleName, s -> s));
-
-        rebuildRepositoryByPrefixMap();
-
         Lang.DEFAULT_LANG = setting().getValue(SystemLanguageSetting.class).name();
-        applicationContext.getBean(ConsoleController.class).postConstruct();
-        applicationContext.getBean(BundleService.class).postConstruct(this);
-        applicationContext.getBean(SettingRepository.class).postConstruct();
-        applicationContext.getBean(SettingController.class).postConstruct(this);
-        /*if (!addBundle) {
-            applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
-        }*/
-        applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
-        applicationContext.getBean(WorkspaceController.class).postConstruct(this);
-        applicationContext.getBean(ItemController.class).postConstruct();
-        applicationContext.getBean(Scratch3OtherBlocks.class).postConstruct();
-        applicationContext.getBean(PortService.class).postConstruct();
-        applicationContext.getBean(AudioService.class).postConstruct();
-        applicationContext.getBean(FileSystemController.class).postConstruct();
+
+        for (Class<? extends BeanPostConstruct> beanUpdateClass : BEAN_UPDATE_CLASSES) {
+            applicationContext.getBean(beanUpdateClass).onContextUpdate(this);
+        }
 
         if (bundleContext != null) {
             applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addBundle);
@@ -750,6 +752,23 @@ public class EntityContextImpl implements EntityContext {
         }
 
         log.info("Finish update all app bundles");
+    }
+
+    private void rebuildAllRepositories(ApplicationContext context, boolean addBundle) {
+        Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values().stream()
+                .collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
+
+        if (addBundle) {
+            pureRepositories.putAll(pureRepositoryMap);
+            repositories.putAll(context.getBeansOfType(AbstractRepository.class));
+        } else {
+            pureRepositories.keySet().removeAll(pureRepositoryMap.keySet());
+            repositories.keySet().removeAll(context.getBeansOfType(AbstractRepository.class).keySet());
+        }
+        baseEntityNameToClass = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream()
+                .collect(Collectors.toMap(Class::getSimpleName, s -> s));
+
+        rebuildRepositoryByPrefixMap();
     }
 
     private void registerUpdatableSettings(ApplicationContext context) throws IllegalAccessException {
