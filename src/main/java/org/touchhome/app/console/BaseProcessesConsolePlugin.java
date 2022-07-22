@@ -20,7 +20,8 @@ import static org.touchhome.bundle.api.ui.field.UIFieldType.StaticDate;
 @RequiredArgsConstructor
 public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<BaseProcessesConsolePlugin.BackgroundProcessJSON> {
 
-    private final EntityContextImpl entityContextImpl;
+    @Getter
+    private final EntityContextImpl entityContext;
 
     @Override
     public String getParentTab() {
@@ -34,7 +35,7 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
     @Override
     public Collection<BackgroundProcessJSON> getValue() {
-        Collection<BackgroundProcessJSON> result = entityContextImpl.bgp().getSchedulers().values()
+        Collection<BackgroundProcessJSON> result = entityContext.bgp().getSchedulers().values()
                 .stream()
                 .filter(EntityContextBGPImpl.ThreadContextImpl::isShowOnUI)
                 .filter(threadContext -> {
@@ -86,7 +87,7 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
                 return this;
             }
         };
-        for (Consumer<EntityContextBGP.ThreadPuller> pullerConsumer : entityContextImpl.bgp().getThreadsPullers().values()) {
+        for (Consumer<EntityContextBGP.ThreadPuller> pullerConsumer : entityContext.bgp().getThreadsPullers().values()) {
             pullerConsumer.accept(threadPuller);
         }
 

@@ -1,29 +1,40 @@
 package org.touchhome.app.model.entity.widget.impl.gauge;
 
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.widget.HasGaugeSeries;
+import org.touchhome.bundle.api.entity.widget.AggregationType;
+import org.touchhome.bundle.api.entity.widget.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldNumber;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIKeyValueField;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldClassWithFeatureSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
 
-    public static final String PREFIX = "wtgg_";
+    public static final String PREFIX = "wgtgg_";
 
     @UIField(order = 14, required = true)
-    @UIFieldClassWithFeatureSelection(HasGaugeSeries.class)
+    @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
     public String getDataSource() {
         return getJsonData("ds");
     }
 
     public WidgetGaugeEntity setDataSource(String value) {
         setJsonData("ds", value);
+        return this;
+    }
+
+    @UIField(order = 15)
+    public AggregationType getAggregationType() {
+        return getJsonDataEnum("cvt", AggregationType.Last);
+    }
+
+    public WidgetGaugeEntity setAggregationType(AggregationType value) {
+        setJsonData("cvt", value);
         return this;
     }
 
@@ -129,7 +140,8 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
     }
 
     @UIField(order = 25)
-    @UIKeyValueField(maxSize = 5, keyType = UIFieldType.Float, valueType = UIFieldType.ColorPicker, defaultKey = "0", defaultValue = "#FFFFFF")
+    @UIKeyValueField(maxSize = 5, keyType = UIFieldType.Float, valueType = UIFieldType.ColorPicker, defaultKey = "0",
+            defaultValue = "#FFFFFF")
     public String getThreshold() {
         return getJsonData("threshold", "{}");
     }

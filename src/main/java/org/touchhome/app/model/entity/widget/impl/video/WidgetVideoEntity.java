@@ -2,6 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.video;
 
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.bundle.api.entity.widget.WidgetGroup;
 
 import javax.persistence.Entity;
 import javax.validation.constraints.Max;
@@ -10,7 +11,12 @@ import java.util.Set;
 @Entity
 public class WidgetVideoEntity extends WidgetBaseEntityAndSeries<WidgetVideoEntity, WidgetVideoSeriesEntity> {
 
-    public static final String PREFIX = "wtvid_";
+    public static final String PREFIX = "wgtvid_";
+
+    @Override
+    public WidgetGroup getGroup() {
+        return WidgetGroup.Media;
+    }
 
     @Max(4) // allow max 4 cameras
     public Set<WidgetVideoSeriesEntity> getSeries() {

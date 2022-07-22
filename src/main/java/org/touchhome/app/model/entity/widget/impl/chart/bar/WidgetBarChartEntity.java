@@ -1,8 +1,9 @@
 package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
-import org.touchhome.app.repository.widget.impl.chart.WidgetBarChartSeriesEntity;
+import org.touchhome.bundle.api.entity.widget.WidgetGroup;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 import javax.persistence.Entity;
@@ -10,77 +11,7 @@ import javax.persistence.Entity;
 @Entity
 public class WidgetBarChartEntity extends ChartBaseEntity<WidgetBarChartEntity, WidgetBarChartSeriesEntity> {
 
-    public static final String PREFIX = "barw_";
-
-    @UIField(order = 31)
-    public Boolean getShowAxisX() {
-        return getJsonData("showAxisX", Boolean.TRUE);
-    }
-
-    public WidgetBarChartEntity setShowAxisX(Boolean value) {
-        setJsonData("showAxisX", value);
-        return this;
-    }
-
-    @UIField(order = 32)
-    public Boolean getShowAxisY() {
-        return getJsonData("showAxisY", Boolean.TRUE);
-    }
-
-    public WidgetBarChartEntity setShowAxisY(Boolean value) {
-        setJsonData("showAxisY", value);
-        return this;
-    }
-
-    @UIField(order = 33)
-    public String getAxisLabelX() {
-        return getJsonData("axisLabelX", "Date");
-    }
-
-    public WidgetBarChartEntity setAxisLabelX(String value) {
-        setJsonData("axisLabelX", value);
-        return this;
-    }
-
-    @UIField(order = 34)
-    public String getAxisLabelY() {
-        return getJsonData("axisLabelY", "Value");
-    }
-
-    public WidgetBarChartEntity setAxisLabelY(String value) {
-        setJsonData("axisLabelY", value);
-        return this;
-    }
-
-    @UIField(order = 35)
-    public Integer getMin() {
-        return getJsonData("min", 0);
-    }
-
-    public WidgetBarChartEntity setMin(Integer value) {
-        setJsonData("min", value);
-        return this;
-    }
-
-    @UIField(order = 36)
-    public Integer getMax() {
-        return getJsonData("max", 100);
-    }
-
-    public WidgetBarChartEntity setMax(Integer value) {
-        setJsonData("max", value);
-        return this;
-    }
-
-    @UIField(order = 37)
-    public Boolean getNoBarWhenZero() {
-        return getJsonData("noBarWhenZero", Boolean.TRUE);
-    }
-
-    public WidgetBarChartEntity setNoBarWhenZero(Boolean value) {
-        setJsonData("noBarWhenZero", value);
-        return this;
-    }
+    public static final String PREFIX = "wgtbc_";
 
     @UIField(order = 38)
     public BarChartType getDisplayType() {
@@ -92,34 +23,25 @@ public class WidgetBarChartEntity extends ChartBaseEntity<WidgetBarChartEntity, 
         return this;
     }
 
-    @UIField(order = 39)
-    public Boolean getShowDataLabel() {
-        return getJsonData("showDataLabel", Boolean.FALSE);
-    }
-
-    public WidgetBarChartEntity setShowDataLabel(Boolean value) {
-        setJsonData("showDataLabel", value);
-        return this;
-    }
-
     @UIField(order = 40)
-    public Boolean getRoundEdges() {
-        return getJsonData("roundEdges", Boolean.TRUE);
+    @UIFieldGroup("Axis")
+    public String getAxisLabel() {
+        return getJsonData("al", "example");
     }
 
-    public WidgetBarChartEntity setRoundEdges(Boolean value) {
-        setJsonData("roundEdges", value);
+    public WidgetBarChartEntity setAxisLabel(String value) {
+        setJsonData("al", value);
         return this;
     }
 
-    @UIField(order = 41)
-    @UIFieldSlider(min = 0, max = 20)
-    public Integer getBarPadding() {
-        return getJsonData("barPadding", 0);
+    @UIField(order = 52)
+    @UIFieldSlider(min = 1, max = 4)
+    public int getBorderWidth() {
+        return getJsonData("bw", 1);
     }
 
-    public WidgetBarChartEntity setBarPadding(Integer value) {
-        setJsonData("barPadding", value);
+    public WidgetBarChartEntity setBorderWidth(int value) {
+        setJsonData("bw", value);
         return this;
     }
 

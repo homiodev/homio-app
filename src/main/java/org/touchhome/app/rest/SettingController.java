@@ -133,7 +133,7 @@ public class SettingController implements BeanPostConstruct {
     }
 
     @Secured(ADMIN_ROLE)
-    @PostMapping(value = "{entityID}", consumes = "text/plain")
+    @PostMapping(value = "/{entityID}", consumes = "text/plain")
     public <T> void updateSetting(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin != null) {
@@ -142,7 +142,7 @@ public class SettingController implements BeanPostConstruct {
     }
 
     @Secured(ADMIN_ROLE)
-    @DeleteMapping(value = "{entityID}", consumes = "text/plain")
+    @DeleteMapping(value = "/{entityID}", consumes = "text/plain")
     public void removeSettingValue(@PathVariable("entityID") String entityID, @RequestBody String value) throws Exception {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginOptionsRemovable) {

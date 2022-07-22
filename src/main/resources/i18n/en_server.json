@@ -1,4 +1,5 @@
 {
+  "USED_QUOTA": "Used {{PC}}% quota {{VAL}}/{{MAX}}",
   "UDP_ERROR": "Unable to listen udp: {{key}}. Error: {{msg}}",
   "NEW_DEVICE": {
     "TITLE": "Found device: {{NAME}}",

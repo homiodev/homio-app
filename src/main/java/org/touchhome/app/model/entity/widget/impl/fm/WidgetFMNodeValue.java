@@ -15,7 +15,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.codec.binary.Base64OutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.touchhome.common.fs.FileObject;
+import org.touchhome.common.fs.TreeNode;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -31,25 +31,25 @@ import java.util.List;
 public class WidgetFMNodeValue {
     private String content;
     private ResolveContentType resolveType = ResolveContentType.unknown;
-    private final FileObject fileObject;
+    private final TreeNode treeNode;
 
     @Override
     public int hashCode() {
-        return fileObject.hashCode();
+        return treeNode.hashCode();
     }
 
     @SneakyThrows
-    public WidgetFMNodeValue(FileObject fileObject, int width, int height) {
-        this.fileObject = fileObject;
+    public WidgetFMNodeValue(TreeNode treeNode, int width, int height) {
+        this.treeNode = treeNode;
         List<Dimensions> outputDimensions = Collections.singletonList(new Dimensions(width, height));
 
-        String contentType = fileObject.getAttributes().getContentType();
+        String contentType = treeNode.getAttributes().getContentType();
         if (contentType != null) {
             Thumbnailer thumbnailer = buildThumbnail(contentType);
 
             if (thumbnailer != null) {
                 try {
-                    try (InputStream stream = fileObject.getInputStream()) {
+                    try (InputStream stream = treeNode.getInputStream()) {
                         BufferedImage output = thumbnailer.getThumbnails(stream, outputDimensions).get(0);
                         ByteArrayOutputStream os = new ByteArrayOutputStream();
                         OutputStream b64 = new Base64OutputStream(os);
@@ -59,13 +59,13 @@ public class WidgetFMNodeValue {
                         this.resolveType = ResolveContentType.image;
                     }
                 } catch (Exception ex) {
-                    log.debug("Unable to fetch thumbnail from file: <{}>", fileObject.getName());
+                    log.debug("Unable to fetch thumbnail from file: <{}>", treeNode.getName());
                 }
                 // String encodedValue = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(convertedValue);
             } else if (contentType.startsWith("text/") || contentType.equals("application/javascript")
                     || contentType.equals("application/json")) {
-                if (fileObject.getAttributes().getSize() <= FileUtils.ONE_MB) {
-                    try (InputStream stream = fileObject.getInputStream()) {
+                if (treeNode.getAttributes().getSize() <= FileUtils.ONE_MB) {
+                    try (InputStream stream = treeNode.getInputStream()) {
                         this.content = IOUtils.toString(stream, StandardCharsets.UTF_8);
                         this.resolveType = ResolveContentType.text;
                     }
@@ -78,7 +78,7 @@ public class WidgetFMNodeValue {
                 }
             }
         } else {
-            log.debug("Unable to find contentType for file: <{}>", fileObject.getName());
+            log.debug("Unable to find contentType for file: <{}>", treeNode.getName());
         }
     }
 

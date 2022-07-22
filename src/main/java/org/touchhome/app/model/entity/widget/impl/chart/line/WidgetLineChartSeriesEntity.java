@@ -1,36 +1,72 @@
 package org.touchhome.app.model.entity.widget.impl.chart.line;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.touchhome.bundle.api.entity.widget.HasLineChartSeries;
+import lombok.RequiredArgsConstructor;
+import org.touchhome.bundle.api.entity.widget.AggregationType;
+import org.touchhome.bundle.api.entity.widget.HasTimeValueSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
+import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldClassWithFeatureSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Entity
 public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineChartEntity> {
 
-    public static final String PREFIX = "csw_";
+    public static final String PREFIX = "wgslcs_";
 
     @UIField(order = 14, required = true)
-    @UIFieldClassWithFeatureSelection(HasLineChartSeries.class)
+    @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
     public String getDataSource() {
         return getJsonData("ds");
     }
 
     @UIField(order = 15, type = UIFieldType.ColorPicker)
+    @UIFieldGroup("Line")
     public String getColor() {
-        return getJsonData("color", "#FFFFFF");
+        return getJsonData("bc", "#FFFFFF");
     }
 
     public WidgetLineChartSeriesEntity setColor(String value) {
-        setJsonData("color", value);
+        setJsonData("bc", value);
+        return this;
+    }
+
+    @UIField(order = 16)
+    @UIFieldSlider(min = 1, max = 254, step = 5)
+    @UIFieldGroup("Line")
+    public int getColorOpacity() {
+        return getJsonData("bco", 120);
+    }
+
+    public void setColorOpacity(int value) {
+        setJsonData("bco", value);
+    }
+
+    @UIField(order = 17)
+    @UIFieldSlider(min = 0, max = 10)
+    @UIFieldGroup("Line")
+    public int getTension() {
+        return getJsonData("tns", 4);
+    }
+
+    public WidgetLineChartSeriesEntity setTension(int value) {
+        setJsonData("tns", value);
+        return this;
+    }
+
+    @UIField(order = 17)
+    @UIFieldGroup("Line")
+    public Stepped getStepped() {
+        return getJsonDataEnum("stpd", Stepped.False);
+    }
+
+    public WidgetLineChartSeriesEntity setStepped(Stepped value) {
+        setJsonDataEnum("stpd", value);
         return this;
     }
 
@@ -45,12 +81,12 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     }
 
     @UIField(order = 25)
-    public AggregateFunction getAggregateFunction() {
-        return getJsonDataEnum("aggrFn", AggregateFunction.mean);
+    public AggregationType getAggregationType() {
+        return getJsonDataEnum("aggr", AggregationType.Last);
     }
 
-    public WidgetLineChartSeriesEntity setAggregateFunction(AggregateFunction value) {
-        setJsonDataEnum("aggrFn", value);
+    public WidgetLineChartSeriesEntity setAggregationType(AggregationType value) {
+        setJsonData("aggr", value);
         return this;
     }
 
@@ -59,33 +95,22 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
         return PREFIX;
     }
 
-    @Getter
-    @AllArgsConstructor
-    public enum AggregateFunction {
-        mean(values -> {
-            return values.stream().collect(Collectors.averagingDouble(value -> value)).floatValue();
-        }),
-        median(values -> {
-            if (values.size() > 2) {
-                values.sort(Float::compare);
-                return values.get(values.size() / 2);
-            }
-            return values.isEmpty() ? 0F : values.get(0);
-        }),
-        first(values -> {
-            return values.isEmpty() ? 0F : values.get(0);
-        }),
-        last(values -> {
-            return values.isEmpty() ? 0F : values.get(values.size() - 1);
-        }),
-        max(values -> {
-            return values.stream().max(Float::compareTo).orElse(0F);
-        }),
-        min(values -> {
-            return values.stream().min(Float::compareTo).orElse(0F);
-        }),
-        sum(values -> values.stream().reduce(0F, Float::sum));
+    @Override
+    protected void beforePersist() {
+        if (!getJsonData().has("bc")) {
+            setColor(UI.Color.random());
+        }
+    }
 
-        private final Function<List<Float>, Float> aggregateFn;
+    @RequiredArgsConstructor
+    public enum Stepped {
+        False(false),
+        True(true),
+        Before("before"),
+        After("after"),
+        Middle("middle");
+
+        @Getter
+        private final Object value;
     }
 }

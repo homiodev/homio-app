@@ -1,12 +1,10 @@
 package org.touchhome.app.rest;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
-import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.data.util.Pair;
 import org.springframework.security.access.annotation.Secured;
@@ -17,17 +15,11 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetButtonSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
-import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartEntity;
-import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity;
-import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMEntity;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
 import org.touchhome.app.model.entity.widget.impl.js.WidgetJsEntity;
 import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
@@ -36,7 +28,6 @@ import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntit
 import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoEntity;
 import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
-import org.touchhome.app.repository.widget.impl.chart.WidgetBarChartSeriesEntity;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
@@ -52,13 +43,12 @@ import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.widget.WidgetJSBaseTemplate;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.fs.FileObject;
 import org.touchhome.common.fs.FileSystemProvider;
+import org.touchhome.common.fs.TreeNode;
 import org.touchhome.common.util.CommonUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
@@ -88,11 +78,14 @@ public class WidgetController {
     }
 
     @PostMapping("/fm/{entityID}")
-    public List<WidgetFMNodes> getWidgetFileManagerData(@PathVariable("entityID") String entityID,
-                                                        @RequestParam("w") int width, @RequestParam("h") int height,
+    public List<WidgetFMNodes> getWidgetFileManagerData(@PathVariable("entityID") String entityID, @RequestParam("w") int width,
+                                                        @RequestParam("h") int height,
                                                         @RequestBody List<WidgetFMPrevSnapshot> prevValues) {
         Map<String, Long> seriesToSnapValue = prevValues.stream().collect(Collectors.toMap(n -> n.sid, n -> n.sn));
         WidgetFMEntity entity = entityContext.getEntity(entityID);
+        if (entity == null) { // in case if deleted but still requested
+            return null;
+        }
         List<BaseFileSystemEntity> fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
         List<WidgetFMNodes> nodes = new ArrayList<>();
         for (WidgetFMSeriesEntity seriesEntity : entity.getSeries()) {
@@ -104,17 +97,16 @@ public class WidgetController {
             if (fileSystemEntity != null) {
                 Long snapshot = seriesToSnapValue.get(seriesEntity.getEntityID());
                 FileSystemProvider fileSystem = fileSystemEntity.getFileSystem(entityContext);
-                Long lastUpdated = fileSystem.toFileObject(parentId).getAttributes().getLastUpdated();
+                Long lastUpdated = fileSystem.toTreeNode(parentId).getAttributes().getLastUpdated();
                 Set<WidgetFMNodeValue> items = null;
                 if (!Objects.equals(snapshot, lastUpdated)) {
-                    Set<FileObject> children = fileSystem.getChildren(parentId)
-                            .stream().filter(n -> !n.getAttributes().isDir()).collect(Collectors.toSet());
-                    items = children.stream().map(fileObject -> new WidgetFMNodeValue(fileObject, width, height)).collect(
-                            Collectors.toSet());
+                    Set<TreeNode> children = fileSystem.getChildren(parentId).stream().filter(n -> !n.getAttributes().isDir())
+                            .collect(Collectors.toSet());
+                    items = children.stream().map(treeNode -> new WidgetFMNodeValue(treeNode, width, height))
+                            .collect(Collectors.toSet());
 
                 }
-                nodes.add(new WidgetFMNodes(fileSystemEntity.getTitle(), seriesEntity.getEntityID(),
-                        lastUpdated, items));
+                nodes.add(new WidgetFMNodes(fileSystemEntity.getTitle(), seriesEntity.getEntityID(), lastUpdated, items));
             } else {
                 log.info("Unable to find fileSystem");
             }
@@ -155,8 +147,7 @@ public class WidgetController {
     }
 
     @PostMapping("/video/{entityID}/series/{seriesEntityID}/action")
-    public void fireVideoAction(@PathVariable("entityID") String entityID,
-                                @PathVariable("seriesEntityID") String seriesEntityID,
+    public void fireVideoAction(@PathVariable("entityID") String entityID, @PathVariable("seriesEntityID") String seriesEntityID,
                                 @RequestBody VideoActionRequest videoActionRequest) {
         WidgetVideoEntity entity = entityContext.getEntity(entityID);
         WidgetVideoSeriesEntity series =
@@ -196,139 +187,6 @@ public class WidgetController {
         }
     }
 
-    @GetMapping("/bar/{entityID}/series")
-    public Set<BarSeries> getBarSeries(@PathVariable("entityID") String entityID,
-                                       @RequestParam(value = "liveEntity", required = false) String liveEntity)
-            throws JsonProcessingException {
-        WidgetBarChartEntity entity = entityContext.getEntity(entityID);
-        if (liveEntity != null) {
-            entity = objectMapper.readValue(liveEntity, entity.getClass());
-        }
-        Set<BarSeries> series = new LinkedHashSet<>();
-        for (WidgetBarChartSeriesEntity item : entity.getSeries()) {
-            if (item.getDataSource() != null) {
-                BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
-                if (source instanceof HasBarChartSeries) {
-                    double value = ((HasBarChartSeries) source).getBarValue(entityContext);
-                    BarSeries barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()), value);
-                    int i = 1;
-                    while (!series.add(barSeries)) {
-                        barSeries = new BarSeries(StringUtils.defaultString(item.getName(), source.getTitle()) + "(" + i++ + ")",
-                                value);
-                    }
-                }
-            }
-        }
-        return series;
-    }
-
-    @GetMapping("/line/{entityID}/series")
-    public List<ChartSeries> getChartSeries(@PathVariable("entityID") String entityID,
-                                            @RequestParam("period") String period) {
-        WidgetLineChartEntity entity = entityContext.getEntity(entityID);
-        List<ChartSeries> series = new ArrayList<>();
-        for (WidgetLineChartSeriesEntity item : entity.getSeries()) {
-            BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
-            if (source instanceof HasLineChartSeries) {
-                TimePeriod timePeriod = TimePeriod.fromValue(period);
-                Pair<Date, Date> range = timePeriod.getDateRange();
-                JSONObject dynamicParameterFields = item.getDynamicParameterFieldsHolder();
-                Map<HasLineChartSeries.LineChartDescription, List<Object[]>> result =
-                        ((HasLineChartSeries) source).getLineChartSeries(entityContext,
-                                dynamicParameterFields, range.getFirst(), range.getSecond(), timePeriod.getDateFromNow());
-
-                for (Map.Entry<HasLineChartSeries.LineChartDescription, List<Object[]>> entry : result.entrySet()) {
-                    List<Object[]> chartItems = entry.getValue();
-
-                    // convert chartItem[0] to long if it's a Date type
-                    if (!chartItems.isEmpty() && chartItems.get(0)[0] instanceof Date) {
-                        for (Object[] chartItem : chartItems) {
-                            chartItem[0] = ((Date) chartItem[0]).getTime();
-                        }
-                    }
-                    EvaluateDatesAndValues evaluateDatesAndValues =
-                            new EvaluateDatesAndValues(timePeriod, chartItems).invoke(item);
-
-                    // aggregation
-                    List<Float> finalValues = evaluateDatesAndValues.getValues().stream()
-                            .map(items -> item.getAggregateFunction().getAggregateFn().apply(items))
-                            .collect(Collectors.toList());
-
-                    String title = StringUtils.defaultString(entry.getKey().getName(), source.getTitle());
-                    series.add(new ChartSeries(title + "(" + chartItems.size() + ")", entry.getKey().getColor(),
-                            evaluateDatesAndValues.getDates(), finalValues));
-                }
-            }
-        }
-        return series;
-    }
-
-    private List<List<Float>> fulfillValues(List<Date> dates, List<Object[]> chartItems, Boolean fillMissingValues) {
-        List<List<Float>> values = new ArrayList<>(dates.size());
-        IntStream.range(0, dates.size()).forEach(value -> values.add(new ArrayList<>()));
-
-        // push values to date between buckets
-        for (Object[] chartItem : chartItems) {
-            long time = chartItem[0] instanceof Date ? ((Date) chartItem[0]).getTime() : (Long) chartItem[0];
-            int index = getDateIndex(dates, time);
-            values.get(index).add((Float) chartItem[1]);
-        }
-
-        // remove empty values
-        if (!fillMissingValues) {
-            Iterator<Date> dateIterator = dates.iterator();
-            for (Iterator<List<Float>> iterator = values.iterator(); iterator.hasNext(); ) {
-                List<Float> filledValues = iterator.next();
-                dateIterator.next();
-                if (filledValues.isEmpty()) {
-                    iterator.remove();
-                    dateIterator.remove();
-                }
-            }
-        }
-        return values;
-    }
-
-    private int getDateIndex(List<Date> dateList, long time) {
-        for (int i = 0; i < dateList.size(); i++) {
-            if (time < dateList.get(i).getTime()) {
-                return i - 1;
-            }
-        }
-        return dateList.size() - 1;
-    }
-
-    @GetMapping("/pie/{entityID}/series")
-    public List<PieSeries> getPieSeries(@PathVariable("entityID") String entityID, @RequestParam("period") String period) {
-        WidgetPieChartEntity entity = entityContext.getEntity(entityID);
-        List<PieSeries> series = new ArrayList<>();
-        for (WidgetPieChartSeriesEntity item : entity.getSeries()) {
-            BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
-            if (source instanceof HasPieChartSeries) {
-                TimePeriod timePeriod = TimePeriod.fromValue(period);
-                Pair<Date, Date> range = timePeriod.getDateRange();
-
-                double value;
-                if (entity.getPieChartValueType() == WidgetPieChartEntity.PieChartValueType.Sum) {
-                    value = ((HasPieChartSeries) source).getPieSumChartSeries(entityContext, range.getFirst(), range.getSecond(),
-                            timePeriod.getDateFromNow());
-                } else {
-                    value = ((HasPieChartSeries) source).getPieCountChartSeries(entityContext, range.getFirst(),
-                            range.getSecond(), timePeriod.getDateFromNow());
-                }
-                series.add(new PieSeries(source.getTitle(), value, new PieSeries.Extra(item.getTitle())));
-            }
-        }
-        return series;
-    }
-
-    @GetMapping("/gauge/{entityID}/value")
-    public Float getGaugeValue(@PathVariable("entityID") String entityID) {
-        WidgetGaugeEntity entity = entityContext.getEntity(entityID);
-        BaseEntity baseEntity = entityContext.getEntity(entity.getDataSource());
-        return baseEntity instanceof HasGaugeSeries ? ((HasGaugeSeries) baseEntity).getGaugeValue() : null;
-    }
-
     @GetMapping("/slider/{entityID}/values")
     public List<Float> getSliderValues(@PathVariable("entityID") String entityID) {
         WidgetSliderEntity entity = entityContext.getEntity(entityID);
@@ -358,15 +216,19 @@ public class WidgetController {
     }
 
     @GetMapping("/display/{entityID}/values")
-    public List<Pair<Object, Date>> getDisplayValues(@PathVariable("entityID") String entityID) {
+    public List<Pair<Object, Date>> getDisplayValues(@PathVariable("entityID") String entityID,
+                                                     @RequestParam(value = "period", defaultValue = "All") String period) {
         WidgetDisplayEntity entity = entityContext.getEntity(entityID);
         List<Pair<Object, Date>> values = new ArrayList<>(entity.getSeries().size());
+        ChartRequest chartRequest = buildChartRequest(period);
         for (WidgetDisplaySeriesEntity item : entity.getSeries()) {
             BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
-            if (source instanceof HasDisplaySeries) {
-                Object val = ((HasDisplaySeries) source).getDisplayValue();
-                if (val != null) {
-                    values.add(Pair.of(val, source.getUpdateTime()));
+            if (source instanceof HasAggregateValueFromSeries) {
+                chartRequest.setParameters(item.getDynamicParameterFieldsHolder());
+                Float value = ((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(chartRequest,
+                        item.getAggregationType());
+                if (value != null) {
+                    values.add(Pair.of(value, source.getUpdateTime()));
                 }
             }
         }
@@ -416,8 +278,8 @@ public class WidgetController {
 
     @GetMapping("/tab/{tabId}")
     public List<WidgetEntity> getWidgetsInTab(@PathVariable("tabId") String tabId) {
-        List<WidgetBaseEntity> widgets = entityContext.findAll(WidgetBaseEntity.class)
-                .stream().filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId)).collect(Collectors.toList());
+        List<WidgetBaseEntity> widgets = entityContext.findAll(WidgetBaseEntity.class).stream()
+                .filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId)).collect(Collectors.toList());
 
         boolean updated = false;
         for (WidgetBaseEntity<?> widget : widgets) {
@@ -446,8 +308,7 @@ public class WidgetController {
             WidgetJsEntity jsEntity = (WidgetJsEntity) widget;
             try {
                 jsEntity.setJavaScriptErrorResponse(null);
-                ScriptEntity scriptEntity = new ScriptEntity()
-                        .setJavaScript(jsEntity.getJavaScript())
+                ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(jsEntity.getJavaScript())
                         .setJavaScriptParameters(jsEntity.getJavaScriptParameters());
 
                 CompileScriptContext compileScriptContext = scriptService.createCompiledScript(scriptEntity, null);
@@ -506,14 +367,11 @@ public class WidgetController {
             }
         }
 
-        WidgetJsEntity widgetJsEntity = new WidgetJsEntity()
-                .setJavaScriptParameters(params)
-                .setJavaScriptParametersReadOnly(paramReadOnly)
-                .setJavaScript(js);
+        WidgetJsEntity widgetJsEntity =
+                new WidgetJsEntity().setJavaScriptParameters(params).setJavaScriptParametersReadOnly(paramReadOnly)
+                        .setJavaScript(js);
 
-        widgetJsEntity.setWidgetTabEntity(widgetTabEntity)
-                .setFieldFetchType(bundle + ":" + template.getClass().getSimpleName())
-                .setAutoScale(template.isDefaultAutoScale());
+        widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(bundle + ":" + template.getClass().getSimpleName());
 
         return entityContext.save(widgetJsEntity);
     }
@@ -565,94 +423,11 @@ public class WidgetController {
         throw new ServerException("Unable to find widget tab with id: " + tabId);
     }
 
-   /* @RequestMapping(value = "/getWidget", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ChartWidgetJSON getMiniBoxWidget(@RequestBody WidgetJsEntity miniBoxWidgetEntity) {
-        ChartBuilder chartBuilder = ChartBuilder.create(miniBoxWidgetEntity);
-        ScriptEntity scriptEntity = ScriptEntity.create(miniBoxWidgetEntity.getJavaScript(),
-                miniBoxWidgetEntity.getEntityID(),
-                miniBoxWidgetEntity.getJavaScriptParameters());
-        if (StringUtils.isNotEmpty(scriptEntity.getJavaScript())) {
-            Object retValue;
-            try {
-                retValue = scriptManager.executeJavaScriptOnce(scriptEntity, null, null, false);
-            } catch (Exception ex) {
-                retValue = "<pre style='max-width:600px;max-height:400px;'>" + ExceptionUtils.getStackTrace(ex) + "</pre>";
-            }
-            chartBuilder.withXAxis().data(Collections.singletonList(retValue == null ? "script returns no value" : retValue
-            .toString()));
-        }
-
-        return chartBuilder.build();
-    }*/
-
-    /*@RequestMapping(value = "/getChartPieWidget", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ChartWidgetJSON getChartPieWidget(@RequestParam(value = "entityID") String entityID) {
-        ChartPieWidgetEntity chartPieWidgetEntity = chartPieWidgetRepository.getByEntityID(entityID);
-        ChartBuilder chartBuilder = ChartBuilder.create(chartPieWidgetEntity);
-
-        final ChartBuilder.LegendBuilder legendBuilder = chartPieWidgetEntity.getShowLegend() ? chartBuilder.withLegend()
-        .withOrient(chartPieWidgetEntity.getLegendOrient()) : new ChartBuilder.LegendBuilder();
-        ChartBuilder.SeriesBuilder seriesBuilder = chartBuilder.withSeries("pie", chartPieWidgetEntity.getTitle()).withRadius
-        (50, 70);
-
-        if (chartPieWidgetEntity.getBehaviourType() == ChartPieWidgetEntity.ChartPieBehaviourType.ItemsCount) {
-            // ALL
-            if (chartPieWidgetEntity.getTargetItems().contains(""))
-                entityManager.getRepositories().stream()
-                        .filter(abstractRepository -> abstractRepository.getEntityClass().getDeclaredAnnotation(UISidebarMenu
-                        .class) != null)
-                        .forEach(abstractRepository -> {
-                            Class<?> clazz = abstractRepository.getEntityClass();
-                            String href = SidebarMenuItem.getHref(clazz);
-                            legendBuilder.withData(href);
-                            seriesBuilder.withData(abstractRepository.size().intValue(), href).withItemStyleColor
-                            (TouchHomeUtils.randomColor());
-                        });
-        }
-        return chartBuilder.build();
-    }*/
-
-    @Getter
-    @AllArgsConstructor
-    private static class ChartSeries {
-        private String name;
-        private String color;
-        private List<Date> dates;
-        private List<Float> values;
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private static class PieSeries {
-        private String name;
-        private Object value;
-        private Extra extra;
-
-        @Getter
-        @AllArgsConstructor
-        private static class Extra {
-            private String code;
-        }
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private static class BarSeries {
-        private String name;
-        private Object value;
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            BarSeries barSeries = (BarSeries) o;
-            return name.equals(barSeries.name);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(name);
-        }
+    private ChartRequest buildChartRequest(String period) {
+        TimePeriod timePeriod = TimePeriod.fromValue(period);
+        Pair<Date, Date> range = timePeriod.getDateRange();
+        return new ChartRequest(entityContext, range.getFirst(), range.getSecond(), timePeriod.getDateFromNow(),
+                timePeriod != TimePeriod.All);
     }
 
     @Setter
@@ -663,41 +438,6 @@ public class WidgetController {
     @Setter
     private static class BooleanValue {
         private Boolean value;
-    }
-
-    @RequiredArgsConstructor
-    private class EvaluateDatesAndValues {
-        private final TimePeriod timePeriod;
-        private final List<Object[]> chartItems;
-        @Getter
-        private List<Date> dates;
-        @Getter
-        private List<List<Float>> values;
-
-        public EvaluateDatesAndValues invoke(WidgetLineChartSeriesEntity item) {
-            // get dates split by algorithm
-            dates = timePeriod.getDates(chartItems);
-            List<Date> initialDates = new ArrayList<>(dates);
-            // minimum number not 0 values to fit requirements
-            int minDateSize = initialDates.size() / 2;
-            // fill values with remove 0 points. Attention: dates are modified by iterator
-            values = WidgetController.this.fulfillValues(dates, chartItems, item.getFillMissingValues());
-            int index = 2;
-            int prevDates = -1; // prevDates uses to avoid extra iterations if prevDates == datesWithMultiplier
-            while (index != 5 && prevDates != dates.size()) {
-                prevDates = dates.size();
-                dates = new ArrayList<>(initialDates.size() * index);
-                for (int i = 0; i < initialDates.size() - 1; i++) {
-                    dates.add(initialDates.get(i));
-                    dates.add(new Date(((initialDates.get(i + 1).getTime() + initialDates.get(i).getTime())) / 2));
-                }
-                dates.add(initialDates.get(initialDates.size() - 1));
-                initialDates = new ArrayList<>(dates);
-                values = WidgetController.this.fulfillValues(dates, chartItems, item.getFillMissingValues());
-                index++;
-            }
-            return this;
-        }
     }
 
     @Setter

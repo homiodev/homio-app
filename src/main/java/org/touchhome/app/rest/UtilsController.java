@@ -23,6 +23,7 @@ import org.touchhome.app.js.assistant.model.CompletionRequest;
 import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
+import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.model.ActionResponseModel;
@@ -58,6 +59,16 @@ public class UtilsController {
     private final EntityContextImpl entityContext;
     private final ScriptService scriptService;
     private final CodeParser codeParser;
+
+    @PutMapping("/dynamicUpdates")
+    public void registerForUpdates(@RequestBody DynamicUpdateRequest request) {
+        entityContext.ui().registerForUpdates(request);
+    }
+
+    @DeleteMapping("/dynamicUpdates")
+    public void unregisterForUpdates(@RequestBody DynamicUpdateRequest request) {
+        entityContext.ui().unRegisterForUpdates(request);
+    }
 
     @GetMapping("/app/config")
     public DeviceConfig getAppConfiguration() {
@@ -116,7 +127,9 @@ public class UtilsController {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintStream logOutputStream = new PrintStream(outputStream);
         try {
-            runScriptOnceJSON.result = scriptService.executeJavaScriptOnce(scriptEntity, scriptEntity.getJavaScriptParameters(), logOutputStream, false);
+            runScriptOnceJSON.result =
+                    scriptService.executeJavaScriptOnce(scriptEntity, scriptEntity.getJavaScriptParameters(), logOutputStream,
+                            false);
         } catch (Exception ex) {
             runScriptOnceJSON.error = ExceptionUtils.getStackTrace(ex);
         }
@@ -140,7 +153,8 @@ public class UtilsController {
     }
 
     @PostMapping("/notification/{entityID}/action")
-    public ActionResponseModel acceptNotificationAction(@PathVariable("entityID") String entityID, @RequestBody BellHeaderActionRequest actionRequest) {
+    public ActionResponseModel acceptNotificationAction(@PathVariable("entityID") String entityID,
+                                                        @RequestBody BellHeaderActionRequest actionRequest) {
         return entityContext.ui().handleNotificationAction(entityID, actionRequest.entityID, actionRequest.value);
     }
 

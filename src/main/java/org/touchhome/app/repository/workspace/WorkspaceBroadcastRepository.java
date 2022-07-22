@@ -4,12 +4,10 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.widget.ChartRequest;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
-import java.util.Date;
 import java.util.List;
-
-import static org.touchhome.bundle.api.entity.widget.HasLineChartSeries.buildValuesQuery;
 
 @Repository("broadcastRepository")
 public class WorkspaceBroadcastRepository extends AbstractRepository<WorkspaceBroadcastEntity> {
@@ -19,24 +17,30 @@ public class WorkspaceBroadcastRepository extends AbstractRepository<WorkspaceBr
     }
 
     @Transactional
-    public List<Object[]> getLineChartSeries(BaseEntity baseEntity, Date from, Date to) {
-        return buildValuesQuery(em, "WorkspaceBroadcastEntity.fetchValues", baseEntity, from, to).getResultList();
+    public List<Object[]> getLineChartSeries(BaseEntity source, ChartRequest request) {
+        //noinspection unchecked
+        return (List<Object[]>) queryForValues("creationTime", source, request, "ORDER BY e.creationTime");
     }
 
-    @Transactional
-    public double getPieSumChartSeries(WorkspaceBroadcastEntity workspaceBroadcastEntity, Date from, Date to) {
-        return -1;
+    public Float getValue(WorkspaceBroadcastEntity source, ChartRequest request) {
+        return findExactOneBackupValue("COUNT(id)", source, request);
     }
 
-    @Transactional
-    public double getPieCountChartSeries(WorkspaceBroadcastEntity workspaceBroadcastEntity, Date from, Date to) {
-        return (double) buildValuesQuery(em, "WorkspaceBroadcastEntity.fetchCount", workspaceBroadcastEntity, from, to).getSingleResult();
+    private Float findExactOneBackupValue(String select, BaseEntity entity, ChartRequest request) {
+        return findExactOneBackupValue(select, entity, request, "");
     }
 
-   /* @Override
-    public Date getMinDate(BaseEntity source) {
-        throw new ServerException("Not implemented exception");
-*//*        return em.createNamedQuery("WorkspaceBackupEntity.fetchMinDate", Date.class)
-                .setParameter("source", source).getSingleResult();*//*
-    }*/
+    private Float findExactOneBackupValue(String select, BaseEntity entity, ChartRequest request, String sort) {
+        List<?> list = queryForValues(select, entity, request, sort);
+        return list.isEmpty() ? 0F : (Float) list.get(0);
+    }
+
+    private List<?> queryForValues(String select, BaseEntity entity, ChartRequest request, String sort) {
+        return (List<?>) em.createQuery("SELECT " + select + " FROM WorkspaceBroadcastValueCrudEntity " +
+                        "where workspaceBroadcastEntity = :source and creationTime >= :from and creationTime <= :to" + sort)
+                .setParameter("source", entity)
+                .setParameter("from", request.getFrom())
+                .setParameter("to", request.getTo())
+                .getResultList();
+    }
 }

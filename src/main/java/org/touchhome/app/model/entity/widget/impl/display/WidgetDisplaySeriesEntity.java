@@ -1,22 +1,33 @@
 package org.touchhome.app.model.entity.widget.impl.display;
 
-import org.touchhome.bundle.api.entity.widget.HasDisplaySeries;
+import org.touchhome.bundle.api.entity.widget.AggregationType;
+import org.touchhome.bundle.api.entity.widget.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldClassWithFeatureSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity> {
 
-    public static final String PREFIX = "wtdps_";
+    public static final String PREFIX = "wgsdps_";
 
     @UIField(order = 14, required = true)
-    @UIFieldClassWithFeatureSelection(HasDisplaySeries.class)
+    @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
     public String getDataSource() {
         return getJsonData("ds");
+    }
+
+    @UIField(order = 15)
+    public AggregationType getAggregationType() {
+        return getJsonDataEnum("cvt", AggregationType.Last);
+    }
+
+    public WidgetDisplaySeriesEntity setAggregationType(AggregationType value) {
+        setJsonData("cvt", value);
+        return this;
     }
 
     @UIField(order = 20, type = UIFieldType.ColorPicker)

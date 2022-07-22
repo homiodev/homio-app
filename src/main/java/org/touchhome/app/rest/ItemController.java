@@ -60,6 +60,7 @@ import java.awt.image.BufferedImage;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -74,7 +75,7 @@ import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 public class ItemController implements BeanPostConstruct {
 
     private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
-    private final Map<String, TypeToRequireDependenciesContext> typeToRequireDependencies = new HashMap<>();
+    private static final Map<String, TypeToRequireDependenciesContext> typeToRequireDependencies = new HashMap<>();
     private final Map<String, List<ItemContext>> itemsBootstrapContextMap = new HashMap<>();
 
     private final ObjectMapper objectMapper;
@@ -82,6 +83,9 @@ public class ItemController implements BeanPostConstruct {
     private final EntityManager entityManager;
     private final ClassFinder classFinder;
     private final ImageService imageService;
+
+    private final ReentrantLock putItemsLock = new ReentrantLock();
+    private final ReentrantLock updateItemLock = new ReentrantLock();
 
     private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
     private Map<Class<? extends UIActionHandler>, UIActionHandler> sidebarClassButtonToInstance = new HashMap<>();
@@ -93,13 +97,14 @@ public class ItemController implements BeanPostConstruct {
     }
 
     public <T extends UIActionHandler> T getOrCreateUIActionHandler(Class<T> actionHandlerClass) {
-        return (T) sidebarClassButtonToInstance.computeIfAbsent(actionHandlerClass, handlerClass ->
-                entityContext.getBean((Class<UIActionHandler>) handlerClass, () -> CommonUtils.newInstance(handlerClass)));
+        return (T) sidebarClassButtonToInstance.computeIfAbsent(actionHandlerClass,
+                handlerClass -> entityContext.getBean((Class<UIActionHandler>) handlerClass,
+                        () -> CommonUtils.newInstance(handlerClass)));
     }
 
     @SneakyThrows
-    public ActionResponseModel executeAction(ActionRequestModel actionRequestModel,
-                                             Object actionHolder, BaseEntity actionEntity) {
+    public ActionResponseModel executeAction(ActionRequestModel actionRequestModel, Object actionHolder,
+                                             BaseEntity actionEntity) {
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuAction.class)) {
             UIContextMenuAction menuAction = method.getDeclaredAnnotation(UIContextMenuAction.class);
             if (menuAction.value().equals(actionRequestModel.getName())) {
@@ -116,9 +121,9 @@ public class ItemController implements BeanPostConstruct {
         if (actionRequestModel.metadata != null && actionRequestModel.metadata.has("field")) {
             String fieldName = actionRequestModel.metadata.getString("field");
 
-            AccessibleObject field = Optional.ofNullable((AccessibleObject)
-                            FieldUtils.getField(actionHolder.getClass(), fieldName, true))
-                    .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
+            AccessibleObject field =
+                    Optional.ofNullable((AccessibleObject) FieldUtils.getField(actionHolder.getClass(), fieldName, true))
+                            .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
             if (field != null) {
                 for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
                     if (actionButton.name().equals(actionRequestModel.name)) {
@@ -144,8 +149,7 @@ public class ItemController implements BeanPostConstruct {
     }
 
     @SneakyThrows
-    static ActionResponseModel executeMethodAction(Method method, Object actionHolder,
-                                                   EntityContext entityContext,
+    static ActionResponseModel executeMethodAction(Method method, Object actionHolder, EntityContext entityContext,
                                                    BaseEntity actionEntity, JSONObject params) {
         List<Object> objects = new ArrayList<>();
         for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
@@ -196,13 +200,14 @@ public class ItemController implements BeanPostConstruct {
             List<ItemContext> itemContexts = new ArrayList<>();
 
             for (Class<?> classType : findAllClassImplementationsByType(type)) {
-                List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>());
+                List<EntityUIMetaData> entityUIMetaData =
+                        UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>(), entityContext);
                 if (subType != null && subType.contains(":")) {
                     String[] bundleAndClassName = subType.split(":");
                     Object subClassObject =
                             entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]);
                     List<EntityUIMetaData> subTypeFieldMetadata =
-                            UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>());
+                            UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext);
                     // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json
                     // parameter)
                     for (EntityUIMetaData data : subTypeFieldMetadata) {
@@ -259,23 +264,20 @@ public class ItemController implements BeanPostConstruct {
     }
 
     public void reloadItems(Collection<String> type) {
-        entityContext.ui().sendNotification("-global", new JSONObject().put("type", "reloadItems")
-                .put("value", type));
+        entityContext.ui().sendNotification("-global", new JSONObject().put("type", "reloadItems").put("value", type));
     }
 
     @PostMapping(value = "/{type}/installDep/{dependency}")
     public void installDep(@PathVariable("type") String type, @PathVariable("dependency") String dependency) {
         if (this.typeToRequireDependencies.containsKey(type)) {
             List<DependencyExecutableInstaller> installers = this.typeToRequireDependencies.get(type).installers;
-            DependencyExecutableInstaller installer = installers.stream()
-                    .filter(c -> c.getName().equals(dependency)).findAny().orElse(null);
+            DependencyExecutableInstaller installer =
+                    installers.stream().filter(c -> c.getName().equals(dependency)).findAny().orElse(null);
             if (installer != null && installer.isRequireInstallDependencies(entityContext, false)) {
-                entityContext.bgp().runWithProgress("install-deps-" + dependency, false,
-                        progressBar -> {
-                            installer.installDependency(entityContext, progressBar);
-                            reloadItems(Collections.singletonList(type));
-                        }, null,
-                        () -> new RuntimeException("INSTALL_DEPENDENCY_IN_PROGRESS"));
+                entityContext.bgp().runWithProgress("install-deps-" + dependency, false, progressBar -> {
+                    installer.installDependency(entityContext, progressBar);
+                    reloadItems(Collections.singletonList(type));
+                }, null, () -> new RuntimeException("INSTALL_DEPENDENCY_IN_PROGRESS"));
             }
         }
     }
@@ -346,38 +348,47 @@ public class ItemController implements BeanPostConstruct {
         return usages.stream().map(Object::toString).collect(Collectors.toList());
     }
 
+    /**
+     * synchronized because if we add few series to item/widget/etc... and pushing changes to server in parallel
+     * we may face with loose changes when merging changes from new income data and saved in db
+     */
     @PutMapping
     @SneakyThrows
     public BaseEntity<?> updateItems(@RequestBody String json) {
-        JSONObject jsonObject = new JSONObject(json);
-        BaseEntity<?> resultField = null;
-        for (String entityId : jsonObject.keySet()) {
-            log.info("Put update item: <{}>", entityId);
-            BaseEntity<?> entity = entityContext.getEntity(entityId);
+        updateItemLock.lock();
+        try {
+            JSONObject jsonObject = new JSONObject(json);
+            BaseEntity<?> resultField = null;
+            for (String entityId : jsonObject.keySet()) {
+                log.info("Put update item: <{}>", entityId);
+                BaseEntity<?> entity = entityContext.getEntity(entityId);
 
-            if (entity == null) {
-                throw new NotFoundException("Entity '" + entityId + "' not found");
-            }
+                if (entity == null) {
+                    throw new NotFoundException("Entity '" + entityId + "' not found");
+                }
 
-            JSONObject entityFields = jsonObject.getJSONObject(entityId);
-            entity = objectMapper.readerForUpdating(entity).readValue(entityFields.toString());
+                JSONObject entityFields = jsonObject.getJSONObject(entityId);
+                entity = objectMapper.readerForUpdating(entity).readValue(entityFields.toString());
 
-            // reference fields isn't updatable, we need update them manually
-            for (String fieldName : entityFields.keySet()) {
-                Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
-                if (field != null && BaseEntity.class.isAssignableFrom(field.getType())) {
-                    BaseEntity<?> refEntity = entityContext.getEntity(entityFields.getString(fieldName));
-                    FieldUtils.writeField(field, entity, refEntity);
+                // reference fields isn't updatable, we need update them manually
+                for (String fieldName : entityFields.keySet()) {
+                    Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
+                    if (field != null && BaseEntity.class.isAssignableFrom(field.getType())) {
+                        BaseEntity<?> refEntity = entityContext.getEntity(entityFields.getString(fieldName));
+                        FieldUtils.writeField(field, entity, refEntity);
+                    }
+                }
+
+                // update entity
+                BaseEntity<?> savedEntity = entityContext.save(entity);
+                if (resultField == null) {
+                    resultField = savedEntity;
                 }
             }
-
-            // update entity
-            BaseEntity<?> savedEntity = entityContext.save(entity);
-            if (resultField == null) {
-                resultField = savedEntity;
-            }
+            return resultField;
+        } finally {
+            updateItemLock.unlock();
         }
-        return resultField;
     }
 
     @GetMapping("/typeContext/{type}")
@@ -388,13 +399,9 @@ public class ItemController implements BeanPostConstruct {
 
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
             items.addAll(entityContext.findAll(aClass));
-            TypeToRequireDependenciesContext dependenciesContext = typeToRequireDependencies.get(aClass.getSimpleName());
-            if (dependenciesContext != null) {
-                Set<String> notInstalledDependencies =
-                        dependenciesContext.installers.stream().filter(i -> i.isEnabled(entityContext))
-                                .map(DependencyExecutableInstaller::getName).collect(Collectors.toSet());
-                typeDependencies.add(new ItemsByTypeResponse.TypeDependency(aClass.getSimpleName(), notInstalledDependencies));
-            }
+
+            Optional<ItemsByTypeResponse.TypeDependency> typeDependency = getTypeDependency(aClass, entityContext);
+            typeDependency.ifPresent(typeDependencies::add);
         }
         List<Collection<UIInputEntity>> contextActions = new ArrayList<>();
         for (BaseEntity item : items) {
@@ -458,28 +465,33 @@ public class ItemController implements BeanPostConstruct {
 
     @SneakyThrows
     @PutMapping("/{entityID}/mappedBy/{mappedBy}")
-    public BaseEntity<?> putToItem(@PathVariable("entityID") String entityID,
-                                   @PathVariable("mappedBy") String mappedBy,
+    public BaseEntity<?> putToItem(@PathVariable("entityID") String entityID, @PathVariable("mappedBy") String mappedBy,
                                    @RequestBody String json) {
-        JSONObject jsonObject = new JSONObject(json);
-        BaseEntity<?> owner = entityContext.getEntity(entityID);
+        // to avoid problem with lost values in case of parallel call of putToItem rest API
+        // of course we may use hashtable for locks but this method not fires often at all
+        putItemsLock.lock();
+        try {
+            JSONObject jsonObject = new JSONObject(json);
+            BaseEntity<?> owner = entityContext.getEntity(entityID);
 
-        for (String type : jsonObject.keySet()) {
-            Class<? extends BaseEntity> className = entityManager.getClassByType(type);
-            JSONObject entityFields = jsonObject.getJSONObject(type);
-            BaseEntity<?> newEntity = objectMapper.readValue(entityFields.toString(), className);
-            FieldUtils.writeField(newEntity, mappedBy, owner, true);
-            entityContext.save(newEntity);
+            for (String type : jsonObject.keySet()) {
+                Class<? extends BaseEntity> className = entityManager.getClassByType(type);
+                JSONObject entityFields = jsonObject.getJSONObject(type);
+                BaseEntity<?> newEntity = objectMapper.readValue(entityFields.toString(), className);
+                FieldUtils.writeField(newEntity, mappedBy, owner, true);
+                entityContext.save(newEntity);
+            }
+
+            return entityContext.getEntity(owner);
+        } finally {
+            putItemsLock.unlock();
         }
-
-        return entityContext.getEntity(owner);
     }
 
     @SneakyThrows
     @Secured(ADMIN_ROLE)
     @DeleteMapping("/{entityID}/field/{field}/item/{entityToRemove}")
-    public BaseEntity<?> removeFromItem(@PathVariable("entityID") String entityID,
-                                        @PathVariable("field") String field,
+    public BaseEntity<?> removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("field") String field,
                                         @PathVariable("entityToRemove") String entityToRemove) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
         entityContext.delete(entityToRemove);
@@ -487,8 +499,7 @@ public class ItemController implements BeanPostConstruct {
     }
 
     @PostMapping("/{entityID}/block")
-    public void updateBlockPosition(@PathVariable("entityID") String entityID,
-                                    @RequestBody UpdateBlockPosition position) {
+    public void updateBlockPosition(@PathVariable("entityID") String entityID, @RequestBody UpdateBlockPosition position) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
         if (entity != null) {
             if (entity instanceof HasPosition) {
@@ -553,8 +564,8 @@ public class ItemController implements BeanPostConstruct {
             return options;
         }
 
-        return UIFieldUtils.loadOptions(classEntity, entityContext, fieldName,
-                null, optionsRequest.getSelectType(), optionsRequest.getDeps(), optionsRequest.getParam0());
+        return UIFieldUtils.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(),
+                optionsRequest.getDeps(), optionsRequest.getParam0());
     }
 
     @GetMapping("/{entityID}/{fieldName}/{selectedEntityID}/dynamicParameterOptions")
@@ -641,9 +652,7 @@ public class ItemController implements BeanPostConstruct {
     }
 
     private Set<OptionModel> fetchCreateItemTypes(Class<?> entityClassByType) {
-        return classFinder.getClassesWithParent(entityClassByType)
-                .stream()
-                .map(this::getUISideBarMenuOption)
+        return classFinder.getClassesWithParent(entityClassByType).stream().map(this::getUISideBarMenuOption)
                 .collect(Collectors.toSet());
     }
 
@@ -694,7 +703,7 @@ public class ItemController implements BeanPostConstruct {
 
             for (Class<?> baseClass : ClassFinder.findAllParentClasses(entityClass, baseEntityByName)) {
                 for (RequireExecutableDependency dependency : baseClass.getAnnotationsByType(RequireExecutableDependency.class)) {
-                    installers.add(getOrCreateUIActionHandler(dependency.installer()));
+                    installers.add(getOrCreateUIActionHandler(dependency.value()));
                 }
             }
             typeToRequireDependencies.put(entityClass.getSimpleName(),
@@ -741,12 +750,11 @@ public class ItemController implements BeanPostConstruct {
 
         // if Class has only one selection and only one filtered method - use it
         long count = FieldUtils.getFieldsListWithAnnotation(entity.getClass(), UIField.class).stream()
-                .map(p -> p.getAnnotation(UIField.class).type())
-                .filter(f -> f == UIFieldType.SelectBox).count();
+                .map(p -> p.getAnnotation(UIField.class).type()).filter(f -> f == UIFieldType.SelectBox).count();
         if (count == 1) {
-            List<Method> methodsListWithAnnotation = Stream.of(entity.getClass().getDeclaredMethods())
-                    .filter(m -> m.isAnnotationPresent(UIFilterOptions.class))
-                    .collect(Collectors.toList());
+            List<Method> methodsListWithAnnotation =
+                    Stream.of(entity.getClass().getDeclaredMethods()).filter(m -> m.isAnnotationPresent(UIFilterOptions.class))
+                            .collect(Collectors.toList());
 
             if (methodsListWithAnnotation.size() == 1) {
                 return methodsListWithAnnotation.get(0);
@@ -804,16 +812,27 @@ public class ItemController implements BeanPostConstruct {
         }
     }
 
+    public static Optional<ItemsByTypeResponse.TypeDependency> getTypeDependency(Class<? extends BaseEntity> aClass,
+                                                                                 EntityContext entityContext) {
+        TypeToRequireDependenciesContext dependenciesContext = typeToRequireDependencies.get(aClass.getSimpleName());
+        if (dependenciesContext != null) {
+            Set<String> notInstalledDependencies = dependenciesContext.installers.stream().filter(i -> i.isEnabled(entityContext))
+                    .map(DependencyExecutableInstaller::getName).collect(Collectors.toSet());
+            return Optional.of(new ItemsByTypeResponse.TypeDependency(aClass.getSimpleName(), notInstalledDependencies));
+        }
+        return Optional.empty();
+    }
+
     @Getter
     @RequiredArgsConstructor
-    private static class ItemsByTypeResponse {
+    public static class ItemsByTypeResponse {
         private final List<BaseEntity> items;
         private final List<Collection<UIInputEntity>> contextActions;
         private final List<TypeDependency> typeDependencies;
 
         @Getter
         @AllArgsConstructor
-        private static class TypeDependency {
+        public static class TypeDependency {
             private String name;
             private Set<String> dependencies;
         }
@@ -836,6 +855,7 @@ public class ItemController implements BeanPostConstruct {
     @Getter
     @Setter
     public static class ActionRequestModel {
+        private String entityID;
         private String name;
         private JSONObject metadata;
         private JSONObject params;

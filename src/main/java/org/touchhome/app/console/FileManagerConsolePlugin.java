@@ -1,5 +1,6 @@
 package org.touchhome.app.console;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
@@ -9,6 +10,7 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 @RequiredArgsConstructor
 public class FileManagerConsolePlugin implements ConsolePlugin<Object> {
 
+    @Getter
     private final EntityContext entityContext;
 
     @Override

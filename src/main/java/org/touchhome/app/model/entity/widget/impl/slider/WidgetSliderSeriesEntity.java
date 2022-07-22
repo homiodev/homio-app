@@ -5,17 +5,17 @@ import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldNumber;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldClassWithFeatureSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity> {
 
-    public static final String PREFIX = "wtsls_";
+    public static final String PREFIX = "wgssls_";
 
     @UIField(order = 14, required = true)
-    @UIFieldClassWithFeatureSelection(HasSliderSeries.class)
+    @UIFieldEntityByClassSelection(HasSliderSeries.class)
     public String getDataSource() {
         return getJsonData("ds");
     }

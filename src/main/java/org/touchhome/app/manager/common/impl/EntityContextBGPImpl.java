@@ -17,6 +17,7 @@ import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
+import org.touchhome.bundle.api.model.Status;
 import org.touchhome.common.util.CommonUtils;
 
 import java.util.*;
@@ -183,7 +184,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     private <T> List<T> waitBatchToDone(String batchName, int maxTerminateTimeoutInSeconds,
-                                        Consumer<Integer> progressConsumer, BatchRunContext<T> batchRunContext) throws InterruptedException, ExecutionException {
+                                        Consumer<Integer> progressConsumer, BatchRunContext<T> batchRunContext)
+            throws InterruptedException, ExecutionException {
         ThreadPoolExecutor executor = batchRunContext.executor;
         executor.shutdown();
         int maxTerminateTimeoutInMilliseconds = maxTerminateTimeoutInSeconds * 1000;
@@ -196,7 +198,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     progressConsumer.accept((int) completedTaskCount);
 
                     if (System.currentTimeMillis() - batchStarted > maxTerminateTimeoutInMilliseconds) {
-                        log.warn("Exceeded await limit for batch run <{}> (Max {} sec.)", batchName, maxTerminateTimeoutInSeconds);
+                        log.warn("Exceeded await limit for batch run <{}> (Max {} sec.)", batchName,
+                                maxTerminateTimeoutInSeconds);
                         executor.shutdownNow();
                     }
                 } catch (Exception ignore) {
@@ -239,12 +242,14 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 runnable -> taskScheduler.schedule(runnable, new CronTrigger(cron)));
     }
 
-    private <T> ThreadContext<T> addSchedule(@NotNull String name, Long period, @NotNull ThrowingFunction<ThreadContext<T>, T, Exception> command,
+    private <T> ThreadContext<T> addSchedule(@NotNull String name, Long period,
+                                             @NotNull ThrowingFunction<ThreadContext<T>, T, Exception> command,
                                              @NotNull ScheduleType scheduleType, boolean showOnUI, boolean hideOnUIAfterCancel,
                                              @NotNull Function<Runnable, ScheduledFuture<?>> scheduleHandler) {
 
         this.cancelThread(name);
-        ThreadContextImpl<T> threadContext = new ThreadContextImpl<>(name, command, scheduleType, period, showOnUI, hideOnUIAfterCancel);
+        ThreadContextImpl<T> threadContext =
+                new ThreadContextImpl<>(name, command, scheduleType, period, showOnUI, hideOnUIAfterCancel);
         this.schedulers.put(name, threadContext);
 
         Runnable runnable = () -> {
@@ -280,7 +285,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
         this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
             if (isInternetUp != isInternetWasUp) {
-                entityContext.event().fireEvent(isInternetUp ? "internet-up" : "internet-down");
+                entityContext.event().fireEvent("internet-status", isInternetUp ? Status.ONLINE : Status.OFFLINE);
                 if (isInternetUp) {
                     entityContext.ui().removeBellNotification("internet-connection");
                     entityContext.ui().addBellInfoNotification("internet-connection", "Internet Connection", "Internet up");
@@ -347,7 +352,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
 
         @Override
-        public T await(long timeout, @NotNull TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+        public T await(long timeout, @NotNull TimeUnit timeUnit)
+                throws InterruptedException, ExecutionException, TimeoutException {
             return scheduledFuture.get(timeout, timeUnit);
         }
 
@@ -357,7 +363,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
 
         @Override
-        public boolean addValueListener(@NotNull String name, @NotNull ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
+        public boolean addValueListener(@NotNull String name,
+                                        @NotNull ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
             if (this.valueListeners == null) {
                 this.valueListeners = new ConcurrentHashMap<>();
             }
@@ -375,7 +382,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
             // fire listeners if require
             if (this.valueListeners != null) {
-                for (Iterator<ThrowingBiFunction<T, T, Boolean, Exception>> iterator = this.valueListeners.values().iterator(); iterator.hasNext(); ) {
+                for (Iterator<ThrowingBiFunction<T, T, Boolean, Exception>> iterator = this.valueListeners.values().iterator();
+                     iterator.hasNext(); ) {
                     ThrowingBiFunction<T, T, Boolean, Exception> fn = iterator.next();
                     try {
                         if (Boolean.TRUE.equals(fn.apply(value, oldValue))) {

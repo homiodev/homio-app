@@ -16,7 +16,7 @@ import javax.persistence.Transient;
 @Accessors(chain = true)
 public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
 
-    public static final String PREFIX = "wtjs_";
+    public static final String PREFIX = "wgtjs_";
 
     @Transient
     private String javaScriptResponse;

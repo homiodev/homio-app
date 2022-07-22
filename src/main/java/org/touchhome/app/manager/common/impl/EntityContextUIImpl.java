@@ -13,10 +13,12 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.manager.common.v1.item.UIInputEntityActionHandler;
 import org.touchhome.app.model.entity.SettingEntity;
+import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.app.notification.BellNotification;
 import org.touchhome.app.notification.HeaderButtonNotification;
 import org.touchhome.app.notification.ProgressNotification;
 import org.touchhome.app.repository.SettingRepository;
+import org.touchhome.app.rest.widget.WidgetChartsController;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.ActionResponseModel;
@@ -28,9 +30,11 @@ import org.touchhome.bundle.api.ui.dialog.DialogModel;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.util.NotificationLevel;
+import org.touchhome.common.fs.TreeNode;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
@@ -38,6 +42,8 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 @Log4j2
 @RequiredArgsConstructor
 public class EntityContextUIImpl implements EntityContextUI {
+    public final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new HashMap<>();
+
     private final Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
     private final Map<String, BellNotification> bellNotifications = new ConcurrentHashMap<>();
     private final Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
@@ -45,8 +51,18 @@ public class EntityContextUIImpl implements EntityContextUI {
     private Map<String, BellNotification> bundleEntryPointNotifications = new HashMap<>();
 
     private final SimpMessagingTemplate messagingTemplate;
+
     @Getter
     private final EntityContextImpl entityContext;
+
+    private static final Set<String> ALLOWED_DYNAMIC_VALUES = new HashSet<>(
+            Arrays.asList(
+                    WidgetChartsController.BarChartDataset.class.getSimpleName(),
+                    WidgetChartsController.PieChartDataset.class.getSimpleName(),
+                    WidgetChartsController.TimeSeriesChartData.class.getSimpleName(),
+                    TreeNode.class.getSimpleName() // console tree
+            )
+    );
 
     @Override
     public void addBellNotification(@NotNull String entityID, @NotNull String name, @NotNull String value,
@@ -59,6 +75,43 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
         bellNotifications.put(entityID, bellNotification);
         sendGlobal(GlobalSendType.bell, entityID, value, name, new JSONObject().put("level", level.name()));
+    }
+
+    public void registerForUpdates(DynamicUpdateRequest request) {
+        DynamicUpdateContext context = dynamicUpdateRegisters.get(request);
+        if (context == null) {
+            dynamicUpdateRegisters.put(request, new DynamicUpdateContext());
+        } else {
+            context.timeout = System.currentTimeMillis(); // refresh timer
+            context.registerCounter.incrementAndGet();
+        }
+        entityContext.event().addEventListener(request.getDynamicUpdateId() + "_" + request.getType(), o -> {
+            this.sendDynamicUpdate(request, o);
+        });
+    }
+
+    public void unRegisterForUpdates(DynamicUpdateRequest request) {
+        DynamicUpdateContext context = dynamicUpdateRegisters.get(request);
+        if (context != null && context.registerCounter.decrementAndGet() == 0) {
+            dynamicUpdateRegisters.remove(request);
+        }
+    }
+
+    public void sendDynamicUpdate(@NotNull DynamicUpdateRequest request, @Nullable Object value) {
+        if (value != null) {
+            String type = calcDynamicTypeFromValue(value);
+            if (request.getType().equals(type)) {
+                DynamicUpdateContext context = dynamicUpdateRegisters.get(request);
+                if (context != null) {
+                    if (System.currentTimeMillis() - context.timeout > 60000) {
+                        dynamicUpdateRegisters.remove(request);
+                    } else {
+                        sendGlobal(GlobalSendType.dynamicUpdate, null, value, null,
+                                new JSONObject().put("dynamicRequest", request));
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -88,7 +141,8 @@ public class EntityContextUIImpl implements EntityContextUI {
         } else {
             progressMap.put(key, new ProgressNotification(key, progress, message, cancellable));
         }
-        sendGlobal(GlobalSendType.progress, key, progress, message, cancellable ? new JSONObject().put("cancellable", true) : null);
+        sendGlobal(GlobalSendType.progress, key, progress, message,
+                cancellable ? new JSONObject().put("cancellable", true) : null);
     }
 
     @Override
@@ -134,7 +188,8 @@ public class EntityContextUIImpl implements EntityContextUI {
                 throw new IllegalArgumentException("Trying add header button to page without annotation UISidebarMenu");
             }
             page.getDeclaredAnnotation(UISidebarMenu.class);
-            topJson.setPage(StringUtils.defaultIfEmpty(page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(), page.getSimpleName()));
+            topJson.setPage(StringUtils.defaultIfEmpty(page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(),
+                    page.getSimpleName()));
         }
         if (hideAction != null) {
             topJson.setStopAction("st_" + hideAction.getSimpleName());
@@ -163,7 +218,8 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     public void disableHeaderButton(String entityID, boolean disable) {
-        sendGlobal(GlobalSendType.headerButton, entityID, null, null, new JSONObject().put("action", "toggle").put("disable", disable));
+        sendGlobal(GlobalSendType.headerButton, entityID, null, null,
+                new JSONObject().put("action", "toggle").put("disable", disable));
     }
 
     private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<JSONObject> additionalSupplier) {
@@ -213,19 +269,23 @@ public class EntityContextUIImpl implements EntityContextUI {
         for (EntityContextImpl.InternalBundleContext bundleContext : entityContext.getBundles().values()) {
 
             bundleContext.getBundleEntrypoint().assembleBellNotifications((notificationLevel, entityID, title, value) -> {
-                addBellNotification(map, new BellNotification(entityID).setTitle(title).setValue(value).setLevel(notificationLevel));
+                addBellNotification(map,
+                        new BellNotification(entityID).setTitle(title).setValue(value).setLevel(notificationLevel));
             });
 
-            Class<? extends SettingPluginStatus> statusSettingClass = bundleContext.getBundleEntrypoint().getBundleStatusSetting();
+            Class<? extends SettingPluginStatus> statusSettingClass =
+                    bundleContext.getBundleEntrypoint().getBundleStatusSetting();
             if (statusSettingClass != null) {
                 String bundleID = SettingRepository.getSettingBundleName(entityContext, statusSettingClass);
                 SettingPluginStatus.BundleStatusInfo bundleStatusInfo = entityContext.setting().getValue(statusSettingClass);
-                SettingPluginStatus settingPlugin = (SettingPluginStatus) EntityContextSettingImpl.settingPluginsByPluginKey.get(SettingEntity.getKey(statusSettingClass));
+                SettingPluginStatus settingPlugin = (SettingPluginStatus) EntityContextSettingImpl.settingPluginsByPluginKey.get(
+                        SettingEntity.getKey(statusSettingClass));
                 String statusEntityID = bundleID + "-status";
                 if (bundleStatusInfo != null) {
                     BellNotification bundleStatusNotification = new BellNotification(statusEntityID)
                             .setLevel(bundleStatusInfo.getLevel())
-                            .setTitle(bundleID).setValue(defaultIfEmpty(bundleStatusInfo.getMessage(), bundleStatusInfo.getStatus().name()));
+                            .setTitle(bundleID)
+                            .setValue(defaultIfEmpty(bundleStatusInfo.getMessage(), bundleStatusInfo.getStatus().name()));
 
                     UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
                     settingPlugin.setActions(uiInputBuilder);
@@ -239,7 +299,8 @@ public class EntityContextUIImpl implements EntityContextUI {
                     for (SettingPluginStatus.BundleStatusInfo transientStatus : transientStatuses) {
                         BellNotification bundleStatusNotification = new BellNotification(statusEntityID)
                                 .setLevel(transientStatus.getLevel())
-                                .setTitle(bundleID).setValue(defaultIfEmpty(transientStatus.getMessage(), transientStatus.getStatus().name()));
+                                .setTitle(bundleID)
+                                .setValue(defaultIfEmpty(transientStatus.getMessage(), transientStatus.getStatus().name()));
 
                         if (transientStatus.getActionHandler() != null) {
                             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
@@ -265,7 +326,8 @@ public class EntityContextUIImpl implements EntityContextUI {
 
             for (HeaderButtonNotification notificationModel : headerButtonNotifications.values()) {
                 if (notificationModel.getDialogs().remove(model) && notificationModel.getDialogs().isEmpty()) {
-                    this.removeHeaderButton(notificationModel.getEntityID()); // request to remove header button if no confirmation exists
+                    this.removeHeaderButton(
+                            notificationModel.getEntityID()); // request to remove header button if no confirmation exists
                 }
             }
         }
@@ -279,8 +341,10 @@ public class EntityContextUIImpl implements EntityContextUI {
         if (bellNotification == null) {
             throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
         }
-        UIInputEntity action = bellNotification.getActions().stream().filter(a -> a.getEntityID().equals(actionEntityID)).findAny().orElseThrow(() ->
-                new IllegalStateException("Unable to find action: <" + entityID + ">"));
+        UIInputEntity action =
+                bellNotification.getActions().stream().filter(a -> a.getEntityID().equals(actionEntityID)).findAny()
+                        .orElseThrow(() ->
+                                new IllegalStateException("Unable to find action: <" + entityID + ">"));
         if (action instanceof UIInputEntityActionHandler) {
             UIActionHandler actionHandler = ((UIInputEntityActionHandler) action).getActionHandler();
             if (actionHandler != null) {
@@ -290,11 +354,24 @@ public class EntityContextUIImpl implements EntityContextUI {
         throw new RuntimeException("Action: " + entityID + " has incorrect format");
     }
 
+    private String calcDynamicTypeFromValue(Object value) {
+        String dynamicType = value.getClass().getSimpleName();
+        if (ALLOWED_DYNAMIC_VALUES.contains(dynamicType)) {
+            return dynamicType;
+        }
+        throw new IllegalStateException("Unable to evaluate dynamic type from value: " + value.getClass().getSimpleName());
+    }
+
     @Getter
     public static class NotificationResponse {
         private final Set<BellNotification> bellNotifications = new TreeSet<>();
         private Collection<HeaderButtonNotification> headerButtonNotifications;
         private Collection<ProgressNotification> progress;
         private Collection<DialogModel> dialogs;
+    }
+
+    private static class DynamicUpdateContext {
+        private long timeout = System.currentTimeMillis();
+        private final AtomicInteger registerCounter = new AtomicInteger(0);
     }
 }

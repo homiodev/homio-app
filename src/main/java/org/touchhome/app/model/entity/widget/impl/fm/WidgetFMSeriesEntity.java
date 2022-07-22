@@ -11,7 +11,7 @@ import javax.persistence.Entity;
 @Entity
 public class WidgetFMSeriesEntity extends WidgetSeriesEntity<WidgetFMEntity> {
 
-    public static final String PREFIX = "wfms_";
+    public static final String PREFIX = "wgsfms_";
 
     @UIField(order = 14, required = true)
     @UIFieldFileSelection(allowSelectDirs = true, allowSelectFiles = false, iconColor = "#14A669")

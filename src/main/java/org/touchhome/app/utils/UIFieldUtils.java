@@ -111,6 +111,7 @@ public class UIFieldUtils {
                 params -> params.entityContext.getBeansOfTypeWithBeanName(params.targetClass).keySet().stream()
                         .map(OptionModel::key)
                         .collect(Collectors.toList())),
+        port(UIFieldDevicePortSelection.class, params -> OptionModel.listOfPorts(false)),
         clazz(UIFieldClassSelection.class,
                 params -> {
                     ClassFinder classFinder = params.entityContext.getBean(ClassFinder.class);
@@ -123,9 +124,9 @@ public class UIFieldUtils {
                     return list.stream().filter(predicate).map(c -> OptionModel.of(c.getName(), c.getSimpleName()))
                             .collect(Collectors.toList());
                 }),
-        clazzWithFeature(UIFieldClassWithFeatureSelection.class, params -> {
-            UIFieldClassWithFeatureSelection uiFieldClassSelection =
-                    params.field.getDeclaredAnnotation(UIFieldClassWithFeatureSelection.class);
+        entityByClass(UIFieldEntityByClassSelection.class, params -> {
+            UIFieldEntityByClassSelection uiFieldClassSelection =
+                    params.field.getDeclaredAnnotation(UIFieldEntityByClassSelection.class);
             List<OptionModel> list = new ArrayList<>();
             for (Class<? extends HasEntityIdentifier> foundTargetType : params.entityContext.getClassesWithParent(
                     uiFieldClassSelection.value(), uiFieldClassSelection.basePackages())) {
@@ -282,13 +283,14 @@ public class UIFieldUtils {
     }
 
     @SneakyThrows
-    public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType) {
-        return fillEntityUIMetadataList(entityClassByType, new HashSet<>());
+    public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType, EntityContext entityContext) {
+        return fillEntityUIMetadataList(entityClassByType, new HashSet<>(), entityContext);
     }
 
     @SneakyThrows
     public static List<EntityUIMetaData> fillEntityUIMetadataList(Class entityClassByType,
-                                                                  Set<EntityUIMetaData> entityUIMetaDataSet) {
+                                                                  Set<EntityUIMetaData> entityUIMetaDataSet,
+                                                                  EntityContext entityContext) {
         if (entityClassByType == null) {
             return Collections.emptyList();
         }
@@ -296,10 +298,12 @@ public class UIFieldUtils {
         if (instance == null) {
             throw new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName());
         }
-        return fillEntityUIMetadataList(instance, entityUIMetaDataSet);
+        return fillEntityUIMetadataList(instance, entityUIMetaDataSet, entityContext);
     }
 
-    public static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet) {
+    public static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance,
+                                                                  Set<EntityUIMetaData> entityUIMetaDataSet,
+                                                                  EntityContext entityContext) {
         Map<String, List<Method>> fieldNameToGetters = new HashMap<>();
 
         List<Class<?>> classes = getAllSuperclassesAndInterfaces(instance.getClass());
@@ -321,7 +325,7 @@ public class UIFieldUtils {
         }
 
         for (UIFieldMethodContext uiFieldMethodContext : uiFieldNameToGetters.values()) {
-            generateUIField(instance, entityUIMetaDataSet, uiFieldMethodContext);
+            generateUIField(instance, entityUIMetaDataSet, uiFieldMethodContext, entityContext);
         }
 
         Set<String> processedMethods =
@@ -333,7 +337,8 @@ public class UIFieldUtils {
                 List<Method> fieldGetterMethods =
                         fieldNameToGetters.getOrDefault("get" + capitalizeMethodName, new ArrayList<>());
                 fieldGetterMethods.addAll(fieldNameToGetters.getOrDefault("is" + capitalizeMethodName, Collections.emptyList()));
-                generateUIField(instance, entityUIMetaDataSet, new UIFieldFieldContext(field, fieldGetterMethods));
+                generateUIField(instance, entityUIMetaDataSet,
+                        new UIFieldFieldContext(field, fieldGetterMethods), entityContext);
             }
         });
 
@@ -345,7 +350,8 @@ public class UIFieldUtils {
 
     @SneakyThrows
     private static void generateUIField(Object instance, Set<EntityUIMetaData> entityUIMetaDataList,
-                                        UIFieldContext uiFieldContext) {
+                                        UIFieldContext uiFieldContext,
+                                        EntityContext entityContext) {
         EntityUIMetaData entityUIMetaData = new EntityUIMetaData();
         entityUIMetaData.setEntityName(uiFieldContext.getName());
         Type genericType = uiFieldContext.getGenericType();
@@ -390,8 +396,9 @@ public class UIFieldUtils {
         if (uiField.type().equals(UIFieldType.AutoDetect)) {
             if (type.isEnum() || uiFieldContext.isAnnotationPresent(UIFieldFileSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldSelection.class) ||
+                    uiFieldContext.isAnnotationPresent(UIFieldDevicePortSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldStaticSelection.class) ||
-                    uiFieldContext.isAnnotationPresent(UIFieldClassWithFeatureSelection.class) ||
+                    uiFieldContext.isAnnotationPresent(UIFieldEntityByClassSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldClassSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldBeanSelection.class)) {
                 // detect types
@@ -407,6 +414,10 @@ public class UIFieldUtils {
                 }
                 if (uiFieldContext.isAnnotationPresent(UIFieldFileSelection.class) &&
                         uiFieldContext.getDeclaredAnnotation(UIFieldFileSelection.class).allowInputRawText()) {
+                    uiFieldType = UIFieldType.TextSelectBoxDynamic;
+                }
+                if (uiFieldContext.isAnnotationPresent(UIFieldDevicePortSelection.class) &&
+                        uiFieldContext.getDeclaredAnnotation(UIFieldDevicePortSelection.class).allowInputRawText()) {
                     uiFieldType = UIFieldType.TextSelectBoxDynamic;
                 }
 
@@ -455,25 +466,6 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("bg", uiField.bg());
         }
 
-        UIFieldBeanSelection uiFieldBeanSelection = uiFieldContext.getDeclaredAnnotation(UIFieldBeanSelection.class);
-        if (uiFieldBeanSelection != null) {
-            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
-            meta.put("selectType", "bean");
-        }
-
-        UIFieldClassWithFeatureSelection uiFieldClassWithFeatureSelection =
-                uiFieldContext.getDeclaredAnnotation(UIFieldClassWithFeatureSelection.class);
-        if (uiFieldClassWithFeatureSelection != null) {
-            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
-            meta.put("selectType", "classWithFeature");
-        }
-
-        UIFieldClassSelection uiFieldClassSelection = uiFieldContext.getDeclaredAnnotation(UIFieldClassSelection.class);
-        if (uiFieldClassSelection != null) {
-            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
-            meta.put("selectType", "static");
-        }
-
         UIFieldTableLayout uiFieldTableLayout = uiFieldContext.getDeclaredAnnotation(UIFieldTableLayout.class);
         if (uiFieldTableLayout != null) {
             entityUIMetaData.setType("TableLayout");
@@ -481,40 +473,7 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("maxColumns", uiFieldTableLayout.maxColumns());
         }
 
-        UIFieldStaticSelection uiFieldStaticSelection = uiFieldContext.getDeclaredAnnotation(UIFieldStaticSelection.class);
-        if (uiFieldStaticSelection != null) {
-            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
-            meta.put("selectOptions", uiFieldStaticSelection.value());
-            meta.put("selectType", "static");
-            if (uiFieldStaticSelection.dependencyFields().length > 0) {
-                jsonTypeMetadata.put("depFields", uiFieldStaticSelection.dependencyFields());
-            }
-        }
-
-        UIFieldSelection uiFieldSelection = uiFieldContext.getDeclaredAnnotation(UIFieldSelection.class);
-        if (uiFieldSelection != null) {
-            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
-            meta.put("selectType", "simple");
-            meta.put("lazyLoading", uiFieldSelection.lazyLoading());
-            meta.put("parentChildJoiner", uiFieldSelection.parentChildJoiner());
-
-            if (uiFieldSelection.dependencyFields().length > 0) {
-                jsonTypeMetadata.put("depFields", uiFieldSelection.dependencyFields());
-            }
-        }
-
-        UIFieldFileSelection uiFieldFileSelection = uiFieldContext.getDeclaredAnnotation(UIFieldFileSelection.class);
-        if (uiFieldFileSelection != null) {
-            JSONObject meta = getTextBoxSelections(entityUIMetaData, uiFieldContext, jsonTypeMetadata);
-            meta.put("selectType", "file");
-            meta.put("SAFS", uiFieldFileSelection.showAllFileSystems());
-            meta.put("ASD", uiFieldFileSelection.allowSelectDirs());
-            meta.put("AMS", uiFieldFileSelection.allowMultiSelect());
-            meta.put("ASF", uiFieldFileSelection.allowSelectFiles());
-            meta.put("pattern", uiFieldFileSelection.pattern());
-            meta.put("icon", uiFieldFileSelection.icon());
-            meta.put("iconColor", uiFieldFileSelection.iconColor());
-        }
+        handleFieldSelections(uiFieldContext, entityContext, entityUIMetaData, jsonTypeMetadata);
 
         UIFieldGroup uiFieldGroup = uiFieldContext.getDeclaredAnnotation(UIFieldGroup.class);
         if (uiFieldGroup != null) {
@@ -688,8 +647,75 @@ public class UIFieldUtils {
         entityUIMetaDataList.add(entityUIMetaData);
     }
 
-    private static JSONObject getTextBoxSelections(EntityUIMetaData entityUIMetaData, UIFieldContext uiFieldContext,
-                                                   JSONObject jsonTypeMetadata) {
+    private static void handleFieldSelections(UIFieldContext uiFieldContext, EntityContext entityContext,
+                                              EntityUIMetaData entityUIMetaData,
+                                              JSONObject jsonTypeMetadata) {
+        UIFieldBeanSelection uiFieldBeanSelection = uiFieldContext.getDeclaredAnnotation(UIFieldBeanSelection.class);
+        if (uiFieldBeanSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
+            meta.put("selectType", SelectHandler.bean.name());
+            if (!uiFieldBeanSelection.lazyLoading()) {
+                Set<String> values = entityContext.getBeansOfTypeWithBeanName(uiFieldBeanSelection.value()).keySet();
+                meta.put("selectOptions",
+                        uiFieldBeanSelection.addEmpty() ? OptionModel.listWithEmpty(values) : OptionModel.list(values));
+            }
+        }
+
+        UIFieldEntityByClassSelection uiFieldEntityByClassSelection =
+                uiFieldContext.getDeclaredAnnotation(UIFieldEntityByClassSelection.class);
+        if (uiFieldEntityByClassSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
+            meta.put("selectType", SelectHandler.entityByClass.name());
+        }
+
+        UIFieldClassSelection uiFieldClassSelection = uiFieldContext.getDeclaredAnnotation(UIFieldClassSelection.class);
+        if (uiFieldClassSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
+            meta.put("selectType", "static");
+        }
+
+        UIFieldStaticSelection uiFieldStaticSelection = uiFieldContext.getDeclaredAnnotation(UIFieldStaticSelection.class);
+        if (uiFieldStaticSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
+            meta.put("selectOptions", uiFieldStaticSelection.value());
+        }
+
+        UIFieldSelection uiFieldSelection = uiFieldContext.getDeclaredAnnotation(UIFieldSelection.class);
+        if (uiFieldSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
+            meta.put("selectType", SelectHandler.simple.name());
+            meta.put("lazyLoading", uiFieldSelection.lazyLoading());
+            meta.put("parentChildJoiner", uiFieldSelection.parentChildJoiner());
+
+            if (uiFieldSelection.dependencyFields().length > 0) {
+                jsonTypeMetadata.put("depFields", uiFieldSelection.dependencyFields());
+            }
+        }
+
+        UIFieldDevicePortSelection uiFieldDevicePortSelection =
+                uiFieldContext.getDeclaredAnnotation(UIFieldDevicePortSelection.class);
+        if (uiFieldDevicePortSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
+            meta.put("selectType", SelectHandler.port.name());
+            meta.put("icon", uiFieldDevicePortSelection.icon());
+            meta.put("iconColor", uiFieldDevicePortSelection.iconColor());
+        }
+
+        UIFieldFileSelection uiFieldFileSelection = uiFieldContext.getDeclaredAnnotation(UIFieldFileSelection.class);
+        if (uiFieldFileSelection != null) {
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
+            meta.put("selectType", "file");
+            meta.put("SAFS", uiFieldFileSelection.showAllFileSystems());
+            meta.put("ASD", uiFieldFileSelection.allowSelectDirs());
+            meta.put("AMS", uiFieldFileSelection.allowMultiSelect());
+            meta.put("ASF", uiFieldFileSelection.allowSelectFiles());
+            meta.put("pattern", uiFieldFileSelection.pattern());
+            meta.put("icon", uiFieldFileSelection.icon());
+            meta.put("iconColor", uiFieldFileSelection.iconColor());
+        }
+    }
+
+    private static JSONObject getTextBoxSelections(EntityUIMetaData entityUIMetaData, JSONObject jsonTypeMetadata) {
         if (entityUIMetaData.getType().equals(UIFieldType.TextSelectBoxDynamic.name())) {
             if (!jsonTypeMetadata.has("textBoxSelections")) {
                 jsonTypeMetadata.put("textBoxSelections", new JSONArray());

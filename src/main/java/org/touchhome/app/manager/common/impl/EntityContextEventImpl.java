@@ -3,6 +3,7 @@ package org.touchhome.app.manager.common.impl;
 import lombok.Getter;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextEvent;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -10,9 +11,11 @@ import org.touchhome.bundle.api.entity.BaseEntityIdentifier;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
+import org.touchhome.common.util.Lang;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static java.util.Collections.emptyMap;
@@ -32,30 +35,46 @@ public class EntityContextEventImpl implements EntityContextEvent {
     @Getter
     private final Set<OptionModel> events = new HashSet<>();
     private final Map<String, Object> lastValues = new ConcurrentHashMap<>();
-    private final Map<String, Consumer<Object>> listeners = new HashMap<>();
+    private final Map<String, Consumer<Object>> eventListeners = new HashMap<>();
+    @Getter
+    private final List<BiConsumer<String, Object>> globalEvenListeners = new ArrayList<>();
 
     public EntityContextEventImpl(BroadcastLockManager broadcastLockManager) {
         this.broadcastLockManager = broadcastLockManager;
-        this.addEvent("internet-connection", "Internet connection");
-        this.addEvent("internet-up", "Internet up");
-        this.addEvent("app-release", "Found new app release");
     }
 
     @Override
-    public void removeEvents(String... keys) {
-        for (String key : keys) {
-            listeners.remove(key);
-            lastValues.remove(key);
+    public void removeEvents(String key, String... additionalKeys) {
+        eventListeners.remove(key);
+        lastValues.remove(key);
+        for (String additionalKey : additionalKeys) {
+            eventListeners.remove(additionalKey);
+            lastValues.remove(additionalKey);
         }
     }
 
     @Override
-    public void setListener(String key, Consumer<Object> listener) {
-        listeners.put(key, listener);
+    public boolean addEventBehaviourListener(String key, Consumer<Object> listener) {
+        if (lastValues.containsKey(key)) {
+            listener.accept(lastValues.get(key));
+        }
+        return addEventListener(key, listener);
     }
 
     @Override
-    public void fireEvent(String key, Object value, boolean compareValues) {
+    // TODO: add extra parameter!!!!!!!!!!!!!  bar/pie
+    public boolean addEventListener(String key, Consumer<Object> listener) {
+        return eventListeners.put(key, listener) != null;
+    }
+
+    @Override
+    public void fireEvent(@NotNull String key, @NotNull Object value, boolean compareValues) {
+        // fire by key and key + value type
+        fireEventInternal(key, value, compareValues);
+        fireEventInternal(key + "_" + value.getClass().getSimpleName(), value, compareValues);
+    }
+
+    private void fireEventInternal(String key, Object value, boolean compareValues) {
         addEvent(key);
         if (StringUtils.isEmpty(key)) {
             throw new IllegalArgumentException("Unable to fire event with empty key");
@@ -67,27 +86,17 @@ public class EntityContextEventImpl implements EntityContextEvent {
             lastValues.put(key, value);
         }
 
-        Consumer<Object> consumer = listeners.get(key);
+        Consumer<Object> consumer = eventListeners.get(key);
         if (consumer != null) {
             consumer.accept(value);
         }
+        globalEvenListeners.forEach(l -> l.accept(key, value));
         broadcastLockManager.signalAll(key, value);
     }
 
-    @Override
-    public String addEvent(String key, String name) {
-        if (StringUtils.isEmpty(key)) {
-            throw new IllegalArgumentException("Unable to add event with empty key");
-        }
-        // update event name if event already added and name not empty and name not equals key
-        if (!this.events.add(OptionModel.of(key, name)) && (StringUtils.isNotEmpty(name) && !name.equals(key))) {
-            for (OptionModel event : events) {
-                if (event.getKey().equals(key)) {
-                    event.setTitle(name);
-                }
-            }
-        }
-
+    private String addEvent(String key) {
+        OptionModel optionModel = OptionModel.of(key, Lang.getServerMessage(key));
+        this.events.add(optionModel);
         return key;
     }
 

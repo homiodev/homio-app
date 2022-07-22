@@ -28,7 +28,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
         LineChartWidgetBuilder builder = new LineChartWidgetBuilder() {
             @Override
             public LineChartWidgetBuilder showButtons(boolean on) {
-                widgetLineChartEntity.setShowButtons(on);
+                widgetLineChartEntity.setShowTimeButtons(on);
                 return this;
             }
 

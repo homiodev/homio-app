@@ -4,17 +4,17 @@ import org.touchhome.bundle.api.entity.widget.HasPushButtonSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldClassWithFeatureSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetButtonSeriesEntity extends WidgetSeriesEntity<WidgetButtonEntity> {
 
-    public static final String PREFIX = "wtbs_";
+    public static final String PREFIX = "wgsbs_";
 
     @UIField(order = 14, required = true)
-    @UIFieldClassWithFeatureSelection(HasPushButtonSeries.class)
+    @UIFieldEntityByClassSelection(HasPushButtonSeries.class)
     public String getDataSource() {
         return getJsonData("ds");
     }

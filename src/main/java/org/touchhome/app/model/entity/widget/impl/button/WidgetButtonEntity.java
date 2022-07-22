@@ -8,7 +8,7 @@ import javax.persistence.Entity;
 @Entity
 public class WidgetButtonEntity extends WidgetBaseEntityAndSeries<WidgetButtonEntity, WidgetButtonSeriesEntity> {
 
-    public static final String PREFIX = "wtbn_";
+    public static final String PREFIX = "wgtbn_";
 
     @UIField(order = 31, showInContextMenu = true, icon = "fas fa-grip-vertical")
     public Boolean isVertical() {

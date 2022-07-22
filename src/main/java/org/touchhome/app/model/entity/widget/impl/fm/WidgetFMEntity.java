@@ -2,6 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.fm;
 
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.bundle.api.entity.widget.WidgetGroup;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
@@ -14,7 +15,12 @@ import java.util.Set;
 public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, WidgetFMSeriesEntity>
         implements HasDynamicContextMenuActions {
 
-    public static final String PREFIX = "wfm_";
+    public static final String PREFIX = "wgtfm_";
+
+    @Override
+    public WidgetGroup getGroup() {
+        return WidgetGroup.Media;
+    }
 
     @Override
     public String getImage() {

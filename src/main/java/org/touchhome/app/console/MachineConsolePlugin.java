@@ -23,7 +23,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePlugin.HardwarePluginEntity> {
 
+    @Getter
     private final EntityContext entityContext;
+
     private final MachineHardwareRepository machineHardwareRepository;
     private final NetworkHardwareRepository networkHardwareRepository;
 

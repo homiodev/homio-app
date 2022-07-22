@@ -11,6 +11,7 @@ import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.LogService;
 import org.touchhome.app.console.LogsConsolePlugin;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
@@ -45,46 +46,22 @@ import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 public class ConsoleController implements BeanPostConstruct {
 
     private final LogService logService;
-    private final EntityContext entityContext;
+    private final EntityContextImpl entityContext;
     private final ItemController itemController;
     private final Set<ConsoleTab> tabs = new ArraySet<>();
     @Getter
     private Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
     private Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
 
-    @SneakyThrows
-    static void fetchUIHeaderActions(ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
-        Map<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
-        if (actionMap != null) {
-            for (Map.Entry<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
-                Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
-                ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(entry.getKey(),
-                        CommonUtils.newInstance(settingClass).fireActionsBeforeChange(), SettingEntity.getKey(settingClass), 0);
-
-                /* TODO: actions.add(new UIActionResponse(entry.getKey())
-                        .putOpt("fabc", CommonUtils.newInstance(settingClass).fireActionsBeforeChange())
-                        .putOpt("ref", SettingEntity.getKey(settingClass)));*/
-            }
-        }
-        if (consolePlugin instanceof ConsolePluginEditor) {
-            Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction =
-                    ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
-            if (nameHeaderAction != null) {
-                ((UIInputBuilderImpl) uiInputBuilder).addReferenceAction("name", SettingEntity.getKey(nameHeaderAction), 1);
-                // TODO: actions.add(new UIActionResponse("name").putOpt("ref", SettingEntity.getKey(nameHeaderAction)));
-            }
-        }
-    }
-
     @Override
-    public void onContextUpdate(EntityContext entityContext) {
+    public void onContextUpdate(EntityContext context) {
         this.consolePluginsMap.clear();
         this.tabs.clear();
 
         ConsoleTab log4j2Tab = new ConsoleTab("logs", null, null);
         for (String tab : logService.getTabs()) {
             log4j2Tab.addChild(new ConsoleTab(tab, ConsolePlugin.RenderType.lines, null));
-            this.logsConsolePluginsMap.put(tab, new LogsConsolePlugin(logService, tab));
+            this.logsConsolePluginsMap.put(tab, new LogsConsolePlugin(entityContext, logService, tab));
         }
         this.tabs.add(log4j2Tab);
 
@@ -93,6 +70,7 @@ public class ConsoleController implements BeanPostConstruct {
         for (ConsolePlugin consolePlugin : consolePlugins) {
             this.consolePluginsMap.put(consolePlugin.getName(), consolePlugin);
         }
+        this.consolePluginsMap.putAll(EntityContextImpl.getCustomConsolePlugins());
     }
 
     @GetMapping("/tab/{tab}/actions")
@@ -122,34 +100,38 @@ public class ConsoleController implements BeanPostConstruct {
 
             return new EntityContent().setList(baseEntities)
                     .setActions(UIFieldUtils.fetchUIActionsFromClass(clazz, entityContext))
-                    .setUiFields(UIFieldUtils.fillEntityUIMetadataList(clazz));
+                    .setUiFields(UIFieldUtils.fillEntityUIMetadataList(clazz, entityContext));
         }
         return consolePlugin.getValue();
     }
 
-    @PostMapping("/tab/{tab}/{entityID}/action")
+    @SneakyThrows
+    @PostMapping("/tab/{tab}/action")
     @Secured(ADMIN_ROLE)
-    public ActionResponseModel executeAction(@PathVariable("tab") String tab, @PathVariable("entityID") String entityID,
-                                             @RequestBody ItemController.ActionRequestModel actionRequestModel) {
+    public ActionResponseModel executeAction(@PathVariable("tab") String tab,
+                                             @RequestBody ItemController.ActionRequestModel request) {
+        String entityID = request.getEntityID();
         ConsolePlugin<?> consolePlugin = consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
             Collection<? extends HasEntityIdentifier> baseEntities =
                     ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny()
                     .orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-            return itemController.executeAction(actionRequestModel, identifier,
+            return itemController.executeAction(request, identifier,
                     entityContext.getEntity(identifier.getEntityID()));
         } else if (consolePlugin instanceof ConsolePluginCommunicator) {
-            return ((ConsolePluginCommunicator) consolePlugin).commandReceived(actionRequestModel.getName());
+            return ((ConsolePluginCommunicator) consolePlugin).commandReceived(request.getName());
         } else if (consolePlugin instanceof ConsolePluginEditor) {
-            if (actionRequestModel.getMetadata().has("glyph")) {
-                return ((ConsolePluginEditor) consolePlugin).glyphClicked(actionRequestModel.getMetadata().getString("glyph"));
+            if (request.getMetadata().has("glyph")) {
+                return ((ConsolePluginEditor) consolePlugin).glyphClicked(request.getMetadata().getString("glyph"));
             }
-            if (StringUtils.isNotEmpty(actionRequestModel.getName()) && actionRequestModel.getMetadata().has("content")) {
+            if (StringUtils.isNotEmpty(request.getName()) && request.getMetadata().has("content")) {
                 return ((ConsolePluginEditor) consolePlugin).save(
-                        new FileModel(actionRequestModel.getName(), actionRequestModel.getMetadata().getString("content"), null,
+                        new FileModel(request.getName(), request.getMetadata().getString("content"), null,
                                 false));
             }
+        } else {
+            return consolePlugin.executeAction(entityID, request.getMetadata(), request.getParams());
         }
         throw new IllegalArgumentException("Unable to handle action for tab: " + tab);
     }
@@ -250,6 +232,31 @@ public class ConsoleController implements BeanPostConstruct {
             this.children.add(consoleTab);
         }
     }
+
+    @SneakyThrows
+    static void fetchUIHeaderActions(ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
+        Map<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
+        if (actionMap != null) {
+            for (Map.Entry<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
+                Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
+                ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(entry.getKey(),
+                        CommonUtils.newInstance(settingClass).fireActionsBeforeChange(), SettingEntity.getKey(settingClass), 0);
+
+                /* TODO: actions.add(new UIActionResponse(entry.getKey())
+                        .putOpt("fabc", CommonUtils.newInstance(settingClass).fireActionsBeforeChange())
+                        .putOpt("ref", SettingEntity.getKey(settingClass)));*/
+            }
+        }
+        if (consolePlugin instanceof ConsolePluginEditor) {
+            Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction =
+                    ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
+            if (nameHeaderAction != null) {
+                ((UIInputBuilderImpl) uiInputBuilder).addReferenceAction("name", SettingEntity.getKey(nameHeaderAction), 1);
+                // TODO: actions.add(new UIActionResponse("name").putOpt("ref", SettingEntity.getKey(nameHeaderAction)));
+            }
+        }
+    }
+
 
     @Getter
     @Setter

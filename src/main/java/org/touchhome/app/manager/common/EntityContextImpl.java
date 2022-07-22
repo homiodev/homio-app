@@ -10,7 +10,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.hibernate.engine.spi.EntityEntry;
-import org.hibernate.engine.spi.Status;
 import org.hibernate.event.internal.PostDeleteEventListenerStandardImpl;
 import org.hibernate.event.internal.PostInsertEventListenerStandardImpl;
 import org.hibernate.event.internal.PostUpdateEventListenerStandardImpl;
@@ -19,6 +18,7 @@ import org.hibernate.event.spi.*;
 import org.hibernate.internal.SessionFactoryImpl;
 import org.hibernate.metamodel.spi.MetamodelImplementor;
 import org.hibernate.persister.entity.Joinable;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.aop.framework.Advised;
@@ -63,17 +63,19 @@ import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
 import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
+import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
-import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
 import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
+import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.repository.UserRepository;
@@ -81,6 +83,7 @@ import org.touchhome.bundle.api.service.EntityService;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.state.DecimalType;
 import org.touchhome.bundle.api.state.OnOffType;
+import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
@@ -108,7 +111,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.util.TouchHomeUtils.MACHINE_IP_ADDRESS;
-import static org.touchhome.bundle.api.util.TouchHomeUtils.PRIMARY_COLOR;
 
 @Log4j2
 @Component
@@ -133,6 +135,9 @@ public class EntityContextImpl implements EntityContext {
     }
 
     public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
+    @Getter
+    private static final Map<String, ConsolePlugin<?>> customConsolePlugins = new HashMap<>();
+
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
     public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
     public static Map<String, AbstractRepository> repositoriesByPrefix;
@@ -275,7 +280,7 @@ public class EntityContextImpl implements EntityContext {
         // create indexes on tables
         //  this.createTableIndexes();
         this.bgp().schedule("check-app-version", 1, TimeUnit.DAYS, this::fetchReleaseVersion, true);
-        this.event().fireEvent("app-started", "App started");
+        this.event().fireEvent("app-status", Status.ONLINE);
 
         // install autossh. Should refactor to move somewhere else
         this.bgp().runOnceOnInternetUp("internal-ctx", () -> MACHINE_IP_ADDRESS = getInternalIpAddress());
@@ -416,13 +421,13 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public <T extends BaseEntity> T save(T entity) {
+    public <T extends BaseEntity> T save(T entity, boolean fireNotifyListeners) {
         AbstractRepository foundRepo = classFinder.getRepositoryByClass(entity.getClass());
         final AbstractRepository repository =
                 foundRepo == null && entity instanceof DeviceBaseEntity ? allDeviceRepository : foundRepo;
         EntityContextEventImpl.EntityListener entityUpdateListeners = this.event().getEntityUpdateListeners();
 
-        T oldEntity = entity.getEntityID() == null ? null :
+        T oldEntity = entity.getEntityID() == null || !fireNotifyListeners ? null :
                 entityUpdateListeners.isRequireFetchOldEntity(entity) ? getEntity(entity.getEntityID(), false) : null;
 
         T updatedEntity = transactionTemplate.execute(status -> {
@@ -431,10 +436,13 @@ public class EntityContextImpl implements EntityContext {
             return t;
         });
 
-        if (oldEntity == null) {
-            runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners, this.event().getEntityCreateListeners());
-        } else {
-            runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners);
+        if (fireNotifyListeners) {
+            if (oldEntity == null) {
+                runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners,
+                        this.event().getEntityCreateListeners());
+            } else {
+                runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners);
+            }
         }
 
         if (StringUtils.isEmpty(entity.getEntityID())) {
@@ -535,6 +543,27 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
+    public <T extends ConsolePlugin> void registerConsolePlugin(@NotNull String name, @NotNull T plugin) {
+        customConsolePlugins.put(name, plugin);
+        getBean(ConsoleController.class).getConsolePluginsMap().put(name, plugin);
+    }
+
+    @Override
+    public <T extends ConsolePlugin> T getRegisteredConsolePlugin(@NotNull String name) {
+        return (T) customConsolePlugins.get(name);
+    }
+
+    @Override
+    public boolean unRegisterConsolePlugin(@NotNull String name) {
+        if (customConsolePlugins.containsKey(name)) {
+            customConsolePlugins.remove(name);
+            getBean(ConsoleController.class).getConsolePluginsMap().remove(name);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
     public Collection<AbstractRepository> getRepositories() {
         return repositories.values();
     }
@@ -608,6 +637,7 @@ public class EntityContextImpl implements EntityContext {
             @Override
             public void onPostInsert(PostInsertEvent event) {
                 super.onPostInsert(event);
+                sendEntityUpdateNotification(event.getEntity(), ItemAction.Insert);
                 updateCacheEntity(event.getEntity(), ItemAction.Insert);
             }
         });
@@ -619,9 +649,11 @@ public class EntityContextImpl implements EntityContext {
                 EventSource eventSource = event.getSession();
                 EntityEntry entry = eventSource.getPersistenceContextInternal().getEntry(entity);
                 // mimic the preUpdate filter
-                if (Status.DELETED != entry.getStatus()) {
+                if (org.hibernate.engine.spi.Status.DELETED != entry.getStatus()) {
                     if (entity instanceof BaseEntity) {
                         ((BaseEntity) entity).afterUpdate(EntityContextImpl.this);
+                        // Do not send updates to UI in case of Status.DELETED
+                        sendEntityUpdateNotification(entity, ItemAction.Update);
                     }
                 }
                 updateCacheEntity(event.getEntity(), ItemAction.Update);
@@ -636,6 +668,7 @@ public class EntityContextImpl implements EntityContext {
                 if (entity instanceof BaseEntity) {
                     ((BaseEntity) entity).afterDelete(EntityContextImpl.this);
                 }
+                sendEntityUpdateNotification(event.getEntity(), ItemAction.Remove);
                 updateCacheEntity(event.getEntity(), ItemAction.Remove);
             }
         });
@@ -645,7 +678,6 @@ public class EntityContextImpl implements EntityContext {
         try {
             if (entity instanceof BaseEntity) {
                 this.cacheService.entityUpdated((BaseEntity) entity);
-                sendEntityUpdateNotification(entity, type);
             }
         } catch (Exception ex) {
             log.error("Unable to update cache entity <{}> for entity: <{}>. Msg: <{}>", type, entity,
@@ -656,6 +688,9 @@ public class EntityContextImpl implements EntityContext {
     private Map<Class, Boolean> entityClassToHasUISidebarMenu = new HashMap<>();
 
     public void sendEntityUpdateNotification(Object entity, ItemAction type) {
+        if (!(entity instanceof BaseEntity)) {
+            return;
+        }
         // send info if item changed and it could be shown on page.
         Boolean hasUISidebarMenu = entityClassToHasUISidebarMenu.computeIfAbsent(entity.getClass(), cursor -> {
             while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
@@ -668,13 +703,25 @@ public class EntityContextImpl implements EntityContext {
         });
         if (hasUISidebarMenu) {
             JSONObject metadata = new JSONObject().put("type", type.name).put("value", entity);
-            if (entity instanceof HasDynamicContextMenuActions) {
-                UIInputBuilder uiInputBuilder = ui().inputBuilder();
-                ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
-                metadata.put("actions", uiInputBuilder.buildAll());
+            if (type != ItemAction.Remove) {
+                if (entity instanceof BaseEntity) {
+                    // add install dependencies if require
+                    ItemController.ItemsByTypeResponse.TypeDependency dependency =
+                            ItemController.getTypeDependency((Class<? extends BaseEntity>) entity.getClass(), this).orElse(null);
+                    if (dependency != null && !dependency.getDependencies().isEmpty()) {
+                        metadata.append("requireDependencies", dependency.getDependencies());
+                    }
+                }
+
+                // insert context actions if need
+                if (entity instanceof HasDynamicContextMenuActions) {
+                    UIInputBuilder uiInputBuilder = ui().inputBuilder();
+                    ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
+                    metadata.put("actions", uiInputBuilder.buildAll());
                 /* TODO: if (actions != null && !actions.isEmpty()) {
                     metadata.put("actions", actions.stream().map(UIActionResponse::new).collect(Collectors.toSet()));
                 }*/
+                }
             }
             ui().sendNotification("-global", metadata);
         }
@@ -878,7 +925,7 @@ public class EntityContextImpl implements EntityContext {
                 String description =
                         "Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion;
                 ui().addBellErrorNotification("version", "app", description,
-                        uiInputBuilder -> uiInputBuilder.addButton("handle-version", "fas fa-registered", PRIMARY_COLOR,
+                        uiInputBuilder -> uiInputBuilder.addButton("handle-version", "fas fa-registered", UI.Color.PRIMARY_COLOR,
                                 (entityContext, params) -> ActionResponseModel.showInfo(
                                         startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath()))).setText("Update"));
                 this.event().fireEvent("app-release", this.latestVersion);

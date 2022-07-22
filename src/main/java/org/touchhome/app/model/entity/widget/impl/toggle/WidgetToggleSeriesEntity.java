@@ -4,17 +4,17 @@ import org.touchhome.bundle.api.entity.widget.HasToggleSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldClassWithFeatureSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEntity> {
 
-    public static final String PREFIX = "wttgs_";
+    public static final String PREFIX = "wgttgs_";
 
     @UIField(order = 14, required = true)
-    @UIFieldClassWithFeatureSelection(HasToggleSeries.class)
+    @UIFieldEntityByClassSelection(HasToggleSeries.class)
     public String getDataSource() {
         return getJsonData("ds");
     }

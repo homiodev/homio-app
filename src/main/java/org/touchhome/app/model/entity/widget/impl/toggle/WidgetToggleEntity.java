@@ -8,7 +8,7 @@ import javax.persistence.Entity;
 @Entity
 public class WidgetToggleEntity extends WidgetBaseEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity> {
 
-    public static final String PREFIX = "wttg_";
+    public static final String PREFIX = "wgttg_";
 
     @UIField(order = 32)
     public ToggleType getDisplayType() {

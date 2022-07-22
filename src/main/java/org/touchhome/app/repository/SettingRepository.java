@@ -15,6 +15,7 @@ import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.setting.*;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
+import org.touchhome.bundle.api.setting.console.header.ConsoleHeaderSettingPlugin;
 import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.common.exception.ServerException;
@@ -127,6 +128,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity> impleme
         if (plugin instanceof SettingPluginOptionsFileExplorer) {
             return ((SettingPluginOptionsFileExplorer) plugin).getIcon();
         }
+        if(plugin instanceof ConsoleHeaderSettingPlugin) {
+            return ((ConsoleHeaderSettingPlugin) plugin).getIcon();
+        }
         return null;
     }
 
@@ -144,7 +148,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> impleme
                 BundleEntryPoint bundleEntrypoint = entityContext.getBeansOfType(BundleEntryPoint.class)
                         .stream().filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
                 if (bundleEntrypoint == null) {
-                    throw new ServerException("Unable find bundle entry-point for setting: ");
+                    throw new ServerException("Unable find bundle entry-point for setting: " + key);
                 }
                 return bundleEntrypoint.getBundleId();
             }

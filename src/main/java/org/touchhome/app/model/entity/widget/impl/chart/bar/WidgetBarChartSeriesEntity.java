@@ -1,6 +1,6 @@
-package org.touchhome.app.model.entity.widget.impl.chart.pie;
+package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
-import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartSeriesEntity;
+import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
@@ -14,9 +14,9 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection
 import javax.persistence.Entity;
 
 @Entity
-public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChartEntity> {
+public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChartEntity> {
 
-    public static final String PREFIX = "wgspcs_";
+    public static final String PREFIX = "wgsbcs_";
 
     @UIField(order = 14, required = true)
     @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
@@ -29,23 +29,23 @@ public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChar
         return getJsonDataEnum("aggr", AggregationType.Last);
     }
 
-    public WidgetPieChartSeriesEntity setAggregationType(AggregationType value) {
+    public WidgetBarChartSeriesEntity setAggregationType(AggregationType value) {
         setJsonData("aggr", value);
         return this;
     }
 
-    @UIField(order = 20, type = UIFieldType.ColorPicker)
+    @UIField(order = 50, type = UIFieldType.ColorPicker)
     @UIFieldGroup("Bar customization")
     public String getColor() {
         return getJsonData("bc", "#FFFFFF");
     }
 
-    public WidgetPieChartSeriesEntity setColor(String value) {
+    public WidgetBarChartSeriesEntity setColor(String value) {
         setJsonData("bc", value);
         return this;
     }
 
-    @UIField(order = 21)
+    @UIField(order = 51)
     @UIFieldSlider(min = 1, max = 254, step = 5)
     @UIFieldGroup("Bar customization")
     public int getColorOpacity() {

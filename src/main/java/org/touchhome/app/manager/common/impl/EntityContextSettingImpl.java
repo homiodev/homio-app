@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.SettingEntity;
@@ -71,14 +72,24 @@ public class EntityContextSettingImpl implements EntityContextSetting {
             SettingEntity settingEntity = entityContext.getEntity(SettingEntity.getKey(pluginFor));
             value = settingEntity == null ? null : settingEntity.getValue();
         }
-        return pluginFor.parseValue(entityContext, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
+        return parseSettingValue(pluginFor, value);
+    }
+
+    @Nullable
+    private <T> T parseSettingValue(SettingPlugin<T> pluginFor, String value) {
+        try {
+            return pluginFor.parseValue(entityContext, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
+        } catch (Exception ex) {
+            log.error("Unable to parse value: '{}' to type: '{}'", value, pluginFor.getType());
+            return null;
+        }
     }
 
     @Override
     public <T> T getValue(Class<? extends SettingPlugin<T>> settingPluginClazz) {
         SettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
         String value = this.getRawValue(settingPluginClazz);
-        return pluginFor.parseValue(entityContext, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
+        return parseSettingValue(pluginFor, value);
     }
 
     @Override

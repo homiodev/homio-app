@@ -1,8 +1,8 @@
-package org.touchhome.app.model.entity.widget.impl.chart.pie;
+package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
-import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartSeriesEntity;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.HasAggregateValueFromSeries;
+import org.touchhome.bundle.api.entity.widget.HasTimeValueSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -14,12 +14,12 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection
 import javax.persistence.Entity;
 
 @Entity
-public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChartEntity> {
+public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBarTimeChartEntity> {
 
-    public static final String PREFIX = "wgspcs_";
+    public static final String PREFIX = "wgsbtcs_";
 
     @UIField(order = 14, required = true)
-    @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
+    @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
     public String getDataSource() {
         return getJsonData("ds");
     }
@@ -29,25 +29,25 @@ public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChar
         return getJsonDataEnum("aggr", AggregationType.Last);
     }
 
-    public WidgetPieChartSeriesEntity setAggregationType(AggregationType value) {
+    public WidgetBarTimeChartSeriesEntity setAggregationType(AggregationType value) {
         setJsonData("aggr", value);
         return this;
     }
 
-    @UIField(order = 20, type = UIFieldType.ColorPicker)
-    @UIFieldGroup("Bar customization")
+    @UIField(order = 50, type = UIFieldType.ColorPicker)
+    @UIFieldGroup("Bar")
     public String getColor() {
         return getJsonData("bc", "#FFFFFF");
     }
 
-    public WidgetPieChartSeriesEntity setColor(String value) {
+    public WidgetBarTimeChartSeriesEntity setColor(String value) {
         setJsonData("bc", value);
         return this;
     }
 
-    @UIField(order = 21)
+    @UIField(order = 51)
     @UIFieldSlider(min = 1, max = 254, step = 5)
-    @UIFieldGroup("Bar customization")
+    @UIFieldGroup("Bar")
     public int getColorOpacity() {
         return getJsonData("bco", 120);
     }

@@ -18,7 +18,7 @@ import java.util.List;
 @Entity
 public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntity> {
 
-    public static final String PREFIX = "wtvidser_";
+    public static final String PREFIX = "wgsvids_";
 
     @UIField(order = 11)
     public boolean isAutoPlay() {

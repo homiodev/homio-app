@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,13 +12,12 @@ import org.springframework.web.multipart.MultipartFile;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.DeviceBaseEntity;
+import org.touchhome.bundle.api.entity.TreeConfiguration;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
-import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.raspberry.entity.RaspberryDeviceEntity;
 import org.touchhome.bundle.raspberry.fs.RaspberryFileSystem;
-import org.touchhome.common.fs.FileObject;
+import org.touchhome.common.fs.TreeNode;
 import org.touchhome.common.fs.FileSystemProvider;
 import org.touchhome.common.util.ArchiveUtil;
 import org.touchhome.common.util.CommonUtils;
@@ -65,17 +63,17 @@ public class FileSystemController implements BeanPostConstruct {
     }
 
     @PostMapping("")
-    public List<FileSystemConfiguration> getFileSystems(@RequestBody GetFSRequest request) {
-        List<FileSystemConfiguration> configurations = new ArrayList<>();
+    public List<TreeConfiguration> getFileSystems(@RequestBody GetFSRequest request) {
+        List<TreeConfiguration> configurations = new ArrayList<>();
         for (BaseFileSystemEntity fileSystem : fileSystems) {
             if (request.showOnlyLocalFS && !fileSystem.getEntityID().equals(this.localFileSystem.getEntity().getEntityID())) {
                 continue;
             }
-            FileSystemConfiguration configuration = new FileSystemConfiguration(fileSystem);
+            TreeConfiguration configuration = new TreeConfiguration(fileSystem);
 
             for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
                 if (selectedNode.fs.equals(fileSystem.getEntityID())) {
-                    configuration.children = fileSystem.getFileSystem(entityContext).loadTreeUpToChild(selectedNode.id);
+                    configuration.setChildren(fileSystem.getFileSystem(entityContext).loadTreeUpToChild(selectedNode.id));
                 }
             }
             configurations.add(configuration);
@@ -83,25 +81,13 @@ public class FileSystemController implements BeanPostConstruct {
         return configurations;
     }
 
-    /**
-     * Load children up to specific file path
-     */
-    @PostMapping("/load")
-    public FileSystemConfiguration load(@RequestBody ListRequest request) {
-        BaseFileSystemEntity baseFileSystemEntity = getFileSystemEntity(request.sourceFs);
-        FileSystemProvider fileSystem = baseFileSystemEntity.getFileSystem(entityContext);
-        FileSystemConfiguration fileSystemConfiguration = new FileSystemConfiguration(baseFileSystemEntity);
-        fileSystemConfiguration.children = fileSystem.loadTreeUpToChild(request.sourceFileId);
-        return fileSystemConfiguration;
-    }
-
     @PostMapping("/list")
-    public Collection<FileObject> list(@RequestBody ListRequest request) {
+    public Collection<TreeNode> list(@RequestBody ListRequest request) {
         return getFileSystem(request.sourceFs).getChildren(request.sourceFileId);
     }
 
     @DeleteMapping
-    public FileObject remove(@RequestBody RemoveFilesRequest request) {
+    public TreeNode remove(@RequestBody RemoveFilesRequest request) {
         return getFileSystem(request.sourceFs).delete(request.sourceFileIds);
     }
 
@@ -109,12 +95,12 @@ public class FileSystemController implements BeanPostConstruct {
     public ResponseEntity<InputStreamResource> download(@RequestBody DownloadRequest request) throws Exception {
         FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
         if (request.sourceFileIds.size() == 1) {
-            FileObject fileObject = fileSystem.toFileObject(request.sourceFileIds.iterator().next());
-            InputStream inputStream = fileSystem.getEntryInputStream(fileObject.getId());
+            TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileIds.iterator().next());
+            InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
 
             MediaType mediaType;
             try {
-                mediaType = MediaType.parseMediaType(fileObject.getAttributes().getContentType());
+                mediaType = MediaType.parseMediaType(treeNode.getAttributes().getContentType());
             } catch (Exception ex) {
                 mediaType = MediaType.APPLICATION_OCTET_STREAM;
             }
@@ -126,19 +112,19 @@ public class FileSystemController implements BeanPostConstruct {
     }
 
     @PostMapping("/create")
-    public FileObject createNode(@RequestBody CreateNodeRequest request) {
+    public TreeNode createNode(@RequestBody CreateNodeRequest request) {
         FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
         return fileSystem.create(request.sourceFileId, request.name, request.dir, getUploadOption(request));
     }
 
     @PostMapping("/unarchive")
-    public FileObject unarchive(@RequestBody UnArchiveNodeRequest request) {
+    public TreeNode unarchive(@RequestBody UnArchiveNodeRequest request) {
         FileSystemProvider sourceFs = getFileSystem(request.sourceFs);
         FileSystemProvider targetFs = getFileSystem(request.targetFs);
 
         Path archive = sourceFs.getArchiveAsLocalPath(request.sourceFileId);
         // InputStream stream = sourceFs.getEntryInputStream(request.sourceFileId);
-        FileObject sourceItem = sourceFs.toFileObject(request.sourceFileId);
+        TreeNode sourceItem = sourceFs.toTreeNode(request.sourceFileId);
 
         String fileExtension = CommonUtils.getExtension(sourceItem.getName());
         String fileWithoutExtension = sourceItem.getName().substring(0, sourceItem.getName().length() - fileExtension.length());
@@ -149,7 +135,7 @@ public class FileSystemController implements BeanPostConstruct {
         ArchiveUtil.unzip(archive, zipFormat, targetPath, null, null, issueHandler);
         Set<String> ids = Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles()))
                 .map(File::toString).collect(Collectors.toSet());
-        FileObject fileSystemItem = targetFs.copy(localFileSystem.toFileObjects(ids), request.targetDir,
+        TreeNode fileSystemItem = targetFs.copy(localFileSystem.toTreeNodes(ids), request.targetDir,
                 FileSystemProvider.UploadOption.Replace);
 
         if (request.removeSource) {
@@ -159,15 +145,15 @@ public class FileSystemController implements BeanPostConstruct {
     }
 
     @PostMapping("/archive")
-    public FileObject archive(@RequestBody ArchiveNodeRequest request) throws Exception {
+    public TreeNode archive(@RequestBody ArchiveNodeRequest request) throws Exception {
         // make archive from requested files/folders
         Path zipFile = archiveSource(request.sourceFs, request.format, request.sourceFileIds, request.targetName, request.level,
                 request.password);
 
         try {
-            FileObject zipFileObject = FileObject.of(zipFile.toString(), zipFile, localFileSystem);
+            TreeNode zipTreeNode = TreeNode.of(zipFile.toString(), zipFile, localFileSystem);
 
-            return getFileSystem(request.targetFs).copy(zipFileObject, request.targetDir,
+            return getFileSystem(request.targetFs).copy(zipTreeNode, request.targetDir,
                     FileSystemProvider.UploadOption.Replace);
         } finally {
             Files.deleteIfExists(zipFile);
@@ -175,12 +161,12 @@ public class FileSystemController implements BeanPostConstruct {
     }
 
     @PostMapping("/copy")
-    public FileObject copyNode(@RequestBody CopyNodeRequest request) {
+    public TreeNode copyNode(@RequestBody CopyNodeRequest request) {
         FileSystemProvider sourceFs = getFileSystem(request.sourceFs);
         FileSystemProvider targetFs = getFileSystem(request.targetFs);
 
-        Set<FileObject> entries = sourceFs.toFileObjects(request.getSourceFileIds());
-        FileObject fileSystemItem = targetFs.copy(entries, request.targetPath, FileSystemProvider.UploadOption.Replace);
+        Set<TreeNode> entries = sourceFs.toTreeNodes(request.getSourceFileIds());
+        TreeNode fileSystemItem = targetFs.copy(entries, request.targetPath, FileSystemProvider.UploadOption.Replace);
 
         if (request.removeSource) {
             sourceFs.delete(request.getSourceFileIds());
@@ -189,29 +175,29 @@ public class FileSystemController implements BeanPostConstruct {
     }
 
     @PostMapping("/upload")
-    public FileObject upload(@RequestParam("sourceFs") String sourceFs, @RequestParam("sourceFileId") String sourceFileId,
+    public TreeNode upload(@RequestParam("sourceFs") String sourceFs, @RequestParam("sourceFileId") String sourceFileId,
                              @RequestParam("replace") boolean replace, @RequestParam("data") MultipartFile[] files) {
         FileSystemProvider fileSystem = getFileSystem(sourceFs);
-        Set<FileObject> fileObjects = Stream.of(files).map(FileObject::of).collect(Collectors.toSet());
-        return fileSystem.copy(fileObjects, sourceFileId, FileSystemProvider.UploadOption.Replace);
+        Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
+        return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);
     }
 
     @PostMapping("/rename")
-    public FileObject rename(@RequestBody RenameNodeRequest request) {
+    public TreeNode rename(@RequestBody RenameNodeRequest request) {
         return getFileSystem(request.sourceFs).rename(request.sourceFileId, request.newName, getUploadOption(request));
     }
 
     @GetMapping("/search")
-    public List<FileObject> search(@RequestParam("query") String query) {
+    public List<TreeNode> search(@RequestParam("query") String query) {
         //  if (StringUtils.isEmpty(query)) {
         return null;
         // }
-        /*List<FileObject> result = new ArrayList<>();
+        /*List<TreeNode> result = new ArrayList<>();
         Files.walkFileTree(Paths.get(defaultPath), new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 if (file.getFileName().toString().contains(query)) {
-                    result.add(new FileObject(file.toFile()));
+                    result.add(new TreeNode(file.toFile()));
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -320,47 +306,11 @@ public class FileSystemController implements BeanPostConstruct {
         public boolean replace;
     }
 
-    @Getter
-    private class FileSystemConfiguration {
-        public final String id;
-        public final String name;
-        public final String icon;
-        public final String color;
-        public final boolean hasDelete;
-        public final boolean hasRename;
-        public final boolean hasUpload;
-        public final boolean hasCreateFile;
-        public final boolean hasCreateFolder;
-        public final List<String> editableExtensions;
-        public final List<OptionModel> zipExtensions;
-        public Set<FileObject> children;
-
-        public FileSystemConfiguration(BaseFileSystemEntity fs) {
-            this.id = fs.getEntityID();
-            DeviceBaseEntity entity = (DeviceBaseEntity) fs;
-            this.name = StringUtils.left(entity.getTitle(), 20);
-            this.icon = fs.getIcon();
-            this.color = fs.getIconColor();
-            this.hasDelete = true;
-            this.hasRename = true;
-            this.hasUpload = true;
-            this.hasCreateFile = true;
-            this.hasCreateFolder = true;
-
-            this.zipExtensions =
-                    Stream.of(ArchiveUtil.ArchiveFormat.values()).map(f -> OptionModel.of(f.getName()))
-                            .collect(Collectors.toList());
-            this.editableExtensions =
-                    Arrays.asList("txt", "java", "cpp", "sh", "css", "scss", "js", "json", "xml", "html", "php", "py", "ts",
-                            "ino", "conf", "service", "md", "png", "jpg", "jpeg");
-        }
-    }
-
     private Path archiveSource(String fs, String format, Set<String> sourceFileIds, String targetName, String level,
                                String password) throws IOException {
         FileSystemProvider sourceFs = getFileSystem(fs);
 
-        Collection<FileObject> entries = sourceFs.toFileObjects(sourceFileIds);
+        Collection<TreeNode> entries = sourceFs.toTreeNodes(sourceFileIds);
         Path tmpArchiveAssemblerPath = CommonUtils.getTmpPath().resolve("tmp_archive_assembler_" + System.currentTimeMillis());
 
         try {
