@@ -1,7 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
-import org.touchhome.bundle.api.entity.widget.WidgetGroup;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;

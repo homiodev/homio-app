@@ -73,7 +73,7 @@ public class WidgetChartsController {
             dataset.setLabel(defaultString(item.getName(), context.source.getTitle()));
             dataset.setBorderWidth(entity.getBorderWidth());
 
-            String color = item.getColor();
+            String color = item.getChartColor();
             dataset.setBackgroundColor(Collections.singletonList(getColorWithOpacity(color, item.getColorOpacity())));
             dataset.setBorderColor(Collections.singletonList(color));
             timeSeriesChartData.datasets.add(dataset);
@@ -115,7 +115,7 @@ public class WidgetChartsController {
 
             timeSeriesChartData.labels.add(defaultString(item.getName(), context.source.getTitle()));
 
-            String color = item.getColor();
+            String color = item.getChartColor();
             dataset.getBackgroundColor().add(getColorWithOpacity(color, item.getColorOpacity()));
             dataset.getBorderColor().add(color);
 

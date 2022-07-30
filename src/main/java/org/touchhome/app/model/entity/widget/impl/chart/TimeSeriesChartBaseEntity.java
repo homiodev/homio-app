@@ -25,16 +25,6 @@ public abstract class TimeSeriesChartBaseEntity<T extends WidgetBaseEntityAndSer
         return (T) this;
     }
 
-    @UIField(order = 32)
-    public Boolean getTimeline() {
-        return getJsonData("timeline", Boolean.TRUE);
-    }
-
-    public T setTimeline(String value) {
-        setJsonData("timeline", value);
-        return (T) this;
-    }
-
     public abstract DS buildTargetDataset(TimeSeriesContext item);
 
     public boolean fillMissingValues(WidgetSeriesEntity seriesEntity) {

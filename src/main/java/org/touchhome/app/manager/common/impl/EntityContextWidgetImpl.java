@@ -55,12 +55,6 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
                 widgetLineChartEntity.setAxisLabelY(name);
                 return this;
             }
-
-            @Override
-            public LineChartWidgetBuilder timeline(String value) {
-                widgetLineChartEntity.setTimeline(value);
-                return this;
-            }
         };
         lineChartWidgetBuilder.accept(builder);
 
@@ -73,7 +67,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
         LineChartSeriesBuilder lineChartSeriesBuilder = (color, lineChartSeries) -> {
             WidgetLineChartSeriesEntity seriesEntity = new WidgetLineChartSeriesEntity();
-            seriesEntity.setColor(color);
+            seriesEntity.setChartColor(color);
             seriesEntity.setDataSource(lineChartSeries.getEntityID());
             seriesEntity.setWidgetEntity(savedWidget);
             entityContext.save(seriesEntity);

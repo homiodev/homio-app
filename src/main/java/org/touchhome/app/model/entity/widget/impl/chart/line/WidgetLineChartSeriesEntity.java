@@ -26,19 +26,19 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     }
 
     @UIField(order = 15, type = UIFieldType.ColorPicker)
-    @UIFieldGroup("Line")
-    public String getColor() {
+    @UIFieldGroup("Chart line")
+    public String getChartColor() {
         return getJsonData("bc", "#FFFFFF");
     }
 
-    public WidgetLineChartSeriesEntity setColor(String value) {
+    public WidgetLineChartSeriesEntity setChartColor(String value) {
         setJsonData("bc", value);
         return this;
     }
 
     @UIField(order = 16)
     @UIFieldSlider(min = 1, max = 254, step = 5)
-    @UIFieldGroup("Line")
+    @UIFieldGroup("Chart line")
     public int getColorOpacity() {
         return getJsonData("bco", 120);
     }
@@ -49,7 +49,7 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
 
     @UIField(order = 17)
     @UIFieldSlider(min = 0, max = 10)
-    @UIFieldGroup("Line")
+    @UIFieldGroup("Chart line")
     public int getTension() {
         return getJsonData("tns", 4);
     }
@@ -60,7 +60,7 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     }
 
     @UIField(order = 17)
-    @UIFieldGroup("Line")
+    @UIFieldGroup("Chart line")
     public Stepped getStepped() {
         return getJsonDataEnum("stpd", Stepped.False);
     }
@@ -98,7 +98,7 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     @Override
     protected void beforePersist() {
         if (!getJsonData().has("bc")) {
-            setColor(UI.Color.random());
+            setChartColor(UI.Color.random());
         }
     }
 

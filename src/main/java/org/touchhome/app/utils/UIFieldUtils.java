@@ -478,6 +478,7 @@ public class UIFieldUtils {
         UIFieldGroup uiFieldGroup = uiFieldContext.getDeclaredAnnotation(UIFieldGroup.class);
         if (uiFieldGroup != null) {
             jsonTypeMetadata.put("group", uiFieldGroup.value());
+            jsonTypeMetadata.put("groupOrder", uiFieldGroup.order());
             jsonTypeMetadata.put("borderColor", uiFieldGroup.borderColor());
         }
 

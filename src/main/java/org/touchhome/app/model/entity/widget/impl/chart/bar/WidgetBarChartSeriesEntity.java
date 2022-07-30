@@ -1,7 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
 import org.touchhome.bundle.api.entity.widget.AggregationType;
-import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.UI;
@@ -36,11 +35,11 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
 
     @UIField(order = 50, type = UIFieldType.ColorPicker)
     @UIFieldGroup("Bar customization")
-    public String getColor() {
+    public String getChartColor() {
         return getJsonData("bc", "#FFFFFF");
     }
 
-    public WidgetBarChartSeriesEntity setColor(String value) {
+    public WidgetBarChartSeriesEntity setChartColor(String value) {
         setJsonData("bc", value);
         return this;
     }
@@ -64,7 +63,7 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
     @Override
     protected void beforePersist() {
         if (!getJsonData().has("bc")) {
-            setColor(UI.Color.random());
+            setChartColor(UI.Color.random());
         }
     }
 }
