@@ -3,7 +3,9 @@ package org.touchhome.app.model.entity.widget.impl.display;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
+import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
@@ -40,16 +42,6 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         return this;
     }
 
-    @UIField(order = 21, type = UIFieldType.ColorPicker)
-    public String getBackground() {
-        return getJsonData("bg", "rgba(0, 0, 0, 0.1)");
-    }
-
-    public WidgetDisplaySeriesEntity setBackground(String value) {
-        setJsonData("bg", value);
-        return this;
-    }
-
     @UIField(order = 22)
     public String getPrepend() {
         return getJsonData("prepend");
@@ -71,14 +63,31 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         return this;
     }
 
-    @UIField(order = 24)
-    public boolean getShowLastUpdateDate() {
-        return getJsonData("showLastUpdateDate", Boolean.FALSE);
+    @UIField(order = 1, type = UIFieldType.IconPicker)
+    @UIFieldGroup("Icon")
+    public String getIcon() {
+        return getJsonData("icon", "fas fa-adjust");
     }
 
-    public WidgetDisplaySeriesEntity setShowLastUpdateDate(boolean value) {
-        setJsonData("showLastUpdateDate", value);
-        return this;
+    public void setIcon(String value) {
+        setJsonData("icon", value);
+    }
+
+    @UIField(order = 2, type = UIFieldType.ColorPicker)
+    @UIFieldGroup("Icon")
+    public String getIconColor() {
+        return getJsonData("ic", "#FFFFFF");
+    }
+
+    public void setIconColor(String value) {
+        setJsonData("ic", value);
+    }
+
+    @Override
+    protected void beforePersist() {
+        if (!getJsonData().has("ic")) {
+            setIconColor(UI.Color.random());
+        }
     }
 
     @Override

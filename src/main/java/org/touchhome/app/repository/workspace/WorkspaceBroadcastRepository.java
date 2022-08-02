@@ -17,7 +17,7 @@ public class WorkspaceBroadcastRepository extends AbstractRepository<WorkspaceBr
     }
 
     @Transactional
-    public List<Object[]> getLineChartSeries(BaseEntity source, ChartRequest request) {
+    public List<Object[]> getTimeValueSeries(BaseEntity source, ChartRequest request) {
         //noinspection unchecked
         return (List<Object[]>) queryForValues("creationTime", source, request, "ORDER BY e.creationTime");
     }

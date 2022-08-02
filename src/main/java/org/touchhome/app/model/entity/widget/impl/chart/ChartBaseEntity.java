@@ -6,6 +6,7 @@ import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.Entity;
 
@@ -26,16 +27,6 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
 
     public void setTitle(String value) {
         super.setName(value);
-    }
-
-    @UIField(order = 12)
-    public TimePeriod getTimePeriod() {
-        return getJsonDataEnum("timePeriod", TimePeriod.All);
-    }
-
-    public T setTimePeriod(TimePeriod value) {
-        setJsonData("timePeriod", value);
-        return (T) this;
     }
 
     @UIField(order = 70)
@@ -137,6 +128,26 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
         return (T) this;
     }
 
+    @UIField(order = 1)
+    @UIFieldGroup("Data labels")
+    public boolean getShowDataLabels() {
+        return getJsonData("sdl", true);
+    }
+
+    public void setShowDataLabels(boolean value) {
+        setJsonData("sdl", value);
+    }
+
+    @UIField(order = 2, type = UIFieldType.ColorPicker)
+    @UIFieldGroup("Data labels")
+    public String getDataLabelsColor() {
+        return getJsonData("dlc", "#ADB5BD");
+    }
+
+    public void setDataLabelsColor(String value) {
+        setJsonData("dlc", value);
+    }
+
     @UIField(order = 100)
     public Boolean getAnimations() {
         return getJsonData("am", Boolean.FALSE);
@@ -144,38 +155,6 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
 
     public T setAnimations(Boolean value) {
         setJsonData("am", value);
-        return (T) this;
-    }
-
-    @UIField(order = 120, showInContextMenu = true)
-    public Boolean getShowTimeButtons() {
-        return getJsonData("stb", Boolean.FALSE);
-    }
-
-    public T setShowTimeButtons(Boolean value) {
-        setJsonData("stb", value);
-        return (T) this;
-    }
-
-    @UIField(order = 200)
-    @UIFieldGroup("Update")
-    public UpdateInterval getReloadDataInterval() {
-        return getJsonDataEnum("rdi", UpdateInterval.Never);
-    }
-
-    public T setReloadDataInterval(UpdateInterval value) {
-        setJsonData("rdi", value);
-        return (T) this;
-    }
-
-    @UIField(order = 210)
-    @UIFieldGroup("Update")
-    public Boolean getListenSourceUpdates() {
-        return getJsonData("lsu", Boolean.TRUE);
-    }
-
-    public T setListenSourceUpdates(Boolean value) {
-        setJsonData("lsu", value);
         return (T) this;
     }
 

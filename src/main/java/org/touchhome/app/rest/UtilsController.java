@@ -33,6 +33,7 @@ import org.touchhome.common.util.CommonUtils;
 import org.touchhome.common.util.Curl;
 import org.touchhome.common.util.Lang;
 
+import javax.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -61,12 +62,12 @@ public class UtilsController {
     private final CodeParser codeParser;
 
     @PutMapping("/dynamicUpdates")
-    public void registerForUpdates(@RequestBody DynamicUpdateRequest request) {
+    public void registerForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
         entityContext.ui().registerForUpdates(request);
     }
 
     @DeleteMapping("/dynamicUpdates")
-    public void unregisterForUpdates(@RequestBody DynamicUpdateRequest request) {
+    public void unregisterForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
         entityContext.ui().unRegisterForUpdates(request);
     }
 

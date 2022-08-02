@@ -1,9 +1,13 @@
 package org.touchhome.app.rest.widget;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
 import org.springframework.data.util.Pair;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,16 +20,21 @@ import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartEntity;
+import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetMiniCardChartEntity;
+import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetMiniCardChartSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
 import org.touchhome.app.model.rest.DynamicUpdateRequest;
-import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.app.model.rest.WidgetDataRequest;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.widget.*;
 import org.touchhome.bundle.api.ui.TimePeriod;
 
+import javax.validation.Valid;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
@@ -40,28 +49,78 @@ public class WidgetChartsController {
     private final EntityContextImpl entityContext;
     private final ObjectMapper objectMapper;
 
+    @PostMapping("/minicard/series")
+    public TimeSeriesChartData<ChartDataset> getMiniCardChartSeries(@Valid @RequestBody WidgetDataRequest request) {
+        WidgetMiniCardChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetMiniCardChartEntity.class);
+        double pointsPerHour = entity.getCalcPointsPerHour();
+
+        TimePeriod.TimePeriodImpl timePeriod = new TimePeriod.TimePeriodImpl() {
+            @Override
+            public Pair<Date, Date> getDateRange() {
+                return Pair.of(new Date(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(entity.getHoursToShow())),
+                        new Date());
+            }
+
+            @Override
+            public String getDateFromNow() {
+                return "-" + entity.getHoursToShow() + "h";
+            }
+
+            @Override
+            public List<Date> evaluateDateRange() {
+                long endTime = System.currentTimeMillis();
+                long startTime = endTime - TimeUnit.HOURS.toMillis(entity.getHoursToShow());
+                double requiredNumOfPoints = Math.ceil(entity.getHoursToShow() * pointsPerHour);
+                double diff = (endTime - startTime) / requiredNumOfPoints;
+                List<Date> dates = new ArrayList<>();
+                for (int i = 0; i < requiredNumOfPoints; i++) {
+                    dates.add(new Date((long) (startTime + i * diff)));
+                }
+                return dates;
+            }
+        };
+        ChartRequest chartRequest = buildChartRequest(timePeriod);
+
+        // build fake series
+        WidgetMiniCardChartSeriesEntity series = new WidgetMiniCardChartSeriesEntity();
+        series.setDataSource(entity.getDataSource());
+        series.setDynamicParameterFieldsHolder(entity.getDynamicParameterFieldsHolder());
+
+        entity.setSeries(Collections.singleton(series));
+        TimeSeriesChartData<ChartDataset> data =
+                buildTimeSeriesFullData(entity, timePeriod, chartRequest, entity.getListenSourceUpdates());
+
+        BaseEntity<?> source = entityContext.getEntity(entity.getDataSource());
+        // actually it must be type HasTimeValueAndLastValueSeries but we also checking against null
+        if (source instanceof HasTimeValueAndLastValueSeries) {
+            data.value =
+                    ((HasTimeValueAndLastValueSeries) source).getLastAvailableValue(entity.getDynamicParameterFieldsHolder());
+        }
+        return data;
+    }
+
     @PostMapping("/line/series")
-    public TimeSeriesChartData<ChartDataset> getChartSeries(@RequestBody WidgetSeriesRequest request) {
+    public TimeSeriesChartData<ChartDataset> getChartSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetLineChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetLineChartEntity.class);
-        TimePeriod timePeriod = TimePeriod.fromValue(request.getTimePeriod());
+        TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
         ChartRequest chartRequest = buildChartRequest(timePeriod);
 
         return buildTimeSeriesFullData(entity, timePeriod, chartRequest, entity.getListenSourceUpdates());
     }
 
     @PostMapping("/bartime/series")
-    public TimeSeriesChartData<ChartDataset> getBartimeSeries(@RequestBody WidgetSeriesRequest request) {
+    public TimeSeriesChartData<ChartDataset> getBartimeSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetBarTimeChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetBarTimeChartEntity.class);
-        TimePeriod timePeriod = TimePeriod.fromValue(request.getTimePeriod());
+        TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
         ChartRequest chartRequest = buildChartRequest(timePeriod);
 
         return buildTimeSeriesFullData(entity, timePeriod, chartRequest, entity.getListenSourceUpdates());
     }
 
     @PostMapping("/bar/series")
-    public TimeSeriesChartData<BarChartDataset> getBarSeries(@RequestBody WidgetSeriesRequest request) {
+    public TimeSeriesChartData<BarChartDataset> getBarSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetBarChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetBarChartEntity.class);
-        TimePeriod timePeriod = TimePeriod.fromValue(request.getTimePeriod());
+        TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
         ChartRequest chartRequest = buildChartRequest(timePeriod);
         TimeSeriesChartData<BarChartDataset> timeSeriesChartData = new TimeSeriesChartData<>();
         timeSeriesChartData.labels.add(entity.getAxisLabel());
@@ -80,13 +139,15 @@ public class WidgetChartsController {
 
             AggregationType aggregationType = item.getAggregationType();
             chartRequest.setParameters(item.getDynamicParameterFieldsHolder());
-            dataset.setData(Collections.singletonList(calcFloatValue(chartRequest, aggregationType, context.source)));
+            dataset.setData(Collections.singletonList(calcFloatValue(chartRequest, aggregationType,
+                    (HasAggregateValueFromSeries) context.source)));
 
             if (entity.getListenSourceUpdates()) {
-                entityContext.event().addEventListener(item.getDataSource(), o -> {
+                entityContext.event().addEventListener(item.getDataSource(), entity.getEntityID(), o -> {
                     ChartRequest updChartRequest = buildChartRequest(timePeriod);
                     updChartRequest.setParameters(item.getDynamicParameterFieldsHolder());
-                    dataset.setData(Collections.singletonList(calcFloatValue(updChartRequest, aggregationType, context.source)));
+                    dataset.setData(Collections.singletonList(calcFloatValue(updChartRequest, aggregationType,
+                            (HasAggregateValueFromSeries) context.source)));
                     entityContext.ui().sendDynamicUpdate(
                             new DynamicUpdateRequest(item.getDataSource(), BarChartDataset.class.getSimpleName(),
                                     entity.getEntityID()), dataset);
@@ -97,10 +158,10 @@ public class WidgetChartsController {
     }
 
     @PostMapping("/pie/series")
-    public TimeSeriesChartData<PieChartDataset> getPieSeries(@RequestBody WidgetSeriesRequest request) {
+    public TimeSeriesChartData<PieChartDataset> getPieSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetPieChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetPieChartEntity.class);
         String widgetEntityID = entity.getEntityID();
-        TimePeriod timePeriod = TimePeriod.fromValue(request.getTimePeriod());
+        TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
         ChartRequest chartRequest = buildChartRequest(timePeriod);
         TimeSeriesChartData<PieChartDataset> timeSeriesChartData = new TimeSeriesChartData<>();
         PieChartDataset dataset = new PieChartDataset(widgetEntityID + "___" + System.currentTimeMillis());
@@ -121,14 +182,15 @@ public class WidgetChartsController {
 
             AggregationType aggregationType = item.getAggregationType();
             chartRequest.setParameters(item.getDynamicParameterFieldsHolder());
-            dataset.getData().add(calcFloatValue(chartRequest, aggregationType, context.source));
+            dataset.getData().add(calcFloatValue(chartRequest, aggregationType, (HasAggregateValueFromSeries) context.source));
 
             // listen DataSource changed events, convert to BarSeries and put again in even bus
             if (entity.getListenSourceUpdates()) {
-                entityContext.event().addEventListener(item.getDataSource(), o -> {
+                entityContext.event().addEventListener(item.getDataSource(), entity.getEntityID(), o -> {
                     ChartRequest updChartRequest = buildChartRequest(timePeriod);
                     updChartRequest.setParameters(item.getDynamicParameterFieldsHolder());
-                    dataset.getData().set(context.index, calcFloatValue(updChartRequest, aggregationType, context.source));
+                    dataset.getData().set(context.index, calcFloatValue(updChartRequest, aggregationType,
+                            (HasAggregateValueFromSeries) context.source));
                     entityContext.ui().sendDynamicUpdate(
                             new DynamicUpdateRequest(item.getDataSource(), PieChartDataset.class.getSimpleName(),
                                     widgetEntityID), dataset);
@@ -138,27 +200,59 @@ public class WidgetChartsController {
         return timeSeriesChartData;
     }
 
-    @PostMapping("/gauge/{entityID}/value")
-    public Float getGaugeValue(@RequestBody WidgetGaugeRequest request) {
+    @PostMapping("/gauge/value")
+    public Float getGaugeValue(@Valid @RequestBody WidgetDataRequest request) {
         WidgetGaugeEntity entity = request.getEntity(entityContext, objectMapper, WidgetGaugeEntity.class);
 
         BaseEntity baseEntity = entityContext.getEntity(entity.getDataSource());
-        if (baseEntity instanceof HasAggregateValueFromSeries) {
-            TimePeriod timePeriod = TimePeriod.fromValue(request.getTimePeriod());
-            return ((HasAggregateValueFromSeries) baseEntity).getAggregateValueFromSeries(buildChartRequest(timePeriod),
-                    entity.getAggregationType());
-        }
-        return 0F;
+        return getAggregateValueFromSeries(request, entityContext, baseEntity,
+                entity.getDynamicParameterFieldsHolder(), entity.getListenSourceUpdates(),
+                entity.getAggregationType(), entity.getDataSource(), entity.getEntityID());
     }
 
-    private ChartRequest buildChartRequest(TimePeriod timePeriod) {
+    public static Float getAggregateValueFromSeries(WidgetDataRequest request, EntityContextImpl entityContext,
+                                                    BaseEntity<?> baseEntity,
+                                                    JSONObject dynamicParameterFieldsHolder, Boolean listenSourceUpdates,
+                                                    AggregationType aggregationType, String dataSourceEntityID, String entityID) {
+        Float value = null;
+        if (baseEntity instanceof HasAggregateValueFromSeries) {
+            HasAggregateValueFromSeries dataSource = (HasAggregateValueFromSeries) baseEntity;
+            TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
+
+            value = calcFloatValue(buildChartRequest(timePeriod, entityContext)
+                    .setParameters(dynamicParameterFieldsHolder), aggregationType, dataSource);
+
+            if (listenSourceUpdates) {
+                AtomicReference<Float> valueRef = new AtomicReference<>(0F);
+                entityContext.event().addEventListener(dataSourceEntityID, entityID, o -> {
+                    ChartRequest updChartRequest = buildChartRequest(timePeriod, entityContext)
+                            .setParameters(dynamicParameterFieldsHolder);
+                    float updatedValue = calcFloatValue(updChartRequest, aggregationType, dataSource);
+                    if (valueRef.get() != updatedValue) {
+                        valueRef.set(updatedValue);
+                        entityContext.ui().sendDynamicUpdate(
+                                new DynamicUpdateRequest(dataSourceEntityID, SingleValueData.class.getSimpleName(),
+                                        entityID), new SingleValueData(updatedValue));
+                    }
+                });
+            }
+        }
+        return value;
+    }
+
+    private static ChartRequest buildChartRequest(TimePeriod.TimePeriodImpl timePeriod, EntityContextImpl entityContext) {
         Pair<Date, Date> range = timePeriod.getDateRange();
         return new ChartRequest(entityContext, range.getFirst(), range.getSecond(), timePeriod.getDateFromNow(),
-                timePeriod != TimePeriod.All);
+                !timePeriod.getDateFromNow().equals("0"));
     }
 
-    private float calcFloatValue(ChartRequest chartRequest, AggregationType aggregationType, BaseEntity source) {
-        Float value = ((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(chartRequest, aggregationType);
+    private ChartRequest buildChartRequest(TimePeriod.TimePeriodImpl timePeriod) {
+        return buildChartRequest(timePeriod, entityContext);
+    }
+
+    public static float calcFloatValue(ChartRequest chartRequest, AggregationType aggregationType,
+                                       HasAggregateValueFromSeries source) {
+        Float value = source.getAggregateValueFromSeries(chartRequest, aggregationType);
         return value == null ? 0F : value;
     }
 
@@ -182,7 +276,7 @@ public class WidgetChartsController {
     }
 
     private TimeSeriesChartData<ChartDataset> buildTimeSeriesFullData(TimeSeriesChartBaseEntity entity,
-                                                                      TimePeriod timePeriod,
+                                                                      TimePeriod.TimePeriodImpl timePeriod,
                                                                       ChartRequest chartRequest,
                                                                       boolean addUpdateListener) {
         Set<WidgetSeriesEntity> series = entity.getSeries();
@@ -216,22 +310,29 @@ public class WidgetChartsController {
 
     private void addChangeListenerForTimeSeriesEntity(TimeSeriesChartBaseEntity entity,
                                                       TimeSeriesContext timeSeriesContext,
-                                                      TimePeriod timePeriod,
+                                                      TimePeriod.TimePeriodImpl timePeriod,
                                                       String entityID) {
         WidgetSeriesEntity item = timeSeriesContext.getSeriesEntity();
-        entityContext.event().addEventListener(item.getDataSource(), o -> {
+        BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
+        entityContext.event().addEventListener(item.getDataSource(), entityID, o -> {
             ChartRequest updatedChartRequest = buildChartRequest(timePeriod);
             Set<TimeSeriesContext> cts = buildTimeSeriesFromDataSource(updatedChartRequest, item, timeSeriesContext.getSeries());
             TimeSeriesValues values = timeSeriesContext.getOwner();
 
             // if context was updated - we need update rest of values also !!!
             if (!values.isEqualSeries(cts)) {
-                TimeSeriesChartData<ChartDataset> updatedData =
+                TimeSeriesChartData<ChartDataset> fullUpdatedData =
                         this.buildTimeSeriesFullData(entity, timePeriod, updatedChartRequest, false);
+
+                if (source instanceof HasTimeValueAndLastValueSeries) {
+                    fullUpdatedData.value =
+                            ((HasTimeValueAndLastValueSeries) source).getLastAvailableValue(
+                                    item.getDynamicParameterFieldsHolder());
+                }
 
                 entityContext.ui().sendDynamicUpdate(
                         new DynamicUpdateRequest(item.getDataSource(), TimeSeriesChartData.class.getSimpleName(),
-                                entityID), updatedData);
+                                entityID), fullUpdatedData);
             }
         });
     }
@@ -305,6 +406,7 @@ public class WidgetChartsController {
     public static class TimeSeriesChartData<T extends ChartDataset> {
         private final List<String> labels = new ArrayList<>();
         private final List<T> datasets = new ArrayList<>();
+        private Object value; // for mini-card
     }
 
     @Getter
@@ -316,50 +418,16 @@ public class WidgetChartsController {
         private List<Float> data;
     }
 
+    @Getter
+    @RequiredArgsConstructor
+    public static class SingleValueData {
+        private final Object value;
+    }
+
     @AllArgsConstructor
     private static class ChartContext<T extends WidgetSeriesEntity> {
         private int index;
         private T item;
         private BaseEntity source;
-    }
-
-    @Getter
-    @Setter
-    private static class WidgetSeriesRequest {
-        private String entityID;
-        private String timePeriod;
-        private String liveEntity;
-
-        public String getTimePeriod() {
-            return timePeriod == null ? TimePeriod.All.name() : timePeriod;
-        }
-
-        @SneakyThrows
-        public <T extends BaseEntity> T getEntity(EntityContext entityContext, ObjectMapper objectMapper, Class<T> tClass) {
-            if (liveEntity != null) {
-                return objectMapper.readValue(liveEntity, tClass);
-            }
-            return entityContext.getEntity(entityID);
-        }
-    }
-
-    @Getter
-    @Setter
-    private static class WidgetGaugeRequest {
-        private String entityID;
-        private String timePeriod;
-        private String liveEntity;
-
-        public String getTimePeriod() {
-            return timePeriod == null ? TimePeriod.All.name() : timePeriod;
-        }
-
-        @SneakyThrows
-        public <T extends BaseEntity> T getEntity(EntityContext entityContext, ObjectMapper objectMapper, Class<T> tClass) {
-            if (liveEntity != null) {
-                return objectMapper.readValue(liveEntity, tClass);
-            }
-            return entityContext.getEntity(entityID);
-        }
     }
 }

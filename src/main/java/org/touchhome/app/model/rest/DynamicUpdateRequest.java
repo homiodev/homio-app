@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
 @Getter
@@ -12,7 +13,9 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DynamicUpdateRequest {
+    @NotNull
     private String dynamicUpdateId;
+    @NotNull
     private String type;
     private String entityID;
 

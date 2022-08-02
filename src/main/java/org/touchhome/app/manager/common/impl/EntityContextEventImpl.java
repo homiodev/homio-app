@@ -35,7 +35,9 @@ public class EntityContextEventImpl implements EntityContextEvent {
     @Getter
     private final Set<OptionModel> events = new HashSet<>();
     private final Map<String, Object> lastValues = new ConcurrentHashMap<>();
-    private final Map<String, Consumer<Object>> eventListeners = new HashMap<>();
+
+    private final Map<String, Map<String, Consumer<Object>>> eventListeners = new HashMap<>();
+
     @Getter
     private final List<BiConsumer<String, Object>> globalEvenListeners = new ArrayList<>();
 
@@ -54,17 +56,17 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public boolean addEventBehaviourListener(String key, Consumer<Object> listener) {
+    public void addEventBehaviourListener(String key, String discriminator, Consumer<Object> listener) {
         if (lastValues.containsKey(key)) {
             listener.accept(lastValues.get(key));
         }
-        return addEventListener(key, listener);
+        addEventListener(key, discriminator, listener);
     }
 
     @Override
-    // TODO: add extra parameter!!!!!!!!!!!!!  bar/pie
-    public boolean addEventListener(String key, Consumer<Object> listener) {
-        return eventListeners.put(key, listener) != null;
+    public void addEventListener(String key, String discriminator, Consumer<Object> listener) {
+        eventListeners.computeIfAbsent(discriminator, d -> new ConcurrentHashMap<>())
+                .put(key, listener);
     }
 
     @Override
@@ -86,9 +88,10 @@ public class EntityContextEventImpl implements EntityContextEvent {
             lastValues.put(key, value);
         }
 
-        Consumer<Object> consumer = eventListeners.get(key);
-        if (consumer != null) {
-            consumer.accept(value);
+        for (Map<String, Consumer<Object>> eventListenerMap : eventListeners.values()) {
+            if (eventListenerMap.containsKey(key)) {
+                eventListenerMap.get(key).accept(value);
+            }
         }
         globalEvenListeners.forEach(l -> l.accept(key, value));
         broadcastLockManager.signalAll(key, value);

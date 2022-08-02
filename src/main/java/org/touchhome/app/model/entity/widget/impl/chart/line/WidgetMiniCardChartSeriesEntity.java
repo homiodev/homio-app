@@ -16,6 +16,6 @@ public class WidgetMiniCardChartSeriesEntity extends WidgetSeriesEntity<WidgetMi
 
     @Override
     public String getDataSource() {
-        return null;
+        return getJsonData("ds");
     }
 }

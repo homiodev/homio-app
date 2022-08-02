@@ -1,13 +1,15 @@
 package org.touchhome.app.model.entity.widget.impl.chart.line;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
+import org.json.JSONObject;
 import org.touchhome.app.model.entity.widget.impl.chart.TimeSeriesChartBaseEntity;
 import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
 import org.touchhome.app.rest.widget.TimeSeriesContext;
 import org.touchhome.app.rest.widget.WidgetChartsController;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
-import org.touchhome.bundle.api.entity.widget.HasTimeValueSeries;
+import org.touchhome.bundle.api.entity.widget.HasTimeValueAndLastValueSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.UI;
@@ -54,7 +56,7 @@ public class WidgetMiniCardChartEntity
         return getJsonData("icon", "fas fa-temperature-half");
     }
 
-    @UIField(order = 2, type = UIFieldType.ColorPicker)
+    @UIField(order = 2, type = UIFieldType.ColorPickerWithThreshold)
     @UIFieldGroup("Icon")
     public String getIconColor() {
         return getJsonData("ic", "#44739E");
@@ -63,7 +65,7 @@ public class WidgetMiniCardChartEntity
     // ### chart group
 
     @UIField(order = 1, required = true)
-    @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
+    @UIFieldEntityByClassSelection(HasTimeValueAndLastValueSeries.class)
     @UIFieldGroup(value = "Chart", order = 3)
     public String getDataSource() {
         return getJsonData("ds");
@@ -77,18 +79,31 @@ public class WidgetMiniCardChartEntity
     }
 
     @UIField(order = 3)
+    @UIFieldSlider(min = 0.1, max = 60, step = 0.2)
+    @UIFieldGroup("Chart")
+    public double getPointsPerHour() {
+        return getJsonData("pph", 0.5D);
+    }
+
+    @UIField(order = 5)
+    @UIFieldGroup("Chart")
+    public GroupBy getGroupBy() {
+        return getJsonDataEnum("gby", GroupBy.interval);
+    }
+
+    @UIField(order = 5)
     @UIFieldGroup("Chart")
     public AggregationType getAggregationType() {
         return getJsonDataEnum("aggr", AggregationType.Average);
     }
 
-    @UIField(order = 4)
+    @UIField(order = 6)
     @UIFieldGroup("Chart")
     public Boolean getFillMissingValues() {
         return getJsonData("fillMis", false);
     }
 
-    @UIField(order = 5)
+    @UIField(order = 7)
     @UIFieldGroup("Chart")
     public ChartType getChartType() {
         return getJsonDataEnum("ct", ChartType.line);
@@ -99,13 +114,24 @@ public class WidgetMiniCardChartEntity
         return PREFIX;
     }
 
+    @JsonIgnore
+    public double getCalcPointsPerHour() {
+        switch (getGroupBy()) {
+            case date:
+                return 1 / 24D;
+            case hour:
+                return 1;
+        }
+        return getPointsPerHour();
+    }
+
     public enum ChartType {
         line, bar, none
     }
 
     // #### Chart UI look and feel
 
-    @UIField(order = 1, type = UIFieldType.ColorPicker)
+    @UIField(order = 1, type = UIFieldType.ColorPickerWithThreshold)
     @UIFieldGroup(value = "Chart ui", order = 4)
     public String getChartColor() {
         return getJsonData("bc", "#FFFFFF");
@@ -129,7 +155,7 @@ public class WidgetMiniCardChartEntity
     @UIFieldSlider(min = 20, max = 100)
     @UIFieldGroup("Chart ui")
     public int getChartHeight() {
-        return getJsonData("hts", 30);
+        return getJsonData("ch", 30);
     }
 
     @Override
@@ -141,17 +167,16 @@ public class WidgetMiniCardChartEntity
 
     @Override
     public boolean fillMissingValues(WidgetSeriesEntity seriesEntity) {
-        return ((WidgetLineChartSeriesEntity) seriesEntity).getFillMissingValues();
+        return getJsonData("fillMis", true);
     }
 
     @Override
     public WidgetChartsController.TimeSeriesDataset buildTargetDataset(TimeSeriesContext item) {
-        WidgetLineChartSeriesEntity seriesEntity = (WidgetLineChartSeriesEntity) item.getSeriesEntity();
         WidgetChartsController.TimeSeriesDataset dataset = new WidgetChartsController.TimeSeriesDataset(item.getId(),
-                seriesEntity.getTitle(), seriesEntity.getChartColor(), seriesEntity.getColorOpacity(),
-                seriesEntity.getTension() / 10D, seriesEntity.getStepped().getValue());
+                null, getChartColor(), getColorOpacity(),
+                getTension() / 10D, false);
         if (item.getValues() != null && !item.getValues().isEmpty()) {
-            dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), seriesEntity.getAggregationType()));
+            dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), getAggregationType()));
         }
         return dataset;
     }
@@ -161,7 +186,7 @@ public class WidgetMiniCardChartEntity
     }
 
     public void setChartHeight(int value) {
-        setJsonData("hts", value);
+        setJsonData("ch", value);
     }
 
     public void setIcon(String value) {
@@ -178,6 +203,10 @@ public class WidgetMiniCardChartEntity
 
     public void setHoursToShow(int value) {
         setJsonData("hts", value);
+    }
+
+    public void setGroupBy(GroupBy groupBy) {
+        setJsonDataEnum("gby", groupBy);
     }
 
     public void setAggregationType(AggregationType value) {
@@ -204,18 +233,22 @@ public class WidgetMiniCardChartEntity
         setJsonData("tns", value);
     }
 
+    public void setPointsPerHour(double value) {
+        setJsonData("pph", value);
+    }
+
     // ### ignore UIFields!!!
 
     @Override
     @UIFieldIgnore
     public TimePeriod getTimePeriod() {
-        return super.getTimePeriod();
+        return TimePeriod.All;
     }
 
     @Override
     @UIFieldIgnore
     public Boolean getLegendShow() {
-        return super.getLegendShow();
+        return false;
     }
 
     @Override
@@ -233,13 +266,13 @@ public class WidgetMiniCardChartEntity
     @Override
     @UIFieldIgnore
     public Boolean getShowAxisX() {
-        return super.getShowAxisX();
+        return false;
     }
 
     @Override
     @UIFieldIgnore
     public Boolean getShowAxisY() {
-        return super.getShowAxisY();
+        return false;
     }
 
     @Override
@@ -255,14 +288,32 @@ public class WidgetMiniCardChartEntity
     }
 
     @Override
+    public boolean getShowDataLabels() {
+        return getJsonData("sdl", false);
+    }
+
+    @Override
     @UIFieldIgnore
     public Boolean getShowTimeButtons() {
-        return super.getShowTimeButtons();
+        return false;
     }
 
     @Override
     @UIFieldIgnore
     public Set<WidgetMiniCardChartSeriesEntity> getSeries() {
         return super.getSeries();
+    }
+
+    public enum GroupBy {
+        interval, date, hour
+    }
+
+    public Object setDynamicParameterFieldsHolder(JSONObject value) {
+        setJsonData("dsp", value);
+        return this;
+    }
+
+    public JSONObject getDynamicParameterFieldsHolder() {
+        return getJsonData().optJSONObject("dsp");
     }
 }

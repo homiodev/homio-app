@@ -279,9 +279,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     private void listenInternetStatus(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
-        this.internetThreadContext = this.addSchedule("internet-test", 10, 10, TimeUnit.SECONDS, context -> {
-            return getEntityContext().googleConnect() != null;
-        }, true, false);
+        this.internetThreadContext = this.addSchedule("internet-test", 10, 10,
+                TimeUnit.SECONDS, context -> getEntityContext().googleConnect() != null, true, false);
 
         this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
             if (isInternetUp != isInternetWasUp) {

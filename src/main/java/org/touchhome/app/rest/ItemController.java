@@ -60,6 +60,7 @@ import java.awt.image.BufferedImage;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -76,7 +77,7 @@ public class ItemController implements BeanPostConstruct {
 
     private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
     private static final Map<String, TypeToRequireDependenciesContext> typeToRequireDependencies = new HashMap<>();
-    private final Map<String, List<ItemContext>> itemsBootstrapContextMap = new HashMap<>();
+    private final Map<String, List<ItemContext>> itemsBootstrapContextMap = new ConcurrentHashMap<>();
 
     private final ObjectMapper objectMapper;
     private final EntityContextImpl entityContext;

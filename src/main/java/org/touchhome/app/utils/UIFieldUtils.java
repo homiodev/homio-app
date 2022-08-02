@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.ClassUtils;
+import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -679,6 +680,12 @@ public class UIFieldUtils {
         if (uiFieldStaticSelection != null) {
             JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
             meta.put("selectOptions", uiFieldStaticSelection.value());
+        }
+
+        if(uiFieldContext.getType().isEnum() && uiFieldContext.getType().getEnumConstants().length < 10) {
+            List<OptionModel> optionModels = OptionModel.enumList((Class<? extends Enum>) uiFieldContext.getType());
+            JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
+            meta.put("selectOptions", optionModels);
         }
 
         UIFieldSelection uiFieldSelection = uiFieldContext.getDeclaredAnnotation(UIFieldSelection.class);

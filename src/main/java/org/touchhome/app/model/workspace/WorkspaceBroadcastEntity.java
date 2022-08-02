@@ -13,9 +13,7 @@ import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @Getter
@@ -53,6 +51,6 @@ public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntit
     @Override
     public @NotNull List<Object[]> getTimeValueSeries(@NotNull ChartRequest request) {
         return request.getEntityContext().getBean(WorkspaceBroadcastRepository.class)
-                .getLineChartSeries(this, request);
+                .getTimeValueSeries(this, request);
     }
 }

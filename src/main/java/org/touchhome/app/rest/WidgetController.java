@@ -1,6 +1,5 @@
 package org.touchhome.app.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
@@ -28,6 +27,7 @@ import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntit
 import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoEntity;
 import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
+import org.touchhome.app.model.rest.WidgetDataRequest;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
@@ -50,6 +50,7 @@ import org.touchhome.common.util.CommonUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.touchhome.app.rest.widget.WidgetChartsController.getAggregateValueFromSeries;
 import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 
@@ -61,7 +62,6 @@ public class WidgetController {
 
     private final EntityContextImpl entityContext;
     private final ScriptService scriptService;
-    private final ObjectMapper objectMapper;
     private final WidgetService widgetService;
     private final List<WidgetVideoSourceResolver> videoSourceResolvers;
 
@@ -70,11 +70,6 @@ public class WidgetController {
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<WidgetService.AvailableWidget> getAvailableWidgets() {
         return widgetService.getAvailableWidgets();
-    }
-
-    @RequestMapping(value = "/fm/{entityID}", method = RequestMethod.HEAD)
-    public boolean requireUpdateFiles(@PathVariable("entityID") String entityID) {
-        return false;
     }
 
     @PostMapping("/fm/{entityID}")
@@ -215,22 +210,16 @@ public class WidgetController {
         return values;
     }
 
-    @GetMapping("/display/{entityID}/values")
-    public List<Pair<Object, Date>> getDisplayValues(@PathVariable("entityID") String entityID,
-                                                     @RequestParam(value = "period", defaultValue = "All") String period) {
-        WidgetDisplayEntity entity = entityContext.getEntity(entityID);
-        List<Pair<Object, Date>> values = new ArrayList<>(entity.getSeries().size());
-        ChartRequest chartRequest = buildChartRequest(period);
+    @PostMapping("/display/values")
+    public List<Object> getDisplayValues(@RequestBody WidgetDataRequest request) {
+        WidgetDisplayEntity entity = entityContext.getEntity(request.getEntityID());
+        List<Object> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetDisplaySeriesEntity item : entity.getSeries()) {
             BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
-            if (source instanceof HasAggregateValueFromSeries) {
-                chartRequest.setParameters(item.getDynamicParameterFieldsHolder());
-                Float value = ((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(chartRequest,
-                        item.getAggregationType());
-                if (value != null) {
-                    values.add(Pair.of(value, source.getUpdateTime()));
-                }
-            }
+
+            values.add(getAggregateValueFromSeries(request, entityContext, source,
+                    item.getDynamicParameterFieldsHolder(), entity.getListenSourceUpdates(),
+                    item.getAggregationType(), item.getDataSource(), entity.getEntityID()));
         }
         return values;
     }
@@ -425,8 +414,9 @@ public class WidgetController {
 
     private ChartRequest buildChartRequest(String period) {
         TimePeriod timePeriod = TimePeriod.fromValue(period);
-        Pair<Date, Date> range = timePeriod.getDateRange();
-        return new ChartRequest(entityContext, range.getFirst(), range.getSecond(), timePeriod.getDateFromNow(),
+        Pair<Date, Date> range = timePeriod.getTimePeriod().getDateRange();
+        ;
+        return new ChartRequest(entityContext, range.getFirst(), range.getSecond(), timePeriod.getTimePeriod().getDateFromNow(),
                 timePeriod != TimePeriod.All);
     }
 

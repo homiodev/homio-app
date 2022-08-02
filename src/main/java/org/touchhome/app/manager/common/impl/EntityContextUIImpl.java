@@ -57,6 +57,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     private static final Set<String> ALLOWED_DYNAMIC_VALUES = new HashSet<>(
             Arrays.asList(
+                    WidgetChartsController.SingleValueData.class.getSimpleName(),
                     WidgetChartsController.BarChartDataset.class.getSimpleName(),
                     WidgetChartsController.PieChartDataset.class.getSimpleName(),
                     WidgetChartsController.TimeSeriesChartData.class.getSimpleName(),
