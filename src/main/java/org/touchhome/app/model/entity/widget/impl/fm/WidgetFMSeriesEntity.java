@@ -2,8 +2,6 @@ package org.touchhome.app.model.entity.widget.impl.fm;
 
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldSlider;
-import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldFileSelection;
 
 import javax.persistence.Entity;

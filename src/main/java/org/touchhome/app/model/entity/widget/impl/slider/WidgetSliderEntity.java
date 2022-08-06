@@ -1,10 +1,11 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
-import org.touchhome.app.model.entity.widget.HorizontalPosition;
-import org.touchhome.app.model.entity.widget.VerticalPosition;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.Entity;
@@ -14,64 +15,34 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
 
     public static final String PREFIX = "wgtsl_";
 
-    @UIField(order = 31, showInContextMenu = true)
+    @UIField(order = 2, showInContextMenu = true)
+    @UIFieldGroup("Slider")
     public Boolean isVertical() {
         return getJsonData("vt", Boolean.FALSE);
     }
 
-    public WidgetSliderEntity setVertical(Boolean value) {
-        setJsonData("vt", value);
-        return this;
-    }
-
-    @UIField(order = 33, showInContextMenu = true)
-    public Boolean getShowValue() {
-        return getJsonData("sv", Boolean.TRUE);
-    }
-
-    public WidgetSliderEntity setShowValue(Boolean value) {
-        setJsonData("sv", value);
-        return this;
-    }
-
-    @UIField(order = 34)
+    @UIField(order = 3)
+    @UIFieldGroup("Slider")
     public Boolean getThumbLabel() {
         return getJsonData("tl", Boolean.TRUE);
     }
 
-    public WidgetSliderEntity setThumbLabel(Boolean value) {
-        setJsonData("tl", value);
-        return this;
+    @UIField(order = 1, showInContextMenu = true)
+    @UIFieldGroup("Value label")
+    public Boolean getShowValue() {
+        return getJsonData("sv", Boolean.TRUE);
     }
 
-    @UIField(order = 35, type = UIFieldType.ColorPicker)
-    public String getLabelColor() {
-        return getJsonData("lc", UI.Color.PRIMARY_COLOR);
+    @UIField(order = 2, type = UIFieldType.ColorPickerWithThreshold)
+    @UIFieldGroup("Value label")
+    public String getValueColor() {
+        return getJsonData("lc", UI.Color.WHITE);
     }
 
-    public WidgetSliderEntity setLabelColor(String value) {
-        setJsonData("lc", value);
-        return this;
-    }
-
-    @UIField(order = 40)
-    public VerticalPosition getVerticalPosition() {
-        return getJsonDataEnum("vp", VerticalPosition.Bottom);
-    }
-
-    public WidgetSliderEntity setVerticalPosition(VerticalPosition value) {
-        setJsonData("vp", value);
-        return this;
-    }
-
-    @UIField(order = 41)
-    public HorizontalPosition getHorizontalPosition() {
-        return getJsonDataEnum("hp", HorizontalPosition.Right);
-    }
-
-    public WidgetSliderEntity setHorizontalPosition(HorizontalPosition value) {
-        setJsonData("hp", value);
-        return this;
+    @UIField(order = 3, type = UIFieldType.Position)
+    @UIFieldGroup("Value label")
+    public String getValuePosition() {
+        return getJsonData("vlp", "1x1");
     }
 
     @Override
@@ -82,5 +53,43 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
     @Override
     public String getEntityPrefix() {
         return PREFIX;
+    }
+
+    @Override
+    @UIFieldIgnore
+    public String getBackground() {
+        return super.getBackground();
+    }
+
+    @Override
+    @UIFieldIgnore
+    public Boolean getShowTimeButtons() {
+        return super.getShowTimeButtons();
+    }
+
+    @Override
+    @UIFieldIgnore
+    public TimePeriod getTimePeriod() {
+        return super.getTimePeriod();
+    }
+
+    public void setValueColor(String value) {
+        setJsonData("lc", value);
+    }
+
+    public void setVertical(Boolean value) {
+        setJsonData("vt", value);
+    }
+
+    public void setShowValue(Boolean value) {
+        setJsonData("sv", value);
+    }
+
+    public void setThumbLabel(Boolean value) {
+        setJsonData("tl", value);
+    }
+
+    public void setValuePosition(String value) {
+        setJsonData("vlp", value);
     }
 }

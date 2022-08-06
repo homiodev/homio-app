@@ -27,7 +27,9 @@ import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntit
 import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoEntity;
 import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
+import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.app.model.rest.WidgetDataRequest;
+import org.touchhome.app.rest.widget.WidgetChartsController;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
@@ -48,6 +50,7 @@ import org.touchhome.common.fs.TreeNode;
 import org.touchhome.common.util.CommonUtils;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static org.touchhome.app.rest.widget.WidgetChartsController.getAggregateValueFromSeries;
@@ -189,7 +192,24 @@ public class WidgetController {
         for (WidgetSliderSeriesEntity item : entity.getSeries()) {
             BaseEntity<?> dataSource = entityContext.getEntity(item.getDataSource());
             if (dataSource instanceof HasSliderSeries) {
-                values.add(((HasSliderSeries) dataSource).getSliderValue());
+                HasSliderSeries sliderSource = (HasSliderSeries) dataSource;
+                values.add(sliderSource.getSliderValue(entityContext, item.getDynamicParameterFieldsHolder()));
+
+                if (entity.getListenSourceUpdates()) {
+                    AtomicReference<Float> valueRef = new AtomicReference<>(0F);
+                    sliderSource.addUpdateValueListener(entityContext, entityID,
+                            item.getDynamicParameterFieldsHolder(), o -> {
+                                float updatedValue =
+                                        sliderSource.getSliderValue(entityContext, item.getDynamicParameterFieldsHolder());
+                                if (valueRef.get() != updatedValue) {
+                                    valueRef.set(updatedValue);
+                                    entityContext.ui().sendDynamicUpdate(
+                                            new DynamicUpdateRequest(sliderSource.getEntityID(),
+                                                    WidgetChartsController.SingleValueData.class.getSimpleName(),
+                                                    entityID), new WidgetChartsController.SingleValueData(updatedValue));
+                                }
+                            });
+                }
             }
         }
         return values;
@@ -219,7 +239,7 @@ public class WidgetController {
 
             values.add(getAggregateValueFromSeries(request, entityContext, source,
                     item.getDynamicParameterFieldsHolder(), entity.getListenSourceUpdates(),
-                    item.getAggregationType(), item.getDataSource(), entity.getEntityID()));
+                    item.getAggregationType(), entity.getEntityID()));
         }
         return values;
     }
@@ -235,8 +255,8 @@ public class WidgetController {
         }
         BaseEntity<?> source = entityContext.getEntity(series.getDataSource());
         if (source instanceof HasSliderSeries) {
-            ((HasSliderSeries) source).setSliderValue(integerValue.value);
-            entityContext.save(source);
+            ((HasSliderSeries) source).setSliderValue(integerValue.value, entityContext,
+                    series.getDynamicParameterFieldsHolder());
         }
     }
 

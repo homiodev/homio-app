@@ -3,6 +3,7 @@ package org.touchhome.app.model.workspace;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONObject;
 import org.touchhome.app.repository.workspace.WorkspaceBroadcastRepository;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
@@ -15,6 +16,7 @@ import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 @Getter
 @Entity
@@ -46,6 +48,12 @@ public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntit
     public Float getAggregateValueFromSeries(ChartRequest request, AggregationType aggregationType) {
         return request.getEntityContext().getBean(WorkspaceBroadcastRepository.class)
                 .getValue(this, request);
+    }
+
+    @Override
+    public void addUpdateValueListener(EntityContext entityContext, String key, JSONObject dynamicParameters,
+                                       Consumer<Object> listener) {
+        entityContext.event().addEventListener(getEntityID(), listener);
     }
 
     @Override

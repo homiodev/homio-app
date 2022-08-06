@@ -4,6 +4,7 @@ import lombok.Getter;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextEvent;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -70,13 +71,15 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public void fireEvent(@NotNull String key, @NotNull Object value, boolean compareValues) {
+    public void fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
         // fire by key and key + value type
         fireEventInternal(key, value, compareValues);
-        fireEventInternal(key + "_" + value.getClass().getSimpleName(), value, compareValues);
+        if (value != null) {
+            fireEventInternal(key + "_" + value.getClass().getSimpleName(), value, compareValues);
+        }
     }
 
-    private void fireEventInternal(String key, Object value, boolean compareValues) {
+    private void fireEventInternal(@NotNull String key, @Nullable Object value, boolean compareValues) {
         addEvent(key);
         if (StringUtils.isEmpty(key)) {
             throw new IllegalArgumentException("Unable to fire event with empty key");
@@ -97,10 +100,9 @@ public class EntityContextEventImpl implements EntityContextEvent {
         broadcastLockManager.signalAll(key, value);
     }
 
-    private String addEvent(String key) {
+    private void addEvent(String key) {
         OptionModel optionModel = OptionModel.of(key, Lang.getServerMessage(key));
         this.events.add(optionModel);
-        return key;
     }
 
     @Override

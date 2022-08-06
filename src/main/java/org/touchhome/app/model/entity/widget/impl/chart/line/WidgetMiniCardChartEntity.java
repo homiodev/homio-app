@@ -15,6 +15,7 @@ import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
 import javax.persistence.Entity;
 import java.util.Set;
@@ -24,7 +25,7 @@ import java.util.Set;
 @Entity
 public class WidgetMiniCardChartEntity
         extends TimeSeriesChartBaseEntity<WidgetMiniCardChartEntity, WidgetMiniCardChartSeriesEntity,
-        WidgetChartsController.TimeSeriesDataset> {
+        WidgetChartsController.TimeSeriesDataset> implements HasDynamicParameterFields {
 
     public static final String PREFIX = "wgtmcc_";
 
@@ -50,16 +51,23 @@ public class WidgetMiniCardChartEntity
 
     // ### icon group
 
-    @UIField(order = 1, type = UIFieldType.IconPicker)
-    @UIFieldGroup(value = "Icon", order = 2)
+    @UIField(order = 1)
+    @UIFieldIconPicker(allowThreshold = true, allowEmptyIcon = true)
+    @UIFieldGroup(value = "UI", order = 2)
     public String getIcon() {
         return getJsonData("icon", "fas fa-temperature-half");
     }
 
     @UIField(order = 2, type = UIFieldType.ColorPickerWithThreshold)
-    @UIFieldGroup("Icon")
+    @UIFieldGroup("UI")
     public String getIconColor() {
         return getJsonData("ic", "#44739E");
+    }
+
+    @UIField(order = 3, type = UIFieldType.ColorPickerWithThreshold)
+    @UIFieldGroup("UI")
+    public String getTextColor() {
+        return getJsonData("txtCol", UI.Color.WHITE);
     }
 
     // ### chart group
@@ -172,9 +180,9 @@ public class WidgetMiniCardChartEntity
 
     @Override
     public WidgetChartsController.TimeSeriesDataset buildTargetDataset(TimeSeriesContext item) {
-        WidgetChartsController.TimeSeriesDataset dataset = new WidgetChartsController.TimeSeriesDataset(item.getId(),
-                null, getChartColor(), getColorOpacity(),
-                getTension() / 10D, false);
+        WidgetChartsController.TimeSeriesDataset dataset =
+                new WidgetChartsController.TimeSeriesDataset(item.getId(), null, getChartColor(), getColorOpacity(),
+                        getTension() / 10D, false);
         if (item.getValues() != null && !item.getValues().isEmpty()) {
             dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), getAggregationType()));
         }
@@ -235,6 +243,10 @@ public class WidgetMiniCardChartEntity
 
     public void setPointsPerHour(double value) {
         setJsonData("pph", value);
+    }
+
+    public void setTextColor(String value) {
+        setJsonData("txtCol", value);
     }
 
     // ### ignore UIFields!!!
@@ -308,11 +320,12 @@ public class WidgetMiniCardChartEntity
         interval, date, hour
     }
 
-    public Object setDynamicParameterFieldsHolder(JSONObject value) {
-        setJsonData("dsp", value);
-        return this;
+    @Override
+    public void setDynamicParameterFieldsHolder(JSONObject value) {
+        super.setJsonData("dsp", value);
     }
 
+    @Override
     public JSONObject getDynamicParameterFieldsHolder() {
         return getJsonData().optJSONObject("dsp");
     }

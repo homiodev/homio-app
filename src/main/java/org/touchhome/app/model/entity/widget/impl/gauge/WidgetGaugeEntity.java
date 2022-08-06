@@ -8,11 +8,12 @@ import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
 import javax.persistence.Entity;
 
 @Entity
-public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
+public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> implements HasDynamicParameterFields {
 
     public static final String PREFIX = "wgtgg_";
 
@@ -27,11 +28,12 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> {
         return this;
     }
 
-    public Object setDynamicParameterFieldsHolder(JSONObject value) {
+    @Override
+    public void setDynamicParameterFieldsHolder(JSONObject value) {
         setJsonData("dsp", value);
-        return this;
     }
 
+    @Override
     public JSONObject getDynamicParameterFieldsHolder() {
         return getJsonData().optJSONObject("dsp");
     }

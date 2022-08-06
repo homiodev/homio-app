@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.ClassUtils;
-import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -31,6 +30,8 @@ import org.touchhome.bundle.api.ui.field.image.UIFieldImage;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImageSrc;
 import org.touchhome.bundle.api.ui.field.selection.*;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicRequestType;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.touchhome.bundle.api.ui.method.UIFieldCreateWorkspaceVariableOnEmpty;
 import org.touchhome.bundle.api.util.SecureString;
@@ -75,39 +76,6 @@ public class UIFieldUtils {
             }
             return null;
         }),
-        /*file(UIFieldFileSelection.class, params -> {
-            UIFieldFileSelection annotation = params.field.getDeclaredAnnotation(UIFieldFileSelection.class);
-            boolean firstLevel = StringUtils.isEmpty(params.param0);
-            String pathStr = StringUtils.defaultIfEmpty(params.param0, annotation.rootPath());
-            Path rootPath = StringUtils.isEmpty(pathStr) ? CommonUtils.getRootPath() : Paths.get(pathStr);
-            return SettingPluginOptionsFileExplorer.getFilePath(rootPath, annotation.levels(), annotation.flatStructure(), true,
-                    annotation.skipRootInTreeStructure(), Comparator.comparing(OptionModel::getTitleOrKey),
-                    SettingPluginOptionsFileExplorer::visitDirectoryDefault, path -> true, (path, basicFileAttributes) -> {
-                        if (Files.isDirectory(path)) {
-                            return true;
-                        }
-                        if (Files.exists(path) && Files.isReadable(path)) {
-                            if (!annotation.allowSelectFiles() && Files.isRegularFile(path)) {
-                                return false;
-                            }
-                            String name = path.getFileName() == null ? path.toString() : path.getFileName().toString();
-                            if (name.startsWith("$") || name.startsWith(".")) {
-                                return false;
-                            }
-                            if (annotation.extensions().length > 0) {
-                                for (String extension : annotation.extensions()) {
-                                    if (name.endsWith(extension)) {
-                                        return true;
-                                    }
-                                }
-                                return false;
-                            }
-                            return true;
-                        }
-                        return false;
-                    }, (path, path2) -> null, path ->
-                            firstLevel ? path.toString() : path.getFileName().toString());
-        }),*/
         bean(UIFieldBeanSelection.class,
                 params -> params.entityContext.getBeansOfTypeWithBeanName(params.targetClass).keySet().stream()
                         .map(OptionModel::key)
@@ -133,7 +101,7 @@ public class UIFieldUtils {
                     uiFieldClassSelection.value(), uiFieldClassSelection.basePackages())) {
                 if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
                     for (BaseEntity baseEntity : params.entityContext.findAll((Class<BaseEntity>) foundTargetType)) {
-                        list.add(addEntityToSelection(baseEntity));
+                        list.add(addEntityToSelection(baseEntity, params.classEntityForDynamicOptionLoader));
                     }
                 }
             }
@@ -234,19 +202,21 @@ public class UIFieldUtils {
         return null;
     }
 
-    private static OptionModel addEntityToSelection(HasEntityIdentifier entityIdentifier) {
+    private static OptionModel addEntityToSelection(HasEntityIdentifier entityIdentifier,
+                                                    Object requestedEntity) {
         OptionModel optionModel = OptionModel.of(entityIdentifier.getEntityID(), entityIdentifier.getTitle());
         if (entityIdentifier instanceof SelectionWithDynamicParameterFields) {
             optionModel.json(params -> {
                 DynamicParameterFields dynamicParameterFields =
-                        ((SelectionWithDynamicParameterFields) entityIdentifier).getDynamicParameterFields(null);
+                        ((SelectionWithDynamicParameterFields) entityIdentifier).getDynamicParameterFields(requestedEntity,
+                                fetchRequestWidgetType(requestedEntity));
                 if (dynamicParameterFields != null) {
                     try {
                         params.put("dynamicParameter", new JSONObject().put("groupName", dynamicParameterFields.getGroupName())
                                 .put("borderColor", dynamicParameterFields.getBorderColor())
                                 .put("defaultValues", CommonUtils.OBJECT_MAPPER.writeValueAsString(dynamicParameterFields))
                                 .put("class", dynamicParameterFields.getClass().getSimpleName())
-                                .put("holder", dynamicParameterFields.getHolderField()));
+                                .put("holder", "dynamicParameterFieldsHolder"));
                     } catch (JsonProcessingException ex) {
                         throw new RuntimeException(ex);
                     }
@@ -254,6 +224,14 @@ public class UIFieldUtils {
             });
         }
         return optionModel;
+    }
+
+    public static DynamicRequestType fetchRequestWidgetType(Object requestedEntity) {
+        DynamicRequestType dynamicRequestType = null;
+        if (requestedEntity instanceof HasDynamicParameterFields) {
+            dynamicRequestType = ((HasDynamicParameterFields) requestedEntity).getDynamicRequestType();
+        }
+        return dynamicRequestType == null ? DynamicRequestType.Default : dynamicRequestType;
     }
 
     public static Collection<UIInputEntity> fetchUIActionsFromClass(Class<?> clazz, EntityContext entityContext) {
@@ -465,6 +443,13 @@ public class UIFieldUtils {
         }
         if (StringUtils.isNotEmpty(uiField.bg())) {
             jsonTypeMetadata.put("bg", uiField.bg());
+        }
+
+        UIFieldIconPicker uiFieldIconPicker = uiFieldContext.getDeclaredAnnotation(UIFieldIconPicker.class);
+        if (uiFieldIconPicker != null) {
+            entityUIMetaData.setType("IconPicker");
+            jsonTypeMetadata.put("allowEmptyIcon", uiFieldIconPicker.allowEmptyIcon());
+            jsonTypeMetadata.put("allowThreshold", uiFieldIconPicker.allowThreshold());
         }
 
         UIFieldTableLayout uiFieldTableLayout = uiFieldContext.getDeclaredAnnotation(UIFieldTableLayout.class);
@@ -682,7 +667,7 @@ public class UIFieldUtils {
             meta.put("selectOptions", uiFieldStaticSelection.value());
         }
 
-        if(uiFieldContext.getType().isEnum() && uiFieldContext.getType().getEnumConstants().length < 10) {
+        if (uiFieldContext.getType().isEnum() && uiFieldContext.getType().getEnumConstants().length < 10) {
             List<OptionModel> optionModels = OptionModel.enumList((Class<? extends Enum>) uiFieldContext.getType());
             JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
             meta.put("selectOptions", optionModels);

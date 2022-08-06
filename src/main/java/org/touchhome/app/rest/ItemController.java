@@ -194,7 +194,7 @@ public class ItemController implements BeanPostConstruct {
     @GetMapping("/{type}/context")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<ItemContext> getItemsBootstrapContext(@PathVariable("type") String type,
-                                                      @RequestParam(value = "subType", required = false) String subType) {
+                                                      @RequestParam(value = "subType", defaultValue = "") String subType) {
         String key = type + subType;
         // itemsBootstrapContextMap.clear(); // TODO: remove this
         itemsBootstrapContextMap.computeIfAbsent(key, s -> {
@@ -322,9 +322,7 @@ public class ItemController implements BeanPostConstruct {
 
     @PostMapping("/{entityID}/copy")
     public BaseEntity<?> copyEntityByID(@PathVariable("entityID") String entityID) {
-        BaseEntity<?> entity = entityContext.getEntity(entityID);
-        entity.copy();
-        return entityContext.save(entity);
+        return entityContext.copyEntity(entityContext.getEntity(entityID));
     }
 
     @DeleteMapping("/{entityID}")
@@ -588,7 +586,8 @@ public class ItemController implements BeanPostConstruct {
                             ">");
         }
         DynamicParameterFields dynamicParameterFields =
-                ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(classEntity);
+                ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(classEntity,
+                        UIFieldUtils.fetchRequestWidgetType(classEntity));
         if (dynamicParameterFields == null) {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }
@@ -777,7 +776,12 @@ public class ItemController implements BeanPostConstruct {
             classTypes.add(classByType);
         }
         if (classTypes.isEmpty()) {
-            classTypes.addAll(classFinder.getClassesWithParent(DynamicParameterFields.class));
+            for (Class<? extends DynamicParameterFields> dynamicClassType : classFinder.getClassesWithParent(
+                    DynamicParameterFields.class)) {
+                if (dynamicClassType.getSimpleName().equals(type)) {
+                    classTypes.add(dynamicClassType);
+                }
+            }
         }
         return classTypes;
     }

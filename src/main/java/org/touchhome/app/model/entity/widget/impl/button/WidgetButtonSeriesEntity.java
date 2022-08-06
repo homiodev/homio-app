@@ -3,6 +3,7 @@ package org.touchhome.app.model.entity.widget.impl.button;
 import org.touchhome.bundle.api.entity.widget.HasPushButtonSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldIconPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
@@ -29,7 +30,8 @@ public class WidgetButtonSeriesEntity extends WidgetSeriesEntity<WidgetButtonEnt
         return this;
     }
 
-    @UIField(order = 20, type = UIFieldType.IconPicker)
+    @UIField(order = 20)
+    @UIFieldIconPicker
     public String getIcon() {
         return getJsonData("icon", "");
     }

@@ -2,10 +2,10 @@ package org.touchhome.app.model.entity.widget.impl.slider;
 
 import org.touchhome.bundle.api.entity.widget.HasSliderSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
-import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldNumber;
-import org.touchhome.bundle.api.ui.field.UIFieldType;
+import org.touchhome.bundle.api.ui.UI;
+import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicRequestType;
 
 import javax.persistence.Entity;
 
@@ -14,26 +14,48 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
 
     public static final String PREFIX = "wgssls_";
 
-    @UIField(order = 14, required = true)
+    @UIField(order = 1, required = true)
     @UIFieldEntityByClassSelection(HasSliderSeries.class)
+    @UIFieldGroup("Slider")
     public String getDataSource() {
         return getJsonData("ds");
     }
 
-    @UIField(order = 30)
+    @UIField(order = 2, type = UIFieldType.ColorPickerWithThreshold)
+    @UIFieldGroup("Slider")
+    public String getSliderColor() {
+        return getJsonData("sc", "#FFFFFF");
+    }
+
+    @UIField(order = 3)
+    @UIFieldGroup("Slider")
     public Integer getMin() {
         return getJsonData("min", 0);
+    }
+
+    @UIField(order = 4)
+    @UIFieldNumber(min = 0)
+    @UIFieldGroup("Slider")
+    public Integer getMax() {
+        return getJsonData("max", 255);
+    }
+
+    @UIField(order = 1)
+    @UIFieldIconPicker(allowEmptyIcon = true, allowThreshold = true)
+    @UIFieldGroup("Icon")
+    public String getIcon() {
+        return getJsonData("icon", "");
+    }
+
+    @UIField(order = 1, type = UIFieldType.ColorPickerWithThreshold)
+    @UIFieldGroup("Icon")
+    public String getIconColor() {
+        return getJsonData("iconColor", UI.Color.WHITE);
     }
 
     public WidgetSliderSeriesEntity setMin(Integer value) {
         setJsonData("min", value);
         return this;
-    }
-
-    @UIField(order = 31)
-    @UIFieldNumber(min = 0)
-    public Integer getMax() {
-        return getJsonData("max", 255);
     }
 
     public WidgetSliderSeriesEntity setMax(Integer value) {
@@ -52,18 +74,32 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
         return this;
     }
 
-    @UIField(order = 15, type = UIFieldType.ColorPicker)
-    public String getColor() {
-        return getJsonData("color", "#FFFFFF");
-    }
-
-    public WidgetSliderSeriesEntity setColor(String value) {
-        setJsonData("color", value);
-        return this;
-    }
-
     @Override
     public String getEntityPrefix() {
         return PREFIX;
+    }
+
+    public void setSliderColor(String value) {
+        setJsonData("sc", value);
+    }
+
+    public void setIcon(String value) {
+        setJsonData("icon", value);
+    }
+
+    public void setIconColor(String value) {
+        setJsonData("iconColor", value);
+    }
+
+    @Override
+    protected void beforePersist() {
+        if (!getJsonData().has("sc")) {
+            setSliderColor(UI.Color.random());
+        }
+    }
+
+    @Override
+    public DynamicRequestType getDynamicRequestType() {
+        return DynamicRequestType.Slider;
     }
 }

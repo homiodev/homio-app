@@ -6,6 +6,7 @@ import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldIconPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
@@ -63,7 +64,8 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         return this;
     }
 
-    @UIField(order = 1, type = UIFieldType.IconPicker)
+    @UIField(order = 1)
+    @UIFieldIconPicker(allowEmptyIcon = true, allowThreshold = true)
     @UIFieldGroup("Icon")
     public String getIcon() {
         return getJsonData("icon", "fas fa-adjust");

@@ -66,7 +66,6 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
-import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
@@ -470,7 +469,7 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public BaseEntity<? extends BaseEntity> delete(String entityId) {
         BaseEntity<? extends BaseEntity> deletedEntity = entityManager.delete(entityId);
-        cacheService.delete(entityId);
+        cacheService.clearCache();
         runUpdateNotifyListeners(null, deletedEntity, this.event().getEntityRemoveListeners());
         return deletedEntity;
     }
@@ -950,6 +949,13 @@ public class EntityContextImpl implements EntityContext {
     public <T> List<T> getEntityServices(Class<T> serviceClass) {
         return allDeviceRepository.listAll().stream().filter(e -> serviceClass.isAssignableFrom(e.getClass())).map(e -> (T) e)
                 .collect(Collectors.toList());
+    }
+
+    public BaseEntity<?> copyEntity(BaseEntity entity) {
+        entity.copy();
+        BaseEntity<?> saved = save(entity, true);
+        cacheService.clearCache();
+        return saved;
     }
 
     @AllArgsConstructor
