@@ -4,10 +4,7 @@ import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldIconPicker;
-import org.touchhome.bundle.api.ui.field.UIFieldType;
+import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
@@ -33,7 +30,8 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         return this;
     }
 
-    @UIField(order = 20, type = UIFieldType.ColorPicker)
+    @UIField(order = 20)
+    @UIFieldColorPicker
     public String getForeground() {
         return getJsonData("fg", "#009688");
     }
@@ -75,19 +73,20 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         setJsonData("icon", value);
     }
 
-    @UIField(order = 2, type = UIFieldType.ColorPicker)
+    @UIField(order = 2)
+    @UIFieldColorPicker
     @UIFieldGroup("Icon")
     public String getIconColor() {
-        return getJsonData("ic", "#FFFFFF");
+        return getJsonData("iconColor", UI.Color.WHITE);
     }
 
     public void setIconColor(String value) {
-        setJsonData("ic", value);
+        setJsonData("iconColor", value);
     }
 
     @Override
     protected void beforePersist() {
-        if (!getJsonData().has("ic")) {
+        if (!getJsonData().has("iconColor")) {
             setIconColor(UI.Color.random());
         }
     }

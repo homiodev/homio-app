@@ -66,7 +66,7 @@ public class WidgetBarTimeChartEntity
         WidgetChartsController.BarChartDataset dataset = new WidgetChartsController.BarChartDataset(item.getId());
 
         dataset.setBackgroundColor(Collections.singletonList(
-                WidgetChartsController.getColorWithOpacity(seriesEntity.getColor(), seriesEntity.getColorOpacity())));
+                WidgetChartsController.getColorWithOpacity(seriesEntity.getColor(), seriesEntity.getChartColorOpacity())));
         dataset.setBorderColor(Collections.singletonList(seriesEntity.getColor()));
         dataset.setBorderWidth(this.getBorderWidth());
         dataset.setLabel(item.getSeriesEntity().getTitle());

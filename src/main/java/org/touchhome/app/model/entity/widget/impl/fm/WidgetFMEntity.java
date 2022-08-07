@@ -44,7 +44,8 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
         setBw(3);
     }
 
-    @UIField(order = 24, type = UIFieldType.ColorPicker, isRevert = true)
+    @UIField(order = 24, isRevert = true)
+    @UIFieldColorPicker
     public String getBorderColor() {
         return getJsonData("bc", "#434B5A");
     }
@@ -110,7 +111,8 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
         return this;
     }
 
-    @UIField(order = 54, type = UIFieldType.ColorPicker, isRevert = true)
+    @UIField(order = 54, isRevert = true)
+    @UIFieldColorPicker
     @UIFieldGroup("fileName")
     public String getFileNameColor() {
         return getJsonData("fnc", "#ADB5BD");

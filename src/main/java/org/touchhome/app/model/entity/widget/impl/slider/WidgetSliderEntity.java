@@ -3,10 +3,7 @@ package org.touchhome.app.model.entity.widget.impl.slider;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
-import org.touchhome.bundle.api.ui.field.UIFieldType;
+import org.touchhome.bundle.api.ui.field.*;
 
 import javax.persistence.Entity;
 
@@ -33,14 +30,16 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
         return getJsonData("sv", Boolean.TRUE);
     }
 
-    @UIField(order = 2, type = UIFieldType.ColorPickerWithThreshold)
+    @UIField(order = 2)
     @UIFieldGroup("Value label")
+    @UIFieldColorPicker(allowThreshold = true)
     public String getValueColor() {
         return getJsonData("lc", UI.Color.WHITE);
     }
 
-    @UIField(order = 3, type = UIFieldType.Position)
+    @UIField(order = 3)
     @UIFieldGroup("Value label")
+    @UIFieldPosition
     public String getValuePosition() {
         return getJsonData("vlp", "1x1");
     }

@@ -31,7 +31,7 @@ public class WidgetLineChartEntity extends TimeSeriesChartBaseEntity<WidgetLineC
     public WidgetChartsController.TimeSeriesDataset buildTargetDataset(TimeSeriesContext item) {
         WidgetLineChartSeriesEntity seriesEntity = (WidgetLineChartSeriesEntity) item.getSeriesEntity();
         WidgetChartsController.TimeSeriesDataset dataset = new WidgetChartsController.TimeSeriesDataset(item.getId(),
-                seriesEntity.getTitle(), seriesEntity.getChartColor(), seriesEntity.getColorOpacity(),
+                seriesEntity.getTitle(), seriesEntity.getChartColor(), seriesEntity.getChartColorOpacity(),
                 seriesEntity.getTension() / 10D, seriesEntity.getStepped().getValue());
         if (item.getValues() != null && !item.getValues().isEmpty()) {
             dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), seriesEntity.getAggregationType()));

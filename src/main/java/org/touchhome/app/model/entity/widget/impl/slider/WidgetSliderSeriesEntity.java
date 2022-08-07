@@ -2,6 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.slider;
 
 import org.touchhome.bundle.api.entity.widget.HasSliderSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
+import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
@@ -21,8 +22,9 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
         return getJsonData("ds");
     }
 
-    @UIField(order = 2, type = UIFieldType.ColorPickerWithThreshold)
+    @UIField(order = 2)
     @UIFieldGroup("Slider")
+    @UIFieldColorPicker(allowThreshold = true)
     public String getSliderColor() {
         return getJsonData("sc", "#FFFFFF");
     }
@@ -47,8 +49,9 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
         return getJsonData("icon", "");
     }
 
-    @UIField(order = 1, type = UIFieldType.ColorPickerWithThreshold)
+    @UIField(order = 1)
     @UIFieldGroup("Icon")
+    @UIFieldColorPicker(allowThreshold = true)
     public String getIconColor() {
         return getJsonData("iconColor", UI.Color.WHITE);
     }
@@ -99,7 +102,7 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
     }
 
     @Override
-    public DynamicRequestType getDynamicRequestType() {
+    public DynamicRequestType getDynamicRequestType(Class<? extends HasEntityIdentifier> sourceClassType) {
         return DynamicRequestType.Slider;
     }
 }

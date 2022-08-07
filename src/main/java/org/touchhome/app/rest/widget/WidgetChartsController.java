@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.springframework.data.util.Pair;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -53,10 +52,9 @@ public class WidgetChartsController {
     @PostMapping("/minicard/series")
     public TimeSeriesChartData<ChartDataset> getMiniCardChartSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetMiniCardChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetMiniCardChartEntity.class);
-        double pointsPerHour = entity.getCalcPointsPerHour();
+        double pointsPerHour = entity.getPointsPerHour();
 
         TimePeriod.TimePeriodImpl timePeriod = buildTimePeriodFromHoursToShow(entity.getHoursToShow(), pointsPerHour);
-        ChartRequest chartRequest = buildChartRequest(timePeriod);
 
         // build fake series
         WidgetMiniCardChartSeriesEntity series = new WidgetMiniCardChartSeriesEntity();
@@ -65,14 +63,14 @@ public class WidgetChartsController {
 
         entity.setSeries(Collections.singleton(series));
         TimeSeriesChartData<ChartDataset> data =
-                buildTimeSeriesFullData(entity, timePeriod, chartRequest, entity.getListenSourceUpdates());
+                buildTimeSeriesFullData(entity, timePeriod, entity.getListenSourceUpdates());
 
         BaseEntity<?> source = entityContext.getEntity(entity.getDataSource());
 
         // actually it must be type HasTimeValueAndLastValueSeries but we checking against null
         if (source instanceof HasTimeValueAndLastValueSeries) {
             data.value =
-                    ((HasTimeValueAndLastValueSeries) source).getLastAvailableValue(entity.getDynamicParameterFieldsHolder());
+                    ((HasTimeValueAndLastValueSeries) source).getLastAvailableValue(entity.getDynamicParameterFields());
         }
         return data;
     }
@@ -81,25 +79,22 @@ public class WidgetChartsController {
     public TimeSeriesChartData<ChartDataset> getChartSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetLineChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetLineChartEntity.class);
         TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
-        ChartRequest chartRequest = buildChartRequest(timePeriod);
 
-        return buildTimeSeriesFullData(entity, timePeriod, chartRequest, entity.getListenSourceUpdates());
+        return buildTimeSeriesFullData(entity, timePeriod, entity.getListenSourceUpdates());
     }
 
     @PostMapping("/bartime/series")
     public TimeSeriesChartData<ChartDataset> getBartimeSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetBarTimeChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetBarTimeChartEntity.class);
         TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
-        ChartRequest chartRequest = buildChartRequest(timePeriod);
 
-        return buildTimeSeriesFullData(entity, timePeriod, chartRequest, entity.getListenSourceUpdates());
+        return buildTimeSeriesFullData(entity, timePeriod, entity.getListenSourceUpdates());
     }
 
     @PostMapping("/bar/series")
     public TimeSeriesChartData<BarChartDataset> getBarSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetBarChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetBarChartEntity.class);
         TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
-        ChartRequest chartRequest = buildChartRequest(timePeriod);
         TimeSeriesChartData<BarChartDataset> timeSeriesChartData = new TimeSeriesChartData<>();
         timeSeriesChartData.labels.add(entity.getAxisLabel());
 
@@ -111,20 +106,19 @@ public class WidgetChartsController {
             dataset.setBorderWidth(entity.getBorderWidth());
 
             String color = item.getChartColor();
-            dataset.setBackgroundColor(Collections.singletonList(getColorWithOpacity(color, item.getColorOpacity())));
+            dataset.setBackgroundColor(Collections.singletonList(getColorWithOpacity(color, item.getChartColorOpacity())));
             dataset.setBorderColor(Collections.singletonList(color));
             timeSeriesChartData.datasets.add(dataset);
 
             AggregationType aggregationType = item.getAggregationType();
-            chartRequest.setParameters(item.getDynamicParameterFieldsHolder());
+            ChartRequest chartRequest = buildChartRequest(timePeriod, item.getDynamicParameterFields());
             dataset.setData(Collections.singletonList(calcFloatValue(chartRequest, aggregationType,
                     (HasAggregateValueFromSeries) context.source)));
 
             if (entity.getListenSourceUpdates()) {
                 ((HasAggregateValueFromSeries) context.source).addUpdateValueListener(entityContext, entity.getEntityID(),
-                        item.getDynamicParameterFieldsHolder(), o -> {
-                            ChartRequest updChartRequest = buildChartRequest(timePeriod);
-                            updChartRequest.setParameters(item.getDynamicParameterFieldsHolder());
+                        item.getDynamicParameterFields(), o -> {
+                            ChartRequest updChartRequest = buildChartRequest(timePeriod, item.getDynamicParameterFields());
                             dataset.setData(Collections.singletonList(calcFloatValue(updChartRequest, aggregationType,
                                     (HasAggregateValueFromSeries) context.source)));
                             entityContext.ui().sendDynamicUpdate(
@@ -141,7 +135,6 @@ public class WidgetChartsController {
         WidgetPieChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetPieChartEntity.class);
         String widgetEntityID = entity.getEntityID();
         TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
-        ChartRequest chartRequest = buildChartRequest(timePeriod);
         TimeSeriesChartData<PieChartDataset> timeSeriesChartData = new TimeSeriesChartData<>();
         PieChartDataset dataset = new PieChartDataset(widgetEntityID + "___" + System.currentTimeMillis());
         timeSeriesChartData.datasets.add(dataset);
@@ -156,19 +149,18 @@ public class WidgetChartsController {
             timeSeriesChartData.labels.add(defaultString(item.getName(), context.source.getTitle()));
 
             String color = item.getChartColor();
-            dataset.getBackgroundColor().add(getColorWithOpacity(color, item.getColorOpacity()));
+            dataset.getBackgroundColor().add(getColorWithOpacity(color, item.getChartColorOpacity()));
             dataset.getBorderColor().add(color);
 
             AggregationType aggregationType = item.getAggregationType();
-            chartRequest.setParameters(item.getDynamicParameterFieldsHolder());
+            ChartRequest chartRequest = buildChartRequest(timePeriod, item.getDynamicParameterFields());
             dataset.getData().add(calcFloatValue(chartRequest, aggregationType, (HasAggregateValueFromSeries) context.source));
 
             // listen DataSource changed events, convert to BarSeries and put again in even bus
             if (entity.getListenSourceUpdates()) {
                 ((HasAggregateValueFromSeries) context.source).addUpdateValueListener(entityContext, entity.getEntityID(),
-                        item.getDynamicParameterFieldsHolder(), o -> {
-                            ChartRequest updChartRequest = buildChartRequest(timePeriod);
-                            updChartRequest.setParameters(item.getDynamicParameterFieldsHolder());
+                        item.getDynamicParameterFields(), o -> {
+                            ChartRequest updChartRequest = buildChartRequest(timePeriod, item.getDynamicParameterFields());
                             dataset.getData().set(context.index, calcFloatValue(updChartRequest, aggregationType,
                                     (HasAggregateValueFromSeries) context.source));
                             entityContext.ui().sendDynamicUpdate(
@@ -181,39 +173,42 @@ public class WidgetChartsController {
     }
 
     @PostMapping("/gauge/value")
-    public Float getGaugeValue(@Valid @RequestBody WidgetDataRequest request) {
+    public Object getGaugeValue(@Valid @RequestBody WidgetDataRequest request) {
         WidgetGaugeEntity entity = request.getEntity(entityContext, objectMapper, WidgetGaugeEntity.class);
 
         BaseEntity baseEntity = entityContext.getEntity(entity.getDataSource());
         return getAggregateValueFromSeries(request, entityContext, baseEntity,
-                entity.getDynamicParameterFieldsHolder(), entity.getListenSourceUpdates(),
-                entity.getAggregationType(), entity.getEntityID());
+                entity.getDynamicParameterFields(), entity.getListenSourceUpdates(),
+                entity.getAggregationType(), entity.getEntityID(), null, true);
     }
 
-    public static Float getAggregateValueFromSeries(WidgetDataRequest request, EntityContextImpl entityContext,
-                                                    BaseEntity<?> source,
-                                                    JSONObject dynamicParameterFieldsHolder, Boolean listenSourceUpdates,
-                                                    AggregationType aggregationType, String entityID) {
-        Float value = null;
+    public static Object getAggregateValueFromSeries(WidgetDataRequest request, EntityContextImpl entityContext,
+                                                     BaseEntity<?> source,
+                                                     JSONObject dynamicParameterFieldsHolder, Boolean listenSourceUpdates,
+                                                     AggregationType aggregationType, String entityID,
+                                                     String seriesEntityID,
+                                                     boolean filterOnlyNumbers) {
+        Object value = null;
         if (source instanceof HasAggregateValueFromSeries) {
             HasAggregateValueFromSeries dataSource = (HasAggregateValueFromSeries) source;
             TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
 
-            value = calcFloatValue(buildChartRequest(timePeriod, entityContext)
-                    .setParameters(dynamicParameterFieldsHolder), aggregationType, dataSource);
+            ChartRequest chartRequest = buildChartRequest(timePeriod, entityContext, dynamicParameterFieldsHolder);
+            value = dataSource.getAggregateValueFromSeries(chartRequest, aggregationType, filterOnlyNumbers);
 
             if (listenSourceUpdates) {
-                AtomicReference<Float> valueRef = new AtomicReference<>(0F);
+                AtomicReference<Object> valueRef = new AtomicReference<>(0F);
                 ((HasAggregateValueFromSeries) source).addUpdateValueListener(entityContext, entityID,
                         dynamicParameterFieldsHolder, o -> {
-                            ChartRequest updChartRequest = buildChartRequest(timePeriod, entityContext)
-                                    .setParameters(dynamicParameterFieldsHolder);
-                            float updatedValue = calcFloatValue(updChartRequest, aggregationType, dataSource);
+                            ChartRequest updChartRequest =
+                                    buildChartRequest(timePeriod, entityContext, dynamicParameterFieldsHolder);
+                            Object updatedValue =
+                                    dataSource.getAggregateValueFromSeries(updChartRequest, aggregationType, filterOnlyNumbers);
                             if (valueRef.get() != updatedValue) {
                                 valueRef.set(updatedValue);
                                 entityContext.ui().sendDynamicUpdate(
                                         new DynamicUpdateRequest(source.getEntityID(), SingleValueData.class.getSimpleName(),
-                                                entityID), new SingleValueData(updatedValue));
+                                                entityID), new SingleValueData(updatedValue, seriesEntityID));
                             }
                         });
             }
@@ -221,19 +216,20 @@ public class WidgetChartsController {
         return value;
     }
 
-    private static ChartRequest buildChartRequest(TimePeriod.TimePeriodImpl timePeriod, EntityContextImpl entityContext) {
+    private static ChartRequest buildChartRequest(TimePeriod.TimePeriodImpl timePeriod, EntityContextImpl entityContext,
+                                                  JSONObject parameters) {
         Pair<Date, Date> range = timePeriod.getDateRange();
         return new ChartRequest(entityContext, range.getFirst(), range.getSecond(), timePeriod.getDateFromNow(),
-                !timePeriod.getDateFromNow().equals("0"));
+                !timePeriod.getDateFromNow().equals("0")).setParameters(parameters);
     }
 
-    private ChartRequest buildChartRequest(TimePeriod.TimePeriodImpl timePeriod) {
-        return buildChartRequest(timePeriod, entityContext);
+    private ChartRequest buildChartRequest(TimePeriod.TimePeriodImpl timePeriod, JSONObject parameters) {
+        return buildChartRequest(timePeriod, entityContext, parameters);
     }
 
     public static float calcFloatValue(ChartRequest chartRequest, AggregationType aggregationType,
                                        HasAggregateValueFromSeries source) {
-        Float value = source.getAggregateValueFromSeries(chartRequest, aggregationType);
+        Float value = (Float) source.getAggregateValueFromSeries(chartRequest, aggregationType, true);
         return value == null ? 0F : value;
     }
 
@@ -245,7 +241,7 @@ public class WidgetChartsController {
     }
 
     private <T extends WidgetSeriesEntity> List<ChartContext<T>> filterSeries(ChartBaseEntity entity, Class<T> tClass) {
-        if(entity.getSeries() == null) {
+        if (entity.getSeries() == null) {
             return Collections.emptyList();
         }
         List<ChartContext<T>> result =
@@ -261,7 +257,6 @@ public class WidgetChartsController {
 
     private TimeSeriesChartData<ChartDataset> buildTimeSeriesFullData(TimeSeriesChartBaseEntity entity,
                                                                       TimePeriod.TimePeriodImpl timePeriod,
-                                                                      ChartRequest chartRequest,
                                                                       boolean addUpdateListener) {
         Set<WidgetSeriesEntity> series = entity.getSeries();
         List<TimeSeriesValues> timeSeriesValuesList = new ArrayList<>(series.size());
@@ -270,7 +265,7 @@ public class WidgetChartsController {
             BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
             if (source instanceof HasTimeValueSeries) {
                 timeSeriesValuesList.add(new TimeSeriesValues(item, source,
-                        buildTimeSeriesFromDataSource(chartRequest, item, (HasTimeValueSeries) source)));
+                        buildTimeSeriesFromDataSource(timePeriod, item, (HasTimeValueSeries) source)));
             }
         }
 
@@ -298,22 +293,21 @@ public class WidgetChartsController {
                                                       String entityID) {
         WidgetSeriesEntity item = timeSeriesContext.getSeriesEntity();
         BaseEntity<?> source = entityContext.getEntity(item.getDataSource());
-        ((HasTimeValueSeries) source).addUpdateValueListener(entityContext, entityID, item.getDynamicParameterFieldsHolder(),
+        ((HasTimeValueSeries) source).addUpdateValueListener(entityContext, entityID, item.getDynamicParameterFields(),
                 o -> {
-                    ChartRequest updatedChartRequest = buildChartRequest(timePeriod);
                     Set<TimeSeriesContext> cts =
-                            buildTimeSeriesFromDataSource(updatedChartRequest, item, timeSeriesContext.getSeries());
+                            buildTimeSeriesFromDataSource(timePeriod, item, timeSeriesContext.getSeries());
                     TimeSeriesValues values = timeSeriesContext.getOwner();
 
                     // if context was updated - we need update rest of values also !!!
                     if (!values.isEqualSeries(cts)) {
                         TimeSeriesChartData<ChartDataset> fullUpdatedData =
-                                this.buildTimeSeriesFullData(entity, timePeriod, updatedChartRequest, false);
+                                this.buildTimeSeriesFullData(entity, timePeriod, false);
 
                         if (source instanceof HasTimeValueAndLastValueSeries) {
                             fullUpdatedData.value =
                                     ((HasTimeValueAndLastValueSeries) source).getLastAvailableValue(
-                                            item.getDynamicParameterFieldsHolder());
+                                            item.getDynamicParameterFields());
                         }
 
                         entityContext.ui().sendDynamicUpdate(
@@ -323,11 +317,11 @@ public class WidgetChartsController {
                 });
     }
 
-    private Set<TimeSeriesContext> buildTimeSeriesFromDataSource(ChartRequest chartRequest,
+    private Set<TimeSeriesContext> buildTimeSeriesFromDataSource(TimePeriod.TimePeriodImpl timePeriod,
                                                                  WidgetSeriesEntity item,
                                                                  HasTimeValueSeries source) {
         Set<TimeSeriesContext> result = new HashSet<>();
-        chartRequest.setParameters(item.getDynamicParameterFieldsHolder());
+        ChartRequest chartRequest = buildChartRequest(timePeriod, item.getDynamicParameterFields());
 
         Map<HasTimeValueSeries.TimeValueDatasetDescription, List<Object[]>> timeSeries =
                 source.getMultipleTimeValueSeries(chartRequest);
@@ -437,6 +431,7 @@ public class WidgetChartsController {
     @RequiredArgsConstructor
     public static class SingleValueData {
         private final Object value;
+        private final String seriesEntityID;
     }
 
     @AllArgsConstructor

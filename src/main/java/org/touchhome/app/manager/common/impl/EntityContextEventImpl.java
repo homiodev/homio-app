@@ -37,7 +37,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     private final Set<OptionModel> events = new HashSet<>();
     private final Map<String, Object> lastValues = new ConcurrentHashMap<>();
 
-    private final Map<String, Map<String, Consumer<Object>>> eventListeners = new HashMap<>();
+    private final Map<String, Map<String, Consumer<Object>>> eventListeners = new ConcurrentHashMap<>();
 
     @Getter
     private final List<BiConsumer<String, Object>> globalEvenListeners = new ArrayList<>();

@@ -5,6 +5,7 @@ import org.touchhome.bundle.api.entity.widget.WidgetGroup;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
@@ -138,8 +139,9 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
         setJsonData("sdl", value);
     }
 
-    @UIField(order = 2, type = UIFieldType.ColorPicker)
+    @UIField(order = 2)
     @UIFieldGroup("Data labels")
+    @UIFieldColorPicker
     public String getDataLabelsColor() {
         return getJsonData("dlc", "#ADB5BD");
     }

@@ -97,11 +97,12 @@ public class UIFieldUtils {
             UIFieldEntityByClassSelection uiFieldClassSelection =
                     params.field.getDeclaredAnnotation(UIFieldEntityByClassSelection.class);
             List<OptionModel> list = new ArrayList<>();
+            Class<? extends HasEntityIdentifier> sourceClassType = uiFieldClassSelection.value();
             for (Class<? extends HasEntityIdentifier> foundTargetType : params.entityContext.getClassesWithParent(
-                    uiFieldClassSelection.value(), uiFieldClassSelection.basePackages())) {
+                    sourceClassType, uiFieldClassSelection.basePackages())) {
                 if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
                     for (BaseEntity baseEntity : params.entityContext.findAll((Class<BaseEntity>) foundTargetType)) {
-                        list.add(addEntityToSelection(baseEntity, params.classEntityForDynamicOptionLoader));
+                        list.add(addEntityToSelection(baseEntity, params.classEntityForDynamicOptionLoader, sourceClassType));
                     }
                 }
             }
@@ -203,13 +204,14 @@ public class UIFieldUtils {
     }
 
     private static OptionModel addEntityToSelection(HasEntityIdentifier entityIdentifier,
-                                                    Object requestedEntity) {
+                                                    Object requestedEntity,
+                                                    Class<? extends HasEntityIdentifier> sourceClassType) {
         OptionModel optionModel = OptionModel.of(entityIdentifier.getEntityID(), entityIdentifier.getTitle());
         if (entityIdentifier instanceof SelectionWithDynamicParameterFields) {
             optionModel.json(params -> {
                 DynamicParameterFields dynamicParameterFields =
                         ((SelectionWithDynamicParameterFields) entityIdentifier).getDynamicParameterFields(requestedEntity,
-                                fetchRequestWidgetType(requestedEntity));
+                                fetchRequestWidgetType(requestedEntity, sourceClassType));
                 if (dynamicParameterFields != null) {
                     try {
                         params.put("dynamicParameter", new JSONObject().put("groupName", dynamicParameterFields.getGroupName())
@@ -226,10 +228,11 @@ public class UIFieldUtils {
         return optionModel;
     }
 
-    public static DynamicRequestType fetchRequestWidgetType(Object requestedEntity) {
+    public static DynamicRequestType fetchRequestWidgetType(Object requestedEntity,
+                                                            Class<? extends HasEntityIdentifier> sourceClassType) {
         DynamicRequestType dynamicRequestType = null;
         if (requestedEntity instanceof HasDynamicParameterFields) {
-            dynamicRequestType = ((HasDynamicParameterFields) requestedEntity).getDynamicRequestType();
+            dynamicRequestType = ((HasDynamicParameterFields) requestedEntity).getDynamicRequestType(sourceClassType);
         }
         return dynamicRequestType == null ? DynamicRequestType.Default : dynamicRequestType;
     }
@@ -450,6 +453,19 @@ public class UIFieldUtils {
             entityUIMetaData.setType("IconPicker");
             jsonTypeMetadata.put("allowEmptyIcon", uiFieldIconPicker.allowEmptyIcon());
             jsonTypeMetadata.put("allowThreshold", uiFieldIconPicker.allowThreshold());
+        }
+
+        UIFieldPosition uiFieldPosition = uiFieldContext.getDeclaredAnnotation(UIFieldPosition.class);
+        if (uiFieldPosition != null) {
+            entityUIMetaData.setType("Position");
+            jsonTypeMetadata.put("disableCenter", uiFieldPosition.disableCenter());
+        }
+
+        UIFieldColorPicker uiFieldColorPicker = uiFieldContext.getDeclaredAnnotation(UIFieldColorPicker.class);
+        if (uiFieldColorPicker != null) {
+            entityUIMetaData.setType(UIFieldType.ColorPicker.name());
+            jsonTypeMetadata.put("allowThreshold", uiFieldColorPicker.allowThreshold());
+            jsonTypeMetadata.put("animateColorCondition", uiFieldColorPicker.animateColorCondition());
         }
 
         UIFieldTableLayout uiFieldTableLayout = uiFieldContext.getDeclaredAnnotation(UIFieldTableLayout.class);

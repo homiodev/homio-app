@@ -101,8 +101,9 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> imple
         return this;
     }
 
-    @UIField(order = 20, type = UIFieldType.ColorPickerWithThreshold)
+    @UIField(order = 20)
     @UIFieldGroup("UI")
+    @UIFieldColorPicker(allowThreshold = true)
     public String getForeground() {
         return getJsonData("fg", "#009688");
     }

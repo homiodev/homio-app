@@ -40,12 +40,12 @@ public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntit
     }
 
     @Override
-    public void pushButton(EntityContext entityContext) {
+    public void firePushButton(EntityContext entityContext, JSONObject dynamicParameters) {
         entityContext.getBean(Scratch3EventsBlocks.class).broadcastEvent(this);
     }
 
     @Override
-    public Float getAggregateValueFromSeries(ChartRequest request, AggregationType aggregationType) {
+    public Object getAggregateValueFromSeries(ChartRequest request, AggregationType aggregationType, boolean filterOnlyNumbers) {
         return request.getEntityContext().getBean(WorkspaceBroadcastRepository.class)
                 .getValue(this, request);
     }

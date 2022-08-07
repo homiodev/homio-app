@@ -6,10 +6,7 @@ import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.HasTimeValueSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldSlider;
-import org.touchhome.bundle.api.ui.field.UIFieldType;
+import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
@@ -25,8 +22,9 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
         return getJsonData("ds");
     }
 
-    @UIField(order = 15, type = UIFieldType.ColorPicker)
+    @UIField(order = 15)
     @UIFieldGroup("Chart line")
+    @UIFieldColorPicker
     public String getChartColor() {
         return getJsonData("bc", "#FFFFFF");
     }
@@ -39,11 +37,11 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     @UIField(order = 16)
     @UIFieldSlider(min = 1, max = 254, step = 5)
     @UIFieldGroup("Chart line")
-    public int getColorOpacity() {
+    public int getChartColorOpacity() {
         return getJsonData("bco", 120);
     }
 
-    public void setColorOpacity(int value) {
+    public void setChartColorOpacity(int value) {
         setJsonData("bco", value);
     }
 

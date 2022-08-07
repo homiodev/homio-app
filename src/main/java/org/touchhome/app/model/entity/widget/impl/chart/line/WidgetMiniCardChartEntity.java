@@ -1,9 +1,9 @@
 package org.touchhome.app.model.entity.widget.impl.chart.line;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import org.json.JSONObject;
+import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.TimeSeriesChartBaseEntity;
 import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
 import org.touchhome.app.rest.widget.TimeSeriesContext;
@@ -58,14 +58,16 @@ public class WidgetMiniCardChartEntity
         return getJsonData("icon", "fas fa-temperature-half");
     }
 
-    @UIField(order = 2, type = UIFieldType.ColorPickerWithThreshold)
+    @UIField(order = 2)
     @UIFieldGroup("UI")
+    @UIFieldColorPicker(allowThreshold = true)
     public String getIconColor() {
-        return getJsonData("ic", "#44739E");
+        return getJsonData("iconColor", "#44739E");
     }
 
-    @UIField(order = 3, type = UIFieldType.ColorPickerWithThreshold)
+    @UIField(order = 3)
     @UIFieldGroup("UI")
+    @UIFieldColorPicker(allowThreshold = true)
     public String getTextColor() {
         return getJsonData("txtCol", UI.Color.WHITE);
     }
@@ -95,12 +97,6 @@ public class WidgetMiniCardChartEntity
 
     @UIField(order = 5)
     @UIFieldGroup("Chart")
-    public GroupBy getGroupBy() {
-        return getJsonDataEnum("gby", GroupBy.interval);
-    }
-
-    @UIField(order = 5)
-    @UIFieldGroup("Chart")
     public AggregationType getAggregationType() {
         return getJsonDataEnum("aggr", AggregationType.Average);
     }
@@ -113,8 +109,8 @@ public class WidgetMiniCardChartEntity
 
     @UIField(order = 7)
     @UIFieldGroup("Chart")
-    public ChartType getChartType() {
-        return getJsonDataEnum("ct", ChartType.line);
+    public HasChartDataSource.ChartType getChartType() {
+        return getJsonDataEnum("ct", HasChartDataSource.ChartType.line);
     }
 
     @Override
@@ -122,25 +118,11 @@ public class WidgetMiniCardChartEntity
         return PREFIX;
     }
 
-    @JsonIgnore
-    public double getCalcPointsPerHour() {
-        switch (getGroupBy()) {
-            case date:
-                return 1 / 24D;
-            case hour:
-                return 1;
-        }
-        return getPointsPerHour();
-    }
-
-    public enum ChartType {
-        line, bar, none
-    }
-
     // #### Chart UI look and feel
 
-    @UIField(order = 1, type = UIFieldType.ColorPickerWithThreshold)
+    @UIField(order = 1)
     @UIFieldGroup(value = "Chart ui", order = 4)
+    @UIFieldColorPicker(allowThreshold = true)
     public String getChartColor() {
         return getJsonData("bc", "#FFFFFF");
     }
@@ -148,7 +130,7 @@ public class WidgetMiniCardChartEntity
     @UIField(order = 2)
     @UIFieldSlider(min = 1, max = 254, step = 5)
     @UIFieldGroup("Chart ui")
-    public int getColorOpacity() {
+    public int getChartColorOpacity() {
         return getJsonData("bco", 120);
     }
 
@@ -181,7 +163,7 @@ public class WidgetMiniCardChartEntity
     @Override
     public WidgetChartsController.TimeSeriesDataset buildTargetDataset(TimeSeriesContext item) {
         WidgetChartsController.TimeSeriesDataset dataset =
-                new WidgetChartsController.TimeSeriesDataset(item.getId(), null, getChartColor(), getColorOpacity(),
+                new WidgetChartsController.TimeSeriesDataset(item.getId(), null, getChartColor(), getChartColorOpacity(),
                         getTension() / 10D, false);
         if (item.getValues() != null && !item.getValues().isEmpty()) {
             dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), getAggregationType()));
@@ -202,7 +184,7 @@ public class WidgetMiniCardChartEntity
     }
 
     public void setIconColor(String value) {
-        setJsonData("ic", value);
+        setJsonData("iconColor", value);
     }
 
     public void setUnit(String value) {
@@ -213,10 +195,6 @@ public class WidgetMiniCardChartEntity
         setJsonData("hts", value);
     }
 
-    public void setGroupBy(GroupBy groupBy) {
-        setJsonDataEnum("gby", groupBy);
-    }
-
     public void setAggregationType(AggregationType value) {
         setJsonData("aggr", value);
     }
@@ -225,7 +203,7 @@ public class WidgetMiniCardChartEntity
         setJsonData("fillMis", value);
     }
 
-    public void getChartType(ChartType value) {
+    public void getChartType(HasChartDataSource.ChartType value) {
         setJsonData("ct", value);
     }
 
@@ -233,7 +211,7 @@ public class WidgetMiniCardChartEntity
         setJsonData("bc", value);
     }
 
-    public void setColorOpacity(int value) {
+    public void setChartColorOpacity(int value) {
         setJsonData("bco", value);
     }
 

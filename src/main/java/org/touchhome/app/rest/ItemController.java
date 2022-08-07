@@ -587,7 +587,7 @@ public class ItemController implements BeanPostConstruct {
         }
         DynamicParameterFields dynamicParameterFields =
                 ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(classEntity,
-                        UIFieldUtils.fetchRequestWidgetType(classEntity));
+                        UIFieldUtils.fetchRequestWidgetType(classEntity, null));
         if (dynamicParameterFields == null) {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }
