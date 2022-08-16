@@ -64,7 +64,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     }
 
     @UIField(order = 80)
-    @UIFieldGroup("Axis")
+    @UIFieldGroup("Chart axis")
     public Boolean getShowAxisX() {
         return getJsonData("showAxisX", Boolean.TRUE);
     }
@@ -75,7 +75,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     }
 
     @UIField(order = 81)
-    @UIFieldGroup("Axis")
+    @UIFieldGroup("Chart axis")
     public Boolean getShowAxisY() {
         return getJsonData("showAxisY", Boolean.TRUE);
     }
@@ -86,7 +86,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     }
 
     @UIField(order = 82)
-    @UIFieldGroup("Axis")
+    @UIFieldGroup("Chart axis")
     public Integer getMin() {
         return getJsonData().has("min") ? getJsonData().getInt("min") : null;
     }
@@ -97,7 +97,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     }
 
     @UIField(order = 83)
-    @UIFieldGroup("Axis")
+    @UIFieldGroup("Chart axis")
     public Integer getMax() {
         return getJsonData().has("max") ? getJsonData().getInt("max") : null;
     }
@@ -108,7 +108,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     }
 
     @UIField(order = 84)
-    @UIFieldGroup("Axis")
+    @UIFieldGroup("Chart axis")
     public String getAxisLabelX() {
         return getJsonData("axisLabelX");
     }
@@ -119,7 +119,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     }
 
     @UIField(order = 85)
-    @UIFieldGroup("Axis")
+    @UIFieldGroup("Chart axis")
     public String getAxisLabelY() {
         return getJsonData("axisLabelY");
     }

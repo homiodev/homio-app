@@ -1,32 +1,40 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
-import org.touchhome.bundle.api.entity.widget.HasSliderSeries;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
-import org.touchhome.bundle.api.model.HasEntityIdentifier;
+import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicRequestType;
 
 import javax.persistence.Entity;
 
 @Entity
-public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity> {
+public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity>
+        implements HasSingleValueDataSource<WidgetSliderEntity> {
 
     public static final String PREFIX = "wgssls_";
 
+    @Override
     @UIField(order = 1, required = true)
-    @UIFieldEntityByClassSelection(HasSliderSeries.class)
-    @UIFieldGroup("Slider")
-    public String getDataSource() {
-        return getJsonData("ds");
+    @UIFieldEntityByClassSelection(HasGetStatusValue.class)
+    @UIFieldGroup("Value")
+    @UIFieldIgnoreParent
+    public String getValueDataSource() {
+        return HasSingleValueDataSource.super.getValueDataSource();
+    }
+
+    @Override
+    @UIField(order = 1, required = true)
+    public String getSetValueDataSource() {
+        return HasSingleValueDataSource.super.getSetValueDataSource();
     }
 
     @UIField(order = 2)
     @UIFieldGroup("Slider")
     @UIFieldColorPicker(allowThreshold = true)
     public String getSliderColor() {
-        return getJsonData("sc", "#FFFFFF");
+        return getJsonData("sc", UI.Color.WHITE);
     }
 
     @UIField(order = 3)
@@ -99,10 +107,5 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
         if (!getJsonData().has("sc")) {
             setSliderColor(UI.Color.random());
         }
-    }
-
-    @Override
-    public DynamicRequestType getDynamicRequestType(Class<? extends HasEntityIdentifier> sourceClassType) {
-        return DynamicRequestType.Slider;
     }
 }

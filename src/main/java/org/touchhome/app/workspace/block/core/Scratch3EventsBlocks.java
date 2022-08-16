@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
-import org.touchhome.app.model.workspace.WorkspaceBroadcastValueCrudEntity;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
@@ -12,8 +11,6 @@ import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-
-import java.util.Date;
 
 @Getter
 @Component
@@ -32,14 +29,8 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
         this.broadcastEvent = Scratch3Block.ofHandler("broadcast", BlockType.command, this::broadcastEventHandler);
     }
 
-    public void broadcastEvent(WorkspaceBroadcastEntity source) {
-        String broadcastRefEntityID = source.getEntityID().substring(source.getEntityID().indexOf("_") + 1);
-        fireBroadcastEvent(broadcastRefEntityID);
-    }
-
     private void broadcastEventHandler(WorkspaceBlock workspaceBlock) {
-        String broadcastRefEntityID = workspaceBlock.getInputString("BROADCAST_INPUT");
-        fireBroadcastEvent(broadcastRefEntityID);
+        fireBroadcastEvent(workspaceBlock.getInputString("BROADCAST_INPUT"));
     }
 
     @SneakyThrows
@@ -54,8 +45,6 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
 
     public void fireBroadcastEvent(String broadcastRefEntityID) {
         WorkspaceBroadcastEntity entity = entityContext.getEntity(WorkspaceBroadcastEntity.PREFIX + broadcastRefEntityID);
-        entityContext.save(new WorkspaceBroadcastValueCrudEntity().setCreationTime(new Date()).setWorkspaceBroadcastEntity(entity));
-
-        broadcastLockManager.signalAll(broadcastRefEntityID);
+        entity.fireBroadcastEvent(broadcastRefEntityID, "");
     }
 }

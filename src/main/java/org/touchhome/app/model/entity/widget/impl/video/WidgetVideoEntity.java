@@ -1,11 +1,11 @@
 package org.touchhome.app.model.entity.widget.impl.video;
 
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.entity.validation.MaxItems;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetGroup;
 
 import javax.persistence.Entity;
-import javax.validation.constraints.Max;
 import java.util.Set;
 
 @Entity
@@ -18,7 +18,7 @@ public class WidgetVideoEntity extends WidgetBaseEntityAndSeries<WidgetVideoEnti
         return WidgetGroup.Media;
     }
 
-    @Max(4) // allow max 4 cameras
+    @MaxItems(4) // allow max 4 cameras
     public Set<WidgetVideoSeriesEntity> getSeries() {
         return super.getSeries();
     }

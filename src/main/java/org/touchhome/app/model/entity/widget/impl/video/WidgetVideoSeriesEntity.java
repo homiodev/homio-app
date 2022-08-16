@@ -1,11 +1,13 @@
 package org.touchhome.app.model.entity.widget.impl.video;
 
 import org.springframework.data.util.Pair;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.model.StylePosition;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldFileSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 import org.touchhome.bundle.api.video.BaseVideoStreamEntity;
@@ -16,7 +18,8 @@ import java.util.Collection;
 import java.util.List;
 
 @Entity
-public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntity> {
+public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntity>
+        implements HasSingleValueDataSource<WidgetVideoEntity> {
 
     public static final String PREFIX = "wgsvids_";
 
@@ -101,11 +104,13 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         setJsonData("rw", value);
     }
 
+    @Override
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
     @UIFieldSelection(value = VideoSeriesDataSourceDynamicOptionLoader.class, allowInputRawText = true)
     @UIFieldFileSelection(pattern = ".*(\\.mp4|\\.m3u8)", iconColor = "#14A669")
-    public String getDataSource() {
-        return getJsonData("ds");
+    @UIFieldIgnoreParent
+    public String getValueDataSource() {
+        return HasSingleValueDataSource.super.getValueDataSource();
     }
 
     public StylePosition getActionPosition() {

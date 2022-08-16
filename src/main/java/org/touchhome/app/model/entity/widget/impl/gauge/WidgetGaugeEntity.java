@@ -1,52 +1,20 @@
 package org.touchhome.app.model.entity.widget.impl.gauge;
 
-import org.json.JSONObject;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
-import org.touchhome.bundle.api.entity.widget.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
-import org.touchhome.bundle.api.ui.TimePeriod;
+import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
 import javax.persistence.Entity;
 
 @Entity
-public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> implements HasDynamicParameterFields {
+public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
+        implements HasSingleValueDataSource<WidgetGaugeEntity> {
 
     public static final String PREFIX = "wgtgg_";
-
-    @UIField(order = 14, required = true)
-    @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
-    public String getDataSource() {
-        return getJsonData("ds");
-    }
-
-    public WidgetGaugeEntity setDataSource(String value) {
-        setJsonData("ds", value);
-        return this;
-    }
-
-    @Override
-    public void setDynamicParameterFieldsHolder(JSONObject value) {
-        setJsonData("dsp", value);
-    }
-
-    @Override
-    public JSONObject getDynamicParameterFieldsHolder() {
-        return getJsonData().optJSONObject("dsp");
-    }
-
-    @UIField(order = 15)
-    public AggregationType getAggregationType() {
-        return getJsonDataEnum("cvt", AggregationType.Last);
-    }
-
-    public WidgetGaugeEntity setAggregationType(AggregationType value) {
-        setJsonData("cvt", value);
-        return this;
-    }
 
     @UIField(order = 15)
     public GaugeType getDisplayType() {
@@ -152,9 +120,9 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity> imple
 
     @Override
     public boolean updateRelations(EntityContext entityContext) {
-        String dataSource = getDataSource();
-        if (dataSource != null && entityContext.getEntity(dataSource) == null) {
-            this.setDataSource(null);
+        String valueDataSource = getValueDataSource();
+        if (valueDataSource != null && entityContext.getEntity(valueDataSource) == null) {
+            this.setValueDataSource(null);
             return true;
         }
         return false;

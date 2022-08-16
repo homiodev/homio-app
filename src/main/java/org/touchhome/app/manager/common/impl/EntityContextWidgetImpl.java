@@ -68,7 +68,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
         LineChartSeriesBuilder lineChartSeriesBuilder = (color, lineChartSeries) -> {
             WidgetLineChartSeriesEntity seriesEntity = new WidgetLineChartSeriesEntity();
             seriesEntity.setChartColor(color);
-            seriesEntity.setDataSource(lineChartSeries.getEntityID());
+            seriesEntity.setChartDataSource(lineChartSeries.getEntityID());
             seriesEntity.setWidgetEntity(savedWidget);
             entityContext.save(seriesEntity);
         };

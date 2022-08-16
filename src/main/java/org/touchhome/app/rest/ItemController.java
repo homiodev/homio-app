@@ -298,6 +298,7 @@ public class ItemController implements BeanPostConstruct {
             actionRequestModel.params.put("files", files);
             return executeAction(actionRequestModel, entity, entity);
         } catch (Exception ex) {
+            log.error("Error while execute action: {}", CommonUtils.getErrorMessage(ex));
             return ActionResponseModel.showError(ex);
         }
     }
@@ -585,38 +586,15 @@ public class ItemController implements BeanPostConstruct {
                     "SelectedEntity must implement interface <" + SelectionWithDynamicParameterFields.class.getSimpleName() +
                             ">");
         }
-        DynamicParameterFields dynamicParameterFields =
-                ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(classEntity,
+        SelectionWithDynamicParameterFields.RequestDynamicParameter parameter =
+                new SelectionWithDynamicParameterFields.RequestDynamicParameter(classEntity,
                         UIFieldUtils.fetchRequestWidgetType(classEntity, null));
+        DynamicParameterFields dynamicParameterFields =
+                ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(parameter);
         if (dynamicParameterFields == null) {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }
         return UIFieldUtils.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity, null, null, null);
-
-        /*if (classEntity == null) {
-            // i.e in case we load Widget
-            Class<?> aClass = entityManager.getClassByType(entityID);
-            if (aClass == null) {
-                List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
-                aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.get(0);
-            }
-            classEntity = CommonUtils.newInstance(aClass);
-            if (classEntity == null) {
-                throw new IllegalArgumentException("Unable find class: " + entityID);
-            }
-        }
-        Class<?> entityClass = classEntity.getClass();
-        if (StringUtils.isNotEmpty(fieldFetchType)) {
-            String[] bundleAndClassName = fieldFetchType.split(":");
-            entityClass = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
-        }
-
-        List<OptionModel> options = getEntityOptions(fieldName, classEntity, entityClass);
-        if (options != null) {
-            return options;
-        }
-
-        return UIFieldUtils.loadOptions(classEntity, entityContext, fieldName);*/
     }
 
     private List<OptionModel> getEntityOptions(String fieldName, Object classEntity, Class<?> entityClass) {

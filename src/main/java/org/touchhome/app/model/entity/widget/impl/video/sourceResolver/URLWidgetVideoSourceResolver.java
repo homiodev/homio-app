@@ -11,15 +11,15 @@ import java.nio.file.Paths;
 public class URLWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
     @Override
     public VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
-        String videoType = getVideoType(item.getDataSource());
+        String videoType = getVideoType(item.getValueDataSource());
         try {
-            if (Files.exists(Paths.get(item.getDataSource()))) {
-                return new VideoEntityResponse(item.getDataSource(), MediaController.createVideoLink(item.getDataSource()),
+            if (Files.exists(Paths.get(item.getValueDataSource()))) {
+                return new VideoEntityResponse(item.getValueDataSource(), MediaController.createVideoLink(item.getValueDataSource()),
                         videoType);
             }
         } catch (Exception ignore) {}
-        if (item.getDataSource().startsWith("http")) {
-            return new VideoEntityResponse(item.getDataSource(), item.getDataSource(), videoType);
+        if (item.getValueDataSource().startsWith("http")) {
+            return new VideoEntityResponse(item.getValueDataSource(), item.getValueDataSource(), videoType);
         }
         return null;
     }

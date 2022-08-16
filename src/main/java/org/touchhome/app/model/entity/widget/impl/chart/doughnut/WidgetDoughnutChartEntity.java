@@ -1,17 +1,33 @@
-package org.touchhome.app.model.entity.widget.impl.chart.pie;
+package org.touchhome.app.model.entity.widget.impl.chart.doughnut;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 import javax.persistence.Entity;
 
 @Entity
-public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity> {
+public class WidgetDoughnutChartEntity extends ChartBaseEntity<WidgetDoughnutChartEntity, WidgetDoughnutChartSeriesEntity>
+        implements HasSingleValueDataSource<WidgetDoughnutChartEntity> {
 
     public static final String PREFIX = "wgtpc_";
+
+    @UIField(order = 2)
+    @UIFieldGroup(value = "Value", order = 1)
+    public String getUnit() {
+        return getJsonData("unit", "°C");
+    }
+
+    @UIField(order = 3)
+    @UIFieldGroup("Value")
+    @UIFieldSlider(min = 14, max = 40)
+    public int getValueFontSize() {
+        return getJsonData("vfs", 28);
+    }
 
     @UIField(order = 52)
     @UIFieldSlider(min = 1, max = 4)
@@ -19,14 +35,14 @@ public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity, 
         return getJsonData("bw", 1);
     }
 
-    public WidgetPieChartEntity setBorderWidth(int value) {
+    public WidgetDoughnutChartEntity setBorderWidth(int value) {
         setJsonData("bw", value);
         return this;
     }
 
     @Override
     public String getImage() {
-        return "fas fa-chart-pie";
+        return "fas fa-circle-dot";
     }
 
     @Override

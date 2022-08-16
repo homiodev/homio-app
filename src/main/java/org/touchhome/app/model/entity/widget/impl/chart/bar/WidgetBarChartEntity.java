@@ -23,9 +23,9 @@ public class WidgetBarChartEntity extends ChartBaseEntity<WidgetBarChartEntity, 
     }
 
     @UIField(order = 40)
-    @UIFieldGroup("Axis")
+    @UIFieldGroup("Chart axis")
     public String getAxisLabel() {
-        return getJsonData("al", "example");
+        return getJsonData("al", "");
     }
 
     public WidgetBarChartEntity setAxisLabel(String value) {

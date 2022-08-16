@@ -47,11 +47,11 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     @UIField(order = 24, isRevert = true)
     @UIFieldColorPicker
     public String getBorderColor() {
-        return getJsonData("bc", "#434B5A");
+        return getJsonData("bordC", "#434B5A");
     }
 
     public WidgetFMEntity setBorderColor(String value) {
-        setJsonData("bc", value);
+        setJsonData("bordC", value);
         return this;
     }
 

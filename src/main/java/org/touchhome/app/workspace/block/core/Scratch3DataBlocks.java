@@ -186,7 +186,9 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     private void inverseBooleanHandler(WorkspaceBlock workspaceBlock) {
         String boolVariableId = workspaceBlock.getFieldId("bool_variables_group");
         WorkspaceBooleanEntity entity = entityContext.getEntity(WorkspaceBooleanEntity.PREFIX + boolVariableId);
-        entityContext.save(entity.inverseValue());
+        Boolean value = entity.getValue();
+        entity.setValue(!value);
+        entityContext.save(entity);
     }
 
     private void setAndBackupGroupVariableHandler(WorkspaceBlock workspaceBlock) {

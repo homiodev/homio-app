@@ -1,40 +1,37 @@
 package org.touchhome.app.model.entity.widget.impl.button;
 
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
-import org.touchhome.bundle.api.entity.widget.HasPushButtonSeries;
-import org.touchhome.bundle.api.entity.widget.HasStatusSeries;
-import org.touchhome.bundle.api.entity.widget.HasTimeValueAndLastValueSeries;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
-import org.touchhome.bundle.api.model.HasEntityIdentifier;
+import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicRequestType;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushButtonEntity>
-        implements HasChartDataSource<WidgetPushButtonEntity> {
+        implements HasChartDataSource<WidgetPushButtonEntity>, HasSingleValueDataSource<WidgetPushButtonEntity> {
 
     public static final String PREFIX = "wgsbs_";
 
-    @UIField(order = 1, required = true)
-    @UIFieldEntityByClassSelection(HasPushButtonSeries.class)
-    @UIFieldGroup(value = "Data source", order = 1)
-    public String getDataSource() {
-        return getJsonData("ds");
+    @Override
+    @UIField(order = 1, required = true, label = "widget.pushValueDataSource")
+    @UIFieldEntityByClassSelection(HasSetStatusValue.class)
+    @UIFieldGroup(value = "Action Data source", order = 1)
+    public String getSetValueDataSource() {
+        return HasSingleValueDataSource.super.getSetValueDataSource();
     }
 
-    @UIField(order = 2)
-    @UIFieldEntityByClassSelection(HasStatusSeries.class)
-    @UIFieldGroup("Data source")
-    public String getFetchStatusDataSource() {
-        return getJsonData("fdds");
+    @UIField(order = 2, required = true)
+    @UIFieldGroup(value = "Action Data source")
+    public String getValueToPush() {
+        return getJsonData("valToPush");
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "UI", order = 2)
+    @UIFieldGroup(value = "UI", order = 2, borderColor = "#009688")
     @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
     public String getButtonColor() {
         return getJsonData("btnClr", UI.Color.WHITE);
@@ -42,25 +39,19 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
 
     @UIField(order = 2)
     @UIFieldGroup("UI")
-    public Boolean getShowRawValue() {
-        return getJsonData("srw", Boolean.FALSE);
-    }
-
-    @UIField(order = 3)
-    @UIFieldGroup("UI")
     public String getConfirmMessage() {
         return getJsonData("confirm", "");
     }
 
     @UIField(order = 1)
     @UIFieldIconPicker(allowThreshold = true, allowEmptyIcon = true)
-    @UIFieldGroup(value = "UI icon", order = 3)
+    @UIFieldGroup(value = "UI icon", order = 3, borderColor = "#009688")
     public String getIcon() {
         return getJsonData("icon", "");
     }
 
     @UIField(order = 2)
-    @UIFieldGroup("UI icon")
+    @UIFieldGroup(value = "UI icon")
     @UIFieldPosition
     public String getIconPosition() {
         return getJsonData("iconPos", "2x3");
@@ -78,21 +69,38 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
         return PREFIX;
     }
 
+    @UIField(order = 1, type = UIFieldType.StringTemplate)
+    @UIFieldGroup(value = "Value", order = 4, borderColor = "#E91E63")
+    public String getValueTemplate() {
+        return getJsonData("valTmpl");
+    }
+
+    @UIField(order = 2)
+    @UIFieldGroup("Value")
+    public String getNoValueText() {
+        return getJsonData("noVal", "-");
+    }
+
+    @UIField(order = 3)
+    @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldGroup("Value")
+    public String getValueColor() {
+        return getJsonData("valC", UI.Color.WHITE);
+    }
+
+    @UIField(order = 2)
+    @UIFieldPosition
+    @UIFieldGroup("Value")
+    public String getValuePosition() {
+        return getJsonData("valuePos", "2x3");
+    }
+
     @Override
     protected void beforePersist() {
         if (!getJsonData().has("btnClr")) {
             setButtonColor(UI.Color.random());
         }
-    }
-
-    @Override
-    public DynamicRequestType getDynamicRequestType(Class<? extends HasEntityIdentifier> sourceClassType) {
-        if (sourceClassType.equals(HasStatusSeries.class)) {
-            return DynamicRequestType.ValueStatus;
-        } else if (sourceClassType.equals(HasTimeValueAndLastValueSeries.class)) {
-            return DynamicRequestType.Default;
-        }
-        return DynamicRequestType.PushButton;
+        setInitChartColor(UI.Color.random());
     }
 
     public WidgetPushButtonSeriesEntity setButtonColor(String value) {
@@ -102,14 +110,6 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
 
     public void setIcon(String value) {
         setJsonData("icon", value);
-    }
-
-    public void setFetchStatusDataSource(String value) {
-        setJsonData("fdds", value);
-    }
-
-    public void setShowRawValue(Boolean value) {
-        setJsonData("srw", value);
     }
 
     public void setIconColor(String value) {
@@ -122,5 +122,25 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
 
     public void setConfirmMessage(String value) {
         setJsonData("confirm", value);
+    }
+
+    public void setValueToPush(String value) {
+        setJsonData("valToPush", value);
+    }
+
+    public void setValuePosition(String value) {
+        setJsonData("valuePos", value);
+    }
+
+    public void setNoValueText(String value) {
+        setJsonData("noVal", value);
+    }
+
+    public void setValueTemplate(String value) {
+        setJsonData("valTmpl", value);
+    }
+
+    public void setValueColor(String value) {
+        setJsonData("valC", value);
     }
 }

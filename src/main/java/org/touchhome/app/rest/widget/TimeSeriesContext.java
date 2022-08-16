@@ -4,23 +4,24 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.entity.widget.HasTimeValueSeries;
+import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
+import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 
 import java.util.List;
 
 @Getter
 @RequiredArgsConstructor
 @Accessors(chain = true)
-public class TimeSeriesContext {
+public class TimeSeriesContext<T extends WidgetSeriesEntity<?> & HasChartDataSource<?>> {
     private final String id;
     // private final String name;
     // private final String color;
-    private final WidgetSeriesEntity seriesEntity;
+    private final T seriesEntity;
     private final HasTimeValueSeries series;
 
     @Setter
-    private TimeSeriesValues owner;
+    private TimeSeriesValues<T> owner;
 
     @Setter
     private List<Object[]> value;
@@ -33,7 +34,7 @@ public class TimeSeriesContext {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        TimeSeriesContext that = (TimeSeriesContext) o;
+        TimeSeriesContext<T> that = (TimeSeriesContext<T>) o;
 
         return id.equals(that.id);
     }

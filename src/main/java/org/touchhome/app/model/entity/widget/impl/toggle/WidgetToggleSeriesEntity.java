@@ -1,24 +1,33 @@
 package org.touchhome.app.model.entity.widget.impl.toggle;
 
-import org.touchhome.bundle.api.entity.widget.HasToggleSeries;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
-import org.touchhome.bundle.api.model.HasEntityIdentifier;
+import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicRequestType;
 
 import javax.persistence.Entity;
+import java.util.List;
 
 @Entity
-public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEntity> {
+public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEntity>
+        implements HasSingleValueDataSource<WidgetToggleEntity> {
 
     public static final String PREFIX = "wgttgs_";
 
-    @UIField(order = 14, required = true)
-    @UIFieldEntityByClassSelection(HasToggleSeries.class)
-    public String getDataSource() {
-        return getJsonData("ds");
+    @Override
+    @UIField(order = 1, required = true)
+    @UIFieldEntityByClassSelection(HasGetStatusValue.class)
+    @UIFieldIgnoreParent
+    @UIFieldGroup(value = "Value", order = 1)
+    public String getValueDataSource() {
+        return HasSingleValueDataSource.super.getValueDataSource();
+    }
+
+    @UIField(order = 2, required = true)
+    public String getSetValueDataSource() {
+        return HasSingleValueDataSource.super.getSetValueDataSource();
     }
 
     @UIField(order = 20)
@@ -38,7 +47,16 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
         return getJsonData("onName", "On");
     }
 
-    @UIField(order = 2)
+    /**
+     * Determine to check if toggle is on compare server value with list of OnValues
+     */
+    @UIField(order = 2, type = UIFieldType.Chips)
+    @UIFieldGroup("ON")
+    public List<String> getOnValues() {
+        return getJsonDataList("onValues");
+    }
+
+    @UIField(order = 3, type = UIFieldType.Chips)
     @UIFieldGroup("ON")
     public String getOnValue() {
         return getJsonData("onValue", "true");
@@ -92,8 +110,8 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
         setJsonData("offName", value);
     }
 
-    public void setOnValue(String value) {
-        setJsonData("onValue", value);
+    public void setOnValues(String value) {
+        setJsonData("onValues", value);
     }
 
     public void setOffValue(String value) {
@@ -126,10 +144,8 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
         if (!getJsonData().has("color")) {
             setColor(UI.Color.random());
         }
-    }
-
-    @Override
-    public DynamicRequestType getDynamicRequestType(Class<? extends HasEntityIdentifier> sourceClassType) {
-        return DynamicRequestType.Toggle;
+        if (getOnValues().isEmpty()) {
+            setOnValues("true~~~1");
+        }
     }
 }

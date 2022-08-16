@@ -14,7 +14,7 @@ public class VideoStreamWidgetVideoSourceResolver implements WidgetVideoSourceRe
 
     @Override
     public VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item) {
-        String ds = item.getDataSource();
+        String ds = item.getValueDataSource();
         String[] keys = ds.split("~~~");
         BaseVideoStreamEntity baseVideoStreamEntity = entityContext.getEntity(keys[0]);
         if (baseVideoStreamEntity != null) {

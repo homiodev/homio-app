@@ -1,4 +1,4 @@
-package org.touchhome.app.model.entity.widget.impl.chart.pie;
+package org.touchhome.app.model.entity.widget.impl.chart.doughnut;
 
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
@@ -11,8 +11,8 @@ import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import javax.persistence.Entity;
 
 @Entity
-public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChartEntity>
-        implements HasSingleValueDataSource<WidgetPieChartEntity> {
+public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDoughnutChartEntity>
+        implements HasSingleValueDataSource<WidgetDoughnutChartEntity> {
 
     public static final String PREFIX = "wgspcs_";
 
@@ -30,7 +30,7 @@ public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChar
         return getJsonData("chartCO", 50);
     }
 
-    public WidgetPieChartSeriesEntity setChartColor(String value) {
+    public WidgetDoughnutChartSeriesEntity setChartColor(String value) {
         setJsonData("chartC", value);
         return this;
     }
