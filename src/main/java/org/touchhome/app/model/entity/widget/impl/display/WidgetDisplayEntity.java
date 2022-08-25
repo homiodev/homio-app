@@ -1,6 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.display;
 
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 
 import javax.persistence.Entity;
 

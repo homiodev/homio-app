@@ -4,16 +4,18 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
+import org.touchhome.app.model.entity.widget.WidgetGroup;
+import org.touchhome.app.model.entity.widget.WidgetTabEntity;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
-import org.touchhome.bundle.api.entity.widget.WidgetGroup;
-import org.touchhome.bundle.api.entity.widget.WidgetTabEntity;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+
+import static org.touchhome.app.model.entity.widget.WidgetTabEntity.GENERAL_WIDGET_TAB_NAME;
 
 @Log4j2
 @Component
@@ -24,8 +26,8 @@ public class WidgetService {
     private final List<WidgetBaseEntity<?>> widgetBaseEntities;
 
     public void postConstruct() {
-        if (entityContext.getEntity(WidgetTabEntity.GENERAL_WIDGET_TAB_NAME) == null) {
-            entityContext.save(new WidgetTabEntity().setEntityID(WidgetTabEntity.GENERAL_WIDGET_TAB_NAME).setName("MainTab"));
+        if (entityContext.getEntity(GENERAL_WIDGET_TAB_NAME) == null) {
+            entityContext.save(new WidgetTabEntity().setEntityID(GENERAL_WIDGET_TAB_NAME).setName("MainTab"));
         }
     }
 

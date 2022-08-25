@@ -12,9 +12,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.common.EntityContextImpl;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartEntity;
@@ -26,8 +27,6 @@ import org.touchhome.app.model.entity.widget.impl.minicard.WidgetMiniCardChartEn
 import org.touchhome.app.model.entity.widget.impl.minicard.WidgetMiniCardChartSeriesEntity;
 import org.touchhome.app.model.rest.WidgetDataRequest;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.TimePeriod;
 
 import javax.validation.Valid;
@@ -108,7 +107,7 @@ public class WidgetChartsController {
 
         BaseEntity<?> valueSource = entityContext.getEntity(entity.getValueDataSource());
         return timeSeriesUtil.getSingleValue(entity, valueSource,
-                entity.getValueDynamicParameterFields(), request, entity.getAggregationType());
+                entity.getValueDynamicParameterFields(), request, entity.getAggregationType(), null);
     }
 
     private <T extends ChartBaseEntity> TimeSeriesChartData<ChartDataset> getValueDataset(WidgetDataRequest request,
@@ -166,7 +165,8 @@ public class WidgetChartsController {
                 BaseEntity<?> valueSource = entityContext.getEntity(valueDataSource);
                 if (valueSource != null) {
                     data.value = timeSeriesUtil.getSingleValue(entity, valueSource,
-                            valueEntity.getValueDynamicParameterFields(), request, valueEntity.getAggregationType());
+                            valueEntity.getValueDynamicParameterFields(), request,
+                            valueEntity.getAggregationType(), entity.getEntityID());
                 }
             }
         }

@@ -1,9 +1,9 @@
 package org.touchhome.app.model.entity.widget.impl.video;
 
+import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.app.model.entity.widget.WidgetGroup;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.validation.MaxItems;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.bundle.api.entity.widget.WidgetGroup;
 
 import javax.persistence.Entity;
 import java.util.Set;

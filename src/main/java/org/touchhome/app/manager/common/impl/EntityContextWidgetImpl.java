@@ -4,12 +4,15 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.touchhome.app.manager.common.EntityContextImpl;
+import org.touchhome.app.model.entity.widget.WidgetTabEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartSeriesEntity;
 import org.touchhome.bundle.api.EntityContextWidget;
-import org.touchhome.bundle.api.entity.widget.WidgetTabEntity;
 
 import java.util.function.Consumer;
+
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.touchhome.app.model.entity.widget.WidgetTabEntity.GENERAL_WIDGET_TAB_NAME;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -19,9 +22,10 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createLineChartWidget(String entityID, String name, Consumer<LineChartSeriesBuilder> chartBuilder,
-                                      Consumer<LineChartWidgetBuilder> lineChartWidgetBuilder, WidgetTabEntity tabEntity) {
+                                      Consumer<LineChartWidgetBuilder> lineChartWidgetBuilder, String tabEntityID) {
         if (!entityID.startsWith(EntityContextWidget.LINE_CHART_WIDGET_PREFIX)) {
-            throw new IllegalArgumentException("Line chart widget must starts with prefix: " + EntityContextWidget.LINE_CHART_WIDGET_PREFIX);
+            throw new IllegalArgumentException(
+                    "Line chart widget must starts with prefix: " + EntityContextWidget.LINE_CHART_WIDGET_PREFIX);
         }
         WidgetLineChartEntity widgetLineChartEntity = new WidgetLineChartEntity()
                 .setEntityID(entityID).setName(name);
@@ -58,9 +62,8 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
         };
         lineChartWidgetBuilder.accept(builder);
 
-        if (tabEntity == null) {
-            tabEntity = entityContext.getEntity(WidgetTabEntity.GENERAL_WIDGET_TAB_NAME);
-        }
+        WidgetTabEntity tabEntity = entityContext.getEntity(defaultString(tabEntityID, GENERAL_WIDGET_TAB_NAME));
+
         widgetLineChartEntity.setWidgetTabEntity(tabEntity);
 
         WidgetLineChartEntity savedWidget = entityContext.save(widgetLineChartEntity);

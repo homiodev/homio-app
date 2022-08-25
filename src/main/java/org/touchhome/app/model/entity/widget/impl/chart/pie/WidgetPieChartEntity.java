@@ -38,41 +38,48 @@ public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity, 
     @UIFieldIgnore
     @JsonIgnore
     public Integer getMin() {
-        return 0;
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
     public Integer getMax() {
-        return 0;
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
     public String getAxisLabelX() {
-        return null;
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
     public String getAxisLabelY() {
-        return null;
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
     public Boolean getShowAxisX() {
-        return false;
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
     public Boolean getShowAxisY() {
-        return false;
+        throw new IllegalStateException("MNC");
+    }
+
+    @Override
+    @JsonIgnore
+    @UIFieldIgnore
+    public String getLayout() {
+        throw new IllegalStateException("MNC");
     }
 }

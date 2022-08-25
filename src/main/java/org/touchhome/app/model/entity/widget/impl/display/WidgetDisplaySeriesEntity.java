@@ -1,7 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.display;
 
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
 

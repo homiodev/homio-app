@@ -14,6 +14,10 @@ import org.touchhome.app.manager.WidgetService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.WidgetTabEntity;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonSeriesEntity;
@@ -33,7 +37,7 @@ import org.touchhome.app.model.rest.WidgetDataRequest;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
-import org.touchhome.bundle.api.entity.widget.*;
+import org.touchhome.bundle.api.entity.widget.ChartRequest;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasUpdateValueListener;
@@ -191,7 +195,7 @@ public class WidgetController {
             BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
 
             Object value = timeSeriesUtil.getSingleValue(entity, valueSource,
-                    item.getValueDynamicParameterFields(), request, item.getAggregationType());
+                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID());
             values.add(value);
         }
         return values;
@@ -200,13 +204,15 @@ public class WidgetController {
     @PostMapping("/button/update")
     public void handleButtonClick(@RequestBody SingleValueRequest<Void> request) {
         WidgetPushButtonSeriesEntity series = getSeriesEntity(request);
-        BaseEntity<?> source = entityContext.getEntity(series.getValueDataSource());
+        BaseEntity<?> source = entityContext.getEntity(series.getSetValueDataSource());
         if (source instanceof HasSetStatusValue) {
             ((HasSetStatusValue) source).setStatusValue(
                     new HasSetStatusValue.SetStatusValueRequest(entityContext,
                             series.getSetValueDynamicParameterFields(),
                             series.getValueToPush()));
+            return;
         }
+        throwNoDataSourceFound(request.entityID, series.getSetValueDataSource());
     }
 
     @GetMapping("/slider/{entityID}/values")
@@ -239,7 +245,7 @@ public class WidgetController {
             BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
 
             Object value = timeSeriesUtil.getSingleValue(entity, valueSource,
-                    item.getValueDynamicParameterFields(), request, item.getAggregationType());
+                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID());
             values.add(value);
         }
         return values;
@@ -494,5 +500,9 @@ public class WidgetController {
         private String entityID;
         private String seriesEntityID;
         private T value;
+    }
+
+    public static void throwNoDataSourceFound(String entityID, String dataSource) {
+        throw new IllegalStateException("Unable to find data source: '" + dataSource + "' for entity: '" + entityID + "'");
     }
 }

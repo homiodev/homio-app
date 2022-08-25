@@ -1,8 +1,10 @@
 package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 import javax.persistence.Entity;
@@ -42,6 +44,13 @@ public class WidgetBarChartEntity extends ChartBaseEntity<WidgetBarChartEntity, 
     public WidgetBarChartEntity setBorderWidth(int value) {
         setJsonData("bw", value);
         return this;
+    }
+
+    @Override
+    @JsonIgnore
+    @UIFieldIgnore
+    public String getLayout() {
+        return super.getLayout();
     }
 
     @Override

@@ -1,6 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;

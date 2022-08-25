@@ -1,8 +1,8 @@
 package org.touchhome.app.model.entity.widget.impl.fm;
 
+import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.app.model.entity.widget.WidgetGroup;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.bundle.api.entity.widget.WidgetGroup;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
@@ -69,12 +69,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     @UIField(order = 35, showInContextMenu = true, icon = "fas fa-table")
     @UIFieldTableLayout
     public String getLayout() {
-        return getJsonData("lt", "2x2");
-    }
-
-    public WidgetFMEntity setLayout(String value) {
-        setJsonData("lt", value);
-        return this;
+        return getJsonData("layout", "2x2");
     }
 
     @UIField(order = 40, showInContextMenu = true, icon = "fas fa-clock")

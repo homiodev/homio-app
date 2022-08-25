@@ -2,7 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.video;
 
 import org.springframework.data.util.Pair;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.model.StylePosition;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;

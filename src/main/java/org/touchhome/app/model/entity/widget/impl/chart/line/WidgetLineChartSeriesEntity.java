@@ -1,8 +1,8 @@
 package org.touchhome.app.model.entity.widget.impl.chart.line;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
-import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 

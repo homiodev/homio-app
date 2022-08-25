@@ -1,9 +1,9 @@
 package org.touchhome.app.rest.widget;
 
 import lombok.Getter;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 
 import java.util.Set;
 
@@ -26,7 +26,8 @@ public class TimeSeriesValues<T extends WidgetSeriesEntity<?> & HasChartDataSour
     public boolean isEqualSeries(Set<TimeSeriesContext<T>> updatedContext) {
         if (this.itemSeries.equals(updatedContext)) {
             for (TimeSeriesContext<T> item : this.itemSeries) {
-                TimeSeriesContext<T> otherItem = updatedContext.stream().filter(c -> c.getId().equals(item.getId())).findAny().get();
+                TimeSeriesContext<T> otherItem =
+                        updatedContext.stream().filter(c -> c.getId().equals(item.getId())).findAny().get();
 
                 if (!item.getValue().equals(otherItem.getValue())) {
                     return false;

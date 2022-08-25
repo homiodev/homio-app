@@ -14,6 +14,7 @@ import org.json.JSONObject;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.manager.common.v1.layout.UIDialogLayoutBuilderImpl;
+import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -460,6 +461,8 @@ public class UIFieldUtils {
         if (uiFieldIconPicker != null) {
             entityUIMetaData.setType("IconPicker");
             jsonTypeMetadata.put("allowEmptyIcon", uiFieldIconPicker.allowEmptyIcon());
+            jsonTypeMetadata.put("allowSize", uiFieldIconPicker.allowSize());
+            jsonTypeMetadata.put("allowSpin", uiFieldIconPicker.allowSpin());
             jsonTypeMetadata.put("allowThreshold", uiFieldIconPicker.allowThreshold());
         }
 
@@ -484,6 +487,14 @@ public class UIFieldUtils {
         }
 
         handleFieldSelections(uiFieldContext, entityContext, entityUIMetaData, jsonTypeMetadata);
+
+        UIFieldLayout uiFieldLayout = uiFieldContext.getDeclaredAnnotation(UIFieldLayout.class);
+        if (uiFieldLayout != null) {
+            entityUIMetaData.setType("Layout");
+            jsonTypeMetadata.put("layoutRows", uiFieldLayout.rows());
+            jsonTypeMetadata.put("layoutColumns", uiFieldLayout.columns());
+            jsonTypeMetadata.put("layoutOptions", uiFieldLayout.options());
+        }
 
         UIFieldGroup uiFieldGroup = uiFieldContext.getDeclaredAnnotation(UIFieldGroup.class);
         if (uiFieldGroup != null) {

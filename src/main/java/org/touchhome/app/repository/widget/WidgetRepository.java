@@ -3,7 +3,7 @@ package org.touchhome.app.repository.widget;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 
 import java.util.List;

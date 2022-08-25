@@ -68,27 +68,34 @@ public class WidgetDoughnutChartEntity extends ChartBaseEntity<WidgetDoughnutCha
     @UIFieldIgnore
     @JsonIgnore
     public String getAxisLabelX() {
-        return null;
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
     public String getAxisLabelY() {
-        return null;
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
     public Boolean getShowAxisX() {
-        return false;
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
     public Boolean getShowAxisY() {
-        return false;
+        throw new IllegalStateException("MNC");
+    }
+
+    @Override
+    @JsonIgnore
+    @UIFieldIgnore
+    public String getLayout() {
+        throw new IllegalStateException("MNC");
     }
 }

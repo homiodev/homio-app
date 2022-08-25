@@ -3,8 +3,8 @@ package org.touchhome.app.rest.widget;
 import org.springframework.data.util.Pair;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.TimePeriod;
 
 import java.text.DateFormat;

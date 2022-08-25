@@ -1,7 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.minicard;
 
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
-import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.field.*;
 
 import javax.persistence.Entity;

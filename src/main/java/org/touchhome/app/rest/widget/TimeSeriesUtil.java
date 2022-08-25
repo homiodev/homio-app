@@ -4,11 +4,15 @@ import lombok.RequiredArgsConstructor;
 import org.json.JSONObject;
 import org.springframework.data.util.Pair;
 import org.touchhome.app.manager.common.EntityContextImpl;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.app.model.rest.WidgetDataRequest;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.entity.widget.*;
+import org.touchhome.bundle.api.entity.widget.AggregationType;
+import org.touchhome.bundle.api.entity.widget.ChartRequest;
 import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
@@ -89,7 +93,8 @@ public class TimeSeriesUtil {
     public <T extends WidgetBaseEntity<T>> Object getSingleValue(T entity, BaseEntity<?> source,
                                                                  JSONObject dynamicParameters,
                                                                  WidgetDataRequest request,
-                                                                 AggregationType aggregationType) {
+                                                                 AggregationType aggregationType,
+                                                                 String seriesEntityId) {
         if (source == null) {
             return null;
         }
@@ -102,13 +107,14 @@ public class TimeSeriesUtil {
                     valueRequest);
 
             if (entity.getListenSourceUpdates()) {
-                ((HasGetStatusValue) source).addUpdateValueListener(entityContext, entity.getEntityID(), dynamicParameters,
+                String key = entity.getEntityID() + seriesEntityId;
+                ((HasGetStatusValue) source).addUpdateValueListener(entityContext, key, dynamicParameters,
                         o -> {
                             Object updatedValue = ((HasGetStatusValue) source).getStatusValue(valueRequest);
                             entityContext.ui().sendDynamicUpdate(
                                     new DynamicUpdateRequest(source.getEntityID(),
                                             WidgetChartsController.SingleValueData.class.getSimpleName(), entity.getEntityID()),
-                                    new WidgetChartsController.SingleValueData(updatedValue, source.getEntityID()));
+                                    new WidgetChartsController.SingleValueData(updatedValue, seriesEntityId));
                         });
             }
         } else {

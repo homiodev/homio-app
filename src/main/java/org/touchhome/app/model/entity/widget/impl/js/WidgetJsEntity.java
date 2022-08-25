@@ -1,11 +1,14 @@
 package org.touchhome.app.model.entity.widget.impl.js;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
+
+import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
+import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
@@ -70,5 +73,12 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
         super.beforePersist();
         setJavaScriptParameters("{\"text\":\"Hello world!\"}");
         setJavaScript("function run() {\n\treturn params.get('text');\n}");
+    }
+
+    @Override
+    @JsonIgnore
+    @UIFieldIgnore
+    public String getLayout() {
+        throw new IllegalStateException("MNC");
     }
 }

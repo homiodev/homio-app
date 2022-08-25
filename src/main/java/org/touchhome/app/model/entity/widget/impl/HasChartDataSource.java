@@ -82,7 +82,7 @@ public interface HasChartDataSource<T> extends HasJsonData<T> {
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Chart ui", order = 4, borderColor = "#673AB7")
+    @UIFieldGroup(value = "Chart ui", order = 11, borderColor = "#673AB7")
     @UIFieldColorPicker(allowThreshold = true)
     default String getChartColor() {
         return getJsonData("chartC", UI.Color.WHITE);

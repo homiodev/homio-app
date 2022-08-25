@@ -91,8 +91,9 @@ public class WidgetMiniCardChartEntity
     // ### ignore UIFields!!!
     @Override
     @UIFieldIgnore
+    @JsonIgnore
     public TimePeriod getTimePeriod() {
-        return TimePeriod.All;
+        throw new IllegalStateException("MNC");
     }
 
     @Override
@@ -152,7 +153,7 @@ public class WidgetMiniCardChartEntity
     @JsonIgnore
     @UIFieldIgnore
     public Set<WidgetMiniCardChartSeriesEntity> getSeries() {
-        throw new RuntimeException("MNC");
+        throw new IllegalStateException("MNC");
     }
 
     public void setUnit(String value) {

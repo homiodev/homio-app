@@ -57,7 +57,7 @@ import org.touchhome.app.workspace.block.Scratch3Space;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntity;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostProcessor;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.api.util.SecureString;

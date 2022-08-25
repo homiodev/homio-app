@@ -1,6 +1,8 @@
 package org.touchhome.app.model.entity.widget.impl.button;
 
-import org.touchhome.bundle.api.entity.widget.WidgetBaseEntityAndSeries;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.touchhome.app.model.entity.widget.UIFieldLayout;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
@@ -23,6 +25,14 @@ public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPush
     }
 
     @Override
+    protected String getDefaultLayout() {
+        return UIFieldLayout.LayoutBuilder.builder().addRow(rb -> rb
+                        .addCol("icon", UIFieldLayout.HorizontalAlign.center)
+                        .addCol("name", UIFieldLayout.HorizontalAlign.center))
+                .build();
+    }
+
+    @Override
     public String getImage() {
         return "fa fa-stop-circle";
     }
@@ -33,20 +43,23 @@ public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPush
     }
 
     @Override
+    @JsonIgnore
     @UIFieldIgnore
     public String getBackground() {
-        return super.getBackground();
+        throw new IllegalStateException("MNC");
     }
 
     @Override
+    @JsonIgnore
     @UIFieldIgnore
     public Boolean getShowTimeButtons() {
-        return super.getShowTimeButtons();
+        throw new IllegalStateException("MNC");
     }
 
     @Override
+    @JsonIgnore
     @UIFieldIgnore
     public TimePeriod getTimePeriod() {
-        return super.getTimePeriod();
+        throw new IllegalStateException("MNC");
     }
 }

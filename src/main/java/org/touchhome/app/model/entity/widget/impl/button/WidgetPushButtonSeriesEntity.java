@@ -1,8 +1,8 @@
 package org.touchhome.app.model.entity.widget.impl.button;
 
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
@@ -50,13 +50,6 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
         return getJsonData("icon", "");
     }
 
-    @UIField(order = 2)
-    @UIFieldGroup(value = "UI icon")
-    @UIFieldPosition
-    public String getIconPosition() {
-        return getJsonData("iconPos", "2x3");
-    }
-
     @UIField(order = 3)
     @UIFieldGroup("UI icon")
     @UIFieldColorPicker(allowThreshold = true)
@@ -88,13 +81,6 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
         return getJsonData("valC", UI.Color.WHITE);
     }
 
-    @UIField(order = 2)
-    @UIFieldPosition
-    @UIFieldGroup("Value")
-    public String getValuePosition() {
-        return getJsonData("valuePos", "2x3");
-    }
-
     @Override
     protected void beforePersist() {
         if (!getJsonData().has("btnClr")) {
@@ -116,20 +102,12 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
         setJsonData("iconColor", value);
     }
 
-    public void setIconPosition(String value) {
-        setJsonData("iconPos", value);
-    }
-
     public void setConfirmMessage(String value) {
         setJsonData("confirm", value);
     }
 
     public void setValueToPush(String value) {
         setJsonData("valToPush", value);
-    }
-
-    public void setValuePosition(String value) {
-        setJsonData("valuePos", value);
     }
 
     public void setNoValueText(String value) {

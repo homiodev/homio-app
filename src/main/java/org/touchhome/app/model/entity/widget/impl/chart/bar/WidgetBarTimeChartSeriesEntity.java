@@ -5,7 +5,7 @@ import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.rest.widget.ChartDataset;
 import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
 import org.touchhome.app.rest.widget.TimeSeriesContext;
-import org.touchhome.bundle.api.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
