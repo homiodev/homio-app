@@ -77,7 +77,6 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
 
     @Override
     @JsonIgnore
-    @UIFieldIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");
     }

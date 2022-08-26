@@ -78,7 +78,6 @@ public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity, 
 
     @Override
     @JsonIgnore
-    @UIFieldIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");
     }

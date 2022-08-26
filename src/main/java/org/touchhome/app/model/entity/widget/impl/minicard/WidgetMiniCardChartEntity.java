@@ -77,6 +77,12 @@ public class WidgetMiniCardChartEntity
     }
 
     @Override
+    @JsonIgnore
+    public String getLayout() {
+        throw new IllegalStateException("MNC");
+    }
+
+    @Override
     protected void beforePersist() {
         setInitChartColor(UI.Color.random());
     }

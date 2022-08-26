@@ -26,28 +26,28 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
     @JsonIgnore
     @UIFieldIgnore
     public int getHoursToShow() {
-        throw new RuntimeException("MNC");
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @JsonIgnore
     @UIFieldIgnore
     public int getPointsPerHour() {
-        throw new RuntimeException("MNC");
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @JsonIgnore
     @UIFieldIgnore
     public ChartType getChartType() {
-        throw new RuntimeException("MNC");
+        throw new IllegalStateException("MNC");
     }
 
     @Override
     @JsonIgnore
     @UIFieldIgnore
     public int getTension() {
-        throw new RuntimeException("MNC");
+        throw new IllegalStateException("MNC");
     }
 
     @Override

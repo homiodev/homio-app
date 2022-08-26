@@ -1,9 +1,11 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
+import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.bundle.api.ui.TimePeriod;
-import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.field.*;
+import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
 import javax.persistence.Entity;
 
@@ -24,26 +26,6 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
         return getJsonData("tl", Boolean.TRUE);
     }
 
-    @UIField(order = 1, showInContextMenu = true)
-    @UIFieldGroup("Value label")
-    public Boolean getShowValue() {
-        return getJsonData("sv", Boolean.TRUE);
-    }
-
-    @UIField(order = 2)
-    @UIFieldGroup("Value label")
-    @UIFieldColorPicker(allowThreshold = true)
-    public String getValueColor() {
-        return getJsonData("lc", UI.Color.WHITE);
-    }
-
-    @UIField(order = 3)
-    @UIFieldGroup("Value label")
-    @UIFieldPosition
-    public String getValuePosition() {
-        return getJsonData("vlp", "1x1");
-    }
-
     @Override
     public String getImage() {
         return "fas fa-sliders-h";
@@ -52,12 +34,6 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
     @Override
     public String getEntityPrefix() {
         return PREFIX;
-    }
-
-    @Override
-    @UIFieldIgnore
-    public String getBackground() {
-        return super.getBackground();
     }
 
     @Override
@@ -72,23 +48,26 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
         return super.getTimePeriod();
     }
 
-    public void setValueColor(String value) {
-        setJsonData("lc", value);
-    }
-
     public void setVertical(Boolean value) {
         setJsonData("vt", value);
-    }
-
-    public void setShowValue(Boolean value) {
-        setJsonData("sv", value);
     }
 
     public void setThumbLabel(Boolean value) {
         setJsonData("tl", value);
     }
 
-    public void setValuePosition(String value) {
-        setJsonData("vlp", value);
+    @UIField(order = 50)
+    @UIFieldLayout(options = {"name", "value", "icon", "slider"})
+    public String getLayout() {
+        return getJsonData("layout");
+    }
+
+    @Override
+    protected String getDefaultLayout() {
+        return UIFieldLayout.LayoutBuilder.builder().addRow(rb -> rb
+                        .addCol("icon", UIFieldLayout.HorizontalAlign.center)
+                        .addCol("name", UIFieldLayout.HorizontalAlign.center)
+                        .addCol("slider", UIFieldLayout.HorizontalAlign.center))
+                .build();
     }
 }

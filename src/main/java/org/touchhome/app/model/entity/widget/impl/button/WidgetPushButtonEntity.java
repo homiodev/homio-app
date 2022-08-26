@@ -24,6 +24,12 @@ public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPush
         return this;
     }
 
+    @UIField(order = 50)
+    @UIFieldLayout(options = {"name", "value", "icon"})
+    public String getLayout() {
+        return getJsonData("layout");
+    }
+
     @Override
     protected String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder.builder().addRow(rb -> rb

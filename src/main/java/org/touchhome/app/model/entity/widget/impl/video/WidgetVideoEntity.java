@@ -1,5 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.video;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetGroup;
 import org.touchhome.bundle.api.EntityContext;
@@ -16,6 +17,12 @@ public class WidgetVideoEntity extends WidgetBaseEntityAndSeries<WidgetVideoEnti
     @Override
     public WidgetGroup getGroup() {
         return WidgetGroup.Media;
+    }
+
+    @Override
+    @JsonIgnore
+    public String getLayout() {
+        throw new IllegalStateException("MNC");
     }
 
     @MaxItems(4) // allow max 4 cameras

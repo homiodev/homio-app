@@ -48,9 +48,8 @@ public class WidgetBarChartEntity extends ChartBaseEntity<WidgetBarChartEntity, 
 
     @Override
     @JsonIgnore
-    @UIFieldIgnore
     public String getLayout() {
-        return super.getLayout();
+        throw new IllegalStateException("MNC");
     }
 
     @Override

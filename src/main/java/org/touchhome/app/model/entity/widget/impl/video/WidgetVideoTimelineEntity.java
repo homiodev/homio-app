@@ -76,9 +76,8 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
 
     @Override
     @JsonIgnore
-    @UIFieldIgnore
     public String getLayout() {
-        return super.getLayout();
+        throw new IllegalStateException("MNC");
     }
 
     public static class VideoTimelineDataSourceDynamicOptionLoader implements DynamicOptionLoader {

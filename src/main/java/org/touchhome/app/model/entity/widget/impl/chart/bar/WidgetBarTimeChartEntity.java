@@ -63,8 +63,7 @@ public class WidgetBarTimeChartEntity
 
     @Override
     @JsonIgnore
-    @UIFieldIgnore
     public String getLayout() {
-        return super.getLayout();
+        throw new IllegalStateException("MNC");
     }
 }

@@ -1,5 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.toggle;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -12,6 +13,12 @@ import javax.persistence.Entity;
 public class WidgetToggleEntity extends WidgetBaseEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity> {
 
     public static final String PREFIX = "wgttg_";
+
+    @Override
+    @JsonIgnore
+    public String getLayout() {
+        throw new IllegalStateException("MNC");
+    }
 
     @UIField(order = 1)
     @UIFieldGroup(value = "Header")

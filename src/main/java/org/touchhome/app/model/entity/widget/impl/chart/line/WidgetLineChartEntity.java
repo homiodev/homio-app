@@ -26,7 +26,6 @@ public class WidgetLineChartEntity extends ChartBaseEntity<WidgetLineChartEntity
 
     @Override
     @JsonIgnore
-    @UIFieldIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");
     }

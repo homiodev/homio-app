@@ -60,13 +60,11 @@ public class WidgetChartsController {
 
     @PostMapping("/minicard/series")
     public TimeSeriesChartData<ChartDataset> getMiniCardChartSeries(@Valid @RequestBody WidgetDataRequest request) {
-        return getTimeSeriesChartData(request, WidgetMiniCardChartEntity.class, entity -> {
-            return new WidgetMiniCardChartSeriesEntity() {
-                @Override
-                public JSONObject getJsonData() {
-                    return entity.getJsonData();
-                }
-            };
+        return getTimeSeriesChartData(request, WidgetMiniCardChartEntity.class, entity -> new WidgetMiniCardChartSeriesEntity() {
+            @Override
+            public JSONObject getJsonData() {
+                return entity.getJsonData();
+            }
         });
     }
 
@@ -107,7 +105,8 @@ public class WidgetChartsController {
 
         BaseEntity<?> valueSource = entityContext.getEntity(entity.getValueDataSource());
         return timeSeriesUtil.getSingleValue(entity, valueSource,
-                entity.getValueDynamicParameterFields(), request, entity.getAggregationType(), null);
+                entity.getValueDynamicParameterFields(), request, entity.getAggregationType(), null,
+                o -> o);
     }
 
     private <T extends ChartBaseEntity> TimeSeriesChartData<ChartDataset> getValueDataset(WidgetDataRequest request,
@@ -166,7 +165,7 @@ public class WidgetChartsController {
                 if (valueSource != null) {
                     data.value = timeSeriesUtil.getSingleValue(entity, valueSource,
                             valueEntity.getValueDynamicParameterFields(), request,
-                            valueEntity.getAggregationType(), entity.getEntityID());
+                            valueEntity.getAggregationType(), entity.getEntityID(), o -> o);
                 }
             }
         }

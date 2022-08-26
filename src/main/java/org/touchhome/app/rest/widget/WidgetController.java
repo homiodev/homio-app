@@ -6,7 +6,6 @@ import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.json.JSONObject;
-import org.springframework.data.util.Pair;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.touchhome.app.manager.ScriptService;
@@ -18,7 +17,6 @@ import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.WidgetTabEntity;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
@@ -27,22 +25,19 @@ import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMEntity;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.js.WidgetJsEntity;
+import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoEntity;
 import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
-import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.app.model.rest.WidgetDataRequest;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
-import org.touchhome.bundle.api.entity.widget.ChartRequest;
-import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
-import org.touchhome.bundle.api.entity.widget.ability.HasUpdateValueListener;
 import org.touchhome.bundle.api.model.OptionModel;
-import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.action.UIActionHandler;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
@@ -57,8 +52,6 @@ import org.touchhome.common.fs.TreeNode;
 import org.touchhome.common.util.CommonUtils;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
@@ -77,7 +70,6 @@ public class WidgetController {
     private final TimeSeriesUtil timeSeriesUtil;
 
     public WidgetController(EntityContextImpl entityContext, ScriptService scriptService, WidgetService widgetService,
-                            ObjectMapper objectMapper,
                             List<WidgetVideoSourceResolver> videoSourceResolvers) {
         this.entityContext = entityContext;
         this.scriptService = scriptService;
@@ -195,7 +187,7 @@ public class WidgetController {
             BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
 
             Object value = timeSeriesUtil.getSingleValue(entity, valueSource,
-                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID());
+                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID(), o -> o);
             values.add(value);
         }
         return values;
@@ -215,26 +207,32 @@ public class WidgetController {
         throwNoDataSourceFound(request.entityID, series.getSetValueDataSource());
     }
 
-    @GetMapping("/slider/{entityID}/values")
-    public List<Integer> getSliderValues(@PathVariable("entityID") String entityID) {
-        return this.fetchWidgetValues(entityID, HasGetStatusValue.class,
-                (item, dataSource) -> {
-                    HasGetStatusValue toggleSource = (HasGetStatusValue) dataSource;
-                    Object value = toggleSource.getStatusValue(
-                            new HasGetStatusValue.GetStatusValueRequest(entityContext, item.getValueDynamicParameterFields()));
-                    return HasSetStatusValue.SetStatusValueRequest.rawValueToNumber(value, 0).intValue();
-                });
+    @PostMapping("/slider/values")
+    public List<Integer> getSliderValues(@RequestBody WidgetDataRequest request) {
+        WidgetSliderEntity entity = entityContext.getEntity(request.getEntityID());
+        List<Integer> values = new ArrayList<>(entity.getSeries().size());
+        for (WidgetSliderSeriesEntity item : entity.getSeries()) {
+            BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
+
+            values.add(timeSeriesUtil.getSingleValue(entity, valueSource,
+                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID(), o ->
+                            HasSetStatusValue.SetStatusValueRequest.rawValueToNumber(o, 0).intValue()));
+        }
+        return values;
     }
 
-    @GetMapping("/toggle/{entityID}/values")
-    public List<String> getToggleValues(@PathVariable("entityID") String entityID) {
-        return this.fetchWidgetValues(entityID, HasGetStatusValue.class,
-                (item, dataSource) -> {
-                    HasGetStatusValue toggleSource = (HasGetStatusValue) dataSource;
-                    Object value = toggleSource.getStatusValue(
-                            new HasGetStatusValue.GetStatusValueRequest(entityContext, item.getValueDynamicParameterFields()));
-                    return String.valueOf(value);
-                });
+    @PostMapping("/toggle/values")
+    public List<String> getToggleValues(@RequestBody WidgetDataRequest request) {
+        WidgetToggleEntity entity = entityContext.getEntity(request.getEntityID());
+        List<String> values = new ArrayList<>(entity.getSeries().size());
+        for (WidgetToggleSeriesEntity item : entity.getSeries()) {
+            BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
+
+            values.add(timeSeriesUtil.getSingleValue(entity, valueSource,
+                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID(),
+                    String::valueOf));
+        }
+        return values;
     }
 
     @PostMapping("/display/values")
@@ -245,7 +243,8 @@ public class WidgetController {
             BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
 
             Object value = timeSeriesUtil.getSingleValue(entity, valueSource,
-                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID());
+                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID(),
+                    o -> o);
             values.add(value);
         }
         return values;
@@ -254,7 +253,7 @@ public class WidgetController {
     @PostMapping("/slider/update")
     public void updateSliderValue(@RequestBody SingleValueRequest<Integer> request) {
         WidgetSliderSeriesEntity series = getSeriesEntity(request);
-        BaseEntity<?> source = entityContext.getEntity(series.getValueDataSource());
+        BaseEntity<?> source = entityContext.getEntity(series.getSetValueDataSource());
         if (source instanceof HasSetStatusValue) {
             ((HasSetStatusValue) source).setStatusValue(
                     new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(),
@@ -430,13 +429,6 @@ public class WidgetController {
         throw new ServerException("Unable to find widget tab with id: " + tabId);
     }
 
-    private ChartRequest buildChartRequest(String period) {
-        TimePeriod timePeriod = TimePeriod.fromValue(period);
-        Pair<Date, Date> range = timePeriod.getTimePeriod().getDateRange();
-        return new ChartRequest(entityContext, range.getFirst(), range.getSecond(), timePeriod.getTimePeriod().getDateFromNow(),
-                timePeriod != TimePeriod.All);
-    }
-
     private <T extends WidgetSeriesEntity> T getSeriesEntity(SingleValueRequest<?> request) {
         WidgetBaseEntityAndSeries entity = entityContext.getEntity(request.entityID);
         T series = ((Set<T>) entity.getSeries()).stream()
@@ -445,39 +437,6 @@ public class WidgetController {
             throw new NotFoundException("Unable to find series: " + request.seriesEntityID + " for entity: " + entity.getTitle());
         }
         return series;
-    }
-
-    private <T, DS, E extends WidgetBaseEntityAndSeries> List<T> fetchWidgetValues(
-            String entityID, Class<DS> dataSourceClass,
-            BiFunction<WidgetSeriesEntity, BaseEntity, T> valueProducer) {
-        E entity = entityContext.getEntity(entityID);
-        List<T> values = new ArrayList<>(entity.getSeries().size());
-        Set<WidgetSeriesEntity> series = entity.getSeries();
-        for (WidgetSeriesEntity item : series) {
-            String sourceEntityID = ((HasSingleValueDataSource) item).getValueDataSource();
-
-            BaseEntity<?> dataSource = entityContext.getEntity(sourceEntityID);
-            if (dataSourceClass.isAssignableFrom(dataSource.getClass())) {
-                values.add(valueProducer.apply(item, dataSource));
-
-                if (entity.getListenSourceUpdates() && dataSource instanceof HasUpdateValueListener) {
-                    AtomicReference<T> valueRef = new AtomicReference<>(null);
-                    ((HasUpdateValueListener) dataSource).addUpdateValueListener(entityContext, entityID,
-                            item.getValueDynamicParameterFields(), o -> {
-                                T updatedValue = valueProducer.apply(item, dataSource);
-                                if (!Objects.equals(valueRef.get(), updatedValue)) {
-                                    valueRef.set(updatedValue);
-                                    entityContext.ui().sendDynamicUpdate(new DynamicUpdateRequest(dataSource.getEntityID(),
-                                                    WidgetChartsController.SingleValueData.class.getSimpleName(), entityID),
-                                            new WidgetChartsController.SingleValueData(updatedValue, item.getEntityID()));
-                                }
-                            });
-                }
-            } else {
-                values.add(null);
-            }
-        }
-        return values;
     }
 
     @Setter

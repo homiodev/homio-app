@@ -57,10 +57,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     private JSONObject jsonData = new JSONObject();
 
     @UIField(order = 50)
-    @UIFieldLayout(options = {"name", "value", "icon"})
-    public String getLayout() {
-        return getJsonData("layout"); // must be set from beforePersist or overrided
-    }
+    public abstract String getLayout();
 
     @Override
     protected void beforePersist() {

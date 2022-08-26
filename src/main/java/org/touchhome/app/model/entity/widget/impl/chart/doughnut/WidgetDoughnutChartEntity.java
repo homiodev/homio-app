@@ -94,7 +94,6 @@ public class WidgetDoughnutChartEntity extends ChartBaseEntity<WidgetDoughnutCha
 
     @Override
     @JsonIgnore
-    @UIFieldIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");
     }

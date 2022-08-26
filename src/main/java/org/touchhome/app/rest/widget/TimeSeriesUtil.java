@@ -1,6 +1,9 @@
 package org.touchhome.app.rest.widget;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.data.util.Pair;
 import org.touchhome.app.manager.common.EntityContextImpl;
@@ -21,6 +24,8 @@ import org.touchhome.bundle.api.ui.TimePeriod;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 @RequiredArgsConstructor
 public class TimeSeriesUtil {
@@ -90,11 +95,13 @@ public class TimeSeriesUtil {
                 });
     }
 
-    public <T extends WidgetBaseEntity<T>> Object getSingleValue(T entity, BaseEntity<?> source,
-                                                                 JSONObject dynamicParameters,
-                                                                 WidgetDataRequest request,
-                                                                 AggregationType aggregationType,
-                                                                 String seriesEntityId) {
+    public <T extends WidgetBaseEntity<T>, R> R getSingleValue(@NotNull T entity,
+                                                               @Nullable BaseEntity<?> source,
+                                                               @NotNull JSONObject dynamicParameters,
+                                                               @NotNull WidgetDataRequest request,
+                                                               @NotNull AggregationType aggregationType,
+                                                               @Nullable String seriesEntityId,
+                                                               @NotNull Function<Object, R> resultConverter) {
         if (source == null) {
             return null;
         }
@@ -103,25 +110,38 @@ public class TimeSeriesUtil {
             HasGetStatusValue.GetStatusValueRequest valueRequest =
                     new HasGetStatusValue.GetStatusValueRequest(entityContext, dynamicParameters);
 
-            value = ((HasGetStatusValue) source).getStatusValue(
-                    valueRequest);
-
-            if (entity.getListenSourceUpdates()) {
-                String key = entity.getEntityID() + seriesEntityId;
-                ((HasGetStatusValue) source).addUpdateValueListener(entityContext, key, dynamicParameters,
-                        o -> {
-                            Object updatedValue = ((HasGetStatusValue) source).getStatusValue(valueRequest);
-                            entityContext.ui().sendDynamicUpdate(
-                                    new DynamicUpdateRequest(source.getEntityID(),
-                                            WidgetChartsController.SingleValueData.class.getSimpleName(), entity.getEntityID()),
-                                    new WidgetChartsController.SingleValueData(updatedValue, seriesEntityId));
-                        });
-            }
+            value = ((HasGetStatusValue) source).getStatusValue(valueRequest);
+            addListenValueIfRequire(entity.getListenSourceUpdates(), entity.getEntityID(), source, dynamicParameters,
+                    seriesEntityId, () -> ((HasGetStatusValue) source).getStatusValue(valueRequest));
         } else {
             value = getAggregateValueFromSeries(request, entity, dynamicParameters, entity.getListenSourceUpdates(),
                     aggregationType, entity.getEntityID(), source.getEntityID(), false);
         }
-        return value;
+        return resultConverter.apply(value);
+    }
+
+    private <R> void addListenValueIfRequire(boolean listenSourceUpdates,
+                                             @NotNull String entityID,
+                                             @NotNull BaseEntity<?> source,
+                                             @NotNull JSONObject dynamicParameters,
+                                             @Nullable String seriesEntityId,
+                                             @NotNull Supplier<R> valueSupplier) {
+        if (listenSourceUpdates) {
+            AtomicReference<R> valueRef = new AtomicReference<>(null);
+            String key = entityID + StringUtils.defaultString(seriesEntityId, "");
+            ((HasGetStatusValue) source).addUpdateValueListener(entityContext, key, dynamicParameters,
+                    o -> {
+                        R updatedValue = valueSupplier.get();
+                        if (valueRef.get() != updatedValue) {
+                            valueRef.set(updatedValue);
+                            entityContext.ui().sendDynamicUpdate(
+                                    new DynamicUpdateRequest(source.getEntityID(),
+                                            WidgetChartsController.SingleValueData.class.getSimpleName(), entityID),
+                                    new WidgetChartsController.SingleValueData(updatedValue,
+                                            seriesEntityId));
+                        }
+                    });
+        }
     }
 
     public <T extends WidgetSeriesEntity<?> & HasChartDataSource<?>> Set<TimeSeriesContext<T>> buildTimeSeriesFromDataSource(
@@ -191,24 +211,12 @@ public class TimeSeriesUtil {
             ChartRequest chartRequest = buildChartRequest(timePeriod, dynamicParameterFieldsHolder);
             value = dataSource.getAggregateValueFromSeries(chartRequest, aggregationType, filterOnlyNumbers);
 
-            if (listenSourceUpdates) {
-                AtomicReference<Object> valueRef = new AtomicReference<>(0F);
-                ((HasAggregateValueFromSeries) source).addUpdateValueListener(entityContext, entityID,
-                        dynamicParameterFieldsHolder, o -> {
-                            ChartRequest updChartRequest =
-                                    buildChartRequest(timePeriod, dynamicParameterFieldsHolder);
-                            Object updatedValue =
-                                    dataSource.getAggregateValueFromSeries(updChartRequest, aggregationType, filterOnlyNumbers);
-                            if (valueRef.get() != updatedValue) {
-                                valueRef.set(updatedValue);
-                                entityContext.ui().sendDynamicUpdate(
-                                        new DynamicUpdateRequest(source.getEntityID(),
-                                                WidgetChartsController.SingleValueData.class.getSimpleName(),
-                                                entityID),
-                                        new WidgetChartsController.SingleValueData(updatedValue, seriesEntityID));
-                            }
-                        });
-            }
+            addListenValueIfRequire(listenSourceUpdates, entityID, source, dynamicParameterFieldsHolder,
+                    seriesEntityID, () -> {
+                        ChartRequest updChartRequest =
+                                buildChartRequest(timePeriod, dynamicParameterFieldsHolder);
+                        return dataSource.getAggregateValueFromSeries(updChartRequest, aggregationType, filterOnlyNumbers);
+                    });
         }
         return value;
     }

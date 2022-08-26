@@ -1,5 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.gauge;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
@@ -111,6 +112,12 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     public WidgetGaugeEntity setAnimations(Boolean value) {
         setJsonData("animations", value);
         return this;
+    }
+
+    @Override
+    @JsonIgnore
+    public String getLayout() {
+        throw new IllegalStateException("MNC");
     }
 
     @Override
