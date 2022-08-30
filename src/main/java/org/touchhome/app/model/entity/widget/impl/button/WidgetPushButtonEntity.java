@@ -32,7 +32,7 @@ public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPush
 
     @Override
     protected String getDefaultLayout() {
-        return UIFieldLayout.LayoutBuilder.builder().addRow(rb -> rb
+        return UIFieldLayout.LayoutBuilder.builder(30, 70).addRow(rb -> rb
                         .addCol("icon", UIFieldLayout.HorizontalAlign.center)
                         .addCol("name", UIFieldLayout.HorizontalAlign.center))
                 .build();

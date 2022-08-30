@@ -23,34 +23,6 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
     }
 
     @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public int getHoursToShow() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public int getPointsPerHour() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public ChartType getChartType() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public int getTension() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
     public ChartDataset buildTargetDataset(TimeSeriesContext item) {
         WidgetBarTimeChartSeriesEntity seriesEntity = (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
         ChartDataset dataset = new ChartDataset(item.getId());

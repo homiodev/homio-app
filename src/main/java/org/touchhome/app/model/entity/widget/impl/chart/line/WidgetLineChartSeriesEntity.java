@@ -1,16 +1,15 @@
 package org.touchhome.app.model.entity.widget.impl.chart.line;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasLineChartDataSource;
 import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
+import org.touchhome.bundle.api.ui.field.UIField;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineChartEntity>
-        implements HasChartDataSource<WidgetLineChartEntity> {
+        implements HasLineChartDataSource<WidgetLineChartEntity> {
 
     public static final String PREFIX = "wgslcs_";
 
@@ -24,24 +23,8 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
         setInitChartColor(UI.Color.random());
     }
 
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public int getHoursToShow() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public int getPointsPerHour() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
+    @UIField(order = 0, visible = false)
     public ChartType getChartType() {
-        throw new IllegalStateException("MNC");
+        return ChartType.line;
     }
 }

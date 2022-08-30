@@ -1,6 +1,5 @@
 package org.touchhome.app.rest.widget;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
@@ -235,21 +234,6 @@ public class WidgetController {
         return values;
     }
 
-    @PostMapping("/display/values")
-    public List<Object> getDisplayValues(@RequestBody WidgetDataRequest request) {
-        WidgetDisplayEntity entity = entityContext.getEntity(request.getEntityID());
-        List<Object> values = new ArrayList<>(entity.getSeries().size());
-        for (WidgetDisplaySeriesEntity item : entity.getSeries()) {
-            BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
-
-            Object value = timeSeriesUtil.getSingleValue(entity, valueSource,
-                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID(),
-                    o -> o);
-            values.add(value);
-        }
-        return values;
-    }
-
     @PostMapping("/slider/update")
     public void updateSliderValue(@RequestBody SingleValueRequest<Integer> request) {
         WidgetSliderSeriesEntity series = getSeriesEntity(request);
@@ -268,8 +252,8 @@ public class WidgetController {
         if (source instanceof HasSetStatusValue) {
             ((HasSetStatusValue) source).setStatusValue(
                     new HasSetStatusValue.SetStatusValueRequest(entityContext,
-                            series.getValueDynamicParameterFields(),
-                            request.value ? series.getOnValue() : series.getOffValue()));
+                            series.getSetValueDynamicParameterFields(),
+                            request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue()));
         } else {
             throw new ServerException("Unable to find handler for set value for slider");
         }

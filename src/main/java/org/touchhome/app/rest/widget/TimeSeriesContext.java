@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 
@@ -13,10 +12,8 @@ import java.util.List;
 @Getter
 @RequiredArgsConstructor
 @Accessors(chain = true)
-public class TimeSeriesContext<T extends WidgetSeriesEntity<?> & HasChartDataSource<?>> {
+public class TimeSeriesContext<T extends HasChartDataSource<?>> {
     private final String id;
-    // private final String name;
-    // private final String color;
     private final T seriesEntity;
     private final HasTimeValueSeries series;
 

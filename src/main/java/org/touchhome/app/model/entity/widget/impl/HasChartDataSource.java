@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.touchhome.app.rest.widget.ChartDataset;
 import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
 import org.touchhome.app.rest.widget.TimeSeriesContext;
-import org.touchhome.app.rest.widget.WidgetChartsController;
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
@@ -29,28 +28,6 @@ public interface HasChartDataSource<T> extends HasJsonData<T> {
         setJsonData("chartDS", value);
     }
 
-    @UIField(order = 2)
-    @UIFieldSlider(min = 1, max = 72)
-    @UIFieldGroup("Chart")
-    default int getHoursToShow() {
-        return getJsonData("hts", 24);
-    }
-
-    default void setHoursToShow(int value) {
-        setJsonData("hts", value);
-    }
-
-    @UIField(order = 3)
-    @UIFieldSlider(min = 1, max = 60)
-    @UIFieldGroup("Chart")
-    default int getPointsPerHour() {
-        return getJsonData("pph", 1);
-    }
-
-    default void setPointsPerHour(int value) {
-        setJsonData("pph", value);
-    }
-
     @UIField(order = 5)
     @UIFieldGroup("Chart")
     default AggregationType getChartAggregationType() {
@@ -71,16 +48,6 @@ public interface HasChartDataSource<T> extends HasJsonData<T> {
         setJsonData("fillMis", value);
     }
 
-    @UIField(order = 7)
-    @UIFieldGroup("Chart")
-    default ChartType getChartType() {
-        return getJsonDataEnum("ct", ChartType.line);
-    }
-
-    default void getChartType(ChartType value) {
-        setJsonData("ct", value);
-    }
-
     @UIField(order = 1)
     @UIFieldGroup(value = "Chart ui", order = 11, borderColor = "#673AB7")
     @UIFieldColorPicker(allowThreshold = true)
@@ -93,7 +60,7 @@ public interface HasChartDataSource<T> extends HasJsonData<T> {
     }
 
     @UIField(order = 2)
-    @UIFieldSlider(min = 0, max = 100, step = 5)
+    @UIFieldSlider(min = 25, max = 100, step = 5)
     @UIFieldGroup("Chart ui")
     default int getChartColorOpacity() {
         return getJsonData("chartCO", 50);
@@ -101,28 +68,6 @@ public interface HasChartDataSource<T> extends HasJsonData<T> {
 
     default void setChartColorOpacity(int value) {
         setJsonData("chartCO", value);
-    }
-
-    @UIField(order = 3)
-    @UIFieldSlider(min = 0, max = 10)
-    @UIFieldGroup("Chart ui")
-    default int getTension() {
-        return getJsonData("tns", 4);
-    }
-
-    default void setTension(int value) {
-        setJsonData("tns", value);
-    }
-
-    @UIField(order = 4)
-    @UIFieldSlider(min = 20, max = 100)
-    @UIFieldGroup("Chart ui")
-    default int getChartHeight() {
-        return getJsonData("ch", 30);
-    }
-
-    default void setChartHeight(int value) {
-        setJsonData("ch", value);
     }
 
     @UIField(order = 5)
@@ -135,14 +80,24 @@ public interface HasChartDataSource<T> extends HasJsonData<T> {
         setJsonData("clbl", value);
     }
 
-    @UIField(order = 6)
-    @UIFieldGroup(value = "Chart ui")
-    default Stepped getStepped() {
-        return getJsonDataEnum("stpd", Stepped.False);
+    @UIField(order = 1)
+    @UIFieldGroup(value = "Chart axis", order = 100, borderColor = "#0C73A6")
+    default Integer getMin() {
+        return getJsonData().has("min") ? getJsonData().getInt("min") : null;
     }
 
-    default void setStepped(Stepped value) {
-        setJsonDataEnum("stpd", value);
+    default void setMin(Integer value) {
+        setJsonData("min", value);
+    }
+
+    @UIField(order = 2)
+    @UIFieldGroup("Chart axis")
+    default Integer getMax() {
+        return getJsonData().has("max") ? getJsonData().getInt("max") : null;
+    }
+
+    default void setMax(Integer value) {
+        setJsonData("max", value);
     }
 
     default void setInitChartColor(String color) {
@@ -152,10 +107,8 @@ public interface HasChartDataSource<T> extends HasJsonData<T> {
     }
 
     default ChartDataset buildTargetDataset(TimeSeriesContext item) {
-        HasChartDataSource seriesEntity = (HasChartDataSource) item.getSeriesEntity();
-        WidgetChartsController.TimeSeriesDataset dataset = new WidgetChartsController.TimeSeriesDataset(item.getId(),
-                seriesEntity.getChartLabel(), seriesEntity.getChartColor(), seriesEntity.getChartColorOpacity(),
-                seriesEntity.getTension() / 10D, seriesEntity.getStepped().getValue());
+        HasChartDataSource seriesEntity = item.getSeriesEntity();
+        ChartDataset dataset = new ChartDataset(item.getId()).setLabel(seriesEntity.getChartLabel());
         if (item.getValues() != null && !item.getValues().isEmpty()) {
             dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), seriesEntity.getChartAggregationType()));
         }
@@ -164,17 +117,5 @@ public interface HasChartDataSource<T> extends HasJsonData<T> {
 
     enum ChartType {
         line, bar
-    }
-
-    @RequiredArgsConstructor
-    enum Stepped {
-        False(false),
-        True(true),
-        Before("before"),
-        After("after"),
-        Middle("middle");
-
-        @Getter
-        private final Object value;
     }
 }

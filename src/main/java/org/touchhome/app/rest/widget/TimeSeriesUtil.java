@@ -8,8 +8,6 @@ import org.json.JSONObject;
 import org.springframework.data.util.Pair;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
-import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.app.model.rest.WidgetDataRequest;
@@ -20,6 +18,7 @@ import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSerie
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.TimePeriod;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -31,9 +30,8 @@ import java.util.function.Supplier;
 public class TimeSeriesUtil {
     private final EntityContextImpl entityContext;
 
-    public <E extends WidgetBaseEntityAndSeries<?, T>, T extends WidgetSeriesEntity<?> & HasChartDataSource<?>>
-    WidgetChartsController.TimeSeriesChartData<ChartDataset>
-    buildTimeSeriesFullData(E entity, TimePeriod.TimePeriodImpl timePeriod,
+    public <T extends HasDynamicParameterFields<?> & HasChartDataSource<?>> WidgetChartsController.TimeSeriesChartData<ChartDataset>
+    buildTimeSeriesFullData(String entityID, TimePeriod.TimePeriodImpl timePeriod,
                             boolean addUpdateListener, Set<T> series) {
 
         List<TimeSeriesValues<T>> timeSeriesValuesList = new ArrayList<>(series.size());
@@ -41,7 +39,7 @@ public class TimeSeriesUtil {
         for (T item : series) {
             BaseEntity<?> source = entityContext.getEntity(item.getChartDataSource());
             if (source instanceof HasTimeValueSeries) {
-                timeSeriesValuesList.add(new TimeSeriesValues<>(item, source,
+                timeSeriesValuesList.add(new TimeSeriesValues<>(source,
                         buildTimeSeriesFromDataSource(timePeriod, item, (HasTimeValueSeries) source)));
             }
         }
@@ -50,7 +48,7 @@ public class TimeSeriesUtil {
                 timeSeriesChartData = new WidgetChartsController.TimeSeriesChartData<>();
 
         if (!timeSeriesValuesList.isEmpty()) {
-            List<Date> dates = EvaluateDatesAndValues.calculateDates(timePeriod, timeSeriesValuesList, entity);
+            List<Date> dates = EvaluateDatesAndValues.calculateDates(timePeriod, timeSeriesValuesList);
             timeSeriesChartData.getLabels().addAll(EvaluateDatesAndValues.buildLabels(timePeriod, dates));
         }
 
@@ -61,7 +59,7 @@ public class TimeSeriesUtil {
 
                 // add update listeners
                 if (addUpdateListener) {
-                    addChangeListenerForTimeSeriesEntity(entity, item, timePeriod, entity.getEntityID(), series);
+                    addChangeListenerForTimeSeriesEntity(item, timePeriod, entityID, series);
                 }
             }
         }
@@ -69,8 +67,8 @@ public class TimeSeriesUtil {
         return timeSeriesChartData;
     }
 
-    public <T extends WidgetSeriesEntity<?> & HasChartDataSource<?>> void addChangeListenerForTimeSeriesEntity(
-            WidgetBaseEntityAndSeries<?, T> entity, TimeSeriesContext<T> timeSeriesContext,
+    public <T extends HasDynamicParameterFields<?> & HasChartDataSource<?>> void addChangeListenerForTimeSeriesEntity(
+            TimeSeriesContext<T> timeSeriesContext,
             TimePeriod.TimePeriodImpl timePeriod, String entityID, Set<T> series) {
 
         T item = timeSeriesContext.getSeriesEntity();
@@ -85,7 +83,7 @@ public class TimeSeriesUtil {
                     // if context was updated - we need update rest of values also !!!
                     if (!values.isEqualSeries(cts)) {
                         WidgetChartsController.TimeSeriesChartData<ChartDataset> fullUpdatedData =
-                                this.buildTimeSeriesFullData(entity, timePeriod, false, series);
+                                this.buildTimeSeriesFullData(entityID, timePeriod, false, series);
 
                         entityContext.ui().sendDynamicUpdate(
                                 new DynamicUpdateRequest(item.getChartDataSource(),
@@ -97,7 +95,7 @@ public class TimeSeriesUtil {
 
     public <T extends WidgetBaseEntity<T>, R> R getSingleValue(@NotNull T entity,
                                                                @Nullable BaseEntity<?> source,
-                                                               @NotNull JSONObject dynamicParameters,
+                                                               @Nullable JSONObject dynamicParameters,
                                                                @NotNull WidgetDataRequest request,
                                                                @NotNull AggregationType aggregationType,
                                                                @Nullable String seriesEntityId,
@@ -123,7 +121,7 @@ public class TimeSeriesUtil {
     private <R> void addListenValueIfRequire(boolean listenSourceUpdates,
                                              @NotNull String entityID,
                                              @NotNull BaseEntity<?> source,
-                                             @NotNull JSONObject dynamicParameters,
+                                             @Nullable JSONObject dynamicParameters,
                                              @Nullable String seriesEntityId,
                                              @NotNull Supplier<R> valueSupplier) {
         if (listenSourceUpdates) {
@@ -144,9 +142,8 @@ public class TimeSeriesUtil {
         }
     }
 
-    public <T extends WidgetSeriesEntity<?> & HasChartDataSource<?>> Set<TimeSeriesContext<T>> buildTimeSeriesFromDataSource(
-            TimePeriod.TimePeriodImpl timePeriod, T item,
-            HasTimeValueSeries source) {
+    public <T extends HasDynamicParameterFields<?> & HasChartDataSource<?>> Set<TimeSeriesContext<T>>
+    buildTimeSeriesFromDataSource(TimePeriod.TimePeriodImpl timePeriod, T item, HasTimeValueSeries source) {
         Set<TimeSeriesContext<T>> result = new HashSet<>();
         ChartRequest chartRequest = buildChartRequest(timePeriod, item.getChartDynamicParameterFields());
 

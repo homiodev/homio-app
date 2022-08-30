@@ -1,20 +1,17 @@
 package org.touchhome.app.rest.widget;
 
 import lombok.Getter;
-import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.bundle.api.entity.BaseEntity;
 
 import java.util.Set;
 
 @Getter
-public class TimeSeriesValues<T extends WidgetSeriesEntity<?> & HasChartDataSource<?>> {
-    private final T item;
+public class TimeSeriesValues<T extends HasChartDataSource<?>> {
     private final BaseEntity<?> source;
     private final Set<TimeSeriesContext<T>> itemSeries;
 
-    public TimeSeriesValues(T item, BaseEntity<?> source, Set<TimeSeriesContext<T>> itemSeries) {
-        this.item = item;
+    public TimeSeriesValues(BaseEntity<?> source, Set<TimeSeriesContext<T>> itemSeries) {
         this.source = source;
         this.itemSeries = itemSeries;
 

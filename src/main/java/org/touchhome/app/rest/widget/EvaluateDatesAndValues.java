@@ -3,9 +3,8 @@ package org.touchhome.app.rest.widget;
 import org.springframework.data.util.Pair;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
-import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.TimePeriod;
+import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -30,17 +29,16 @@ public final class EvaluateDatesAndValues {
         }).collect(Collectors.toList());
     }
 
-    public static <T extends WidgetSeriesEntity<?> & HasChartDataSource<?>> List<Date> calculateDates(
-            TimePeriod.TimePeriodImpl timePeriod, List<TimeSeriesValues<T>> timeSeriesValues,
-            WidgetBaseEntityAndSeries<?, T> entity) {
+    public static <T extends HasDynamicParameterFields<?> & HasChartDataSource<?>> List<Date> calculateDates(
+            TimePeriod.TimePeriodImpl timePeriod, List<TimeSeriesValues<T>> timeSeriesValues) {
         // get dates split by algorithm
         List<Date> dates = evaluateDates(timePeriod, timeSeriesValues);
         List<Date> initialDates = new ArrayList<>(dates);
         // minimum number not 0 values to fit requirements
         int minDateSize = initialDates.size() / 2;
         // fill values with remove 0 points. Attention: dates are modified by iterator
-        fulfillValues(dates, timeSeriesValues, entity);
-        int index = 2;
+        fulfillValues(dates, timeSeriesValues);
+        /* int index = 2;
         int prevDates = -1; // prevDates uses to avoid extra iterations if prevDates == datesWithMultiplier
         while (index != 5 && prevDates != dates.size()) {
             prevDates = dates.size();
@@ -51,13 +49,13 @@ public final class EvaluateDatesAndValues {
             }
             dates.add(initialDates.get(initialDates.size() - 1));
             initialDates = new ArrayList<>(dates);
-            fulfillValues(dates, timeSeriesValues, entity);
+            fulfillValues(dates, timeSeriesValues);
             index++;
-        }
+        }*/
         return dates;
     }
 
-    private static <T extends WidgetSeriesEntity<?> & HasChartDataSource<?>> List<Date>
+    private static <T extends HasChartDataSource<?>> List<Date>
     evaluateDates(TimePeriod.TimePeriodImpl timePeriod, List<TimeSeriesValues<T>> timeSeriesValues) {
         List<Date> dates = timePeriod.evaluateDateRange();
         if (dates == null) {
@@ -77,10 +75,8 @@ public final class EvaluateDatesAndValues {
         return dates;
     }
 
-    private static <T extends WidgetSeriesEntity<?> & HasChartDataSource<?>>
-    void fulfillValues(List<Date> dates, List<TimeSeriesValues<T>> timeSeriesValues,
-                       WidgetBaseEntityAndSeries<?, T> entity) {
-        List<TimeSeriesContext<T>> contextList = new ArrayList<>();
+    private static <T extends HasDynamicParameterFields<?> & HasChartDataSource<?>>
+    void fulfillValues(List<Date> dates, List<TimeSeriesValues<T>> timeSeriesValues) {
         boolean calcMissingValues = true;
         List<Iterator<List<Float>>> fullChartValueIterators = new ArrayList<>();
 
@@ -95,27 +91,16 @@ public final class EvaluateDatesAndValues {
                 for (Object[] chartItem : timeSeriesContext.getValue()) {
                     long time = chartItem[0] instanceof Date ? ((Date) chartItem[0]).getTime() : (Long) chartItem[0];
                     int index = getDateIndex(dates, time);
-                    values.get(index).add((Float) chartItem[1]);
+                    if (index >= 0) {
+                        values.get(index).add((Float) chartItem[1]);
+                    }
                 }
                 timeSeriesContext.setValues(values);
-                contextList.add(timeSeriesContext);
 
                 Boolean fillMissingValues = timeSeriesContext.getSeriesEntity().getFillMissingValues();
 
                 calcMissingValues = calcMissingValues && !fillMissingValues;
                 fullChartValueIterators.add(values.iterator());
-
-                /*if (!entity.fillMissingValues(timeSeriesContext.getSeriesEntity())) {
-                    Iterator<Date> dateIterator = dates.iterator();
-                    for (Iterator<List<Float>> iterator = values.iterator(); iterator.hasNext(); ) {
-                        List<Float> filledValues = iterator.next();
-                        dateIterator.next();
-                        if (filledValues.isEmpty()) {
-                            iterator.remove();
-                            dateIterator.remove();
-                        }
-                    }
-                }*/
             }
         }
 
@@ -128,7 +113,7 @@ public final class EvaluateDatesAndValues {
                 dateIterator.next();
 
                 if (!notEmptyBlock) {
-                            fullChartValueIterators.forEach(Iterator::remove);
+                    fullChartValueIterators.forEach(Iterator::remove);
                     dateIterator.remove();
                 }
             }

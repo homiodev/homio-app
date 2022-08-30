@@ -496,6 +496,11 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("layoutOptions", uiFieldLayout.options());
         }
 
+        UIFieldShowOnCondition uiFieldShowOnCondition = uiFieldContext.getDeclaredAnnotation(UIFieldShowOnCondition.class);
+        if (uiFieldShowOnCondition != null) {
+            jsonTypeMetadata.put("showCondition", uiFieldShowOnCondition.value());
+        }
+
         UIFieldGroup uiFieldGroup = uiFieldContext.getDeclaredAnnotation(UIFieldGroup.class);
         if (uiFieldGroup != null) {
             jsonTypeMetadata.put("group", uiFieldGroup.value());

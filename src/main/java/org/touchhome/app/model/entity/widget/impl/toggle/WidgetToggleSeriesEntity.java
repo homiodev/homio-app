@@ -1,8 +1,9 @@
 package org.touchhome.app.model.entity.widget.impl.toggle;
 
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
+import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
@@ -20,29 +21,41 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
     @UIField(order = 1, required = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldIgnoreParent
-    @UIFieldGroup(value = "Value", order = 1)
+    @UIFieldGroup(value = "Value", order = 2)
     public String getValueDataSource() {
         return HasSingleValueDataSource.super.getValueDataSource();
     }
 
     @UIField(order = 2, required = true)
+    @UIFieldGroup(value = "Value")
+    @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     public String getSetValueDataSource() {
         return HasSingleValueDataSource.super.getSetValueDataSource();
     }
 
-    @UIField(order = 20)
+    @UIField(order = 1)
+    @UIFieldIconPicker(allowThreshold = true, allowEmptyIcon = true)
+    @UIFieldGroup(value = "UI", order = 3)
+    public String getIcon() {
+        return getJsonData("icon", "");
+    }
+
+    @UIField(order = 2)
+    @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldGroup("UI")
+    public String getIconColor() {
+        return getJsonData("iconColor", UI.Color.WHITE);
+    }
+
+    @UIField(order = 3)
     @UIFieldColorPicker
+    @UIFieldGroup("UI")
     public String getColor() {
         return getJsonData("color", UI.Color.WHITE);
     }
 
-    public WidgetToggleSeriesEntity setColor(String value) {
-        setJsonData("color", value);
-        return this;
-    }
-
     @UIField(order = 1)
-    @UIFieldGroup(value = "ON", order = 1)
+    @UIFieldGroup(value = "ON", order = 4)
     public String getOnName() {
         return getJsonData("onName", "On");
     }
@@ -56,50 +69,22 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
         return getJsonDataList("onValues");
     }
 
-    @UIField(order = 3, type = UIFieldType.Chips)
+    @UIField(order = 3)
     @UIFieldGroup("ON")
-    public String getOnValue() {
+    public String getPushToggleOnValue() {
         return getJsonData("onValue", "true");
     }
 
-    @UIField(order = 4)
-    @UIFieldIconPicker(allowEmptyIcon = true)
-    @UIFieldGroup("ON")
-    public String getOnIcon() {
-        return getJsonData("onIcon", "");
-    }
-
-    @UIField(order = 5)
-    @UIFieldColorPicker
-    @UIFieldGroup("ON")
-    public String getOnIconColor() {
-        return getJsonData("onIconColor", UI.Color.WHITE);
-    }
-
     @UIField(order = 1)
-    @UIFieldGroup(value = "OFF", order = 2)
+    @UIFieldGroup(value = "OFF", order = 4)
     public String getOffName() {
         return getJsonData("offName", "Off");
     }
 
     @UIField(order = 2)
     @UIFieldGroup("OFF")
-    public String getOffValue() {
+    public String getPushToggleOffValue() {
         return getJsonData("offValue", "false");
-    }
-
-    @UIField(order = 4)
-    @UIFieldIconPicker(allowEmptyIcon = true)
-    @UIFieldGroup("OFF")
-    public String getOffIcon() {
-        return getJsonData("offIcon", "");
-    }
-
-    @UIField(order = 5)
-    @UIFieldColorPicker
-    @UIFieldGroup("OFF")
-    public String getOffIconColor() {
-        return getJsonData("offIconColor", UI.Color.WHITE);
     }
 
     public void setOnName(String value) {
@@ -114,29 +99,30 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
         setJsonData("onValues", value);
     }
 
-    public void setOffValue(String value) {
+    public void setPushToggleOnValue(String value) {
+        setJsonData("onValue", value);
+    }
+
+    public void setPushToggleOffValue(String value) {
         setJsonData("offValue", value);
     }
 
-    public void setOnIcon(String value) {
-        setJsonData("onIcon", value);
+    public void setIcon(String value) {
+        setJsonData("icon", value);
     }
 
-    public void setOnIconColor(String value) {
-        setJsonData("onIconColor", value);
-    }
-
-    public void setOffIcon(String value) {
-        setJsonData("offIcon", value);
-    }
-
-    public void setOffIconColor(String value) {
-        setJsonData("offIconColor", value);
+    public void setIconColor(String value) {
+        setJsonData("iconColor", value);
     }
 
     @Override
     public String getEntityPrefix() {
         return PREFIX;
+    }
+
+    public WidgetToggleSeriesEntity setColor(String value) {
+        setJsonData("color", value);
+        return this;
     }
 
     @Override

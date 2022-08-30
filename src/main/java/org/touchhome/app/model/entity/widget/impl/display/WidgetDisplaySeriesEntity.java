@@ -1,7 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.display;
 
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
 
@@ -14,31 +14,44 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     public static final String PREFIX = "wgsdps_";
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Text", order = 1)
+    @UIFieldGroup(value = "UI", order = 10, borderColor = "#009688")
+    @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
+    public String getBackground() {
+        return getJsonData("bg", "transparent");
+    }
+
+    @UIField(order = 2)
+    @UIFieldGroup(value = "UI")
+    public String getPadding() {
+        return getJsonData("padding", "4px");
+    }
+
+    @UIField(order = 1)
+    @UIFieldGroup(value = "Name", order = 1)
     public String getName() {
         return super.getName();
     }
 
     @UIField(order = 2)
-    @UIFieldColorPicker
-    @UIFieldGroup(value = "Text")
-    public String getTextColor() {
-        return getJsonData("tc", UI.Color.WHITE);
+    @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldGroup(value = "Name")
+    public String getNameColor() {
+        return getJsonData("nc", UI.Color.WHITE);
     }
 
     @UIField(order = 1, type = UIFieldType.StringTemplate)
-    @UIFieldGroup(value = "Value", order = 2)
+    @UIFieldGroup(value = "Value", order = 20)
     public String getValueTemplate() {
-        return getJsonData("vt");
+        return getJsonData("vt", "~~~℃");
     }
 
-    @UIField(order = 2)
+    @UIField(order = 21)
     @UIFieldGroup("Value")
     public String getNoValueText() {
         return getJsonData("noVal", "-");
     }
 
-    @UIField(order = 3)
+    @UIField(order = 22)
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldGroup("Value")
     public String getValueColor() {
@@ -53,7 +66,7 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     }
 
     @UIField(order = 2)
-    @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
+    @UIFieldColorPicker(allowThreshold = true)
     @UIFieldGroup("Icon")
     public String getIconColor() {
         return getJsonData("iconColor", UI.Color.WHITE);
@@ -64,9 +77,6 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         String randomColor = UI.Color.random();
         if (!getJsonData().has("iconColor")) {
             setIconColor(randomColor);
-        }
-        if (!getJsonData().has("vc")) {
-            setValueColor(randomColor);
         }
     }
 
@@ -79,8 +89,8 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         setJsonData("iconColor", value);
     }
 
-    public void setTextColor(String value) {
-        setJsonData("tc", value);
+    public void setNameColor(String value) {
+        setJsonData("nc", value);
     }
 
     public void setNoValueText(String value) {
@@ -97,5 +107,13 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
 
     public void setIcon(String value) {
         setJsonData("icon", value);
+    }
+
+    public void setBackground(String value) {
+        setJsonData("bg", value);
+    }
+
+    public void setPadding(String value) {
+        setJsonData("padding", value);
     }
 }

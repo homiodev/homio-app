@@ -85,28 +85,6 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
         return (T) this;
     }
 
-    @UIField(order = 82)
-    @UIFieldGroup("Chart axis")
-    public Integer getMin() {
-        return getJsonData().has("min") ? getJsonData().getInt("min") : null;
-    }
-
-    public T setMin(int value) {
-        setJsonData("min", value);
-        return (T) this;
-    }
-
-    @UIField(order = 83)
-    @UIFieldGroup("Chart axis")
-    public Integer getMax() {
-        return getJsonData().has("max") ? getJsonData().getInt("max") : null;
-    }
-
-    public T setMax(int value) {
-        setJsonData("max", value);
-        return (T) this;
-    }
-
     @UIField(order = 84)
     @UIFieldGroup("Chart axis")
     public String getAxisLabelX() {

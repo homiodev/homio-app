@@ -50,7 +50,7 @@ public class WidgetDoughnutChartEntity extends ChartBaseEntity<WidgetDoughnutCha
         return PREFIX;
     }
 
-    @Override
+   /* TODO: @Override
     @UIFieldIgnore
     @JsonIgnore
     public Integer getMin() {
@@ -62,7 +62,7 @@ public class WidgetDoughnutChartEntity extends ChartBaseEntity<WidgetDoughnutCha
     @JsonIgnore
     public Integer getMax() {
         return 0;
-    }
+    }*/
 
     @Override
     @UIFieldIgnore

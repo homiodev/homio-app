@@ -11,7 +11,7 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFi
 
 public interface HasSingleValueDataSource<T> extends HasDynamicParameterFields<T> {
 
-    @UIField(order = 10)
+    @UIField(order = 10, required = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
     @UIFieldGroup(value = "Value", order = 10)

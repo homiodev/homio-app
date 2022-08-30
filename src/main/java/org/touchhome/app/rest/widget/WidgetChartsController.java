@@ -1,12 +1,12 @@
 package org.touchhome.app.rest.widget;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONObject;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
@@ -22,9 +21,9 @@ import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartEn
 import org.touchhome.app.model.entity.widget.impl.chart.doughnut.WidgetDoughnutChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity;
+import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
+import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
-import org.touchhome.app.model.entity.widget.impl.minicard.WidgetMiniCardChartEntity;
-import org.touchhome.app.model.entity.widget.impl.minicard.WidgetMiniCardChartSeriesEntity;
 import org.touchhome.app.model.rest.WidgetDataRequest;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.ui.TimePeriod;
@@ -34,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 
 @Log4j2
 @RestController
@@ -58,14 +56,30 @@ public class WidgetChartsController {
         });
     }*/
 
-    @PostMapping("/minicard/series")
-    public TimeSeriesChartData<ChartDataset> getMiniCardChartSeries(@Valid @RequestBody WidgetDataRequest request) {
-        return getTimeSeriesChartData(request, WidgetMiniCardChartEntity.class, entity -> new WidgetMiniCardChartSeriesEntity() {
-            @Override
-            public JSONObject getJsonData() {
-                return entity.getJsonData();
-            }
-        });
+    @PostMapping("/display/series")
+    public DisplayDataResponse getDisplayValues(@RequestBody WidgetDataRequest request) {
+        WidgetDisplayEntity entity = entityContext.getEntity(request.getEntityID());
+        List<Object> values = new ArrayList<>(entity.getSeries().size());
+        for (WidgetDisplaySeriesEntity item : entity.getSeries()) {
+            BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
+
+            Object value = timeSeriesUtil.getSingleValue(entity, valueSource,
+                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID(),
+                    o -> o);
+            values.add(value);
+        }
+
+        TimeSeriesChartData<ChartDataset> chartData = null;
+        if (StringUtils.isNotEmpty(entity.getChartDataSource())) {
+            TimePeriod.TimePeriodImpl timePeriod =
+                    timeSeriesUtil.buildTimePeriodFromHoursToShow(entity.getHoursToShow(), entity.getPointsPerHour());
+            chartData = timeSeriesUtil.buildTimeSeriesFullData(entity.getEntityID(), timePeriod, entity.getListenSourceUpdates(),
+                    Collections.singleton(entity));
+
+            fillSingleValue(entity, chartData, request);
+        }
+
+        return new DisplayDataResponse(values, chartData);
     }
 
     @PostMapping("/line/series")
@@ -73,7 +87,8 @@ public class WidgetChartsController {
         WidgetLineChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetLineChartEntity.class);
         TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
 
-        return timeSeriesUtil.buildTimeSeriesFullData(entity, timePeriod, entity.getListenSourceUpdates(), entity.getSeries());
+        return timeSeriesUtil.buildTimeSeriesFullData(entity.getEntityID(), timePeriod, entity.getListenSourceUpdates(),
+                entity.getSeries());
     }
 
     @PostMapping("/bartime/series")
@@ -81,7 +96,8 @@ public class WidgetChartsController {
         WidgetBarTimeChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetBarTimeChartEntity.class);
         TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
 
-        return timeSeriesUtil.buildTimeSeriesFullData(entity, timePeriod, entity.getListenSourceUpdates(), entity.getSeries());
+        return timeSeriesUtil.buildTimeSeriesFullData(entity.getEntityID(), timePeriod, entity.getListenSourceUpdates(),
+                entity.getSeries());
     }
 
     @PostMapping("/bar/series")
@@ -134,26 +150,6 @@ public class WidgetChartsController {
         return timeSeriesChartData;
     }
 
-    private <S extends WidgetSeriesEntity<T> & HasChartDataSource<T>, T extends WidgetBaseEntityAndSeries<T, S>>
-    TimeSeriesChartData<ChartDataset> getTimeSeriesChartData(WidgetDataRequest request, Class<T> typeClass,
-                                                             Function<T, S> itemSupplier) {
-        T entity = request.getEntity(entityContext, objectMapper, typeClass);
-
-        S item = itemSupplier.apply(entity);
-        if (item != null) {
-            TimePeriod.TimePeriodImpl timePeriod =
-                    timeSeriesUtil.buildTimePeriodFromHoursToShow(item.getHoursToShow(), item.getPointsPerHour());
-            TimeSeriesChartData<ChartDataset> data =
-                    timeSeriesUtil.buildTimeSeriesFullData(entity, timePeriod, entity.getListenSourceUpdates(),
-                            Collections.singleton(item));
-
-            fillSingleValue(entity, data, request);
-            return data;
-        }
-
-        return null;
-    }
-
     private <S extends WidgetSeriesEntity<T>, T extends WidgetBaseEntityAndSeries<T, S>> void fillSingleValue(
             T entity, TimeSeriesChartData<ChartDataset> data, WidgetDataRequest request) {
         if (entity instanceof HasSingleValueDataSource) {
@@ -180,25 +176,6 @@ public class WidgetChartsController {
 
     @Getter
     @Setter
-    public static class TimeSeriesDataset extends ChartDataset {
-        private String fill = "origin";
-        private final String borderColor;
-        private final String backgroundColor;
-        private final double tension;
-        private final Object stepped;
-
-        public TimeSeriesDataset(String id, String label, String color, int opacity, double tension, Object stepped) {
-            super(id);
-            this.setLabel(label);
-            this.borderColor = color;
-            this.backgroundColor = getColorWithOpacity(color, opacity);
-            this.tension = tension;
-            this.stepped = stepped;
-        }
-    }
-
-    @Getter
-    @Setter
     public static class TimeSeriesChartData<T extends ChartDataset> {
         private final List<String> labels = new ArrayList<>();
         private final List<T> datasets = new ArrayList<>();
@@ -210,5 +187,12 @@ public class WidgetChartsController {
     public static class SingleValueData {
         private final Object value;
         private final String seriesEntityID;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class DisplayDataResponse {
+        private List<Object> values;
+        private TimeSeriesChartData<ChartDataset> chart;
     }
 }

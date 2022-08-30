@@ -64,9 +64,9 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
 
     @Override
     protected String getDefaultLayout() {
-        return UIFieldLayout.LayoutBuilder.builder().addRow(rb -> rb
+        return UIFieldLayout.LayoutBuilder.builder(15, 25, 60).addRow(rb -> rb
                         .addCol("icon", UIFieldLayout.HorizontalAlign.center)
-                        .addCol("name", UIFieldLayout.HorizontalAlign.center)
+                        .addCol("name", UIFieldLayout.HorizontalAlign.left)
                         .addCol("slider", UIFieldLayout.HorizontalAlign.center))
                 .build();
     }
