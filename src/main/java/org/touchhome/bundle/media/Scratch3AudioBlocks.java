@@ -55,7 +55,7 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         this.audioService = audioService;
         setParent("media");
 
-        this.ttsMenu = MenuBlock.ofServerServiceItems("tts", TextToSpeechEntityService.class, "TTS");
+        this.ttsMenu = MenuBlock.ofServerServiceItems("tts", TextToSpeechEntityService.class, "Select TTS");
         this.audioMenu = MenuBlock.ofServer("audioMenu", "rest/media/audio", "Audio").setUIDelimiter("/");
 
         this.sinkMenu = MenuBlock.ofServer("sinkMenu", "rest/media/sink", "Sink");

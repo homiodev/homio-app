@@ -1,20 +1,23 @@
 package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.touchhome.app.model.entity.widget.UIFieldJSONLine;
+import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
-import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 import javax.persistence.Entity;
 
 @Entity
-public class WidgetBarChartEntity extends ChartBaseEntity<WidgetBarChartEntity, WidgetBarChartSeriesEntity> {
+public class WidgetBarChartEntity extends ChartBaseEntity<WidgetBarChartEntity, WidgetBarChartSeriesEntity>
+        implements HasTimePeriod {
 
     public static final String PREFIX = "wgtbc_";
 
-    @UIField(order = 38)
+    @UIField(order = 10)
+    @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
     public BarChartType getDisplayType() {
         return getJsonDataEnum("displayType", BarChartType.Horizontal);
     }
@@ -35,19 +38,21 @@ public class WidgetBarChartEntity extends ChartBaseEntity<WidgetBarChartEntity, 
         return this;
     }
 
-    @UIField(order = 52)
-    @UIFieldSlider(min = 1, max = 4)
-    public int getBorderWidth() {
-        return getJsonData("bw", 1);
+    @UIField(order = 12)
+    @UIFieldGroup("Chart ui")
+    @UIFieldJSONLine(template = "{\"top\": number}, \"left\": number, \"bottom\": number, \"right\": number")
+    public String getBarBorderWidth() {
+        return getJsonData("bbw", "{\"top\": 0, \"left\": 0, \"bottom\": 0, \"right\": 0}");
     }
 
-    public WidgetBarChartEntity setBorderWidth(int value) {
-        setJsonData("bw", value);
+    public WidgetBarChartEntity setBarBorderWidth(String value) {
+        setJsonData("bbw", value);
         return this;
     }
 
     @Override
     @JsonIgnore
+    @UIFieldIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");
     }

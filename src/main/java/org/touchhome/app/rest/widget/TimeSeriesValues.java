@@ -7,7 +7,7 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 import java.util.Set;
 
 @Getter
-public class TimeSeriesValues<T extends HasChartDataSource<?>> {
+public class TimeSeriesValues<T extends HasChartDataSource> {
     private final BaseEntity<?> source;
     private final Set<TimeSeriesContext<T>> itemSeries;
 

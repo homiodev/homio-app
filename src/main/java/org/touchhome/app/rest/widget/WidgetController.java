@@ -1,5 +1,6 @@
 package org.touchhome.app.rest.widget;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
@@ -18,8 +19,6 @@ import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.WidgetTabEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
-import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMEntity;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMSeriesEntity;
@@ -61,15 +60,16 @@ import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 @RequestMapping("/rest/widget")
 public class WidgetController {
 
+    private final ObjectMapper objectMapper;
     private final EntityContextImpl entityContext;
     private final ScriptService scriptService;
     private final WidgetService widgetService;
     private final List<WidgetVideoSourceResolver> videoSourceResolvers;
-
     private final TimeSeriesUtil timeSeriesUtil;
 
-    public WidgetController(EntityContextImpl entityContext, ScriptService scriptService, WidgetService widgetService,
-                            List<WidgetVideoSourceResolver> videoSourceResolvers) {
+    public WidgetController(ObjectMapper objectMapper, EntityContextImpl entityContext, ScriptService scriptService,
+                            WidgetService widgetService, List<WidgetVideoSourceResolver> videoSourceResolvers) {
+        this.objectMapper = objectMapper;
         this.entityContext = entityContext;
         this.scriptService = scriptService;
         this.widgetService = widgetService;
@@ -180,14 +180,10 @@ public class WidgetController {
 
     @PostMapping("/button/values")
     public List<Object> getButtonValues(@RequestBody WidgetDataRequest request) {
-        WidgetPushButtonEntity entity = entityContext.getEntity(request.getEntityID());
+        WidgetPushButtonEntity entity = request.getEntity(entityContext, objectMapper, WidgetPushButtonEntity.class);
         List<Object> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetPushButtonSeriesEntity item : entity.getSeries()) {
-            BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
-
-            Object value = timeSeriesUtil.getSingleValue(entity, valueSource,
-                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID(), o -> o);
-            values.add(value);
+            values.add(timeSeriesUtil.getSingleValue(entity, item, o -> o));
         }
         return values;
     }
@@ -198,8 +194,7 @@ public class WidgetController {
         BaseEntity<?> source = entityContext.getEntity(series.getSetValueDataSource());
         if (source instanceof HasSetStatusValue) {
             ((HasSetStatusValue) source).setStatusValue(
-                    new HasSetStatusValue.SetStatusValueRequest(entityContext,
-                            series.getSetValueDynamicParameterFields(),
+                    new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(),
                             series.getValueToPush()));
             return;
         }
@@ -208,28 +203,21 @@ public class WidgetController {
 
     @PostMapping("/slider/values")
     public List<Integer> getSliderValues(@RequestBody WidgetDataRequest request) {
-        WidgetSliderEntity entity = entityContext.getEntity(request.getEntityID());
+        WidgetSliderEntity entity = request.getEntity(entityContext, objectMapper, WidgetSliderEntity.class);
         List<Integer> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetSliderSeriesEntity item : entity.getSeries()) {
-            BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
-
-            values.add(timeSeriesUtil.getSingleValue(entity, valueSource,
-                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID(), o ->
-                            HasSetStatusValue.SetStatusValueRequest.rawValueToNumber(o, 0).intValue()));
+            values.add(timeSeriesUtil.getSingleValue(entity, item,
+                    o -> HasSetStatusValue.SetStatusValueRequest.rawValueToNumber(o, 0).intValue()));
         }
         return values;
     }
 
     @PostMapping("/toggle/values")
     public List<String> getToggleValues(@RequestBody WidgetDataRequest request) {
-        WidgetToggleEntity entity = entityContext.getEntity(request.getEntityID());
+        WidgetToggleEntity entity = request.getEntity(entityContext, objectMapper, WidgetToggleEntity.class);
         List<String> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetToggleSeriesEntity item : entity.getSeries()) {
-            BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
-
-            values.add(timeSeriesUtil.getSingleValue(entity, valueSource,
-                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID(),
-                    String::valueOf));
+            values.add(timeSeriesUtil.getSingleValue(entity, item, String::valueOf));
         }
         return values;
     }
@@ -251,8 +239,7 @@ public class WidgetController {
         BaseEntity<?> source = entityContext.getEntity(series.getSetValueDataSource());
         if (source instanceof HasSetStatusValue) {
             ((HasSetStatusValue) source).setStatusValue(
-                    new HasSetStatusValue.SetStatusValueRequest(entityContext,
-                            series.getSetValueDynamicParameterFields(),
+                    new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(),
                             request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue()));
         } else {
             throw new ServerException("Unable to find handler for set value for slider");
@@ -415,8 +402,8 @@ public class WidgetController {
 
     private <T extends WidgetSeriesEntity> T getSeriesEntity(SingleValueRequest<?> request) {
         WidgetBaseEntityAndSeries entity = entityContext.getEntity(request.entityID);
-        T series = ((Set<T>) entity.getSeries()).stream()
-                .filter(s -> s.getEntityID().equals(request.seriesEntityID)).findAny().orElse(null);
+        T series = ((Set<T>) entity.getSeries()).stream().filter(s -> s.getEntityID().equals(request.seriesEntityID)).findAny()
+                .orElse(null);
         if (series == null) {
             throw new NotFoundException("Unable to find series: " + request.seriesEntityID + " for entity: " + entity.getTitle());
         }

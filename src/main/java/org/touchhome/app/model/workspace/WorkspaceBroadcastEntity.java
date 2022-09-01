@@ -32,7 +32,7 @@ public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntit
     }
 
     @UIFieldNumber(min = 0, max = 10_000_000)
-    private Integer quota;
+    private int quota = 1000;
 
     @Override
     public String getEntityPrefix() {
@@ -40,21 +40,23 @@ public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntit
     }
 
     public InMemoryDBService<BroadcastMessage> getStorage() {
+        EntityContext entityContext = WorkspaceBroadcastEntity.this.getEntityContext();
+        BroadcastLockManagerImpl broadcastLockManager =
+                entityContext.getBean(BroadcastLockManagerImpl.class);
         return InMemoryDB.getService(BroadcastMessage.class, (long) quota)
                 .addSaveListener("", broadcastMessage -> {
-                    WorkspaceBroadcastEntity.this.getEntityContext().getBean(BroadcastLockManagerImpl.class)
-                            .signalAll(broadcastMessage.getName()); // TODO: Without prefix?? WorkspaceBroadcastEntity.PREFIX +
-                    // broadcastRefEntityID
+                    broadcastLockManager.signalAll(broadcastMessage.getEntityID());
+                    entityContext.event().fireEvent(broadcastMessage.getEntityID(), broadcastMessage.getValue(), false);
                 });
     }
 
-    public void fireBroadcastEvent(String name, Object value) {
-        getStorage().save(new BroadcastMessage(name, value));
+    public void fireBroadcastEvent(Object value) {
+        getStorage().save(new BroadcastMessage(getEntityID(), value));
     }
 
     @Override
     public void setStatusValue(SetStatusValueRequest request) {
-        fireBroadcastEvent(getName(), request.getValue());
+        fireBroadcastEvent(request.getValue());
     }
 
     @Override
@@ -72,7 +74,7 @@ public class WorkspaceBroadcastEntity extends BaseEntity<WorkspaceBroadcastEntit
     @Override
     public void addUpdateValueListener(EntityContext entityContext, String key, JSONObject dynamicParameters,
                                        Consumer<Object> listener) {
-        entityContext.event().addEventListener(getEntityID(), listener);
+        entityContext.event().addEventListener(getEntityID(), key, listener);
     }
 
     @Override

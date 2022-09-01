@@ -1,7 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.rest.widget.ChartDataset;
 import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
 import org.touchhome.app.rest.widget.TimeSeriesContext;
@@ -15,11 +14,12 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
-public interface HasChartDataSource<T> extends HasJsonData<T> {
+public interface HasChartDataSource extends HasJsonData {
 
     @UIField(order = 1)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
     @UIFieldGroup(value = "Chart", order = 10, borderColor = "#9C27B0")
+    @UIEditReloadWidget
     default String getChartDataSource() {
         return getJsonData("chartDS");
     }
@@ -30,22 +30,13 @@ public interface HasChartDataSource<T> extends HasJsonData<T> {
 
     @UIField(order = 5)
     @UIFieldGroup("Chart")
+    @UIEditReloadWidget
     default AggregationType getChartAggregationType() {
         return getJsonDataEnum("chartAggrType", AggregationType.Average);
     }
 
     default void setChartAggregationType(AggregationType value) {
         setJsonData("chartAggrType", value);
-    }
-
-    @UIField(order = 6)
-    @UIFieldGroup("Chart")
-    default Boolean getFillMissingValues() {
-        return getJsonData("fillMis", false);
-    }
-
-    default void setFillMissingValues(Boolean value) {
-        setJsonData("fillMis", value);
     }
 
     @UIField(order = 1)
@@ -71,33 +62,13 @@ public interface HasChartDataSource<T> extends HasJsonData<T> {
     }
 
     @UIField(order = 5)
-    @UIFieldGroup(value = "Chart ui")
+    @UIFieldGroup("Chart ui")
     default String getChartLabel() {
         return getJsonData("clbl", "");
     }
 
     default void setChartLabel(String value) {
         setJsonData("clbl", value);
-    }
-
-    @UIField(order = 1)
-    @UIFieldGroup(value = "Chart axis", order = 100, borderColor = "#0C73A6")
-    default Integer getMin() {
-        return getJsonData().has("min") ? getJsonData().getInt("min") : null;
-    }
-
-    default void setMin(Integer value) {
-        setJsonData("min", value);
-    }
-
-    @UIField(order = 2)
-    @UIFieldGroup("Chart axis")
-    default Integer getMax() {
-        return getJsonData().has("max") ? getJsonData().getInt("max") : null;
-    }
-
-    default void setMax(Integer value) {
-        setJsonData("max", value);
     }
 
     default void setInitChartColor(String color) {

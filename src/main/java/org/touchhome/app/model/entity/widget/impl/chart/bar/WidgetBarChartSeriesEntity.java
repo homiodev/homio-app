@@ -1,7 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
@@ -12,12 +12,12 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChartEntity>
-        implements HasSingleValueDataSource<WidgetBarChartEntity> {
+        implements HasSingleValueDataSource {
 
     public static final String PREFIX = "wgsbcs_";
 
     @UIField(order = 50)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
     @UIFieldColorPicker
     public String getChartColor() {
         return getJsonData("chartC", UI.Color.WHITE);

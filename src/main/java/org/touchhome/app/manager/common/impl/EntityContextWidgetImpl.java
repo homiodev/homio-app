@@ -30,11 +30,6 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
         WidgetLineChartEntity widgetLineChartEntity = new WidgetLineChartEntity()
                 .setEntityID(entityID).setName(name);
         LineChartWidgetBuilder builder = new LineChartWidgetBuilder() {
-            @Override
-            public LineChartWidgetBuilder showButtons(boolean on) {
-                widgetLineChartEntity.setShowTimeButtons(on);
-                return this;
-            }
 
             @Override
             public LineChartWidgetBuilder showAxisX(boolean on) {

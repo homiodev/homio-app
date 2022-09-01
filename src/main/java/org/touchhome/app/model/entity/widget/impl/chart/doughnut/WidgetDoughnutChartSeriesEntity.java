@@ -1,7 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.chart.doughnut;
 
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
@@ -12,7 +12,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDoughnutChartEntity>
-        implements HasSingleValueDataSource<WidgetDoughnutChartEntity> {
+        implements HasSingleValueDataSource {
 
     public static final String PREFIX = "wgspcs_";
 

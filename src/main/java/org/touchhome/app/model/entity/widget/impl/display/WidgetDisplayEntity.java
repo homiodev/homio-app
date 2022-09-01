@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.UIFieldJSONLine;
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.app.model.entity.widget.impl.HasLineChartDataSource;
-import org.touchhome.bundle.api.ui.TimePeriod;
+import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasLineChartBehaviour;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
@@ -13,7 +13,8 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetDisplayEntity extends WidgetBaseEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
-        implements HasLineChartDataSource<WidgetDisplayEntity>, HasDynamicParameterFields<WidgetDisplayEntity> {
+        implements HasLineChartBehaviour, HasDynamicParameterFields,
+        HasChartDataSource {
 
     public static final String PREFIX = "wgtdp_";
 
@@ -41,35 +42,8 @@ public class WidgetDisplayEntity extends WidgetBaseEntityAndSeries<WidgetDisplay
 
     @JsonIgnore
     @UIFieldIgnore
-    public Boolean getFillMissingValues() {
-        return true;
-    }
-
-    @JsonIgnore
-    @UIFieldIgnore
     public String getChartLabel() {
         return "";
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public Boolean getShowTimeButtons() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @UIField(order = 2)
-    @UIFieldSlider(min = 1, max = 72)
-    @UIFieldGroup("Chart")
-    public int getHoursToShow() {
-        return getJsonData("hts", 1);
-    }
-
-    @UIField(order = 3)
-    @UIFieldSlider(min = 1, max = 60)
-    @UIFieldGroup("Chart")
-    public int getPointsPerHour() {
-        return getJsonData("pph", 30);
     }
 
     @UIField(order = 4)
@@ -94,13 +68,6 @@ public class WidgetDisplayEntity extends WidgetBaseEntityAndSeries<WidgetDisplay
     }
 
     @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public TimePeriod getTimePeriod() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
     protected String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder.builder(50, 50) //
                 .addRow(rb -> rb //
@@ -117,14 +84,6 @@ public class WidgetDisplayEntity extends WidgetBaseEntityAndSeries<WidgetDisplay
 
     public void setChartHeight(int value) {
         setJsonData("ch", value);
-    }
-
-    public void setHoursToShow(int value) {
-        setJsonData("hts", value);
-    }
-
-    public void setPointsPerHour(int value) {
-        setJsonData("pph", value);
     }
 
     public void setChartType(ChartType value) {

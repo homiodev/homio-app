@@ -2,10 +2,8 @@ package org.touchhome.app.model.entity.widget.impl.slider;
 
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
 import javax.persistence.Entity;
 
@@ -34,18 +32,6 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
     @Override
     public String getEntityPrefix() {
         return PREFIX;
-    }
-
-    @Override
-    @UIFieldIgnore
-    public Boolean getShowTimeButtons() {
-        return super.getShowTimeButtons();
-    }
-
-    @Override
-    @UIFieldIgnore
-    public TimePeriod getTimePeriod() {
-        return super.getTimePeriod();
     }
 
     public void setVertical(Boolean value) {

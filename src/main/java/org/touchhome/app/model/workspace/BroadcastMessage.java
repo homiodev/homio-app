@@ -5,10 +5,10 @@ import org.touchhome.bundle.api.inmemory.InMemoryDBEntity;
 
 @Getter
 public class BroadcastMessage extends InMemoryDBEntity {
-    private final String name;
+    private final String entityID;
 
-    public BroadcastMessage(String name, Object value) {
+    public BroadcastMessage(String entityID, Object value) {
         super(value);
-        this.name = name;
+        this.entityID = entityID;
     }
 }

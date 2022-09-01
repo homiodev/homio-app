@@ -1,6 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.toggle;
 
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
@@ -13,7 +14,7 @@ import java.util.List;
 
 @Entity
 public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEntity>
-        implements HasSingleValueDataSource<WidgetToggleEntity> {
+        implements HasSingleValueDataSource, HasIcon {
 
     public static final String PREFIX = "wgttgs_";
 
@@ -31,20 +32,6 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     public String getSetValueDataSource() {
         return HasSingleValueDataSource.super.getSetValueDataSource();
-    }
-
-    @UIField(order = 1)
-    @UIFieldIconPicker(allowThreshold = true, allowEmptyIcon = true)
-    @UIFieldGroup(value = "UI", order = 3)
-    public String getIcon() {
-        return getJsonData("icon", "");
-    }
-
-    @UIField(order = 2)
-    @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldGroup("UI")
-    public String getIconColor() {
-        return getJsonData("iconColor", UI.Color.WHITE);
     }
 
     @UIField(order = 3)
@@ -105,14 +92,6 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
 
     public void setPushToggleOffValue(String value) {
         setJsonData("offValue", value);
-    }
-
-    public void setIcon(String value) {
-        setJsonData("icon", value);
-    }
-
-    public void setIconColor(String value) {
-        setJsonData("iconColor", value);
     }
 
     @Override

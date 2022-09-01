@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
@@ -26,13 +25,11 @@ import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplaySeriesEnt
 import org.touchhome.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
 import org.touchhome.app.model.rest.WidgetDataRequest;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.ui.TimePeriod;
 
 import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 @Log4j2
 @RestController
@@ -58,25 +55,16 @@ public class WidgetChartsController {
 
     @PostMapping("/display/series")
     public DisplayDataResponse getDisplayValues(@RequestBody WidgetDataRequest request) {
-        WidgetDisplayEntity entity = entityContext.getEntity(request.getEntityID());
+        WidgetDisplayEntity entity = request.getEntity(entityContext, objectMapper, WidgetDisplayEntity.class);
         List<Object> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetDisplaySeriesEntity item : entity.getSeries()) {
-            BaseEntity<?> valueSource = entityContext.getEntity(item.getValueDataSource());
-
-            Object value = timeSeriesUtil.getSingleValue(entity, valueSource,
-                    item.getValueDynamicParameterFields(), request, item.getAggregationType(), item.getEntityID(),
-                    o -> o);
-            values.add(value);
+            values.add(timeSeriesUtil.getSingleValue(entity, item, o -> o));
         }
 
         TimeSeriesChartData<ChartDataset> chartData = null;
         if (StringUtils.isNotEmpty(entity.getChartDataSource())) {
-            TimePeriod.TimePeriodImpl timePeriod =
-                    timeSeriesUtil.buildTimePeriodFromHoursToShow(entity.getHoursToShow(), entity.getPointsPerHour());
-            chartData = timeSeriesUtil.buildTimeSeriesFullData(entity.getEntityID(), timePeriod, entity.getListenSourceUpdates(),
-                    Collections.singleton(entity));
-
-            fillSingleValue(entity, chartData, request);
+            chartData = timeSeriesUtil.buildTimeSeriesFullData(entity.getEntityID(),
+                    entity.buildTimePeriod(), entity.getListenSourceUpdates(), Collections.singleton(entity));
         }
 
         return new DisplayDataResponse(values, chartData);
@@ -85,19 +73,17 @@ public class WidgetChartsController {
     @PostMapping("/line/series")
     public TimeSeriesChartData<ChartDataset> getChartSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetLineChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetLineChartEntity.class);
-        TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
 
-        return timeSeriesUtil.buildTimeSeriesFullData(entity.getEntityID(), timePeriod, entity.getListenSourceUpdates(),
-                entity.getSeries());
+        return timeSeriesUtil.buildTimeSeriesFullData(entity.getEntityID(), entity.buildTimePeriod(),
+                entity.getListenSourceUpdates(), entity.getSeries());
     }
 
     @PostMapping("/bartime/series")
     public TimeSeriesChartData<ChartDataset> getBartimeSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetBarTimeChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetBarTimeChartEntity.class);
-        TimePeriod.TimePeriodImpl timePeriod = TimePeriod.fromValue(request.getTimePeriod()).getTimePeriod();
 
-        return timeSeriesUtil.buildTimeSeriesFullData(entity.getEntityID(), timePeriod, entity.getListenSourceUpdates(),
-                entity.getSeries());
+        return timeSeriesUtil.buildTimeSeriesFullData(entity.getEntityID(), entity.buildTimePeriod(),
+                entity.getListenSourceUpdates(), entity.getSeries());
     }
 
     @PostMapping("/bar/series")
@@ -112,74 +98,47 @@ public class WidgetChartsController {
 
     @PostMapping("/doughnut/series")
     public TimeSeriesChartData<ChartDataset> getDoughnutSeries(@Valid @RequestBody WidgetDataRequest request) {
-        return getValueDataset(request, WidgetDoughnutChartEntity.class);
+        WidgetDoughnutChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetDoughnutChartEntity.class);
+        TimeSeriesChartData<ChartDataset> result = getValueDataset(request, WidgetDoughnutChartEntity.class);
+        String valueDataSource = entity.getValueDataSource();
+
+        if (StringUtils.isNotEmpty(valueDataSource)) {
+            BaseEntity<?> valueSource = entityContext.getEntity(valueDataSource);
+            if (valueSource != null) {
+                result.value = timeSeriesUtil.getSingleValue(entity, entity, o -> o);
+            }
+        }
+
+        return result;
     }
 
     @PostMapping("/gauge/value")
     public Object getGaugeValue(@Valid @RequestBody WidgetDataRequest request) {
         WidgetGaugeEntity entity = request.getEntity(entityContext, objectMapper, WidgetGaugeEntity.class);
-
-        BaseEntity<?> valueSource = entityContext.getEntity(entity.getValueDataSource());
-        return timeSeriesUtil.getSingleValue(entity, valueSource,
-                entity.getValueDynamicParameterFields(), request, entity.getAggregationType(), null,
-                o -> o);
+        return timeSeriesUtil.getSingleValue(entity, entity, o -> o);
     }
 
-    private <T extends ChartBaseEntity> TimeSeriesChartData<ChartDataset> getValueDataset(WidgetDataRequest request,
-                                                                                          Class<T> chartClass) {
+    private <S extends WidgetSeriesEntity<T> & HasSingleValueDataSource, T extends ChartBaseEntity<T, S>> TimeSeriesChartData<ChartDataset>
+    getValueDataset(WidgetDataRequest request, Class<T> chartClass) {
         T entity = request.getEntity(entityContext, objectMapper, chartClass);
         TimeSeriesChartData<ChartDataset> timeSeriesChartData = new TimeSeriesChartData<>();
 
-        Set<WidgetSeriesEntity> series = entity.getSeries();
-        for (WidgetSeriesEntity item : series) {
-            BaseEntity<?> source = entityContext.getEntity(((HasSingleValueDataSource) item).getValueDataSource());
+        for (S item : entity.getSeries()) {
+            Object value = timeSeriesUtil.getSingleValue(entity, item, o -> o);
+
             ChartDataset dataset = new ChartDataset(item.getEntityID());
             timeSeriesChartData.datasets.add(dataset);
-
-            Object value =
-                    timeSeriesUtil.getAggregateValueFromSeries(request, source, item.getValueDynamicParameterFields(),
-                            entity.getListenSourceUpdates(), ((HasSingleValueDataSource) item).getAggregationType(),
-                            entity.getEntityID(),
-                            item.getEntityID(),
-                            true);
             dataset.setData(Collections.singletonList(value == null ? 0F : ((Number) value).floatValue()));
         }
-        // fill single value for doughnut
-        fillSingleValue(entity, timeSeriesChartData, request);
-
         return timeSeriesChartData;
-    }
-
-    private <S extends WidgetSeriesEntity<T>, T extends WidgetBaseEntityAndSeries<T, S>> void fillSingleValue(
-            T entity, TimeSeriesChartData<ChartDataset> data, WidgetDataRequest request) {
-        if (entity instanceof HasSingleValueDataSource) {
-            HasSingleValueDataSource<?> valueEntity = (HasSingleValueDataSource<?>) entity;
-            String valueDataSource = valueEntity.getValueDataSource();
-
-            if (StringUtils.isNotEmpty(valueDataSource)) {
-                BaseEntity<?> valueSource = entityContext.getEntity(valueDataSource);
-                if (valueSource != null) {
-                    data.value = timeSeriesUtil.getSingleValue(entity, valueSource,
-                            valueEntity.getValueDynamicParameterFields(), request,
-                            valueEntity.getAggregationType(), entity.getEntityID(), o -> o);
-                }
-            }
-        }
-    }
-
-    public static String getColorWithOpacity(String color, int colorOpacity) {
-        if (StringUtils.isNotEmpty(color) && color.startsWith("#") && color.length() == 7) {
-            return color + String.format("%02X", colorOpacity);
-        }
-        return color;
     }
 
     @Getter
     @Setter
     public static class TimeSeriesChartData<T extends ChartDataset> {
-        private final List<String> labels = new ArrayList<>();
         private final List<T> datasets = new ArrayList<>();
-        private Object value; // for mini-card
+        private Object value; // for doughnut
+        private List<Long> timestamp;
     }
 
     @Getter

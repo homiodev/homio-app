@@ -3,11 +3,9 @@ package org.touchhome.app.model.entity.widget.impl.chart;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetGroup;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.Entity;
 
@@ -31,7 +29,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     }
 
     @UIField(order = 70)
-    @UIFieldGroup("Legend")
+    @UIFieldGroup(value = "Legend", order = 20, borderColor = "#77AD2F")
     public Boolean getLegendShow() {
         return getJsonData("ls", Boolean.TRUE);
     }
@@ -107,10 +105,20 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
         return (T) this;
     }
 
+    @UIField(order = 90)
+    @UIFieldGroup("Chart axis")
+    public String getAxisDateFormat() {
+        return getJsonData("timeF", "");
+    }
+
+    public void setAxisDateFormat(String value) {
+        setJsonData("timeF", value);
+    }
+
     @UIField(order = 1)
     @UIFieldGroup("Data labels")
     public boolean getShowDataLabels() {
-        return getJsonData("sdl", true);
+        return getJsonData("sdl", false);
     }
 
     public void setShowDataLabels(boolean value) {

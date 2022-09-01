@@ -1,19 +1,22 @@
 package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.rest.widget.ChartDataset;
 import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
 import org.touchhome.app.rest.widget.TimeSeriesContext;
-import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
+import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBarTimeChartEntity>
-        implements HasChartDataSource<WidgetBarTimeChartEntity> {
+        implements HasChartDataSource {
 
     public static final String PREFIX = "wgsbtcs_";
 
@@ -27,13 +30,6 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
         WidgetBarTimeChartSeriesEntity seriesEntity = (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
         ChartDataset dataset = new ChartDataset(item.getId());
 
-       // dataset.setBackgroundColor(Collections.singletonList(
-         //       WidgetChartsController.getColorWithOpacity(seriesEntity.getChartColor(), seriesEntity.getChartColorOpacity())));
-        // dataset.setBorderColor(Collections.singletonList(seriesEntity.getChartColor()));
-
-       // dataset.setBorderWidth(getWidgetEntity().getBorderWidth());
-    //    dataset.setLabel(item.getSeriesEntity().getTitle());
-
         if (item.getValues() != null && !item.getValues().isEmpty()) {
             dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), seriesEntity.getChartAggregationType()));
         }
@@ -43,5 +39,13 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
     @Override
     protected void beforePersist() {
         setInitChartColor(UI.Color.random());
+    }
+
+    @UIField(order = 1, required = true)
+    @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
+    @UIFieldGroup(value = "Chart", order = 10, borderColor = "#9C27B0")
+    @UIEditReloadWidget
+    public String getChartDataSource() {
+        return getJsonData("chartDS");
     }
 }

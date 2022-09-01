@@ -1,6 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
@@ -12,7 +13,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity>
-        implements HasSingleValueDataSource<WidgetSliderEntity> {
+        implements HasSingleValueDataSource, HasIcon {
 
     public static final String PREFIX = "wgssls_";
 
@@ -73,20 +74,6 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
         return getJsonData("step", 1);
     }
 
-    @UIField(order = 1)
-    @UIFieldIconPicker(allowEmptyIcon = true, allowThreshold = true)
-    @UIFieldGroup(value = "UI icon", order = 3, borderColor = "#009688")
-    public String getIcon() {
-        return getJsonData("icon", "");
-    }
-
-    @UIField(order = 1)
-    @UIFieldGroup("UI icon")
-    @UIFieldColorPicker(allowThreshold = true)
-    public String getIconColor() {
-        return getJsonData("iconColor", UI.Color.WHITE);
-    }
-
     @Override
     public String getEntityPrefix() {
         return PREFIX;
@@ -94,14 +81,6 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
 
     public void setSliderColor(String value) {
         setJsonData("sc", value);
-    }
-
-    public void setIcon(String value) {
-        setJsonData("icon", value);
-    }
-
-    public void setIconColor(String value) {
-        setJsonData("iconColor", value);
     }
 
     public void setValueTemplate(String value) {

@@ -76,6 +76,7 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
 
     @Override
     @JsonIgnore
+    @UIFieldIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");
     }

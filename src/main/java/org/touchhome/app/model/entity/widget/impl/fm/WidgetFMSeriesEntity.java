@@ -1,9 +1,9 @@
 package org.touchhome.app.model.entity.widget.impl.fm;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
-import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
@@ -13,7 +13,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetFMSeriesEntity extends WidgetSeriesEntity<WidgetFMEntity>
-        implements HasSingleValueDataSource<WidgetFMEntity> {
+        implements HasSingleValueDataSource {
 
     public static final String PREFIX = "wgsfms_";
 

@@ -12,12 +12,12 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChartEntity>
-        implements HasSingleValueDataSource<WidgetPieChartEntity> {
+        implements HasSingleValueDataSource {
 
     public static final String PREFIX = "wgspcs_";
 
     @UIField(order = 20)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
     @UIFieldColorPicker
     public String getChartColor() {
         return getJsonData("chartC", UI.Color.WHITE);

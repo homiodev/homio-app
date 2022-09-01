@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
@@ -77,6 +76,7 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
 
     @Override
     @JsonIgnore
+    @UIFieldIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");
     }

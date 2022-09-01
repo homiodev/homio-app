@@ -1,6 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.display;
 
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
@@ -9,7 +10,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>
-        implements HasSingleValueDataSource<WidgetDisplayEntity> {
+        implements HasSingleValueDataSource, HasIcon {
 
     public static final String PREFIX = "wgsdps_";
 
@@ -58,35 +59,14 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
         return getJsonData("vc", UI.Color.WHITE);
     }
 
-    @UIField(order = 1)
-    @UIFieldIconPicker(allowEmptyIcon = true, allowThreshold = true)
-    @UIFieldGroup(value = "Icon", order = 3)
-    public String getIcon() {
-        return getJsonData("icon", "fas fa-adjust");
-    }
-
-    @UIField(order = 2)
-    @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldGroup("Icon")
-    public String getIconColor() {
-        return getJsonData("iconColor", UI.Color.WHITE);
-    }
-
     @Override
     protected void beforePersist() {
-        String randomColor = UI.Color.random();
-        if (!getJsonData().has("iconColor")) {
-            setIconColor(randomColor);
-        }
+        HasIcon.randomIcon(this);
     }
 
     @Override
     public String getEntityPrefix() {
         return PREFIX;
-    }
-
-    public void setIconColor(String value) {
-        setJsonData("iconColor", value);
     }
 
     public void setNameColor(String value) {
@@ -103,10 +83,6 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
 
     public void setValueColor(String value) {
         setJsonData("vc", value);
-    }
-
-    public void setIcon(String value) {
-        setJsonData("icon", value);
     }
 
     public void setBackground(String value) {

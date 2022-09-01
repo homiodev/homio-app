@@ -25,7 +25,7 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
         this.broadcastLockManager = broadcastLockManager;
 
         // Blocks
-        this.receiveEvent = Scratch3Block.ofHandler("gotbroadcast", BlockType.hat, this::receiveEventHandler);
+        this.receiveEvent = Scratch3Block.ofHandler("got_broadcast", BlockType.hat, this::receiveEventHandler);
         this.broadcastEvent = Scratch3Block.ofHandler("broadcast", BlockType.command, this::broadcastEventHandler);
     }
 
@@ -45,6 +45,6 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
 
     public void fireBroadcastEvent(String broadcastRefEntityID) {
         WorkspaceBroadcastEntity entity = entityContext.getEntity(WorkspaceBroadcastEntity.PREFIX + broadcastRefEntityID);
-        entity.fireBroadcastEvent(broadcastRefEntityID, "");
+        entity.fireBroadcastEvent(1);
     }
 }

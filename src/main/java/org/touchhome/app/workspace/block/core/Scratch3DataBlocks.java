@@ -249,7 +249,7 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         String backupId = workspaceBlock.getFieldId("backup_list_group");
         WorkspaceBackupEntity entity = entityContext.getEntity(WorkspaceBackupEntity.PREFIX + backupId);
         return workspaceBackupRepository.getBackupLastValue(entity,
-                new ChartRequest(entityContext, null, null, null, false));
+                new ChartRequest(entityContext, null, null));
     }
 
     private void backupHandler(WorkspaceBlock workspaceBlock) {

@@ -3,7 +3,6 @@ package org.touchhome.app.model.entity.widget.impl.button;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
@@ -52,20 +51,6 @@ public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPush
     @JsonIgnore
     @UIFieldIgnore
     public String getBackground() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public Boolean getShowTimeButtons() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public TimePeriod getTimePeriod() {
         throw new IllegalStateException("MNC");
     }
 }

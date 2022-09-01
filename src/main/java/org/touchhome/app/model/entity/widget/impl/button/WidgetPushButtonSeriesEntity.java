@@ -2,6 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.button;
 
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
@@ -12,7 +13,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushButtonEntity>
-        implements HasChartDataSource<WidgetPushButtonEntity>, HasSingleValueDataSource<WidgetPushButtonEntity> {
+        implements HasChartDataSource, HasSingleValueDataSource, HasIcon {
 
     public static final String PREFIX = "wgsbs_";
 
@@ -41,20 +42,6 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
     @UIFieldGroup("UI")
     public String getConfirmMessage() {
         return getJsonData("confirm", "");
-    }
-
-    @UIField(order = 1)
-    @UIFieldIconPicker(allowThreshold = true, allowEmptyIcon = true)
-    @UIFieldGroup(value = "UI icon", order = 3, borderColor = "#009688")
-    public String getIcon() {
-        return getJsonData("icon", "");
-    }
-
-    @UIField(order = 3)
-    @UIFieldGroup("UI icon")
-    @UIFieldColorPicker(allowThreshold = true)
-    public String getIconColor() {
-        return getJsonData("iconColor", UI.Color.WHITE);
     }
 
     @Override
@@ -92,14 +79,6 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
     public WidgetPushButtonSeriesEntity setButtonColor(String value) {
         setJsonData("btnClr", value);
         return this;
-    }
-
-    public void setIcon(String value) {
-        setJsonData("icon", value);
-    }
-
-    public void setIconColor(String value) {
-        setJsonData("iconColor", value);
     }
 
     public void setConfirmMessage(String value) {

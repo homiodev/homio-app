@@ -1,7 +1,6 @@
 package org.touchhome.app.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.pivovarit.function.ThrowingBinaryOperator;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;

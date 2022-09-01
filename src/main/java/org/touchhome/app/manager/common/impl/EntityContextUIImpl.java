@@ -1,7 +1,6 @@
 package org.touchhome.app.manager.common.impl;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -34,15 +33,15 @@ import org.touchhome.common.fs.TreeNode;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 @Log4j2
-@RequiredArgsConstructor
 public class EntityContextUIImpl implements EntityContextUI {
-    public final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new HashMap<>();
+    public final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
 
     private final Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
     private final Map<String, BellNotification> bellNotifications = new ConcurrentHashMap<>();
@@ -62,6 +61,17 @@ public class EntityContextUIImpl implements EntityContextUI {
                     TreeNode.class.getSimpleName() // console tree
             )
     );
+
+    public EntityContextUIImpl(SimpMessagingTemplate messagingTemplate,
+                               EntityContextImpl entityContext) {
+        this.messagingTemplate = messagingTemplate;
+        this.entityContext = entityContext;
+
+        // run hourly script to drop not used dynamicUpdateRegisters
+        entityContext.bgp().schedule("drop-outdated-dynamicContext", (int) TimeUnit.HOURS.toMillis(1),
+                1, TimeUnit.HOURS, () -> this.dynamicUpdateRegisters.values().removeIf(v ->
+                        TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - v.timeout) > 1), false, false);
+    }
 
     @Override
     public void addBellNotification(@NotNull String entityID, @NotNull String name, @NotNull String value,
@@ -84,9 +94,8 @@ public class EntityContextUIImpl implements EntityContextUI {
             context.timeout = System.currentTimeMillis(); // refresh timer
             context.registerCounter.incrementAndGet();
         }
-        entityContext.event().addEventListener(request.getDynamicUpdateId() + "_" + request.getType(), o -> {
-            this.sendDynamicUpdate(request, o);
-        });
+        entityContext.event().addEventListener(request.getDynamicUpdateId() + "_" + request.getType(), o ->
+                this.sendDynamicUpdate(request, o));
     }
 
     public void unRegisterForUpdates(DynamicUpdateRequest request) {
@@ -129,6 +138,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public <T extends BaseEntity> void sendEntityUpdated(T entity) {
         entityContext.sendEntityUpdateNotification(entity, EntityContextImpl.ItemAction.Update);
     }
@@ -186,7 +196,6 @@ public class EntityContextUIImpl implements EntityContextUI {
             if (!page.isAnnotationPresent(UISidebarMenu.class)) {
                 throw new IllegalArgumentException("Trying add header button to page without annotation UISidebarMenu");
             }
-            page.getDeclaredAnnotation(UISidebarMenu.class);
             topJson.setPage(StringUtils.defaultIfEmpty(page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(),
                     page.getSimpleName()));
         }
@@ -267,10 +276,9 @@ public class EntityContextUIImpl implements EntityContextUI {
         Map<String, BellNotification> map = new LinkedHashMap<>();
         for (EntityContextImpl.InternalBundleContext bundleContext : entityContext.getBundles().values()) {
 
-            bundleContext.getBundleEntrypoint().assembleBellNotifications((notificationLevel, entityID, title, value) -> {
-                addBellNotification(map,
-                        new BellNotification(entityID).setTitle(title).setValue(value).setLevel(notificationLevel));
-            });
+            bundleContext.getBundleEntrypoint().assembleBellNotifications((notificationLevel, entityID, title, value) ->
+                    addBellNotification(map,
+                            new BellNotification(entityID).setTitle(title).setValue(value).setLevel(notificationLevel)));
 
             Class<? extends SettingPluginStatus> statusSettingClass =
                     bundleContext.getBundleEntrypoint().getBundleStatusSetting();

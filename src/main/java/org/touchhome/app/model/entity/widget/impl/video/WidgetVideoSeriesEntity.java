@@ -1,8 +1,8 @@
 package org.touchhome.app.model.entity.widget.impl.video;
 
 import org.springframework.data.util.Pair;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.model.StylePosition;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
@@ -19,7 +19,7 @@ import java.util.List;
 
 @Entity
 public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntity>
-        implements HasSingleValueDataSource<WidgetVideoEntity> {
+        implements HasSingleValueDataSource {
 
     public static final String PREFIX = "wgsvids_";
 

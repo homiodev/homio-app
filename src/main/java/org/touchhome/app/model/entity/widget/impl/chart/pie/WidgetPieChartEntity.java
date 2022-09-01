@@ -34,19 +34,6 @@ public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity, 
         return PREFIX;
     }
 
-    /*@Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public Integer getMin() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public Integer getMax() {
-        throw new IllegalStateException("MNC");
-    }*/
 
     @Override
     @UIFieldIgnore
@@ -78,6 +65,7 @@ public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity, 
 
     @Override
     @JsonIgnore
+    @UIFieldIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");
     }

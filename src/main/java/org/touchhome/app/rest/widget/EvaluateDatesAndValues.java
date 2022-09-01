@@ -1,13 +1,10 @@
 package org.touchhome.app.rest.widget;
 
-import org.springframework.data.util.Pair;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
-import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -29,13 +26,13 @@ public final class EvaluateDatesAndValues {
         }).collect(Collectors.toList());
     }
 
-    public static <T extends HasDynamicParameterFields<?> & HasChartDataSource<?>> List<Date> calculateDates(
-            TimePeriod.TimePeriodImpl timePeriod, List<TimeSeriesValues<T>> timeSeriesValues) {
+    public static <T extends HasDynamicParameterFields & HasChartDataSource> List<Date> calculateDates(
+            HasTimePeriod.TimePeriod timePeriod, List<TimeSeriesValues<T>> timeSeriesValues) {
         // get dates split by algorithm
         List<Date> dates = evaluateDates(timePeriod, timeSeriesValues);
-        List<Date> initialDates = new ArrayList<>(dates);
+        // List<Date> initialDates = new ArrayList<>(dates);
         // minimum number not 0 values to fit requirements
-        int minDateSize = initialDates.size() / 2;
+        // int minDateSize = initialDates.size() / 2;
         // fill values with remove 0 points. Attention: dates are modified by iterator
         fulfillValues(dates, timeSeriesValues);
         /* int index = 2;
@@ -55,10 +52,11 @@ public final class EvaluateDatesAndValues {
         return dates;
     }
 
-    private static <T extends HasChartDataSource<?>> List<Date>
-    evaluateDates(TimePeriod.TimePeriodImpl timePeriod, List<TimeSeriesValues<T>> timeSeriesValues) {
+    private static <T extends HasChartDataSource> List<Date>
+    evaluateDates(HasTimePeriod.TimePeriod timePeriod, List<TimeSeriesValues<T>> timeSeriesValues) {
         List<Date> dates = timePeriod.evaluateDateRange();
         if (dates == null) {
+            // TODO: currently not invokes
             long min = Long.MAX_VALUE, max = Long.MIN_VALUE;
             for (TimeSeriesValues<T> timeSeriesValue : timeSeriesValues) {
                 for (TimeSeriesContext<T> timeSeriesContext : timeSeriesValue.getItemSeries()) {
@@ -75,9 +73,8 @@ public final class EvaluateDatesAndValues {
         return dates;
     }
 
-    private static <T extends HasDynamicParameterFields<?> & HasChartDataSource<?>>
+    private static <T extends HasDynamicParameterFields & HasChartDataSource>
     void fulfillValues(List<Date> dates, List<TimeSeriesValues<T>> timeSeriesValues) {
-        boolean calcMissingValues = true;
         List<Iterator<List<Float>>> fullChartValueIterators = new ArrayList<>();
 
         for (TimeSeriesValues<T> timeSeriesValue : timeSeriesValues) {
@@ -97,14 +94,12 @@ public final class EvaluateDatesAndValues {
                 }
                 timeSeriesContext.setValues(values);
 
-                Boolean fillMissingValues = timeSeriesContext.getSeriesEntity().getFillMissingValues();
-
-                calcMissingValues = calcMissingValues && !fillMissingValues;
                 fullChartValueIterators.add(values.iterator());
             }
         }
 
         // need erase dates only through all datasets
+        /* TODO:
         if (calcMissingValues) {
             for (Iterator<Date> dateIterator = dates.iterator(); dateIterator.hasNext(); ) {
                 List<List<Float>> valuesList = fullChartValueIterators.stream().map(Iterator::next).collect(Collectors.toList());
@@ -117,7 +112,7 @@ public final class EvaluateDatesAndValues {
                     dateIterator.remove();
                 }
             }
-        }
+        }*/
     }
 
     private static int getDateIndex(List<Date> dateList, long time) {
@@ -127,27 +122,5 @@ public final class EvaluateDatesAndValues {
             }
         }
         return dateList.size() - 1;
-    }
-
-    public static List<String> buildLabels(TimePeriod.TimePeriodImpl timePeriod, List<Date> dates) {
-        DateFormat dateFormat = getDateFormat(timePeriod, dates);
-        return dates.stream().map(dateFormat::format).collect(Collectors.toList());
-    }
-
-    public static DateFormat getDateFormat(TimePeriod.TimePeriodImpl timePeriod, List<Date> dates) {
-        Pair<Date, Date> dateRange = timePeriod.getDateRange();
-        long diff = dateRange.getSecond().getTime() - dateRange.getFirst().getTime();
-        int minutes = (int) (diff / 60000);
-        if (minutes < 60) {
-            return new SimpleDateFormat("mm:ss");
-        } else if (minutes < TimeUnit.HOURS.toMillis(24)) {
-            return new SimpleDateFormat("HH:mm:ss");
-        } else if (minutes < TimeUnit.DAYS.toMillis(7)) {
-            return new SimpleDateFormat("dd:HH:mm");
-        } else if (minutes < TimeUnit.DAYS.toMillis(30)) {
-            return new SimpleDateFormat("MM-dd:HH:mm");
-        } else {
-            return new SimpleDateFormat("yy-MM-dd:HH");
-        }
     }
 }

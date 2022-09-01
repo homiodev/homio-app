@@ -2,10 +2,8 @@ package org.touchhome.app.model.entity.widget.impl.toggle;
 
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
 import javax.persistence.Entity;
 
@@ -63,18 +61,6 @@ public class WidgetToggleEntity extends WidgetBaseEntityAndSeries<WidgetToggleEn
 
     enum ToggleType {
         Regular, Slide
-    }
-
-    @Override
-    @UIFieldIgnore
-    public TimePeriod getTimePeriod() {
-        return super.getTimePeriod();
-    }
-
-    @Override
-    @UIFieldIgnore
-    public Boolean getShowTimeButtons() {
-        return super.getShowTimeButtons();
     }
 
     public void setShowAllButton(Boolean value) {

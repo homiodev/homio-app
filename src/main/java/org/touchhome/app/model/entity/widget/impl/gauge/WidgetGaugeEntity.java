@@ -1,23 +1,24 @@
 package org.touchhome.app.model.entity.widget.impl.gauge;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
-import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
+import org.touchhome.app.model.entity.widget.impl.HasIcon;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
+import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
-        implements HasSingleValueDataSource<WidgetGaugeEntity> {
+        implements HasSingleValueDataSource, HasTimePeriod, HasIcon {
 
     public static final String PREFIX = "wgtgg_";
 
-    @UIField(order = 15)
+    @UIField(order = 1)
+    @UIFieldGroup(value = "UI", order = 5, borderColor = "#21B584")
     public GaugeType getDisplayType() {
         return getJsonDataEnum("displayType", GaugeType.arch);
     }
@@ -27,7 +28,8 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         return this;
     }
 
-    @UIField(order = 16, label = "gauge.min")
+    @UIField(order = 2, label = "gauge.min")
+    @UIFieldGroup("UI")
     public Integer getMin() {
         return getJsonData("min", 0);
     }
@@ -37,7 +39,8 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         return this;
     }
 
-    @UIField(order = 17, label = "gauge.max")
+    @UIField(order = 3, label = "gauge.max")
+    @UIFieldGroup("UI")
     public Integer getMax() {
         return getJsonData("max", 255);
     }
@@ -47,7 +50,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         return this;
     }
 
-    @UIField(order = 18, type = UIFieldType.Slider, label = "gauge.thick")
+    @UIField(order = 4, type = UIFieldType.Slider, label = "gauge.thick")
     @UIFieldNumber(min = 1, max = 10)
     @UIFieldGroup("UI")
     public Integer getThick() {
@@ -59,7 +62,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         return this;
     }
 
-    @UIField(order = 19)
+    @UIField(order = 5)
     @UIFieldGroup("UI")
     public LineType getGaugeCapType() {
         return getJsonDataEnum("gaugeCapType", LineType.round);
@@ -70,38 +73,31 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         return this;
     }
 
-    @UIField(order = 20)
+    @UIField(order = 6)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true)
-    public String getForeground() {
-        return getJsonData("fg", "#009688");
+    public String getGaugeForeground() {
+        return getJsonData("gfc", UI.Color.WHITE);
     }
 
-    public WidgetGaugeEntity setForeground(String value) {
-        setJsonData("fg", value);
-        return this;
+    public void setGaugeForeground(String value) {
+        setJsonData("gfc", value);
     }
 
-    @UIField(order = 22)
-    @UIFieldGroup("UI")
-    public String getPrepend() {
-        return getJsonData("prepend");
+    @UIField(order = 1, type = UIFieldType.StringTemplate)
+    @UIFieldGroup(value = "Value", order = 20)
+    public String getValueTemplate() {
+        return getJsonData("vt", "~~~℃");
     }
 
-    public WidgetGaugeEntity setPrepend(String value) {
-        setJsonData("prepend", value);
-        return this;
+    public void setValueTemplate(String value) {
+        setJsonData("vt", value);
     }
 
-    @UIField(order = 23)
-    @UIFieldGroup("UI")
-    public String getAppend() {
-        return getJsonData("append");
-    }
-
-    public WidgetGaugeEntity setAppend(String value) {
-        setJsonData("append", value);
-        return this;
+    @UIField(order = 2, label = "label")
+    @UIFieldGroup(value = "Value")
+    public String getName() {
+        return super.getName();
     }
 
     @UIField(order = 24)
@@ -116,6 +112,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
 
     @Override
     @JsonIgnore
+    @UIFieldIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");
     }
@@ -127,7 +124,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
 
     @Override
     public boolean updateRelations(EntityContext entityContext) {
-        String valueDataSource = getValueDataSource();
+        String valueDataSource = getSingleValueDataSource().getKey();
         if (valueDataSource != null && entityContext.getEntity(valueDataSource) == null) {
             this.setValueDataSource(null);
             return true;
@@ -138,6 +135,13 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     @Override
     public String getEntityPrefix() {
         return PREFIX;
+    }
+
+    @Override
+    protected void beforePersist() {
+        if (!getJsonData().has("gfg")) {
+            setGaugeForeground(UI.Color.random());
+        }
     }
 
     public enum GaugeType {

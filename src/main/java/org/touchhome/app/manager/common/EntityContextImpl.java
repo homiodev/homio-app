@@ -186,10 +186,10 @@ public class EntityContextImpl implements EntityContext {
         this.broadcastLockManager = broadcastLockManager;
         this.touchHomeProperties = touchHomeProperties;
 
+        this.entityContextBGP = new EntityContextBGPImpl(this, touchHomeProperties, taskScheduler);
         this.entityContextUI = new EntityContextUIImpl(messagingTemplate, this);
         this.entityContextUDP = new EntityContextUDPImpl(this);
         this.entityContextEvent = new EntityContextEventImpl(broadcastLockManager);
-        this.entityContextBGP = new EntityContextBGPImpl(this, touchHomeProperties, taskScheduler);
         this.entityContextSetting = new EntityContextSettingImpl(this);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
     }

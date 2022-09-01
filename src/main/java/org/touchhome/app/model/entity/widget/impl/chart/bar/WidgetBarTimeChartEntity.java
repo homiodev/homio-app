@@ -1,24 +1,22 @@
 package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.touchhome.app.model.entity.widget.UIFieldJSONLine;
+import org.touchhome.app.model.entity.widget.impl.HasMinMaxChartValue;
+import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
-import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetBarTimeChartEntity
-        extends ChartBaseEntity<WidgetBarTimeChartEntity, WidgetBarTimeChartSeriesEntity> {
+        extends ChartBaseEntity<WidgetBarTimeChartEntity, WidgetBarTimeChartSeriesEntity>
+        implements HasTimePeriod, HasMinMaxChartValue {
 
     public static final String PREFIX = "wgtbtc_";
-
-    @UIField(order = 38)
-    public BarChartType getDisplayType() {
-        return getJsonDataEnum("displayType", BarChartType.Horizontal);
-    }
 
     public WidgetBarTimeChartEntity setDisplayType(BarChartType value) {
         setJsonData("displayType", value);
@@ -36,15 +34,21 @@ public class WidgetBarTimeChartEntity
         return this;
     }
 
-    @UIField(order = 52)
-    @UIFieldSlider(min = 0, max = 4)
-    public int getBorderWidth() {
-        return getJsonData("bw", 1);
+    @UIField(order = 10)
+    @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
+    public BarChartType getDisplayType() {
+        return getJsonDataEnum("displayType", BarChartType.Horizontal);
     }
 
-    public WidgetBarTimeChartEntity setBorderWidth(int value) {
-        setJsonData("bw", value);
-        return this;
+    @UIField(order = 12)
+    @UIFieldGroup("Chart ui")
+    @UIFieldJSONLine(template = "{\"top\": number}, \"left\": number, \"bottom\": number, \"right\": number")
+    public String getBarBorderWidth() {
+        return getJsonData("bbw", "{\"top\": 1, \"left\": 1, \"bottom\": 1, \"right\": 1}");
+    }
+
+    public void setBarBorderWidth(String value) {
+        setJsonData("bbw", value);
     }
 
     @Override
@@ -63,6 +67,7 @@ public class WidgetBarTimeChartEntity
 
     @Override
     @JsonIgnore
+    @UIFieldIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");
     }

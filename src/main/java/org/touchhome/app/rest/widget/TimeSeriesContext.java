@@ -12,7 +12,7 @@ import java.util.List;
 @Getter
 @RequiredArgsConstructor
 @Accessors(chain = true)
-public class TimeSeriesContext<T extends HasChartDataSource<?>> {
+public class TimeSeriesContext<T extends HasChartDataSource> {
     private final String id;
     private final T seriesEntity;
     private final HasTimeValueSeries series;

@@ -14,7 +14,9 @@ import org.json.JSONObject;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.manager.common.v1.layout.UIDialogLayoutBuilderImpl;
+import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
+import org.touchhome.app.model.entity.widget.UIFieldTimeSlider;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -92,14 +94,16 @@ public class UIFieldUtils {
                     .collect(Collectors.toList());
         }), entityByClass(UIFieldEntityByClassSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
-            for (UIFieldEntityByClassSelection item : params.field.getDeclaredAnnotationsByType(
-                    UIFieldEntityByClassSelection.class)) {
+            UIFieldEntityByClassSelection[] entityClasses =
+                    params.field.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class);
+            for (UIFieldEntityByClassSelection item : entityClasses) {
                 Class<? extends HasEntityIdentifier> sourceClassType = item.value();
                 for (Class<? extends HasEntityIdentifier> foundTargetType : params.entityContext.getClassesWithParent(
                         sourceClassType, item.basePackages())) {
                     if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
                         for (BaseEntity baseEntity : params.entityContext.findAll((Class<BaseEntity>) foundTargetType)) {
-                            list.add(addEntityToSelection(baseEntity, params.classEntityForDynamicOptionLoader, sourceClassType));
+                            list.add(addEntityToSelection(baseEntity, params.classEntityForDynamicOptionLoader, sourceClassType,
+                                    entityClasses.length > 1));
                         }
                     }
                 }
@@ -202,8 +206,12 @@ public class UIFieldUtils {
     }
 
     private static OptionModel addEntityToSelection(HasEntityIdentifier entityIdentifier, Object requestedEntity,
-                                                    Class<? extends HasEntityIdentifier> sourceClassType) {
+                                                    Class<? extends HasEntityIdentifier> sourceClassType,
+                                                    boolean addInherit) {
         OptionModel optionModel = OptionModel.of(entityIdentifier.getEntityID(), entityIdentifier.getTitle());
+        if (addInherit) {
+            optionModel.json(jsonObject -> jsonObject.put("inherit", sourceClassType.getSimpleName()));
+        }
         List<Method> classDescriptionMethods = MethodUtils.getMethodsListWithAnnotation(sourceClassType, ClassDescription.class);
         Method descriptionMethod = classDescriptionMethods.isEmpty() ? null : classDescriptionMethods.iterator().next();
         String entityTypeDescription;
@@ -453,6 +461,9 @@ public class UIFieldUtils {
         if (uiField.hideLabelInFullWidth()) {
             jsonTypeMetadata.put("showLabelInFw", true);
         }
+        if (!uiField.visible()) {
+            jsonTypeMetadata.put("hideFromUI", true);
+        }
         if (StringUtils.isNotEmpty(uiField.bg())) {
             jsonTypeMetadata.put("bg", uiField.bg());
         }
@@ -508,10 +519,20 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("borderColor", uiFieldGroup.borderColor());
         }
 
+        UIEditReloadWidget uiEditReloadWidget = uiFieldContext.getDeclaredAnnotation(UIEditReloadWidget.class);
+        if (uiEditReloadWidget != null) {
+            jsonTypeMetadata.put("reloadOnUpdate", true);
+        }
+
         Pattern pattern = uiFieldContext.getDeclaredAnnotation(Pattern.class);
         if (pattern != null) {
             jsonTypeMetadata.put("regexp", pattern.regexp());
             jsonTypeMetadata.put("regexpMsg", pattern.message());
+        }
+
+        UIFieldTimeSlider uiFieldTimeSlider = uiFieldContext.getDeclaredAnnotation(UIFieldTimeSlider.class);
+        if (uiFieldTimeSlider != null) {
+            entityUIMetaData.setType("TimeSlider");
         }
 
         UIFieldProgress uiFieldProgress = uiFieldContext.getDeclaredAnnotation(UIFieldProgress.class);

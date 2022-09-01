@@ -20,7 +20,7 @@ import java.util.Set;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries> extends BaseEntity<WidgetSeriesEntity>
-        implements HasDynamicParameterFields<T>, Comparable<WidgetSeriesEntity>, HasJsonData<T> {
+        implements HasDynamicParameterFields, Comparable<WidgetSeriesEntity>, HasJsonData {
 
     private int priority;
 

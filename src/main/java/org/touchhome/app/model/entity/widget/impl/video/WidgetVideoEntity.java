@@ -5,6 +5,7 @@ import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetGroup;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.validation.MaxItems;
+import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
 import javax.persistence.Entity;
 import java.util.Set;
@@ -20,6 +21,7 @@ public class WidgetVideoEntity extends WidgetBaseEntityAndSeries<WidgetVideoEnti
     }
 
     @Override
+    @UIFieldIgnore
     @JsonIgnore
     public String getLayout() {
         throw new IllegalStateException("MNC");

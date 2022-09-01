@@ -10,7 +10,6 @@ import org.touchhome.bundle.api.converter.JSONObjectConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.model.HasPosition;
-import org.touchhome.bundle.api.ui.TimePeriod;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
@@ -27,7 +26,7 @@ import javax.persistence.*;
 @Accessors(chain = true)
 @NoArgsConstructor
 public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity<T>
-        implements HasPosition<WidgetBaseEntity>, HasJsonData<T> {
+        implements HasPosition<WidgetBaseEntity>, HasJsonData {
 
     /**
      * Uses for grouping widget by type on UI
@@ -94,17 +93,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         return false;
     }
 
-    @UIField(order = 1)
-    @UIFieldGroup("Update")
-    public UpdateInterval getReloadDataInterval() {
-        return getJsonDataEnum("rdi", UpdateInterval.Never);
-    }
-
-    public T setReloadDataInterval(UpdateInterval value) {
-        setJsonData("rdi", value);
-        return (T) this;
-    }
-
     @UIField(order = 2)
     @UIFieldGroup("Update")
     public Boolean getListenSourceUpdates() {
@@ -124,28 +112,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     public T setShowLastUpdateTimer(Boolean value) {
         setJsonData("slut", value);
-        return (T) this;
-    }
-
-    @UIField(order = 1)
-    @UIFieldGroup(value = "Period", order = 100)
-    public TimePeriod getTimePeriod() {
-        return getJsonDataEnum("tp", TimePeriod.All);
-    }
-
-    public T setTimePeriod(TimePeriod value) {
-        setJsonData("tp", value);
-        return (T) this;
-    }
-
-    @UIField(order = 2, showInContextMenu = true)
-    @UIFieldGroup("Period")
-    public Boolean getShowTimeButtons() {
-        return getJsonData("stb", Boolean.FALSE);
-    }
-
-    public T setShowTimeButtons(Boolean value) {
-        setJsonData("stb", value);
         return (T) this;
     }
 
