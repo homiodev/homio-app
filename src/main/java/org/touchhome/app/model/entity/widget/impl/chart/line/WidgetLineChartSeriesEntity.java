@@ -3,7 +3,6 @@ package org.touchhome.app.model.entity.widget.impl.chart.line;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
-import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
@@ -24,7 +23,7 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
 
     @Override
     protected void beforePersist() {
-        setInitChartColor(UI.Color.random());
+        HasChartDataSource.randomColor(this);
     }
 
     @UIField(order = 1, required = true)

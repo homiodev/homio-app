@@ -191,14 +191,18 @@ public class WidgetController {
     @PostMapping("/button/update")
     public void handleButtonClick(@RequestBody SingleValueRequest<Void> request) {
         WidgetPushButtonSeriesEntity series = getSeriesEntity(request);
-        BaseEntity<?> source = entityContext.getEntity(series.getSetValueDataSource());
+        String sourceEntityID = series.getSetSingleValueDataSource().getKey();
+        if (sourceEntityID == null) {
+            throw new IllegalArgumentException("Unable to find source set data source");
+        }
+        BaseEntity<?> source = entityContext.getEntity(sourceEntityID);
         if (source instanceof HasSetStatusValue) {
             ((HasSetStatusValue) source).setStatusValue(
                     new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(),
                             series.getValueToPush()));
-            return;
+        } else {
+            throw new IllegalArgumentException("Set data source must be of type HasSetStatusValue");
         }
-        throwNoDataSourceFound(request.entityID, series.getSetValueDataSource());
     }
 
     @PostMapping("/slider/values")
@@ -225,24 +229,34 @@ public class WidgetController {
     @PostMapping("/slider/update")
     public void updateSliderValue(@RequestBody SingleValueRequest<Integer> request) {
         WidgetSliderSeriesEntity series = getSeriesEntity(request);
-        BaseEntity<?> source = entityContext.getEntity(series.getSetValueDataSource());
+        String sourceEntityID = series.getSetSingleValueDataSource().getKey();
+        if (sourceEntityID == null) {
+            throw new IllegalArgumentException("Unable to find source set data source");
+        }
+        BaseEntity<?> source = entityContext.getEntity(sourceEntityID);
         if (source instanceof HasSetStatusValue) {
             ((HasSetStatusValue) source).setStatusValue(
                     new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(),
                             request.value));
+        } else {
+            throw new IllegalArgumentException("Set data source must be of type HasSetStatusValue");
         }
     }
 
     @PostMapping("/toggle/update")
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
         WidgetToggleSeriesEntity series = getSeriesEntity(request);
-        BaseEntity<?> source = entityContext.getEntity(series.getSetValueDataSource());
+        String sourceEntityID = series.getSetSingleValueDataSource().getKey();
+        if (sourceEntityID == null) {
+            throw new IllegalArgumentException("Unable to find source set data source");
+        }
+        BaseEntity<?> source = entityContext.getEntity(sourceEntityID);
         if (source instanceof HasSetStatusValue) {
             ((HasSetStatusValue) source).setStatusValue(
                     new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(),
                             request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue()));
         } else {
-            throw new ServerException("Unable to find handler for set value for slider");
+            throw new IllegalArgumentException("Set data source must be of type HasSetStatusValue");
         }
     }
 
@@ -430,9 +444,5 @@ public class WidgetController {
         private String entityID;
         private String seriesEntityID;
         private T value;
-    }
-
-    public static void throwNoDataSourceFound(String entityID, String dataSource) {
-        throw new IllegalStateException("Unable to find data source: '" + dataSource + "' for entity: '" + entityID + "'");
     }
 }

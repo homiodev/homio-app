@@ -49,7 +49,8 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         String activeNetworkInterface = networkHardwareRepository.getActiveNetworkInterface();
         list.add(new HardwarePluginEntity("Network interface", activeNetworkInterface));
         list.add(new HardwarePluginEntity("Internet stat", toString(networkHardwareRepository.stat(activeNetworkInterface))));
-        list.add(new HardwarePluginEntity("Network description", toString(networkHardwareRepository.getNetworkDescription(activeNetworkInterface))));
+        list.add(new HardwarePluginEntity("Network description",
+                toString(networkHardwareRepository.getNetworkDescription(activeNetworkInterface))));
         list.add(new HardwarePluginEntity("Cpu features", onLinux(SystemInfo::getCpuFeatures)));
         list.add(new HardwarePluginEntity("Cpu num", Runtime.getRuntime().availableProcessors()));
         list.add(new HardwarePluginEntity("Java", SystemUtils.JAVA_RUNTIME_NAME));
@@ -57,14 +58,18 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
                 ". Version: " + SystemUtils.OS_VERSION + ". Arch: " + SystemUtils.OS_ARCH));
 
         list.add(new HardwarePluginEntity("IP address", networkHardwareRepository.getIPAddress()));
-        list.add(new HardwarePluginEntity("Device model", EntityContext.isLinuxEnvironment() ? machineHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
-        list.add(new HardwarePluginEntity("Cloud status", this.entityContext.setting().getValue(ConsoleCloudProviderSetting.class).getStatus()));
-        list.add(new HardwarePluginEntity("Cloud keystore", user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));
+        list.add(new HardwarePluginEntity("Device model",
+                EntityContext.isLinuxEnvironment() ? machineHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
+        list.add(new HardwarePluginEntity("Cloud status",
+                this.entityContext.setting().getValue(ConsoleCloudProviderSetting.class).getStatus()));
+        list.add(new HardwarePluginEntity("Cloud keystore",
+                user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));
         list.add(new HardwarePluginEntity("Features", getFeatures()));
 
         for (SerialPort serialPort : SerialPort.getCommPorts()) {
-            list.add(new HardwarePluginEntity("Com port <" + serialPort.getSystemPortName() + ">", serialPort.getDescriptivePortName() +
-                    " [" + serialPort.getBaudRate() + "/" + serialPort.getPortDescription() + "]"));
+            list.add(new HardwarePluginEntity("Com port <" + serialPort.getSystemPortName() + ">",
+                    serialPort.getDescriptivePortName() +
+                            " [" + serialPort.getBaudRate() + "/" + serialPort.getPortDescription() + "]"));
         }
 
         Collections.sort(list);

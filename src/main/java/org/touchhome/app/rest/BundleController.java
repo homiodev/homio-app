@@ -36,7 +36,8 @@ public class BundleController {
     @GetMapping("/image/{bundleID}")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID) throws IOException {
-        BundleEntryPoint bundleEntryPoint = bundleService.getBundle(bundleID.contains("-") ? bundleID.substring(0, bundleID.indexOf("-")) : bundleID);
+        BundleEntryPoint bundleEntryPoint =
+                bundleService.getBundle(bundleID.contains("-") ? bundleID.substring(0, bundleID.indexOf("-")) : bundleID);
         URL imageUrl = bundleEntryPoint.getResource(bundleID + ".png");
         if (imageUrl == null) {
             imageUrl = bundleEntryPoint.getBundleImageURL();

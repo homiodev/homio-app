@@ -81,11 +81,13 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
     }
 
     private boolean orEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate()) || ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND2").evaluate());
+        return ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate()) ||
+                ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND2").evaluate());
     }
 
     private boolean andEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate()) && ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND2").evaluate());
+        return ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate()) &&
+                ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND2").evaluate());
     }
 
     private boolean gtEvaluateEvaluate(WorkspaceBlock workspaceBlock) {

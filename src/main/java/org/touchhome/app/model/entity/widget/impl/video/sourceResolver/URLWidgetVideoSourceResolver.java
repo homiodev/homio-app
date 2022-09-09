@@ -14,7 +14,8 @@ public class URLWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
         String videoType = getVideoType(item.getValueDataSource());
         try {
             if (Files.exists(Paths.get(item.getValueDataSource()))) {
-                return new VideoEntityResponse(item.getValueDataSource(), MediaController.createVideoLink(item.getValueDataSource()),
+                return new VideoEntityResponse(item.getValueDataSource(),
+                        MediaController.createVideoLink(item.getValueDataSource()),
                         videoType);
             }
         } catch (Exception ignore) {}

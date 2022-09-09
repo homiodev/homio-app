@@ -74,7 +74,8 @@ public class CacheService {
 
     private void singleEntityUpdated(BaseEntity entity) {
         Objects.requireNonNull(cacheManager.getCache(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI)).evict(entity.getEntityID());
-        Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME)).clear(); // need remove all because entity may create alos another entities
+        Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME))
+                .clear(); // need remove all because entity may create alos another entities
     }
 
     public void putToCache(PureRepository repository, HasEntityIdentifier entity, Map<String, Object[]> changeFields) {

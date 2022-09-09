@@ -95,18 +95,24 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     }
 
     @Override
-    public UIButtonItemBuilder addSelectableButton(@NotNull String name, String icon, String iconColor, UIActionHandler action, int order) {
+    public UIButtonItemBuilder addSelectableButton(@NotNull String name, String icon, String iconColor, UIActionHandler action,
+                                                   int order) {
         return addEntity(new UIButtonItemBuilderImpl(UIItemType.SelectableButton, name, icon, iconColor, order, action));
     }
 
     @Override
     public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButton(@NotNull String name, String icon,
-                                                                                          String color, @Nullable Integer dialogWidth,
-                                                                                          @NotNull UIActionHandler action, int order) {
+                                                                                          String color,
+                                                                                          @Nullable Integer dialogWidth,
+                                                                                          @NotNull UIActionHandler action,
+                                                                                          int order) {
         return addOpenDialogSelectableButtonInternal(name, icon, color, dialogWidth, action);
     }
 
-    public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButtonInternal(String name, String icon, String color, Integer dialogWidth, UIActionHandler action) {
+    public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButtonInternal(String name, String icon,
+                                                                                                  String color,
+                                                                                                  Integer dialogWidth,
+                                                                                                  UIActionHandler action) {
         UIDialogLayoutBuilderImpl uiDialogLayoutBuilder = new UIDialogLayoutBuilderImpl(name, dialogWidth);
         UIDialogLayoutBuilderImpl dialogEntityBuilder = addEntity(uiDialogLayoutBuilder);
         UIButtonItemBuilder entityBuilder = ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, color, action))

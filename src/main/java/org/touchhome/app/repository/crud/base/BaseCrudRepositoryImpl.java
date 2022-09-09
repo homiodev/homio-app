@@ -8,7 +8,8 @@ import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
 @NoRepositoryBean
-public class BaseCrudRepositoryImpl<T extends HasEntityIdentifier> extends SimpleJpaRepository<T, Integer> implements BaseCrudRepository<T> {
+public class BaseCrudRepositoryImpl<T extends HasEntityIdentifier> extends SimpleJpaRepository<T, Integer>
+        implements BaseCrudRepository<T> {
 
     BaseCrudRepositoryImpl(Class<T> domainClass, EntityManager entityManager) {
         super(domainClass, entityManager);

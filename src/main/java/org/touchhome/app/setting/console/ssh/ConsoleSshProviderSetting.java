@@ -5,7 +5,8 @@ import org.touchhome.bundle.api.service.SshProviderService;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsBean;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
-public class ConsoleSshProviderSetting implements ConsoleSettingPlugin<SshProviderService>, SettingPluginOptionsBean<SshProviderService> {
+public class ConsoleSshProviderSetting
+        implements ConsoleSettingPlugin<SshProviderService>, SettingPluginOptionsBean<SshProviderService> {
 
     @Override
     public Class<SshProviderService> getType() {

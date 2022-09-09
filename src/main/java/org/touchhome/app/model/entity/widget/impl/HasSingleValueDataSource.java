@@ -39,6 +39,15 @@ public interface HasSingleValueDataSource extends HasDynamicParameterFields {
         return getJsonData("svds");
     }
 
+    default Pair<String, String> getSetSingleValueDataSource() {
+        String data = getJsonData("svds");
+        if (data == null) {
+            return Pair.of(null, null);
+        }
+        String[] vds = data.split("~~~");
+        return Pair.of(vds[0], vds.length > 1 ? vds[1] : "");
+    }
+
     @UIField(order = 10)
     @UIFieldGroup(value = "Value", order = 2)
     @UIEditReloadWidget

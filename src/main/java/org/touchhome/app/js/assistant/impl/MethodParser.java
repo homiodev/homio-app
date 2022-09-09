@@ -12,7 +12,8 @@ final class MethodParser {
         String methodName = methodFitParser.getMethodName(finalNext);
 
         Set<Method> methods = new HashSet<>();
-        Stream<Method> stream = clazz.getSuperclass() != null ? Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
+        Stream<Method> stream = clazz.getSuperclass() != null ?
+                Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
                 Stream.of(clazz.getMethods());
 
         stream.forEach(method -> {

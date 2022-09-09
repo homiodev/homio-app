@@ -11,7 +11,8 @@ import org.touchhome.bundle.api.model.HasEntityIdentifier;
 
 import javax.persistence.EntityManager;
 
-public class CrudRepositoryFactoryBean<R extends JpaRepository<T, Integer>, T extends HasEntityIdentifier> extends JpaRepositoryFactoryBean<R, T, Integer> {
+public class CrudRepositoryFactoryBean<R extends JpaRepository<T, Integer>, T extends HasEntityIdentifier>
+        extends JpaRepositoryFactoryBean<R, T, Integer> {
 
     /**
      * Creates a new {@link JpaRepositoryFactoryBean} for the given repository interface.
@@ -33,7 +34,8 @@ public class CrudRepositoryFactoryBean<R extends JpaRepository<T, Integer>, T ex
         }
 
         @Override
-        protected JpaRepositoryImplementation<?, ?> getTargetRepository(RepositoryInformation information, EntityManager entityManager) {
+        protected JpaRepositoryImplementation<?, ?> getTargetRepository(RepositoryInformation information,
+                                                                        EntityManager entityManager) {
             return new BaseCrudRepositoryImpl<>((Class<T>) information.getDomainType(), entityManager);
         }
 

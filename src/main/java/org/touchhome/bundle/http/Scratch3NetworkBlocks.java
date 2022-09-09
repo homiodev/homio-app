@@ -93,7 +93,8 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         if (StringUtils.isNotEmpty(payload)) {
             String host = workspaceBlock.getInputString("HOST");
             Integer port = workspaceBlock.getInputInteger("PORT");
-            InetSocketAddress address = StringUtils.isEmpty(host) ? new InetSocketAddress(port) : new InetSocketAddress(host, port);
+            InetSocketAddress address =
+                    StringUtils.isEmpty(host) ? new InetSocketAddress(port) : new InetSocketAddress(host, port);
             byte[] buf = payload.getBytes();
             udpSocket.send(new DatagramPacket(buf, buf.length, address));
         }

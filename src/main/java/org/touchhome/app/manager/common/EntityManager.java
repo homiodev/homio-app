@@ -42,7 +42,8 @@ public class EntityManager {
     public Class<? extends BaseEntity> getClassByType(String type) {
         for (Class<? extends BaseEntity> aClass : EntityContextImpl.baseEntityNameToClass.values()) {
             Entity entity = aClass.getDeclaredAnnotation(Entity.class);
-            if (entity != null && entity.name().equals(type) || aClass.getName().equals(type) || aClass.getSimpleName().equals(type)) {
+            if (entity != null && entity.name().equals(type) || aClass.getName().equals(type) ||
+                    aClass.getSimpleName().equals(type)) {
                 return aClass;
             }
         }

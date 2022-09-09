@@ -134,7 +134,8 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
             StringBuilder sb = new StringBuilder(formattedJavaScript);
             for (String patternValue : patternValues) {
                 String fnName = "rpl_" + Math.abs(patternValue.hashCode());
-                sb.append("\nfunction ").append(fnName).append("() { ").append(patternValue.contains("return ") ? patternValue : "return " + patternValue).append(" }");
+                sb.append("\nfunction ").append(fnName).append("() { ")
+                        .append(patternValue.contains("return ") ? patternValue : "return " + patternValue).append(" }");
             }
 
             // fire rpl functions

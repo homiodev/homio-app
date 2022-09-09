@@ -36,14 +36,16 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
     private static String appendPOST(String request, String params, boolean singleLine, String tabs) {
         return ("$.ajax({type: \"POST\"," + "url: window.location.origin + \"/rest/widget/") +
                 request + "\"," + (singleLine ? "\\\n" : "\n") +
-                tabs + "\tdataType: \"json\",async: false,contentType: \"application/json; charset=utf-8\"," + (singleLine ? "\\\n" : "\n") +
+                tabs + "\tdataType: \"json\",async: false,contentType: \"application/json; charset=utf-8\"," +
+                (singleLine ? "\\\n" : "\n") +
                 tabs + "\tdata: JSON.stringify(" + params + ")," + (singleLine ? "\\\n" : "\n") +
                 tabs + "\tsuccess: function () {}," + (singleLine ? "\\\n" : "\n") +
                 tabs + "\terror: showException" + (singleLine ? "\\\n" : "\n") +
                 tabs + "});";
     }
 
-    private void addTag(List<JSInput> jsInputs, String tag, int level, JSInputImpl parent, Consumer<JSStyle> jsStyleContext, Consumer<JSInput> jsInputContext) {
+    private void addTag(List<JSInput> jsInputs, String tag, int level, JSInputImpl parent, Consumer<JSStyle> jsStyleContext,
+                        Consumer<JSInput> jsInputContext) {
         JSInputImpl jsInputImpl = new JSInputImpl(tag, null, level, parent, jsStyleContext);
         jsInputs.add(jsInputImpl);
         jsInputContext.accept(jsInputImpl);
@@ -62,7 +64,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
         if (!jsServerVariables.variables.isEmpty()) {
             JsMethodImpl readVariablesOnServerValues = new JsMethodImpl("readVariablesOnServerValues", new String[0], false, 0);
-            readVariablesOnServerValues.raw(() -> "return [" + String.join(" \", \"", jsServerVariables.variables.values()) + "];");
+            readVariablesOnServerValues.raw(
+                    () -> "return [" + String.join(" \", \"", jsServerVariables.variables.values()) + "];");
             builder.append(readVariablesOnServerValues.build());
 
             JsMethodImpl readVariablesOnServerKeys = new JsMethodImpl("readVariablesOnServerKeys", new String[0], false, 0);
@@ -76,9 +79,11 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
         builder.append("\n\nfunction run() {\n");
         /*for (FetchEntity fetchEntity : fetchEntities) {
-            builder.append("var ").append(fetchEntity.name).append(" = manager.getEntity('").append(fetchEntity.entityID).append("');\n");
+            builder.append("var ").append(fetchEntity.name).append(" = manager.getEntity('").append(fetchEntity.entityID)
+            .append("');\n");
             if (fetchEntity.errorOnNotFound) {
-                builder.append("if(").append(fetchEntity.name).append("==null)return 'Error: Entity with entityID <").append(fetchEntity.entityID).append("> not found';\n");
+                builder.append("if(").append(fetchEntity.name).append("==null)return 'Error: Entity with entityID <").append
+                (fetchEntity.entityID).append("> not found';\n");
             }
         }*/
 
@@ -277,7 +282,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             StringBuilder builder = new StringBuilder();
             for (Map.Entry<String, JSONParameter> entry : arrays.entrySet()) {
                 builder.append("window.").append(entry.getKey()).append(" = (window.").append(entry.getKey())
-                        .append(" || []).concat(").append("\n").append(tabs).append(entry.getValue().toString(tabs.length() * 4 + 4)).append(tabs).append(");");
+                        .append(" || []).concat(").append("\n").append(tabs)
+                        .append(entry.getValue().toString(tabs.length() * 4 + 4)).append(tabs).append(");");
             }
             for (Map.Entry<String, JSONParameter> entry : parameters.entrySet()) {
                 builder.append("window.").append(entry.getKey()).append(" = ").append(entry.getValue().toString());
@@ -471,7 +477,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
         @Override
         public JSStyle ngStyleIf(String condition, String style, String value, String otherValue) {
-            builder.append(" [style]=\"").append("{").append("\\'").append(style).append("\\'").append(":").append(condition).append(" ? \\'").append(value).append("\\' : \\'").append(otherValue).append("\\'}\"");
+            builder.append(" [style]=\"").append("{").append("\\'").append(style).append("\\'").append(":").append(condition)
+                    .append(" ? \\'").append(value).append("\\' : \\'").append(otherValue).append("\\'}\"");
             return this;
         }
 
@@ -494,7 +501,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             builder.append(" (click)=\"")
                     .append(jsMethodImpl.name).append("(");
             if (params.length != jsMethodImpl.params.length) {
-                throw new IllegalArgumentException("JsMethod: " + jsMethod + "has different parameter count that onClick handling");
+                throw new IllegalArgumentException(
+                        "JsMethod: " + jsMethod + "has different parameter count that onClick handling");
             }
             for (int i = 0; i < params.length; i++) {
                 String param = params[i];
@@ -548,7 +556,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             if (inputContent != null) {
                 builder.append(inputContent);
             }
-            builder.append("\\\n").append(parent == null ? "" : parent.tabs).append("</").append(inputType).append(">\\\n").append(parent == null ? "" : parent.tabs);
+            builder.append("\\\n").append(parent == null ? "" : parent.tabs).append("</").append(inputType).append(">\\\n")
+                    .append(parent == null ? "" : parent.tabs);
 
             return builder.toString();
         }

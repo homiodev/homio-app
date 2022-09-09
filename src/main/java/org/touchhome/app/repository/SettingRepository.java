@@ -50,7 +50,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> impleme
         if (plugin instanceof SettingPluginOptionsRemovable) {
             for (OptionModel option : options) {
                 if (((SettingPluginOptionsRemovable<?>) plugin).removableOption(option)) {
-                    option.getJson().put("removable", true);
+                    option.put("removable", true);
                 }
             }
         }
@@ -128,7 +128,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> impleme
         if (plugin instanceof SettingPluginOptionsFileExplorer) {
             return ((SettingPluginOptionsFileExplorer) plugin).getIcon();
         }
-        if(plugin instanceof ConsoleHeaderSettingPlugin) {
+        if (plugin instanceof ConsoleHeaderSettingPlugin) {
             return ((ConsoleHeaderSettingPlugin) plugin).getIcon();
         }
         return null;

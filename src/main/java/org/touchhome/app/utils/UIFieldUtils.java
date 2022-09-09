@@ -14,9 +14,7 @@ import org.json.JSONObject;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.manager.common.v1.layout.UIDialogLayoutBuilderImpl;
-import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
-import org.touchhome.app.model.entity.widget.UIFieldLayout;
-import org.touchhome.app.model.entity.widget.UIFieldTimeSlider;
+import org.touchhome.app.model.entity.widget.*;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -102,8 +100,7 @@ public class UIFieldUtils {
                         sourceClassType, item.basePackages())) {
                     if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
                         for (BaseEntity baseEntity : params.entityContext.findAll((Class<BaseEntity>) foundTargetType)) {
-                            list.add(addEntityToSelection(baseEntity, params.classEntityForDynamicOptionLoader, sourceClassType,
-                                    entityClasses.length > 1));
+                            list.add(addEntityToSelection(baseEntity, params.classEntityForDynamicOptionLoader, sourceClassType));
                         }
                     }
                 }
@@ -206,12 +203,10 @@ public class UIFieldUtils {
     }
 
     private static OptionModel addEntityToSelection(HasEntityIdentifier entityIdentifier, Object requestedEntity,
-                                                    Class<? extends HasEntityIdentifier> sourceClassType,
-                                                    boolean addInherit) {
+                                                    Class<? extends HasEntityIdentifier> sourceClassType) {
         OptionModel optionModel = OptionModel.of(entityIdentifier.getEntityID(), entityIdentifier.getTitle());
-        if (addInherit) {
-            optionModel.json(jsonObject -> jsonObject.put("inherit", sourceClassType.getSimpleName()));
-        }
+        optionModel.json(jsonObject -> jsonObject.put("REQ_TARGET", sourceClassType.getSimpleName()));
+
         List<Method> classDescriptionMethods = MethodUtils.getMethodsListWithAnnotation(sourceClassType, ClassDescription.class);
         Method descriptionMethod = classDescriptionMethods.isEmpty() ? null : classDescriptionMethods.iterator().next();
         String entityTypeDescription;
@@ -499,6 +494,12 @@ public class UIFieldUtils {
 
         handleFieldSelections(uiFieldContext, entityContext, entityUIMetaData, jsonTypeMetadata);
 
+        UIFieldMarkers uiFieldMarkers = uiFieldContext.getDeclaredAnnotation(UIFieldMarkers.class);
+        if (uiFieldMarkers != null) {
+            entityUIMetaData.setType("Markers");
+            jsonTypeMetadata.put("markerOP", uiFieldMarkers.value());
+        }
+
         UIFieldLayout uiFieldLayout = uiFieldContext.getDeclaredAnnotation(UIFieldLayout.class);
         if (uiFieldLayout != null) {
             entityUIMetaData.setType("Layout");
@@ -655,6 +656,12 @@ public class UIFieldUtils {
             }
         }
 
+        UIFieldUpdateFontSize uiFieldUpdateFontSize = uiFieldContext.getDeclaredAnnotation(UIFieldUpdateFontSize.class);
+        if (uiFieldUpdateFontSize != null) {
+            jsonTypeMetadata.put("fsMin", uiFieldUpdateFontSize.min());
+            jsonTypeMetadata.put("fsMax", uiFieldUpdateFontSize.max());
+        }
+
         UIFieldNumber uiFieldNumber = uiFieldContext.getDeclaredAnnotation(UIFieldNumber.class);
         if (uiFieldNumber != null) {
             jsonTypeMetadata.put("min", uiFieldNumber.min());
@@ -726,7 +733,7 @@ public class UIFieldUtils {
             meta.put("selectOptions", uiFieldStaticSelection.value());
         }
 
-        if (uiFieldContext.getType().isEnum() && uiFieldContext.getType().getEnumConstants().length < 10) {
+        if (uiFieldContext.getType().isEnum() && uiFieldContext.getType().getEnumConstants().length < 20) {
             List<OptionModel> optionModels = OptionModel.enumList((Class<? extends Enum>) uiFieldContext.getType());
             JSONObject meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
             meta.put("selectOptions", optionModels);

@@ -71,9 +71,10 @@ public interface HasChartDataSource extends HasJsonData {
         setJsonData("clbl", value);
     }
 
-    default void setInitChartColor(String color) {
-        if (!getJsonData().has("chartC")) {
-            setChartColor(color);
+    static void randomColor(HasJsonData widget) {
+        String randomColor = UI.Color.random();
+        if (!widget.getJsonData().has("chartC")) {
+            widget.setJsonData("chartC", randomColor);
         }
     }
 

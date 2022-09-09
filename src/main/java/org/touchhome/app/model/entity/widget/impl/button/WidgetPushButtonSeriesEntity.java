@@ -4,16 +4,19 @@ import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.field.*;
+import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
+import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushButtonEntity>
-        implements HasChartDataSource, HasSingleValueDataSource, HasIcon {
+        implements HasChartDataSource, HasSingleValueDataSource, HasIcon, HasValueTemplate {
 
     public static final String PREFIX = "wgsbs_";
 
@@ -32,7 +35,7 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "UI", order = 2, borderColor = "#009688")
+    @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
     public String getButtonColor() {
         return getJsonData("btnClr", UI.Color.WHITE);
@@ -49,31 +52,13 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
         return PREFIX;
     }
 
-    @UIField(order = 1, type = UIFieldType.StringTemplate)
-    @UIFieldGroup(value = "Value", order = 4, borderColor = "#E91E63")
-    public String getValueTemplate() {
-        return getJsonData("valTmpl");
-    }
-
-    @UIField(order = 2)
-    @UIFieldGroup("Value")
-    public String getNoValueText() {
-        return getJsonData("noVal", "-");
-    }
-
-    @UIField(order = 3)
-    @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldGroup("Value")
-    public String getValueColor() {
-        return getJsonData("valC", UI.Color.WHITE);
-    }
-
     @Override
     protected void beforePersist() {
         if (!getJsonData().has("btnClr")) {
             setButtonColor(UI.Color.random());
         }
-        setInitChartColor(UI.Color.random());
+        HasChartDataSource.randomColor(this);
+        HasIcon.randomColor(this);
     }
 
     public WidgetPushButtonSeriesEntity setButtonColor(String value) {
@@ -87,17 +72,5 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
 
     public void setValueToPush(String value) {
         setJsonData("valToPush", value);
-    }
-
-    public void setNoValueText(String value) {
-        setJsonData("noVal", value);
-    }
-
-    public void setValueTemplate(String value) {
-        setJsonData("valTmpl", value);
-    }
-
-    public void setValueColor(String value) {
-        setJsonData("valC", value);
     }
 }

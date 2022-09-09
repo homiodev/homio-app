@@ -79,10 +79,12 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
             @Override
             public EntityContextBGP.ThreadPuller addScheduler(String name, String description, Date creationTime, String state,
-                                                              String errorMessage, int period, int runCount, String bigDescription) {
+                                                              String errorMessage, int period, int runCount,
+                                                              String bigDescription) {
                 if (!BaseProcessesConsolePlugin.this.handleThreads()) {
                     result.add(new BackgroundProcessJSON(name, name, description, creationTime, state,
-                            EntityContextBGPImpl.ScheduleType.DELAY.name(), -1L, null, errorMessage, (long) period, runCount, bigDescription));
+                            EntityContextBGPImpl.ScheduleType.DELAY.name(), -1L, null, errorMessage, (long) period, runCount,
+                            bigDescription));
                 }
                 return this;
             }

@@ -30,18 +30,20 @@ public class DoubleCheckPasswordAuthenticationProvider extends DaoAuthentication
         this.userRepository = userRepository;
         this.attemptsCache = CacheBuilder.newBuilder().
                 expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<String, Integer>() {
-            public Integer load(@SuppressWarnings("NullableProblems") String ignore) {
-                return 0;
-            }
-        });
+                    public Integer load(@SuppressWarnings("NullableProblems") String ignore) {
+                        return 0;
+                    }
+                });
     }
 
     @Override
-    protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication) throws AuthenticationException {
+    protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication)
+            throws AuthenticationException {
         if (authentication.getCredentials() == null) {
             logger.debug("Authentication failed: no credentials provided");
 
-            throw new BadCredentialsException(messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials", "Bad credentials"));
+            throw new BadCredentialsException(
+                    messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials", "Bad credentials"));
         }
 
         if (isBlocked(userDetails.getUsername())) {

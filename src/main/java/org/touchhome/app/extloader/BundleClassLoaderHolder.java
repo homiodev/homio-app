@@ -73,14 +73,16 @@ public class BundleClassLoaderHolder extends ClassLoader {
         return scanners;
     }
 
-    private ClassPathScanningCandidateComponentProvider createClassPathScanningCandidateComponentProvider(boolean includeInterfaces, SingleBundleClassLoader jarLoader) {
-        ClassPathScanningCandidateComponentProvider provider = !includeInterfaces ? new ClassPathScanningCandidateComponentProvider(false) :
-                new ClassPathScanningCandidateComponentProvider(false) {
-                    @Override
-                    protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
-                        return true;
-                    }
-                };
+    private ClassPathScanningCandidateComponentProvider createClassPathScanningCandidateComponentProvider(
+            boolean includeInterfaces, SingleBundleClassLoader jarLoader) {
+        ClassPathScanningCandidateComponentProvider provider =
+                !includeInterfaces ? new ClassPathScanningCandidateComponentProvider(false) :
+                        new ClassPathScanningCandidateComponentProvider(false) {
+                            @Override
+                            protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
+                                return true;
+                            }
+                        };
         if (jarLoader != null) {
             provider.setResourceLoader(new PathMatchingResourcePatternResolver(jarLoader));
         }

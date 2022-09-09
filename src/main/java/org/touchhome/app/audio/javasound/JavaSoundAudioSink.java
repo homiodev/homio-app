@@ -32,9 +32,11 @@ public class JavaSoundAudioSink implements AudioSink {
 
     private final EntityContext entityContext;
 
-    private static final Set<AudioFormat> SUPPORTED_AUDIO_FORMATS = new HashSet<>(Arrays.asList(AudioFormat.MP3, AudioFormat.WAV));
+    private static final Set<AudioFormat> SUPPORTED_AUDIO_FORMATS =
+            new HashSet<>(Arrays.asList(AudioFormat.MP3, AudioFormat.WAV));
 
-    private static final Set<Class<? extends AudioStream>> SUPPORTED_AUDIO_STREAMS = new HashSet<>(Collections.singletonList(AudioStream.class));
+    private static final Set<Class<? extends AudioStream>> SUPPORTED_AUDIO_STREAMS =
+            new HashSet<>(Collections.singletonList(AudioStream.class));
 
     @Override
     public Map<String, String> getSources() {

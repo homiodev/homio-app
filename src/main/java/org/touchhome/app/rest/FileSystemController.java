@@ -176,7 +176,7 @@ public class FileSystemController implements BeanPostConstruct {
 
     @PostMapping("/upload")
     public TreeNode upload(@RequestParam("sourceFs") String sourceFs, @RequestParam("sourceFileId") String sourceFileId,
-                             @RequestParam("replace") boolean replace, @RequestParam("data") MultipartFile[] files) {
+                           @RequestParam("replace") boolean replace, @RequestParam("data") MultipartFile[] files) {
         FileSystemProvider fileSystem = getFileSystem(sourceFs);
         Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
         return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);

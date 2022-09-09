@@ -69,13 +69,15 @@ public class WorkspaceController implements BeanPostConstruct {
             scratch3ExtensionBlock.init();
 
             if (!ID_PATTERN.matcher(scratch3ExtensionBlock.getId()).matches()) {
-                throw new IllegalArgumentException("Wrong Scratch3Extension: <" + scratch3ExtensionBlock.getId() + ">. Must contains [a-z] or '-'");
+                throw new IllegalArgumentException(
+                        "Wrong Scratch3Extension: <" + scratch3ExtensionBlock.getId() + ">. Must contains [a-z] or '-'");
             }
 
             if (!systemScratches.contains(scratch3ExtensionBlock.getClass())) {
                 BundleEntryPoint bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId());
                 if (bundleEntrypoint == null && scratch3ExtensionBlock.getId().contains("-")) {
-                    bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId().substring(0, scratch3ExtensionBlock.getId().indexOf("-")));
+                    bundleEntrypoint = bundleController.getBundle(
+                            scratch3ExtensionBlock.getId().substring(0, scratch3ExtensionBlock.getId().indexOf("-")));
                 }
                 int order = Integer.MAX_VALUE;
                 if (bundleEntrypoint == null) {
@@ -104,7 +106,8 @@ public class WorkspaceController implements BeanPostConstruct {
     @GetMapping("/extension/{bundleID}.png")
     public ResponseEntity<InputStreamResource> getExtensionImage(@PathVariable("bundleID") String bundleID) {
         BundleEntryPoint bundleEntrypoint = bundleService.getBundle(bundleID);
-        InputStream stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream("extensions/" + bundleEntrypoint.getBundleId() + ".png");
+        InputStream stream = bundleEntrypoint.getClass().getClassLoader()
+                .getResourceAsStream("extensions/" + bundleEntrypoint.getBundleId() + ".png");
         if (stream == null) {
             stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream(bundleEntrypoint.getBundleImage());
         }
@@ -125,7 +128,8 @@ public class WorkspaceController implements BeanPostConstruct {
 
     @GetMapping("/variable")
     public String getWorkspaceVariables() {
-        WorkspaceShareVariableEntity entity = entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
+        WorkspaceShareVariableEntity entity =
+                entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
         if (entity == null) {
             throw new NotFoundException("Unable to find workspace variables");
         }
@@ -147,7 +151,8 @@ public class WorkspaceController implements BeanPostConstruct {
     @SneakyThrows
     @PostMapping("/variable")
     public void saveVariables(@RequestBody String json) {
-        WorkspaceShareVariableEntity entity = entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
+        WorkspaceShareVariableEntity entity =
+                entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
         entityContext.save(entity.setContent(json));
     }
 
@@ -158,7 +163,8 @@ public class WorkspaceController implements BeanPostConstruct {
         if (optionalRepository.isPresent()) {
             AbstractRepository repository = optionalRepository.get();
             if (repository instanceof HasWorkspaceVariableLinkAbility) {
-                ((HasWorkspaceVariableLinkAbility) repository).createVariable(entityID, createVariable.varGroup, createVariable.varName, createVariable.key);
+                ((HasWorkspaceVariableLinkAbility) repository).createVariable(entityID, createVariable.varGroup,
+                        createVariable.varName, createVariable.key);
             } else {
                 throw new ServerException("Entity: '" + entityID + "' repository has no workspace variable link ability");
             }

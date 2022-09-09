@@ -33,7 +33,8 @@ public class ImageService {
 
     @SneakyThrows
     public ResponseEntity<InputStreamResource> getImage(Path imagePath) {
-        return TouchHomeUtils.inputStreamToResource(Files.newInputStream(imagePath), MediaType.parseMediaType(Files.probeContentType(imagePath)));
+        return TouchHomeUtils.inputStreamToResource(Files.newInputStream(imagePath),
+                MediaType.parseMediaType(Files.probeContentType(imagePath)));
     }
 
     public boolean isExistsImage(String imageID) {

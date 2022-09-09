@@ -81,7 +81,8 @@ import java.util.concurrent.Executors;
 @EntityScan(basePackages = {"org.touchhome"})
 @ComponentScan({"org.touchhome"})
 @Import(value = {WebSocketConfig.class})
-@EnableJpaRepositories(basePackages = "org.touchhome.app.repository.crud", repositoryFactoryBeanClass = CrudRepositoryFactoryBean.class)
+@EnableJpaRepositories(basePackages = "org.touchhome.app.repository.crud",
+        repositoryFactoryBeanClass = CrudRepositoryFactoryBean.class)
 @EnableTransactionManagement(proxyTargetClass = true)
 public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
 
@@ -100,7 +101,8 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     }
 
     @Bean
-    public HardwareRepositoryFactoryPostProcessor.HardwareRepositoryThreadPool hardwareRepositoryThreadPool(ThreadPoolTaskScheduler scheduler) {
+    public HardwareRepositoryFactoryPostProcessor.HardwareRepositoryThreadPool hardwareRepositoryThreadPool(
+            ThreadPoolTaskScheduler scheduler) {
         return (name, runnable) -> scheduler.submit(runnable);
     }
 
@@ -172,13 +174,15 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
         SimpleModule simpleModule = new SimpleModule();
         simpleModule.addSerializer(SecureString.class, new JsonSerializer<SecureString>() {
             @Override
-            public void serialize(SecureString secureString, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+            public void serialize(SecureString secureString, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
+                    throws IOException {
                 jsonGenerator.writeString(secureString.toString());
             }
         });
         simpleModule.addSerializer(Pin.class, new JsonSerializer<Pin>() {
             @Override
-            public void serialize(Pin pin, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+            public void serialize(Pin pin, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
+                    throws IOException {
                 jsonGenerator.writeStartObject();
                 jsonGenerator.writeStringField("name", pin.getName());
                 jsonGenerator.writeEndObject();
@@ -187,7 +191,8 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
 
         simpleModule.addSerializer(Scratch3ExtensionBlocks.class, new JsonSerializer<Scratch3ExtensionBlocks>() {
             @Override
-            public void serialize(Scratch3ExtensionBlocks block, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            public void serialize(Scratch3ExtensionBlocks block, JsonGenerator gen, SerializerProvider serializers)
+                    throws IOException {
                 gen.writeStartObject();
                 gen.writeStringField("id", block.getId());
                 if (block.getName() != null) {
@@ -272,7 +277,8 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
         FilterRegistrationBean<Filter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new OncePerRequestFilter() {
             @Override
-            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws IOException, ServletException {
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+                    throws IOException, ServletException {
                 applicationContext.getBean(CacheService.class).flushDelayedUpdates();
                 filterChain.doFilter(request, response);
             }

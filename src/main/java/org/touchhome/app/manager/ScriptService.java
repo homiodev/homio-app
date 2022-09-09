@@ -56,12 +56,14 @@ public class ScriptService {
     public void postConstruct() {
         for (ScriptEntity scriptEntity : entityContext.findAll(ScriptEntity.class)) {
             if (scriptEntity.isAutoStart()) {
-                EntityContextBGP.ThreadContext<Void> threadContext = this.entityContext.bgp().run(scriptEntity.getEntityID(), () -> {
-                    CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, null);
-                    runJavaScript(compiledScriptContext);
-                }, true);
+                EntityContextBGP.ThreadContext<Void> threadContext =
+                        this.entityContext.bgp().run(scriptEntity.getEntityID(), () -> {
+                            CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, null);
+                            runJavaScript(compiledScriptContext);
+                        }, true);
                 threadContext.onError(ex ->
-                        entityContext.updateDelayed(scriptEntity, s -> s.setStatus(Status.ERROR).setError(CommonUtils.getErrorMessage(ex))));
+                        entityContext.updateDelayed(scriptEntity,
+                                s -> s.setStatus(Status.ERROR).setError(CommonUtils.getErrorMessage(ex))));
             }
         }
     }
@@ -82,7 +84,8 @@ public class ScriptService {
     /**
      * @param forceBackground - if force - execute javascript in background without check if process has period or not
      */
-    public String startThread(ScriptEntity scriptEntity, String json, boolean allowRepeat, PrintStream logPrintStream, boolean forceBackground) throws Exception {
+    public String startThread(ScriptEntity scriptEntity, String json, boolean allowRepeat, PrintStream logPrintStream,
+                              boolean forceBackground) throws Exception {
         scriptEntity.setStatus(Status.RUNNING);
         if (forceBackground) {
             scriptEntity.setJavaScriptParameters(json);
@@ -107,7 +110,8 @@ public class ScriptService {
         StringBuilder script = new StringBuilder();
         appendFunc(script, "readyOnClient", "READY_BLOCK", compileScriptContext.getFormattedJavaScript());
 
-        Object value = ((Invocable) compileScriptContext.getCompiledScript().getEngine()).invokeFunction("run", compileScriptContext.getJsonParams());
+        Object value = ((Invocable) compileScriptContext.getCompiledScript().getEngine()).invokeFunction("run",
+                compileScriptContext.getJsonParams());
         if (value instanceof ScriptObjectMirror) {
             ScriptObjectMirror obj = (ScriptObjectMirror) value;
             JSONObject jsonObject = new JSONObject();
@@ -123,7 +127,8 @@ public class ScriptService {
     }
 
     public CompileScriptContext createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream) {
-        ScriptEngine engine = nashornScriptEngineFactory.getScriptEngine(new String[]{"--global-per-engine"}, bundleClassLoaderHolder);
+        ScriptEngine engine =
+                nashornScriptEngineFactory.getScriptEngine(new String[]{"--global-per-engine"}, bundleClassLoaderHolder);
         if (logPrintStream != null) {
             engine.put(JavaScriptBinder.log.name(), loggerService.getLogger(logPrintStream));
         }
@@ -146,7 +151,8 @@ public class ScriptService {
                 future.cancel(true);
                 createCompiledScriptSingleCallExecutorService.shutdownNow();
                 createCompiledScriptSingleCallExecutorService = Executors.newSingleThreadExecutor();
-                throw new ExecutionException("Script evaluation stuck. Got TimeoutException: " + CommonUtils.getErrorMessage(ex), ex);
+                throw new ExecutionException("Script evaluation stuck. Got TimeoutException: " + CommonUtils.getErrorMessage(ex),
+                        ex);
             }
         } catch (Exception ex) {
             log.error("Can not compile script: <{}>. Msg: <{}>", scriptEntity.getEntityID(), ex.getMessage());
@@ -158,8 +164,10 @@ public class ScriptService {
     /**
      * Run java script once and interrupt it if too long works
      */
-    public String callJavaScriptOnce(ScriptEntity scriptEntity, CompileScriptContext compiledScriptContext) throws InterruptedException, ExecutionException {
-        EntityContextBGP.ThreadContext<String> threadContext = this.entityContext.bgp().runAndGet(scriptEntity.getEntityID(), () -> runJavaScript(compiledScriptContext), true);
+    public String callJavaScriptOnce(ScriptEntity scriptEntity, CompileScriptContext compiledScriptContext)
+            throws InterruptedException, ExecutionException {
+        EntityContextBGP.ThreadContext<String> threadContext =
+                this.entityContext.bgp().runAndGet(scriptEntity.getEntityID(), () -> runJavaScript(compiledScriptContext), true);
         try {
             return threadContext.await(maxJavaScriptOnceCallBeforeInterruptInSec, TimeUnit.SECONDS);
         } catch (TimeoutException ex) {

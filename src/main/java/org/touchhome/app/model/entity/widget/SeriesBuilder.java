@@ -11,7 +11,8 @@ import java.util.stream.Collectors;
 
 public final class SeriesBuilder {
 
-    private static <T extends BaseEntity> List<OptionModel> buildOptions(EntityContext entityContext, Class<T> type, String prefix) {
+    private static <T extends BaseEntity> List<OptionModel> buildOptions(EntityContext entityContext, Class<T> type,
+                                                                         String prefix) {
         return entityContext.findAll(type).stream()
                 .map(e -> OptionModel.of(e.getEntityID(), prefix + e.getTitle())).collect(Collectors.toList());
     }

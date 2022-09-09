@@ -48,9 +48,11 @@ public class AwtImageProviderService implements ImageProviderService {
         }
         return handleChangeImage(image, formatType, bufferedImage -> {
             if (bufferedImage.getType() == BufferedImage.TYPE_BYTE_INDEXED) {
-                bufferedImage = copyImage(bufferedImage, "png".equals(formatType) ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+                bufferedImage = copyImage(bufferedImage,
+                        "png".equals(formatType) ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
             }
-            BufferedImage targetImage = copyImage(bufferedImage, "png".equals(formatType) ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+            BufferedImage targetImage =
+                    copyImage(bufferedImage, "png".equals(formatType) ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
             int[] pixel = {0, 0, 0, 0};
             float[] hsbvals = {0, 0, 0};
             // recalculare every pixel, changing the brightness
@@ -196,7 +198,8 @@ public class AwtImageProviderService implements ImageProviderService {
     }
 
     @SneakyThrows
-    private byte[] handleImage(byte[] content, String formatType, ThrowingBiFunction<Graphics2D, BufferedImage, Boolean, Exception> handle) {
+    private byte[] handleImage(byte[] content, String formatType,
+                               ThrowingBiFunction<Graphics2D, BufferedImage, Boolean, Exception> handle) {
         BufferedImage newBi = ImageIO.read(new ByteArrayInputStream(content));
         Graphics2D g = newBi.createGraphics();
         try {
@@ -212,7 +215,8 @@ public class AwtImageProviderService implements ImageProviderService {
     }
 
     @SneakyThrows
-    private byte[] handleChangeImage(byte[] content, String formatType, ThrowingFunction<BufferedImage, BufferedImage, Exception> handle) {
+    private byte[] handleChangeImage(byte[] content, String formatType,
+                                     ThrowingFunction<BufferedImage, BufferedImage, Exception> handle) {
         BufferedImage newBi = ImageIO.read(new ByteArrayInputStream(content));
         BufferedImage changedImage = handle.apply(newBi);
         if (changedImage != null) {
@@ -223,7 +227,8 @@ public class AwtImageProviderService implements ImageProviderService {
         return content;
     }
 
-    private Pair<Integer, Integer> getTextPosition(Graphics2D g, BufferedImage bufferedImage, String text, StylePosition stylePosition) {
+    private Pair<Integer, Integer> getTextPosition(Graphics2D g, BufferedImage bufferedImage, String text,
+                                                   StylePosition stylePosition) {
         int imageWidth = bufferedImage.getWidth();
         int imageHeight = bufferedImage.getHeight();
         int textWidth = g.getFontMetrics().stringWidth(text);

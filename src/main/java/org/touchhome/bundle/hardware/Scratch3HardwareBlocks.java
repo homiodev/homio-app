@@ -49,16 +49,20 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
 
         // Blocks
         this.myIpReporter = Scratch3Block.ofReporter(50, "my_ip", "my ip", this::fireGetByIP);
-        this.serverTimeReporter = Scratch3Block.ofReporter(60, "server_time", "time | format [FORMAT]", this::fireGetServerTimeReporter);
+        this.serverTimeReporter =
+                Scratch3Block.ofReporter(60, "server_time", "time | format [FORMAT]", this::fireGetServerTimeReporter);
         this.serverTimeReporter.addArgument("FORMAT");
 
-        this.cityGeoLocationReporter = Scratch3Block.ofReporter(100, "city_geo_location", "City geo [CITY] | json", this::fireGetCityGeoLocationReporter);
+        this.cityGeoLocationReporter = Scratch3Block.ofReporter(100, "city_geo_location", "City geo [CITY] | json",
+                this::fireGetCityGeoLocationReporter);
         this.cityGeoLocationReporter.addArgument("CITY", "unknown city");
 
-        this.ipGeoLocationReporter = Scratch3Block.ofReporter(200, "ip_geo_location", "IP geo [IP] | json", this::fireGetIPGeoLocation);
+        this.ipGeoLocationReporter =
+                Scratch3Block.ofReporter(200, "ip_geo_location", "IP geo [IP] | json", this::fireGetIPGeoLocation);
         this.ipGeoLocationReporter.addArgument("IP", "127.0.0.1");
 
-        this.settingChangeHat = Scratch3Block.ofHat(300, "setting_change", "Setting [SETTING] changed to [VALUE]", this::fireSettingChangeHatEvent);
+        this.settingChangeHat = Scratch3Block.ofHat(300, "setting_change", "Setting [SETTING] changed to [VALUE]",
+                this::fireSettingChangeHatEvent);
         this.settingChangeHat.addArgument(SETTING, this.settingsMenu);
         this.settingChangeHat.addArgument(VALUE);
 
@@ -67,7 +71,8 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
 
         entityContext.bgp().runOnceOnInternetUp("scratch3-hardware", () -> {
             this.ipGeoLocationReporter.addArgument("IP", fireGetByIP(null));
-            this.cityGeoLocationReporter.addArgument("CITY", networkHardwareRepository.getIpGeoLocation(networkHardwareRepository.getOuterIpAddress()).getCity());
+            this.cityGeoLocationReporter.addArgument("CITY",
+                    networkHardwareRepository.getIpGeoLocation(networkHardwareRepository.getOuterIpAddress()).getCity());
         });
     }
 

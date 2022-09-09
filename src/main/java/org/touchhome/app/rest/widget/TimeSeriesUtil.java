@@ -1,7 +1,6 @@
 package org.touchhome.app.rest.widget;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -102,11 +101,10 @@ public class TimeSeriesUtil {
                    @NotNull DS dataSource,
                    @NotNull Function<Object, R> resultConverter) {
         Pair<String, String> pair = dataSource.getSingleValueDataSource();
-        String inheritValue = pair.getValue();
+        String requireTargetInterface = pair.getValue();
         String seriesEntityId = dataSource.getEntityID();
         JSONObject dynamicParameters = dataSource.getValueDynamicParameterFields();
         BaseEntity<?> source = entityContext.getEntity(pair.getKey());
-        AggregationType aggregationType = dataSource.getAggregationType();
         if (source == null) {
             return null;
         }
@@ -115,11 +113,7 @@ public class TimeSeriesUtil {
         Object value;
         boolean aggregateGetter;
         if (source instanceof HasGetStatusValue || source instanceof HasAggregateValueFromSeries) {
-            if (StringUtils.isNotEmpty(inheritValue)) {
-                aggregateGetter = "HasAggregateValueFromSeries".equals(inheritValue);
-            } else {
-                aggregateGetter = source instanceof HasAggregateValueFromSeries;
-            }
+            aggregateGetter = HasAggregateValueFromSeries.class.getSimpleName().equals(requireTargetInterface);
         } else {
             throw new IllegalStateException("Unable to calculate value for: " + entity.getEntityID());
         }
@@ -129,6 +123,8 @@ public class TimeSeriesUtil {
                 throw new IllegalStateException("Entity with type " + entity.getTitle() + " with aggregation data source " +
                         "has to implement HasTimePeriod");
             }
+            AggregationType aggregationType = dataSource.getAggregationType();
+
             ChartRequest chartRequest = buildChartRequest(((HasTimePeriod) entity).buildTimePeriod(), dynamicParameters);
             value = ((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(chartRequest, aggregationType, false);
 
@@ -151,13 +147,13 @@ public class TimeSeriesUtil {
         return resultConverter.apply(value);
     }
 
-    public  <R> void addListenValueIfRequire(boolean listenSourceUpdates,
-                                             @NotNull String entityID,
-                                             @NotNull BaseEntity<?> source,
-                                             @Nullable JSONObject dynamicParameters,
-                                             @Nullable String seriesEntityId,
-                                             @Nullable String dataSourceEntityID,
-                                             @NotNull Supplier<R> valueSupplier) {
+    public <R> void addListenValueIfRequire(boolean listenSourceUpdates,
+                                            @NotNull String entityID,
+                                            @NotNull BaseEntity<?> source,
+                                            @Nullable JSONObject dynamicParameters,
+                                            @Nullable String seriesEntityId,
+                                            @Nullable String dataSourceEntityID,
+                                            @NotNull Supplier<R> valueSupplier) {
         if (listenSourceUpdates) {
             AtomicReference<R> valueRef = new AtomicReference<>(null);
             String key = entityID + defaultString(seriesEntityId, "");

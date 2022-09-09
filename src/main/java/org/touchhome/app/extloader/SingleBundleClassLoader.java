@@ -135,12 +135,12 @@ public class SingleBundleClassLoader extends JarClassLoader {
                         retCC[retLen++] = c;
                     }
                 } else if (c > 0x07FF) {
-                    retLen = escape(retCC, (char)(0xE0 | ((c >> 12) & 0x0F)), retLen);
-                    retLen = escape(retCC, (char)(0x80 | ((c >>  6) & 0x3F)), retLen);
-                    retLen = escape(retCC, (char)(0x80 | ((c >>  0) & 0x3F)), retLen);
+                    retLen = escape(retCC, (char) (0xE0 | ((c >> 12) & 0x0F)), retLen);
+                    retLen = escape(retCC, (char) (0x80 | ((c >> 6) & 0x3F)), retLen);
+                    retLen = escape(retCC, (char) (0x80 | ((c >> 0) & 0x3F)), retLen);
                 } else {
-                    retLen = escape(retCC, (char)(0xC0 | ((c >>  6) & 0x1F)), retLen);
-                    retLen = escape(retCC, (char)(0x80 | ((c >>  0) & 0x3F)), retLen);
+                    retLen = escape(retCC, (char) (0xC0 | ((c >> 6) & 0x1F)), retLen);
+                    retLen = escape(retCC, (char) (0x80 | ((c >> 0) & 0x3F)), retLen);
                 }
             }
             //worst case scenario for character [0x7ff-] every single

@@ -68,7 +68,8 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         this.playFileCommand.addArgument("VOLUME", 100);
 
         this.playPartFileCommand = withFile(Scratch3Block.ofHandler(12, "play_part",
-                BlockType.command, "Play file [FILE] to [SINK]|Volume [VOLUME], From [FROM]sec. Length [LENGTH]sec.", this::playPartFileCommand));
+                BlockType.command, "Play file [FILE] to [SINK]|Volume [VOLUME], From [FROM]sec. Length [LENGTH]sec.",
+                this::playPartFileCommand));
         this.playPartFileCommand.addArgument("SINK", this.sinkMenu);
         this.playPartFileCommand.addArgument("VOLUME", 100);
         this.playPartFileCommand.addArgument("FROM", 10);
@@ -90,8 +91,10 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
 
         this.lengthReporter = withFile(Scratch3Block.ofReporter(100, "length", "[FILE] Length", this::getLengthReporter));
         this.bitrateReporter = withFile(Scratch3Block.ofReporter(110, "bitrate", "[FILE] BitRate", this::getBitrateReporter));
-        this.sampleRateReporter = withFile(Scratch3Block.ofReporter(120, "samplerate", "[FILE] SampleRate", this::getSampleRateReporter));
-        this.textToAudioReporter = Scratch3Block.ofReporter(130, "tts", "text [VALUE] to audio [TTS]", this::getTextToAudioReporter);
+        this.sampleRateReporter =
+                withFile(Scratch3Block.ofReporter(120, "samplerate", "[FILE] SampleRate", this::getSampleRateReporter));
+        this.textToAudioReporter =
+                Scratch3Block.ofReporter(130, "tts", "text [VALUE] to audio [TTS]", this::getTextToAudioReporter);
         this.textToAudioReporter.addArgument(VALUE, "Hello world");
         this.textToAudioReporter.addArgument("TTS", this.ttsMenu);
     }
@@ -99,7 +102,8 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     private RawType getTextToAudioReporter(WorkspaceBlock workspaceBlock) {
         String text = workspaceBlock.getInputString(VALUE);
         if (!text.isEmpty()) {
-            TextToSpeechEntityService ttsService = workspaceBlock.getEntityService("TTS", this.ttsMenu, TextToSpeechEntityService.class);
+            TextToSpeechEntityService ttsService =
+                    workspaceBlock.getEntityService("TTS", this.ttsMenu, TextToSpeechEntityService.class);
             return new RawType(ttsService.synthesizeSpeech(text, true), "audio/mp3");
         }
         return null;

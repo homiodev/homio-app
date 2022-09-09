@@ -24,7 +24,8 @@ public class UIButtonItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UIButto
     @Getter
     private UIStickyDialogItemBuilder stickyDialogBuilder;
 
-    public UIButtonItemBuilderImpl(UIItemType uiItemType, String entityID, String icon, String iconColor, int order, UIActionHandler actionHandler) {
+    public UIButtonItemBuilderImpl(UIItemType uiItemType, String entityID, String icon, String iconColor, int order,
+                                   UIActionHandler actionHandler) {
         super(uiItemType, entityID, order, actionHandler);
         setValue(entityID);
         setIcon(icon, iconColor);

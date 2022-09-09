@@ -1,8 +1,11 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
+import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
@@ -13,7 +16,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity>
-        implements HasSingleValueDataSource, HasIcon {
+        implements HasSingleValueDataSource, HasIcon, HasValueTemplate {
 
     public static final String PREFIX = "wgssls_";
 
@@ -32,19 +35,6 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     public String getSetValueDataSource() {
         return HasSingleValueDataSource.super.getSetValueDataSource();
-    }
-
-    @UIField(order = 3, type = UIFieldType.StringTemplate)
-    @UIFieldGroup(value = "Value")
-    public String getValueTemplate() {
-        return getJsonData("valTmpl");
-    }
-
-    @UIField(order = 4)
-    @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldGroup("Value")
-    public String getValueColor() {
-        return getJsonData("valC", UI.Color.WHITE);
     }
 
     @UIField(order = 1)
@@ -83,14 +73,6 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
         setJsonData("sc", value);
     }
 
-    public void setValueTemplate(String value) {
-        setJsonData("valTmpl", value);
-    }
-
-    public void setValueColor(String value) {
-        setJsonData("valC", value);
-    }
-
     public WidgetSliderSeriesEntity setMin(Integer value) {
         setJsonData("min", value);
         return this;
@@ -107,8 +89,23 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
 
     @Override
     protected void beforePersist() {
+        HasIcon.randomColor(this);
         if (!getJsonData().has("sc")) {
             setSliderColor(UI.Color.random());
         }
+    }
+
+    @Override
+    @JsonIgnore
+    @UIFieldIgnore
+    public AggregationType getAggregationType() {
+        throw new IllegalStateException("MNC");
+    }
+
+    @Override
+    @JsonIgnore
+    @UIFieldIgnore
+    public String getNoValueText() {
+        throw new IllegalStateException("MNC");
     }
 }

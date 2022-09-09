@@ -72,7 +72,8 @@ public class DemoConfiguration {
     }
 
     private void clearWorkspace() throws JsonProcessingException {
-        WorkspaceShareVariableEntity shareVariableEntity = entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
+        WorkspaceShareVariableEntity shareVariableEntity =
+                entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
         JSONObject target = new JSONObject(StringUtils.defaultIfEmpty(shareVariableEntity.getContent(), "{}"));
         removeOutdatedVariables(target.optJSONObject("variables"), WorkspaceStandaloneVariableEntity.PREFIX);
         removeOutdatedVariables(target.optJSONObject("broadcasts"), WorkspaceBroadcastEntity.PREFIX);
@@ -96,7 +97,8 @@ public class DemoConfiguration {
             for (Iterator<String> iterator = list.keys(); iterator.hasNext(); ) {
                 String id = iterator.next();
                 BaseEntity entity = entityContext.getEntity(repositoryPrefix + id);
-                if (entity != null && TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - entity.getCreationTime().getTime()) > 10) {
+                if (entity != null &&
+                        TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - entity.getCreationTime().getTime()) > 10) {
                     entityContext.delete(entity);
                     iterator.remove();
                 }

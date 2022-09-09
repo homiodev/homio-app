@@ -30,7 +30,8 @@ public class EntityContextUDPImpl implements EntityContextUDP {
         if (!this.listenUdpMap.containsKey(hostPortKey)) {
             EntityContextBGP.ThreadContext<Void> scheduleFuture;
             try {
-                DatagramSocket socket = new DatagramSocket(host == null ? new InetSocketAddress(port) : new InetSocketAddress(host, port));
+                DatagramSocket socket =
+                        new DatagramSocket(host == null ? new InetSocketAddress(port) : new InetSocketAddress(host, port));
                 DatagramPacket datagramPacket = new DatagramPacket(new byte[255], 255);
 
                 scheduleFuture = entityContext.bgp().run("listen-udp-" + hostPortKey, () -> {

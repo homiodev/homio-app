@@ -35,13 +35,12 @@ public class ConsoleVisibleTabsSetting implements ConsoleSettingPlugin<String>, 
             String parentTab = entry.getValue().getParentTab();
             if (StringUtils.isNotEmpty(parentTab)) {
                 result.putIfAbsent(parentTab, OptionModel.key(parentTab));
-                if (!result.get(parentTab).getJson().has("children")) {
-                    result.get(parentTab).getJson().put("children", new JSONArray());
-                }
+                result.get(parentTab).putIfAbsent("children", new JSONArray());
                 result.get(parentTab).getJson().getJSONArray("children")
                         .put(new JSONObject().put("subTab", entry.getKey()).put("available", entry.getValue().isEnabled()));
             } else {
-                result.put(entry.getKey(), OptionModel.key(entry.getKey()).json(json -> json.put("available", entry.getValue().isEnabled())));
+                result.put(entry.getKey(),
+                        OptionModel.key(entry.getKey()).json(json -> json.put("available", entry.getValue().isEnabled())));
             }
         }
         return result.values();

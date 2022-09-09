@@ -33,7 +33,8 @@ public class JwtTokenProvider {
         this.regenerateSecurityIdOnRestart = entityContext.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);
         this.jwtParser = Jwts.parser().setSigningKey(buildSecurityId());
         this.jwtValidityTimeout = entityContext.setting().getValue(SystemJWTTokenValidSetting.class);
-        entityContext.setting().listenValue(SystemJWTTokenValidSetting.class, "jwt-valid", value -> this.jwtValidityTimeout = value);
+        entityContext.setting()
+                .listenValue(SystemJWTTokenValidSetting.class, "jwt-valid", value -> this.jwtValidityTimeout = value);
         entityContext.setting().listenValue(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
             this.regenerateSecurityIdOnRestart = value;
             this.jwtParser = Jwts.parser().setSigningKey(buildSecurityId());
@@ -88,7 +89,7 @@ public class JwtTokenProvider {
 
     private String buildSecurityId() {
         String securityId = TouchHomeUtils.APP_UUID;
-        if(regenerateSecurityIdOnRestart) {
+        if (regenerateSecurityIdOnRestart) {
             securityId += "_" + TouchHomeUtils.RUN_COUNT;
         }
         return securityId;

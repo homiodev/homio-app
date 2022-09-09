@@ -23,7 +23,8 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     private final Runnable runnable = () -> {
         Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
         while (!Thread.currentThread().isInterrupted()) {
-            for (Map.Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item : listenerHolder.broadcastListenersMap.entrySet()) {
+            for (Map.Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item :
+                    listenerHolder.broadcastListenersMap.entrySet()) {
                 if (item.getValue().getSecond().get()) {
                     item.getValue().getFirst().signalAll();
                 }
@@ -55,17 +56,17 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     }
 
     @Override
-    public  BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock) {
+    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock) {
         return getOrCreateLock(workspaceBlock, workspaceBlock.getId(), null);
     }
 
     @Override
-    public  BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key) {
+    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key) {
         return getOrCreateLock(workspaceBlock, key, null);
     }
 
     @Override
-    public  BroadcastLock listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
+    public BroadcastLock listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
         Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
         BroadcastLockImpl lock = getOrCreateLock(workspaceBlock);
         listenerHolder.broadcastListenersMap.put(workspaceBlock.getId(), Pair.of(lock, supplier));

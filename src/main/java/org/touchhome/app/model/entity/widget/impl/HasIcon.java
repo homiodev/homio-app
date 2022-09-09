@@ -9,7 +9,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldIconPicker;
 
 public interface HasIcon extends HasJsonData {
 
-    static void randomIcon(HasJsonData widget) {
+    static void randomColor(HasJsonData widget) {
         String randomColor = UI.Color.random();
         if (!widget.getJsonData().has("iconColor")) {
             widget.setJsonData("iconColor", randomColor);

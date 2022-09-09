@@ -96,7 +96,8 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         }
 
         static void sendLogEvent(String appenderName, LogEvent event, EntityContext entityContext) {
-            entityContext.ui().sendNotification("-lines-" + appenderName, formatLogMessage(event, event.getMessage().getFormattedMessage()));
+            entityContext.ui().sendNotification("-lines-" + appenderName,
+                    formatLogMessage(event, event.getMessage().getFormattedMessage()));
 
             if (event.getThrown() != null) {
                 StringWriter outError = new StringWriter();
@@ -141,7 +142,8 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
             if (level != Level.DEBUG) {
                 updateLogLevel(level);
             }
-            entityContext.setting().listenValue(ConsoleLogLevelSetting.class, "log-set-level", logLevel -> updateLogLevel(logLevel.getLevel()));
+            entityContext.setting()
+                    .listenValue(ConsoleLogLevelSetting.class, "log-set-level", logLevel -> updateLogLevel(logLevel.getLevel()));
         }
 
         private void updateLogLevel(Level level) {

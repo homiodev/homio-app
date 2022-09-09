@@ -59,8 +59,10 @@ public class SettingController implements BeanPostConstruct {
                 this.transientSettings.put((Class<? extends SettingPlugin<?>>) settingPlugin.getClass(),
                         SettingRepository.createSettingEntityFromPlugin(settingPlugin, new SettingEntity(), entityContext));
             }
-            if (settingPlugin instanceof ConsoleSettingPlugin && !settingPlugin.getClass().getSimpleName().startsWith("Console")) {
-                throw new ServerException("Console plugin class <" + settingPlugin.getClass().getName() + "> must starts with name 'Console'");
+            if (settingPlugin instanceof ConsoleSettingPlugin &&
+                    !settingPlugin.getClass().getSimpleName().startsWith("Console")) {
+                throw new ServerException(
+                        "Console plugin class <" + settingPlugin.getClass().getName() + "> must starts with name 'Console'");
             }
         }
     }
@@ -68,15 +70,18 @@ public class SettingController implements BeanPostConstruct {
     @GetMapping("/{entityID}/options")
     public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID,
                                                               @RequestParam(value = "param0", required = false) String param0) {
-        SettingPluginOptions<?> settingPlugin = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        SettingPluginOptions<?> settingPlugin =
+                (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         return SettingRepository.getOptions(settingPlugin, entityContext, new JSONObject().put("param0", param0));
     }
 
     @GetMapping("/{entityID}/packages/all")
-    public SettingPluginPackageInstall.PackageContext loadAllPackages(@PathVariable("entityID") String entityID) throws Exception {
+    public SettingPluginPackageInstall.PackageContext loadAllPackages(@PathVariable("entityID") String entityID)
+            throws Exception {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
-            SettingPluginPackageInstall.PackageContext packageContext = ((SettingPluginPackageInstall) settingPlugin).allPackages(entityContext);
+            SettingPluginPackageInstall.PackageContext packageContext =
+                    ((SettingPluginPackageInstall) settingPlugin).allPackages(entityContext);
             for (Map.Entry<String, Boolean> entry : packagesInProgress.entrySet()) {
                 SettingPluginPackageInstall.PackageModel singlePackage = packageContext.getPackages().stream()
                         .filter(p -> p.getName().equals(entry.getKey())).findFirst().orElse(null);
@@ -94,7 +99,8 @@ public class SettingController implements BeanPostConstruct {
     }
 
     @GetMapping("/{entityID}/packages")
-    public SettingPluginPackageInstall.PackageContext loadInstalledPackages(@PathVariable("entityID") String entityID) throws Exception {
+    public SettingPluginPackageInstall.PackageContext loadInstalledPackages(@PathVariable("entityID") String entityID)
+            throws Exception {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             return ((SettingPluginPackageInstall) settingPlugin).installedPackages(entityContext);
@@ -111,7 +117,8 @@ public class SettingController implements BeanPostConstruct {
             if (!packagesInProgress.containsKey(packageRequest.getName())) {
                 packagesInProgress.put(packageRequest.getName(), false);
                 entityContext.ui().runWithProgress("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(),
-                        false, progressBar -> ((SettingPluginPackageInstall) settingPlugin).unInstallPackage(entityContext, packageRequest, progressBar),
+                        false, progressBar -> ((SettingPluginPackageInstall) settingPlugin).unInstallPackage(entityContext,
+                                packageRequest, progressBar),
                         ex -> packagesInProgress.remove(packageRequest.getName()));
             }
         }
@@ -126,7 +133,9 @@ public class SettingController implements BeanPostConstruct {
             if (!packagesInProgress.containsKey(packageRequest.getName())) {
                 packagesInProgress.put(packageRequest.getName(), true);
                 entityContext.ui().runWithProgress("Install " + packageRequest.getName() + "/" + packageRequest.getVersion(),
-                        false, progressBar -> ((SettingPluginPackageInstall) settingPlugin).installPackage(entityContext, packageRequest, progressBar),
+                        false,
+                        progressBar -> ((SettingPluginPackageInstall) settingPlugin).installPackage(entityContext, packageRequest,
+                                progressBar),
                         ex -> packagesInProgress.remove(packageRequest.getName()));
             }
         }
@@ -224,7 +233,8 @@ public class SettingController implements BeanPostConstruct {
                 for (Map.Entry<String, ConsolePlugin<?>> entry : consoleController.getConsolePluginsMap().entrySet()) {
                     if (((ConsoleSettingPlugin<?>) plugin).acceptConsolePluginPage(entry.getValue())) {
                         settingToPages.computeIfAbsent(settingEntity.getEntityID(),
-                                s -> new HashSet<>()).add(StringUtils.defaultString(entry.getValue().getParentTab(), entry.getKey()));
+                                        s -> new HashSet<>())
+                                .add(StringUtils.defaultString(entry.getValue().getParentTab(), entry.getKey()));
                     }
                 }
             }

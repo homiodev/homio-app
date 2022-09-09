@@ -59,8 +59,10 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         this.waitBlock = Scratch3Block.ofHandler("wait", BlockType.command, this::waitHandler);
         this.waitUntilBlock = Scratch3Block.ofHandler("wait_until", BlockType.command, this::waitUntilHandler);
         this.repeatUntilBlock = Scratch3Block.ofHandler("repeat_until", BlockType.command, this::repeatUntilHandler);
-        this.whenConditionChangedBlock = Scratch3Block.ofHandler("when_condition_changed", BlockType.command, this::whenConditionChangedHandler);
-        this.whenValueChangedBlock = Scratch3Block.ofHandler("when_value_changed", BlockType.command, this::whenValueChangedHandler);
+        this.whenConditionChangedBlock =
+                Scratch3Block.ofHandler("when_condition_changed", BlockType.command, this::whenConditionChangedHandler);
+        this.whenValueChangedBlock =
+                Scratch3Block.ofHandler("when_value_changed", BlockType.command, this::whenValueChangedHandler);
     }
 
     private void scheduleCronHandler(WorkspaceBlock workspaceBlock) {
@@ -73,11 +75,12 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
                     workspaceBlock.getInputString("MONTH") + " " +
                     workspaceBlock.getInputString("DOW");
             AtomicInteger index = new AtomicInteger();
-            EntityContextBGP.ThreadContext<Void> schedule = entityContext.bgp().schedule("workspace-schedule-" + workspaceBlock.getId(), cron,
-                    () -> {
-                        workspaceBlock.setValue("index", index.getAndIncrement());
-                        child.handle();
-                    }, true, true);
+            EntityContextBGP.ThreadContext<Void> schedule =
+                    entityContext.bgp().schedule("workspace-schedule-" + workspaceBlock.getId(), cron,
+                            () -> {
+                                workspaceBlock.setValue("index", index.getAndIncrement());
+                                child.handle();
+                            }, true, true);
             workspaceBlock.onRelease(schedule::cancel);
         }
     }
@@ -200,7 +203,8 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     private void waitHandler(WorkspaceBlock workspaceBlock) {
         int duration = workspaceBlock.getInputInteger("DURATION");
         if (duration < 1 || duration > 3600) {
-            throw new ServerException("Unable to sleep current block, because duration is more than 1 hour. Actual value is: " + duration);
+            throw new ServerException(
+                    "Unable to sleep current block, because duration is more than 1 hour. Actual value is: " + duration);
         }
         TimeUnit.SECONDS.sleep(duration);
     }

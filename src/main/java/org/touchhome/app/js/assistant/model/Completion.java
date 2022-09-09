@@ -65,7 +65,8 @@ public class Completion implements Comparable<Completion> {
      * current position.
      * <p>
      * *Note:* The range must be a [single line](#Range.isSingleLine) and it must
-     * [contain](#Range.contains) the position at which completion has been [requested](#CompletionItemProvider.provideCompletionItems).
+     * [contain](#Range.contains) the position at which completion has been [requested](#CompletionItemProvider
+     * .provideCompletionItems).
      */
     IRange range;
     /**

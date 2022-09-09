@@ -37,7 +37,8 @@ public class BackgroundProcessController {
 
     /*@GetMapping("/dynamic/{url}")
     @Secured(ADMIN_ROLE)
-    public void dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws Exception {
+    public void dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws
+    Exception {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
         if (scriptEntity == null) {
             throw new ServerException("Dynamic URL: '" + url + "' not exists.");
@@ -67,14 +68,17 @@ public class BackgroundProcessController {
                     String backgroundProcessServiceID = scriptEntity.getBackgroundProcessServiceID();
 
 
-                    BackgroundProcessService bgp = backgroundProcessManager.getBackgroundProcessByDescriptorID(backgroundProcessServiceID);
+                    BackgroundProcessService bgp = backgroundProcessManager.getBackgroundProcessByDescriptorID
+                    (backgroundProcessServiceID);
                     BackgroundProcessStatusJSON backgroundProcessStatusJSON = new BackgroundProcessStatusJSON();
                     backgroundProcessStatusJSON.setEntityID(entityID);
                     backgroundProcessStatusJSON.setBackgroundProcessDescriptor(scriptDescriptor);
-                    BackgroundProcessStatus scriptStatus = bgp == null ? scriptEntity.getBackgroundProcessStatus() : bgp.getStatus();
+                    BackgroundProcessStatus scriptStatus = bgp == null ? scriptEntity.getBackgroundProcessStatus() : bgp
+                    .getStatus();
                     backgroundProcessStatusJSON.setStatus(scriptStatus);
                     if (scriptStatus == BackgroundProcessStatus.FAILED) {
-                        backgroundProcessStatusJSON.setErrorMessage(bgp == null ? scriptEntity.getError() : bgp.getErrorMessage());
+                        backgroundProcessStatusJSON.setErrorMessage(bgp == null ? scriptEntity.getError() : bgp.getErrorMessage
+                        ());
                     }
                     backgroundProcessStatusJSON.setProgress(backgroundProcessManager.isRunning(bgp) ?
                             backgroundProcessManager.getTimeInPercentageToNextSchedule(bgp) : 0);
@@ -85,9 +89,11 @@ public class BackgroundProcessController {
         return backgroundProcessStatusJSONList;
     }*/
 
-    /*private void buildBackgroundProcessStatus(String entityID, List<BackgroundProcessStatusJSON> backgroundProcessStatuses, BaseEntity item, Class<? extends AbstractJSBackgroundProcessService> aClass) {
+    /*private void buildBackgroundProcessStatus(String entityID, List<BackgroundProcessStatusJSON> backgroundProcessStatuses,
+    BaseEntity item, Class<? extends AbstractJSBackgroundProcessService> aClass) {
         try {
-            AbstractJSBackgroundProcessService backgroundProcessService = aClass.getConstructor(item.getClass(), InternalManager.class).newInstance(item, context);
+            AbstractJSBackgroundProcessService backgroundProcessService = aClass.getConstructor(item.getClass(),
+            InternalManager.class).newInstance(item, context);
             BackgroundProcessStatusJSON backgroundProcessStatus = new BackgroundProcessStatusJSON();
             backgroundProcessStatus.setEntityID(entityID);
             backgroundProcessStatus.setBackgroundProcessDescriptor(backgroundProcessService.getClass().getSimpleName());

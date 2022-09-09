@@ -28,7 +28,8 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block topImageHeaderCommand;
     private final Scratch3EventsBlocks scratch3EventsBlocks;
 
-    public Scratch3UIBlocks(EntityContext entityContext, Scratch3EventsBlocks scratch3EventsBlocks, WorkspaceManager workspaceManager) {
+    public Scratch3UIBlocks(EntityContext entityContext, Scratch3EventsBlocks scratch3EventsBlocks,
+                            WorkspaceManager workspaceManager) {
         super("#7C4B96", entityContext, null, "ui");
         this.scratch3EventsBlocks = scratch3EventsBlocks;
 
@@ -84,9 +85,12 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
                     String color = workspaceBlock.getInputString("COLOR");
                     // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
                     if (isFetchDuration) {
-                        entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title, null, false, 3, workspaceBlock.getInputInteger("DURATION"), null, SendBroadcastSetting.class);
+                        entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title, null, false, 3,
+                                workspaceBlock.getInputInteger("DURATION"), null, SendBroadcastSetting.class);
                     } else {
-                        entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title, "fas fa-" + workspaceBlock.getInputString("ICON"), false, 3, null, null, SendBroadcastSetting.class);
+                        entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title,
+                                "fas fa-" + workspaceBlock.getInputString("ICON"), false, 3, null, null,
+                                SendBroadcastSetting.class);
                     }
                 },
                 () -> entityContext.ui().removeHeaderButton(workspaceBlock.getId())

@@ -7,7 +7,6 @@ import org.touchhome.app.rest.widget.ChartDataset;
 import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
 import org.touchhome.app.rest.widget.TimeSeriesContext;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
-import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
@@ -38,7 +37,7 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
 
     @Override
     protected void beforePersist() {
-        setInitChartColor(UI.Color.random());
+        HasChartDataSource.randomColor(this);
     }
 
     @UIField(order = 1, required = true)

@@ -185,7 +185,8 @@ public class Scratch3ImageEditBlocks extends Scratch3ExtensionBlocks {
             if (urlParts.length > 1) {
                 imageAsString = urlParts[1];
             }
-            InputStream decodedInputStream = Base64.getDecoder().wrap(new ByteArrayInputStream(imageAsString.getBytes(StandardCharsets.UTF_8)));
+            InputStream decodedInputStream =
+                    Base64.getDecoder().wrap(new ByteArrayInputStream(imageAsString.getBytes(StandardCharsets.UTF_8)));
             return Pair.of(true, IOUtils.toByteArray(decodedInputStream));
         }
         return Pair.of(false, image.byteArrayValue());

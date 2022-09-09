@@ -77,7 +77,8 @@ public class CodeParser {
         return Collections.emptySet();
     }
 
-    private Set<Completion> addCompetitionFrom(String from, Class fromClass, String line, Stack<Param> stack, ParserContext context) throws NoSuchMethodException {
+    private Set<Completion> addCompetitionFrom(String from, Class fromClass, String line, Stack<Param> stack,
+                                               ParserContext context) throws NoSuchMethodException {
         line = line.trim();
         Set<Completion> list = new HashSet<>();
         List<String> items = splitSpecial(line);
@@ -109,7 +110,8 @@ public class CodeParser {
         return list;
     }
 
-    public Set<Completion> addCompetitionFromManagerOrClass(String line, Stack<Param> stack, ParserContext context, String allScript) throws NoSuchMethodException {
+    public Set<Completion> addCompetitionFromManagerOrClass(String line, Stack<Param> stack, ParserContext context,
+                                                            String allScript) throws NoSuchMethodException {
         Set<Completion> completions = new HashSet<>();
         List<String> items = splitSpecial(line); // list of items splitted by '.'
         String firstItem = items.get(0);
@@ -129,7 +131,8 @@ public class CodeParser {
         return completions;
     }
 
-    private Set<Completion> tryEvaFromFunctionParameter(String supposeParameter, String allScript, String line) throws NoSuchMethodException {
+    private Set<Completion> tryEvaFromFunctionParameter(String supposeParameter, String allScript, String line)
+            throws NoSuchMethodException {
         int index = allScript.indexOf(line);
         int funcIndex = allScript.lastIndexOf("function", index);
         int endFunc = allScript.indexOf(")", funcIndex);
@@ -152,7 +155,8 @@ public class CodeParser {
             content.append("{\n\t");
             for (Method method : fromClass.getMethods()) {
                 if (!method.isDefault()) {
-                    content.append(method.getReturnType().getName()).append(" ").append(method.getName()).append(createParametersFromMethod(method, false)).append(" {\n\t\t\n\t}");
+                    content.append(method.getReturnType().getName()).append(" ").append(method.getName())
+                            .append(createParametersFromMethod(method, false)).append(" {\n\t\t\n\t}");
                 }
             }
             content.append("}");
@@ -164,15 +168,19 @@ public class CodeParser {
 
     private void addStaticCompletions(String finalNext, Class clazz, Set<Completion> list) {
         if (clazz != null) {
-            list.addAll(getFitStaticMethods(finalNext, clazz).stream().map(this::convertMethodToCompletion).collect(Collectors.toList()));
-            list.addAll(getFitStaticFields(finalNext, clazz).stream().map(this::convertFieldToCompletion).collect(Collectors.toList()));
+            list.addAll(getFitStaticMethods(finalNext, clazz).stream().map(this::convertMethodToCompletion)
+                    .collect(Collectors.toList()));
+            list.addAll(getFitStaticFields(finalNext, clazz).stream().map(this::convertFieldToCompletion)
+                    .collect(Collectors.toList()));
         }
     }
 
-    private void addCompletionsAtEndFunc(String finalNext, Class clazz, Set<Completion> list, Stack<Param> stack, ParserContext context) throws NoSuchMethodException {
+    private void addCompletionsAtEndFunc(String finalNext, Class clazz, Set<Completion> list, Stack<Param> stack,
+                                         ParserContext context) throws NoSuchMethodException {
         if (clazz != null) {
             if (!finalNext.contains("(")) {
-                list.addAll(MethodParser.getFitMethods(finalNext, clazz).stream().map(this::convertMethodToCompletion).collect(Collectors.toList()));
+                list.addAll(MethodParser.getFitMethods(finalNext, clazz).stream().map(this::convertMethodToCompletion)
+                        .collect(Collectors.toList()));
             } else {
                 String funcParameters = finalNext.substring(finalNext.indexOf("(") + 1);
                 int paramIndex = StringUtils.countMatches(funcParameters, ",");
@@ -213,7 +221,8 @@ public class CodeParser {
 
             String retValue;
             if (method.getAnnotatedReturnType() instanceof AnnotatedParameterizedType) {
-                List<String> retParameters = Stream.of(((AnnotatedParameterizedType) method.getAnnotatedReturnType()).getAnnotatedActualTypeArguments())
+                List<String> retParameters = Stream.of(
+                                ((AnnotatedParameterizedType) method.getAnnotatedReturnType()).getAnnotatedActualTypeArguments())
                         .filter(a -> a.getType() instanceof Class)
                         .map(a -> ((Class) a.getType()).getSimpleName()).collect(Collectors.toList());
                 retValue = method.getReturnType().getSimpleName() + "<" + StringUtils.join(retParameters, ", ") + ">";
@@ -233,7 +242,8 @@ public class CodeParser {
 
     private String createParametersFromMethod(Method method, boolean asComments) {
         int apiParamIndex = 0;
-        Annotation[] apiParams = method.getParameterAnnotations().length == 0 ? new Annotation[0] : method.getParameterAnnotations()[0];
+        Annotation[] apiParams =
+                method.getParameterAnnotations().length == 0 ? new Annotation[0] : method.getParameterAnnotations()[0];
         List<String> collect = new ArrayList<>();
         for (Parameter parameter : method.getParameters()) {
             String name = parameter.getName();
@@ -244,7 +254,8 @@ public class CodeParser {
         }
 
         return collect.isEmpty() ? "()" : "(" + (asComments ? "/*" : "") +
-                StringUtils.join(collect, (asComments ? "*/" : "") + "   , " + (asComments ? "/*" : "") + " ") + (asComments ? "*/" : "") + ")";
+                StringUtils.join(collect, (asComments ? "*/" : "") + "   , " + (asComments ? "/*" : "") + " ") +
+                (asComments ? "*/" : "") + ")";
     }
 
     private Completion convertFieldToCompletion(Field field) {
@@ -304,13 +315,15 @@ public class CodeParser {
     }
 
     private Method getFitMethod(String finalNext, Class clazz) {
-        Stream<Method> stream = clazz.getSuperclass() != null ? Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
+        Stream<Method> stream = clazz.getSuperclass() != null ?
+                Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
                 Stream.of(clazz.getMethods());
 
         return getFitMethod(stream, finalNext, method -> true);
     }
 
-    private void addCompetitionFromManager2(int i, List<String> items, Set<Completion> list, Class clazz, Stack<Param> stack, ParserContext context) throws NoSuchMethodException {
+    private void addCompetitionFromManager2(int i, List<String> items, Set<Completion> list, Class clazz, Stack<Param> stack,
+                                            ParserContext context) throws NoSuchMethodException {
         if (items.size() == i + 1) {
             addCompletionsAtEndFunc(items.get(i), clazz, list, stack, context);
             addCompletionsAtEndFunc(items.get(i), clazz.getSuperclass(), list, stack, context);
@@ -325,7 +338,8 @@ public class CodeParser {
                     if (methodOptional.getParameterCount() >= methodParameters.length) {
                         Parameter parameter = methodOptional.getParameters()[methodParameters.length - 1];
                         // getPinRequestType
-                        addCompetitionFrom("", parameter.getType(), methodParameters[methodParameters.length - 1], new Stack<>(), context);
+                        addCompetitionFrom("", parameter.getType(), methodParameters[methodParameters.length - 1], new Stack<>(),
+                                context);
 
 
                     }

@@ -81,7 +81,8 @@ public class WorkspaceManager implements BeanPostConstruct {
                                 EntityContextBGP.ThreadContext<?> threadContext = this.entityContext.bgp().run(
                                         "workspace-" + workspaceBlock.getId(),
                                         createWorkspaceThread(workspaceBlock, workspaceEntity), true);
-                                threadContext.setDescription("Tab[" + workspaceEntity.getName() + "]. " + workspaceBlock.getDescription());
+                                threadContext.setDescription(
+                                        "Tab[" + workspaceEntity.getName() + "]. " + workspaceBlock.getDescription());
                                 workspaceBlock.setStateHandler(threadContext::setState);
                                 tabHolder.tab2Services.add(threadContext);
                             }
@@ -164,16 +165,20 @@ public class WorkspaceManager implements BeanPostConstruct {
         updateWorkspaceObjects(target.optJSONObject("broadcasts"), WorkspaceBroadcastEntity::new);
 
         // backup
-        Map<BaseEntity, JSONArray> values = updateWorkspaceObjects(target.optJSONObject("backup_lists"), WorkspaceBackupGroupEntity::new);
-        createSupplier(values, (baseEntity) -> new WorkspaceBackupEntity().setWorkspaceBackupGroupEntity((WorkspaceBackupGroupEntity) baseEntity), WorkspaceBackupEntity.PREFIX);
+        Map<BaseEntity, JSONArray> values =
+                updateWorkspaceObjects(target.optJSONObject("backup_lists"), WorkspaceBackupGroupEntity::new);
+        createSupplier(values, (baseEntity) -> new WorkspaceBackupEntity().setWorkspaceBackupGroupEntity(
+                (WorkspaceBackupGroupEntity) baseEntity), WorkspaceBackupEntity.PREFIX);
 
         // bool
         values = updateWorkspaceObjects(target.optJSONObject("bool_variables"), WorkspaceBooleanGroupEntity::new);
-        createSupplier(values, (baseEntity) -> new WorkspaceBooleanEntity().setWorkspaceBooleanGroupEntity((WorkspaceBooleanGroupEntity) baseEntity), WorkspaceBooleanEntity.PREFIX);
+        createSupplier(values, (baseEntity) -> new WorkspaceBooleanEntity().setWorkspaceBooleanGroupEntity(
+                (WorkspaceBooleanGroupEntity) baseEntity), WorkspaceBooleanEntity.PREFIX);
 
         // group variables
         values = updateWorkspaceObjects(target.optJSONObject("group_variables"), WorkspaceVariableGroupEntity::new);
-        createSupplier(values, (baseEntity) -> new WorkspaceVariableEntity().setWorkspaceVariableGroupEntity((WorkspaceVariableGroupEntity) baseEntity), WorkspaceVariableEntity.PREFIX);
+        createSupplier(values, (baseEntity) -> new WorkspaceVariableEntity().setWorkspaceVariableGroupEntity(
+                (WorkspaceVariableGroupEntity) baseEntity), WorkspaceVariableEntity.PREFIX);
     }
 
     private Map<String, WorkspaceBlock> parseWorkspace(WorkspaceEntity workspaceEntity) {
@@ -218,13 +223,15 @@ public class WorkspaceManager implements BeanPostConstruct {
     }
 
     private void createSupplier(Map<BaseEntity, JSONArray> res, Function<BaseEntity, BaseEntity> entitySupplier, String prefix) {
-        List<String> existedEntities = entityContext.findAllByPrefix(prefix).stream().map(BaseEntity::getEntityID).collect(Collectors.toList());
+        List<String> existedEntities =
+                entityContext.findAllByPrefix(prefix).stream().map(BaseEntity::getEntityID).collect(Collectors.toList());
         for (Map.Entry<BaseEntity, JSONArray> entry : res.entrySet()) {
             JSONArray jsonArray = entry.getValue().optJSONArray(2);
             if (jsonArray != null) {
                 for (int i = 0; i < jsonArray.length(); i++) {
                     JSONObject jsonObject1 = jsonArray.getJSONObject(i);
-                    saveOrUpdateEntity(() -> entitySupplier.apply(entry.getKey()), jsonObject1.getString("id"), jsonObject1.getString("name"), prefix);
+                    saveOrUpdateEntity(() -> entitySupplier.apply(entry.getKey()), jsonObject1.getString("id"),
+                            jsonObject1.getString("name"), prefix);
                     existedEntities.remove(prefix + jsonObject1.getString("id"));
                 }
             }
@@ -272,7 +279,8 @@ public class WorkspaceManager implements BeanPostConstruct {
 
     private WorkspaceBlock getOrCreateWorkspaceBlock(Map<String, WorkspaceBlock> workspaceMap, JSONObject block, String key) {
         if (block.has(key) && !block.isNull(key)) {
-            workspaceMap.putIfAbsent(block.getString(key), new WorkspaceBlockImpl(block.getString(key), workspaceMap, scratch3Blocks, entityContext));
+            workspaceMap.putIfAbsent(block.getString(key),
+                    new WorkspaceBlockImpl(block.getString(key), workspaceMap, scratch3Blocks, entityContext));
             return workspaceMap.get(block.getString(key));
         }
         return null;
@@ -297,17 +305,21 @@ public class WorkspaceManager implements BeanPostConstruct {
                 entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent(""))));
 
         // listen for clear variables
-        entityContext.setting().listenValue(SystemClearWorkspaceVariablesButtonSetting.class, "wm-clear-workspace-variables", () -> {
-            entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent("")));
-            WorkspaceShareVariableEntity entity = entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
-            entityContext.save(entity.setContent(""));
-        });
+        entityContext.setting()
+                .listenValue(SystemClearWorkspaceVariablesButtonSetting.class, "wm-clear-workspace-variables", () -> {
+                    entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent("")));
+                    WorkspaceShareVariableEntity entity =
+                            entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
+                    entityContext.save(entity.setContent(""));
+                });
     }
 
     private void reloadVariables() {
-        WorkspaceShareVariableEntity entity = entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
+        WorkspaceShareVariableEntity entity =
+                entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
         if (entity == null) {
-            entity = entityContext.save(new WorkspaceShareVariableEntity().computeEntityID(() -> WorkspaceShareVariableEntity.NAME));
+            entity = entityContext.save(
+                    new WorkspaceShareVariableEntity().computeEntityID(() -> WorkspaceShareVariableEntity.NAME));
         }
         reloadVariable(entity);
     }
@@ -315,7 +327,8 @@ public class WorkspaceManager implements BeanPostConstruct {
     private void reloadWorkspaces() {
         List<WorkspaceEntity> list = entityContext.findAll(WorkspaceEntity.class);
         if (list.isEmpty()) {
-            WorkspaceEntity mainWorkspace = entityContext.getEntity(WorkspaceEntity.PREFIX + WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME);
+            WorkspaceEntity mainWorkspace =
+                    entityContext.getEntity(WorkspaceEntity.PREFIX + WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME);
             if (mainWorkspace == null) {
                 entityContext.save(new WorkspaceEntity().computeEntityID(() -> WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME));
             }

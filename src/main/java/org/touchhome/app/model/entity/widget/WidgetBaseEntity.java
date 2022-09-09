@@ -58,6 +58,16 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     @UIField(order = 50)
     public abstract String getLayout();
 
+    @UIField(order = 1000)
+    @UIFieldGroup(value = "UI", order = 10, borderColor = "#009688")
+    public boolean isAdjustFontSize() {
+        return getJsonData("adjfs", Boolean.TRUE);
+    }
+
+    public void setAdjustFontSize(boolean value) {
+        setJsonData("adjfs", value);
+    }
+
     @Override
     protected void beforePersist() {
         super.beforePersist();
