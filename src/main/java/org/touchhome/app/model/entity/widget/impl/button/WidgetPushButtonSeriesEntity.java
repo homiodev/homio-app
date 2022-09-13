@@ -1,28 +1,28 @@
 package org.touchhome.app.model.entity.widget.impl.button;
 
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasIcon;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
+import org.touchhome.app.model.entity.widget.impl.*;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
+import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushButtonEntity>
-        implements HasChartDataSource, HasSingleValueDataSource, HasIcon, HasValueTemplate {
+        implements HasChartDataSource, HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName {
 
     public static final String PREFIX = "wgsbs_";
 
     @Override
     @UIField(order = 1, required = true, label = "widget.pushValueDataSource")
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
+    @UIFieldBeanSelection(HasSetStatusValue.class)
     @UIFieldGroup(value = "Action Data source", order = 1)
     public String getSetValueDataSource() {
         return HasSingleValueDataSource.super.getSetValueDataSource();

@@ -6,9 +6,11 @@ import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.rest.widget.ChartDataset;
 import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
 import org.touchhome.app.rest.widget.TimeSeriesContext;
+import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
@@ -42,6 +44,7 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
 
     @UIField(order = 1, required = true)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
+    @UIFieldBeanSelection(HasTimeValueSeries.class)
     @UIFieldGroup(value = "Chart", order = 10, borderColor = "#9C27B0")
     @UIEditReloadWidget
     public String getChartDataSource() {

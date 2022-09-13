@@ -12,7 +12,7 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
 
     public static final String PREFIX = "wgtsl_";
 
-    @UIField(order = 2, showInContextMenu = true)
+    @UIField(order = 2)
     @UIFieldGroup("Slider")
     public Boolean isVertical() {
         return getJsonData("vt", Boolean.FALSE);
@@ -22,6 +22,12 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
     @UIFieldGroup("Slider")
     public Boolean getThumbLabel() {
         return getJsonData("tl", Boolean.TRUE);
+    }
+
+    @UIField(order = 6)
+    @UIFieldGroup("Slider")
+    public Boolean isUpdateOnMove() {
+        return getJsonData("uom", Boolean.FALSE);
     }
 
     @Override
@@ -40,6 +46,10 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
 
     public void setThumbLabel(Boolean value) {
         setJsonData("tl", value);
+    }
+
+    public void setUpdateOnMove(Boolean value) {
+        setJsonData("uom", value);
     }
 
     @UIField(order = 50)

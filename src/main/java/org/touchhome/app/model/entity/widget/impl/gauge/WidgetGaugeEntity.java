@@ -152,7 +152,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
 
     @UIField(order = 4)
     @UIFieldGroup("Markers")
-    @UIFieldSlider(min = 6, max = 16)
+    @UIFieldSlider(min = 2, max = 16)
     public int getMarkerSize() {
         return getJsonData("ms", 8);
     }

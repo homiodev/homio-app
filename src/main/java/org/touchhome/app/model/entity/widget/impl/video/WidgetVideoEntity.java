@@ -51,7 +51,7 @@ public class WidgetVideoEntity extends WidgetBaseEntityAndSeries<WidgetVideoEnti
 
     @Override
     // hard to validate video series
-    protected boolean validateSeries(Set<WidgetVideoSeriesEntity> series, EntityContext entityContext) {
+    protected boolean invalidateWrongDataSource(Set<WidgetVideoSeriesEntity> series, EntityContext entityContext) {
         return false;
     }
 }

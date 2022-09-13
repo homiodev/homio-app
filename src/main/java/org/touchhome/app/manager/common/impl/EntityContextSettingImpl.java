@@ -149,15 +149,17 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value,
                                         SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
         if (settingListeners.containsKey(settingPluginClazz.getName())) {
-            for (Consumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {
-                try {
-                    consumer.accept(value);
-                } catch (Exception ex) {
-                    entityContext.ui().sendErrorMessage(ex);
-                    log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(),
-                            value);
+            entityContext.bgp().run("update-setting-" + settingPluginClazz.getSimpleName(), () -> {
+                for (Consumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {
+                    try {
+                        consumer.accept(value);
+                    } catch (Exception ex) {
+                        entityContext.ui().sendErrorMessage(ex);
+                        log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(),
+                                value, ex);
+                    }
                 }
-            }
+            }, false);
         }
         entityContext.getBroadcastLockManager().signalAll(SettingEntity.getKey(settingPluginClazz),
                 StringUtils.defaultIfEmpty(strValue, pluginFor.getDefaultValue()));

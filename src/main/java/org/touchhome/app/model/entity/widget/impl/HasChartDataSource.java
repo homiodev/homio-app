@@ -12,12 +12,14 @@ import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 public interface HasChartDataSource extends HasJsonData {
 
     @UIField(order = 1)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
+    @UIFieldBeanSelection(HasTimeValueSeries.class)
     @UIFieldGroup(value = "Chart", order = 10, borderColor = "#9C27B0")
     @UIEditReloadWidget
     default String getChartDataSource() {

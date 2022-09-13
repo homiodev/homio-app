@@ -30,11 +30,6 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
 
     public static final String PREFIX = "st_";
 
-    @Override
-    public String getName() {
-        return null;
-    }
-
     @Lob
     @Column(length = 1048576)
     private String value;
@@ -140,7 +135,8 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
 
     @Override
     public String getBundle() {
+        // dynamic settings(firmata has no parameters)
         SettingPlugin plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
-        return SettingRepository.getSettingBundleName(getEntityContext(), plugin.getClass());
+        return plugin == null ? null : SettingRepository.getSettingBundleName(getEntityContext(), plugin.getClass());
     }
 }

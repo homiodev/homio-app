@@ -36,7 +36,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> impleme
 
     public static SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin, SettingEntity settingEntity,
                                                               EntityContext entityContext) {
-        settingEntity.computeEntityID(() -> getKey(settingPlugin));
+        settingEntity.setEntityID(getKey(settingPlugin));
         if (settingPlugin.transientState()) {
             settingEntity.setEntityID(getKey(settingPlugin));
             fulfillEntityFromPlugin(settingEntity, entityContext, settingPlugin);

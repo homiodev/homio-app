@@ -1,28 +1,33 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasIcon;
+import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
+import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity>
-        implements HasSingleValueDataSource, HasIcon, HasValueTemplate {
+        implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName {
 
     public static final String PREFIX = "wgssls_";
 
     @Override
     @UIField(order = 1, required = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
+    @UIFieldBeanSelection(HasGetStatusValue.class)
     @UIFieldGroup(value = "Value", order = 1)
     @UIFieldIgnoreParent
     public String getValueDataSource() {
@@ -32,6 +37,7 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
     @Override
     @UIField(order = 2, required = true)
     @UIFieldGroup(value = "Value")
+    @UIFieldBeanSelection(HasSetStatusValue.class)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     public String getSetValueDataSource() {
         return HasSingleValueDataSource.super.getSetValueDataSource();

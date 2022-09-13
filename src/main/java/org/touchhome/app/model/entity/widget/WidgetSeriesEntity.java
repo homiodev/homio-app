@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import org.touchhome.bundle.api.converter.JSONObjectConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.HasJsonData;
+import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
 import javax.persistence.*;

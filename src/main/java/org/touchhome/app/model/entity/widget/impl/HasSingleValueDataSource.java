@@ -7,6 +7,7 @@ import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSerie
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
@@ -16,6 +17,7 @@ public interface HasSingleValueDataSource extends HasDynamicParameterFields {
      * ValueDataSource must contains dataSource~~~UIFieldEntityByClassSelection
      */
     @UIField(order = 10, required = true)
+    @UIFieldBeanSelection(HasAggregateValueFromSeries.class)
     @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
     @UIFieldGroup(value = "Value", order = 10)
     @UIEditReloadWidget
@@ -32,6 +34,7 @@ public interface HasSingleValueDataSource extends HasDynamicParameterFields {
         return Pair.of(vds[0], vds.length > 1 ? vds[1] : "");
     }
 
+    @UIFieldBeanSelection(HasSetStatusValue.class)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     @UIFieldGroup(value = "Value")
     @UIEditReloadWidget

@@ -2,10 +2,12 @@ package org.touchhome.app.model.entity.widget.impl.chart.line;
 
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
+import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
@@ -28,6 +30,7 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
 
     @UIField(order = 1, required = true)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
+    @UIFieldBeanSelection(HasTimeValueSeries.class)
     @UIFieldGroup(value = "Chart", order = 10, borderColor = "#9C27B0")
     @UIFieldIgnoreParent
     public String getChartDataSource() {

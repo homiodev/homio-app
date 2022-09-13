@@ -2,11 +2,13 @@ package org.touchhome.app.model.entity.widget.impl.toggle;
 
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasIcon;
+import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 import javax.persistence.Entity;
@@ -14,12 +16,13 @@ import java.util.List;
 
 @Entity
 public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEntity>
-        implements HasSingleValueDataSource, HasIcon {
+        implements HasSingleValueDataSource, HasIcon, HasName {
 
     public static final String PREFIX = "wgttgs_";
 
     @Override
     @UIField(order = 1, required = true)
+    @UIFieldBeanSelection(HasGetStatusValue.class)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldIgnoreParent
     @UIFieldGroup(value = "Value", order = 2)
@@ -29,6 +32,7 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
 
     @UIField(order = 2, required = true)
     @UIFieldGroup(value = "Value")
+    @UIFieldBeanSelection(HasSetStatusValue.class)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     public String getSetValueDataSource() {
         return HasSingleValueDataSource.super.getSetValueDataSource();
