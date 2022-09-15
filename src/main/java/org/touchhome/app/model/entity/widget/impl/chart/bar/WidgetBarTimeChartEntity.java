@@ -37,7 +37,7 @@ public class WidgetBarTimeChartEntity
     @UIField(order = 10)
     @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
     public BarChartType getDisplayType() {
-        return getJsonDataEnum("displayType", BarChartType.Horizontal);
+        return getJsonDataEnum("displayType", BarChartType.Vertical);
     }
 
     @UIField(order = 12)

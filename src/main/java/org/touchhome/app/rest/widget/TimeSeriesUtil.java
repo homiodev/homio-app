@@ -1,12 +1,12 @@
 package org.touchhome.app.rest.widget;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
+import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
@@ -40,10 +40,12 @@ public class TimeSeriesUtil {
         List<TimeSeriesValues<T>> timeSeriesValuesList = new ArrayList<>(series.size());
 
         for (T item : series) {
-            BaseEntity<?> source = entityContext.getEntity(item.getChartDataSource());
+            DataSourceUtil.DataSourceContext sourceDS = DataSourceUtil.getSource(entityContext, item.getChartDataSource());
+            Object source = sourceDS.getSource();
             if (source instanceof HasTimeValueSeries) {
-                timeSeriesValuesList.add(new TimeSeriesValues<>(source,
-                        buildTimeSeriesFromDataSource(timePeriod, item, (HasTimeValueSeries) source)));
+                Set<TimeSeriesContext<T>> timeSeries =
+                        buildTimeSeriesFromDataSource(timePeriod, item, (HasTimeValueSeries) source);
+                timeSeriesValuesList.add(new TimeSeriesValues<>(timeSeries, sourceDS.getSource()));
             }
         }
 
@@ -62,7 +64,7 @@ public class TimeSeriesUtil {
 
                 // add update listeners
                 if (addUpdateListener) {
-                    addChangeListenerForTimeSeriesEntity(item, timePeriod, entityID, series);
+                    addChangeListenerForTimeSeriesEntity(item, timePeriod, entityID, series, timeSeriesValues.getSource());
                 }
             }
         }
@@ -72,10 +74,9 @@ public class TimeSeriesUtil {
 
     public <T extends HasDynamicParameterFields & HasChartDataSource> void addChangeListenerForTimeSeriesEntity(
             TimeSeriesContext<T> timeSeriesContext,
-            HasTimePeriod.TimePeriod timePeriod, String entityID, Set<T> series) {
+            HasTimePeriod.TimePeriod timePeriod, String entityID, Set<T> series, Object source) {
 
         T item = timeSeriesContext.getSeriesEntity();
-        BaseEntity<?> source = entityContext.getEntity(item.getChartDataSource());
         ((HasTimeValueSeries) source).addUpdateValueListener(entityContext, entityID + "_timeSeries",
                 item.getChartDynamicParameterFields(),
                 o -> {
@@ -100,11 +101,10 @@ public class TimeSeriesUtil {
     getSingleValue(@NotNull T entity,
                    @NotNull DS dataSource,
                    @NotNull Function<Object, R> resultConverter) {
-        Pair<String, String> pair = dataSource.getSingleValueDataSource();
-        String requireTargetInterface = pair.getValue();
         String seriesEntityId = dataSource.getEntityID();
         JSONObject dynamicParameters = dataSource.getValueDynamicParameterFields();
-        BaseEntity<?> source = entityContext.getEntity(pair.getKey());
+        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, dataSource.getValueDataSource());
+        Object source = dsContext.getSource();
         if (source == null) {
             return null;
         }
@@ -113,7 +113,7 @@ public class TimeSeriesUtil {
         Object value;
         boolean aggregateGetter;
         if (source instanceof HasGetStatusValue || source instanceof HasAggregateValueFromSeries) {
-            aggregateGetter = HasAggregateValueFromSeries.class.getSimpleName().equals(requireTargetInterface);
+            aggregateGetter = HasAggregateValueFromSeries.class.getSimpleName().equals(dsContext.getSourceClass());
         } else {
             throw new IllegalStateException("Unable to calculate value for: " + entity.getEntityID());
         }
@@ -149,7 +149,7 @@ public class TimeSeriesUtil {
 
     public <R> void addListenValueIfRequire(boolean listenSourceUpdates,
                                             @NotNull String entityID,
-                                            @NotNull BaseEntity<?> source,
+                                            @NotNull Object source,
                                             @Nullable JSONObject dynamicParameters,
                                             @Nullable String seriesEntityId,
                                             @Nullable String dataSourceEntityID,

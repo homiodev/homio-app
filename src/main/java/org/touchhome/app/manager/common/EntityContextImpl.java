@@ -151,6 +151,7 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextWidgetImpl entityContextWidget;
     private final Environment environment;
     private final StartupHardwareRepository startupHardwareRepository;
+    private final EntityContextStorage entityContextStorage;
 
     private final ClassFinder classFinder;
     @Getter
@@ -192,6 +193,7 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextEvent = new EntityContextEventImpl(broadcastLockManager);
         this.entityContextSetting = new EntityContextSettingImpl(this);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
+        this.entityContextStorage = new EntityContextStorage(this);
     }
 
     @SneakyThrows
@@ -283,6 +285,7 @@ public class EntityContextImpl implements EntityContext {
 
         // install autossh. Should refactor to move somewhere else
         this.bgp().runOnceOnInternetUp("internal-ctx", () -> MACHINE_IP_ADDRESS = getInternalIpAddress());
+        this.entityContextStorage.init();
     }
 
     @Override

@@ -5,6 +5,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.json.JSONObject;
+import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
+import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.converter.JSONObjectConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -17,6 +20,8 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
 import javax.persistence.*;
+
+import static org.apache.commons.lang3.ObjectUtils.isNotEmpty;
 
 @Getter
 @Setter
@@ -101,6 +106,37 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     public boolean updateRelations(EntityContext entityContext) {
         return false;
+    }
+
+    protected boolean invalidateWrongEntity(EntityContext entityContext, Object item) {
+        boolean updated = false;
+        if (item instanceof HasSingleValueDataSource) {
+            HasSingleValueDataSource source = (HasSingleValueDataSource) item;
+            if (isNotEmpty(source.getValueDataSource()) &&
+                    isEntityNotExists(entityContext, source.getValueDataSource())) {
+                updated = true;
+                source.setValueDataSource(null);
+            }
+
+            if (isNotEmpty(source.getSetValueDataSource()) &&
+                    isEntityNotExists(entityContext, source.getSetValueDataSource())) {
+                updated = true;
+                source.setSetValueDataSource(null);
+            }
+        }
+        if (item instanceof HasChartDataSource) {
+            HasChartDataSource source = (HasChartDataSource) item;
+            if (isNotEmpty(source.getChartDataSource()) && isEntityNotExists(entityContext, source.getChartDataSource())) {
+                updated = true;
+                ((HasChartDataSource) item).setChartDataSource(null);
+            }
+        }
+        return updated;
+    }
+
+    private boolean isEntityNotExists(EntityContext entityContext, String source) {
+        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, source);
+        return dsContext.getSource() == null;
     }
 
     @UIField(order = 2)

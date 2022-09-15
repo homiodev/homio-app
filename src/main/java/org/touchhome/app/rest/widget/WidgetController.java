@@ -17,6 +17,7 @@ import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.WidgetTabEntity;
+import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMEntity;
@@ -191,13 +192,12 @@ public class WidgetController {
     @PostMapping("/button/update")
     public void handleButtonClick(@RequestBody SingleValueRequest<Void> request) {
         WidgetPushButtonSeriesEntity series = getSeriesEntity(request);
-        String sourceEntityID = series.getSetSingleValueDataSource().getKey();
-        if (sourceEntityID == null) {
+        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, series.getSetValueDataSource());
+        if (dsContext.getSource() == null) {
             throw new IllegalArgumentException("Unable to find source set data source");
         }
-        BaseEntity<?> source = entityContext.getEntity(sourceEntityID);
-        if (source instanceof HasSetStatusValue) {
-            ((HasSetStatusValue) source).setStatusValue(
+        if (dsContext.getSource() instanceof HasSetStatusValue) {
+            ((HasSetStatusValue) dsContext.getSource()).setStatusValue(
                     new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(),
                             series.getValueToPush()));
         } else {
@@ -229,13 +229,12 @@ public class WidgetController {
     @PostMapping("/slider/update")
     public void updateSliderValue(@RequestBody SingleValueRequest<Integer> request) {
         WidgetSliderSeriesEntity series = getSeriesEntity(request);
-        String sourceEntityID = series.getSetSingleValueDataSource().getKey();
-        if (sourceEntityID == null) {
+        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, series.getSetValueDataSource());
+        if (dsContext.getSource() == null) {
             throw new IllegalArgumentException("Unable to find source set data source");
         }
-        BaseEntity<?> source = entityContext.getEntity(sourceEntityID);
-        if (source instanceof HasSetStatusValue) {
-            ((HasSetStatusValue) source).setStatusValue(
+        if (dsContext.getSource() instanceof HasSetStatusValue) {
+            ((HasSetStatusValue) dsContext.getSource()).setStatusValue(
                     new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(),
                             request.value));
         } else {
@@ -246,13 +245,12 @@ public class WidgetController {
     @PostMapping("/toggle/update")
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
         WidgetToggleSeriesEntity series = getSeriesEntity(request);
-        String sourceEntityID = series.getSetSingleValueDataSource().getKey();
-        if (sourceEntityID == null) {
+        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, series.getSetValueDataSource());
+        if (dsContext.getSource() == null) {
             throw new IllegalArgumentException("Unable to find source set data source");
         }
-        BaseEntity<?> source = entityContext.getEntity(sourceEntityID);
-        if (source instanceof HasSetStatusValue) {
-            ((HasSetStatusValue) source).setStatusValue(
+        if (dsContext.getSource() instanceof HasSetStatusValue) {
+            ((HasSetStatusValue) dsContext.getSource()).setStatusValue(
                     new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(),
                             request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue()));
         } else {

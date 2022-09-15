@@ -8,12 +8,12 @@ import java.util.Set;
 
 @Getter
 public class TimeSeriesValues<T extends HasChartDataSource> {
-    private final BaseEntity<?> source;
     private final Set<TimeSeriesContext<T>> itemSeries;
+    private final Object source;
 
-    public TimeSeriesValues(BaseEntity<?> source, Set<TimeSeriesContext<T>> itemSeries) {
-        this.source = source;
+    public TimeSeriesValues(Set<TimeSeriesContext<T>> itemSeries, Object source) {
         this.itemSeries = itemSeries;
+        this.source = source;
 
         for (TimeSeriesContext<T> timeSeriesContext : itemSeries) {
             timeSeriesContext.setOwner(this);

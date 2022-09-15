@@ -33,7 +33,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     }
 
     @Override
-    protected boolean invalidateWrongDataSource(Set<WidgetFMSeriesEntity> series, EntityContext entityContext) {
+    public boolean updateRelations(EntityContext entityContext) {
         return false;
     }
 

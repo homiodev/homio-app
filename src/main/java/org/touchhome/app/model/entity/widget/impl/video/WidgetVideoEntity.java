@@ -49,9 +49,9 @@ public class WidgetVideoEntity extends WidgetBaseEntityAndSeries<WidgetVideoEnti
         return PREFIX;
     }
 
-    @Override
     // hard to validate video series
-    protected boolean invalidateWrongDataSource(Set<WidgetVideoSeriesEntity> series, EntityContext entityContext) {
+    @Override
+    public boolean updateRelations(EntityContext entityContext) {
         return false;
     }
 }

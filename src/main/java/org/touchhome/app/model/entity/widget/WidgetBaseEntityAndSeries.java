@@ -2,7 +2,6 @@ package org.touchhome.app.model.entity.widget;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.lang3.StringUtils;
 import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.EntityContext;
@@ -32,38 +31,10 @@ public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSer
 
     @Override
     public boolean updateRelations(EntityContext entityContext) {
-        return invalidateWrongDataSource(series, entityContext);
-    }
-
-    /**
-     * Check data sources every fetch and check if relation exists. Set to null if not exists
-     *
-     * @return true if any data source has been invalid and set to null. This mean we need save it to database
-     */
-    protected boolean invalidateWrongDataSource(Set<S> series, EntityContext entityContext) {
         boolean updated = false;
         if (series != null) {
             for (S item : series) {
-                if (item instanceof HasSingleValueDataSource) {
-                    String valueDataSource = ((HasSingleValueDataSource) item).getValueDataSource();
-                    if (isNotEmpty(valueDataSource) && entityContext.getEntity(valueDataSource) == null) {
-                        updated = true;
-                        ((HasSingleValueDataSource) item).setValueDataSource(null);
-                    }
-
-                    String setValueDataSource = ((HasSingleValueDataSource) item).getSetValueDataSource();
-                    if (isNotEmpty(setValueDataSource) && entityContext.getEntity(setValueDataSource) == null) {
-                        updated = true;
-                        ((HasSingleValueDataSource) item).setValueDataSource(null);
-                    }
-                }
-                if(item instanceof HasChartDataSource) {
-                    String chartDataSource = ((HasChartDataSource) item).getChartDataSource();
-                    if (isNotEmpty(chartDataSource) && entityContext.getEntity(chartDataSource) == null) {
-                        updated = true;
-                        ((HasChartDataSource) item).setChartDataSource(null);
-                    }
-                }
+                updated |= invalidateWrongEntity(entityContext, item);
             }
         }
         return updated;

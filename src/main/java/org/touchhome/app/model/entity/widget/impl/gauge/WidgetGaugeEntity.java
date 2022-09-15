@@ -190,12 +190,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
 
     @Override
     public boolean updateRelations(EntityContext entityContext) {
-        String valueDataSource = getSingleValueDataSource().getKey();
-        if (valueDataSource != null && entityContext.getEntity(valueDataSource) == null) {
-            this.setValueDataSource(null);
-            return true;
-        }
-        return false;
+        return invalidateWrongEntity(entityContext, this);
     }
 
     @Override
