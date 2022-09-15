@@ -6,7 +6,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.json.JSONObject;
 import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
-import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
+import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.converter.JSONObjectConverter;
@@ -60,9 +60,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     @Convert(converter = JSONObjectConverter.class)
     private JSONObject jsonData = new JSONObject();
 
-    @UIField(order = 50)
-    public abstract String getLayout();
-
     @UIField(order = 1000)
     @UIFieldGroup(value = "UI", order = 10, borderColor = "#009688")
     public boolean isAdjustFontSize() {
@@ -71,20 +68,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     public void setAdjustFontSize(boolean value) {
         setJsonData("adjfs", value);
-    }
-
-    @Override
-    protected void beforePersist() {
-        super.beforePersist();
-        setLayout(getDefaultLayout());
-    }
-
-    protected String getDefaultLayout() {
-        return "";
-    }
-
-    public void setLayout(String value) {
-        setJsonData("layout", value);
     }
 
     public String getFieldFetchType() {

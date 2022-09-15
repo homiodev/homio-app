@@ -1,20 +1,20 @@
 package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.UIFieldJSONLine;
-import org.touchhome.app.model.entity.widget.impl.HasMinMaxChartValue;
 import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
+import org.touchhome.app.model.entity.widget.impl.chart.HasAxis;
+import org.touchhome.app.model.entity.widget.impl.chart.HasHorizontalLine;
+import org.touchhome.app.model.entity.widget.impl.chart.HasMinMaxChartValue;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetBarTimeChartEntity
         extends ChartBaseEntity<WidgetBarTimeChartEntity, WidgetBarTimeChartSeriesEntity>
-        implements HasTimePeriod, HasMinMaxChartValue {
+        implements HasTimePeriod, HasMinMaxChartValue, HasHorizontalLine, HasAxis {
 
     public static final String PREFIX = "wgtbtc_";
 
@@ -63,12 +63,5 @@ public class WidgetBarTimeChartEntity
 
     public enum BarChartType {
         Horizontal, Vertical
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public String getLayout() {
-        throw new IllegalStateException("MNC");
     }
 }

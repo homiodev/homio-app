@@ -20,13 +20,6 @@ public class WidgetVideoEntity extends WidgetBaseEntityAndSeries<WidgetVideoEnti
         return WidgetGroup.Media;
     }
 
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public String getLayout() {
-        throw new IllegalStateException("MNC");
-    }
-
     @MaxItems(4) // allow max 4 cameras
     public Set<WidgetVideoSeriesEntity> getSeries() {
         return super.getSeries();

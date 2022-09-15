@@ -1,4 +1,4 @@
-package org.touchhome.app.model.entity.widget.impl;
+package org.touchhome.app.model.entity.widget.impl.chart;
 
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.rest.widget.ChartDataset;
@@ -8,10 +8,7 @@ import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
-import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldSlider;
+import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
@@ -39,6 +36,17 @@ public interface HasChartDataSource extends HasJsonData {
 
     default void setChartAggregationType(AggregationType value) {
         setJsonData("chartAggrType", value);
+    }
+
+    @UIField(order = 6)
+    @UIFieldGroup("Chart")
+    @UIFieldCodeEditor(autoFormat = true, editorType = UIFieldCodeEditor.CodeEditorType.javascript)
+    default String getFinalChartValueConverter() {
+        return getJsonData("finValConv", "return value;");
+    }
+
+    default void setFinalChartValueConverter(String value) {
+        setJsonData("finValConv", value);
     }
 
     @UIField(order = 1)

@@ -11,7 +11,7 @@ import javax.persistence.Entity;
 
 @Entity
 public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
-        extends WidgetBaseEntityAndSeries<T, S> {
+        extends WidgetBaseEntityAndSeries<T, S> implements HasLegend {
 
     @Override
     public WidgetGroup getGroup() {
@@ -26,93 +26,6 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
 
     public void setTitle(String value) {
         super.setName(value);
-    }
-
-    @UIField(order = 70)
-    @UIFieldGroup(value = "Legend", order = 20, borderColor = "#77AD2F")
-    public Boolean getLegendShow() {
-        return getJsonData("ls", Boolean.TRUE);
-    }
-
-    public T setLegendShow(Boolean value) {
-        setJsonData("ls", value);
-        return (T) this;
-    }
-
-    @UIField(order = 71)
-    @UIFieldGroup("Legend")
-    public LegendPosition getLegendPosition() {
-        return getJsonDataEnum("lp", LegendPosition.top);
-    }
-
-    public T setLegendPosition(LegendPosition value) {
-        setJsonData("lp", value);
-        return (T) this;
-    }
-
-    @UIField(order = 72)
-    @UIFieldGroup("Legend")
-    public LegendAlign getLegendAlign() {
-        return getJsonDataEnum("la", LegendAlign.center);
-    }
-
-    public T setLegendAlign(LegendAlign value) {
-        setJsonData("la", value);
-        return (T) this;
-    }
-
-    @UIField(order = 80)
-    @UIFieldGroup("Chart axis")
-    public Boolean getShowAxisX() {
-        return getJsonData("showAxisX", Boolean.TRUE);
-    }
-
-    public T setShowAxisX(Boolean value) {
-        setJsonData("showAxisX", value);
-        return (T) this;
-    }
-
-    @UIField(order = 81)
-    @UIFieldGroup("Chart axis")
-    public Boolean getShowAxisY() {
-        return getJsonData("showAxisY", Boolean.TRUE);
-    }
-
-    public T setShowAxisY(Boolean value) {
-        setJsonData("showAxisY", value);
-        return (T) this;
-    }
-
-    @UIField(order = 84)
-    @UIFieldGroup("Chart axis")
-    public String getAxisLabelX() {
-        return getJsonData("axisLabelX");
-    }
-
-    public T setAxisLabelX(String value) {
-        setJsonData("axisLabelX", value);
-        return (T) this;
-    }
-
-    @UIField(order = 85)
-    @UIFieldGroup("Chart axis")
-    public String getAxisLabelY() {
-        return getJsonData("axisLabelY");
-    }
-
-    public T setAxisLabelY(String value) {
-        setJsonData("axisLabelY", value);
-        return (T) this;
-    }
-
-    @UIField(order = 90)
-    @UIFieldGroup("Chart axis")
-    public String getAxisDateFormat() {
-        return getJsonData("timeF", "");
-    }
-
-    public void setAxisDateFormat(String value) {
-        setJsonData("timeF", value);
     }
 
     @UIField(order = 1)
@@ -144,18 +57,5 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     public T setAnimations(Boolean value) {
         setJsonData("am", value);
         return (T) this;
-    }
-
-    public enum LegendPosition {
-        top,
-        right,
-        bottom,
-        left
-    }
-
-    public enum LegendAlign {
-        start,
-        center,
-        end
     }
 }

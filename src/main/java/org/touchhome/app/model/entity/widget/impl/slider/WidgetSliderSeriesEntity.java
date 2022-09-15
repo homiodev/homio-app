@@ -3,10 +3,7 @@ package org.touchhome.app.model.entity.widget.impl.slider;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasIcon;
-import org.touchhome.app.model.entity.widget.impl.HasName;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
+import org.touchhome.app.model.entity.widget.impl.*;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
@@ -20,7 +17,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity>
-        implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName {
+        implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasTextConverter {
 
     public static final String PREFIX = "wgssls_";
 

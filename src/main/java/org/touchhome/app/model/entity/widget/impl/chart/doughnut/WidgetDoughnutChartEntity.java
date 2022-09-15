@@ -1,38 +1,32 @@
 package org.touchhome.app.model.entity.widget.impl.chart.doughnut;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
+import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
+import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.field.*;
+import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
+import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 import javax.persistence.Entity;
 
 @Entity
 public class WidgetDoughnutChartEntity extends ChartBaseEntity<WidgetDoughnutChartEntity, WidgetDoughnutChartSeriesEntity>
-        implements HasSingleValueDataSource, HasTimePeriod {
+        implements HasSingleValueDataSource, HasTimePeriod, HasValueConverter, HasValueTemplate {
 
     public static final String PREFIX = "wgtpc_";
-
-    @UIField(order = 2)
-    @UIFieldGroup(value = "Value", order = 1)
-    public String getUnit() {
-        return getJsonData("unit", "°C");
-    }
-
-    public void setUnit(String value) {
-        setJsonData("unit", value);
-    }
 
     @UIField(order = 3)
     @UIFieldGroup("Value")
     @UIFieldSlider(min = 8, max = 40)
-    public int getValueFontSize() {
+    public double getValueFontSize() {
         return getJsonData("vfs", 18);
     }
 
-    public void setValueFontSize(String value) {
+    public double setValueFontSize(int value) {
         setJsonData("vfs", value);
     }
 
@@ -66,40 +60,5 @@ public class WidgetDoughnutChartEntity extends ChartBaseEntity<WidgetDoughnutCha
     @Override
     public String getEntityPrefix() {
         return PREFIX;
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public String getAxisLabelX() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public String getAxisLabelY() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public Boolean getShowAxisX() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public Boolean getShowAxisY() {
-        throw new IllegalStateException("MNC");
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public String getLayout() {
-        throw new IllegalStateException("MNC");
     }
 }

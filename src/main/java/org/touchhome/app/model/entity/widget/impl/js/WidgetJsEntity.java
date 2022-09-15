@@ -73,11 +73,4 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
         setJavaScriptParameters("{\"text\":\"Hello world!\"}");
         setJavaScript("function run() {\n\treturn params.get('text');\n}");
     }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public String getLayout() {
-        throw new IllegalStateException("MNC");
-    }
 }

@@ -2,8 +2,8 @@ package org.touchhome.app.model.entity.widget.impl.button;
 
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.*;
+import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
-import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
@@ -15,7 +15,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushButtonEntity>
-        implements HasChartDataSource, HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName {
+        implements HasChartDataSource, HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasValueConverter {
 
     public static final String PREFIX = "wgsbs_";
 

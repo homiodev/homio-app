@@ -1,10 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.display;
 
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasIcon;
-import org.touchhome.app.model.entity.widget.impl.HasName;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
+import org.touchhome.app.model.entity.widget.impl.*;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
@@ -13,7 +10,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>
-        implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName {
+        implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasValueConverter {
 
     public static final String PREFIX = "wgsdps_";
 

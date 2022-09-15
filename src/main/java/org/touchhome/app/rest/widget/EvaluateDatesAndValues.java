@@ -1,6 +1,6 @@
 package org.touchhome.app.rest.widget;
 
-import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
+import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;

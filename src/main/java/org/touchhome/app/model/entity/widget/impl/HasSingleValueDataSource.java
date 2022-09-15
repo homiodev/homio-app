@@ -1,9 +1,9 @@
 package org.touchhome.app.model.entity.widget.impl;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
+import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
@@ -18,7 +18,11 @@ public interface HasSingleValueDataSource extends HasDynamicParameterFields {
      */
     @UIField(order = 10, required = true)
     @UIFieldBeanSelection(HasAggregateValueFromSeries.class)
+
+    // if found same class for those 2 option than only HasAggregateValueFromSeries taken
+    @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
+
     @UIFieldGroup(value = "Value", order = 10)
     @UIEditReloadWidget
     default String getValueDataSource() {

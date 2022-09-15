@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
@@ -24,7 +25,6 @@ import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
 import org.touchhome.app.model.rest.WidgetDataRequest;
-import org.touchhome.bundle.api.entity.BaseEntity;
 
 import javax.validation.Valid;
 import java.util.ArrayList;
@@ -100,13 +100,10 @@ public class WidgetChartsController {
     public TimeSeriesChartData<ChartDataset> getDoughnutSeries(@Valid @RequestBody WidgetDataRequest request) {
         WidgetDoughnutChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetDoughnutChartEntity.class);
         TimeSeriesChartData<ChartDataset> result = getValueDataset(request, WidgetDoughnutChartEntity.class);
-        String valueDataSource = entity.getValueDataSource();
 
-        if (StringUtils.isNotEmpty(valueDataSource)) {
-            BaseEntity<?> valueSource = entityContext.getEntity(valueDataSource);
-            if (valueSource != null) {
-                result.value = timeSeriesUtil.getSingleValue(entity, entity, o -> o);
-            }
+        DataSourceUtil.DataSourceContext source = DataSourceUtil.getSource(entityContext, entity.getValueDataSource());
+        if (source.getSource() != null) {
+            result.value = timeSeriesUtil.getSingleValue(entity, entity, o -> o);
         }
 
         return result;

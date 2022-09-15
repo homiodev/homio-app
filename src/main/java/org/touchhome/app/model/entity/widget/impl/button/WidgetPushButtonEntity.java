@@ -3,13 +3,15 @@ package org.touchhome.app.model.entity.widget.impl.button;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.touchhome.app.model.entity.widget.impl.HasLayout;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
 import javax.persistence.Entity;
 
 @Entity
-public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPushButtonEntity, WidgetPushButtonSeriesEntity> {
+public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPushButtonEntity, WidgetPushButtonSeriesEntity>
+        implements HasLayout {
 
     public static final String PREFIX = "wgtbn_";
 
@@ -21,20 +23,6 @@ public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPush
     public WidgetPushButtonEntity setVertical(Boolean value) {
         setJsonData("vertical", value);
         return this;
-    }
-
-    @UIField(order = 50)
-    @UIFieldLayout(options = {"name", "value", "icon"})
-    public String getLayout() {
-        return getJsonData("layout");
-    }
-
-    @Override
-    protected String getDefaultLayout() {
-        return UIFieldLayout.LayoutBuilder.builder(30, 70).addRow(rb -> rb
-                        .addCol("icon", UIFieldLayout.HorizontalAlign.center)
-                        .addCol("name", UIFieldLayout.HorizontalAlign.center))
-                .build();
     }
 
     @Override
@@ -52,5 +40,21 @@ public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPush
     @UIFieldIgnore
     public String getBackground() {
         throw new IllegalStateException("MNC");
+    }
+
+    @Override
+    @UIField(order = 50)
+    @UIFieldLayout(options = {"name", "value", "icon"})
+    public String getLayout() {
+        return getJsonData("layout");
+    }
+
+    @Override
+    protected void beforePersist() {
+        super.beforePersist();
+        setLayout(UIFieldLayout.LayoutBuilder.builder(30, 70).addRow(rb -> rb
+                        .addCol("icon", UIFieldLayout.HorizontalAlign.center)
+                        .addCol("name", UIFieldLayout.HorizontalAlign.center))
+                .build());
     }
 }

@@ -14,9 +14,9 @@ import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 public class EntityContextStorage {
-    private final OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
+    public static final OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(
             OperatingSystemMXBean.class);
-    private final long TOTAL_MEMORY = osBean.getTotalPhysicalMemorySize();
+    public static final long TOTAL_MEMORY = osBean.getTotalPhysicalMemorySize();
     public static InMemoryDBService<SystemMessage> cpuStorage;
 
     private final EntityContextImpl entityContext;
@@ -29,9 +29,8 @@ public class EntityContextStorage {
     private void initSystemCpuListening() {
         cpuStorage = InMemoryDB.getService(SystemMessage.class,
                 (long) entityContext.setting().getValue(SystemCPUHistorySizeSetting.class));
-        entityContext.setting().listenValue(SystemCPUHistorySizeSetting.class, "listen-cpu-history", size -> {
-            cpuStorage.updateQuota((long) size);
-        });
+        entityContext.setting().listenValue(SystemCPUHistorySizeSetting.class, "listen-cpu-history", size ->
+                cpuStorage.updateQuota((long) size));
 
         entityContext.setting().listenValueAndGet(SystemCPUFetchValueIntervalSetting.class, "hardware-cpu", timeout -> {
             if (this.hardwareCpuScheduler != null) {

@@ -1,8 +1,7 @@
 package org.touchhome.app.rest.widget;
 
 import lombok.Getter;
-import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
-import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 
 import java.util.Set;
 

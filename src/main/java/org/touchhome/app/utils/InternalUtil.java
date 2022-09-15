@@ -7,6 +7,7 @@ import java.beans.Introspector;
 import java.lang.reflect.Method;
 
 public final class InternalUtil {
+    public static final double GB_DIVIDER = 1024 * 1024 * 1024;
 
     public static Method findMethodByName(Class clz, String name) {
         String capitalizeName = StringUtils.capitalize(name);

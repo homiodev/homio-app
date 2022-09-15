@@ -2,6 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.fm;
 
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetGroup;
+import org.touchhome.app.model.entity.widget.impl.HasLayout;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.ui.field.*;
@@ -9,11 +10,10 @@ import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 
 import javax.persistence.Entity;
-import java.util.Set;
 
 @Entity
 public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, WidgetFMSeriesEntity>
-        implements HasDynamicContextMenuActions {
+        implements HasDynamicContextMenuActions, HasLayout {
 
     public static final String PREFIX = "wgtfm_";
 
@@ -66,6 +66,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
         return this;
     }
 
+    @Override
     @UIField(order = 35, showInContextMenu = true, icon = "fas fa-table")
     @UIFieldTableLayout
     public String getLayout() {

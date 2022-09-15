@@ -2,8 +2,6 @@ package org.touchhome.app.model.entity.widget;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.touchhome.app.model.entity.widget.impl.HasChartDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.validation.MaxItems;
@@ -12,8 +10,6 @@ import org.touchhome.common.exception.ServerException;
 
 import javax.persistence.*;
 import java.util.Set;
-
-import static org.apache.commons.lang3.ObjectUtils.isNotEmpty;
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)

@@ -1,4 +1,4 @@
-package org.touchhome.app.model.entity.widget.impl;
+package org.touchhome.app.model.entity.widget.impl.chart;
 
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.ui.field.UIField;

@@ -5,9 +5,7 @@ import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.UIFieldMarkers;
 import org.touchhome.app.model.entity.widget.UIFieldTimeSlider;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
-import org.touchhome.app.model.entity.widget.impl.HasIcon;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
+import org.touchhome.app.model.entity.widget.impl.*;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.*;
@@ -16,7 +14,7 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
-        implements HasSingleValueDataSource, HasTimePeriod, HasIcon {
+        implements HasSingleValueDataSource, HasTimePeriod, HasIcon, HasValueConverter, HasTextConverter {
 
     public static final String PREFIX = "wgtgg_";
 
@@ -94,7 +92,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Value", order = 20)
+    @UIFieldGroup(value = "Text", order = 20, borderColor = "#D4B72B")
     public String getUnit() {
         return getJsonData("unit", "℃");
     }
@@ -103,10 +101,42 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         setJsonData("unit", value);
     }
 
-    @UIField(order = 2, label = "label")
-    @UIFieldGroup(value = "Value")
+    @UIField(order = 0, visible = false)
+    @UIFieldSlider(min = 8, max = 40)
+    public double getUnitFontSize() {
+        return getJsonData("unitFS", 1D);
+    }
+
+    public void setUnitFontSize(double value) {
+        setJsonData("unitFS", value);
+    }
+
+    @UIField(order = 2)
+    @UIFieldGroup("Text")
+    @UIFieldColorPicker
+    public String getUnitColor() {
+        return getJsonData("uc", UI.Color.WHITE);
+    }
+
+    public void setUnitColor(String value) {
+        setJsonData("uc", value);
+    }
+
+    @UIField(order = 3, label = "label")
+    @UIFieldGroup("Text")
     public String getName() {
         return super.getName();
+    }
+
+    @UIField(order = 4)
+    @UIFieldGroup("Text")
+    @UIFieldColorPicker(allowThreshold = true)
+    public String getTextColor() {
+        return getJsonData("tc", UI.Color.WHITE);
+    }
+
+    public void setTextColor(String value) {
+        setJsonData("tc", value);
     }
 
     @UIField(order = 24)
@@ -159,13 +189,6 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
 
     public void setMarkerSize(int value) {
         setJsonData("ms", value);
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public String getLayout() {
-        throw new IllegalStateException("MNC");
     }
 
     @UIField(order = 100, label = "duration_aggr")

@@ -6,17 +6,20 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.touchhome.bundle.api.inmemory.InMemoryDBEntity;
 
+import static org.touchhome.app.utils.InternalUtil.GB_DIVIDER;
+
 @Getter
 @Setter
 @NoArgsConstructor
 public class SystemMessage extends InMemoryDBEntity {
-    private double scl;
-    private long mem;
-    private double cpl;
+    private float scl;
+    private float mem;
+    private float cpl;
 
     public SystemMessage(OperatingSystemMXBean osBean, long totalMemory) {
-        this.cpl = osBean.getProcessCpuLoad() * 100;
-        this.mem = totalMemory - osBean.getFreePhysicalMemorySize();
-        this.scl = osBean.getSystemCpuLoad() * 100;
+        this.cpl = (float) (osBean.getProcessCpuLoad() * 100);
+
+        this.mem = (float) ((totalMemory - osBean.getFreePhysicalMemorySize()) / GB_DIVIDER);
+        this.scl = (float) (osBean.getSystemCpuLoad() * 100);
     }
 }
