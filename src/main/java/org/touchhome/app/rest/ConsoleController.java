@@ -16,6 +16,7 @@ import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
+import org.touchhome.app.utils.UIFieldSelectionUtil;
 import org.touchhome.app.utils.UIFieldUtils;
 import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.EntityContext;
@@ -158,7 +159,7 @@ public class ConsoleController implements BeanPostConstruct {
                     ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier = baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny()
                     .orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
-            return UIFieldUtils.loadOptions(identifier, entityContext, fieldName, null, null, null, null);
+            return UIFieldSelectionUtil.loadOptions(identifier, entityContext, fieldName, null, null, null, null);
         }
         return null;
     }

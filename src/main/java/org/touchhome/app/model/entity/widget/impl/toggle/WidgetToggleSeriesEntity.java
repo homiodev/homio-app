@@ -22,7 +22,7 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
 
     @Override
     @UIField(order = 1, required = true)
-    @UIFieldBeanSelection(HasGetStatusValue.class)
+    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldIgnoreParent
     @UIFieldGroup(value = "Value", order = 2)
@@ -32,7 +32,7 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
 
     @UIField(order = 2, required = true)
     @UIFieldGroup(value = "Value")
-    @UIFieldBeanSelection(HasSetStatusValue.class)
+    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     public String getSetValueDataSource() {
         return HasSingleValueDataSource.super.getSetValueDataSource();

@@ -2,8 +2,10 @@ package org.touchhome.app.service.hardware;
 
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextStorage;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent;
 
 @Component
+@UIFieldSelectionParent(value = "selection.hardware", icon = "fas fa-microchip", iconColor = "#31BDB6")
 public class SystemMemService extends BaseSystemService {
 
     public SystemMemService() {

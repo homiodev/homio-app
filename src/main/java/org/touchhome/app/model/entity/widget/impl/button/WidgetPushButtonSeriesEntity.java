@@ -22,7 +22,7 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
     @Override
     @UIField(order = 1, required = true, label = "widget.pushValueDataSource")
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-    @UIFieldBeanSelection(HasSetStatusValue.class)
+    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldGroup(value = "Action Data source", order = 1)
     public String getSetValueDataSource() {
         return HasSingleValueDataSource.super.getSetValueDataSource();

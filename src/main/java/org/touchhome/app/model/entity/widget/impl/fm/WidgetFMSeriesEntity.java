@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
+import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
@@ -34,6 +35,6 @@ public class WidgetFMSeriesEntity extends WidgetSeriesEntity<WidgetFMEntity>
     @JsonIgnore
     @UIFieldIgnore
     public AggregationType getAggregationType() {
-        throw new IllegalStateException("MNC");
+        throw new ProhibitedExecution();
     }
 }

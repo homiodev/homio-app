@@ -30,7 +30,7 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries> ex
     private T widgetEntity;
 
     @Lob
-    @Column(length = 1048576)
+    @Column(length = 1000_000)
     @Convert(converter = JSONObjectConverter.class)
     private JSONObject jsonData = new JSONObject();
 

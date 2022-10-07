@@ -13,23 +13,18 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFi
 
 public interface HasSingleValueDataSource extends HasDynamicParameterFields {
 
-    /**
-     * ValueDataSource must contains dataSource~~~UIFieldEntityByClassSelection
-     */
     @UIField(order = 10, required = true)
-    @UIFieldBeanSelection(HasAggregateValueFromSeries.class)
-
-    // if found same class for those 2 option than only HasAggregateValueFromSeries taken
+    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
+    @UIFieldBeanSelection(value = HasAggregateValueFromSeries.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
-
     @UIFieldGroup(value = "Value", order = 10)
     @UIEditReloadWidget
     default String getValueDataSource() {
         return getJsonData("vds");
     }
 
-    @UIFieldBeanSelection(HasSetStatusValue.class)
+    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     @UIFieldGroup(value = "Value")
     @UIEditReloadWidget

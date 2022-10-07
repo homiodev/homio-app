@@ -64,13 +64,11 @@ import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
 import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
-import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
-import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
@@ -80,8 +78,6 @@ import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.repository.UserRepository;
 import org.touchhome.bundle.api.service.EntityService;
 import org.touchhome.bundle.api.setting.SettingPlugin;
-import org.touchhome.bundle.api.state.DecimalType;
-import org.touchhome.bundle.api.state.OnOffType;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
@@ -90,7 +86,6 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
-import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.raspberry.repository.RaspberryDeviceRepository;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.model.UpdatableValue;
@@ -148,6 +143,7 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextEventImpl entityContextEvent;
     private final EntityContextBGPImpl entityContextBGP;
     private final EntityContextSettingImpl entityContextSetting;
+    private final EntityContextVarImpl entityContextVar;
     private final EntityContextWidgetImpl entityContextWidget;
     private final Environment environment;
     private final StartupHardwareRepository startupHardwareRepository;
@@ -194,6 +190,7 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextSetting = new EntityContextSettingImpl(this);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
         this.entityContextStorage = new EntityContextStorage(this);
+        this.entityContextVar = new EntityContextVarImpl(this, broadcastLockManager);
     }
 
     @SneakyThrows
@@ -218,6 +215,7 @@ public class EntityContextImpl implements EntityContext {
             applicationContext.getBean(beanUpdateClass).postConstruct(this);
         }
         updateBeans(null, applicationContext, true);
+        this.entityContextVar.init();
 
         applicationContext.getBean(JwtTokenProvider.class).postConstruct(this);
         applicationContext.getBean(LoggerService.class).postConstruct();
@@ -254,26 +252,6 @@ public class EntityContextImpl implements EntityContext {
         applicationContext.getBean(WorkspaceController.class).postConstruct(this);
         applicationContext.getBean(WidgetService.class).postConstruct();
 
-        // trigger handlers when variables changed
-        this.event()
-                .addEntityUpdateListener(WorkspaceVariableEntity.class, "workspace-var-change-listener", (source, oldSource) -> {
-                    Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
-                    broadcastLockManager.signalAll(source.getEntityID(),
-                            new DecimalType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
-                });
-        this.event().addEntityUpdateListener(WorkspaceStandaloneVariableEntity.class, "workspace-stand-var-change-listener",
-                (source, oldSource) -> {
-                    Scratch3ExtensionBlocks.sendWorkspaceValueChangeValue(this, source, source.getValue());
-                    broadcastLockManager.signalAll(source.getEntityID(),
-                            new DecimalType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
-                });
-        this.event().addEntityUpdateListener(WorkspaceBooleanEntity.class, "workspace-var-bool-change-listener",
-                (source, oldSource) -> {
-                    Scratch3ExtensionBlocks.sendWorkspaceBooleanValueChangeValue(this, source, source.getValue());
-                    broadcastLockManager.signalAll(source.getEntityID(),
-                            new OnOffType(source.getValue(), oldSource == null ? null : oldSource.getValue()));
-                });
-
         // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
 
         ui().addBellInfoNotification("app-status", "app", "Started at " + DateFormat.getDateTimeInstance().format(new Date()));
@@ -285,6 +263,7 @@ public class EntityContextImpl implements EntityContext {
 
         // install autossh. Should refactor to move somewhere else
         this.bgp().runOnceOnInternetUp("internal-ctx", () -> MACHINE_IP_ADDRESS = getInternalIpAddress());
+        setting().listenValueAndGet(SystemLanguageSetting.class, "listen-lang", lang -> Lang.CURRENT_LANG = lang.name());
         this.entityContextStorage.init();
     }
 
@@ -311,6 +290,11 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public EntityContextSettingImpl setting() {
         return entityContextSetting;
+    }
+
+    @Override
+    public EntityContextVar var() {
+        return entityContextVar;
     }
 
     public EntityContextWidgetImpl widget() {
@@ -780,8 +764,6 @@ public class EntityContextImpl implements EntityContext {
         log.info("Starting update all app bundles");
         Lang.clear();
         fetchSettingPlugins(bundleContext, addBundle);
-
-        Lang.DEFAULT_LANG = setting().getValue(SystemLanguageSetting.class).name();
 
         for (Class<? extends BeanPostConstruct> beanUpdateClass : BEAN_UPDATE_CLASSES) {
             applicationContext.getBean(beanUpdateClass).onContextUpdate(this);

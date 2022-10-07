@@ -43,7 +43,7 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
 
     @UIField(order = 1, required = true)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
-    @UIFieldBeanSelection(HasTimeValueSeries.class)
+    @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
     @UIFieldGroup(value = "Chart", order = 10, borderColor = "#9C27B0")
     @UIEditReloadWidget
     public String getChartDataSource() {

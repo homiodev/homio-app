@@ -31,8 +31,13 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     public static final String PREFIX = "st_";
 
     @Lob
-    @Column(length = 1048576)
+    @Column(length = 1000_000)
     private String value;
+
+    public SettingEntity setValue(String value) {
+        this.value = value;
+        return this;
+    }
 
     @Transient
     private String color;
@@ -90,7 +95,7 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     @Lob
     @Getter
     @JsonIgnore
-    @Column(length = 1048576)
+    @Column(length = 1000_000)
     @Convert(converter = JSONObjectConverter.class)
     private JSONObject jsonData = new JSONObject();
 

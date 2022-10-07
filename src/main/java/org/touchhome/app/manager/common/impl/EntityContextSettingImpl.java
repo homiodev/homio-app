@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
+import org.touchhome.app.setting.system.SystemPlaceSetting;
 import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -37,6 +38,11 @@ public class EntityContextSettingImpl implements EntityContextSetting {
 
     public static List<SettingPlugin> settingPluginsBy(Predicate<SettingPlugin> predicate) {
         return settingPluginsByPluginKey.values().stream().filter(predicate).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<String> getPlaces() {
+        return new ArrayList<>(this.getValue(SystemPlaceSetting.class));
     }
 
     @Override

@@ -14,7 +14,8 @@ import javax.persistence.Entity;
 
 @Entity
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
-        implements HasSingleValueDataSource, HasTimePeriod, HasIcon, HasValueConverter, HasTextConverter {
+        implements HasSingleValueDataSource, HasTimePeriod, HasIcon, HasValueConverter, HasTextConverter, HasName,
+        HasValueTemplate {
 
     public static final String PREFIX = "wgtgg_";
 
@@ -102,7 +103,6 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 0, visible = false)
-    @UIFieldSlider(min = 8, max = 40)
     public double getUnitFontSize() {
         return getJsonData("unitFS", 1D);
     }
@@ -239,5 +239,12 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
 
     public enum LineType {
         round, butt
+    }
+
+    @Override
+    @UIFieldIgnore
+    @JsonIgnore
+    public String getValueTemplate() {
+        return HasValueTemplate.super.getValueTemplate();
     }
 }

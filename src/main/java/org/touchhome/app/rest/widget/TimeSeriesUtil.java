@@ -7,9 +7,9 @@ import org.json.JSONObject;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
-import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
+import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ChartRequest;
@@ -23,7 +23,6 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFi
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
@@ -130,9 +129,13 @@ public class TimeSeriesUtil {
             addListenValueIfRequire(entity.getListenSourceUpdates(), entity.getEntityID(), source, dynamicParameters,
                     seriesEntityId,
                     dataSourceEntityID,
-                    () -> resultConverter.apply(((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(
-                            buildChartRequest(((HasTimePeriod) entity).buildTimePeriod(), dynamicParameters),
-                            aggregationType, false)));
+                    object -> {
+                        ChartRequest request =
+                                buildChartRequest(((HasTimePeriod) entity).buildTimePeriod(), dynamicParameters);
+                        request.getParameters().put("lastValue", object);
+                        return resultConverter.apply(((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(
+                                request, aggregationType, false));
+                    });
         } else {
             HasGetStatusValue.GetStatusValueRequest valueRequest =
                     new HasGetStatusValue.GetStatusValueRequest(entityContext, dynamicParameters);
@@ -140,7 +143,11 @@ public class TimeSeriesUtil {
 
             addListenValueIfRequire(entity.getListenSourceUpdates(), entity.getEntityID(), source, dynamicParameters,
                     seriesEntityId, dataSourceEntityID,
-                    () -> resultConverter.apply(((HasGetStatusValue) source).getStatusValue(valueRequest)));
+                    object ->
+                    {
+                        valueRequest.getDynamicParameters().put("lastValue", object);
+                        return resultConverter.apply(((HasGetStatusValue) source).getStatusValue(valueRequest));
+                    });
         }
 
         return resultConverter.apply(value);
@@ -152,13 +159,13 @@ public class TimeSeriesUtil {
                                             @Nullable JSONObject dynamicParameters,
                                             @Nullable String seriesEntityId,
                                             @Nullable String dataSourceEntityID,
-                                            @NotNull Supplier<R> valueSupplier) {
+                                            @NotNull Function<Object, R> valueSupplier) {
         if (listenSourceUpdates) {
             AtomicReference<R> valueRef = new AtomicReference<>(null);
             String key = entityID + defaultString(seriesEntityId, "");
             ((HasUpdateValueListener) source).addUpdateValueListener(entityContext, key, dynamicParameters,
                     o -> {
-                        R updatedValue = valueSupplier.get();
+                        R updatedValue = valueSupplier.apply(o);
                         if (valueRef.get() != updatedValue) {
                             valueRef.set(updatedValue);
                             entityContext.ui().sendDynamicUpdate(

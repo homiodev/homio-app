@@ -7,30 +7,19 @@ import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
-import org.touchhome.app.model.workspace.WorkspaceBroadcastEntity;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.setting.system.SystemClearWorkspaceButtonSetting;
-import org.touchhome.app.setting.system.SystemClearWorkspaceVariablesButtonSetting;
 import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.entity.workspace.WorkspaceJsonVariableEntity;
-import org.touchhome.bundle.api.entity.workspace.WorkspaceShareVariableEntity;
-import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
-import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupEntity;
-import org.touchhome.bundle.api.entity.workspace.backup.WorkspaceBackupGroupEntity;
-import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanEntity;
-import org.touchhome.bundle.api.entity.workspace.bool.WorkspaceBooleanGroupEntity;
-import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableEntity;
-import org.touchhome.bundle.api.entity.workspace.var.WorkspaceVariableGroupEntity;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.api.workspace.WorkspaceEventListener;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.common.util.CommonUtils;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -45,7 +34,7 @@ public class WorkspaceManager implements BeanPostConstruct {
 
     private Collection<WorkspaceEventListener> workspaceEventListeners;
     private Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
-    private Map<String, TabHolder> tabs = new HashMap<>();
+    private final Map<String, TabHolder> tabs = new HashMap<>();
 
     @Override
     public void onContextUpdate(EntityContext entityContext) {
@@ -103,7 +92,7 @@ public class WorkspaceManager implements BeanPostConstruct {
                 Thread.currentThread().setName(workspaceEntity.getEntityID());
                 ((WorkspaceBlockImpl) workspaceBlock).handleOrEvaluate();
             } catch (Exception ex) {
-                log.warn("Error in workspace thread: <{}>, <{}>", name, ex.getMessage());
+                log.warn("Error in workspace thread: <{}>, <{}>", name, CommonUtils.getErrorMessage(ex), ex);
                 entityContext.ui().sendErrorMessage("Error in workspace", ex);
             } finally {
                 Thread.currentThread().setName(oldName);
@@ -151,35 +140,26 @@ public class WorkspaceManager implements BeanPostConstruct {
         return true;
     }
 
-    private void reloadVariable(WorkspaceShareVariableEntity entity) {
+    /*private void reloadVariable(WorkspaceShareVariableEntity entity) {
         log.debug("Reloading workspace variables...");
         JSONObject target = new JSONObject(StringUtils.defaultIfEmpty(entity.getContent(), "{}"));
 
-        // single variables
-        updateWorkspaceObjects(target.optJSONObject("variables"), WorkspaceStandaloneVariableEntity::new);
-
-        // json variables
-        updateWorkspaceObjects(target.optJSONObject("json_variables"), WorkspaceJsonVariableEntity::new);
-
         // broadcasts
-        updateWorkspaceObjects(target.optJSONObject("broadcasts"), WorkspaceBroadcastEntity::new);
-
-        // backup
-        Map<BaseEntity, JSONArray> values =
-                updateWorkspaceObjects(target.optJSONObject("backup_lists"), WorkspaceBackupGroupEntity::new);
-        createSupplier(values, (baseEntity) -> new WorkspaceBackupEntity().setWorkspaceBackupGroupEntity(
-                (WorkspaceBackupGroupEntity) baseEntity), WorkspaceBackupEntity.PREFIX);
-
-        // bool
-        values = updateWorkspaceObjects(target.optJSONObject("bool_variables"), WorkspaceBooleanGroupEntity::new);
-        createSupplier(values, (baseEntity) -> new WorkspaceBooleanEntity().setWorkspaceBooleanGroupEntity(
-                (WorkspaceBooleanGroupEntity) baseEntity), WorkspaceBooleanEntity.PREFIX);
+        updateWorkspaceObjects(target.optJSONObject("broadcasts"), WorkspaceBroadcastEntity.class, (id, name, array) ->
+                saveOrUpdateEntity(WorkspaceBroadcastEntity::new, id, name, WorkspaceBroadcastEntity.PREFIX));
 
         // group variables
-        values = updateWorkspaceObjects(target.optJSONObject("group_variables"), WorkspaceVariableGroupEntity::new);
-        createSupplier(values, (baseEntity) -> new WorkspaceVariableEntity().setWorkspaceVariableGroupEntity(
-                (WorkspaceVariableGroupEntity) baseEntity), WorkspaceVariableEntity.PREFIX);
-    }
+        JSONObject list = target.optJSONObject("group_variables");
+        if (list != null) {
+            for (String id : list.keySet()) {
+                JSONArray array = list.optJSONArray(id);
+                String name = array == null ? list.getString(id) : array.getString(0);
+                if (!name.isEmpty()) {
+                    createGroupVariables(name, array);
+                }
+            }
+        }
+    }*/
 
     private Map<String, WorkspaceBlock> parseWorkspace(WorkspaceEntity workspaceEntity) {
         JSONObject jsonObject = new JSONObject(workspaceEntity.getContent());
@@ -222,50 +202,64 @@ public class WorkspaceManager implements BeanPostConstruct {
         return workspaceMap;
     }
 
-    private void createSupplier(Map<BaseEntity, JSONArray> res, Function<BaseEntity, BaseEntity> entitySupplier, String prefix) {
-        List<String> existedEntities =
-                entityContext.findAllByPrefix(prefix).stream().map(BaseEntity::getEntityID).collect(Collectors.toList());
-        for (Map.Entry<BaseEntity, JSONArray> entry : res.entrySet()) {
-            JSONArray jsonArray = entry.getValue().optJSONArray(2);
-            if (jsonArray != null) {
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject jsonObject1 = jsonArray.getJSONObject(i);
-                    saveOrUpdateEntity(() -> entitySupplier.apply(entry.getKey()), jsonObject1.getString("id"),
-                            jsonObject1.getString("name"), prefix);
-                    existedEntities.remove(prefix + jsonObject1.getString("id"));
+    /*private void createGroupVariables(String group, JSONArray jsonArray) {
+        List<String> existedEntities = entityContext.findAll(WorkspaceGroupVariable.class).stream().map(BaseEntity::getEntityID)
+                .collect(Collectors.toList());
+        JSONArray variablesHolder = jsonArray.optJSONArray(2);
+        if (variablesHolder != null) {
+            for (int i = 0; i < variablesHolder.length(); i++) {
+                JSONObject jsonObject1 = variablesHolder.getJSONObject(i);
+
+                String variableId = jsonObject1.getString("id_");
+                String variableName = jsonObject1.getString("name");
+
+                WorkspaceGroupVariable entity = entityContext.getEntity(WorkspaceGroupVariable.PREFIX + variableId);
+                if (entity == null) {
+                    entity = entityContext.save(
+                            new WorkspaceGroupVariable().setVariableGroup(group).computeEntityID(() -> variableId)
+                                    .setName(variableName));
+                } else if (!Objects.equals(entity.getName(), variableName) || !Objects.equals(entity.getVariableGroup(), group)) {
+                    entity = entityContext.save(entity.setName(variableName).setVariableGroup(group));
                 }
+                existedEntities.remove(entity.getEntityID());
             }
         }
         for (String existedEntity : existedEntities) {
             entityContext.delete(existedEntity);
         }
-    }
+    }*/
 
-    private Map<BaseEntity, JSONArray> updateWorkspaceObjects(JSONObject list, Supplier<BaseEntity> entitySupplier) {
+    /*private Map<BaseEntity, JSONArray> updateWorkspaceObjects(JSONObject list, Class<? extends BaseEntity> entityType,
+                                                              CreateVariableHandler createVariableHandler) {
         Set<String> entities = new HashSet<>();
         Map<BaseEntity, JSONArray> res = new HashMap<>();
-        String repositoryPrefix = entitySupplier.get().getEntityPrefix();
         if (list != null) {
             for (String id : list.keySet()) {
                 JSONArray array = list.optJSONArray(id);
                 String name = array == null ? list.getString(id) : array.getString(0);
                 if (!name.isEmpty()) {
-                    BaseEntity entity = saveOrUpdateEntity(entitySupplier, id, name, repositoryPrefix);
-                    res.put(entity, array);
-                    entities.add(repositoryPrefix + id);
+                    BaseEntity baseEntity = createVariableHandler.createVariables(id, name, array);
+                    if (baseEntity != null) {
+                        res.put(baseEntity, array);
+                        entities.add(baseEntity.getEntityID());
+                    }
                 }
             }
         }
         // remove deleted items
-        for (BaseEntity entity : entityContext.findAllByPrefix(repositoryPrefix)) {
+        for (BaseEntity entity : entityContext.findAll(entityType)) {
             if (!entities.contains(entity.getEntityID())) {
                 entityContext.delete(entity);
             }
         }
         return res;
-    }
+    }*/
 
-    private BaseEntity saveOrUpdateEntity(Supplier<BaseEntity> entitySupplier, String id, String name, String repositoryPrefix) {
+    /*private interface CreateVariableHandler {
+        BaseEntity createVariables(String id, String name, JSONArray array);
+    }*/
+
+    /*private BaseEntity saveOrUpdateEntity(Supplier<BaseEntity> entitySupplier, String id, String name, String repositoryPrefix) {
         BaseEntity entity = entityContext.getEntity(repositoryPrefix + id);
         if (entity == null) {
             entity = entityContext.save(entitySupplier.get().computeEntityID(() -> id).setName(name));
@@ -275,7 +269,7 @@ public class WorkspaceManager implements BeanPostConstruct {
             }
         }
         return entity;
-    }
+    }*/
 
     private WorkspaceBlock getOrCreateWorkspaceBlock(Map<String, WorkspaceBlock> workspaceMap, JSONObject block, String key) {
         if (block.has(key) && !block.isNull(key)) {
@@ -288,41 +282,29 @@ public class WorkspaceManager implements BeanPostConstruct {
 
     public void loadWorkspace() {
         try {
-            reloadVariables();
             reloadWorkspaces();
         } catch (Exception ex) {
             log.error("Unable to load workspace. Looks like workspace has incorrect value", ex);
         }
         entityContext.event().addEntityUpdateListener(WorkspaceEntity.class,
                 "workspace-change-listener", this::reloadWorkspace);
-        entityContext.event().addEntityUpdateListener(WorkspaceShareVariableEntity.class,
-                "workspace-share-var-change-listener", this::reloadVariable);
         entityContext.event().addEntityRemovedListener(WorkspaceEntity.class,
                 "workspace-remove-listener", entity -> tabs.remove(entity.getEntityID()));
 
         // listen for clear workspace
         entityContext.setting().listenValue(SystemClearWorkspaceButtonSetting.class, "wm-clear-workspace", () ->
                 entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent(""))));
-
-        // listen for clear variables
-        entityContext.setting()
-                .listenValue(SystemClearWorkspaceVariablesButtonSetting.class, "wm-clear-workspace-variables", () -> {
-                    entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent("")));
-                    WorkspaceShareVariableEntity entity =
-                            entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
-                    entityContext.save(entity.setContent(""));
-                });
     }
 
-    private void reloadVariables() {
+    /*private void reloadVariables() {
         WorkspaceShareVariableEntity entity =
-                entityContext.getEntity(WorkspaceShareVariableEntity.PREFIX + WorkspaceShareVariableEntity.NAME);
+                entityContext.getEntity(SHARE_VARIABLES);
         if (entity == null) {
             entity = entityContext.save(
                     new WorkspaceShareVariableEntity().computeEntityID(() -> WorkspaceShareVariableEntity.NAME));
         }
         reloadVariable(entity);
-    }
+    }*/
 
     private void reloadWorkspaces() {
         List<WorkspaceEntity> list = entityContext.findAll(WorkspaceEntity.class);

@@ -203,7 +203,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 listener.entityUpdated(saved, oldEntity);
             }
             for (Consumer listener : typeListeners.getOrDefault(name, emptyMap()).values()) {
-                listener.accept(saved);
+                listener.accept(saved == null ? oldEntity : saved); // for Delete we have to use oldEntity
             }
         }
 

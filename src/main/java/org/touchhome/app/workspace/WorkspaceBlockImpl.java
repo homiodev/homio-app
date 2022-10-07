@@ -3,13 +3,11 @@ package org.touchhome.app.workspace;
 import com.pivovarit.function.ThrowingRunnable;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.bundle.api.entity.workspace.WorkspaceStandaloneVariableEntity;
 import org.touchhome.bundle.api.state.RawType;
 import org.touchhome.bundle.api.state.State;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
@@ -24,6 +22,8 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -218,7 +218,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     @Override
     public String getFieldId(String fieldName) {
-        return this.fields.get(fieldName).getString(1);
+        return this.fields.get(fieldName).optString(1);
     }
 
     @Override
@@ -300,7 +300,10 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     @Override
     public Float getInputFloat(String key, Float defaultValue) {
-        Object value = getInput(key, true);
+        return objectToFloat(getInput(key, true), defaultValue);
+    }
+
+    public static Float objectToFloat(Object value, Float defaultValue) {
         if (value == null) {
             return defaultValue;
         }
@@ -308,11 +311,9 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             return ((Number) value).floatValue();
         }
         try {
-            return Float.parseFloat(valueToStr(value, "0"));
-        } catch (NumberFormatException ex) {
-            logErrorAndThrow(
-                    "Unable parse value <" + key + "> to double for block: <" + this.opcode + ">. Actual value: <" + value +
-                            ">.");
+            return NumberFormat.getInstance().parse(valueToStr(value, "0")).floatValue();
+        } catch (ParseException ex) {
+            log.error("Unable to convert value '{}' to float", value);
             return defaultValue;
         }
     }
@@ -585,14 +586,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         BROADCAST_PRIMITIVE(array -> array.get(2), (array, entityContext) -> {
             return array.get(2);
         }),
-        VAR_PRIMITIVE(array -> array.get(2), (array, entityContext) -> {
+        /* TODO: VAR_PRIMITIVE(array -> array.get(2), (array, entityContext) -> {
             WorkspaceStandaloneVariableEntity entity =
                     entityContext.getEntity(WorkspaceStandaloneVariableEntity.PREFIX + array.get(2));
             if (entity == null) {
                 throw new IllegalArgumentException("Unable to find variable with name: " + array.get(1));
             }
             return StringUtils.defaultIfEmpty(String.valueOf(entity.getValue()), "0");
-        }),
+        }),*/
         LIST_PRIMITIVE,
         FONT_AWESOME_PRIMITIVE;
 
@@ -609,7 +610,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         }
     }
 
-    private String valueToStr(Object content, String defaultValue) {
+    private static String valueToStr(Object content, String defaultValue) {
         if (content != null) {
             if (content instanceof State) {
                 return ((State) content).stringValue();

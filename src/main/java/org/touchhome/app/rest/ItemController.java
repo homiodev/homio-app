@@ -22,6 +22,7 @@ import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.setting.system.SystemShowEntityCreateTimeSetting;
 import org.touchhome.app.setting.system.SystemShowEntityUpdateTimeSetting;
 import org.touchhome.app.utils.InternalUtil;
+import org.touchhome.app.utils.UIFieldSelectionUtil;
 import org.touchhome.app.utils.UIFieldUtils;
 import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.EntityContext;
@@ -564,7 +565,7 @@ public class ItemController implements BeanPostConstruct {
             return options;
         }
 
-        return UIFieldUtils.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(),
+        return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(),
                 optionsRequest.getDeps(), optionsRequest.getParam0());
     }
 
@@ -594,7 +595,8 @@ public class ItemController implements BeanPostConstruct {
         if (dynamicParameterFields == null) {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }
-        return UIFieldUtils.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity, null, null, null);
+        return UIFieldSelectionUtil.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity, null, null,
+                null);
     }
 
     private List<OptionModel> getEntityOptions(String fieldName, Object classEntity, Class<?> entityClass) {

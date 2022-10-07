@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
+import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 
@@ -39,7 +40,7 @@ public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPush
     @JsonIgnore
     @UIFieldIgnore
     public String getBackground() {
-        throw new IllegalStateException("MNC");
+        throw new ProhibitedExecution();
     }
 
     @Override

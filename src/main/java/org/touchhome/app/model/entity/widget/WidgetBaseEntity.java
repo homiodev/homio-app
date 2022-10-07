@@ -6,8 +6,8 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.json.JSONObject;
 import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
-import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.converter.JSONObjectConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -56,7 +56,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     private int bh = 1;
 
     @Lob
-    @Column(length = 1048576)
+    @Column(length = 1000_000)
     @Convert(converter = JSONObjectConverter.class)
     private JSONObject jsonData = new JSONObject();
 

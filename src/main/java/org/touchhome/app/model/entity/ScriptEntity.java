@@ -28,8 +28,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+// TODO: Temporary remove scripting engine from app due lack of time to fix everything
 @Entity
-@UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true, overridePath = "scripts")
+//@UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true, overridePath = "scripts")
 @Accessors(chain = true)
 public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
@@ -59,7 +60,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @Getter
     @Setter
     @UIField(order = 30)
-    @Column(length = 1048576)
+    @Column(length = 1000_000)
     @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript, autoFormat = true)
     private String javaScript = "function before() { };\nfunction run() { };\nfunction after() { };";
 

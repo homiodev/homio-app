@@ -20,13 +20,13 @@ public class WidgetDoughnutChartEntity extends ChartBaseEntity<WidgetDoughnutCha
     public static final String PREFIX = "wgtpc_";
 
     @UIField(order = 3)
-    @UIFieldGroup("Value")
-    @UIFieldSlider(min = 8, max = 40)
+
+    // TODO:??????????/
     public double getValueFontSize() {
         return getJsonData("vfs", 18);
     }
 
-    public double setValueFontSize(int value) {
+    public void setValueFontSize(double value) {
         setJsonData("vfs", value);
     }
 

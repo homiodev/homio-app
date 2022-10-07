@@ -5,12 +5,14 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextStorage;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent;
 
 import java.util.function.Consumer;
 
 import static org.touchhome.app.utils.InternalUtil.GB_DIVIDER;
 
 @Component
+@UIFieldSelectionParent(value = "selection.hardware", icon = "fas fa-microchip", iconColor = "#31BDB6")
 public class SystemTotalMemService implements HasGetStatusValue {
 
     @Override
