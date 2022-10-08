@@ -58,7 +58,7 @@ public class WidgetDisplayEntity extends WidgetBaseEntityAndSeries<WidgetDisplay
     @UIField(order = 20)
     @UIFieldJSONLine(template = "{\"top\": number}, \"left\": number, \"bottom\": number, \"right\": number")
     @UIFieldGroup("Chart ui")
-    @UIFieldShowOnCondition("eval(\"this.get('chartType') == 'bar'\")")
+    @UIFieldShowOnCondition("return context.get('chartType') == 'bar'")
     public String getBarBorderWidth() {
         return getJsonData("bbw", "{\"top\": 0, \"left\": 0, \"bottom\": 0, \"right\": 0}");
     }

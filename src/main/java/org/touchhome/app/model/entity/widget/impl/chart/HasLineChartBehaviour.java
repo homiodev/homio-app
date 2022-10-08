@@ -12,7 +12,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     @UIField(order = 20)
     @UIFieldGroup(value = "Chart ui", order = 11, borderColor = "#673AB7")
     @UIFieldSlider(min = 0, max = 10)
-    @UIFieldShowOnCondition("eval(\"this.get('chartType') == 'line'\")")
+    @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default int getLineBorderWidth() {
         return getJsonData("lbw", 3);
     }
@@ -23,7 +23,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
 
     @UIField(order = 40)
     @UIFieldGroup("Chart ui")
-    @UIFieldShowOnCondition("eval(\"this.get('chartType') == 'line'\")")
+    @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default Fill getLineFill() {
         return getJsonDataEnum("fill", Fill.Origin);
     }
@@ -34,7 +34,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
 
     @UIField(order = 6)
     @UIFieldGroup(value = "Chart ui")
-    @UIFieldShowOnCondition("eval(\"this.get('chartType') == 'line'\")")
+    @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default Stepped getStepped() {
         return getJsonDataEnum("stpd", Stepped.False);
     }
@@ -46,7 +46,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     @UIField(order = 3)
     @UIFieldSlider(min = 0, max = 10)
     @UIFieldGroup("Chart ui")
-    @UIFieldShowOnCondition("eval(\"this.get('chartType') == 'line'\")")
+    @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default int getTension() {
         return getJsonData("tns", 4);
     }
@@ -58,7 +58,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     @UIField(order = 1)
     @UIFieldGroup(value = "Chart point", order = 5)
     @UIFieldSlider(min = 0, max = 4, step = 0.2)
-    @UIFieldShowOnCondition("eval(\"this.get('chartType') == 'line'\")")
+    @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default double getPointRadius() {
         return getJsonData("prad", 0D);
     }
@@ -69,7 +69,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
 
     @UIField(order = 2)
     @UIFieldGroup(value = "Chart point")
-    @UIFieldShowOnCondition("eval(\"this.get('chartType') == 'line'\")")
+    @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default PointStyle getPointStyle() {
         return getJsonDataEnum("pstyle", PointStyle.circle);
     }
@@ -81,7 +81,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     @UIField(order = 3)
     @UIFieldGroup(value = "Chart point")
     @UIFieldColorPicker
-    @UIFieldShowOnCondition("eval(\"this.get('chartType') == 'line'\")")
+    @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default String getPointBackgroundColor() {
         return getJsonData("pbg", UI.Color.WHITE);
     }
@@ -93,7 +93,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     @UIField(order = 4)
     @UIFieldGroup(value = "Chart point")
     @UIFieldColorPicker
-    @UIFieldShowOnCondition("eval(\"this.get('chartType') == 'line'\")")
+    @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default String getPointBorderColor() {
         return getJsonData("pbc", UI.Color.PRIMARY_COLOR);
     }

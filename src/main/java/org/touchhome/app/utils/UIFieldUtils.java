@@ -479,18 +479,28 @@ public class UIFieldUtils {
             entityUIMetaData.setType("CodeEditor");
         }
 
-        if (entityUIMetaData.getType().equals(UIFieldType.InlineEntity.name())) {
+        UIFieldInlineEntityWidth uiFieldInlineEntityWidth = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntityWidth.class);
+        if (uiFieldInlineEntityWidth != null) {
+            jsonTypeMetadata.put("inlineEditWidth", uiFieldInlineEntityWidth.editWidth());
+            jsonTypeMetadata.put("inlineViewWidth", uiFieldInlineEntityWidth.viewWidth());
+        }
+
+        UIFieldInlineEntity uiFieldInline = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntity.class);
+        if (uiFieldInline != null) {
+
             if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
                 Type inlineType =
                         extractSetEntityType(instance, uiFieldContext, entityUIMetaData, (ParameterizedType) genericType,
                                 jsonTypeMetadata);
-                entityUIMetaData.setType(UIFieldType.InlineEntity.name());
                 // fill inlineType fields!
                 Object childClassInstance = CommonUtils.newInstance((Class) inlineType);
-                List<EntityUIMetaData> subTypeFieldMetadata =
-                        UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext);
-                jsonTypeMetadata.put("inlineTypeFields", subTypeFieldMetadata);
+
+                jsonTypeMetadata.put("inlineTypeFields",
+                        UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext));
+                entityUIMetaData.setStyle("height: 100%; padding: 0; background: " + uiFieldInline.bg() + ";");
                 jsonTypeMetadata.put("fw", true);
+                jsonTypeMetadata.put("addRow", uiFieldInline.addRow());
+                jsonTypeMetadata.put("showInGeneral", true);
             } else {
                 throw new IllegalStateException(
                         "Unable to annotate field " + uiFieldContext.getSourceName() + " with UIFieldType.InlineEntity");

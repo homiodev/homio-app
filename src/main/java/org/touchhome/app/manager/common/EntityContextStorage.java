@@ -27,7 +27,7 @@ public class EntityContextStorage {
     }
 
     private void initSystemCpuListening() {
-        cpuStorage = InMemoryDB.getService(SystemMessage.class,
+        cpuStorage = InMemoryDB.getOrCreateService(SystemMessage.class,
                 (long) entityContext.setting().getValue(SystemCPUHistorySizeSetting.class));
         entityContext.setting().listenValue(SystemCPUHistorySizeSetting.class, "listen-cpu-history", size ->
                 cpuStorage.updateQuota((long) size));

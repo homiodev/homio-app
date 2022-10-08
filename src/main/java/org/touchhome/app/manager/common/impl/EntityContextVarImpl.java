@@ -10,6 +10,7 @@ import org.touchhome.app.manager.var.WorkspaceVariable;
 import org.touchhome.app.manager.var.WorkspaceVariableMessage;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextVar;
+import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.inmemory.InMemoryDB;
 import org.touchhome.bundle.api.inmemory.InMemoryDBService;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
@@ -114,10 +115,10 @@ public class EntityContextVarImpl implements EntityContextVar {
         return context;
     }
 
-    public VariableContext createContext(WorkspaceVariable variable) {
+    private VariableContext createContext(WorkspaceVariable variable) {
         String variableId = variable.getVariableId();
-        var service = InMemoryDB.getService(WorkspaceVariableMessage.class,
-                        (long) variable.getQuota())
+        var service = InMemoryDB.getOrCreateService(WorkspaceVariableMessage.class,
+                        variable.getEntityID(), (long) variable.getQuota())
                 .addSaveListener("", broadcastMessage -> {
                     broadcastLockManager.signalAll(variableId, broadcastMessage.getValue());
                     entityContext.event().fireEvent(variableId, broadcastMessage.getValue(), false);
@@ -140,19 +141,19 @@ public class EntityContextVarImpl implements EntityContextVar {
         return variableId;
     }
 
-    public void delete(WorkspaceVariable variable) {
-        EntityContextVarImpl.VariableContext context = globalVarStorageMap.remove(variable.getVariableId());
-        if (context != null) {
-            context.service.deleteAll();
-        }
+    public void afterVariableEntityDeleted(String variableId) {
+        // all in-memory services will be removed in BaseEntity.preRemove()
+        globalVarStorageMap.remove(variableId);
     }
 
-    public void entityUpdated(WorkspaceVariable variable) {
-        VariableContext context = globalVarStorageMap.get(variable.getVariableId());
-        if (context != null) {
-            context.groupVariable = variable;
-            context.service.updateQuota((long) variable.quota);
-        }
+    public void variableUpdated(WorkspaceVariable variable) {
+        VariableContext context = getOrCreateContext(variable.getVariableId());
+        context.groupVariable = variable;
+        context.service.updateQuota((long) variable.quota);
+    }
+
+    public Object aggregate(String variableId, Long from, Long to, AggregationType aggregationType, boolean exactNumber) {
+        return getOrCreateContext(variableId).service.aggregate(from, to, null, null, aggregationType, exactNumber);
     }
 
     @AllArgsConstructor

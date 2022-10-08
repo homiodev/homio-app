@@ -43,12 +43,13 @@ public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSer
         }
     }
 
+    /* Looks like we may need verify relations only during fetch all variables from UI
     @Override
     public void afterFetch(EntityContext entityContext) {
         if (updateRelations(entityContext)) {
             entityContext.save(this);
         }
-    }
+    }*/
 
     @Override
     public void copy() {

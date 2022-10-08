@@ -8,20 +8,24 @@ public class DataSourceUtil {
         DataSourceContext dataSourceContext = new DataSourceContext();
         if (dataSource != null) {
             String[] vds = dataSource.split("~~~");
-            dataSourceContext.sourceClass = vds.length > 1 ? vds[1] : "";
-            dataSourceContext.source = evaluateDataSource(vds, entityContext);
+            if (vds.length > 2) {
+                dataSourceContext.sourceClass = vds[vds.length == 4 ? 2 : 1];
+                dataSourceContext.source =
+                        evaluateDataSource(vds[vds.length == 4 ? 3 : 2], vds[vds.length == 4 ? 1 : 0], entityContext);
+
+            } else {
+                throw new IllegalArgumentException("Unable to parse dataSource");
+            }
         }
         return dataSourceContext;
     }
 
-    private static Object evaluateDataSource(String[] vds, EntityContext entityContext) {
-        if (vds.length > 2) {
-            switch (vds[2]) {
-                case "bean":
-                    return entityContext.getBean(vds[0], Object.class);
-                case "entityByClass":
-                    return entityContext.getEntity(vds[0]);
-            }
+    private static Object evaluateDataSource(String dsb, String source, EntityContext entityContext) {
+        switch (dsb) {
+            case "bean":
+                return entityContext.getBean(source, Object.class);
+            case "entityByClass":
+                return entityContext.getEntity(source);
         }
         return null;
     }

@@ -12,7 +12,7 @@ import java.util.function.Consumer;
 import static org.touchhome.app.utils.InternalUtil.GB_DIVIDER;
 
 @Component
-@UIFieldSelectionParent(value = "selection.hardware", icon = "fas fa-microchip", iconColor = "#31BDB6")
+@UIFieldSelectionParent("selection.hardware")
 public class SystemTotalMemService implements HasGetStatusValue {
 
     @Override

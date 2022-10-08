@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.touchhome.app.utils.UIFieldUtils.fetchRequestWidgetType;
 
 public final class UIFieldSelectionUtil {
@@ -87,6 +88,12 @@ public final class UIFieldSelectionUtil {
                     if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
                         for (BaseEntity baseEntity : params.entityContext.findAll((Class<BaseEntity>) foundTargetType)) {
                             OptionModel optionModel = OptionModel.of(baseEntity.getEntityID(), baseEntity.getTitle());
+                            if (baseEntity instanceof UIFieldSelection.SelectionConfiguration) {
+                                var conf = ((UIFieldSelection.SelectionConfiguration) baseEntity);
+                                optionModel.setIcon(conf.selectionIcon());
+                                optionModel.setColor(conf.selectionIconColor());
+                            }
+
                             updateSelectedOptionModel(baseEntity, params.classEntityForDynamicOptionLoader, sourceClassType,
                                     optionModel, "entityByClass");
                             list.add(optionModel);
@@ -220,6 +227,7 @@ public final class UIFieldSelectionUtil {
             OptionModel optionModel = OptionModel.of(entry.getKey().key)
                     .setIcon(entry.getKey().icon)
                     .setColor(entry.getKey().iconColor)
+                    .setDescription(entry.getKey().description)
                     .setChildren(entry.getValue());
             result.add(optionModel);
         }
@@ -368,10 +376,25 @@ public final class UIFieldSelectionUtil {
         });
         setDescription(target, sourceClassType, optionModel);
 
+        String sp = null, icon = null, iconColor = null, descr = null;
         UIFieldSelectionParent selectionParent = target.getClass().getDeclaredAnnotation(UIFieldSelectionParent.class);
         if (selectionParent != null) {
-            optionModel.json(jsonObject -> jsonObject.put("sp", new SelectionParent(selectionParent.value(),
-                    selectionParent.icon(), selectionParent.iconColor())));
+            sp = selectionParent.value();
+            icon = selectionParent.icon();
+            iconColor = selectionParent.iconColor();
+            descr = selectionParent.description();
+        }
+
+        if (target instanceof UIFieldSelectionParent.SelectionParent) {
+            UIFieldSelectionParent.SelectionParent parent = (UIFieldSelectionParent.SelectionParent) target;
+            sp = defaultIfEmpty(parent.getParentName(), sp);
+            icon = defaultIfEmpty(parent.getParentIcon(), icon);
+            iconColor = defaultIfEmpty(parent.getParentIconColor(), iconColor);
+            descr = defaultIfEmpty(parent.getParentDescription(), descr);
+        }
+
+        if (sp != null) {
+            optionModel.put("sp", new SelectionParent(sp, icon, iconColor, descr));
         }
 
         if (target instanceof SelectionWithDynamicParameterFields) {
@@ -458,6 +481,7 @@ public final class UIFieldSelectionUtil {
         private final String key;
         private final String icon;
         private final String iconColor;
+        private final String description;
 
         @Override
         public boolean equals(Object o) {

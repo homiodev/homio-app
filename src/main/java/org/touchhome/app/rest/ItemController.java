@@ -549,6 +549,9 @@ public class ItemController implements BeanPostConstruct {
                 List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
                 aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.get(0);
             }
+            if (aClass == null) {
+                throw new IllegalArgumentException("Unable to find class for entity: " + entityID);
+            }
             classEntity = CommonUtils.newInstance(aClass);
             if (classEntity == null) {
                 throw new IllegalArgumentException("Unable find class: " + entityID);
@@ -565,8 +568,8 @@ public class ItemController implements BeanPostConstruct {
             return options;
         }
 
-        return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(),
-                optionsRequest.getDeps(), optionsRequest.getParam0());
+        return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null,
+                optionsRequest.getSelectType(), optionsRequest.getDeps(), optionsRequest.getParam0());
     }
 
     @GetMapping("/{entityID}/{fieldName}/{selectedEntityID}/dynamicParameterOptions")

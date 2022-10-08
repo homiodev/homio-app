@@ -10,6 +10,8 @@ import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.entity.validation.MaxItems;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldInlineEntity;
+import org.touchhome.bundle.api.ui.field.UIFieldInlineEntityWidth;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.*;
@@ -35,10 +37,14 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup> implements HasJso
         return super.getName();
     }
 
+    @UIField(order = 12)
+    private String description;
+
     @Getter
     @MaxItems(30) // max 30 variables in one group
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
-    @UIField(order = 30, type = UIFieldType.InlineEntity, style = "height: 100%; padding: 0; background: #1E5E611F;")
+    @UIField(order = 30)
+    @UIFieldInlineEntity(bg = "#1E5E611F", addRow="CREATE_VAR")
     private Set<WorkspaceVariable> workspaceVariables;
 
     @Lob
@@ -48,7 +54,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup> implements HasJso
     private JSONObject jsonData = new JSONObject();
 
     @Column(unique = true, nullable = false)
-    public String groupId;
+    private String groupId;
 
     @Override
     public String getEntityID() {

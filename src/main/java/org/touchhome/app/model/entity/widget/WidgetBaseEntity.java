@@ -95,8 +95,8 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         boolean updated = false;
         if (item instanceof HasSingleValueDataSource) {
             HasSingleValueDataSource source = (HasSingleValueDataSource) item;
-            if (isNotEmpty(source.getValueDataSource()) &&
-                    isEntityNotExists(entityContext, source.getValueDataSource())) {
+            String valueDataSource = source.getValueDataSource();
+            if (isNotEmpty(valueDataSource) && isEntityNotExists(entityContext, valueDataSource)) {
                 updated = true;
                 source.setValueDataSource(null);
             }

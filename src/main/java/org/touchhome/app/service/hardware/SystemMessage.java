@@ -17,6 +17,7 @@ public class SystemMessage extends InMemoryDBEntity {
     private float cpl;
 
     public SystemMessage(OperatingSystemMXBean osBean, long totalMemory) {
+        super();
         this.cpl = (float) (osBean.getProcessCpuLoad() * 100);
 
         this.mem = (float) ((totalMemory - osBean.getFreePhysicalMemorySize()) / GB_DIVIDER);
