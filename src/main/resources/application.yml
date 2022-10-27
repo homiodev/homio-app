@@ -2,15 +2,18 @@ rootDir: /opt/touchhome
 artifactoryFilesURL: https://touchhome.jfrog.io/artifactory/files-remote
 
 touchhome:
+  internetTestInterval: PT10S
+  checkPortInterval: PT10S
   disableSecurity: false
   version: @project.version@
   httpPort: 9119
   serverSiteURL: https://touchhome.org
   checkConnectivityURL: www.google.com
+  minScriptThreadSleep: PT0.1S
+  maxJavaScriptOnceCallBeforeInterrupt: PT60S
+  maxJavaScriptCompileBeforeInterrupt: PT5S
 
 spring:
-  security:
-    jwt-token-expire-min: 30
   banner:
     location: classpath:/banner.txt
   datasource:

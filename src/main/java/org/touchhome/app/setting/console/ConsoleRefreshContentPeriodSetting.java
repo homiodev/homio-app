@@ -16,7 +16,7 @@ public class ConsoleRefreshContentPeriodSetting implements ConsoleSettingPlugin<
 
     @Override
     public UIFieldType getSettingType() {
-        return UIFieldType.SelectBoxButton;
+        return UIFieldType.SelectBox;
     }
 
     @Override

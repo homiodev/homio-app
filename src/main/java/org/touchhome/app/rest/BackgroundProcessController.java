@@ -3,11 +3,11 @@ package org.touchhome.app.rest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.access.annotation.Secured;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.touchhome.app.json.BgpProcessResponse;
 import org.touchhome.app.manager.common.EntityContextImpl;
+
+import java.util.List;
 
 import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 
@@ -25,6 +25,11 @@ public class BackgroundProcessController {
         entityContext.bgp().cancelThread(name);
     }
 
+    @GetMapping
+    public BgpProcessResponse getProcesses() {
+        return entityContext.bgp().getProcesses();
+    }
+
    /* @GetMapping("/dynamic/stop/{url}")
     @Secured(ADMIN_ROLE)
     public void stopScriptByName(@PathVariable String url) {
@@ -35,7 +40,7 @@ public class BackgroundProcessController {
         }
     }*/
 
-    /*@GetMapping("/dynamic/{url}")
+    /* @GetMapping("/dynamic/{url}")
     @Secured(ADMIN_ROLE)
     public void dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws
     Exception {
@@ -50,9 +55,9 @@ public class BackgroundProcessController {
             throw new ServerException("Script not valid for dynamic URL: '" + url + "'.");
         }
         scriptManager.startThread(scriptEntity, json, true, null, false);
-    }*/
+    } */
 
-    /*@GetMapping("/progress")
+    /* @GetMapping("/progress")
     public List<BackgroundProcessStatusJSON> getProgressValue(@RequestParam("values") String values) {
         List<BackgroundProcessStatusJSON> backgroundProcessStatusJSONList = new ArrayList<>();
         for (String entityIDAndKey : values.split(";")) {
@@ -87,9 +92,9 @@ public class BackgroundProcessController {
             }
         }
         return backgroundProcessStatusJSONList;
-    }*/
+    } */
 
-    /*private void buildBackgroundProcessStatus(String entityID, List<BackgroundProcessStatusJSON> backgroundProcessStatuses,
+    /* private void buildBackgroundProcessStatus(String entityID, List<BackgroundProcessStatusJSON> backgroundProcessStatuses,
     BaseEntity item, Class<? extends AbstractJSBackgroundProcessService> aClass) {
         try {
             AbstractJSBackgroundProcessService backgroundProcessService = aClass.getConstructor(item.getClass(),
@@ -112,5 +117,5 @@ public class BackgroundProcessController {
         } catch (Exception ex) {
             throw new ServerException(ex);
         }
-    }*/
+    } */
 }

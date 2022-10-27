@@ -11,15 +11,19 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.*;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.state.RawType;
+import org.touchhome.bundle.api.state.StringType;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.MenuBlock;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.common.util.CommonUtils;
 
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -106,7 +110,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
             workspaceBlock.handleAndRelease(
                     () -> entityContext.udp().listenUdp(workspaceBlock.getId(), workspaceBlock.getInputString("HOST"),
                             workspaceBlock.getInputInteger("PORT"), (datagramPacket, output) -> {
-                                workspaceBlock.setValue(output);
+                                workspaceBlock.setValue(new StringType(output));
                                 substack.getNext().handle();
                             }),
                     () -> entityContext.udp().stopListenUdp(workspaceBlock.getId()));
@@ -118,17 +122,19 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         HttpMethod method = workspaceBlock.getMenuValue("METHOD", this.methodMenu);
         String url = workspaceBlock.getInputString("URL");
 
-        HttpRequestBase request = method.httpRequestBaseClass.newInstance();
+        HttpRequestBase request = CommonUtils.newInstance(method.httpRequestBaseClass);
         request.setURI(URI.create(url));
         applyParentBlocks(request, workspaceBlock.getParent());
 
-        HttpClient client = HttpClientBuilder.create().build();
-        HttpResponse response = client.execute(request);
+        try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+            HttpResponse response = client.execute(request);
 
-        if (workspaceBlock.getInputBoolean("RAW")) {
-            workspaceBlock.setValue(IOUtils.toByteArray(response.getEntity().getContent()));
-        } else {
-            workspaceBlock.setValue(IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8));
+            if (workspaceBlock.getInputBoolean("RAW")) {
+                workspaceBlock.setValue(new RawType(IOUtils.toByteArray(response.getEntity().getContent())));
+            } else {
+                workspaceBlock.setValue(
+                        new StringType(IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8)));
+            }
         }
     }
 
@@ -177,6 +183,6 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         POST(HttpPost.class),
         DELETE(HttpDelete.class);
 
-        private Class<? extends HttpRequestBase> httpRequestBaseClass;
+        private final Class<? extends HttpRequestBase> httpRequestBaseClass;
     }
 }

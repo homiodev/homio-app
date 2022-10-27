@@ -1,106 +1,98 @@
 package org.touchhome.app.workspace;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.util.Pair;
-import org.springframework.stereotype.Component;
+import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextBGP.ThreadContext;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
-
 @Log4j2
-@Component
+@RequiredArgsConstructor
 public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
-    private Map<String, Holder> workspaceWarehouse = new HashMap<>();
+  private final WorkspaceWarehouseContext workspaceWarehouse = new WorkspaceWarehouseContext();
+  private final EntityContext entityContext;
 
-    private final Runnable runnable = () -> {
-        Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
-        while (!Thread.currentThread().isInterrupted()) {
-            for (Map.Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item :
-                    listenerHolder.broadcastListenersMap.entrySet()) {
-                if (item.getValue().getSecond().get()) {
-                    item.getValue().getFirst().signalAll();
-                }
+  @Override
+  public void signalAll(String key, Object value) {
+    if (workspaceWarehouse.broadcastListeners.containsKey(key)) {
+      workspaceWarehouse.broadcastListeners.get(key).forEach(a -> a.signalAll(value));
+    }
+  }
+
+  @Override
+  public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key, Object expectedValue) {
+    WorkspaceWarehouseContext listenerWorkspaceWarehouseContext = workspaceWarehouse;
+    BroadcastLockImpl lock = new BroadcastLockImpl(key, expectedValue);
+    listenerWorkspaceWarehouseContext.broadcastListeners.putIfAbsent(key, new ArrayList<>());
+    listenerWorkspaceWarehouseContext.broadcastListeners.get(key).add(lock);
+    ((WorkspaceBlockImpl) workspaceBlock).addLock(lock);
+    return lock;
+  }
+
+  @Override
+  public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock) {
+    return getOrCreateLock(workspaceBlock, workspaceBlock.getId(), null);
+  }
+
+  @Override
+  public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key) {
+    return getOrCreateLock(workspaceBlock, key, null);
+  }
+
+  @Override
+  public BroadcastLock listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
+    String workspaceTab = ((WorkspaceBlockImpl) workspaceBlock).getTab();
+    BroadcastLockImpl lock = getOrCreateLock(workspaceBlock);
+    workspaceWarehouse.broadcastListenersMap.put(workspaceBlock.getId(), Pair.of(lock, supplier));
+
+    if (workspaceWarehouse.threadContext == null) {
+      entityContext.bgp().builder("BroadcastWorkspaceTab-" + workspaceTab)
+          .interval(Duration.ofMillis(100)).tap(context -> workspaceWarehouse.threadContext = context)
+          .execute(() -> {
+            for (Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item :
+                workspaceWarehouse.broadcastListenersMap.entrySet()) {
+              if (item.getValue().getSecond().get()) {
+                item.getValue().getFirst().signalAll();
+              }
             }
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException ignore) {
-            }
-        }
-    };
-
-    @Override
-    public void signalAll(String key, Object value) {
-        for (Holder holder : workspaceWarehouse.values()) {
-            if (holder.broadcastListeners.containsKey(key)) {
-                holder.broadcastListeners.get(key).forEach(a -> a.signalAll(value));
-            }
-        }
+          });
     }
 
-    @Override
-    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key, Object expectedValue) {
-        Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
-        BroadcastLockImpl lock = new BroadcastLockImpl(key, expectedValue);
-        listenerHolder.broadcastListeners.putIfAbsent(key, new ArrayList<>());
-        listenerHolder.broadcastListeners.get(key).add(lock);
-        ((WorkspaceBlockImpl) workspaceBlock).addLock(lock);
-        return lock;
+    return lock;
+  }
+
+  public void release() {
+    for (Pair<BroadcastLockImpl, Supplier<Boolean>> pair : workspaceWarehouse.broadcastListenersMap.values()) {
+      pair.getFirst().release();
     }
+    workspaceWarehouse.broadcastListenersMap.clear();
 
-    @Override
-    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock) {
-        return getOrCreateLock(workspaceBlock, workspaceBlock.getId(), null);
+    for (List<BroadcastLockImpl> locks : workspaceWarehouse.broadcastListeners.values()) {
+      locks.forEach(BroadcastLockImpl::release);
     }
+    workspaceWarehouse.broadcastListeners.clear();
 
-    @Override
-    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key) {
-        return getOrCreateLock(workspaceBlock, key, null);
+    if (workspaceWarehouse.threadContext != null) {
+      workspaceWarehouse.threadContext.cancel();
+      workspaceWarehouse.threadContext = null;
     }
+  }
 
-    @Override
-    public BroadcastLock listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
-        Holder listenerHolder = workspaceWarehouse.get(Thread.currentThread().getName());
-        BroadcastLockImpl lock = getOrCreateLock(workspaceBlock);
-        listenerHolder.broadcastListenersMap.put(workspaceBlock.getId(), Pair.of(lock, supplier));
-        if (listenerHolder.thread == null) {
-            listenerHolder.thread = new Thread(runnable, Thread.currentThread().getName());
-            listenerHolder.thread.start();
-        }
-        return lock;
-    }
+  private static class WorkspaceWarehouseContext {
 
-    public void release(String id) {
-        workspaceWarehouse.putIfAbsent(id, new Holder());
-
-        Holder listenerHolder = workspaceWarehouse.get(id);
-
-        for (Pair<BroadcastLockImpl, Supplier<Boolean>> pair : listenerHolder.broadcastListenersMap.values()) {
-            pair.getFirst().release();
-        }
-        listenerHolder.broadcastListenersMap.clear();
-
-        for (List<BroadcastLockImpl> locks : listenerHolder.broadcastListeners.values()) {
-            locks.forEach(BroadcastLockImpl::release);
-        }
-        listenerHolder.broadcastListeners.clear();
-
-        if (listenerHolder.thread != null) {
-            listenerHolder.thread.interrupt();
-            listenerHolder.thread = null;
-        }
-    }
-
-    private static class Holder {
-        private final Map<String, List<BroadcastLockImpl>> broadcastListeners = new ConcurrentHashMap<>();
-        private final Map<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> broadcastListenersMap = new ConcurrentHashMap<>();
-        private Thread thread;
-    }
+    private final Map<String, List<BroadcastLockImpl>> broadcastListeners = new ConcurrentHashMap<>();
+    private final Map<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> broadcastListenersMap = new ConcurrentHashMap<>();
+    private ThreadContext<Object> threadContext;
+  }
 }

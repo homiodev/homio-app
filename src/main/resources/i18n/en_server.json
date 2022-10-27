@@ -1,4 +1,9 @@
 {
+  "DESCRIPTION": {
+    "VARIABLE_TIME_SERIES": "Variables time-value series",
+    "VARIABLE_GET_STATUS": "Variables get last value",
+    "VARIABLE_SET_STATUS": "Variables set value"
+  },
   "VARIABLE_GROUP": "Variable group: {{name}}",
   "DEFAULT_PLACES": "Kitchen;Bath;Сorridor;Bedroom;Hall;Boiler room;Playroom;Garage;Basement;Entrance;",
   "USED_QUOTA": "Used {{PC}}% quota {{VAL}}/{{MAX}}",

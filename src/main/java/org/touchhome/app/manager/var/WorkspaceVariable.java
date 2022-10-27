@@ -17,6 +17,9 @@ import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ChartRequest;
 import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
+import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
+import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
+import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.field.*;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent;
 import org.touchhome.common.util.CommonUtils;
@@ -24,6 +27,7 @@ import org.touchhome.common.util.Lang;
 
 import javax.persistence.*;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -34,7 +38,7 @@ import java.util.function.Consumer;
 @UIFieldSelectionParent(value = "OVERRIDES_BY_INTERFACE", icon = "fas fa-layer-group", iconColor = "#28A60C",
         description = "Group variables")
 public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements HasJsonData, HasAggregateValueFromSeries,
-        UIFieldSelectionParent.SelectionParent {
+        UIFieldSelectionParent.SelectionParent, HasTimeValueSeries, HasGetStatusValue, HasSetStatusValue {
     public static final String PREFIX = "wgv_";
 
     @Override
@@ -69,6 +73,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
 
     @UIField(order = 20, label = "format")
     @Enumerated(EnumType.STRING)
+    @UIFieldShowOnCondition("return context.item.groupId === 'broadcasts'")
     @UIFieldInlineEntityWidth(viewWidth = 20, editWidth = 20)
     public EntityContextVar.VariableType restriction = EntityContextVar.VariableType.Any;
 
@@ -134,7 +139,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
     @Override
     public @Nullable Object getAggregateValueFromSeries(@NotNull ChartRequest request, @NotNull AggregationType aggregationType,
                                                         boolean exactNumber) {
-        return ((EntityContextVarImpl) request.getEntityContext().var()).aggregate(getVariableId(), request.getFromTime(),
+        return ((EntityContextVarImpl) request.getEntityContext().var()).aggregate(variableId, request.getFromTime(),
                 request.getToTime(), aggregationType, exactNumber);
     }
 
@@ -146,7 +151,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
     @Override
     public void addUpdateValueListener(EntityContext entityContext, String key, JSONObject dynamicParameters,
                                        Consumer<Object> listener) {
-
+        entityContext.event().addEventListener(variableId, key, listener);
     }
 
     @Override
@@ -157,5 +162,36 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
     @Override
     public String getParentDescription() {
         return getWorkspaceGroup().getDescription();
+    }
+
+    @Override
+    public String getTimeValueSeriesDescription() {
+        return "DESCRIPTION.VARIABLE_TIME_SERIES";
+    }
+
+    @Override
+    public String getGetStatusDescription() {
+        return "DESCRIPTION.VARIABLE_GET_STATUS";
+    }
+
+    @Override
+    public String getSetStatusDescription() {
+        return "DESCRIPTION.VARIABLE_SET_STATUS";
+    }
+
+    @Override
+    public List<Object[]> getTimeValueSeries(ChartRequest request) {
+        return ((EntityContextVarImpl) request.getEntityContext().var()).getTimeSeries(variableId, request.getFromTime(),
+                request.getToTime());
+    }
+
+    @Override
+    public Object getStatusValue(GetStatusValueRequest request) {
+        return request.getEntityContext().var().get(variableId);
+    }
+
+    @Override
+    public void setStatusValue(SetStatusValueRequest request) {
+        request.getEntityContext().var().set(variableId, request.getValue());
     }
 }

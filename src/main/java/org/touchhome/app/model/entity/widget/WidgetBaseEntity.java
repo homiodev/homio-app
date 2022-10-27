@@ -60,6 +60,10 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     @Convert(converter = JSONObjectConverter.class)
     private JSONObject jsonData = new JSONObject();
 
+    @Lob
+    @Column(length = 100_000)
+    private byte[] backgroundImage;
+
     @UIField(order = 1000)
     @UIFieldGroup(value = "UI", order = 10, borderColor = "#009688")
     public boolean isAdjustFontSize() {

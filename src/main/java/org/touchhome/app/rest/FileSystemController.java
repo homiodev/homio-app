@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
 
 @RestController
 @RequestMapping("/rest/fs")
@@ -46,10 +48,10 @@ public class FileSystemController implements BeanPostConstruct {
     @Override
     public void postConstruct(EntityContext context) {
         EntityContextImpl entityContext = (EntityContextImpl) context;
-        this.entityContext.event().addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove",
-                (e) -> this.fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class));
-        this.entityContext.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create",
-                (e) -> this.fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class));
+        this.entityContext.event()
+                .addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove", (e) -> findAllFileSystems(entityContext));
+        this.entityContext.event()
+                .addEntityCreateListener(BaseFileSystemEntity.class, "fs-create", (e) -> findAllFileSystems(entityContext));
 
         RaspberryDeviceEntity raspberryDeviceEntity =
                 this.entityContext.getEntity(RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID);
@@ -59,21 +61,29 @@ public class FileSystemController implements BeanPostConstruct {
     @Override
     public void onContextUpdate(EntityContext context) {
         EntityContextImpl entityContext = (EntityContextImpl) context;
-        this.fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
+        findAllFileSystems(entityContext);
     }
 
     @PostMapping("")
     public List<TreeConfiguration> getFileSystems(@RequestBody GetFSRequest request) {
         List<TreeConfiguration> configurations = new ArrayList<>();
-        for (BaseFileSystemEntity fileSystem : fileSystems) {
-            if (request.showOnlyLocalFS && !fileSystem.getEntityID().equals(this.localFileSystem.getEntity().getEntityID())) {
-                continue;
-            }
-            TreeConfiguration configuration = new TreeConfiguration(fileSystem);
+        String firstAvailableFS = request.fileSystemIds == null || request.fileSystemIds.isEmpty() ?
+                this.localFileSystem.getEntity().getEntityID() :
+                request.fileSystemIds.get(0);
+        // if not fs - set as local
+        for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
+            selectedNode.fs = defaultString(selectedNode.fs, firstAvailableFS);
+        }
+        Collection<BaseFileSystemEntity> fsItems = getRequestedFileSystems(request);
+        for (BaseFileSystemEntity fileSystem : fsItems) {
+            TreeConfiguration configuration = fileSystem.buildFileSystemConfiguration(entityContext);
 
             for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
                 if (selectedNode.fs.equals(fileSystem.getEntityID())) {
-                    configuration.setChildren(fileSystem.getFileSystem(entityContext).loadTreeUpToChild(selectedNode.id));
+                    Set<TreeNode> treeNodes = fileSystem.getFileSystem(entityContext).loadTreeUpToChild(selectedNode.id);
+                    if (treeNodes != null) {
+                        configuration.setChildren(treeNodes);
+                    }
                 }
             }
             configurations.add(configuration);
@@ -133,10 +143,10 @@ public class FileSystemController implements BeanPostConstruct {
         ArchiveUtil.UnzipFileIssueHandler issueHandler = ArchiveUtil.UnzipFileIssueHandler.valueOf(request.fileHandler);
         ArchiveUtil.ArchiveFormat zipFormat = ArchiveUtil.ArchiveFormat.getHandlerByExtension(fileExtension);
         ArchiveUtil.unzip(archive, zipFormat, targetPath, null, null, issueHandler);
-        Set<String> ids = Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles()))
-                .map(File::toString).collect(Collectors.toSet());
-        TreeNode fileSystemItem = targetFs.copy(localFileSystem.toTreeNodes(ids), request.targetDir,
-                FileSystemProvider.UploadOption.Replace);
+        Set<String> ids = Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles())).map(File::toString)
+                .collect(Collectors.toSet());
+        TreeNode fileSystemItem =
+                targetFs.copy(localFileSystem.toTreeNodes(ids), request.targetDir, FileSystemProvider.UploadOption.Replace);
 
         if (request.removeSource) {
             sourceFs.delete(Collections.singleton(request.sourceFileId));
@@ -153,8 +163,7 @@ public class FileSystemController implements BeanPostConstruct {
         try {
             TreeNode zipTreeNode = TreeNode.of(zipFile.toString(), zipFile, localFileSystem);
 
-            return getFileSystem(request.targetFs).copy(zipTreeNode, request.targetDir,
-                    FileSystemProvider.UploadOption.Replace);
+            return getFileSystem(request.targetFs).copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
         } finally {
             Files.deleteIfExists(zipFile);
         }
@@ -218,8 +227,15 @@ public class FileSystemController implements BeanPostConstruct {
     }
 
     private BaseFileSystemEntity getFileSystemEntity(String fs) {
-        return fileSystems.stream().filter(e -> e.getEntityID().equals(fs)).findAny()
-                .orElseThrow(() -> new IllegalArgumentException("Unable to find File system: " + fs));
+        if (fs.equals(LOCAL_FS)) {
+            fs = this.localFileSystem.getEntity().getEntityID();
+        }
+        for (BaseFileSystemEntity fileSystem : fileSystems) {
+            if (fileSystem.getEntityID().equals(fs) || fileSystem.getFileSystemAlias().equals(fs)) {
+                return fileSystem;
+            }
+        }
+        throw new RuntimeException("Unable to find file system with id: " + fs);
     }
 
     @Getter
@@ -286,8 +302,8 @@ public class FileSystemController implements BeanPostConstruct {
     @Getter
     @Setter
     private static class GetFSRequest {
-        private boolean showOnlyLocalFS;
         private SelectedNode[] selectedNodes;
+        private List<String> fileSystemIds;
 
         @Getter
         @Setter
@@ -325,8 +341,8 @@ public class FileSystemController implements BeanPostConstruct {
                     Arrays.stream(Objects.requireNonNull(tmpArchiveAssemblerPath.toFile().listFiles())).map(File::toPath)
                             .collect(Collectors.toList());
 
-            return ArchiveUtil.zip(filesToArchive, targetPath, ArchiveUtil.ArchiveFormat.getHandlerByExtension(format),
-                    level, password, null);
+            return ArchiveUtil.zip(filesToArchive, targetPath, ArchiveUtil.ArchiveFormat.getHandlerByExtension(format), level,
+                    password, null);
         } finally {
             FileUtils.deleteDirectory(tmpArchiveAssemblerPath.toFile());
         }
@@ -334,5 +350,17 @@ public class FileSystemController implements BeanPostConstruct {
 
     private FileSystemProvider.UploadOption getUploadOption(BaseNodeRequest request) {
         return request.replace ? FileSystemProvider.UploadOption.Replace : FileSystemProvider.UploadOption.Error;
+    }
+
+    private void findAllFileSystems(EntityContextImpl entityContext) {
+        fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
+    }
+
+    private Collection<BaseFileSystemEntity> getRequestedFileSystems(GetFSRequest request) {
+        if (request.fileSystemIds == null || request.fileSystemIds.isEmpty()) {
+            return this.fileSystems.stream().filter(BaseFileSystemEntity::isShowInFileManager).collect(Collectors.toList());
+        } else {
+            return request.fileSystemIds.stream().map(this::getFileSystemEntity).collect(Collectors.toList());
+        }
     }
 }

@@ -2,7 +2,6 @@ package org.touchhome.app.auth;
 
 import io.jsonwebtoken.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,11 +22,10 @@ import java.util.stream.Collectors;
 public class JwtTokenProvider {
 
     private final UserEntityDetailsService userEntityDetailsService;
-    @Value("${spring.security.jwt-token-expire-min}")
-    private long jwtValidityTimeout; // 30min
 
     private JwtParser jwtParser;
     private boolean regenerateSecurityIdOnRestart;
+    private int jwtValidityTimeout;
 
     public void postConstruct(EntityContext entityContext) {
         this.regenerateSecurityIdOnRestart = entityContext.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);

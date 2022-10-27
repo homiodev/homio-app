@@ -3,10 +3,13 @@ package org.touchhome.app.workspace.block.core;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.state.DecimalType;
+import org.touchhome.bundle.api.state.OnOffType;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -16,21 +19,21 @@ import java.util.function.Function;
 @Component
 public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
 
-    private static Map<String, Function<Float, Number>> mathOps = new HashMap<>();
+    private static final Map<String, Function<Float, BigDecimal>> mathOps = new HashMap<>();
 
     static {
-        mathOps.put("abs", Math::abs);
-        mathOps.put("round", Math::round);
-        mathOps.put("floor", Math::floor);
-        mathOps.put("ceiling", Math::ceil);
-        mathOps.put("sqrt", Math::sqrt);
-        mathOps.put("sin", Math::sin);
-        mathOps.put("cos", Math::cos);
-        mathOps.put("tan", Math::tan);
-        mathOps.put("asin", Math::asin);
-        mathOps.put("acos", Math::acos);
-        mathOps.put("atan", Math::atan);
-        mathOps.put("log", Math::log);
+        mathOps.put("abs", a -> BigDecimal.valueOf(Math.abs(a)));
+        mathOps.put("round", a -> BigDecimal.valueOf(Math.round(a)));
+        mathOps.put("floor", a -> BigDecimal.valueOf(Math.floor(a)));
+        mathOps.put("ceiling", a -> BigDecimal.valueOf(Math.ceil(a)));
+        mathOps.put("sqrt", a -> BigDecimal.valueOf(Math.sqrt(a)));
+        mathOps.put("sin", a -> BigDecimal.valueOf(Math.sin(a)));
+        mathOps.put("cos", a -> BigDecimal.valueOf(Math.cos(a)));
+        mathOps.put("tan", a -> BigDecimal.valueOf(Math.tan(a)));
+        mathOps.put("asin", a -> BigDecimal.valueOf(Math.asin(a)));
+        mathOps.put("acos", a -> BigDecimal.valueOf(Math.acos(a)));
+        mathOps.put("atan", a -> BigDecimal.valueOf(Math.atan(a)));
+        mathOps.put("log", a -> BigDecimal.valueOf(Math.log(a)));
     }
 
     private final Scratch3Block addBlock;
@@ -46,7 +49,7 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block notBlock;
     private final Scratch3Block mathOpBlock;
     private final Scratch3Block boolToNum;
-    private Random random = new Random();
+    private final Random random = new Random();
 
     public Scratch3OperatorBlocks(EntityContext entityContext) {
         super("operator", entityContext);
@@ -67,60 +70,63 @@ public class Scratch3OperatorBlocks extends Scratch3ExtensionBlocks {
         this.boolToNum = Scratch3Block.ofReporter("bool_to_num", this::boolToNumberEvaluate);
     }
 
-    private Object boolToNumberEvaluate(WorkspaceBlock workspaceBlock) {
-        return workspaceBlock.getInputBoolean("OPERAND");
+    private OnOffType boolToNumberEvaluate(WorkspaceBlock workspaceBlock) {
+        return OnOffType.of(workspaceBlock.getInputBoolean("OPERAND"));
     }
 
-    private Number mathOpEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+    private DecimalType mathOpEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
         Float value = workspaceBlock.getInputFloat("NUM");
-        return mathOps.get(workspaceBlock.getField("OPERATOR")).apply(value);
+        return new DecimalType(mathOps.get(workspaceBlock.getField("OPERATOR")).apply(value));
     }
 
-    private boolean notEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return !((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate());
+    private OnOffType notEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+        return OnOffType.of(!workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate().boolValue());
     }
 
-    private boolean orEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate()) ||
-                ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND2").evaluate());
+    private OnOffType orEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+        return OnOffType.of(workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate().boolValue() ||
+                workspaceBlock.getInputWorkspaceBlock("OPERAND2").evaluate().boolValue());
     }
 
-    private boolean andEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate()) &&
-                ((boolean) workspaceBlock.getInputWorkspaceBlock("OPERAND2").evaluate());
+    private OnOffType andEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+        return OnOffType.of(workspaceBlock.getInputWorkspaceBlock("OPERAND1").evaluate().boolValue() &&
+                workspaceBlock.getInputWorkspaceBlock("OPERAND2").evaluate().boolValue());
     }
 
-    private boolean gtEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return Double.compare(workspaceBlock.getInputFloat("OPERAND1"), workspaceBlock.getInputFloat("OPERAND2")) > 0;
+    private OnOffType gtEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+        return OnOffType.of(
+                Double.compare(workspaceBlock.getInputFloat("OPERAND1"), workspaceBlock.getInputFloat("OPERAND2")) > 0);
     }
 
-    private boolean equalsEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return Double.compare(workspaceBlock.getInputFloat("OPERAND1"), workspaceBlock.getInputFloat("OPERAND2")) == 0;
+    private OnOffType equalsEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+        return OnOffType.of(
+                Double.compare(workspaceBlock.getInputFloat("OPERAND1"), workspaceBlock.getInputFloat("OPERAND2")) == 0);
     }
 
-    private boolean ltEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return Double.compare(workspaceBlock.getInputFloat("OPERAND1"), workspaceBlock.getInputFloat("OPERAND2")) < 0;
+    private OnOffType ltEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+        return OnOffType.of(
+                Double.compare(workspaceBlock.getInputFloat("OPERAND1"), workspaceBlock.getInputFloat("OPERAND2")) < 0);
     }
 
-    private int randomEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+    private DecimalType randomEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
         int min = workspaceBlock.getInputInteger("FROM");
         int max = workspaceBlock.getInputInteger("TO");
-        return random.nextInt(max - min + 1) + min;
+        return new DecimalType(random.nextInt(max - min + 1) + min);
     }
 
-    private double divideEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return workspaceBlock.getInputFloat("NUM1") / workspaceBlock.getInputFloat("NUM2");
+    private DecimalType divideEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+        return new DecimalType(workspaceBlock.getInputFloat("NUM1") / workspaceBlock.getInputFloat("NUM2"));
     }
 
-    private double multiplyEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return workspaceBlock.getInputFloat("NUM1") * workspaceBlock.getInputFloat("NUM2");
+    private DecimalType multiplyEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+        return new DecimalType(workspaceBlock.getInputFloat("NUM1") * workspaceBlock.getInputFloat("NUM2"));
     }
 
-    private double subtractEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return workspaceBlock.getInputFloat("NUM1") - workspaceBlock.getInputFloat("NUM2");
+    private DecimalType subtractEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+        return new DecimalType(workspaceBlock.getInputFloat("NUM1") - workspaceBlock.getInputFloat("NUM2"));
     }
 
-    private double addEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
-        return workspaceBlock.getInputFloat("NUM1") + workspaceBlock.getInputFloat("NUM2");
+    private DecimalType addEvaluateEvaluate(WorkspaceBlock workspaceBlock) {
+        return new DecimalType(workspaceBlock.getInputFloat("NUM1") + workspaceBlock.getInputFloat("NUM2"));
     }
 }

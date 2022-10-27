@@ -1,337 +1,236 @@
 package org.touchhome.app.workspace;
 
 import com.pivovarit.function.ThrowingRunnable;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.setting.system.SystemClearWorkspaceButtonSetting;
 import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.EntityContextBGP;
-import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.api.workspace.WorkspaceEventListener;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.common.util.CommonUtils;
 
-import java.util.*;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
 @Log4j2
 @Component
 @RequiredArgsConstructor
 public class WorkspaceManager implements BeanPostConstruct {
 
-    private final Set<String> ONCE_EXECUTION_BLOCKS = new HashSet<>(Arrays.asList("boolean_link", "group_variable_link"));
-    private final BroadcastLockManagerImpl broadcastLockManager;
-    private final EntityContext entityContext;
+  private final Duration TIME_WAIT_OLD_WORKSPACE = Duration.ofSeconds(3);
+  private final Set<String> ONCE_EXECUTION_BLOCKS = new HashSet<>(Arrays.asList("boolean_link", "group_variable_link"));
+  private final EntityContext entityContext;
 
-    private Collection<WorkspaceEventListener> workspaceEventListeners;
-    private Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
-    private final Map<String, TabHolder> tabs = new HashMap<>();
+  private Collection<WorkspaceEventListener> workspaceEventListeners;
+  private Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
+  // tab <-> list of top blocks
+  private final Map<String, WorkspaceTabHolder> tabs = new HashMap<>();
 
-    @Override
-    public void onContextUpdate(EntityContext entityContext) {
-        scratch3Blocks = entityContext.getBeansOfType(Scratch3ExtensionBlocks.class).stream()
-                .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
-        workspaceEventListeners = entityContext.getBeansOfType(WorkspaceEventListener.class);
+  @Override
+  public void onContextUpdate(EntityContext entityContext) {
+    scratch3Blocks = entityContext.getBeansOfType(Scratch3ExtensionBlocks.class).stream()
+        .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
+    workspaceEventListeners = entityContext.getBeansOfType(WorkspaceEventListener.class);
+  }
+
+  @SneakyThrows
+  private synchronized void reloadWorkspace(WorkspaceEntity workspaceTab) {
+    log.debug("Reloading workspace <{}>...", workspaceTab.getName());
+
+    WorkspaceTabHolder workspaceTabHolder = tabs.remove(workspaceTab.getEntityID());
+    if (workspaceTabHolder != null) {
+      releaseWorkspaceEntity(workspaceTab, workspaceTabHolder);
+      // wait to finish all nested processes if workspace started before
+      log.info("Wait workspace {}, {} to able to finish old one", workspaceTab.getTitle(), TIME_WAIT_OLD_WORKSPACE);
+      Thread.sleep(TIME_WAIT_OLD_WORKSPACE.toMillis());
     }
 
-    private void reloadWorkspace(WorkspaceEntity workspaceEntity) {
-        log.debug("Reloading workspace <{}>...", workspaceEntity.getName());
-        boolean workspaceStartedBefore = tabs.putIfAbsent(workspaceEntity.getEntityID(), new TabHolder()) != null;
+    workspaceTabHolder = new WorkspaceTabHolder();
+    tabs.put(workspaceTab.getEntityID(), workspaceTabHolder);
 
-        TabHolder tabHolder = releaseWorkspaceEntity(workspaceEntity);
+    if (StringUtils.isNotEmpty(workspaceTab.getContent())) {
+      try {
+        parseWorkspace(workspaceTab, workspaceTabHolder);
+        workspaceTabHolder.blocks.values().stream()
+            .filter(workspaceBlock -> workspaceBlock.isTopLevel() && !workspaceBlock.isShadow())
+            .forEach(workspaceBlock -> {
+              if (ONCE_EXECUTION_BLOCKS.contains(workspaceBlock.getOpcode())) {
+                executeOnce(workspaceBlock);
+              } else {
+                this.entityContext.bgp().builder("workspace-" + workspaceBlock.getId())
+                    .tap(workspaceBlock::setThreadContext)
+                    .execute(createWorkspaceThread(workspaceBlock));
+              }
+            });
+      } catch (Exception ex) {
+        log.error("Unable to initialize workspace: " + ex.getMessage(), ex);
+        entityContext.ui().sendErrorMessage("Unable to initialize workspace: " + ex.getMessage(), ex);
+      }
+    }
+  }
 
-        tabHolder.tab2Services.clear();
-        tabHolder.tab2WorkspaceBlocks.clear();
+  private ThrowingRunnable<Exception> createWorkspaceThread(WorkspaceBlock workspaceBlock) {
+    return () -> {
+      String name = workspaceBlock.getId();
+      log.info("Workspace start thread: <{}>", name);
+      try {
+        ((WorkspaceBlockImpl) workspaceBlock).handleOrEvaluate();
+      } catch (Exception ex) {
+        log.warn("Error in workspace thread: <{}>, <{}>", name, CommonUtils.getErrorMessage(ex), ex);
+        entityContext.ui().sendErrorMessage("Error in workspace", ex);
+      }
+      log.info("Workspace thread finished: <{}>", name);
+    };
+  }
 
-        if (StringUtils.isNotEmpty(workspaceEntity.getContent())) {
-            try {
-                // wait to finish all nested processes if workspace started before
-                if (workspaceStartedBefore) {
-                    log.info("Wait workspace <{}> to able to finish old one", workspaceEntity.getTitle());
-                    Thread.sleep(3000);
-                }
+  private void releaseWorkspaceEntity(WorkspaceEntity workspaceTab, WorkspaceTabHolder oldWorkspaceTabHolder) {
+    oldWorkspaceTabHolder.broadcastLockManager.release();
 
-                tabHolder.tab2WorkspaceBlocks = parseWorkspace(workspaceEntity);
-                tabHolder.tab2WorkspaceBlocks.values().stream()
-                        .filter(workspaceBlock -> workspaceBlock.isTopLevel() && !workspaceBlock.isShadow())
-                        .forEach(workspaceBlock -> {
-                            if (ONCE_EXECUTION_BLOCKS.contains(workspaceBlock.getOpcode())) {
-                                executeOnce(workspaceBlock);
-                            } else {
-                                EntityContextBGP.ThreadContext<?> threadContext = this.entityContext.bgp().run(
-                                        "workspace-" + workspaceBlock.getId(),
-                                        createWorkspaceThread(workspaceBlock, workspaceEntity), true);
-                                threadContext.setDescription(
-                                        "Tab[" + workspaceEntity.getName() + "]. " + workspaceBlock.getDescription());
-                                workspaceBlock.setStateHandler(threadContext::setState);
-                                tabHolder.tab2Services.add(threadContext);
-                            }
-                        });
-            } catch (Exception ex) {
-                log.error("Unable to initialize workspace: " + ex.getMessage(), ex);
-                entityContext.ui().sendErrorMessage("Unable to initialize workspace: " + ex.getMessage(), ex);
-            }
-        }
+    for (WorkspaceEventListener workspaceEventListener : workspaceEventListeners) {
+      workspaceEventListener.release(workspaceTab.getEntityID());
     }
 
-    private ThrowingRunnable<Exception> createWorkspaceThread(WorkspaceBlock workspaceBlock, WorkspaceEntity workspaceEntity) {
-        return () -> {
-            String oldName = Thread.currentThread().getName();
-            String name = workspaceBlock.getId();
-            log.debug("Workspace start thread: <{}>", name);
-            try {
-                Thread.currentThread().setName(workspaceEntity.getEntityID());
-                ((WorkspaceBlockImpl) workspaceBlock).handleOrEvaluate();
-            } catch (Exception ex) {
-                log.warn("Error in workspace thread: <{}>, <{}>", name, CommonUtils.getErrorMessage(ex), ex);
-                entityContext.ui().sendErrorMessage("Error in workspace", ex);
-            } finally {
-                Thread.currentThread().setName(oldName);
-            }
-            log.debug("Workspace thread finished: <{}>", name);
-        };
+    for (WorkspaceBlockImpl workspaceBlock : oldWorkspaceTabHolder.blocks.values()) {
+      workspaceBlock.release();
     }
+  }
 
-    private TabHolder releaseWorkspaceEntity(WorkspaceEntity workspaceEntity) {
-        TabHolder tabHolder = tabs.get(workspaceEntity.getEntityID());
-        broadcastLockManager.release(workspaceEntity.getEntityID());
-
-        for (WorkspaceEventListener workspaceEventListener : workspaceEventListeners) {
-            workspaceEventListener.release(workspaceEntity.getEntityID());
-        }
-
-        for (WorkspaceBlock workspaceBlock : tabHolder.tab2WorkspaceBlocks.values()) {
-            ((WorkspaceBlockImpl) workspaceBlock).release();
-        }
-        for (EntityContextBGP.ThreadContext threadContext : tabHolder.tab2Services) {
-            this.entityContext.bgp().cancelThread(threadContext.getName());
-        }
-        return tabHolder;
+  private void executeOnce(WorkspaceBlock workspaceBlock) {
+    try {
+      log.debug("Execute single block: <{}>", workspaceBlock);
+      workspaceBlock.handle();
+    } catch (Exception ex) {
+      log.error("Error while execute single block: <{}>", workspaceBlock, ex);
     }
+  }
 
-    private void executeOnce(WorkspaceBlock workspaceBlock) {
-        try {
-            log.debug("Execute single block: <{}>", workspaceBlock);
-            workspaceBlock.handle();
-        } catch (Exception ex) {
-            log.error("Error while execute single block: <{}>", workspaceBlock, ex);
-        }
+  public boolean isEmpty(String content) {
+    if (StringUtils.isEmpty(content)) {
+      return true;
     }
-
-    public boolean isEmpty(String content) {
-        if (StringUtils.isEmpty(content)) {
-            return true;
-        }
-        JSONObject target = new JSONObject(content).getJSONObject("target");
-        for (String key : new String[]{"comments", "blocks"}) {
-            if (target.has(key) && !target.getJSONObject(key).keySet().isEmpty()) {
-                return false;
-            }
-        }
-        return true;
+    JSONObject target = new JSONObject(content).getJSONObject("target");
+    for (String key : new String[]{"comments", "blocks"}) {
+      if (target.has(key) && !target.getJSONObject(key).keySet().isEmpty()) {
+        return false;
+      }
     }
+    return true;
+  }
 
-    /*private void reloadVariable(WorkspaceShareVariableEntity entity) {
-        log.debug("Reloading workspace variables...");
-        JSONObject target = new JSONObject(StringUtils.defaultIfEmpty(entity.getContent(), "{}"));
+  private void parseWorkspace(WorkspaceEntity workspaceTab, WorkspaceTabHolder workspaceTabHolder) {
+    JSONObject jsonObject = new JSONObject(workspaceTab.getContent());
+    JSONObject target = jsonObject.getJSONObject("target");
 
-        // broadcasts
-        updateWorkspaceObjects(target.optJSONObject("broadcasts"), WorkspaceBroadcastEntity.class, (id, name, array) ->
-                saveOrUpdateEntity(WorkspaceBroadcastEntity::new, id, name, WorkspaceBroadcastEntity.PREFIX));
+    JSONObject blocks = target.getJSONObject("blocks");
 
-        // group variables
-        JSONObject list = target.optJSONObject("group_variables");
-        if (list != null) {
-            for (String id : list.keySet()) {
-                JSONArray array = list.optJSONArray(id);
-                String name = array == null ? list.getString(id) : array.getString(0);
-                if (!name.isEmpty()) {
-                    createGroupVariables(name, array);
-                }
-            }
+    for (String blockId : blocks.keySet()) {
+      JSONObject block = blocks.optJSONObject(blockId);
+      if (block == null) {
+        continue;
+      }
+
+      if (!workspaceTabHolder.blocks.containsKey(blockId)) {
+        workspaceTabHolder.blocks.put(blockId, new WorkspaceBlockImpl(blockId, workspaceTabHolder.blocks, scratch3Blocks, entityContext));
+      }
+
+      WorkspaceBlockImpl workspaceBlock = workspaceTabHolder.blocks.get(blockId);
+      workspaceBlock.setBroadcastLockManager(new BroadcastLockManagerImpl(entityContext));
+      workspaceBlock.setTab(workspaceTab.getEntityID());
+      workspaceBlock.setShadow(block.optBoolean("shadow"));
+      workspaceBlock.setTopLevel(block.getBoolean("topLevel"));
+      workspaceBlock.setOpcode(block.getString("opcode"));
+      workspaceBlock.setParent(getOrCreateWorkspaceBlock(workspaceTabHolder.blocks, block, "parent"));
+      workspaceBlock.setNext(getOrCreateWorkspaceBlock(workspaceTabHolder.blocks, block, "next"));
+
+      JSONObject fields = block.optJSONObject("fields");
+      if (fields != null) {
+        for (String fieldKey : fields.keySet()) {
+          workspaceBlock.getFields().put(fieldKey, fields.getJSONArray(fieldKey));
         }
-    }*/
-
-    private Map<String, WorkspaceBlock> parseWorkspace(WorkspaceEntity workspaceEntity) {
-        JSONObject jsonObject = new JSONObject(workspaceEntity.getContent());
-        JSONObject target = jsonObject.getJSONObject("target");
-
-        JSONObject blocks = target.getJSONObject("blocks");
-        Map<String, WorkspaceBlock> workspaceMap = new HashMap<>();
-
-        for (String blockId : blocks.keySet()) {
-            JSONObject block = blocks.optJSONObject(blockId);
-            if (block == null) {
-                continue;
-            }
-
-            if (!workspaceMap.containsKey(blockId)) {
-                workspaceMap.put(blockId, new WorkspaceBlockImpl(blockId, workspaceMap, scratch3Blocks, entityContext));
-            }
-
-            WorkspaceBlockImpl workspaceBlock = (WorkspaceBlockImpl) workspaceMap.get(blockId);
-            workspaceBlock.setShadow(block.optBoolean("shadow"));
-            workspaceBlock.setTopLevel(block.getBoolean("topLevel"));
-            workspaceBlock.setOpcode(block.getString("opcode"));
-            workspaceBlock.setParent(getOrCreateWorkspaceBlock(workspaceMap, block, "parent"));
-            workspaceBlock.setNext(getOrCreateWorkspaceBlock(workspaceMap, block, "next"));
-
-            JSONObject fields = block.optJSONObject("fields");
-            if (fields != null) {
-                for (String fieldKey : fields.keySet()) {
-                    workspaceBlock.getFields().put(fieldKey, fields.getJSONArray(fieldKey));
-                }
-            }
-            JSONObject inputs = block.optJSONObject("inputs");
-            if (inputs != null) {
-                for (String inputsKey : inputs.keySet()) {
-                    workspaceBlock.getInputs().put(inputsKey, inputs.getJSONArray(inputsKey));
-                }
-            }
+      }
+      JSONObject inputs = block.optJSONObject("inputs");
+      if (inputs != null) {
+        for (String inputsKey : inputs.keySet()) {
+          workspaceBlock.getInputs().put(inputsKey, inputs.getJSONArray(inputsKey));
         }
-
-        return workspaceMap;
+      }
     }
+  }
 
-    /*private void createGroupVariables(String group, JSONArray jsonArray) {
-        List<String> existedEntities = entityContext.findAll(WorkspaceGroupVariable.class).stream().map(BaseEntity::getEntityID)
-                .collect(Collectors.toList());
-        JSONArray variablesHolder = jsonArray.optJSONArray(2);
-        if (variablesHolder != null) {
-            for (int i = 0; i < variablesHolder.length(); i++) {
-                JSONObject jsonObject1 = variablesHolder.getJSONObject(i);
-
-                String variableId = jsonObject1.getString("id_");
-                String variableName = jsonObject1.getString("name");
-
-                WorkspaceGroupVariable entity = entityContext.getEntity(WorkspaceGroupVariable.PREFIX + variableId);
-                if (entity == null) {
-                    entity = entityContext.save(
-                            new WorkspaceGroupVariable().setVariableGroup(group).computeEntityID(() -> variableId)
-                                    .setName(variableName));
-                } else if (!Objects.equals(entity.getName(), variableName) || !Objects.equals(entity.getVariableGroup(), group)) {
-                    entity = entityContext.save(entity.setName(variableName).setVariableGroup(group));
-                }
-                existedEntities.remove(entity.getEntityID());
-            }
-        }
-        for (String existedEntity : existedEntities) {
-            entityContext.delete(existedEntity);
-        }
-    }*/
-
-    /*private Map<BaseEntity, JSONArray> updateWorkspaceObjects(JSONObject list, Class<? extends BaseEntity> entityType,
-                                                              CreateVariableHandler createVariableHandler) {
-        Set<String> entities = new HashSet<>();
-        Map<BaseEntity, JSONArray> res = new HashMap<>();
-        if (list != null) {
-            for (String id : list.keySet()) {
-                JSONArray array = list.optJSONArray(id);
-                String name = array == null ? list.getString(id) : array.getString(0);
-                if (!name.isEmpty()) {
-                    BaseEntity baseEntity = createVariableHandler.createVariables(id, name, array);
-                    if (baseEntity != null) {
-                        res.put(baseEntity, array);
-                        entities.add(baseEntity.getEntityID());
-                    }
-                }
-            }
-        }
-        // remove deleted items
-        for (BaseEntity entity : entityContext.findAll(entityType)) {
-            if (!entities.contains(entity.getEntityID())) {
-                entityContext.delete(entity);
-            }
-        }
-        return res;
-    }*/
-
-    /*private interface CreateVariableHandler {
-        BaseEntity createVariables(String id, String name, JSONArray array);
-    }*/
-
-    /*private BaseEntity saveOrUpdateEntity(Supplier<BaseEntity> entitySupplier, String id, String name, String repositoryPrefix) {
-        BaseEntity entity = entityContext.getEntity(repositoryPrefix + id);
-        if (entity == null) {
-            entity = entityContext.save(entitySupplier.get().computeEntityID(() -> id).setName(name));
-        } else if (entity.getName() == null || !entity.getName().equals(name)) { // update name if changed
-            if (name != null) {
-                entity = entityContext.save(entity.setName(name));
-            }
-        }
-        return entity;
-    }*/
-
-    private WorkspaceBlock getOrCreateWorkspaceBlock(Map<String, WorkspaceBlock> workspaceMap, JSONObject block, String key) {
-        if (block.has(key) && !block.isNull(key)) {
-            workspaceMap.putIfAbsent(block.getString(key),
-                    new WorkspaceBlockImpl(block.getString(key), workspaceMap, scratch3Blocks, entityContext));
-            return workspaceMap.get(block.getString(key));
-        }
-        return null;
+  private WorkspaceBlockImpl getOrCreateWorkspaceBlock(Map<String, WorkspaceBlockImpl> workspaceMap, JSONObject block,
+      String key) {
+    if (block.has(key) && !block.isNull(key)) {
+      workspaceMap.putIfAbsent(block.getString(key),
+          new WorkspaceBlockImpl(block.getString(key), workspaceMap, scratch3Blocks, entityContext));
+      return workspaceMap.get(block.getString(key));
     }
+    return null;
+  }
 
-    public void loadWorkspace() {
-        try {
-            reloadWorkspaces();
-        } catch (Exception ex) {
-            log.error("Unable to load workspace. Looks like workspace has incorrect value", ex);
-        }
-        entityContext.event().addEntityUpdateListener(WorkspaceEntity.class,
-                "workspace-change-listener", this::reloadWorkspace);
-        entityContext.event().addEntityRemovedListener(WorkspaceEntity.class,
-                "workspace-remove-listener", entity -> tabs.remove(entity.getEntityID()));
-
-        // listen for clear workspace
-        entityContext.setting().listenValue(SystemClearWorkspaceButtonSetting.class, "wm-clear-workspace", () ->
-                entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent(""))));
+  public void loadWorkspace() {
+    try {
+      reloadWorkspaces();
+    } catch (Exception ex) {
+      log.error("Unable to load workspace. Looks like workspace has incorrect value", ex);
     }
+    entityContext.event().addEntityUpdateListener(WorkspaceEntity.class,
+        "workspace-change-listener", this::reloadWorkspace);
+    entityContext.event().addEntityRemovedListener(WorkspaceEntity.class,
+        "workspace-remove-listener", entity -> tabs.remove(entity.getEntityID()));
 
-    /*private void reloadVariables() {
-        WorkspaceShareVariableEntity entity =
-                entityContext.getEntity(SHARE_VARIABLES);
-        if (entity == null) {
-            entity = entityContext.save(
-                    new WorkspaceShareVariableEntity().computeEntityID(() -> WorkspaceShareVariableEntity.NAME));
-        }
-        reloadVariable(entity);
-    }*/
+    // listen for clear workspace
+    entityContext.setting().listenValue(SystemClearWorkspaceButtonSetting.class, "wm-clear-workspace", () ->
+        entityContext.findAll(WorkspaceEntity.class).forEach(entity -> entityContext.save(entity.setContent(""))));
+  }
 
-    private void reloadWorkspaces() {
-        List<WorkspaceEntity> list = entityContext.findAll(WorkspaceEntity.class);
-        if (list.isEmpty()) {
-            WorkspaceEntity mainWorkspace =
-                    entityContext.getEntity(WorkspaceEntity.PREFIX + WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME);
-            if (mainWorkspace == null) {
-                entityContext.save(new WorkspaceEntity().computeEntityID(() -> WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME));
-            }
-        } else {
-            for (WorkspaceEntity workspaceEntity : list) {
-                reloadWorkspace(workspaceEntity);
-            }
-        }
+  private void reloadWorkspaces() {
+    List<WorkspaceEntity> workspaceTabs = entityContext.findAll(WorkspaceEntity.class);
+    if (workspaceTabs.isEmpty()) {
+      WorkspaceEntity mainWorkspace =
+          entityContext.getEntity(WorkspaceEntity.PREFIX + WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME);
+      if (mainWorkspace == null) {
+        entityContext.save(new WorkspaceEntity().computeEntityID(() -> WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME));
+      }
+    } else {
+      for (WorkspaceEntity workspaceTab : workspaceTabs) {
+        reloadWorkspace(workspaceTab);
+      }
     }
+  }
 
-    public WorkspaceBlock getWorkspaceBlockById(String id) {
-        for (TabHolder tabHolder : this.tabs.values()) {
-            if (tabHolder.tab2WorkspaceBlocks.containsKey(id)) {
-                return tabHolder.tab2WorkspaceBlocks.get(id);
-            }
-        }
-        return null;
+  public WorkspaceBlock getWorkspaceBlockById(String id) {
+    for (WorkspaceTabHolder workspaceTabHolder : this.tabs.values()) {
+      if (workspaceTabHolder.blocks.containsKey(id)) {
+        return workspaceTabHolder.blocks.get(id);
+      }
     }
+    return null;
+  }
 
-    private static class TabHolder {
-        private List<EntityContextBGP.ThreadContext> tab2Services = new ArrayList<>();
-        private Map<String, WorkspaceBlock> tab2WorkspaceBlocks = new HashMap<>();
+  public void fireAllBroadcastLock(Consumer<BroadcastLockManagerImpl> handler) {
+    for (WorkspaceTabHolder workspaceTabHolder : tabs.values()) {
+      handler.accept(workspaceTabHolder.broadcastLockManager);
     }
+  }
+
+  private class WorkspaceTabHolder {
+
+    private final BroadcastLockManagerImpl broadcastLockManager = new BroadcastLockManagerImpl(entityContext);
+    private final Map<String, WorkspaceBlockImpl> blocks = new HashMap<>();
+  }
 }

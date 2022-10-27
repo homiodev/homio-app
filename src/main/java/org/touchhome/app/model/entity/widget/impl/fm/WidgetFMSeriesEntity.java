@@ -8,7 +8,7 @@ import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldFileSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection;
 
 import javax.persistence.Entity;
 
@@ -20,7 +20,7 @@ public class WidgetFMSeriesEntity extends WidgetSeriesEntity<WidgetFMEntity>
 
     @Override
     @UIField(order = 14, required = true)
-    @UIFieldFileSelection(allowSelectDirs = true, allowSelectFiles = false, iconColor = "#14A669")
+    @UIFieldTreeNodeSelection(allowSelectDirs = true, allowSelectFiles = false, iconColor = "#14A669")
     @UIFieldIgnoreParent
     public String getValueDataSource() {
         return HasSingleValueDataSource.super.getValueDataSource();

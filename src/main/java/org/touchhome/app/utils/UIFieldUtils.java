@@ -189,7 +189,7 @@ public class UIFieldUtils {
 
         JSONObject jsonTypeMetadata = new JSONObject();
         if (uiField.type().equals(UIFieldType.AutoDetect)) {
-            if (type.isEnum() || uiFieldContext.isAnnotationPresent(UIFieldFileSelection.class) ||
+            if (type.isEnum() || uiFieldContext.isAnnotationPresent(UIFieldTreeNodeSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldDevicePortSelection.class) ||
                     uiFieldContext.isAnnotationPresent(UIFieldStaticSelection.class) ||
@@ -208,8 +208,8 @@ public class UIFieldUtils {
                         uiFieldContext.getDeclaredAnnotation(UIFieldStaticSelection.class).allowInputRawText()) {
                     uiFieldType = UIFieldType.TextSelectBoxDynamic;
                 }
-                if (uiFieldContext.isAnnotationPresent(UIFieldFileSelection.class) &&
-                        uiFieldContext.getDeclaredAnnotation(UIFieldFileSelection.class).allowInputRawText()) {
+                if (uiFieldContext.isAnnotationPresent(UIFieldTreeNodeSelection.class) &&
+                        uiFieldContext.getDeclaredAnnotation(UIFieldTreeNodeSelection.class).allowInputRawText()) {
                     uiFieldType = UIFieldType.TextSelectBoxDynamic;
                 }
                 if (uiFieldContext.isAnnotationPresent(UIFieldDevicePortSelection.class) &&

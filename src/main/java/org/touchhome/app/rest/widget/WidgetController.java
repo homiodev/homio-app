@@ -301,7 +301,7 @@ public class WidgetController {
                         .setJavaScriptParameters(jsEntity.getJavaScriptParameters());
 
                 CompileScriptContext compileScriptContext = scriptService.createCompiledScript(scriptEntity, null);
-                jsEntity.setJavaScriptResponse(scriptService.runJavaScript(compileScriptContext));
+                jsEntity.setJavaScriptResponse(scriptService.runJavaScript(compileScriptContext).toFullString());
 
             } catch (Exception ex) {
                 jsEntity.setJavaScriptErrorResponse(CommonUtils.getErrorMessage(ex));

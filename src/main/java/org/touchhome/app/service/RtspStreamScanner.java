@@ -35,6 +35,7 @@ import org.touchhome.common.model.ProgressBar;
 import org.touchhome.common.util.Lang;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -70,7 +71,7 @@ public class RtspStreamScanner implements VideoStreamScanner {
     private String headerConfirmButtonKey;
     private Bootstrap bootstrap;
     private BiConsumer<String, SdpMessage> rtspAliveHandler;
-    private BiConsumer<String, SdpMessage> DISCOVERY_HANDLER = new BiConsumer<String, SdpMessage>() {
+    private final BiConsumer<String, SdpMessage> DISCOVERY_HANDLER = new BiConsumer<>() {
         @Override
         public void accept(String uriStr, SdpMessage sdpMessage) {
             if (!existsRtspStreamEntity.containsKey(uriStr)) {
@@ -141,7 +142,7 @@ public class RtspStreamScanner implements VideoStreamScanner {
         }
 
         List<Integer> availableRtspAddresses = entityContext.bgp().runInBatchAndGet("scan-rtsp-batch-result",
-                pingTimeout * tasks.size() / 1000, THREAD_COUNT, tasks,
+                Duration.ofMillis((long) pingTimeout * tasks.size()), THREAD_COUNT, tasks,
                 completedTaskCount -> progressBar.progress(100 / (float) tasks.size() * completedTaskCount,
                         "Rtsp stream done " + completedTaskCount + "/" + tasks.size() + " tasks"));
 
@@ -238,7 +239,7 @@ public class RtspStreamScanner implements VideoStreamScanner {
         }
     }
 
-    private final BiConsumer<String, SdpMessage> PING_HANDLER = new BiConsumer<String, SdpMessage>() {
+    private final BiConsumer<String, SdpMessage> PING_HANDLER = new BiConsumer<>() {
         @Override
         public void accept(String uriStr, SdpMessage sdpMessage) {
             CommonVideoStreamEntity commonVideoStreamEntity = existsRtspStreamEntity.get(uriStr);

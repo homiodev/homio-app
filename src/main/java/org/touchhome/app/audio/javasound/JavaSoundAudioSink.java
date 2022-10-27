@@ -92,24 +92,28 @@ public class JavaSoundAudioSink implements AudioSink {
                     pausedOnFrame = event.getFrame();
                 }
             });
-            entityContext.bgp().run("java_sink-audio", () -> {
-                Integer start = from;
-                Integer end = to;
+            entityContext.bgp().builder("java_sink-audio").execute(() -> {
+                try {
+                    Integer start = from;
+                    Integer end = to;
 
-                if (start != null || end != null) {
-                    if (end != null) {
-                        if (start == null) {
-                            start = 0;
+                    if (start != null || end != null) {
+                        if (end != null) {
+                            if (start == null) {
+                                start = 0;
+                            }
+                        } else {
+                            end = Integer.MAX_VALUE;
                         }
-                    } else {
-                        end = Integer.MAX_VALUE;
-                    }
 
-                    player.play(start, end);
-                } else {
-                    player.play();
+                        player.play(start, end);
+                    } else {
+                        player.play();
+                    }
+                } finally {
+                    player.close();
                 }
-            }, e -> player.close(), true);
+            });
         }
     }
 

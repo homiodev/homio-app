@@ -8,8 +8,8 @@ import org.touchhome.bundle.api.model.StylePosition;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldFileSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.touchhome.bundle.api.video.BaseVideoStreamEntity;
 
 import javax.persistence.Entity;
@@ -107,7 +107,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
     @Override
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
     @UIFieldSelection(value = VideoSeriesDataSourceDynamicOptionLoader.class, allowInputRawText = true)
-    @UIFieldFileSelection(pattern = ".*(\\.mp4|\\.m3u8)", iconColor = "#14A669")
+    @UIFieldTreeNodeSelection(pattern = ".*(\\.mp4|\\.m3u8)", iconColor = "#14A669")
     @UIFieldIgnoreParent
     public String getValueDataSource() {
         return HasSingleValueDataSource.super.getValueDataSource();

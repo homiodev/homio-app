@@ -2,6 +2,7 @@ package org.touchhome.bundle.media;
 
 import com.pivovarit.function.ThrowingFunction;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.AudioHeader;
@@ -14,7 +15,9 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.audio.AudioSink;
 import org.touchhome.bundle.api.audio.stream.FileAudioStream;
 import org.touchhome.bundle.api.service.TextToSpeechEntityService;
+import org.touchhome.bundle.api.state.DecimalType;
 import org.touchhome.bundle.api.state.RawType;
+import org.touchhome.bundle.api.state.State;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.MenuBlock;
@@ -43,12 +46,11 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block playPartFileCommand;
 
     private final Scratch3Block textToAudioReporter;
-    private final Scratch3Block lengthReporter;
-    private final Scratch3Block bitrateReporter;
-    private final Scratch3Block sampleRateReporter;
     private final Scratch3Block resumeCommand;
     // private final Scratch3Block playSourceCommand;
     private final Scratch3Block playFileCommand;
+    private final Scratch3Block infoReporter;
+    private final MenuBlock.StaticMenuBlock<AudioInfo> infoMenu;
 
     public Scratch3AudioBlocks(EntityContext entityContext, AudioService audioService) {
         super("#87B023", entityContext, null, "audio");
@@ -59,6 +61,7 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         this.audioMenu = MenuBlock.ofServer("audioMenu", "rest/media/audio", "Audio").setUIDelimiter("/");
 
         this.sinkMenu = MenuBlock.ofServer("sinkMenu", "rest/media/sink", "Sink");
+        this.infoMenu = MenuBlock.ofStatic("infoMenu", AudioInfo.class, AudioInfo.Length);
         // this.audioSourceMenu = MenuBlock.ofServer("asMenu", "rest/media/audioSource");
 
         this.playFileCommand = Scratch3Block.ofHandler(10, "play",
@@ -75,11 +78,11 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         this.playPartFileCommand.addArgument("FROM", 10);
         this.playPartFileCommand.addArgument("LENGTH", 10);
 
-        /*this.playSourceCommand = Scratch3Block.ofHandler(15, "play_src",
+        /* this.playSourceCommand = Scratch3Block.ofHandler(15, "play_src",
                 BlockType.command, "Play source [SOURCE] to [SINK]|Volume [VOLUME]", this::playSourceCommand);
         this.playSourceCommand.addArgument("SOURCE", this.audioSourceMenu);
         this.playSourceCommand.addArgument("SINK", this.sinkMenu);
-        this.playSourceCommand.addArgument("VOLUME", 100);*/
+        this.playSourceCommand.addArgument("VOLUME", 100); */
 
         this.stopCommand = Scratch3Block.ofCommand(20, "stop",
                 "Stop [SINK]", this::stopCommand);
@@ -89,10 +92,9 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
                 "Resume [SINK]", this::resumeCommand);
         this.resumeCommand.addArgument("SINK", this.sinkMenu);
 
-        this.lengthReporter = withFile(Scratch3Block.ofReporter(100, "length", "[FILE] Length", this::getLengthReporter));
-        this.bitrateReporter = withFile(Scratch3Block.ofReporter(110, "bitrate", "[FILE] BitRate", this::getBitrateReporter));
-        this.sampleRateReporter =
-                withFile(Scratch3Block.ofReporter(120, "samplerate", "[FILE] SampleRate", this::getSampleRateReporter));
+        this.infoReporter = withFile(Scratch3Block.ofReporter(100, "info", "[FILE] [VALUE]", this::getInfoReporter));
+        this.infoReporter.addArgument(VALUE, this.infoMenu);
+
         this.textToAudioReporter =
                 Scratch3Block.ofReporter(130, "tts", "text [VALUE] to audio [TTS]", this::getTextToAudioReporter);
         this.textToAudioReporter.addArgument(VALUE, "Hello world");
@@ -109,16 +111,9 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         return null;
     }
 
-    private float getLengthReporter(WorkspaceBlock workspaceBlock) throws Exception {
-        return handleFile(workspaceBlock, file -> getAudioLength(AudioFileIO.read(file).getAudioHeader()));
-    }
-
-    private long getBitrateReporter(WorkspaceBlock workspaceBlock) throws Exception {
-        return handleFile(workspaceBlock, file -> AudioFileIO.read(file).getAudioHeader().getBitRateAsNumber());
-    }
-
-    private int getSampleRateReporter(WorkspaceBlock workspaceBlock) throws Exception {
-        return handleFile(workspaceBlock, file -> AudioFileIO.read(file).getAudioHeader().getSampleRateAsNumber());
+    private State getInfoReporter(WorkspaceBlock workspaceBlock) throws Exception {
+        return handleFile(workspaceBlock, file ->
+                workspaceBlock.getMenuValue(VALUE, this.infoMenu).handler.apply(file));
     }
 
     private <T> T handleFile(WorkspaceBlock workspaceBlock, ThrowingFunction<File, T, Exception> handler) throws Exception {
@@ -159,7 +154,7 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         });
     }
 
-    private float getAudioLength(AudioHeader audioHeader) {
+    private static float getAudioLength(AudioHeader audioHeader) {
         if (audioHeader instanceof GenericAudioHeader) {
             return ((GenericAudioHeader) audioHeader).getPreciseLength();
         } else if (audioHeader instanceof MP3AudioHeader) {
@@ -172,9 +167,8 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         if (audioHeader instanceof MP3AudioHeader) {
             return ((MP3AudioHeader) audioHeader).getNumberOfFrames();
         } else {
-            AudioSystem.getAudioInputStream(file).getFrameLength();
+            return AudioSystem.getAudioInputStream(file).getFrameLength();
         }
-        return 0;
     }
 
     private void playFileCommand(WorkspaceBlock workspaceBlock) throws Exception {
@@ -246,4 +240,14 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         return scratch3Block;
     }
 
+    @RequiredArgsConstructor
+    private enum AudioInfo {
+        Length(file -> new DecimalType(getAudioLength(AudioFileIO.read(file).getAudioHeader()))),
+        BitRate(file -> new DecimalType(AudioFileIO.read(file).getAudioHeader().getBitRateAsNumber())),
+        SampleRate(file -> new DecimalType(AudioFileIO.read(file).getAudioHeader().getSampleRateAsNumber())),
+        Format(file -> new DecimalType(AudioFileIO.read(file).getAudioHeader().getFormat())),
+        Channels(file -> new DecimalType(AudioFileIO.read(file).getAudioHeader().getChannels()));
+
+        public final ThrowingFunction<File, State, Exception> handler;
+    }
 }

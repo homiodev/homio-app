@@ -9,6 +9,8 @@ import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.state.RawType;
+import org.touchhome.bundle.api.state.State;
+import org.touchhome.bundle.api.state.StringType;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
@@ -42,17 +44,17 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
     }
 
     @SneakyThrows
-    private String runCodeValueEvaluate(WorkspaceBlock workspaceBlock) {
+    private State runCodeValueEvaluate(WorkspaceBlock workspaceBlock) {
         String scriptEntityId = workspaceBlock.getInputWorkspaceBlock("SCRIPT").getField("SCRIPT_REF");
         ScriptEntity scriptEntity = entityContext.getEntity(scriptEntityId);
         if (scriptEntity == null) {
-            entityContext.ui().sendErrorMessage("WORKSPACE.SCRIPT_NOT_FOUND", scriptEntityId);
+            entityContext.ui().sendErrorMessage("workspace.error.script_not_found", scriptEntityId);
         } else {
             Object result =
                     scriptService.executeJavaScriptOnce(scriptEntity, scriptEntity.getJavaScriptParameters(), null, false);
-            return result == null ? null : result.toString();
+            return State.of(result);
         }
-        return "";
+        return StringType.EMPTY;
     }
 
     private void logHandler(WorkspaceBlock workspaceBlock) {

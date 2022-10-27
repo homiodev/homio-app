@@ -11,8 +11,6 @@ import org.touchhome.bundle.api.entity.validation.MaxItems;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldInlineEntity;
-import org.touchhome.bundle.api.ui.field.UIFieldInlineEntityWidth;
-import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 import javax.persistence.*;
 import java.util.Set;
@@ -44,7 +42,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup> implements HasJso
     @MaxItems(30) // max 30 variables in one group
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
     @UIField(order = 30)
-    @UIFieldInlineEntity(bg = "#1E5E611F", addRow="CREATE_VAR")
+    @UIFieldInlineEntity(bg = "#1E5E611F", addRow = "CREATE_VAR")
     private Set<WorkspaceVariable> workspaceVariables;
 
     @Lob

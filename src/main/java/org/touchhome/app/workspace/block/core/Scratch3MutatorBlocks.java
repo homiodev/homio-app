@@ -4,12 +4,14 @@ import com.jayway.jsonpath.JsonPath;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.state.JsonType;
+import org.touchhome.bundle.api.state.State;
+import org.touchhome.bundle.api.state.StringType;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.WorkspaceEventListener;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
@@ -39,15 +41,12 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks implements Wo
         this.mapBlock = Scratch3Block.ofReporter("map", this::mapEvaluate);
     }
 
-    public static JSONObject reduceJSON(String json, String query) {
+    public static State reduceJSON(String json, String query) {
         if (StringUtils.isNotEmpty(query)) {
             Object filteredObject = JsonPath.read(json, query);
-            if (filteredObject instanceof Map) {
-                return new JSONObject((Map) filteredObject);
-            }
-            return (JSONObject) filteredObject;
+            return State.of(filteredObject);
         }
-        return new JSONObject(json);
+        return new JsonType(json);
     }
 
     @Override
@@ -56,7 +55,7 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks implements Wo
     }
 
     @SneakyThrows
-    private Object mapEvaluate(WorkspaceBlock workspaceBlock) {
+    private State mapEvaluate(WorkspaceBlock workspaceBlock) {
         String source = workspaceBlock.getInputString("SOURCE");
         String map = workspaceBlock.getInputString("MAP");
 
@@ -72,13 +71,13 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks implements Wo
         return scriptService.runJavaScript(compileScriptContext);
     }
 
-    private Object jsonReduceEvaluate(WorkspaceBlock workspaceBlock) {
+    private State jsonReduceEvaluate(WorkspaceBlock workspaceBlock) {
         String json = workspaceBlock.getInputString("JSON");
         String query = workspaceBlock.getInputString("REDUCE");
         return reduceJSON(json, query);
     }
 
-    private String joinStringEvaluate(WorkspaceBlock workspaceBlock) {
-        return workspaceBlock.getInputString("STRING1") + workspaceBlock.getInputString("STRING2");
+    private State joinStringEvaluate(WorkspaceBlock workspaceBlock) {
+        return new StringType(workspaceBlock.getInputString("STRING1") + workspaceBlock.getInputString("STRING2"));
     }
 }
