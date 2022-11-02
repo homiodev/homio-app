@@ -1,7 +1,6 @@
 package org.touchhome.app.workspace.block.core;
 
 import static java.util.concurrent.TimeUnit.HOURS;
-import static org.touchhome.bundle.api.workspace.scratch.BlockType.command;
 import static org.touchhome.bundle.api.workspace.scratch.Scratch3Block.CONDITION;
 
 import com.pivovarit.function.ThrowingRunnable;
@@ -30,42 +29,24 @@ import org.touchhome.common.exception.ServerException;
 @Component
 public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
-  private final Scratch3Block foreverBlock;
-  private final Scratch3Block waitBlock;
-  private final Scratch3Block repeatBlock;
-  private final Scratch3Block ifBlock;
-  private final Scratch3Block ifElseBlock;
-  private final Scratch3Block stopBlock;
-  private final Scratch3Block stopInTimeoutBlock;
-  private final Scratch3Block waitUntilBlock;
-  private final Scratch3Block repeatUntilBlock;
-  private final Scratch3Block whenConditionChangedBlock;
-  private final Scratch3Block whenValueChangedBlock;
-  private final Scratch3Block scheduleBlock;
-
-  private final Scratch3Block scheduleCronBlock;
-  private final Scratch3Block whenTimeBetweenBlock;
-
   public Scratch3ControlBlocks(EntityContext entityContext) {
     super("control", entityContext);
 
-    // Blocks
-    this.foreverBlock = Scratch3Block.ofHandler("forever", command, this::foreverHandler);
-    this.scheduleBlock = Scratch3Block.ofHandler("schedule", command, this::repeatEveryTimeScheduleHandler);
-    this.scheduleCronBlock = Scratch3Block.ofHandler("schedule_cron", command, this::scheduleCronHandler);
-    this.repeatBlock = Scratch3Block.ofHandler("repeat", command, this::repeatHandler);
-    this.ifBlock = Scratch3Block.ofHandler("if", command, this::ifHandler);
-    this.ifElseBlock = Scratch3Block.ofHandler("if_else", command, this::ifElseHandler);
-    this.stopBlock = Scratch3Block.ofHandler("stop", command, this::stopHandler);
-    this.stopInTimeoutBlock = Scratch3Block.ofHandler("stop_timeout", command, this::stopInTimeoutHandler);
+    blockCommand("forever", this::foreverHandler);
+    blockCommand("schedule", this::repeatEveryTimeScheduleHandler);
+    blockCommand("schedule_cron", this::scheduleCronHandler);
+    blockCommand("repeat", this::repeatHandler);
+    blockCommand("if", this::ifHandler);
+    blockCommand("if_else", this::ifElseHandler);
+    blockCommand("stop", this::stopHandler);
+    blockCommand("stop_timeout", this::stopInTimeoutHandler);
 
-    this.waitBlock = Scratch3Block.ofHandler("wait", command, this::waitHandler);
-    this.waitUntilBlock = Scratch3Block.ofHandler("wait_until", command, this::waitUntilHandler);
-    this.repeatUntilBlock = Scratch3Block.ofHandler("repeat_until", command, this::repeatUntilHandler);
-    this.whenConditionChangedBlock =
-        Scratch3Block.ofHandler("when_condition_changed", command, this::whenConditionChangedHandler);
-    this.whenValueChangedBlock = Scratch3Block.ofHandler("when_value_changed", command, this::whenValueChangedHandler);
-    this.whenTimeBetweenBlock = Scratch3Block.ofHandler("when_time_between", command, this::whenTimeBetweenHandler);
+    blockCommand("wait", this::waitHandler);
+    blockCommand("wait_until", this::waitUntilHandler);
+    blockCommand("repeat_until", this::repeatUntilHandler);
+    blockCommand("when_condition_changed", this::whenConditionChangedHandler);
+    blockCommand("when_value_changed", this::whenValueChangedHandler);
+    blockCommand("when_time_between", this::whenTimeBetweenHandler);
   }
 
   private void scheduleCronHandler(WorkspaceBlock workspaceBlock) {
@@ -78,9 +59,9 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
       entityContext.bgp().builder("workspace-schedule-cron-" + workspaceBlock.getId())
           .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
           .interval(cron).execute(() -> {
+            ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
             workspaceBlock.setValue("INDEX", new DecimalType(index.getAndIncrement()));
             child.handle();
-            ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
           });
     }
   }
@@ -113,9 +94,11 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     int diffWithTo = nowDateTime.compareTo(nextToRun);
 
     if (nowDateTime.compareTo(nextFromRun) > 0) {
-      if ((toDiffFrom > 0 && nowDateTime.compareTo(nextToRun) < 0)) {
+      if (toDiffFrom > 0 && nowDateTime.compareTo(nextToRun) < 0) {
         Duration singleTimeToExecute = Duration.between(nowDateTime, nextToRun);
-        // Duration.between(nowDateTime, nextToRun).plusDays(1)
+        runWhenTimeInRange(workspaceBlock, singleTimeToExecute);
+      } else if (toDiffFrom < 0 && diffWithTo > 0) {
+        Duration singleTimeToExecute = Duration.between(nowDateTime, nextToRun).plusDays(1);
         runWhenTimeInRange(workspaceBlock, singleTimeToExecute);
       }
       nextFromRun = nextFromRun.plusDays(1);
@@ -133,13 +116,16 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
   private void runWhenTimeInRange(WorkspaceBlock workspaceBlock, Duration timeToExecute) {
     workspaceBlock.logInfo("Fire when-time-execution. Duration: {}", timeToExecute);
+    AtomicInteger index = new AtomicInteger(0);
     ThreadContext<Void> executeContext = entityContext.bgp()
         .builder("when-time-execution" + workspaceBlock.getId())
         .interval(Duration.ofMillis(100)).execute(() -> {
+          ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
+          workspaceBlock.setValue("INDEX", new DecimalType(index.getAndIncrement()));
           workspaceBlock.getChild().handle();
         });
 
-    ThreadContext<Void> stopper = entityContext.bgp().builder("when-time-execution-stop-" + workspaceBlock.getId())
+    ThreadContext<Void> threadKiller = entityContext.bgp().builder("when-time-execution-killer-" + workspaceBlock.getId())
         .delay(timeToExecute).execute(() -> {
           workspaceBlock.logInfo("Cancelling thread: {}", executeContext.getName());
           executeContext.cancel();
@@ -147,7 +133,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
           ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
         });
     workspaceBlock.onRelease(executeContext::cancel);
-    workspaceBlock.onRelease(stopper::cancel);
+    workspaceBlock.onRelease(threadKiller::cancel);
   }
 
   private long getExecutionTTL(WorkspaceBlock workspaceBlock, Duration from, Duration to) {
@@ -279,16 +265,16 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
    *
    */
   private void buildSchedule(String name, WorkspaceBlock workspaceBlock, long timeout,
-      ThrowingRunnable<Exception> runnable) {
+      ThrowingRunnable<Exception> handler) {
     AtomicInteger index = new AtomicInteger(0);
     entityContext.bgp()
         .builder("workspace-schedule-" + name + "-" + workspaceBlock.getId())
         .interval(Duration.ofMillis(Math.max(100, (int) timeout)))
         .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
         .execute(() -> {
-          runnable.run();
-          workspaceBlock.setValue("INDEX", new DecimalType(index.incrementAndGet()));
           ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
+          workspaceBlock.setValue("INDEX", new DecimalType(index.getAndIncrement()));
+          handler.run();
         });
   }
 

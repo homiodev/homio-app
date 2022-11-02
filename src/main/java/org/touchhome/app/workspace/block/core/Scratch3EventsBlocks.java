@@ -6,23 +6,17 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
-import org.touchhome.bundle.api.workspace.scratch.BlockType;
-import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 @Getter
 @Component
 public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
 
-  private final Scratch3Block receiveEvent;
-  private final Scratch3Block broadcastEvent;
-
   public Scratch3EventsBlocks(EntityContext entityContext) {
     super("event", entityContext);
 
-    // Blocks
-    this.receiveEvent = Scratch3Block.ofHandler("got_broadcast", BlockType.hat, this::receiveEventHandler);
-    this.broadcastEvent = Scratch3Block.ofHandler("broadcast", BlockType.command, this::broadcastEventHandler);
+    blockHat("got_broadcast", this::receiveEventHandler);
+    blockCommand("broadcast", this::broadcastEventHandler);
   }
 
   private void broadcastEventHandler(WorkspaceBlock workspaceBlock) {

@@ -1,5 +1,7 @@
 package org.touchhome.app.utils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -27,7 +29,6 @@ import org.touchhome.bundle.api.ui.field.image.UIFieldImageSrc;
 import org.touchhome.bundle.api.ui.field.selection.*;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicRequestType;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
-import org.touchhome.bundle.api.ui.method.UIFieldCreateWorkspaceVariableOnEmpty;
 import org.touchhome.bundle.api.util.SecureString;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.exception.ServerException;
@@ -186,6 +187,9 @@ public class UIFieldUtils {
         }
         entityUIMetaData.setStyle(uiField.style());
         entityUIMetaData.setDefaultValue(uiFieldContext.getDefaultValue(instance));
+
+        ObjectMapper mapper = CommonUtils.OBJECT_MAPPER;
+        ObjectNode jsonTypeMetadata = mapper.createObjectNode();
 
         JSONObject jsonTypeMetadata = new JSONObject();
         if (uiField.type().equals(UIFieldType.AutoDetect)) {
@@ -421,12 +425,6 @@ public class UIFieldUtils {
         UIFieldColorSource uiFieldRowColor = uiFieldContext.getDeclaredAnnotation(UIFieldColorSource.class);
         if (uiFieldRowColor != null) {
             jsonTypeMetadata.put("rc", sourceName);
-        }
-
-        UIFieldCreateWorkspaceVariableOnEmpty uiFieldCreateWorkspaceVariable =
-                uiFieldContext.getDeclaredAnnotation(UIFieldCreateWorkspaceVariableOnEmpty.class);
-        if (uiFieldCreateWorkspaceVariable != null) {
-            jsonTypeMetadata.put("cwvoe", "true");
         }
 
         UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty =

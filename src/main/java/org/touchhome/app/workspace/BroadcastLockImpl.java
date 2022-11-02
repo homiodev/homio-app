@@ -18,9 +18,9 @@ import java.util.regex.Pattern;
 public class BroadcastLockImpl implements BroadcastLock {
     private final Condition condition;
     private final ReentrantLock lock;
-    private Predicate<Object> valueCheck;
-    private String key;
-    private Object expectedValue;
+    private final Predicate<Object> valueCheck;
+    private final String key;
+    private final Object expectedValue;
     private Map<String, Runnable> releaseListeners;
     private List<Consumer<Object>> signalListener;
 
@@ -46,9 +46,7 @@ public class BroadcastLockImpl implements BroadcastLock {
     @SneakyThrows
     public boolean await(WorkspaceBlock workspaceBlock, int timeout, TimeUnit timeUnit) {
         try {
-            log.debug("Call broadcast <{}> await", key);
             lock.lock();
-            workspaceBlock.setState("wait event");
             if (timeout == 0) {
                 condition.await();
             } else {

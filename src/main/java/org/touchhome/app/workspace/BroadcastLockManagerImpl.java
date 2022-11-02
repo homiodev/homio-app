@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.util.Pair;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP.ThreadContext;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
@@ -20,8 +19,8 @@ import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 @RequiredArgsConstructor
 public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
+  private final String workspaceTabId;
   private final WorkspaceWarehouseContext workspaceWarehouse = new WorkspaceWarehouseContext();
-  private final EntityContext entityContext;
 
   @Override
   public void signalAll(String key, Object value) {
@@ -52,13 +51,13 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
   @Override
   public BroadcastLock listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
-    String workspaceTab = ((WorkspaceBlockImpl) workspaceBlock).getTab();
     BroadcastLockImpl lock = getOrCreateLock(workspaceBlock);
     workspaceWarehouse.broadcastListenersMap.put(workspaceBlock.getId(), Pair.of(lock, supplier));
 
     if (workspaceWarehouse.threadContext == null) {
-      entityContext.bgp().builder("BroadcastWorkspaceTab-" + workspaceTab)
-          .interval(Duration.ofMillis(100)).tap(context -> workspaceWarehouse.threadContext = context)
+      workspaceBlock.getEntityContext().bgp().builder("BroadcastListenEvent-" + workspaceTabId)
+          .interval(Duration.ofMillis(1000))
+          .tap(context -> workspaceWarehouse.threadContext = context)
           .execute(() -> {
             for (Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item :
                 workspaceWarehouse.broadcastListenersMap.entrySet()) {

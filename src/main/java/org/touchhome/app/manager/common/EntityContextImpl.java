@@ -100,7 +100,6 @@ import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
-import org.touchhome.app.workspace.block.core.Scratch3OtherBlocks;
 import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
@@ -149,15 +148,12 @@ public class EntityContextImpl implements EntityContext {
     BEAN_UPDATE_CLASSES.add(WorkspaceManager.class);
     BEAN_UPDATE_CLASSES.add(WorkspaceController.class);
     BEAN_UPDATE_CLASSES.add(ItemController.class);
-    BEAN_UPDATE_CLASSES.add(Scratch3OtherBlocks.class);
     BEAN_UPDATE_CLASSES.add(PortService.class);
     BEAN_UPDATE_CLASSES.add(AudioService.class);
     BEAN_UPDATE_CLASSES.add(FileSystemController.class);
   }
 
   public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
-  @Getter
-  private static final Map<String, ConsolePlugin<?>> customConsolePlugins = new HashMap<>();
 
   public static Map<String, AbstractRepository> repositories = new HashMap<>();
   public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
@@ -555,27 +551,6 @@ public class EntityContextImpl implements EntityContext {
       }
     }
     return res;
-  }
-
-  @Override
-  public <T extends ConsolePlugin> void registerConsolePlugin(@NotNull String name, @NotNull T plugin) {
-    customConsolePlugins.put(name, plugin);
-    getBean(ConsoleController.class).getConsolePluginsMap().put(name, plugin);
-  }
-
-  @Override
-  public <T extends ConsolePlugin> T getRegisteredConsolePlugin(@NotNull String name) {
-    return (T) customConsolePlugins.get(name);
-  }
-
-  @Override
-  public boolean unRegisterConsolePlugin(@NotNull String name) {
-    if (customConsolePlugins.containsKey(name)) {
-      customConsolePlugins.remove(name);
-      getBean(ConsoleController.class).getConsolePluginsMap().remove(name);
-      return true;
-    }
-    return false;
   }
 
   @Override

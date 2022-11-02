@@ -18,8 +18,8 @@ import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.inmemory.InMemoryDB;
 import org.touchhome.bundle.api.inmemory.InMemoryDBService;
+import org.touchhome.bundle.api.state.State;
 import org.touchhome.common.exception.NotFoundException;
-import org.touchhome.common.util.CommonUtils;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -50,6 +50,17 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     VariableContext context = getOrCreateContext(variableId);
+    if (value instanceof State) {
+      switch (context.groupVariable.getRestriction()) {
+        case Boolean:
+          value = ((State) value).boolValue();
+          break;
+        case Float:
+          value = ((State) value).floatValue();
+          break;
+      }
+    }
+
     if (!(value instanceof Boolean) && !(value instanceof Number)) {
       String strValue = value.toString();
       if (StringUtils.isNumeric(strValue)) {
@@ -84,16 +95,23 @@ public class EntityContextVarImpl implements EntityContextVar {
   }
 
   @Override
-  public String createVariable(String groupId, String name, VariableType type) {
-    return entityContext.save(new WorkspaceVariable().setName(name).setRestriction(type)
-        .setVariableId(CommonUtils.generateUUID())
-        .setWorkspaceGroup(entityContext.getEntity(WorkspaceGroup.PREFIX + groupId))).getVariableId();
+  public String createVariable(String groupId, String variableId, String variableName, VariableType variableType) {
+    WorkspaceVariable entity = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
+    if (entity == null) {
+      entity = entityContext.save(new WorkspaceVariable()
+          .computeEntityID(() -> variableId)
+          .setName(variableName)
+          .setRestriction(variableType)
+          .setVariableId(variableId)
+          .setWorkspaceGroup(entityContext.getEntity(WorkspaceGroup.PREFIX + groupId)));
+    }
+    return entity.getVariableId();
   }
 
   @Override
-  public boolean createGroup(String groupId, String groupName) {
+  public boolean createGroup(String groupId, String groupName, boolean locked) {
     if (entityContext.getEntity(WorkspaceGroup.PREFIX + groupId) == null) {
-      entityContext.save(new WorkspaceGroup().setGroupId(groupId).setName(groupName));
+      entityContext.save(new WorkspaceGroup().setGroupId(groupId).setLocked(locked).setName(groupName));
       return true;
     }
     return false;

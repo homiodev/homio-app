@@ -27,6 +27,7 @@ public class BgpProcessResponse {
         private final int runCount;
         private final String state;
         private final JSONObject metadata;
+        private final String nextCall;
 
         public BgpProcess(EntityContextBGPImpl.ThreadContextImpl<?> context) {
             this.name = context.getName();
@@ -38,6 +39,7 @@ public class BgpProcessResponse {
             this.runCount = context.getRunCount();
             this.state = context.getState();
             this.metadata = context.getMetadata();
+            this.nextCall = context.getTimeToNextSchedule();
         }
     }
 }

@@ -1,5 +1,13 @@
 package org.touchhome.app.manager.var;
 
+import java.util.Set;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Lob;
+import javax.persistence.OneToMany;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -12,55 +20,56 @@ import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldInlineEntity;
 
-import javax.persistence.*;
-import java.util.Set;
-
 @Entity
 @Setter
 @Getter
 @Accessors(chain = true)
 @UISidebarMenu(icon = "fas fa-boxes-stacked", order = 200, bg = "#54AD24",
-        allowCreateNewItems = true, overridePath = "variable")
+    allowCreateNewItems = true, overridePath = "variable")
 public class WorkspaceGroup extends BaseEntity<WorkspaceGroup> implements HasJsonData {
-    public static final String PREFIX = "wg_";
 
-    @Override
-    public String getEntityPrefix() {
-        return PREFIX;
-    }
+  public static final String PREFIX = "wg_";
 
-    @Override
-    @UIField(order = 10, label = "groupName")
-    public String getName() {
-        return super.getName();
-    }
+  @Override
+  public String getEntityPrefix() {
+    return PREFIX;
+  }
 
-    @UIField(order = 12)
-    private String description;
+  @Override
+  @UIField(order = 10, label = "groupName")
+  public String getName() {
+    return super.getName();
+  }
 
-    @Getter
-    @MaxItems(30) // max 30 variables in one group
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
-    @UIField(order = 30)
-    @UIFieldInlineEntity(bg = "#1E5E611F", addRow = "CREATE_VAR")
-    private Set<WorkspaceVariable> workspaceVariables;
+  @UIField(order = 12)
+  private String description;
 
-    @Lob
-    @Getter
-    @Column(length = 10_000)
-    @Convert(converter = JSONObjectConverter.class)
-    private JSONObject jsonData = new JSONObject();
+  // unable to CRUD variables inside group or rename/drop group
+  private boolean locked;
 
-    @Column(unique = true, nullable = false)
-    private String groupId;
+  @Getter
+  @MaxItems(30) // max 30 variables in one group
+  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
+  @UIField(order = 30)
+  @UIFieldInlineEntity(bg = "#1E5E611F", addRow = "CREATE_VAR")
+  private Set<WorkspaceVariable> workspaceVariables;
 
-    @Override
-    public String getEntityID() {
-        return super.getEntityID();
-    }
+  @Lob
+  @Getter
+  @Column(length = 10_000)
+  @Convert(converter = JSONObjectConverter.class)
+  private JSONObject jsonData = new JSONObject();
 
-    @Override
-    protected void beforePersist() {
-        setEntityID(PREFIX + groupId);
-    }
+  @Column(unique = true, nullable = false)
+  private String groupId;
+
+  @Override
+  public String getEntityID() {
+    return super.getEntityID();
+  }
+
+  @Override
+  protected void beforePersist() {
+    setEntityID(PREFIX + groupId);
+  }
 }

@@ -54,7 +54,12 @@ import org.touchhome.common.util.Lang;
 @Log4j2
 public class EntityContextUIImpl implements EntityContextUI {
 
-  public final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
+  public static final Map<String, ConsolePlugin<?>> customConsolePlugins = new HashMap<>();
+  public static final Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
+
+  public static final Set<String> customConsolePluginNames = new HashSet<>();
+
+  private final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
 
   private final Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
   private final Map<String, BellNotification> bellNotifications = new ConcurrentHashMap<>();
@@ -76,8 +81,7 @@ public class EntityContextUIImpl implements EntityContextUI {
       )
   );
 
-  public EntityContextUIImpl(SimpMessagingTemplate messagingTemplate,
-      EntityContextImpl entityContext) {
+  public EntityContextUIImpl(SimpMessagingTemplate messagingTemplate, EntityContextImpl entityContext) {
     this.messagingTemplate = messagingTemplate;
     this.entityContext = entityContext;
   }
@@ -389,6 +393,32 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
       }
     }
+  }
+
+  @Override
+  public void registerConsolePluginName(@NotNull String name) {
+    customConsolePluginNames.add(name);
+  }
+
+  @Override
+  public <T extends ConsolePlugin> void registerConsolePlugin(@NotNull String name, @NotNull T plugin) {
+    customConsolePlugins.put(name, plugin);
+    consolePluginsMap.put(name, plugin);
+  }
+
+  @Override
+  public <T extends ConsolePlugin> T getRegisteredConsolePlugin(@NotNull String name) {
+    return (T) customConsolePlugins.get(name);
+  }
+
+  @Override
+  public boolean unRegisterConsolePlugin(@NotNull String name) {
+    if (customConsolePlugins.containsKey(name)) {
+      customConsolePlugins.remove(name);
+      consolePluginsMap.remove(name);
+      return true;
+    }
+    return false;
   }
 
   public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, String value) {

@@ -27,6 +27,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.touchhome.app.workspace.WorkspaceManager.WorkspaceTabHolder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -45,14 +46,11 @@ import org.touchhome.common.util.CommonUtils;
 @Log4j2
 public class WorkspaceBlockImpl implements WorkspaceBlock {
 
-  private final Map<String, WorkspaceBlockImpl> allBlocks;
-  private final Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
-
   @Getter
   private final String id;
 
   @Getter
-  private EntityContext entityContext;
+  private final WorkspaceTabHolder workspaceTabHolder;
 
   @Getter
   private String extensionId;
@@ -78,35 +76,26 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
   @Getter
   private boolean topLevel;
 
-  private List<BroadcastLockImpl> acquiredLocks;
-
   private Map<String, State> values = new HashMap<>();
+
   private AtomicReference<State> lastChildValue;
 
   private boolean destroy;
+
   private List<ThrowingRunnable> releaseListeners;
 
   private EntityContextBGP.ThreadContext<?> threadContext;
 
-  @Setter
-  private BroadcastLockManager broadcastLockManager;
-
-  @Setter
-  private String tab;
-
-  WorkspaceBlockImpl(String id, Map<String, WorkspaceBlockImpl> allBlocks, Map<String, Scratch3ExtensionBlocks> scratch3Blocks,
-      EntityContext entityContext) {
+  WorkspaceBlockImpl(String id, WorkspaceTabHolder workspaceTabHolder) {
     this.id = id;
-    this.allBlocks = allBlocks;
-    this.scratch3Blocks = scratch3Blocks;
-    this.entityContext = entityContext;
+    this.workspaceTabHolder = workspaceTabHolder;
   }
 
   @Override
   public void logError(String message, Object... params) {
     log(Level.ERROR, message, params);
     String msg = log.getMessageFactory().newMessage(message, params).getFormattedMessage();
-    this.entityContext.ui().sendErrorMessage(msg);
+    getEntityContext().ui().sendErrorMessage(msg);
   }
 
   @Override
@@ -120,7 +109,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
   public void logWarn(String message, Object... params) {
     String msg = log.getMessageFactory().newMessage(message, params).getFormattedMessage();
     log(Level.WARN, msg);
-    this.entityContext.ui().sendWarningMessage(msg);
+    getEntityContext().ui().sendWarningMessage(msg);
   }
 
   @Override
@@ -140,7 +129,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
   @Override
   public <P> List<P> getMenuValues(String key, MenuBlock menuBlock, Class<P> type, String delimiter) {
     String menuId = this.inputs.get(key).getString(1);
-    WorkspaceBlock refWorkspaceBlock = allBlocks.get(menuId);
+    WorkspaceBlock refWorkspaceBlock = workspaceTabHolder.getBlocks().get(menuId);
     String value = refWorkspaceBlock.getField(menuBlock.getName());
     List<String> items = Stream.of(value.split(delimiter)).collect(Collectors.toList());
     List<P> result = new ArrayList<>();
@@ -156,7 +145,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     } else if (Long.class.isAssignableFrom(type)) {
       return items.stream().map(item -> (P) Long.valueOf(item)).collect(Collectors.toList());
     } else if (BaseEntity.class.isAssignableFrom(type)) {
-      return items.stream().map(item -> (P) entityContext.getEntity(item)).collect(Collectors.toList());
+      return items.stream().map(item -> (P) getEntityContext().getEntity(item)).collect(Collectors.toList());
     }
     logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
     return null; // unreachable block
@@ -176,7 +165,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
   private <P> P getMenuValueInternal(String key, MenuBlock menuBlock, Class<P> type) {
     String menuId = this.inputs.get(key).getString(1);
-    WorkspaceBlock refWorkspaceBlock = allBlocks.get(menuId);
+    WorkspaceBlock refWorkspaceBlock = workspaceTabHolder.getBlocks().get(menuId);
     String fieldValue = refWorkspaceBlock.getField(menuBlock.getName());
     if (Enum.class.isAssignableFrom(type)) {
       for (P p : type.getEnumConstants()) {
@@ -189,7 +178,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     } else if (Long.class.isAssignableFrom(type)) {
       return (P) Long.valueOf(fieldValue);
     } else if (BaseEntity.class.isAssignableFrom(type)) {
-      return (P) entityContext.getEntity(fieldValue);
+      return (P) getEntityContext().getEntity(fieldValue);
     }
     logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
     return null; // unreachable block
@@ -255,7 +244,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         scratch3Block.getHandler().handle(this);
       } catch (Exception ex) {
         String err = "Workspace " + scratch3Block.getOpcode() + " scratch error\n" + CommonUtils.getErrorMessage(ex);
-        entityContext.ui().sendErrorMessage(err, ex);
+        getEntityContext().ui().sendErrorMessage(err, ex);
         log.error(err);
         return null;
       }
@@ -282,7 +271,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         this.setValue("value", value);
         return value;
       } catch (Exception ex) {
-        entityContext.ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
+        getEntityContext().ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
         throw new ServerException(ex);
       }
     });
@@ -307,7 +296,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
   }
 
   public Scratch3Block getScratch3Block() {
-    Scratch3ExtensionBlocks scratch3ExtensionBlocks = scratch3Blocks.get(extensionId);
+    Scratch3ExtensionBlocks scratch3ExtensionBlocks = workspaceTabHolder.getScratch3Blocks().get(extensionId);
     if (scratch3ExtensionBlocks == null) {
       logErrorAndThrow(sendScratch3ExtensionNotFound(extensionId));
     } else {
@@ -396,12 +385,12 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     if (input instanceof Boolean) {
       return (boolean) input;
     }
-    return this.allBlocks.get(cast(input)).evaluate().boolValue();
+    return workspaceTabHolder.getBlocks().get(cast(input)).evaluate().boolValue();
   }
 
   @Override
   public WorkspaceBlock getInputWorkspaceBlock(String key) {
-    return this.allBlocks.get(cast(getInput(key, false)));
+    return workspaceTabHolder.getBlocks().get(cast(getInput(key, false)));
   }
 
   private String cast(Object object) {
@@ -423,14 +412,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         if (array != null) {
           PrimitiveRef primitiveRef = PrimitiveRef.values()[array.getInt(0)];
           if (fetchValue) {
-            return primitiveRef.fetchValue(array, entityContext);
+            return primitiveRef.fetchValue(array, getEntityContext());
           } else {
             return primitiveRef.getRef(array).toString();
           }
         } else {
           ref = objects.getString(1);
           if (fetchValue) {
-            Object evaluateValue = this.allBlocks.get(ref).evaluate();
+            Object evaluateValue = workspaceTabHolder.getBlocks().get(ref).evaluate();
             this.lastChildValue = new AtomicReference<>(State.of(evaluateValue));
             return evaluateValue;
           }
@@ -444,7 +433,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         return PrimitiveRef.values()[objects.getInt(0)].getRef(objects);
       case 2: // just a reference
         String reference = objects.getString(1);
-        return fetchValue ? allBlocks.get(reference).evaluate() : reference;
+        return fetchValue ? workspaceTabHolder.getBlocks().get(reference).evaluate() : reference;
       default:
         logErrorAndThrow("Unable to fetch/parse integer value from input with key: " + key);
         return null;
@@ -477,27 +466,9 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     return this.opcode;
   }
 
-  public String getTab() {
-    return getTopParent().tab;
-  }
-
   public BroadcastLockManager getBroadcastLockManager() {
-    return getTopParent().broadcastLockManager;
+    return workspaceTabHolder.getBroadcastLockManager();
   }
-
-  @Override
-  public void setState(String state) {
-    log.info("Set to state: {}", state);
-    // getTopParent().threadContext.setState(state);
-  }
-
-    /* private WorkspaceBlockImpl getTopParent() {
-        WorkspaceBlock cursor = this;
-        while (cursor.getParent() != null) {
-            cursor = cursor.getParent();
-        }
-        return (WorkspaceBlockImpl) cursor;
-    } */
 
   @Override
   public boolean isDestroyed() {
@@ -533,13 +504,13 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
   private String sendScratch3ExtensionNotFound(String extensionId) {
     String msg = "No scratch extension <" + extensionId + "> found";
-    entityContext.ui().sendErrorMessage(msg, extensionId);
+    getEntityContext().ui().sendErrorMessage(msg, extensionId);
     return msg;
   }
 
   private String sendScratch3BlockNotFound(String extensionId, String opcode) {
     String msg = "No scratch block <" + opcode + "> found in extension <" + extensionId + ">";
-    entityContext.ui().sendErrorMessage("workspace.error.scratch_block_not_found", opcode);
+    getEntityContext().ui().sendErrorMessage("workspace.error.scratch_block_not_found", opcode);
     return msg;
   }
 
@@ -547,27 +518,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
   public String toString() {
     return "WorkspaceBlockImpl{" + "id='" + id + '\'' + ", extensionId='" + extensionId + '\'' + ", opcode='" + opcode +
         '\'' + '}';
-  }
-
-  public void linkBoolean(String variableId) {
-    Scratch3Block scratch3Block = getScratch3Block();
-    if (scratch3Block.getAllowLinkBoolean() == null) {
-      logErrorAndThrow("Unable to link boolean variable to scratch block: " + scratch3Block.getOpcode());
-    }
-    try {
-      scratch3Block.getAllowLinkBoolean().accept(variableId, this);
-    } catch (Exception ex) {
-      logErrorAndThrow("Error when linking boolean variable to scratch block: " + scratch3Block.getOpcode() +
-          CommonUtils.getErrorMessage(ex));
-    }
-  }
-
-  public void linkVariable(String variableId) {
-    Scratch3Block scratch3Block = getScratch3Block();
-    if (scratch3Block.getAllowLinkVariable() == null) {
-      logErrorAndThrow("Unable to link boolean variable to scratch block: " + scratch3Block.getOpcode());
-    }
-    scratch3Block.getAllowLinkVariable().accept(variableId, this);
   }
 
   public State getLastValue() {
@@ -583,10 +533,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
   }
 
   public void addLock(BroadcastLockImpl broadcastLock) {
-    if (acquiredLocks == null) {
-      acquiredLocks = new ArrayList<>();
-    }
-    this.acquiredLocks.add(broadcastLock);
     broadcastLock.addSignalListener(value -> {
       if (value instanceof Collection && ((Collection) value).size() > 1) {
         Collection col = (Collection) value;
@@ -610,8 +556,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     threadContext.setMetadata("activeWorkspaceId", id);
   }
 
-  public void setBroadcastLockManager(BroadcastLockManagerImpl broadcastLockManager) {
-
+  public EntityContext getEntityContext() {
+    return workspaceTabHolder.getEntityContext();
   }
 
   @AllArgsConstructor
@@ -656,9 +602,5 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
       }
     }
     return defaultValue;
-  }
-
-  private WorkspaceBlockImpl getTopParent() {
-    return parent == null ? this : parent.getTopParent();
   }
 }

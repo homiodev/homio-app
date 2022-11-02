@@ -9,6 +9,7 @@
   "USED_QUOTA": "Used {{PC}}% quota {{VAL}}/{{MAX}}",
   "UDP_ERROR": "Unable to listen udp: {{key}}. Error: {{msg}}",
   "NEW_DEVICE": {
+    "GENERAL_QUESTION": "Do you want create {{NAME}} device?",
     "TITLE": "Found device: {{NAME}}",
     "NAME": "Name   '{{NAME}}'",
     "URL": "URL    '{{URL}}'"

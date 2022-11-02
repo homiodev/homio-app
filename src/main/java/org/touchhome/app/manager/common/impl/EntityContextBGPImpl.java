@@ -327,7 +327,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         threadContext.setRetValue(threadContext.getCommand().apply(threadContext));
         threadContext.state = "FINISHED";
         if (threadContext.scheduleType == ScheduleType.SINGLE) {
-          threadContext.cancel();
+          threadContext.cancelProcessInternal();
         }
       } catch (Exception ex) {
         if (ex instanceof CancellationException) {
@@ -451,6 +451,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     @Override
     public void cancel() {
       log.info("Cancel process: '{}'", name);
+      cancelProcessInternal();
+    }
+
+    private void cancelProcessInternal() {
       if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
         stopped = true;
         if (!showOnUI || hideOnUIAfterCancel) {

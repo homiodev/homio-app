@@ -1,12 +1,13 @@
 package org.touchhome.app.model.entity.widget.impl;
 
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 import org.touchhome.bundle.api.EntityContext;
 
 public class DataSourceUtil {
     public static DataSourceContext getSource(EntityContext entityContext, String dataSource) {
         DataSourceContext dataSourceContext = new DataSourceContext();
-        if (dataSource != null) {
+        if (StringUtils.isNotEmpty(dataSource)) {
             String[] vds = dataSource.split("~~~");
             if (vds.length > 2) {
                 dataSourceContext.sourceClass = vds[vds.length == 4 ? 2 : 1];

@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -60,7 +61,7 @@ public class WorkspaceManager implements BeanPostConstruct {
       Thread.sleep(TIME_WAIT_OLD_WORKSPACE.toMillis());
     }
 
-    workspaceTabHolder = new WorkspaceTabHolder();
+    workspaceTabHolder = new WorkspaceTabHolder(workspaceTab.getEntityID(), entityContext, scratch3Blocks);
     tabs.put(workspaceTab.getEntityID(), workspaceTabHolder);
 
     if (StringUtils.isNotEmpty(workspaceTab.getContent())) {
@@ -145,17 +146,16 @@ public class WorkspaceManager implements BeanPostConstruct {
       }
 
       if (!workspaceTabHolder.blocks.containsKey(blockId)) {
-        workspaceTabHolder.blocks.put(blockId, new WorkspaceBlockImpl(blockId, workspaceTabHolder.blocks, scratch3Blocks, entityContext));
+        workspaceTabHolder.blocks.put(blockId,
+            new WorkspaceBlockImpl(blockId, workspaceTabHolder));
       }
 
       WorkspaceBlockImpl workspaceBlock = workspaceTabHolder.blocks.get(blockId);
-      workspaceBlock.setBroadcastLockManager(new BroadcastLockManagerImpl(entityContext));
-      workspaceBlock.setTab(workspaceTab.getEntityID());
       workspaceBlock.setShadow(block.optBoolean("shadow"));
       workspaceBlock.setTopLevel(block.getBoolean("topLevel"));
       workspaceBlock.setOpcode(block.getString("opcode"));
-      workspaceBlock.setParent(getOrCreateWorkspaceBlock(workspaceTabHolder.blocks, block, "parent"));
-      workspaceBlock.setNext(getOrCreateWorkspaceBlock(workspaceTabHolder.blocks, block, "next"));
+      workspaceBlock.setParent(getOrCreateWorkspaceBlock(workspaceTabHolder, block, "parent"));
+      workspaceBlock.setNext(getOrCreateWorkspaceBlock(workspaceTabHolder, block, "next"));
 
       JSONObject fields = block.optJSONObject("fields");
       if (fields != null) {
@@ -172,12 +172,12 @@ public class WorkspaceManager implements BeanPostConstruct {
     }
   }
 
-  private WorkspaceBlockImpl getOrCreateWorkspaceBlock(Map<String, WorkspaceBlockImpl> workspaceMap, JSONObject block,
+  private WorkspaceBlockImpl getOrCreateWorkspaceBlock(WorkspaceTabHolder workspaceTabHolder, JSONObject block,
       String key) {
     if (block.has(key) && !block.isNull(key)) {
-      workspaceMap.putIfAbsent(block.getString(key),
-          new WorkspaceBlockImpl(block.getString(key), workspaceMap, scratch3Blocks, entityContext));
-      return workspaceMap.get(block.getString(key));
+      workspaceTabHolder.blocks.putIfAbsent(block.getString(key),
+          new WorkspaceBlockImpl(block.getString(key), workspaceTabHolder));
+      return workspaceTabHolder.blocks.get(block.getString(key));
     }
     return null;
   }
@@ -228,9 +228,21 @@ public class WorkspaceManager implements BeanPostConstruct {
     }
   }
 
-  private class WorkspaceTabHolder {
+  @Getter
+  @RequiredArgsConstructor
+  public static class WorkspaceTabHolder {
 
-    private final BroadcastLockManagerImpl broadcastLockManager = new BroadcastLockManagerImpl(entityContext);
+    private final String tabId;
+    private final EntityContext entityContext;
+    private final Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
+    private final BroadcastLockManagerImpl broadcastLockManager;
     private final Map<String, WorkspaceBlockImpl> blocks = new HashMap<>();
+
+    public WorkspaceTabHolder(String tabId, EntityContext entityContext, Map<String, Scratch3ExtensionBlocks> scratch3Blocks) {
+      this.tabId = tabId;
+      this.scratch3Blocks = scratch3Blocks;
+      this.entityContext = entityContext;
+      this.broadcastLockManager = new BroadcastLockManagerImpl(tabId);
+    }
   }
 }

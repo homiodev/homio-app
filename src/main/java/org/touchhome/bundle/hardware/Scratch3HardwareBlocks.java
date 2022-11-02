@@ -29,43 +29,41 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
   private final MenuBlock.ServerMenuBlock settingsMenu;
   private final MenuBlock.ServerMenuBlock hardwareEventsMenu;
 
-  private final Scratch3Block cityGeoLocationReporter;
-  private final Scratch3Block ipGeoLocationReporter;
-  private final Scratch3Block myIpReporter;
-  private final Scratch3Block serverTimeReporter;
-  private final Scratch3Block settingChangeHat;
   private final NetworkHardwareRepository networkHardwareRepository;
-  private final Scratch3Block hardwareEventHat;
+
+  private final Scratch3Block ipGeoLocationReporter;
+  private final Scratch3Block cityGeoLocationReporter;
 
   public Scratch3HardwareBlocks(EntityContext entityContext, NetworkHardwareRepository networkHardwareRepository) {
     super("#51633C", entityContext, null, "hardware");
     this.networkHardwareRepository = networkHardwareRepository;
 
     // Menu
-    this.settingsMenu = MenuBlock.ofServer("settingsMenu", "rest/setting/name", "Settings");
-    this.hardwareEventsMenu = MenuBlock.ofServer("hardwareEventsMenu", "rest/hardware/event", "Event");
+    this.settingsMenu = menuServer("settingsMenu", "rest/setting/name", "Settings");
+    this.hardwareEventsMenu = menuServer("hardwareEventsMenu", "rest/hardware/event", "Event");
 
     // Blocks
-    this.myIpReporter = Scratch3Block.ofReporter(50, "my_ip", "my ip", this::fireGetByIP);
-    this.serverTimeReporter =
-        Scratch3Block.ofReporter(60, "server_time", "time | format [FORMAT]", this::fireGetServerTimeReporter);
-    this.serverTimeReporter.addArgument("FORMAT");
+    blockReporter(50, "my_ip", "my ip", this::fireGetByIP);
+    blockReporter(60, "server_time", "time | format [FORMAT]", this::fireGetServerTimeReporter, block -> {
+      block.addArgument("FORMAT");
+    });
 
-    this.cityGeoLocationReporter = Scratch3Block.ofReporter(100, "city_geo_location", "City geo [CITY] | json",
-        this::fireGetCityGeoLocationReporter);
-    this.cityGeoLocationReporter.addArgument("CITY", "unknown city");
+    this.cityGeoLocationReporter = blockReporter(100, "city_geo_location", "City geo [CITY] | json", this::fireGetCityGeoLocationReporter, block -> {
+      block.addArgument("CITY", "unknown city");
+    });
 
-    this.ipGeoLocationReporter =
-        Scratch3Block.ofReporter(200, "ip_geo_location", "IP geo [IP] | json", this::fireGetIPGeoLocation);
-    this.ipGeoLocationReporter.addArgument("IP", "127.0.0.1");
+    this.ipGeoLocationReporter = blockReporter(200, "ip_geo_location", "IP geo [IP] | json", this::fireGetIPGeoLocation, block -> {
+      block.addArgument("IP", "127.0.0.1");
+    });
 
-    this.settingChangeHat = Scratch3Block.ofHat(300, "setting_hat", "Setting [SETTING] changed to [VALUE]",
-        this::fireSettingChangeHatEvent);
-    this.settingChangeHat.addArgument(SETTING, this.settingsMenu);
-    this.settingChangeHat.addArgument(VALUE);
+    blockHat(300, "setting_hat", "Setting [SETTING] changed to [VALUE]", this::fireSettingChangeHatEvent, block -> {
+      block.addArgument(SETTING, this.settingsMenu);
+      block.addArgument(VALUE);
+    });
 
-    this.hardwareEventHat = Scratch3Block.ofHat(400, "event", "Hardware event [EVENT]", this::fireHardwareHatEvent);
-    this.hardwareEventHat.addArgument(EVENT, this.hardwareEventsMenu);
+    blockHat(400, "event", "Hardware event [EVENT]", this::fireHardwareHatEvent, block -> {
+      block.addArgument(EVENT, this.hardwareEventsMenu);
+    });
 
     entityContext.bgp().runOnceOnInternetUp("scratch3-hardware", () -> {
       this.ipGeoLocationReporter.addArgument("IP", fireGetByIP(null).stringValue());

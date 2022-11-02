@@ -53,13 +53,13 @@ public class MediaController {
     private final EntityContext entityContext;
     private final AudioService audioService;
 
-    private RetryPolicy<Path> PLAYBACK_THUMBNAIL_RETRY_POLICY = RetryPolicy.<Path>builder()
+    private final RetryPolicy<Path> PLAYBACK_THUMBNAIL_RETRY_POLICY = RetryPolicy.<Path>builder()
             .handle(Exception.class)
             .withDelay(Duration.ofSeconds(3))
             .withMaxRetries(3)
             .build();
 
-    private RetryPolicy<DownloadFile> PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY =
+    private final RetryPolicy<DownloadFile> PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY =
             RetryPolicy.<DownloadFile>builder()
                     .handle(Exception.class)
                     .withDelay(Duration.ofSeconds(5))
@@ -175,7 +175,7 @@ public class MediaController {
                             log.error("Unable to download playback file: <{}>. <{}>. Msg: <{}>",
                                     entity.getTitle(),
                                     fileId,
-                                    CommonUtils.getErrorMessage(event.getFailure())))
+                                    CommonUtils.getErrorMessage(event.getException())))
                     .get(context -> {
                         log.info("Reply <{}>. Download playback video file <{}>. <{}>", context.getAttemptCount(),
                                 entity.getTitle(), fileId);
@@ -267,7 +267,7 @@ public class MediaController {
                 .onFailure(event ->
                         log.error("Unable to get playback img: <{}>. Msg: <{}>",
                                 entity.getTitle(),
-                                CommonUtils.getErrorMessage(event.getFailure())))
+                                CommonUtils.getErrorMessage(event.getException())))
                 .get(context -> {
                     log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
                     entityContext.getBean(FfmpegInputDeviceHardwareRepository.class).fireFfmpeg(
