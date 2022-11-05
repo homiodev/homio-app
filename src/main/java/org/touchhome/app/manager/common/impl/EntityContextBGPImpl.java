@@ -361,7 +361,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     Duration interval = touchHomeProperties.getInternetTestInterval();
     ScheduleBuilder<Boolean> builder = this.builder("internet-test");
     this.internetThreadContext = builder.interval(interval).delay(interval)
-        .execute(context -> getEntityContext().googleConnect() != null);
+        .interval(interval).execute(context -> getEntityContext().googleConnect() != null);
 
     this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
       if (isInternetUp != isInternetWasUp) {

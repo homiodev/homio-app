@@ -36,7 +36,7 @@ public class EntityContextStorage {
       if (this.hardwareCpuScheduler != null) {
         this.hardwareCpuScheduler.cancel();
       }
-      this.hardwareCpuScheduler = entityContext.bgp().builder("hardware-cpu").delay(Duration.ofSeconds(timeout)).
+      this.hardwareCpuScheduler = entityContext.bgp().builder("hardware-cpu").interval(Duration.ofSeconds(timeout)).
           execute(() -> {
             SystemMessage systemMessage = new SystemMessage(osBean, TOTAL_MEMORY);
             cpuStorage.save(systemMessage);
