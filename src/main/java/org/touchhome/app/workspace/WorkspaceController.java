@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.BundleService;
+import org.touchhome.app.manager.common.impl.EntityContextVarImpl;
 import org.touchhome.app.manager.var.WorkspaceGroup;
 import org.touchhome.app.manager.var.WorkspaceVariable;
 import org.touchhome.app.repository.device.WorkspaceRepository;
@@ -207,7 +208,8 @@ public class WorkspaceController implements BeanPostConstruct {
     JSONObject broadcasts = request.getJSONObject("broadcasts");
     WorkspaceGroup broadcastGroup = groups.remove("broadcasts");
     if (broadcastGroup == null) {
-      broadcastGroup = entityContext.save(new WorkspaceGroup().setGroupId("broadcasts").setName("Broadcasts"));
+      EntityContextVarImpl.createBroadcastGroup(entityContext);
+      broadcastGroup = entityContext.getEntity(WorkspaceGroup.PREFIX + "broadcasts");
     }
     Set<String> existedBroadcasts =
         Optional.ofNullable(broadcastGroup.getWorkspaceVariables()).orElse(Collections.emptySet()).stream().map(

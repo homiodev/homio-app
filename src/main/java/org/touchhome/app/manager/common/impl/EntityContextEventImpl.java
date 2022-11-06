@@ -2,6 +2,8 @@ package org.touchhome.app.manager.common.impl;
 
 import static java.util.Collections.emptyMap;
 
+import com.pivovarit.function.ThrowingRunnable;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,19 +15,25 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import lombok.Getter;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextBGP.ScheduleBuilder;
+import org.touchhome.bundle.api.EntityContextBGP.ThreadContext;
 import org.touchhome.bundle.api.EntityContextEvent;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.BaseEntityIdentifier;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
+import org.touchhome.bundle.api.model.Status;
 import org.touchhome.common.util.Lang;
 
+@Log4j2
 public class EntityContextEventImpl implements EntityContextEvent {
 
   @Getter
@@ -46,9 +54,11 @@ public class EntityContextEventImpl implements EntityContextEvent {
   @Getter
   private final List<BiConsumer<String, Object>> globalEvenListeners = new ArrayList<>();
   private final EntityContextImpl entityContext;
+  private ThreadContext<Boolean> internetThreadContext;
 
-  public EntityContextEventImpl(EntityContextImpl entityContext) {
+  public EntityContextEventImpl(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
     this.entityContext = entityContext;
+    listenInternetStatus(entityContext, touchHomeProperties);
   }
 
   @Override
@@ -78,7 +88,17 @@ public class EntityContextEventImpl implements EntityContextEvent {
   }
 
   @Override
-  public EntityContextEvent fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
+  public EntityContextEvent fireEventIfNotSame(@NotNull String key, @Nullable Object value) {
+    return fireEventddd(key, value, true);
+  }
+
+  @Override
+  public EntityContextEvent fireEvent(@NotNull String key, @Nullable Object value) {
+    return fireEventddd(key, value, false);
+  }
+
+  @NotNull
+  private EntityContextEventImpl fireEventddd(@NotNull String key, @Nullable Object value, boolean compareValues) {
     // fire by key and key + value type
     fireEventInternal(key, value, compareValues);
     if (value != null) {
@@ -130,6 +150,22 @@ public class EntityContextEventImpl implements EntityContextEvent {
       this.entityRemoveListeners.idListeners.get(entityID).remove(key);
     }
     return this;
+  }
+
+  @Override
+  public void runOnceOnInternetUp(@NotNull String name, @NotNull ThrowingRunnable<Exception> command) {
+    this.internetThreadContext.addValueListener(name, (isInternetUp, ignore) -> {
+      if (isInternetUp) {
+        log.info("Internet up. Run <" + name + "> listener.");
+        try {
+          command.run();
+        } catch (Exception ex) {
+          log.error("Error occurs while run command: " + name, ex);
+        }
+        return true;
+      }
+      return false;
+    });
   }
 
   @Override
@@ -238,5 +274,26 @@ public class EntityContextEventImpl implements EntityContextEvent {
       }
       return false;
     }
+  }
+
+  private void listenInternetStatus(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
+    Duration interval = touchHomeProperties.getInternetTestInterval();
+    ScheduleBuilder<Boolean> builder = this.entityContext.bgp().builder("internet-test");
+    this.internetThreadContext = builder.interval(interval).delay(interval)
+        .interval(interval).execute(context -> entityContext.checkUrlAccessible() != null);
+
+    this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
+      if (isInternetUp != isInternetWasUp) {
+        entityContext.event().fireEventIfNotSame("internet-status", isInternetUp ? Status.ONLINE : Status.OFFLINE);
+        if (isInternetUp) {
+          entityContext.ui().removeBellNotification("internet-connection");
+          entityContext.ui().addBellInfoNotification("internet-connection", "Internet Connection", "Internet up");
+        } else {
+          entityContext.ui().removeBellNotification("internet-up");
+          entityContext.ui().addBellErrorNotification("internet-connection", "Internet Connection", "Internet down");
+        }
+      }
+      return null;
+    });
   }
 }

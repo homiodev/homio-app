@@ -1,5 +1,7 @@
 package org.touchhome.app.manager.var;
 
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Date;
 import java.util.List;
@@ -66,7 +68,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
     return super.getName();
   }
 
-  @UIField(order = 12, label = "shortDescription")
+  @UIField(order = 12)
   @UIFieldInlineEntityWidth(viewWidth = 20, editWidth = 20)
   public String description;
 
@@ -112,21 +114,6 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
   @ManyToOne(fetch = FetchType.LAZY)
   private WorkspaceGroup workspaceGroup;
 
-  @Override
-  public void afterDelete(EntityContext entityContext) {
-    ((EntityContextVarImpl) entityContext.var()).afterVariableEntityDeleted(variableId);
-  }
-
-  @Override
-  protected void afterPersist(EntityContext entityContext) {
-    entityContext.var().set(variableId, restriction.getDefaultValue());
-  }
-
-  @Override
-  public void afterUpdate(EntityContext entityContext) {
-    ((EntityContextVarImpl) entityContext.var()).variableUpdated(this);
-  }
-
   @Lob
   @Getter
   @Column(length = 10_000)
@@ -138,10 +125,8 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
 
   @Override
   protected void beforePersist() {
-    if (StringUtils.isEmpty(variableId)) {
-      variableId = CommonUtils.generateUUID();
-    }
-    setEntityID(PREFIX + variableId);
+    setVariableId(defaultIfEmpty(variableId, CommonUtils.generateUUID()));
+    setEntityID(WorkspaceVariable.PREFIX + variableId);
   }
 
   @Override

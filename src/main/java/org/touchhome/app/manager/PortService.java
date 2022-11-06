@@ -37,17 +37,21 @@ public class PortService implements BeanPostConstruct {
 
   @Override
   public void onContextUpdate(EntityContext entityContext) {
-    portListeners.clear();
     listenPortAvailability();
   }
 
   @Override
   public void postConstruct(EntityContext entityContext) {
+    listenPortAvailability();
     Duration checkPortInterval = ((EntityContextImpl) entityContext).getTouchHomeProperties().getCheckPortInterval();
-    entityContext.bgp().builder("check-port").interval(checkPortInterval).execute(this::checkPortsAvailability);
+    entityContext.bgp().builder("check-port")
+        .cancelOnError(false)
+        .interval(checkPortInterval)
+        .execute(this::checkPortsAvailability);
   }
 
   public void listenPortAvailability() {
+    this.portListeners.clear();
     this.portSettingPlugins = EntityContextSettingImpl.settingPluginsBy(sp -> SerialPort.class.equals(sp.getType())).stream()
         .map(sp -> (SettingPluginOptions<SerialPort>) sp).collect(Collectors.toList());
 
@@ -85,6 +89,9 @@ public class PortService implements BeanPostConstruct {
     }
     // notify UI for reload available options
     if (!this.ports.equals(ports.keySet())) {
+      // Notify that any port has been changed
+      entityContext.event().fireEvent("any-port-changed", true);
+
       this.ports = ports.keySet();
 
       for (SettingPluginOptions<?> portSettingPlugin : portSettingPlugins) {

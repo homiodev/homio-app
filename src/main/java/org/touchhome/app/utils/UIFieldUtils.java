@@ -44,6 +44,7 @@ import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.validation.MaxItems;
+import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
@@ -84,6 +85,7 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldClassSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldDevicePortSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassListSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectNoValue;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectValueOnEmpty;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldStaticSelection;
@@ -423,7 +425,7 @@ public class UIFieldUtils {
         actionButtons.put(new JSONObject().put("name", actionButton.name()).put("icon", actionButton.icon())
             .put("color", actionButton.color()).put("inputs", inputs).put("style", actionButton.style()));
       }
-      jsonTypeMetadata.put("actionButtons", OBJECT_MAPPER.valueToTree(actionButtons));
+      jsonTypeMetadata.set("actionButtons", OBJECT_MAPPER.valueToTree(actionButtons));
     }
     UIFieldPort uiFieldPort = uiFieldContext.getDeclaredAnnotation(UIFieldPort.class);
     if (uiFieldPort != null) {
@@ -438,18 +440,22 @@ public class UIFieldUtils {
       for (UIFieldColorMatch uiFieldColorMatch : uiFieldColorMatches) {
         colors.put(uiFieldColorMatch.value(), uiFieldColorMatch.color());
       }
-      jsonTypeMetadata.put("valueColor", OBJECT_MAPPER.valueToTree(colors));
+      jsonTypeMetadata.set("valueColor", OBJECT_MAPPER.valueToTree(colors));
     }
 
     UIFieldColorStatusMatch uiFieldColorStatusMatch = uiFieldContext.getDeclaredAnnotation(UIFieldColorStatusMatch.class);
     if (uiFieldColorStatusMatch != null) {
-      JSONObject colors = new JSONObject();
-      colors.put("OFFLINE", uiFieldColorStatusMatch.offline());
-      colors.put("ONLINE", uiFieldColorStatusMatch.online());
-      colors.put("UNKNOWN", uiFieldColorStatusMatch.unknown());
-      colors.put("ERROR", uiFieldColorStatusMatch.error());
-      colors.put("REQUIRE_AUTH", uiFieldColorStatusMatch.requireAuth());
-      jsonTypeMetadata.put("valueColor", OBJECT_MAPPER.valueToTree(colors));
+      ObjectNode colors = OBJECT_MAPPER.createObjectNode();
+      colors.put(Status.OFFLINE.name(), uiFieldColorStatusMatch.offline());
+      colors.put(Status.ONLINE.name(), uiFieldColorStatusMatch.online());
+      colors.put(Status.UNKNOWN.name(), uiFieldColorStatusMatch.unknown());
+      colors.put(Status.ERROR.name(), uiFieldColorStatusMatch.error());
+      colors.put(Status.REQUIRE_AUTH.name(), uiFieldColorStatusMatch.requireAuth());
+      colors.put(Status.DONE.name(), uiFieldColorStatusMatch.done());
+      colors.put(Status.NOT_SUPPORTED.name(), uiFieldColorStatusMatch.notSupported());
+      colors.put(Status.RUNNING.name(), uiFieldColorStatusMatch.running());
+      colors.put(Status.WAITING.name(), uiFieldColorStatusMatch.waiting());
+      jsonTypeMetadata.set("valueColor", colors);
       jsonTypeMetadata.put("valueColorPrefix", uiFieldColorStatusMatch.handlePrefixes());
     }
 
@@ -479,11 +485,18 @@ public class UIFieldUtils {
       jsonTypeMetadata.put("rc", sourceName);
     }
 
-    UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty =
-        uiFieldContext.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
+    UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty = uiFieldContext.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
     if (uiFieldSelectValueOnEmpty != null) {
-      jsonTypeMetadata.put("sveColor", uiFieldSelectValueOnEmpty.color());
-      jsonTypeMetadata.put("sveLabel", uiFieldSelectValueOnEmpty.label());
+      ObjectNode selectValueOnEmpty = OBJECT_MAPPER.createObjectNode();
+      selectValueOnEmpty.put("color", uiFieldSelectValueOnEmpty.color());
+      selectValueOnEmpty.put("label", uiFieldSelectValueOnEmpty.label());
+      selectValueOnEmpty.put("icon", uiFieldSelectValueOnEmpty.icon());
+      jsonTypeMetadata.put("selectValueOnEmpty", selectValueOnEmpty);
+    }
+
+    UIFieldSelectNoValue uiFieldSelectNoValue = uiFieldContext.getDeclaredAnnotation(UIFieldSelectNoValue.class);
+    if (uiFieldSelectNoValue != null) {
+      jsonTypeMetadata.put("optionsNotFound", uiFieldSelectNoValue.value());
     }
 
     if (entityUIMetaData.getType().equals(String.class.getSimpleName())) {

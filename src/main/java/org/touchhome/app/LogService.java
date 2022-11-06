@@ -14,8 +14,10 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.setting.console.lines.log.ConsoleLogLevelSetting;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.ui.UIEntityLogs;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 import java.io.File;
@@ -29,7 +31,7 @@ import java.util.function.Consumer;
 @Component
 public class LogService implements ApplicationListener<ApplicationEnvironmentPreparedEvent> {
 
-    private static Map<String, LogAppenderHandler> logAppenderHandlers = new HashMap<>();
+    private static final Map<String, LogAppenderHandler> logAppenderHandlers = new HashMap<>();
 
     private static void initLogAppender() {
         LoggerContext lc = (LoggerContext) LogManager.getContext(false);

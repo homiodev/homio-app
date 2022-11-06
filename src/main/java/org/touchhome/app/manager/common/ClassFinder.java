@@ -15,6 +15,7 @@ import org.touchhome.app.extloader.BundleClassLoaderHolder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
+import org.touchhome.bundle.api.ui.UIEntityLogs;
 import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
 

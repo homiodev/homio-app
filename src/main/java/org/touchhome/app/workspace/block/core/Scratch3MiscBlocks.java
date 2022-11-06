@@ -40,7 +40,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
     String scriptEntityId = workspaceBlock.getInputWorkspaceBlock("SCRIPT").getField("SCRIPT_REF");
     ScriptEntity scriptEntity = entityContext.getEntity(scriptEntityId);
     if (scriptEntity == null) {
-      entityContext.ui().sendErrorMessage("workspace.error.script_not_found", scriptEntityId);
+      entityContext.ui().sendErrorMessage("error.script_not_found", scriptEntityId);
     } else {
       Object result =
           scriptService.executeJavaScriptOnce(scriptEntity, scriptEntity.getJavaScriptParameters(), null, false);

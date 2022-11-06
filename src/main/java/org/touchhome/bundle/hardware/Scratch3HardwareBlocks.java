@@ -65,7 +65,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
       block.addArgument(EVENT, this.hardwareEventsMenu);
     });
 
-    entityContext.bgp().runOnceOnInternetUp("scratch3-hardware", () -> {
+    entityContext.event().runOnceOnInternetUp("scratch3-hardware", () -> {
       this.ipGeoLocationReporter.addArgument("IP", fireGetByIP(null).stringValue());
       this.cityGeoLocationReporter.addArgument("CITY",
           networkHardwareRepository.getIpGeoLocation(networkHardwareRepository.getOuterIpAddress()).getCity());

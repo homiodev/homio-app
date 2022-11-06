@@ -40,7 +40,7 @@ public class EntityContextStorage {
           execute(() -> {
             SystemMessage systemMessage = new SystemMessage(osBean, TOTAL_MEMORY);
             cpuStorage.save(systemMessage);
-            entityContext.event().fireEvent("cpu", systemMessage, false);
+            entityContext.event().fireEvent("cpu", systemMessage);
           });
     });
   }

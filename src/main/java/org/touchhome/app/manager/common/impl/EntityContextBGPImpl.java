@@ -33,13 +33,11 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
-import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.json.BgpProcessResponse;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
-import org.touchhome.bundle.api.model.Status;
 import org.touchhome.common.util.CommonUtils;
 
 @Log4j2
@@ -58,13 +56,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
   private final Map<String, BatchRunContext<?>> batchRunContextMap = new ConcurrentHashMap<>();
 
-  private ThreadContext<Boolean> internetThreadContext;
-
-  public EntityContextBGPImpl(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties,
-      ThreadPoolTaskScheduler taskScheduler) {
+  public EntityContextBGPImpl(EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler) {
     this.entityContext = entityContext;
     this.taskScheduler = taskScheduler;
-    listenInternetStatus(entityContext, touchHomeProperties);
 
     this.builder("send-bgp-to-ui").interval(Duration.ofSeconds(1)).cancelOnError(false).execute(() ->
         entityContext.ui().sendDynamicUpdate(new DynamicUpdateRequest("bgp",
@@ -77,22 +71,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
       response.add(context);
     }
     return response;
-  }
-
-  @Override
-  public void runOnceOnInternetUp(@NotNull String name, @NotNull ThrowingRunnable<Exception> command) {
-    this.internetThreadContext.addValueListener(name, (isInternetUp, ignore) -> {
-      if (isInternetUp) {
-        log.info("Internet up. Run <" + name + "> listener.");
-        try {
-          command.run();
-        } catch (Exception ex) {
-          log.error("Error occurs while run command: " + name, ex);
-        }
-        return true;
-      }
-      return false;
-    });
   }
 
   /* @Override
@@ -355,27 +333,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     };
     threadContext.scheduledFuture = (ScheduledFuture<T>) scheduleHandler.apply(runnable);
     return threadContext;
-  }
-
-  private void listenInternetStatus(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
-    Duration interval = touchHomeProperties.getInternetTestInterval();
-    ScheduleBuilder<Boolean> builder = this.builder("internet-test");
-    this.internetThreadContext = builder.interval(interval).delay(interval)
-        .interval(interval).execute(context -> getEntityContext().googleConnect() != null);
-
-    this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
-      if (isInternetUp != isInternetWasUp) {
-        entityContext.event().fireEvent("internet-status", isInternetUp ? Status.ONLINE : Status.OFFLINE);
-        if (isInternetUp) {
-          entityContext.ui().removeBellNotification("internet-connection");
-          entityContext.ui().addBellInfoNotification("internet-connection", "Internet Connection", "Internet up");
-        } else {
-          entityContext.ui().removeBellNotification("internet-up");
-          entityContext.ui().addBellErrorNotification("internet-connection", "Internet Connection", "Internet down");
-        }
-      }
-      return null;
-    });
   }
 
   @RequiredArgsConstructor

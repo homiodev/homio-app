@@ -84,6 +84,9 @@ public class SettingController implements BeanPostConstruct {
   @GetMapping("/{entityID}/options")
   public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID,
       @RequestParam(value = "param0", required = false) String param0) {
+    if (entityID.equals("st_ConsoleHeaderSerialPortSetting")) {
+      return OptionModel.list("trrr", "aaaa");
+    }
     SettingPluginOptions<?> settingPlugin =
         (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
     return SettingRepository.getOptions(settingPlugin, entityContext, new JSONObject().put("param0", param0));

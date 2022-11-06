@@ -6,7 +6,7 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.touchhome.app.utils.UIFieldUtils.fetchRequestWidgetType;
 import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.lang.annotation.Annotation;
@@ -26,12 +26,13 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.jetbrains.annotations.NotNull;
-import org.json.JSONObject;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.EntityContext;
@@ -231,10 +232,11 @@ public final class UIFieldSelectionUtil {
     List<OptionModel> result = new ArrayList<>();
     Map<SelectionParent, List<OptionModel>> groupedModels = new HashMap<>();
     for (OptionModel option : options) {
-      SelectionParent parent = option.getJson() == null ? null : (SelectionParent) option.getJson().remove("sp");
+      JsonNode parent = option.getJson() == null ? null : option.getJson().remove("sp");
       if (parent != null) {
-        groupedModels.putIfAbsent(parent, new ArrayList<>());
-        groupedModels.get(parent).add(option);
+        SelectionParent selectionParent = OBJECT_MAPPER.treeToValue(parent, SelectionParent.class);
+        groupedModels.putIfAbsent(selectionParent, new ArrayList<>());
+        groupedModels.get(selectionParent).add(option);
       } else {
         result.add(option);
       }
@@ -339,13 +341,16 @@ public final class UIFieldSelectionUtil {
     UIFieldTreeNodeSelection fileSelection = uiFieldContext.getDeclaredAnnotation(UIFieldTreeNodeSelection.class);
     if (fileSelection != null) {
       selectTypes.add("file");
-      meta.set("fileSystemIds", OBJECT_MAPPER.valueToTree(fileSelection.fileSystemIds()));
-      meta.put("ASD", fileSelection.allowSelectDirs());
-      meta.put("AMS", fileSelection.allowMultiSelect());
-      meta.put("ASF", fileSelection.allowSelectFiles());
-      meta.put("pattern", fileSelection.pattern());
+      ObjectNode parameters = OBJECT_MAPPER.createObjectNode();
+      parameters.set("fileSystemIds", OBJECT_MAPPER.valueToTree(fileSelection.fileSystemIds()));
+      parameters.put("ASD", fileSelection.allowSelectDirs());
+      parameters.put("AMS", fileSelection.allowMultiSelect());
+      parameters.put("ASF", fileSelection.allowSelectFiles());
+      parameters.put("pattern", fileSelection.pattern());
+
       meta.put("icon", fileSelection.icon());
       meta.put("iconColor", fileSelection.iconColor());
+      meta.set("treeParameters", parameters);
     }
 
     if (!selectOptions.isEmpty()) {
@@ -389,25 +394,25 @@ public final class UIFieldSelectionUtil {
     });
     setDescription(target, sourceClassType, optionModel);
 
-    String sp = null, icon = null, iconColor = null, descr = null;
+    SelectionParent item = new SelectionParent();
     UIFieldSelectionParent selectionParent = target.getClass().getDeclaredAnnotation(UIFieldSelectionParent.class);
     if (selectionParent != null) {
-      sp = selectionParent.value();
-      icon = selectionParent.icon();
-      iconColor = selectionParent.iconColor();
-      descr = selectionParent.description();
+      item.key = selectionParent.value();
+      item.icon = selectionParent.icon();
+      item.iconColor = selectionParent.iconColor();
+      item.description = selectionParent.description();
     }
 
     if (target instanceof UIFieldSelectionParent.SelectionParent) {
       UIFieldSelectionParent.SelectionParent parent = (UIFieldSelectionParent.SelectionParent) target;
-      sp = defaultIfEmpty(parent.getParentName(), sp);
-      icon = defaultIfEmpty(parent.getParentIcon(), icon);
-      iconColor = defaultIfEmpty(parent.getParentIconColor(), iconColor);
-      descr = defaultIfEmpty(parent.getParentDescription(), descr);
+      item.key = defaultIfEmpty(parent.getParentName(), item.key);
+      item.icon = defaultIfEmpty(parent.getParentIcon(), item.icon);
+      item.iconColor = defaultIfEmpty(parent.getParentIconColor(), item.iconColor);
+      item.description = defaultIfEmpty(parent.getParentDescription(), item.description);
     }
 
-    if (sp != null) {
-      optionModel.put("sp", new SelectionParent(sp, icon, iconColor, descr));
+    if (item.key != null) {
+      optionModel.json(json -> json.set("sp", OBJECT_MAPPER.valueToTree(item)));
     }
 
     if (target instanceof SelectionWithDynamicParameterFields) {
@@ -415,19 +420,13 @@ public final class UIFieldSelectionUtil {
           new SelectionWithDynamicParameterFields.RequestDynamicParameter(requestedEntity,
               fetchRequestWidgetType(requestedEntity, sourceClassType));
 
-      optionModel.json(params -> {
+      optionModel.json(json -> {
         DynamicParameterFields dynamicParameterFields =
             ((SelectionWithDynamicParameterFields) target).getDynamicParameterFields(requestDynamicParameter);
         if (dynamicParameterFields != null) {
-          try {
-            params.put("dynamicParameter", new JSONObject().put("groupName", dynamicParameterFields.getGroupName())
-                .put("borderColor", dynamicParameterFields.getBorderColor())
-                .put("defaultValues", OBJECT_MAPPER.writeValueAsString(dynamicParameterFields))
-                .put("class", dynamicParameterFields.getClass().getSimpleName())
-                .put("holder", "dynamicParameterFieldsHolder"));
-          } catch (JsonProcessingException ex) {
-            throw new RuntimeException(ex);
-          }
+          DynamicParameter dynamicParameter = new DynamicParameter(dynamicParameterFields.getGroupName(), dynamicParameterFields.getBorderColor(),
+              dynamicParameterFields.getClass().getSimpleName(), dynamicParameterFields);
+          json.set("dynamicParameter", OBJECT_MAPPER.valueToTree(dynamicParameter));
         }
       });
     }
@@ -455,10 +454,10 @@ public final class UIFieldSelectionUtil {
     for (Map.Entry<String, List<OptionModel>> entry : groupByKeyModels.entrySet()) {
       if (entry.getValue().size() > 1) {
         Set<String> reqTarget =
-            entry.getValue().stream().map(v -> v.getJson().getString("REQ_TARGET").split("~~~")[0]).collect(toSet());
+            entry.getValue().stream().map(v -> v.getJson().get("REQ_TARGET").asText().split("~~~")[0]).collect(toSet());
         if (reqTarget.contains(HasAggregateValueFromSeries.class.getSimpleName())) {
           entry.getValue().removeIf(
-              e -> e.getJson().getString("REQ_TARGET").startsWith(HasGetStatusValue.class.getSimpleName()));
+              e -> e.getJson().get("REQ_TARGET").asText().startsWith(HasGetStatusValue.class.getSimpleName()));
         }
       }
     }
@@ -487,13 +486,13 @@ public final class UIFieldSelectionUtil {
     return null;
   }
 
-  @AllArgsConstructor
+  @Setter
   private static class SelectionParent {
 
-    private final String key;
-    private final String icon;
-    private final String iconColor;
-    private final String description;
+    private String key;
+    private String icon;
+    private String iconColor;
+    private String description;
 
     @Override
     public boolean equals(Object o) {
@@ -513,5 +512,15 @@ public final class UIFieldSelectionUtil {
     public int hashCode() {
       return key.hashCode();
     }
+  }
+
+  @Getter
+  @AllArgsConstructor
+  private static class DynamicParameter {
+
+    private final String groupName;
+    private final String borderColor;
+    private final String targetClass;
+    private final DynamicParameterFields defaultValues;
   }
 }

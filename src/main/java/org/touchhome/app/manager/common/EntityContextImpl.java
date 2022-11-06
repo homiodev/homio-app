@@ -1,5 +1,6 @@
 package org.touchhome.app.manager.common;
 
+import static org.apache.xmlbeans.XmlBeans.getTitle;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.MACHINE_IP_ADDRESS;
 
 import java.lang.annotation.Annotation;
@@ -43,10 +44,10 @@ import org.hibernate.event.spi.EventType;
 import org.hibernate.event.spi.PostDeleteEvent;
 import org.hibernate.event.spi.PostInsertEvent;
 import org.hibernate.event.spi.PostUpdateEvent;
+import org.hibernate.event.spi.PreDeleteEventListener;
 import org.hibernate.internal.SessionFactoryImpl;
 import org.hibernate.metamodel.spi.MetamodelImplementor;
 import org.hibernate.persister.entity.Joinable;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.aop.framework.Advised;
@@ -104,11 +105,11 @@ import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextVar;
-import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
+import org.touchhome.bundle.api.inmemory.InMemoryDB;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.Status;
@@ -206,9 +207,9 @@ public class EntityContextImpl implements EntityContext {
     this.touchHomeProperties = touchHomeProperties;
 
     this.entityContextUI = new EntityContextUIImpl(messagingTemplate, this);
-    this.entityContextBGP = new EntityContextBGPImpl(this, touchHomeProperties, taskScheduler);
+    this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler);
     this.entityContextUDP = new EntityContextUDPImpl(this);
-    this.entityContextEvent = new EntityContextEventImpl(this);
+    this.entityContextEvent = new EntityContextEventImpl(this, touchHomeProperties);
     this.entityContextSetting = new EntityContextSettingImpl(this);
     this.entityContextWidget = new EntityContextWidgetImpl(this);
     this.entityContextStorage = new EntityContextStorage(this);
@@ -283,10 +284,10 @@ public class EntityContextImpl implements EntityContext {
     // create indexes on tables
     //  this.createTableIndexes();
     this.bgp().builder("check-app-version").interval(Duration.ofDays(1)).execute(this::fetchReleaseVersion);
-    this.event().fireEvent("app-status", Status.ONLINE);
+    this.event().fireEventIfNotSame("app-status", Status.ONLINE);
 
     // install autossh. Should refactor to move somewhere else
-    this.bgp().runOnceOnInternetUp("internal-ctx", () -> MACHINE_IP_ADDRESS = getInternalIpAddress());
+    this.event().runOnceOnInternetUp("internal-ctx", () -> MACHINE_IP_ADDRESS = getInternalIpAddress());
     setting().listenValueAndGet(SystemLanguageSetting.class, "listen-lang", lang -> Lang.CURRENT_LANG = lang.name());
     this.entityContextStorage.init();
   }
@@ -623,11 +624,35 @@ public class EntityContextImpl implements EntityContext {
 
     SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
     EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
+    registry.getEventListenerGroup(EventType.PRE_DELETE).appendListener((PreDeleteEventListener) event -> {
+      Object entity = event.getEntity();
+      if (entity instanceof BaseEntity) {
+        BaseEntity baseEntity = (BaseEntity) entity;
+        String entityID = baseEntity.getEntityID();
+        // remove all status for entity
+        TouchHomeUtils.STATUS_MAP.remove(entityID);
+        // remove in-memory data if any exists
+        InMemoryDB.removeService(entityID);
+        // clear all registered console plugins if any exists
+        ui().unRegisterConsolePlugin(entityID);
+        // destroy any additional services
+        if (entity instanceof EntityService) {
+          try {
+            ((EntityService<?, ?>) entity).destroyService();
+          } catch (Exception ex) {
+            log.warn("Unable to destroy service for entity: {}", getTitle());
+          }
+        }
+        baseEntity.beforeDelete(EntityContextImpl.this);
+      }
+      return false;
+    });
     registry.getEventListenerGroup(EventType.POST_INSERT).appendListener(new PostInsertEventListenerStandardImpl() {
       @Override
       public void onPostInsert(PostInsertEvent event) {
         super.onPostInsert(event);
-        sendEntityUpdateNotification(event.getEntity(), ItemAction.Insert);
+        Object entity = event.getEntity();
+        postInsertUpdate(entity, true);
         updateCacheEntity(event.getEntity(), ItemAction.Insert);
       }
     });
@@ -640,11 +665,7 @@ public class EntityContextImpl implements EntityContext {
         EntityEntry entry = eventSource.getPersistenceContextInternal().getEntry(entity);
         // mimic the preUpdate filter
         if (org.hibernate.engine.spi.Status.DELETED != entry.getStatus()) {
-          if (entity instanceof BaseEntity) {
-            ((BaseEntity) entity).afterUpdate(EntityContextImpl.this);
-            // Do not send updates to UI in case of Status.DELETED
-            sendEntityUpdateNotification(entity, ItemAction.Update);
-          }
+          postInsertUpdate(entity, false);
         }
         updateCacheEntity(event.getEntity(), ItemAction.Update);
       }
@@ -662,6 +683,22 @@ public class EntityContextImpl implements EntityContext {
         updateCacheEntity(event.getEntity(), ItemAction.Remove);
       }
     });
+  }
+
+  private void postInsertUpdate(Object entity, boolean persist) {
+    if (entity instanceof BaseEntity) {
+      // Try instantiate service associated with entity
+      if (entity instanceof EntityService) {
+        EntityService.ServiceInstance service = ((EntityService<?, ?>) entity).getOrCreateService(this, false, true);
+        // Update entity into service
+        if (service != null) {
+          service.entityUpdated((EntityService) entity);
+        }
+      }
+      ((BaseEntity) entity).afterUpdate(this, persist);
+      // Do not send updates to UI in case of Status.DELETED
+      sendEntityUpdateNotification(entity, persist ? ItemAction.Insert : ItemAction.Update);
+    }
   }
 
   private void updateCacheEntity(Object entity, ItemAction type) {
@@ -845,7 +882,7 @@ public class EntityContextImpl implements EntityContext {
       setting().listenValue(installer.getDependencyPluginSettingClass(),
           "listen-" + installer.getDependencyPluginSettingClass(), (value) -> {
             event().fireEvent(installer.getName() + "-dependency-installed",
-                !installer.isRequireInstallDependencies(this, false), false);
+                !installer.isRequireInstallDependencies(this, false));
             getBean(ItemController.class).reloadItemsRelatedToDependency(installer);
           });
       if (installer.getInstallButton() != null) {
@@ -916,7 +953,7 @@ public class EntityContextImpl implements EntityContext {
             uiInputBuilder -> uiInputBuilder.addButton("handle-version", "fas fa-registered", UI.Color.PRIMARY_COLOR,
                 (entityContext, params) -> ActionResponseModel.showInfo(
                     startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath()))).setText("Update"));
-        this.event().fireEvent("app-release", this.latestVersion);
+        this.event().fireEventIfNotSame("app-release", this.latestVersion);
       }
     } catch (Exception ex) {
       log.warn("Unable to fetch latest version");
@@ -985,11 +1022,11 @@ public class EntityContextImpl implements EntityContext {
   }
 
   private String getInternalIpAddress() {
-    return StringUtils.defaultString(googleConnect(),
+    return StringUtils.defaultString(checkUrlAccessible(),
         applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress());
   }
 
-  public String googleConnect() {
+  public String checkUrlAccessible() {
     try (Socket socket = new Socket()) {
       socket.connect(new InetSocketAddress(touchHomeProperties.getCheckConnectivityURL(), 80));
       return socket.getLocalAddress().getHostAddress();

@@ -70,6 +70,9 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     private boolean advanced;
 
     @Transient
+    private boolean lazyLoad;
+
+    @Transient
     private boolean storable;
 
     @Transient

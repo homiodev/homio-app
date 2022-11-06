@@ -1,5 +1,7 @@
 package org.touchhome.app.manager.var;
 
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+
 import java.util.Set;
 import javax.persistence.AttributeOverride;
 import javax.persistence.CascadeType;
@@ -12,7 +14,6 @@ import javax.persistence.OneToMany;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.touchhome.bundle.api.converter.JSONObjectConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -23,6 +24,8 @@ import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldIconPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldInlineEntity;
+import org.touchhome.common.util.CommonUtils;
+import org.touchhome.common.util.Lang;
 
 @Entity
 @Setter
@@ -46,7 +49,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup> implements HasJso
     return super.getName();
   }
 
-  @UIField(order = 12)
+  @UIField(order = 12, inlineEditWhenEmpty = true)
   private String description;
 
   // unable to CRUD variables inside group or rename/drop group
@@ -83,8 +86,17 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup> implements HasJso
 
   @Override
   protected void beforePersist() {
+    setGroupId(defaultIfEmpty(groupId, CommonUtils.generateUUID()));
     setEntityID(PREFIX + groupId);
-    setIcon(StringUtils.defaultString(icon, "fas fa-layer-group"));
-    setIconColor(StringUtils.defaultString(iconColor, "#28A60C"));
+    setIcon(defaultIfEmpty(icon, "fas fa-layer-group"));
+    setIconColor(defaultIfEmpty(iconColor, "#28A60C"));
+    setName(defaultIfEmpty(getName(), CommonUtils.generateUUID()));
+  }
+
+  public String getDescription() {
+    if (description == null) {
+      return Lang.getServerMessageOptional("description." + getGroupId()).orElse(null);
+    }
+    return description;
   }
 }

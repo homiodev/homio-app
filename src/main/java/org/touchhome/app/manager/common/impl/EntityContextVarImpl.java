@@ -14,6 +14,7 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.var.WorkspaceGroup;
 import org.touchhome.app.manager.var.WorkspaceVariable;
 import org.touchhome.app.manager.var.WorkspaceVariableMessage;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.inmemory.InMemoryDB;
@@ -25,15 +26,32 @@ import org.touchhome.common.exception.NotFoundException;
 @RequiredArgsConstructor
 public class EntityContextVarImpl implements EntityContextVar {
 
+  public static void createBroadcastGroup(EntityContext entityContext) {
+    entityContext.var().createGroup("broadcasts", "Broadcasts", false, "fas fa-tower-broadcast", "#A32677", null);
+  }
+
   public static final Map<String, VariableContext> globalVarStorageMap = new HashMap<>();
+
   @Getter
   private final EntityContextImpl entityContext;
 
   public void init() {
-    List<WorkspaceVariable> storedVariables = entityContext.findAll(WorkspaceVariable.class);
-    for (WorkspaceVariable storedVariable : storedVariables) {
-      createContext(storedVariable);
+    createBroadcastGroup(entityContext);
+
+    for (WorkspaceVariable workspaceVariable : entityContext.findAll(WorkspaceVariable.class)) {
+      createContext(workspaceVariable);
     }
+
+    entityContext.event().addEntityCreateListener(WorkspaceVariable.class, "var-create", this::createContext);
+    entityContext.event().addEntityUpdateListener(WorkspaceVariable.class, "var-update", workspaceVariable -> {
+      VariableContext context = getOrCreateContext(workspaceVariable.getVariableId());
+      context.groupVariable = workspaceVariable;
+      context.service.updateQuota((long) workspaceVariable.quota);
+    });
+    entityContext.event().addEntityRemovedListener(WorkspaceVariable.class, "var-delete", workspaceVariable -> {
+      globalVarStorageMap.remove(workspaceVariable.getVariableId()).service.deleteAll();
+    });
+
   }
 
   @Override
@@ -109,9 +127,10 @@ public class EntityContextVarImpl implements EntityContextVar {
   }
 
   @Override
-  public boolean createGroup(String groupId, String groupName, boolean locked) {
+  public boolean createGroup(String groupId, String groupName, boolean locked, String icon, String iconColor, String description) {
     if (entityContext.getEntity(WorkspaceGroup.PREFIX + groupId) == null) {
-      entityContext.save(new WorkspaceGroup().setGroupId(groupId).setLocked(locked).setName(groupName));
+      entityContext.save(new WorkspaceGroup().setGroupId(groupId).setLocked(locked)
+          .setName(groupName).setIcon(icon).setIconColor(iconColor).setDescription(description));
       return true;
     }
     return false;
@@ -135,7 +154,7 @@ public class EntityContextVarImpl implements EntityContextVar {
     var service = InMemoryDB.getOrCreateService(WorkspaceVariableMessage.class,
             variable.getEntityID(), (long) variable.getQuota())
         .addSaveListener("", broadcastMessage -> {
-          entityContext.event().fireEvent(variableId, broadcastMessage.getValue(), false);
+          entityContext.event().fireEvent(variableId, broadcastMessage.getValue());
         });
     VariableContext context = new VariableContext(variable, service);
     globalVarStorageMap.put(variableId, context);
@@ -153,17 +172,6 @@ public class EntityContextVarImpl implements EntityContextVar {
       return variableId.substring(WorkspaceVariable.PREFIX.length());
     }
     return variableId;
-  }
-
-  public void afterVariableEntityDeleted(String variableId) {
-    // all in-memory services will be removed in BaseEntity.preRemove()
-    globalVarStorageMap.remove(variableId);
-  }
-
-  public void variableUpdated(WorkspaceVariable variable) {
-    VariableContext context = getOrCreateContext(variable.getVariableId());
-    context.groupVariable = variable;
-    context.service.updateQuota((long) variable.quota);
   }
 
   public Object aggregate(String variableId, Long from, Long to, AggregationType aggregationType, boolean exactNumber) {

@@ -1,10 +1,11 @@
 package org.touchhome.app.setting.console;
 
+import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.bundle.api.EntityContext;
@@ -34,9 +35,9 @@ public class ConsoleVisibleTabsSetting implements ConsoleSettingPlugin<String>, 
       String parentTab = entry.getValue().getParentTab();
       if (StringUtils.isNotEmpty(parentTab)) {
         result.putIfAbsent(parentTab, OptionModel.key(parentTab));
-        result.get(parentTab).putIfAbsent("children", new JSONArray());
-        result.get(parentTab).getJson().getJSONArray("children")
-            .put(new JSONObject().put("subTab", entry.getKey()).put("available", entry.getValue().isEnabled()));
+        result.get(parentTab).json(jsonNodes -> jsonNodes.putIfAbsent("children", OBJECT_MAPPER.createArrayNode()));
+        result.get(parentTab).getJson().withArray("children")
+            .add(OBJECT_MAPPER.createObjectNode().put("subTab", entry.getKey()).put("available", entry.getValue().isEnabled()));
       } else {
         result.put(entry.getKey(),
             OptionModel.key(entry.getKey()).json(json -> json.put("available", entry.getValue().isEnabled())));
