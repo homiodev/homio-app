@@ -1,5 +1,25 @@
 package org.touchhome.app.rest;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
+import static org.touchhome.bundle.raspberry.entity.RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.CopyOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -7,10 +27,17 @@ import org.apache.commons.io.FileUtils;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.bundle.api.BeanPostConstruct;
+import org.touchhome.app.spring.ContextCreated;
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.TreeConfiguration;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
@@ -22,185 +49,170 @@ import org.touchhome.common.fs.TreeNode;
 import org.touchhome.common.util.ArchiveUtil;
 import org.touchhome.common.util.CommonUtils;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.CopyOption;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.apache.commons.lang3.StringUtils.defaultString;
-import static org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
-
 @RestController
 @RequestMapping("/rest/fs")
 @RequiredArgsConstructor
-public class FileSystemController implements BeanPostConstruct {
+public class FileSystemController implements ContextCreated, ContextRefreshed {
 
-    private final EntityContextImpl entityContext;
-    private List<BaseFileSystemEntity> fileSystems;
-    private RaspberryFileSystem localFileSystem;
+  private List<BaseFileSystemEntity> fileSystems;
+  private RaspberryFileSystem localFileSystem;
 
-    @Override
-    public void postConstruct(EntityContext context) {
-        EntityContextImpl entityContext = (EntityContextImpl) context;
-        this.entityContext.event()
-                .addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove", (e) -> findAllFileSystems(entityContext));
-        this.entityContext.event()
-                .addEntityCreateListener(BaseFileSystemEntity.class, "fs-create", (e) -> findAllFileSystems(entityContext));
+  // constructor parameters
+  private final EntityContextImpl entityContext;
 
-        RaspberryDeviceEntity raspberryDeviceEntity =
-                this.entityContext.getEntity(RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID);
-        this.localFileSystem = raspberryDeviceEntity.getFileSystem(entityContext);
+  @Override
+  public void onContextCreated(EntityContext entityContext) {
+    this.entityContext.event().addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove",
+        e -> findAllFileSystems(this.entityContext));
+    this.entityContext.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create",
+        e -> findAllFileSystems(this.entityContext));
+
+    RaspberryDeviceEntity raspberryDeviceEntity = this.entityContext.getEntity(DEFAULT_DEVICE_ENTITY_ID);
+    localFileSystem = raspberryDeviceEntity.getFileSystem(this.entityContext);
+  }
+
+  @Override
+  public void onContextRefresh() {
+    findAllFileSystems(entityContext);
+  }
+
+  @PostMapping("")
+  public List<TreeConfiguration> getFileSystems(@RequestBody GetFSRequest request) {
+    List<TreeConfiguration> configurations = new ArrayList<>();
+    String firstAvailableFS = request.fileSystemIds == null || request.fileSystemIds.isEmpty() ?
+        this.localFileSystem.getEntity().getEntityID() :
+        request.fileSystemIds.get(0);
+    // if not fs - set as local
+    for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
+      selectedNode.fs = defaultString(selectedNode.fs, firstAvailableFS);
     }
+    Collection<BaseFileSystemEntity> fsItems = getRequestedFileSystems(request);
+    for (BaseFileSystemEntity fileSystem : fsItems) {
+      TreeConfiguration configuration = fileSystem.buildFileSystemConfiguration(entityContext);
 
-    @Override
-    public void onContextUpdate(EntityContext context) {
-        EntityContextImpl entityContext = (EntityContextImpl) context;
-        findAllFileSystems(entityContext);
-    }
-
-    @PostMapping("")
-    public List<TreeConfiguration> getFileSystems(@RequestBody GetFSRequest request) {
-        List<TreeConfiguration> configurations = new ArrayList<>();
-        String firstAvailableFS = request.fileSystemIds == null || request.fileSystemIds.isEmpty() ?
-                this.localFileSystem.getEntity().getEntityID() :
-                request.fileSystemIds.get(0);
-        // if not fs - set as local
-        for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
-            selectedNode.fs = defaultString(selectedNode.fs, firstAvailableFS);
+      for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
+        if (selectedNode.fs.equals(fileSystem.getEntityID())) {
+          Set<TreeNode> treeNodes = fileSystem.getFileSystem(entityContext).loadTreeUpToChild(selectedNode.id);
+          if (treeNodes != null) {
+            configuration.setChildren(treeNodes);
+          }
         }
-        Collection<BaseFileSystemEntity> fsItems = getRequestedFileSystems(request);
-        for (BaseFileSystemEntity fileSystem : fsItems) {
-            TreeConfiguration configuration = fileSystem.buildFileSystemConfiguration(entityContext);
-
-            for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
-                if (selectedNode.fs.equals(fileSystem.getEntityID())) {
-                    Set<TreeNode> treeNodes = fileSystem.getFileSystem(entityContext).loadTreeUpToChild(selectedNode.id);
-                    if (treeNodes != null) {
-                        configuration.setChildren(treeNodes);
-                    }
-                }
-            }
-            configurations.add(configuration);
-        }
-        return configurations;
+      }
+      configurations.add(configuration);
     }
+    return configurations;
+  }
 
-    @PostMapping("/list")
-    public Collection<TreeNode> list(@RequestBody ListRequest request) {
-        return getFileSystem(request.sourceFs).getChildren(request.sourceFileId);
+  @PostMapping("/list")
+  public Collection<TreeNode> list(@RequestBody ListRequest request) {
+    return getFileSystem(request.sourceFs).getChildren(request.sourceFileId);
+  }
+
+  @DeleteMapping
+  public TreeNode remove(@RequestBody RemoveFilesRequest request) {
+    return getFileSystem(request.sourceFs).delete(request.sourceFileIds);
+  }
+
+  @PostMapping("/download")
+  public ResponseEntity<InputStreamResource> download(@RequestBody DownloadRequest request) throws Exception {
+    FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
+    if (request.sourceFileIds.size() == 1) {
+      TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileIds.iterator().next());
+      InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
+
+      MediaType mediaType;
+      try {
+        mediaType = MediaType.parseMediaType(treeNode.getAttributes().getContentType());
+      } catch (Exception ex) {
+        mediaType = MediaType.APPLICATION_OCTET_STREAM;
+      }
+      return TouchHomeUtils.inputStreamToResource(inputStream, mediaType);
+    } else {
+      Path zipFile = archiveSource(request.sourceFs, "zip", request.sourceFileIds, "downloadContent", null, null);
+      return TouchHomeUtils.inputStreamToResource(Files.newInputStream(zipFile), new MediaType("application", "zip"));
     }
+  }
 
-    @DeleteMapping
-    public TreeNode remove(@RequestBody RemoveFilesRequest request) {
-        return getFileSystem(request.sourceFs).delete(request.sourceFileIds);
+  @PostMapping("/create")
+  public TreeNode createNode(@RequestBody CreateNodeRequest request) {
+    FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
+    return fileSystem.create(request.sourceFileId, request.name, request.dir, getUploadOption(request));
+  }
+
+  @PostMapping("/unarchive")
+  public TreeNode unarchive(@RequestBody UnArchiveNodeRequest request) {
+    FileSystemProvider sourceFs = getFileSystem(request.sourceFs);
+    FileSystemProvider targetFs = getFileSystem(request.targetFs);
+
+    Path archive = sourceFs.getArchiveAsLocalPath(request.sourceFileId);
+    // InputStream stream = sourceFs.getEntryInputStream(request.sourceFileId);
+    TreeNode sourceItem = sourceFs.toTreeNode(request.sourceFileId);
+
+    String fileExtension = CommonUtils.getExtension(sourceItem.getName());
+    String fileWithoutExtension = sourceItem.getName().substring(0, sourceItem.getName().length() - fileExtension.length());
+    Path targetPath = CommonUtils.getTmpPath().resolve(fileWithoutExtension);
+
+    ArchiveUtil.UnzipFileIssueHandler issueHandler = ArchiveUtil.UnzipFileIssueHandler.valueOf(request.fileHandler);
+    ArchiveUtil.ArchiveFormat zipFormat = ArchiveUtil.ArchiveFormat.getHandlerByExtension(fileExtension);
+    ArchiveUtil.unzip(archive, zipFormat, targetPath, null, null, issueHandler);
+    Set<String> ids = Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles())).map(File::toString)
+        .collect(Collectors.toSet());
+    TreeNode fileSystemItem =
+        targetFs.copy(localFileSystem.toTreeNodes(ids), request.targetDir, FileSystemProvider.UploadOption.Replace);
+
+    if (request.removeSource) {
+      sourceFs.delete(Collections.singleton(request.sourceFileId));
     }
+    return fileSystemItem;
+  }
 
-    @PostMapping("/download")
-    public ResponseEntity<InputStreamResource> download(@RequestBody DownloadRequest request) throws Exception {
-        FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
-        if (request.sourceFileIds.size() == 1) {
-            TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileIds.iterator().next());
-            InputStream inputStream = fileSystem.getEntryInputStream(treeNode.getId());
+  @PostMapping("/archive")
+  public TreeNode archive(@RequestBody ArchiveNodeRequest request) throws Exception {
+    // make archive from requested files/folders
+    Path zipFile = archiveSource(request.sourceFs, request.format, request.sourceFileIds, request.targetName, request.level,
+        request.password);
 
-            MediaType mediaType;
-            try {
-                mediaType = MediaType.parseMediaType(treeNode.getAttributes().getContentType());
-            } catch (Exception ex) {
-                mediaType = MediaType.APPLICATION_OCTET_STREAM;
-            }
-            return TouchHomeUtils.inputStreamToResource(inputStream, mediaType);
-        } else {
-            Path zipFile = archiveSource(request.sourceFs, "zip", request.sourceFileIds, "downloadContent", null, null);
-            return TouchHomeUtils.inputStreamToResource(Files.newInputStream(zipFile), new MediaType("application", "zip"));
-        }
+    try {
+      TreeNode zipTreeNode = TreeNode.of(zipFile.toString(), zipFile, localFileSystem);
+
+      return getFileSystem(request.targetFs).copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
+    } finally {
+      Files.deleteIfExists(zipFile);
     }
+  }
 
-    @PostMapping("/create")
-    public TreeNode createNode(@RequestBody CreateNodeRequest request) {
-        FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
-        return fileSystem.create(request.sourceFileId, request.name, request.dir, getUploadOption(request));
+  @PostMapping("/copy")
+  public TreeNode copyNode(@RequestBody CopyNodeRequest request) {
+    FileSystemProvider sourceFs = getFileSystem(request.sourceFs);
+    FileSystemProvider targetFs = getFileSystem(request.targetFs);
+
+    Set<TreeNode> entries = sourceFs.toTreeNodes(request.getSourceFileIds());
+    TreeNode fileSystemItem = targetFs.copy(entries, request.targetPath, FileSystemProvider.UploadOption.Replace);
+
+    if (request.removeSource) {
+      sourceFs.delete(request.getSourceFileIds());
     }
+    return fileSystemItem;
+  }
 
-    @PostMapping("/unarchive")
-    public TreeNode unarchive(@RequestBody UnArchiveNodeRequest request) {
-        FileSystemProvider sourceFs = getFileSystem(request.sourceFs);
-        FileSystemProvider targetFs = getFileSystem(request.targetFs);
+  @PostMapping("/upload")
+  public TreeNode upload(@RequestParam("sourceFs") String sourceFs, @RequestParam("sourceFileId") String sourceFileId,
+      @RequestParam("replace") boolean replace, @RequestParam("data") MultipartFile[] files) {
+    FileSystemProvider fileSystem = getFileSystem(sourceFs);
+    Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
+    return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);
+  }
 
-        Path archive = sourceFs.getArchiveAsLocalPath(request.sourceFileId);
-        // InputStream stream = sourceFs.getEntryInputStream(request.sourceFileId);
-        TreeNode sourceItem = sourceFs.toTreeNode(request.sourceFileId);
+  @PostMapping("/rename")
+  public TreeNode rename(@RequestBody RenameNodeRequest request) {
+    return getFileSystem(request.sourceFs).rename(request.sourceFileId, request.newName, getUploadOption(request));
+  }
 
-        String fileExtension = CommonUtils.getExtension(sourceItem.getName());
-        String fileWithoutExtension = sourceItem.getName().substring(0, sourceItem.getName().length() - fileExtension.length());
-        Path targetPath = CommonUtils.getTmpPath().resolve(fileWithoutExtension);
-
-        ArchiveUtil.UnzipFileIssueHandler issueHandler = ArchiveUtil.UnzipFileIssueHandler.valueOf(request.fileHandler);
-        ArchiveUtil.ArchiveFormat zipFormat = ArchiveUtil.ArchiveFormat.getHandlerByExtension(fileExtension);
-        ArchiveUtil.unzip(archive, zipFormat, targetPath, null, null, issueHandler);
-        Set<String> ids = Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles())).map(File::toString)
-                .collect(Collectors.toSet());
-        TreeNode fileSystemItem =
-                targetFs.copy(localFileSystem.toTreeNodes(ids), request.targetDir, FileSystemProvider.UploadOption.Replace);
-
-        if (request.removeSource) {
-            sourceFs.delete(Collections.singleton(request.sourceFileId));
-        }
-        return fileSystemItem;
-    }
-
-    @PostMapping("/archive")
-    public TreeNode archive(@RequestBody ArchiveNodeRequest request) throws Exception {
-        // make archive from requested files/folders
-        Path zipFile = archiveSource(request.sourceFs, request.format, request.sourceFileIds, request.targetName, request.level,
-                request.password);
-
-        try {
-            TreeNode zipTreeNode = TreeNode.of(zipFile.toString(), zipFile, localFileSystem);
-
-            return getFileSystem(request.targetFs).copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
-        } finally {
-            Files.deleteIfExists(zipFile);
-        }
-    }
-
-    @PostMapping("/copy")
-    public TreeNode copyNode(@RequestBody CopyNodeRequest request) {
-        FileSystemProvider sourceFs = getFileSystem(request.sourceFs);
-        FileSystemProvider targetFs = getFileSystem(request.targetFs);
-
-        Set<TreeNode> entries = sourceFs.toTreeNodes(request.getSourceFileIds());
-        TreeNode fileSystemItem = targetFs.copy(entries, request.targetPath, FileSystemProvider.UploadOption.Replace);
-
-        if (request.removeSource) {
-            sourceFs.delete(request.getSourceFileIds());
-        }
-        return fileSystemItem;
-    }
-
-    @PostMapping("/upload")
-    public TreeNode upload(@RequestParam("sourceFs") String sourceFs, @RequestParam("sourceFileId") String sourceFileId,
-                           @RequestParam("replace") boolean replace, @RequestParam("data") MultipartFile[] files) {
-        FileSystemProvider fileSystem = getFileSystem(sourceFs);
-        Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
-        return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);
-    }
-
-    @PostMapping("/rename")
-    public TreeNode rename(@RequestBody RenameNodeRequest request) {
-        return getFileSystem(request.sourceFs).rename(request.sourceFileId, request.newName, getUploadOption(request));
-    }
-
-    @GetMapping("/search")
-    public List<TreeNode> search(@RequestParam("query") String query) {
-        //  if (StringUtils.isEmpty(query)) {
-        return null;
-        // }
+  @GetMapping("/search")
+  public List<TreeNode> search(@RequestParam("query") String query) {
+    //  if (StringUtils.isEmpty(query)) {
+    return null;
+    // }
         /*List<TreeNode> result = new ArrayList<>();
         Files.walkFileTree(Paths.get(defaultPath), new SimpleFileVisitor<Path>() {
             @Override
@@ -219,148 +231,159 @@ public class FileSystemController implements BeanPostConstruct {
                 return super.visitFileFailed(file, exc);
             }
         });*/
-        // return result;
-    }
+    // return result;
+  }
 
-    private FileSystemProvider getFileSystem(String fs) {
-        return getFileSystemEntity(fs).getFileSystem(entityContext);
-    }
+  private FileSystemProvider getFileSystem(String fs) {
+    return getFileSystemEntity(fs).getFileSystem(entityContext);
+  }
 
-    private BaseFileSystemEntity getFileSystemEntity(String fs) {
-        if (fs.equals(LOCAL_FS)) {
-            fs = this.localFileSystem.getEntity().getEntityID();
-        }
-        for (BaseFileSystemEntity fileSystem : fileSystems) {
-            if (fileSystem.getEntityID().equals(fs) || fileSystem.getFileSystemAlias().equals(fs)) {
-                return fileSystem;
-            }
-        }
-        throw new RuntimeException("Unable to find file system with id: " + fs);
+  private BaseFileSystemEntity getFileSystemEntity(String fs) {
+    if (fs.equals(LOCAL_FS)) {
+      fs = this.localFileSystem.getEntity().getEntityID();
     }
+    for (BaseFileSystemEntity fileSystem : fileSystems) {
+      if (fileSystem.getEntityID().equals(fs) || fileSystem.getFileSystemAlias().equals(fs)) {
+        return fileSystem;
+      }
+    }
+    throw new RuntimeException("Unable to find file system with id: " + fs);
+  }
+
+  @Getter
+  @Setter
+  private static class RenameNodeRequest extends BaseNodeRequest {
+
+    private String sourceFileId;
+    private String newName;
+  }
+
+  @Getter
+  @Setter
+  private static class CreateNodeRequest extends BaseNodeRequest {
+
+    public String sourceFileId;
+    public String name;
+    public boolean dir;
+  }
+
+  @Getter
+  @Setter
+  private static class UnArchiveNodeRequest extends BaseNodeRequest {
+
+    public String targetDir;
+    public String fileHandler;
+    private String sourceFileId;
+    public boolean removeSource;
+  }
+
+  @Getter
+  @Setter
+  private static class ArchiveNodeRequest extends BaseNodeRequest {
+
+    public Set<String> sourceFileIds;
+    public String format;
+    public String level;
+    public String targetDir;
+    public String targetName;
+    public boolean removeSource;
+  }
+
+  @Getter
+  @Setter
+  private static class CopyNodeRequest extends BaseNodeRequest {
+
+    private Set<String> sourceFileIds;
+    private String targetPath;
+    private boolean removeSource;
+  }
+
+  @Getter
+  @Setter
+  private static class DownloadRequest extends BaseNodeRequest {
+
+    public Set<String> sourceFileIds;
+  }
+
+  @Getter
+  @Setter
+  private static class RemoveFilesRequest extends BaseNodeRequest {
+
+    public Set<String> sourceFileIds;
+  }
+
+  @Getter
+  @Setter
+  private static class ListRequest extends BaseNodeRequest {
+
+    private String sourceFileId;
+  }
+
+  @Getter
+  @Setter
+  private static class GetFSRequest {
+
+    private SelectedNode[] selectedNodes;
+    private List<String> fileSystemIds;
 
     @Getter
     @Setter
-    private static class RenameNodeRequest extends BaseNodeRequest {
-        private String sourceFileId;
-        private String newName;
+    private static class SelectedNode {
+
+      private String fs;
+      private String id;
     }
+  }
 
-    @Getter
-    @Setter
-    private static class CreateNodeRequest extends BaseNodeRequest {
-        public String sourceFileId;
-        public String name;
-        public boolean dir;
+  @Getter
+  @Setter
+  private static class BaseNodeRequest {
+
+    public String sourceFs;
+    public String targetFs;
+    public String password;
+    public boolean replace;
+  }
+
+  private Path archiveSource(String fs, String format, Set<String> sourceFileIds, String targetName, String level,
+      String password) throws IOException {
+    FileSystemProvider sourceFs = getFileSystem(fs);
+
+    Collection<TreeNode> entries = sourceFs.toTreeNodes(sourceFileIds);
+    Path tmpArchiveAssemblerPath = CommonUtils.getTmpPath().resolve("tmp_archive_assembler_" + System.currentTimeMillis());
+
+    try {
+      if (!targetName.endsWith("." + format)) {
+        targetName = targetName + "." + format;
+      }
+      Path targetPath = CommonUtils.getTmpPath().resolve(targetName);
+
+      List<Path> result = new ArrayList<>();
+      localFileSystem.copyEntries(entries, tmpArchiveAssemblerPath, new CopyOption[]{REPLACE_EXISTING}, result);
+      List<Path> filesToArchive =
+          Arrays.stream(Objects.requireNonNull(tmpArchiveAssemblerPath.toFile().listFiles())).map(File::toPath)
+              .collect(Collectors.toList());
+
+      return ArchiveUtil.zip(filesToArchive, targetPath, ArchiveUtil.ArchiveFormat.getHandlerByExtension(format), level,
+          password, null);
+    } finally {
+      FileUtils.deleteDirectory(tmpArchiveAssemblerPath.toFile());
     }
+  }
 
-    @Getter
-    @Setter
-    private static class UnArchiveNodeRequest extends BaseNodeRequest {
-        public String targetDir;
-        public String fileHandler;
-        private String sourceFileId;
-        public boolean removeSource;
+  private FileSystemProvider.UploadOption getUploadOption(BaseNodeRequest request) {
+    return request.replace ? FileSystemProvider.UploadOption.Replace : FileSystemProvider.UploadOption.Error;
+  }
+
+  private void findAllFileSystems(EntityContextImpl entityContext) {
+    fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
+  }
+
+  private Collection<BaseFileSystemEntity> getRequestedFileSystems(GetFSRequest request) {
+    if (request.fileSystemIds == null || request.fileSystemIds.isEmpty()) {
+      return this.fileSystems.stream().filter(BaseFileSystemEntity::isShowInFileManager).collect(Collectors.toList());
+    } else {
+      return request.fileSystemIds.stream().map(this::getFileSystemEntity).collect(Collectors.toList());
     }
-
-    @Getter
-    @Setter
-    private static class ArchiveNodeRequest extends BaseNodeRequest {
-        public Set<String> sourceFileIds;
-        public String format;
-        public String level;
-        public String targetDir;
-        public String targetName;
-        public boolean removeSource;
-    }
-
-    @Getter
-    @Setter
-    private static class CopyNodeRequest extends BaseNodeRequest {
-        private Set<String> sourceFileIds;
-        private String targetPath;
-        private boolean removeSource;
-    }
-
-    @Getter
-    @Setter
-    private static class DownloadRequest extends BaseNodeRequest {
-        public Set<String> sourceFileIds;
-    }
-
-    @Getter
-    @Setter
-    private static class RemoveFilesRequest extends BaseNodeRequest {
-        public Set<String> sourceFileIds;
-    }
-
-    @Getter
-    @Setter
-    private static class ListRequest extends BaseNodeRequest {
-        private String sourceFileId;
-    }
-
-    @Getter
-    @Setter
-    private static class GetFSRequest {
-        private SelectedNode[] selectedNodes;
-        private List<String> fileSystemIds;
-
-        @Getter
-        @Setter
-        private static class SelectedNode {
-            private String fs;
-            private String id;
-        }
-    }
-
-    @Getter
-    @Setter
-    private static class BaseNodeRequest {
-        public String sourceFs;
-        public String targetFs;
-        public String password;
-        public boolean replace;
-    }
-
-    private Path archiveSource(String fs, String format, Set<String> sourceFileIds, String targetName, String level,
-                               String password) throws IOException {
-        FileSystemProvider sourceFs = getFileSystem(fs);
-
-        Collection<TreeNode> entries = sourceFs.toTreeNodes(sourceFileIds);
-        Path tmpArchiveAssemblerPath = CommonUtils.getTmpPath().resolve("tmp_archive_assembler_" + System.currentTimeMillis());
-
-        try {
-            if (!targetName.endsWith("." + format)) {
-                targetName = targetName + "." + format;
-            }
-            Path targetPath = CommonUtils.getTmpPath().resolve(targetName);
-
-            List<Path> result = new ArrayList<>();
-            localFileSystem.copyEntries(entries, tmpArchiveAssemblerPath, new CopyOption[]{REPLACE_EXISTING}, result);
-            List<Path> filesToArchive =
-                    Arrays.stream(Objects.requireNonNull(tmpArchiveAssemblerPath.toFile().listFiles())).map(File::toPath)
-                            .collect(Collectors.toList());
-
-            return ArchiveUtil.zip(filesToArchive, targetPath, ArchiveUtil.ArchiveFormat.getHandlerByExtension(format), level,
-                    password, null);
-        } finally {
-            FileUtils.deleteDirectory(tmpArchiveAssemblerPath.toFile());
-        }
-    }
-
-    private FileSystemProvider.UploadOption getUploadOption(BaseNodeRequest request) {
-        return request.replace ? FileSystemProvider.UploadOption.Replace : FileSystemProvider.UploadOption.Error;
-    }
-
-    private void findAllFileSystems(EntityContextImpl entityContext) {
-        fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
-    }
-
-    private Collection<BaseFileSystemEntity> getRequestedFileSystems(GetFSRequest request) {
-        if (request.fileSystemIds == null || request.fileSystemIds.isEmpty()) {
-            return this.fileSystems.stream().filter(BaseFileSystemEntity::isShowInFileManager).collect(Collectors.toList());
-        } else {
-            return request.fileSystemIds.stream().map(this::getFileSystemEntity).collect(Collectors.toList());
-        }
-    }
+  }
 }

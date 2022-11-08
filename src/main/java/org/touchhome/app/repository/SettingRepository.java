@@ -15,7 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.setting.CoreSettingPlugin;
-import org.touchhome.bundle.api.BeanPostConstruct;
+
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
@@ -33,12 +34,14 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.common.exception.ServerException;
 
 @Repository
-public class SettingRepository extends AbstractRepository<SettingEntity> implements BeanPostConstruct {
+public class SettingRepository extends AbstractRepository<SettingEntity> implements ContextRefreshed {
 
   private final static Map<String, String> settingToBundleMap = new HashMap<>();
+  private final EntityContext entityContext;
 
-  public SettingRepository() {
+  public SettingRepository(EntityContext entityContext) {
     super(SettingEntity.class);
+    this.entityContext = entityContext;
   }
 
   public static SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin, SettingEntity settingEntity,
@@ -159,7 +162,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> impleme
 
   @Override
   @Transactional
-  public void onContextUpdate(EntityContext entityContext) {
+  public void onContextRefresh() {
     for (SettingPlugin settingPlugin : EntityContextSettingImpl.settingPluginsBy(p -> !p.transientState())) {
       SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
       if (settingEntity == null) {

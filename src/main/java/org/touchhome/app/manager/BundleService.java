@@ -1,11 +1,13 @@
 package org.touchhome.app.manager;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.app.utils.color.ColorThief;
 import org.touchhome.app.utils.color.MMCQ;
 import org.touchhome.app.utils.color.RGBUtil;
-import org.touchhome.bundle.api.BeanPostConstruct;
+
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.common.exception.NotFoundException;
@@ -21,13 +23,17 @@ import java.util.stream.Collectors;
 
 @Log4j2
 @Component
-public class BundleService implements BeanPostConstruct {
+@RequiredArgsConstructor
+public class BundleService implements ContextRefreshed {
     private Map<String, String> bundleColorMap;
     private Map<String, BundleEntryPoint> bundleMap;
     private Collection<BundleEntryPoint> bundleEntryPoints;
 
+    // constructor parameters
+    private final EntityContext entityContext;
+
     @Override
-    public void onContextUpdate(EntityContext entityContext) throws Exception {
+    public void onContextRefresh() throws Exception {
         this.bundleEntryPoints = entityContext.getBeansOfType(BundleEntryPoint.class);
         this.bundleMap = bundleEntryPoints.stream().collect(Collectors.toMap(BundleEntryPoint::getBundleId, s -> s));
         this.bundleColorMap = new HashMap<>();

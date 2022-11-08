@@ -61,10 +61,11 @@ import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.setting.system.SystemShowEntityCreateTimeSetting;
 import org.touchhome.app.setting.system.SystemShowEntityUpdateTimeSetting;
+import org.touchhome.app.spring.ContextCreated;
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.app.utils.UIFieldSelectionUtil;
 import org.touchhome.app.utils.UIFieldUtils;
-import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.ImageEntity;
@@ -100,7 +101,7 @@ import org.touchhome.common.util.CommonUtils;
 @RestController
 @RequestMapping("/rest/item")
 @RequiredArgsConstructor
-public class ItemController implements BeanPostConstruct {
+public class ItemController implements ContextCreated, ContextRefreshed {
 
   private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
   private static final Map<String, TypeToRequireDependenciesContext> typeToRequireDependencies = new HashMap<>();
@@ -197,16 +198,16 @@ public class ItemController implements BeanPostConstruct {
   }
 
   @Override
-  public void postConstruct(EntityContext entityContext) {
+  public void onContextCreated(EntityContext entityContext) {
     // invalidate UIField cache scenarios
-    entityContext.setting().listenValue(SystemShowEntityCreateTimeSetting.class, "invalidate-uifield-createTime-cache",
+    this.entityContext.setting().listenValue(SystemShowEntityCreateTimeSetting.class, "invalidate-uifield-createTime-cache",
         this.itemsBootstrapContextMap::clear);
-    entityContext.setting().listenValue(SystemShowEntityUpdateTimeSetting.class, "invalidate-uifield-updateTime-cache",
+    this.entityContext.setting().listenValue(SystemShowEntityUpdateTimeSetting.class, "invalidate-uifield-updateTime-cache",
         this.itemsBootstrapContextMap::clear);
   }
 
   @Override
-  public void onContextUpdate(EntityContext entityContext) {
+  public void onContextRefresh() {
     List<Class<? extends BaseEntity>> baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class, null, null);
     this.baseEntitySimpleClasses = baseEntityClasses.stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
 
@@ -290,7 +291,7 @@ public class ItemController implements BeanPostConstruct {
     putTypeToEntityIfNotExists(type);
     List<OptionModel> list = new ArrayList<>();
     for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-      list.addAll(OptionModel.list(entityContext.findAll(aClass)));
+      list.addAll(OptionModel.entityList(entityContext.findAll(aClass)));
     }
     Collections.sort(list);
 
@@ -303,8 +304,8 @@ public class ItemController implements BeanPostConstruct {
 
   @PostMapping(value = "/{type}/installDep/{dependency}")
   public void installDep(@PathVariable("type") String type, @PathVariable("dependency") String dependency) {
-    if (this.typeToRequireDependencies.containsKey(type)) {
-      List<DependencyExecutableInstaller> installers = this.typeToRequireDependencies.get(type).installers;
+    if (typeToRequireDependencies.containsKey(type)) {
+      List<DependencyExecutableInstaller> installers = typeToRequireDependencies.get(type).installers;
       DependencyExecutableInstaller installer =
           installers.stream().filter(c -> c.getName().equals(dependency)).findAny().orElse(null);
       if (installer != null && installer.isRequireInstallDependencies(entityContext, false)) {
@@ -376,7 +377,8 @@ public class ItemController implements BeanPostConstruct {
         return Collections.emptyList();
       }
     }
-    AbstractRepository repository = entityContext.getRepository(entity).get();
+    Optional<AbstractRepository> repositoryOpt = entityContext.getRepository(entity);
+    AbstractRepository repository = repositoryOpt.orElseThrow();
     List<BaseEntity<?>> usages = getUsages(entityID, repository);
     return usages.stream().map(Object::toString).collect(Collectors.toList());
   }

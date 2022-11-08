@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -35,6 +36,7 @@ import org.touchhome.app.notification.HeaderButtonNotification;
 import org.touchhome.app.notification.ProgressNotification;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.rest.widget.WidgetChartsController;
+import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -52,6 +54,7 @@ import org.touchhome.common.util.FlowMap;
 import org.touchhome.common.util.Lang;
 
 @Log4j2
+@RequiredArgsConstructor
 public class EntityContextUIImpl implements EntityContextUI {
 
   public static final Map<String, ConsolePlugin<?>> customConsolePlugins = new HashMap<>();
@@ -67,10 +70,10 @@ public class EntityContextUIImpl implements EntityContextUI {
   private final Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
   private Map<String, BellNotification> bundleEntryPointNotifications = new HashMap<>();
 
-  private final SimpMessagingTemplate messagingTemplate;
-
+  // constructor parameters
   @Getter
   private final EntityContextImpl entityContext;
+  private final SimpMessagingTemplate messagingTemplate;
 
   private static final Set<String> ALLOWED_DYNAMIC_VALUES = new HashSet<>(
       Arrays.asList(
@@ -81,12 +84,7 @@ public class EntityContextUIImpl implements EntityContextUI {
       )
   );
 
-  public EntityContextUIImpl(SimpMessagingTemplate messagingTemplate, EntityContextImpl entityContext) {
-    this.messagingTemplate = messagingTemplate;
-    this.entityContext = entityContext;
-  }
-
-  public void init() {
+  public void onContextCreated() {
     // run hourly script to drop not used dynamicUpdateRegisters
     entityContext.bgp().builder("drop-outdated-dynamicContext").delay(Duration.ofHours(1))
         .interval(Duration.ofHours(1)).execute(() -> this.dynamicUpdateRegisters.values().removeIf(v ->
@@ -123,6 +121,14 @@ public class EntityContextUIImpl implements EntityContextUI {
     if (context != null && context.registerCounter.decrementAndGet() == 0) {
       dynamicUpdateRegisters.remove(request);
     }
+  }
+
+  public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @NotNull String type, @Nullable Object value) {
+    sendDynamicUpdate(dynamicUpdateId, type, null, value);
+  }
+
+  public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @NotNull String type, @Nullable String entityId, @Nullable Object value) {
+    sendDynamicUpdate(new DynamicUpdateRequest(dynamicUpdateId, type, entityId), value);
   }
 
   public void sendDynamicUpdate(@NotNull DynamicUpdateRequest request, @Nullable Object value) {

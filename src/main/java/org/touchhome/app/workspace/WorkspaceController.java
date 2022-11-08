@@ -38,6 +38,7 @@ import org.touchhome.app.manager.var.WorkspaceGroup;
 import org.touchhome.app.manager.var.WorkspaceVariable;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.rest.BundleController;
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.app.workspace.block.Scratch3Space;
 import org.touchhome.app.workspace.block.core.Scratch3ControlBlocks;
 import org.touchhome.app.workspace.block.core.Scratch3DataBlocks;
@@ -45,7 +46,6 @@ import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.app.workspace.block.core.Scratch3MiscBlocks;
 import org.touchhome.app.workspace.block.core.Scratch3MutatorBlocks;
 import org.touchhome.app.workspace.block.core.Scratch3OperatorBlocks;
-import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -66,14 +66,14 @@ import org.touchhome.common.exception.ServerException;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/rest/workspace")
-public class WorkspaceController implements BeanPostConstruct {
+public class WorkspaceController implements ContextRefreshed {
 
   private static final Pattern ID_PATTERN = Pattern.compile("[a-z-]*");
 
-  private static final List<Class> systemScratches = Arrays.asList(Scratch3ControlBlocks.class, Scratch3MiscBlocks.class,
+  private static final List<Class<?>> systemScratches = Arrays.asList(Scratch3ControlBlocks.class, Scratch3MiscBlocks.class,
       Scratch3DataBlocks.class, Scratch3EventsBlocks.class, Scratch3OperatorBlocks.class, Scratch3MutatorBlocks.class);
 
-  private static final List<Class> inlineScratches = Arrays.asList(Scratch3AudioBlocks.class,
+  private static final List<Class<?>> inlineScratches = Arrays.asList(Scratch3AudioBlocks.class,
       Scratch3NetworkBlocks.class, Scratch3HardwareBlocks.class, Scratch3UIBlocks.class, Scratch3ImageEditBlocks.class);
 
   private final BundleController bundleController;
@@ -84,7 +84,7 @@ public class WorkspaceController implements BeanPostConstruct {
   private List<Scratch3ExtensionImpl> extensions;
 
   @Override
-  public void onContextUpdate(EntityContext entityContext) {
+  public void onContextRefresh() {
     List<Scratch3ExtensionImpl> oldExtension = this.extensions == null ? Collections.emptyList() : this.extensions;
     this.extensions = new ArrayList<>();
     for (Scratch3ExtensionBlocks scratch3ExtensionBlock : entityContext.getBeansOfType(Scratch3ExtensionBlocks.class)) {
@@ -187,7 +187,7 @@ public class WorkspaceController implements BeanPostConstruct {
 
   @GetMapping("/variable/{type}")
   public List<OptionModel> getWorkspaceVariables(@PathVariable("type") String type) {
-    return OptionModel.list(entityContext.findAllByPrefix(type));
+    return OptionModel.entityList(entityContext.findAllByPrefix(type));
   }
 
   @SneakyThrows
@@ -260,7 +260,7 @@ public class WorkspaceController implements BeanPostConstruct {
   public List<OptionModel> getWorkspaceTabs() {
     List<WorkspaceEntity> tabs = entityContext.findAll(WorkspaceEntity.class);
     Collections.sort(tabs);
-    return OptionModel.list(tabs);
+    return OptionModel.entityList(tabs);
   }
 
   @SneakyThrows

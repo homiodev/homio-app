@@ -106,7 +106,6 @@
 
         <logger name="org.freedesktop" level="warn">
             <AppenderRef ref="appLog"/>
-            <AppenderRef ref="appLog"/>
         </logger>
 
         <logger name="org.touchhome.bundle.camera" level="info">

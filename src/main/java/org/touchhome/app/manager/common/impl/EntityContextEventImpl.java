@@ -89,16 +89,16 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
   @Override
   public EntityContextEvent fireEventIfNotSame(@NotNull String key, @Nullable Object value) {
-    return fireEventddd(key, value, true);
+    return fireEvent(key, value, true);
   }
 
   @Override
   public EntityContextEvent fireEvent(@NotNull String key, @Nullable Object value) {
-    return fireEventddd(key, value, false);
+    return fireEvent(key, value, false);
   }
 
   @NotNull
-  private EntityContextEventImpl fireEventddd(@NotNull String key, @Nullable Object value, boolean compareValues) {
+  private EntityContextEventImpl fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
     // fire by key and key + value type
     fireEventInternal(key, value, compareValues);
     if (value != null) {

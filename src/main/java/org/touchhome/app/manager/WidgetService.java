@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.WidgetGroup;
 import org.touchhome.app.model.entity.widget.WidgetTabEntity;
+import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 
@@ -20,14 +21,15 @@ import static org.touchhome.app.model.entity.widget.WidgetTabEntity.GENERAL_WIDG
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class WidgetService {
+public class WidgetService implements ContextCreated {
 
     private final EntityContext entityContext;
     private final List<WidgetBaseEntity<?>> widgetBaseEntities;
 
-    public void postConstruct() {
-        if (entityContext.getEntity(GENERAL_WIDGET_TAB_NAME) == null) {
-            entityContext.save(new WidgetTabEntity().setEntityID(GENERAL_WIDGET_TAB_NAME).setName("MainTab"));
+    @Override
+    public void onContextCreated(EntityContext entityContext) {
+        if (this.entityContext.getEntity(GENERAL_WIDGET_TAB_NAME) == null) {
+            this.entityContext.save(new WidgetTabEntity().setEntityID(GENERAL_WIDGET_TAB_NAME).setName("MainTab"));
         }
     }
 

@@ -33,10 +33,9 @@ import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.setting.console.ssh.ConsoleSshProviderSetting;
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.app.utils.UIFieldSelectionUtil;
 import org.touchhome.app.utils.UIFieldUtils;
-import org.touchhome.bundle.api.BeanPostConstruct;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.console.ConsolePluginCommunicator;
 import org.touchhome.bundle.api.console.ConsolePluginEditor;
@@ -57,7 +56,7 @@ import org.tritonus.share.ArraySet;
 @RestController
 @RequestMapping("/rest/console")
 @RequiredArgsConstructor
-public class ConsoleController implements BeanPostConstruct {
+public class ConsoleController implements ContextRefreshed {
 
   private final LogService logService;
   private final EntityContextImpl entityContext;
@@ -66,7 +65,7 @@ public class ConsoleController implements BeanPostConstruct {
   private final Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
 
   @Override
-  public void onContextUpdate(EntityContext context) {
+  public void onContextRefresh() {
     EntityContextUIImpl.consolePluginsMap.clear();
     this.tabs.clear();
 

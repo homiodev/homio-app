@@ -6,7 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.audio.javasound.JavaSoundAudioSink;
-import org.touchhome.bundle.api.BeanPostConstruct;
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.audio.*;
 import org.touchhome.bundle.api.audio.stream.FixedLengthAudioStream;
@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class AudioService implements BeanPostConstruct {
+public class AudioService implements ContextRefreshed {
 
     private Map<String, AudioSource> audioSources = Collections.emptyMap();
     private Map<String, SelfContainedAudioSourceContainer> selfContainedAudioContainers;
@@ -36,8 +36,11 @@ public class AudioService implements BeanPostConstruct {
     private final Map<String, AudioStream> oneTimeStreams = new ConcurrentHashMap<>();
     private final Map<String, MultiTimeStreamContext> multiTimeStreams = new ConcurrentHashMap<>();
 
+    // constructor parameters
+    private final EntityContext entityContext;
+
     @Override
-    public void onContextUpdate(EntityContext entityContext) {
+    public void onContextRefresh() {
         this.audioSinks = entityContext.getBeansOfTypeWithBeanName(AudioSink.class);
         this.audioSources = entityContext.getBeansOfTypeWithBeanName(AudioSource.class);
         this.selfContainedAudioContainers = entityContext.getBeansOfTypeWithBeanName(SelfContainedAudioSourceContainer.class);

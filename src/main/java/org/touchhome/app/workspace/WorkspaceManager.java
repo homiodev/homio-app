@@ -20,7 +20,7 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.setting.system.SystemClearWorkspaceButtonSetting;
-import org.touchhome.bundle.api.BeanPostConstruct;
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
@@ -31,7 +31,7 @@ import org.touchhome.common.util.CommonUtils;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class WorkspaceManager implements BeanPostConstruct {
+public class WorkspaceManager implements ContextRefreshed {
 
   private final Duration TIME_WAIT_OLD_WORKSPACE = Duration.ofSeconds(3);
   private final Set<String> ONCE_EXECUTION_BLOCKS = new HashSet<>(Arrays.asList("boolean_link", "group_variable_link"));
@@ -43,10 +43,12 @@ public class WorkspaceManager implements BeanPostConstruct {
   private final Map<String, WorkspaceTabHolder> tabs = new HashMap<>();
 
   @Override
-  public void onContextUpdate(EntityContext entityContext) {
+  public void onContextRefresh() {
     scratch3Blocks = entityContext.getBeansOfType(Scratch3ExtensionBlocks.class).stream()
         .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
     workspaceEventListeners = entityContext.getBeansOfType(WorkspaceEventListener.class);
+
+    loadWorkspace();
   }
 
   @SneakyThrows
@@ -182,7 +184,7 @@ public class WorkspaceManager implements BeanPostConstruct {
     return null;
   }
 
-  public void loadWorkspace() {
+  private void loadWorkspace() {
     try {
       reloadWorkspaces();
     } catch (Exception ex) {

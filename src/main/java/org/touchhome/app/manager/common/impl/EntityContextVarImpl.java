@@ -35,7 +35,7 @@ public class EntityContextVarImpl implements EntityContextVar {
   @Getter
   private final EntityContextImpl entityContext;
 
-  public void init() {
+  public void onContextCreated() {
     createBroadcastGroup(entityContext);
 
     for (WorkspaceVariable workspaceVariable : entityContext.findAll(WorkspaceVariable.class)) {

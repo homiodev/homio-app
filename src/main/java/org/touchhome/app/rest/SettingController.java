@@ -15,7 +15,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.security.access.annotation.Secured;
@@ -33,9 +32,8 @@ import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
-import org.touchhome.bundle.api.BeanPostConstruct;
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.bundle.api.BundleEntryPoint;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -52,7 +50,7 @@ import org.touchhome.common.util.Lang;
 @RestController
 @RequestMapping(value = "/rest/setting", produces = APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
-public class SettingController implements BeanPostConstruct {
+public class SettingController implements ContextRefreshed {
 
   private final BundleService bundleService;
 
@@ -65,8 +63,7 @@ public class SettingController implements BeanPostConstruct {
   private final Map<String, Boolean> packagesInProgress = new ConcurrentHashMap<>();
 
   @Override
-  @SneakyThrows
-  public void onContextUpdate(EntityContext entityContext) {
+  public void onContextRefresh() {
     this.transientSettings = new HashMap<>();
     for (SettingPlugin<?> settingPlugin : EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
       if (settingPlugin.transientState()) {
@@ -84,9 +81,6 @@ public class SettingController implements BeanPostConstruct {
   @GetMapping("/{entityID}/options")
   public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID,
       @RequestParam(value = "param0", required = false) String param0) {
-    if (entityID.equals("st_ConsoleHeaderSerialPortSetting")) {
-      return OptionModel.list("trrr", "aaaa");
-    }
     SettingPluginOptions<?> settingPlugin =
         (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
     return SettingRepository.getOptions(settingPlugin, entityContext, new JSONObject().put("param0", param0));
@@ -178,7 +172,7 @@ public class SettingController implements BeanPostConstruct {
 
   @GetMapping("/name")
   public List<OptionModel> getSettingNames() {
-    return OptionModel.list(entityContext.findAll(SettingEntity.class));
+    return OptionModel.entityList(entityContext.findAll(SettingEntity.class));
   }
 
   public List<SettingEntity> getSettings() {

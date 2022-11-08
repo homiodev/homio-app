@@ -48,6 +48,7 @@ import org.hibernate.event.spi.PreDeleteEventListener;
 import org.hibernate.internal.SessionFactoryImpl;
 import org.hibernate.metamodel.spi.MetamodelImplementor;
 import org.hibernate.persister.entity.Joinable;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.aop.framework.Advised;
@@ -97,11 +98,12 @@ import org.touchhome.app.rest.SettingController;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemLanguageSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
+import org.touchhome.app.spring.ContextCreated;
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
-import org.touchhome.bundle.api.BeanPostConstruct;
 import org.touchhome.bundle.api.BundleEntryPoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextVar;
@@ -139,19 +141,29 @@ public class EntityContextImpl implements EntityContext {
   // count how much addBundle/removeBundle invokes
   public static int BUNDLE_UPDATE_COUNT = 0;
 
-  private static Set<Class<? extends BeanPostConstruct>> BEAN_UPDATE_CLASSES = new LinkedHashSet<>();
+  private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
+  private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
 
   static {
-    BEAN_UPDATE_CLASSES.add(BundleService.class);
-    BEAN_UPDATE_CLASSES.add(ConsoleController.class);
-    BEAN_UPDATE_CLASSES.add(SettingRepository.class);
-    BEAN_UPDATE_CLASSES.add(SettingController.class);
-    BEAN_UPDATE_CLASSES.add(WorkspaceManager.class);
-    BEAN_UPDATE_CLASSES.add(WorkspaceController.class);
-    BEAN_UPDATE_CLASSES.add(ItemController.class);
-    BEAN_UPDATE_CLASSES.add(PortService.class);
-    BEAN_UPDATE_CLASSES.add(AudioService.class);
-    BEAN_UPDATE_CLASSES.add(FileSystemController.class);
+    BEAN_CONTEXT_CREATED.add(FileSystemController.class);
+    BEAN_CONTEXT_CREATED.add(ItemController.class);
+    BEAN_CONTEXT_CREATED.add(PortService.class);
+    BEAN_CONTEXT_CREATED.add(LoggerService.class);
+    BEAN_CONTEXT_CREATED.add(WidgetService.class);
+    BEAN_CONTEXT_CREATED.add(BundleContextService.class);
+    BEAN_CONTEXT_CREATED.add(ScriptService.class);
+    BEAN_CONTEXT_CREATED.add(JwtTokenProvider.class);
+
+    BEAN_CONTEXT_REFRESH.add(FileSystemController.class);
+    BEAN_CONTEXT_REFRESH.add(BundleService.class);
+    BEAN_CONTEXT_REFRESH.add(ConsoleController.class);
+    BEAN_CONTEXT_REFRESH.add(SettingRepository.class);
+    BEAN_CONTEXT_REFRESH.add(SettingController.class);
+    BEAN_CONTEXT_REFRESH.add(WorkspaceManager.class);
+    BEAN_CONTEXT_REFRESH.add(WorkspaceController.class);
+    BEAN_CONTEXT_REFRESH.add(ItemController.class);
+    BEAN_CONTEXT_REFRESH.add(PortService.class);
+    BEAN_CONTEXT_REFRESH.add(AudioService.class);
   }
 
   public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
@@ -159,9 +171,9 @@ public class EntityContextImpl implements EntityContext {
   public static Map<String, AbstractRepository> repositories = new HashMap<>();
   public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
   public static Map<String, AbstractRepository> repositoriesByPrefix;
-  private static EntityManager entityManager;
   private static Map<String, PureRepository> pureRepositories = new HashMap<>();
-  private final String GIT_HUB_URL = "https://api.github.com/repos/touchhome/touchhome-core";
+
+  private EntityManager entityManager;
   private final EntityContextUIImpl entityContextUI;
   private final EntityContextUDPImpl entityContextUDP;
   private final EntityContextEventImpl entityContextEvent;
@@ -206,7 +218,7 @@ public class EntityContextImpl implements EntityContext {
     this.startupHardwareRepository = startupHardwareRepository;
     this.touchHomeProperties = touchHomeProperties;
 
-    this.entityContextUI = new EntityContextUIImpl(messagingTemplate, this);
+    this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
     this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler);
     this.entityContextUDP = new EntityContextUDPImpl(this);
     this.entityContextEvent = new EntityContextEventImpl(this, touchHomeProperties);
@@ -214,48 +226,58 @@ public class EntityContextImpl implements EntityContext {
     this.entityContextWidget = new EntityContextWidgetImpl(this);
     this.entityContextStorage = new EntityContextStorage(this);
     this.entityContextVar = new EntityContextVarImpl(this);
+
+    LogService.scanEntityLogs(classFinder);
   }
 
   @SneakyThrows
   public void afterContextStart(ApplicationContext applicationContext) {
+    this.allApplicationContexts.add(applicationContext);
     this.applicationContext = applicationContext;
     MACHINE_IP_ADDRESS = getInternalIpAddress();
 
     this.transactionManager = this.applicationContext.getBean(PlatformTransactionManager.class);
     this.entityManagerFactory = this.applicationContext.getBean(EntityManagerFactory.class);
     this.allDeviceRepository = this.applicationContext.getBean(AllDeviceRepository.class);
-    this.allApplicationContexts.add(applicationContext);
-    this.updateDeviceFeatures();
     this.transactionTemplate = new TransactionTemplate(transactionManager);
     this.workspaceManager = applicationContext.getBean(WorkspaceManager.class);
+    this.entityManager = applicationContext.getBean(EntityManager.class);
 
-    entityManager = applicationContext.getBean(EntityManager.class);
+    rebuildAllRepositories(applicationContext, true);
 
     getBean(UserRepository.class).ensureUserExists();
     getBean(RaspberryDeviceRepository.class).ensureDeviceExists();
+    setting().fetchSettingPlugins("org.touchhome", classFinder, true);
 
-    rebuildAllRepositories(applicationContext, true);
-    for (Class<? extends BeanPostConstruct> beanUpdateClass : BEAN_UPDATE_CLASSES) {
-      applicationContext.getBean(beanUpdateClass).postConstruct(this);
+    entityContextVar.onContextCreated();
+    entityContextUI.onContextCreated();
+
+    for (Class<? extends ContextCreated> beanUpdateClass : BEAN_CONTEXT_CREATED) {
+      applicationContext.getBean(beanUpdateClass).onContextCreated(this);
     }
     updateBeans(null, applicationContext, true);
-    this.entityContextVar.init();
-    this.entityContextUI.init();
-
-    applicationContext.getBean(JwtTokenProvider.class).postConstruct(this);
-    applicationContext.getBean(LoggerService.class).postConstruct();
-    applicationContext.getBean(LogService.class).setEntityContext(this);
 
     registerEntityListeners();
 
-    applicationContext.getBean(ScriptService.class).postConstruct();
+    initialiseInlineBundles(applicationContext);
 
+    ui().addBellInfoNotification("app-status", "app", "Started at " + DateFormat.getDateTimeInstance().format(new Date()));
+
+    bgp().builder("check-app-version").interval(Duration.ofDays(1)).execute(this::fetchReleaseVersion);
+
+    event().fireEventIfNotSame("app-status", Status.ONLINE);
+    event().runOnceOnInternetUp("internal-ctx", () -> MACHINE_IP_ADDRESS = getInternalIpAddress());
     setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", cacheService::clearCache);
+    setting().listenValueAndGet(SystemLanguageSetting.class, "listen-lang", lang -> Lang.CURRENT_LANG = lang.name());
 
-    // loadWorkspace modules
+    this.updateDeviceFeatures();
+
+    this.entityContextStorage.init();
+  }
+
+  private void initialiseInlineBundles(ApplicationContext applicationContext) {
     log.info("Initialize bundles...");
-    ArrayList<BundleEntryPoint> bundleEntryPoints =
-        new ArrayList<>(applicationContext.getBeansOfType(BundleEntryPoint.class).values());
+    ArrayList<BundleEntryPoint> bundleEntryPoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntryPoint.class).values());
     Collections.sort(bundleEntryPoints);
     for (BundleEntryPoint bundleEntrypoint : bundleEntryPoints) {
       this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, null));
@@ -269,27 +291,6 @@ public class EntityContextImpl implements EntityContext {
       }
     }
     log.info("Done initialize bundles");
-
-    applicationContext.getBean(BundleContextService.class).loadBundlesFromPath();
-
-    applicationContext.getBean(WorkspaceManager.class).postConstruct(this);
-    applicationContext.getBean(WorkspaceManager.class).loadWorkspace();
-    applicationContext.getBean(WorkspaceController.class).postConstruct(this);
-    applicationContext.getBean(WidgetService.class).postConstruct();
-
-    // applicationContext.getBean(SettingRepository.class).deleteRemovedSettings();
-
-    ui().addBellInfoNotification("app-status", "app", "Started at " + DateFormat.getDateTimeInstance().format(new Date()));
-
-    // create indexes on tables
-    //  this.createTableIndexes();
-    this.bgp().builder("check-app-version").interval(Duration.ofDays(1)).execute(this::fetchReleaseVersion);
-    this.event().fireEventIfNotSame("app-status", Status.ONLINE);
-
-    // install autossh. Should refactor to move somewhere else
-    this.event().runOnceOnInternetUp("internal-ctx", () -> MACHINE_IP_ADDRESS = getInternalIpAddress());
-    setting().listenValueAndGet(SystemLanguageSetting.class, "listen-lang", lang -> Lang.CURRENT_LANG = lang.name());
-    this.entityContextStorage.init();
   }
 
   @Override
@@ -347,8 +348,8 @@ public class EntityContextImpl implements EntityContext {
   }
 
   @Override
-  public Optional<AbstractRepository> getRepository(String entityID) {
-    return entityID == null ? Optional.empty() : entityManager.getRepositoryByEntityID(entityID);
+  public Optional<AbstractRepository> getRepository(@NotNull String entityID) {
+    return entityManager.getRepositoryByEntityID(entityID);
   }
 
   @Override
@@ -806,8 +807,8 @@ public class EntityContextImpl implements EntityContext {
     Lang.clear();
     fetchSettingPlugins(bundleContext, addBundle);
 
-    for (Class<? extends BeanPostConstruct> beanUpdateClass : BEAN_UPDATE_CLASSES) {
-      applicationContext.getBean(beanUpdateClass).onContextUpdate(this);
+    for (Class<? extends ContextRefreshed> beanUpdateClass : BEAN_CONTEXT_REFRESH) {
+      applicationContext.getBean(beanUpdateClass).onContextRefresh();
     }
 
     if (bundleContext != null) {
@@ -906,10 +907,8 @@ public class EntityContextImpl implements EntityContext {
   }
 
   private void fetchSettingPlugins(BundleContext bundleContext, boolean addBundle) {
-    String basePackage = bundleContext == null ? null : bundleContext.getBasePackage();
-    for (Class<? extends SettingPlugin> settingPlugin : classFinder.getClassesWithParent(SettingPlugin.class, null,
-        basePackage)) {
-      setting().updatePlugins(settingPlugin, addBundle);
+    if (bundleContext != null) {
+      setting().fetchSettingPlugins(bundleContext.getBasePackage(), classFinder, addBundle);
     }
   }
 
@@ -942,7 +941,7 @@ public class EntityContextImpl implements EntityContext {
     try {
       log.info("Try fetch latest version from server");
       ui().addBellInfoNotification("version", "app", "version: " + touchHomeProperties.getVersion());
-      this.latestVersion = Curl.get(GIT_HUB_URL + "/releases/latest", Map.class).get("tag_name").toString();
+      this.latestVersion = Curl.get(touchHomeProperties.getGitHubUrl(), Map.class).get("tag_name").toString();
 
       if (!String.valueOf(touchHomeProperties.getVersion()).equals(this.latestVersion)) {
         log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion,

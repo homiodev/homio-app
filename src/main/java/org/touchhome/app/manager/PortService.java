@@ -16,7 +16,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
-import org.touchhome.bundle.api.BeanPostConstruct;
+import org.touchhome.app.spring.ContextCreated;
+import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginOptions;
@@ -27,7 +28,7 @@ import org.touchhome.bundle.api.setting.SettingPluginOptions;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class PortService implements BeanPostConstruct {
+public class PortService implements ContextCreated, ContextRefreshed {
 
   private final EntityContextImpl entityContext;
 
@@ -36,15 +37,15 @@ public class PortService implements BeanPostConstruct {
   private List<SettingPluginOptions<SerialPort>> portSettingPlugins;
 
   @Override
-  public void onContextUpdate(EntityContext entityContext) {
+  public void onContextRefresh() {
     listenPortAvailability();
   }
 
   @Override
-  public void postConstruct(EntityContext entityContext) {
+  public void onContextCreated(EntityContext entityContext) {
     listenPortAvailability();
-    Duration checkPortInterval = ((EntityContextImpl) entityContext).getTouchHomeProperties().getCheckPortInterval();
-    entityContext.bgp().builder("check-port")
+    Duration checkPortInterval = this.entityContext.getTouchHomeProperties().getCheckPortInterval();
+    this.entityContext.bgp().builder("check-port")
         .cancelOnError(false)
         .interval(checkPortInterval)
         .execute(this::checkPortsAvailability);

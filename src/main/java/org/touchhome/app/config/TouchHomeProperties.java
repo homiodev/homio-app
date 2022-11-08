@@ -23,6 +23,7 @@ public class TouchHomeProperties {
     private Duration minScriptThreadSleep;
     private Duration maxJavaScriptOnceCallBeforeInterrupt;
     private Duration maxJavaScriptCompileBeforeInterrupt;
+    private String gitHubUrl;
 
 
     public void setVersion(String version) {

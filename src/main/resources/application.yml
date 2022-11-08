@@ -2,16 +2,17 @@ rootDir: /opt/touchhome
 artifactoryFilesURL: https://touchhome.jfrog.io/artifactory/files-remote
 
 touchhome:
-  internetTestInterval: PT10S
-  checkPortInterval: PT10S
-  disableSecurity: false
   version: @project.version@
-  httpPort: 9119
-  serverSiteURL: https://touchhome.org
-  checkConnectivityURL: www.google.com
-  minScriptThreadSleep: PT0.1S
-  maxJavaScriptOnceCallBeforeInterrupt: PT60S
-  maxJavaScriptCompileBeforeInterrupt: PT5S
+  internet-test-interval: PT10S
+  git-hub-url: https://api.github.com/repos/touchhome/touchhome-core/releases/latest
+  max-java-script-compile-before-interrupt: PT5S
+  max-java-script-once-call-before-interrupt: PT60S
+  check-connectivity-u-r-l: www.google.com
+  server-site-url: https://touchhome.org
+  http-port: 9119
+  check-port-interval: PT10S
+  disable-security: false
+  min-script-thread-sleep: PT0.1S
 
 spring:
   banner:

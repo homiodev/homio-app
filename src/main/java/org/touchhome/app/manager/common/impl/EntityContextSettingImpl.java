@@ -17,6 +17,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
@@ -249,6 +250,13 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         }
         entityContext.save(settingEntity.setValue(value));
       }
+    }
+  }
+
+  public void fetchSettingPlugins(String basePackage, ClassFinder classFinder, boolean addBundle) {
+    List<Class<? extends SettingPlugin>> classes = classFinder.getClassesWithParent(SettingPlugin.class, null, basePackage);
+    for (Class<? extends SettingPlugin> settingPlugin : classes) {
+      updatePlugins(settingPlugin, addBundle);
     }
   }
 }

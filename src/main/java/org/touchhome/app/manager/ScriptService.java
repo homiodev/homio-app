@@ -32,6 +32,7 @@ import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.extloader.BundleClassLoaderHolder;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
+import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
@@ -45,7 +46,7 @@ import org.touchhome.common.util.CommonUtils;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class ScriptService {
+public class ScriptService implements ContextCreated {
 
   private final NashornScriptEngineFactory nashornScriptEngineFactory = new NashornScriptEngineFactory();
   private final LoggerService loggerService;
@@ -62,15 +63,16 @@ public class ScriptService {
     }
   }
 
-  public void postConstruct() {
-    for (ScriptEntity scriptEntity : entityContext.findAll(ScriptEntity.class)) {
+  @Override
+  public void onContextCreated(EntityContext entityContext) throws Exception {
+    for (ScriptEntity scriptEntity : this.entityContext.findAll(ScriptEntity.class)) {
       if (scriptEntity.isAutoStart()) {
         EntityContextBGP.ThreadContext<Void> threadContext =
             this.entityContext.bgp().builder(scriptEntity.getEntityID()).execute(() -> {
               CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, null);
               runJavaScript(compiledScriptContext);
             });
-        threadContext.onError(ex -> entityContext.updateDelayed(scriptEntity,
+        threadContext.onError(ex -> this.entityContext.updateDelayed(scriptEntity,
             s -> s.setStatus(Status.ERROR).setError(CommonUtils.getErrorMessage(ex))));
       }
     }
@@ -176,8 +178,8 @@ public class ScriptService {
    */
   public String callJavaScriptOnce(ScriptEntity scriptEntity, CompileScriptContext compiledScriptContext)
       throws InterruptedException, ExecutionException {
-      ScheduleBuilder<String> builder = this.entityContext.bgp().builder(scriptEntity.getEntityID());
-      EntityContextBGP.ThreadContext<String> threadContext = builder.execute(arg -> runJavaScript(compiledScriptContext).toFullString());
+    ScheduleBuilder<String> builder = this.entityContext.bgp().builder(scriptEntity.getEntityID());
+    EntityContextBGP.ThreadContext<String> threadContext = builder.execute(arg -> runJavaScript(compiledScriptContext).toFullString());
     try {
       return threadContext.await(properties.getMaxJavaScriptOnceCallBeforeInterrupt());
     } catch (TimeoutException ex) {

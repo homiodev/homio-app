@@ -35,13 +35,14 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 import org.touchhome.app.json.BgpProcessResponse;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.model.rest.DynamicUpdateRequest;
+import org.touchhome.app.spring.ContextCreated;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.common.util.CommonUtils;
 
 @Log4j2
-public class EntityContextBGPImpl implements EntityContextBGP {
+public class EntityContextBGPImpl implements EntityContextBGP, ContextCreated {
 
   @Getter
   private final EntityContextImpl entityContext;
@@ -59,10 +60,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
   public EntityContextBGPImpl(EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler) {
     this.entityContext = entityContext;
     this.taskScheduler = taskScheduler;
+  }
 
+  @Override
+  public void onContextCreated(EntityContext entityContext) throws Exception {
     this.builder("send-bgp-to-ui").interval(Duration.ofSeconds(1)).cancelOnError(false).execute(() ->
-        entityContext.ui().sendDynamicUpdate(new DynamicUpdateRequest("bgp",
-            BgpProcessResponse.class.getSimpleName(), null), getProcesses()));
+        this.entityContext.ui().sendDynamicUpdate("bgp", BgpProcessResponse.class.getSimpleName(), getProcesses()));
   }
 
   public BgpProcessResponse getProcesses() {

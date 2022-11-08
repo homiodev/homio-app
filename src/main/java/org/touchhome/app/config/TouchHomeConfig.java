@@ -113,7 +113,7 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
   @Bean
   public WebMvcRegistrations mvcRegistrations() {
     return new WebMvcRegistrations() {
-      private ExtRequestMappingHandlerMapping handlerMapping = new ExtRequestMappingHandlerMapping();
+      private final ExtRequestMappingHandlerMapping handlerMapping = new ExtRequestMappingHandlerMapping();
 
       @Override
       public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
@@ -176,14 +176,14 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     hibernate5Module.disable(Hibernate5Module.Feature.USE_TRANSIENT_ANNOTATION);
 
     SimpleModule simpleModule = new SimpleModule();
-    simpleModule.addSerializer(SecureString.class, new JsonSerializer<SecureString>() {
+    simpleModule.addSerializer(SecureString.class, new JsonSerializer<>() {
       @Override
       public void serialize(SecureString secureString, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
           throws IOException {
         jsonGenerator.writeString(secureString.toString());
       }
     });
-    simpleModule.addSerializer(Pin.class, new JsonSerializer<Pin>() {
+    simpleModule.addSerializer(Pin.class, new JsonSerializer<>() {
       @Override
       public void serialize(Pin pin, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
           throws IOException {
@@ -193,7 +193,7 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
       }
     });
 
-    simpleModule.addSerializer(Scratch3ExtensionBlocks.class, new JsonSerializer<Scratch3ExtensionBlocks>() {
+    simpleModule.addSerializer(Scratch3ExtensionBlocks.class, new JsonSerializer<>() {
       @Override
       public void serialize(Scratch3ExtensionBlocks block, JsonGenerator gen, SerializerProvider serializers)
           throws IOException {
