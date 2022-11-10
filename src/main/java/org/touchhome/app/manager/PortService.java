@@ -18,7 +18,6 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.app.spring.ContextRefreshed;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginOptions;
 
@@ -42,7 +41,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
   }
 
   @Override
-  public void onContextCreated(EntityContext entityContext) {
+  public void onContextCreated(EntityContextImpl entityContext) {
     listenPortAvailability();
     Duration checkPortInterval = this.entityContext.getTouchHomeProperties().getCheckPortInterval();
     this.entityContext.bgp().builder("check-port")

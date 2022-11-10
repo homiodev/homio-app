@@ -9,7 +9,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository
 public class WidgetTabRepository extends AbstractRepository<WidgetTabEntity> {
 
-    public WidgetTabRepository() {
-        super(WidgetTabEntity.class);
-    }
+  public WidgetTabRepository() {
+    super(WidgetTabEntity.class);
+  }
 }

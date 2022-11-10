@@ -1,7 +1,7 @@
 package org.touchhome.app.repository;
 
 import static org.touchhome.app.model.entity.SettingEntity.getKey;
-import static org.touchhome.bundle.api.BundleEntryPoint.BUNDLE_PREFIX;
+import static org.touchhome.bundle.api.BundleEntrypoint.BUNDLE_PREFIX;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -15,9 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.setting.CoreSettingPlugin;
-
 import org.touchhome.app.spring.ContextRefreshed;
-import org.touchhome.bundle.api.BundleEntryPoint;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -149,7 +148,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity> impleme
       }
       if (name.startsWith(BUNDLE_PREFIX)) {
         String pathName = name.substring(0, BUNDLE_PREFIX.length() + name.substring(BUNDLE_PREFIX.length()).indexOf('.'));
-        BundleEntryPoint bundleEntrypoint = entityContext.getBeansOfType(BundleEntryPoint.class)
+        BundleEntrypoint bundleEntrypoint = entityContext.getBeansOfType(BundleEntrypoint.class)
             .stream().filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
         if (bundleEntrypoint == null) {
           throw new ServerException("Unable find bundle entry-point for setting: " + key);

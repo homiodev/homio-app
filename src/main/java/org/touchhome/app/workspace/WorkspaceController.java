@@ -46,7 +46,7 @@ import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.app.workspace.block.core.Scratch3MiscBlocks;
 import org.touchhome.app.workspace.block.core.Scratch3MutatorBlocks;
 import org.touchhome.app.workspace.block.core.Scratch3OperatorBlocks;
-import org.touchhome.bundle.api.BundleEntryPoint;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -96,7 +96,7 @@ public class WorkspaceController implements ContextRefreshed {
       }
 
       if (!systemScratches.contains(scratch3ExtensionBlock.getClass())) {
-        BundleEntryPoint bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId());
+        BundleEntrypoint bundleEntrypoint = bundleController.getBundle(scratch3ExtensionBlock.getId());
         if (bundleEntrypoint == null && scratch3ExtensionBlock.getId().contains("-")) {
           bundleEntrypoint = bundleController.getBundle(
               scratch3ExtensionBlock.getId().substring(0, scratch3ExtensionBlock.getId().indexOf("-")));
@@ -127,7 +127,7 @@ public class WorkspaceController implements ContextRefreshed {
 
   @GetMapping("/extension/{bundleID}.png")
   public ResponseEntity<InputStreamResource> getExtensionImage(@PathVariable("bundleID") String bundleID) {
-    BundleEntryPoint bundleEntrypoint = bundleService.getBundle(bundleID);
+    BundleEntrypoint bundleEntrypoint = bundleService.getBundle(bundleID);
     InputStream stream = bundleEntrypoint.getClass().getClassLoader()
         .getResourceAsStream("extensions/" + bundleEntrypoint.getBundleId() + ".png");
     if (stream == null) {

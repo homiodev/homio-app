@@ -33,10 +33,10 @@ import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHea
 @RequiredArgsConstructor
 public class EntityContextSettingImpl implements EntityContextSetting {
 
-  private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
   public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
   public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>>
       dynamicHeaderSettings = new HashMap<>();
+  private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
   private static final Map<String, SettingPlugin> settingPluginsByPluginClass = new HashMap<>();
   private final Map<String, Map<String, Consumer<?>>> settingListeners = new HashMap<>();
   private final EntityContextImpl entityContext;

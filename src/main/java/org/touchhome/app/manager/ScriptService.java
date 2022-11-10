@@ -30,6 +30,7 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.extloader.BundleClassLoaderHolder;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.CompileScriptContext;
 import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.spring.ContextCreated;
@@ -64,7 +65,7 @@ public class ScriptService implements ContextCreated {
   }
 
   @Override
-  public void onContextCreated(EntityContext entityContext) throws Exception {
+  public void onContextCreated(EntityContextImpl entityContext) throws Exception {
     for (ScriptEntity scriptEntity : this.entityContext.findAll(ScriptEntity.class)) {
       if (scriptEntity.isAutoStart()) {
         EntityContextBGP.ThreadContext<Void> threadContext =

@@ -647,6 +647,34 @@ public class UIFieldUtils {
     return null;
   }
 
+  /**
+   * Fully copied from MethodUtils.java commons-lang3 because it's private static
+   */
+  private static List<Class<?>> getAllSuperclassesAndInterfaces(final Class<?> cls) {
+    if (cls == null) {
+      return null;
+    }
+
+    final List<Class<?>> allSuperClassesAndInterfaces = new ArrayList<>();
+    final List<Class<?>> allSuperclasses = ClassUtils.getAllSuperclasses(cls);
+    int superClassIndex = 0;
+    final List<Class<?>> allInterfaces = ClassUtils.getAllInterfaces(cls);
+    int interfaceIndex = 0;
+    while (interfaceIndex < allInterfaces.size() || superClassIndex < allSuperclasses.size()) {
+      final Class<?> acls;
+      if (interfaceIndex >= allInterfaces.size()) {
+        acls = allSuperclasses.get(superClassIndex++);
+      } else if ((superClassIndex >= allSuperclasses.size()) || (interfaceIndex < superClassIndex) ||
+          !(superClassIndex < interfaceIndex)) {
+        acls = allInterfaces.get(interfaceIndex++);
+      } else {
+        acls = allSuperclasses.get(superClassIndex++);
+      }
+      allSuperClassesAndInterfaces.add(acls);
+    }
+    return allSuperClassesAndInterfaces;
+  }
+
   public interface UIFieldContext {
 
     String getName();
@@ -804,33 +832,5 @@ public class UIFieldUtils {
     public <A extends Annotation> List<A> getDeclaredAnnotationsByType(Class<A> annotationClass) {
       return UIFieldUtils.getDeclaredAnnotationsByType(annotationClass, methods);
     }
-  }
-
-  /**
-   * Fully copied from MethodUtils.java commons-lang3 because it's private static
-   */
-  private static List<Class<?>> getAllSuperclassesAndInterfaces(final Class<?> cls) {
-    if (cls == null) {
-      return null;
-    }
-
-    final List<Class<?>> allSuperClassesAndInterfaces = new ArrayList<>();
-    final List<Class<?>> allSuperclasses = ClassUtils.getAllSuperclasses(cls);
-    int superClassIndex = 0;
-    final List<Class<?>> allInterfaces = ClassUtils.getAllInterfaces(cls);
-    int interfaceIndex = 0;
-    while (interfaceIndex < allInterfaces.size() || superClassIndex < allSuperclasses.size()) {
-      final Class<?> acls;
-      if (interfaceIndex >= allInterfaces.size()) {
-        acls = allSuperclasses.get(superClassIndex++);
-      } else if ((superClassIndex >= allSuperclasses.size()) || (interfaceIndex < superClassIndex) ||
-          !(superClassIndex < interfaceIndex)) {
-        acls = allInterfaces.get(interfaceIndex++);
-      } else {
-        acls = allSuperclasses.get(superClassIndex++);
-      }
-      allSuperClassesAndInterfaces.add(acls);
-    }
-    return allSuperClassesAndInterfaces;
   }
 }

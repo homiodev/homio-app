@@ -26,14 +26,13 @@ import org.touchhome.common.exception.NotFoundException;
 @RequiredArgsConstructor
 public class EntityContextVarImpl implements EntityContextVar {
 
+  public static final Map<String, VariableContext> globalVarStorageMap = new HashMap<>();
+  @Getter
+  private final EntityContextImpl entityContext;
+
   public static void createBroadcastGroup(EntityContext entityContext) {
     entityContext.var().createGroup("broadcasts", "Broadcasts", false, "fas fa-tower-broadcast", "#A32677", null);
   }
-
-  public static final Map<String, VariableContext> globalVarStorageMap = new HashMap<>();
-
-  @Getter
-  private final EntityContextImpl entityContext;
 
   public void onContextCreated() {
     createBroadcastGroup(entityContext);
@@ -185,7 +184,7 @@ public class EntityContextVarImpl implements EntityContextVar {
   @AllArgsConstructor
   private static class VariableContext {
 
-    private WorkspaceVariable groupVariable;
     private final InMemoryDBService<WorkspaceVariableMessage> service;
+    private WorkspaceVariable groupVariable;
   }
 }

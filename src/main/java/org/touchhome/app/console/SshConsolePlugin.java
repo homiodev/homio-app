@@ -10,26 +10,26 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 @RequiredArgsConstructor
 public class SshConsolePlugin implements ConsolePlugin<Object> {
 
-    @Getter
-    private final EntityContext entityContext;
+  @Getter
+  private final EntityContext entityContext;
 
-    @Override
-    public Object getValue() {
-        return null;
-    }
+  @Override
+  public Object getValue() {
+    return null;
+  }
 
-    @Override
-    public RenderType getRenderType() {
-        return null;
-    }
+  @Override
+  public RenderType getRenderType() {
+    return null;
+  }
 
-    @Override
-    public boolean isEnabled() {
-        return entityContext.isAdminUserOrNone() && EntityContext.isLinuxEnvironment();
-    }
+  @Override
+  public boolean isEnabled() {
+    return entityContext.isAdminUserOrNone() && EntityContext.isLinuxEnvironment();
+  }
 
-    @Override
-    public String getName() {
-        return "ssh";
-    }
+  @Override
+  public String getName() {
+    return "ssh";
+  }
 }

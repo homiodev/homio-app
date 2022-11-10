@@ -91,6 +91,34 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     this.workspaceTabHolder = workspaceTabHolder;
   }
 
+  public static Float objectToFloat(Object value, Float defaultValue) {
+    if (value == null) {
+      return defaultValue;
+    }
+    if (value instanceof Number) {
+      return ((Number) value).floatValue();
+    }
+    try {
+      return NumberFormat.getInstance().parse(valueToStr(value, "0")).floatValue();
+    } catch (ParseException ex) {
+      log.error("Unable to convert value '{}' to float", value);
+      return defaultValue;
+    }
+  }
+
+  private static String valueToStr(Object content, String defaultValue) {
+    if (content != null) {
+      if (content instanceof State) {
+        return ((State) content).stringValue();
+      } else if (content instanceof byte[]) {
+        return new String((byte[]) content);
+      } else {
+        return content.toString();
+      }
+    }
+    return defaultValue;
+  }
+
   @Override
   public void logError(String message, Object... params) {
     log(Level.ERROR, message, params);
@@ -318,21 +346,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
   @Override
   public Float getInputFloat(String key, Float defaultValue) {
     return objectToFloat(getInput(key, true), defaultValue);
-  }
-
-  public static Float objectToFloat(Object value, Float defaultValue) {
-    if (value == null) {
-      return defaultValue;
-    }
-    if (value instanceof Number) {
-      return ((Number) value).floatValue();
-    }
-    try {
-      return NumberFormat.getInstance().parse(valueToStr(value, "0")).floatValue();
-    } catch (ParseException ex) {
-      log.error("Unable to convert value '{}' to float", value);
-      return defaultValue;
-    }
   }
 
   @SneakyThrows
@@ -589,18 +602,5 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     public Object fetchValue(JSONArray array, EntityContext entityContext) {
       return valueFn.apply(array, entityContext);
     }
-  }
-
-  private static String valueToStr(Object content, String defaultValue) {
-    if (content != null) {
-      if (content instanceof State) {
-        return ((State) content).stringValue();
-      } else if (content instanceof byte[]) {
-        return new String((byte[]) content);
-      } else {
-        return content.toString();
-      }
-    }
-    return defaultValue;
   }
 }

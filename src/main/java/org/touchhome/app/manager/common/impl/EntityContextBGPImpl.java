@@ -35,14 +35,12 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 import org.touchhome.app.json.BgpProcessResponse;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.spring.ContextCreated;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.common.util.CommonUtils;
 
 @Log4j2
-public class EntityContextBGPImpl implements EntityContextBGP, ContextCreated {
+public class EntityContextBGPImpl implements EntityContextBGP {
 
   @Getter
   private final EntityContextImpl entityContext;
@@ -62,8 +60,7 @@ public class EntityContextBGPImpl implements EntityContextBGP, ContextCreated {
     this.taskScheduler = taskScheduler;
   }
 
-  @Override
-  public void onContextCreated(EntityContext entityContext) throws Exception {
+  public void onContextCreated() {
     this.builder("send-bgp-to-ui").interval(Duration.ofSeconds(1)).cancelOnError(false).execute(() ->
         this.entityContext.ui().sendDynamicUpdate("bgp", BgpProcessResponse.class.getSimpleName(), getProcesses()));
   }
@@ -354,6 +351,8 @@ public class EntityContextBGPImpl implements EntityContextBGP, ContextCreated {
   @NoArgsConstructor
   public class ThreadContextImpl<T> implements ThreadContext<T> {
 
+    private final JSONObject metadata = new JSONObject();
+    private final Date creationTime = new Date();
     private Duration delay;
     private String name;
     private ThrowingFunction<ThreadContext<T>, T, Exception> command;
@@ -373,10 +372,6 @@ public class EntityContextBGPImpl implements EntityContextBGP, ContextCreated {
     private int runCount;
     @Setter
     private boolean cancelOnError = true;
-
-    private final JSONObject metadata = new JSONObject();
-
-    private final Date creationTime = new Date();
     private Map<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
 
     private Consumer<Exception> errorListener;

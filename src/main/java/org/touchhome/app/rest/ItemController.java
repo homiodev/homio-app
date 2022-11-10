@@ -10,6 +10,8 @@ import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -42,6 +44,8 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.json.JSONObject;
 import org.springframework.data.util.Pair;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -54,6 +58,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.touchhome.app.LogService;
 import org.touchhome.app.manager.ImageService;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
@@ -112,6 +118,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
   private final EntityManager entityManager;
   private final ClassFinder classFinder;
   private final ImageService imageService;
+  private final LogService logService;
 
   private final ReentrantLock putItemsLock = new ReentrantLock();
   private final ReentrantLock updateItemLock = new ReentrantLock();
@@ -119,11 +126,34 @@ public class ItemController implements ContextCreated, ContextRefreshed {
   private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
   private Map<Class<? extends UIActionHandler>, UIActionHandler> sidebarClassButtonToInstance = new HashMap<>();
 
-  @RequiredArgsConstructor
-  private static class TypeToRequireDependenciesContext {
+  @SneakyThrows
+  static ActionResponseModel executeMethodAction(Method method, Object actionHolder, EntityContext entityContext,
+      BaseEntity actionEntity, JSONObject params) {
+    List<Object> objects = new ArrayList<>();
+    for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
+      if (actionHolder.getClass().isAssignableFrom((Class) parameterType.getType())) {
+        objects.add(actionHolder);
+      } else if (BaseEntity.class.isAssignableFrom((Class) parameterType.getType())) {
+        objects.add(actionEntity);
+      } else if (JSONObject.class.isAssignableFrom((Class<?>) parameterType.getType())) {
+        objects.add(params);
+      } else {
+        objects.add(entityContext.getBean((Class) parameterType.getType()));
+      }
+    }
+    method.setAccessible(true);
+    return (ActionResponseModel) method.invoke(actionHolder, objects.toArray());
+  }
 
-    private final Class<? extends BaseEntity> typeClass;
-    private final List<DependencyExecutableInstaller> installers;
+  public static Optional<ItemsByTypeResponse.TypeDependency> getTypeDependency(Class<? extends BaseEntity> aClass,
+      EntityContext entityContext) {
+    TypeToRequireDependenciesContext dependenciesContext = typeToRequireDependencies.get(aClass.getSimpleName());
+    if (dependenciesContext != null) {
+      Set<String> notInstalledDependencies = dependenciesContext.installers.stream().filter(i -> i.isEnabled(entityContext))
+          .map(DependencyExecutableInstaller::getName).collect(Collectors.toSet());
+      return Optional.of(new ItemsByTypeResponse.TypeDependency(aClass.getSimpleName(), notInstalledDependencies));
+    }
+    return Optional.empty();
   }
 
   public <T extends UIActionHandler> T getOrCreateUIActionHandler(Class<T> actionHandlerClass) {
@@ -178,27 +208,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     throw new IllegalArgumentException("Execution method name: <" + actionRequestModel.getName() + "> not implemented");
   }
 
-  @SneakyThrows
-  static ActionResponseModel executeMethodAction(Method method, Object actionHolder, EntityContext entityContext,
-      BaseEntity actionEntity, JSONObject params) {
-    List<Object> objects = new ArrayList<>();
-    for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
-      if (actionHolder.getClass().isAssignableFrom((Class) parameterType.getType())) {
-        objects.add(actionHolder);
-      } else if (BaseEntity.class.isAssignableFrom((Class) parameterType.getType())) {
-        objects.add(actionEntity);
-      } else if (JSONObject.class.isAssignableFrom((Class<?>) parameterType.getType())) {
-        objects.add(params);
-      } else {
-        objects.add(entityContext.getBean((Class) parameterType.getType()));
-      }
-    }
-    method.setAccessible(true);
-    return (ActionResponseModel) method.invoke(actionHolder, objects.toArray());
-  }
-
   @Override
-  public void onContextCreated(EntityContext entityContext) {
+  public void onContextCreated(EntityContextImpl entityContext) {
     // invalidate UIField cache scenarios
     this.entityContext.setting().listenValue(SystemShowEntityCreateTimeSetting.class, "invalidate-uifield-createTime-cache",
         this.itemsBootstrapContextMap::clear);
@@ -284,6 +295,17 @@ public class ItemController implements ContextCreated, ContextRefreshed {
       list.add(getUISideBarMenuOption(aClass));
     }
     return list;
+  }
+
+  @GetMapping(value = "/{entityID}/logs")
+  public ResponseEntity<StreamingResponseBody> getLogs(@PathVariable("entityID") String entityID) {
+    Path logPath = logService.getEntityLogsFile(entityContext.getEntity(entityID));
+    if (logPath == null) {
+      throw new IllegalArgumentException("Unable to find log file path for entity: " + entityID);
+    }
+
+    StreamingResponseBody stream = out -> Files.copy(logPath, out);
+    return new ResponseEntity(stream, HttpStatus.OK);
   }
 
   @GetMapping("/type/{type}/options")
@@ -562,16 +584,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
   }
 
-  @Getter
-  @Setter
-  public static class GetOptionsRequest {
-
-    private String fieldFetchType;
-    private String[] selectType;
-    private String param0; // for lazy loading
-    private Map<String, String> deps;
-  }
-
   @PostMapping("/{entityID}/{fieldName}/options")
   public Collection<OptionModel> loadSelectOptions(@PathVariable("entityID") String entityID,
       @PathVariable("fieldName") String fieldName,
@@ -835,15 +847,21 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
   }
 
-  public static Optional<ItemsByTypeResponse.TypeDependency> getTypeDependency(Class<? extends BaseEntity> aClass,
-      EntityContext entityContext) {
-    TypeToRequireDependenciesContext dependenciesContext = typeToRequireDependencies.get(aClass.getSimpleName());
-    if (dependenciesContext != null) {
-      Set<String> notInstalledDependencies = dependenciesContext.installers.stream().filter(i -> i.isEnabled(entityContext))
-          .map(DependencyExecutableInstaller::getName).collect(Collectors.toSet());
-      return Optional.of(new ItemsByTypeResponse.TypeDependency(aClass.getSimpleName(), notInstalledDependencies));
-    }
-    return Optional.empty();
+  @RequiredArgsConstructor
+  private static class TypeToRequireDependenciesContext {
+
+    private final Class<? extends BaseEntity> typeClass;
+    private final List<DependencyExecutableInstaller> installers;
+  }
+
+  @Getter
+  @Setter
+  public static class GetOptionsRequest {
+
+    private String fieldFetchType;
+    private String[] selectType;
+    private String param0; // for lazy loading
+    private Map<String, String> deps;
   }
 
   @Getter

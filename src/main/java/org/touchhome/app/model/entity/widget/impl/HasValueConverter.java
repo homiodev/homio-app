@@ -7,14 +7,14 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFi
 
 public interface HasValueConverter extends HasDynamicParameterFields {
 
-    @UIField(order = 100)
-    @UIFieldGroup("Value")
-    @UIFieldCodeEditor(autoFormat = true, editorType = UIFieldCodeEditor.CodeEditorType.javascript)
-    default String getValueConverter() {
-        return getJsonData("valConv", "return value;");
-    }
+  @UIField(order = 100)
+  @UIFieldGroup("Value")
+  @UIFieldCodeEditor(autoFormat = true, editorType = UIFieldCodeEditor.CodeEditorType.javascript)
+  default String getValueConverter() {
+    return getJsonData("valConv", "return value;");
+  }
 
-    default void setValueConverter(String value) {
-        setJsonData("valConv", value);
-    }
+  default void setValueConverter(String value) {
+    setJsonData("valConv", value);
+  }
 }

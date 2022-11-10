@@ -7,7 +7,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository
 public class WorkspaceGroupRepository extends AbstractRepository<WorkspaceGroup> {
 
-    public WorkspaceGroupRepository() {
-        super(WorkspaceGroup.class);
-    }
+  public WorkspaceGroupRepository() {
+    super(WorkspaceGroup.class);
+  }
 }

@@ -7,9 +7,9 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository("miscRepository")
 public class MiscRepository extends AbstractRepository<MiscEntity> {
 
-    public MiscRepository() {
-        super(MiscEntity.class);
-    }
+  public MiscRepository() {
+    super(MiscEntity.class);
+  }
 }
 
 

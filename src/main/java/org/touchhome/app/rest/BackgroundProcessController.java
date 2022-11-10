@@ -1,15 +1,17 @@
 package org.touchhome.app.rest;
 
+import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.access.annotation.Secured;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.json.BgpProcessResponse;
 import org.touchhome.app.manager.common.EntityContextImpl;
-
-import java.util.List;
-
-import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 
 @Log4j2
 @RestController
@@ -17,18 +19,18 @@ import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 @RequiredArgsConstructor
 public class BackgroundProcessController {
 
-    private final EntityContextImpl entityContext;
+  private final EntityContextImpl entityContext;
 
-    @DeleteMapping("/{name}")
-    @Secured(ADMIN_ROLE)
-    public void cancelProcess(@PathVariable("name") String name) {
-        entityContext.bgp().cancelThread(name);
-    }
+  @DeleteMapping("/{name}")
+  @Secured(ADMIN_ROLE)
+  public void cancelProcess(@PathVariable("name") String name) {
+    entityContext.bgp().cancelThread(name);
+  }
 
-    @GetMapping
-    public BgpProcessResponse getProcesses() {
-        return entityContext.bgp().getProcesses();
-    }
+  @GetMapping
+  public BgpProcessResponse getProcesses() {
+    return entityContext.bgp().getProcesses();
+  }
 
    /* @GetMapping("/dynamic/stop/{url}")
     @Secured(ADMIN_ROLE)

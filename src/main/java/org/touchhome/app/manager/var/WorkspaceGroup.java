@@ -37,6 +37,29 @@ import org.touchhome.common.util.Lang;
 public class WorkspaceGroup extends BaseEntity<WorkspaceGroup> implements HasJsonData {
 
   public static final String PREFIX = "wg_";
+  @UIField(order = 12, inlineEditWhenEmpty = true)
+  private String description;
+  // unable to CRUD variables inside group or rename/drop group
+  private boolean locked;
+  @UIField(order = 13)
+  @UIFieldIconPicker(allowSize = false, allowSpin = false)
+  private String icon;
+  @UIField(order = 14)
+  @UIFieldColorPicker
+  private String iconColor;
+  @Getter
+  @MaxItems(30) // max 30 variables in one group
+  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
+  @UIField(order = 30)
+  @UIFieldInlineEntity(bg = "#1E5E611F", addRow = "CREATE_VAR")
+  private Set<WorkspaceVariable> workspaceVariables;
+  @Lob
+  @Getter
+  @Column(length = 1000)
+  @Convert(converter = JSONObjectConverter.class)
+  private JSONObject jsonData = new JSONObject();
+  @Column(unique = true, nullable = false)
+  private String groupId;
 
   @Override
   public String getEntityPrefix() {
@@ -48,36 +71,6 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup> implements HasJso
   public String getName() {
     return super.getName();
   }
-
-  @UIField(order = 12, inlineEditWhenEmpty = true)
-  private String description;
-
-  // unable to CRUD variables inside group or rename/drop group
-  private boolean locked;
-
-  @UIField(order = 13)
-  @UIFieldIconPicker(allowSize = false, allowSpin = false)
-  private String icon;
-
-  @UIField(order = 14)
-  @UIFieldColorPicker
-  private String iconColor;
-
-  @Getter
-  @MaxItems(30) // max 30 variables in one group
-  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
-  @UIField(order = 30)
-  @UIFieldInlineEntity(bg = "#1E5E611F", addRow = "CREATE_VAR")
-  private Set<WorkspaceVariable> workspaceVariables;
-
-  @Lob
-  @Getter
-  @Column(length = 1000)
-  @Convert(converter = JSONObjectConverter.class)
-  private JSONObject jsonData = new JSONObject();
-
-  @Column(unique = true, nullable = false)
-  private String groupId;
 
   @Override
   public String getEntityID() {

@@ -87,6 +87,12 @@
             <AppenderRef ref="Console"/>
         </Logger>
 
+        <Logger name="com.zsmartsystems.zigbee" additivity="false" level="info">
+            <AppenderRef ref="zigBeeLog"/>
+            <AppenderRef ref="appLog"/>
+            <AppenderRef ref="Console"/>
+        </Logger>
+
         <Logger name="org.touchhome.app.workspace" additivity="false" level="info">
             <AppenderRef ref="workspaceLog"/>
             <AppenderRef ref="appLog"/>

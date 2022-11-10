@@ -6,5 +6,6 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class Scratch3Space {
-    private int spaceCount;
+
+  private int spaceCount;
 }

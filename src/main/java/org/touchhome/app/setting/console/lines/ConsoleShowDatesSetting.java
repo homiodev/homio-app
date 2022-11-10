@@ -6,18 +6,18 @@ import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
 public class ConsoleShowDatesSetting implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
 
-    @Override
-    public int order() {
-        return 900;
-    }
+  @Override
+  public int order() {
+    return 900;
+  }
 
-    @Override
-    public boolean defaultValue() {
-        return true;
-    }
+  @Override
+  public boolean defaultValue() {
+    return true;
+  }
 
-    @Override
-    public ConsolePlugin.RenderType[] renderTypes() {
-        return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines, ConsolePlugin.RenderType.comm};
-    }
+  @Override
+  public ConsolePlugin.RenderType[] renderTypes() {
+    return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines, ConsolePlugin.RenderType.comm};
+  }
 }

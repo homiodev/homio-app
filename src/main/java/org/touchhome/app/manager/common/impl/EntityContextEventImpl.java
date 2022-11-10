@@ -53,12 +53,24 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
   @Getter
   private final List<BiConsumer<String, Object>> globalEvenListeners = new ArrayList<>();
+  private final ScheduleBuilder<Boolean> internetAccessBuilder;
+  // constructor parameters
   private final EntityContextImpl entityContext;
+  private final TouchHomeProperties touchHomeProperties;
   private ThreadContext<Boolean> internetThreadContext;
 
   public EntityContextEventImpl(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
     this.entityContext = entityContext;
-    listenInternetStatus(entityContext, touchHomeProperties);
+    this.touchHomeProperties = touchHomeProperties;
+
+    ScheduleBuilder<Boolean> builder = this.entityContext.bgp().builder("internet-test");
+    Duration interval = touchHomeProperties.getInternetTestInterval();
+    this.internetAccessBuilder = builder.interval(interval).delay(interval).interval(interval)
+        .tap(context -> this.internetThreadContext = context);
+  }
+
+  public void onContextCreated() {
+    listenInternetStatus();
   }
 
   @Override
@@ -220,6 +232,23 @@ public class EntityContextEventImpl implements EntityContextEvent {
     return this;
   }
 
+  private void listenInternetStatus() {
+    internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
+      if (isInternetUp != isInternetWasUp) {
+        entityContext.event().fireEventIfNotSame("internet-status", isInternetUp ? Status.ONLINE : Status.OFFLINE);
+        if (isInternetUp) {
+          entityContext.ui().removeBellNotification("internet-connection");
+          entityContext.ui().addBellInfoNotification("internet-connection", "Internet Connection", "Internet up");
+        } else {
+          entityContext.ui().removeBellNotification("internet-up");
+          entityContext.ui().addBellErrorNotification("internet-connection", "Internet Connection", "Internet down");
+        }
+      }
+      return null;
+    });
+    internetAccessBuilder.execute(context -> entityContext.checkUrlAccessible() != null);
+  }
+
   @Getter
   public static class EntityListener {
 
@@ -274,26 +303,5 @@ public class EntityContextEventImpl implements EntityContextEvent {
       }
       return false;
     }
-  }
-
-  private void listenInternetStatus(EntityContextImpl entityContext, TouchHomeProperties touchHomeProperties) {
-    Duration interval = touchHomeProperties.getInternetTestInterval();
-    ScheduleBuilder<Boolean> builder = this.entityContext.bgp().builder("internet-test");
-    this.internetThreadContext = builder.interval(interval).delay(interval)
-        .interval(interval).execute(context -> entityContext.checkUrlAccessible() != null);
-
-    this.internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
-      if (isInternetUp != isInternetWasUp) {
-        entityContext.event().fireEventIfNotSame("internet-status", isInternetUp ? Status.ONLINE : Status.OFFLINE);
-        if (isInternetUp) {
-          entityContext.ui().removeBellNotification("internet-connection");
-          entityContext.ui().addBellInfoNotification("internet-connection", "Internet Connection", "Internet up");
-        } else {
-          entityContext.ui().removeBellNotification("internet-up");
-          entityContext.ui().addBellErrorNotification("internet-connection", "Internet Connection", "Internet down");
-        }
-      }
-      return null;
-    });
   }
 }

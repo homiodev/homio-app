@@ -18,7 +18,6 @@ import javax.persistence.ManyToOne;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -55,6 +54,28 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
     UIFieldSelectionParent.SelectionParent, HasTimeValueSeries, HasGetStatusValue, HasSetStatusValue {
 
   public static final String PREFIX = "wgv_";
+  @UIField(order = 12)
+  @UIFieldInlineEntityWidth(viewWidth = 20, editWidth = 20)
+  public String description;
+  @UIField(order = 20, label = "format")
+  @Enumerated(EnumType.STRING)
+  @UIFieldShowOnCondition("return context.item.groupId === 'broadcasts'")
+  @UIFieldInlineEntityWidth(viewWidth = 20, editWidth = 20)
+  public EntityContextVar.VariableType restriction = EntityContextVar.VariableType.Any;
+  @UIField(order = 25)
+  @UIFieldSlider(min = 100, max = 100000, step = 100)
+  @UIFieldGroup(order = 10, value = "Quota")
+  @UIFieldInlineEntityWidth(viewWidth = 15, editWidth = 40)
+  public int quota = 1000;
+  @Column(unique = true, nullable = false)
+  public String variableId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  private WorkspaceGroup workspaceGroup;
+  @Lob
+  @Getter
+  @Column(length = 10_000)
+  @Convert(converter = JSONObjectConverter.class)
+  private JSONObject jsonData = new JSONObject();
 
   @Override
   public String getEntityPrefix() {
@@ -67,10 +88,6 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
   public String getName() {
     return super.getName();
   }
-
-  @UIField(order = 12)
-  @UIFieldInlineEntityWidth(viewWidth = 20, editWidth = 20)
-  public String description;
 
   @Override
   @UIFieldIgnore
@@ -86,18 +103,6 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
     return super.getUpdateTime();
   }
 
-  @UIField(order = 20, label = "format")
-  @Enumerated(EnumType.STRING)
-  @UIFieldShowOnCondition("return context.item.groupId === 'broadcasts'")
-  @UIFieldInlineEntityWidth(viewWidth = 20, editWidth = 20)
-  public EntityContextVar.VariableType restriction = EntityContextVar.VariableType.Any;
-
-  @UIField(order = 25)
-  @UIFieldSlider(min = 100, max = 100000, step = 100)
-  @UIFieldGroup(order = 10, value = "Quota")
-  @UIFieldInlineEntityWidth(viewWidth = 15, editWidth = 40)
-  public int quota = 1000;
-
   @UIField(order = 30, readOnly = true)
   @UIFieldProgress
   @UIFieldGroup("Quota")
@@ -110,18 +115,6 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
     }
     return new UIFieldProgress.Progress(count, this.quota);
   }
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  private WorkspaceGroup workspaceGroup;
-
-  @Lob
-  @Getter
-  @Column(length = 10_000)
-  @Convert(converter = JSONObjectConverter.class)
-  private JSONObject jsonData = new JSONObject();
-
-  @Column(unique = true, nullable = false)
-  public String variableId;
 
   @Override
   protected void beforePersist() {

@@ -5,35 +5,37 @@ import org.apache.commons.lang3.StringUtils;
 import org.touchhome.bundle.api.EntityContext;
 
 public class DataSourceUtil {
-    public static DataSourceContext getSource(EntityContext entityContext, String dataSource) {
-        DataSourceContext dataSourceContext = new DataSourceContext();
-        if (StringUtils.isNotEmpty(dataSource)) {
-            String[] vds = dataSource.split("~~~");
-            if (vds.length > 2) {
-                dataSourceContext.sourceClass = vds[vds.length == 4 ? 2 : 1];
-                dataSourceContext.source =
-                        evaluateDataSource(vds[vds.length == 4 ? 3 : 2], vds[vds.length == 4 ? 1 : 0], entityContext);
 
-            } else {
-                throw new IllegalArgumentException("Unable to parse dataSource");
-            }
-        }
-        return dataSourceContext;
-    }
+  public static DataSourceContext getSource(EntityContext entityContext, String dataSource) {
+    DataSourceContext dataSourceContext = new DataSourceContext();
+    if (StringUtils.isNotEmpty(dataSource)) {
+      String[] vds = dataSource.split("~~~");
+      if (vds.length > 2) {
+        dataSourceContext.sourceClass = vds[vds.length == 4 ? 2 : 1];
+        dataSourceContext.source =
+            evaluateDataSource(vds[vds.length == 4 ? 3 : 2], vds[vds.length == 4 ? 1 : 0], entityContext);
 
-    private static Object evaluateDataSource(String dsb, String source, EntityContext entityContext) {
-        switch (dsb) {
-            case "bean":
-                return entityContext.getBean(source, Object.class);
-            case "entityByClass":
-                return entityContext.getEntity(source);
-        }
-        return null;
+      } else {
+        throw new IllegalArgumentException("Unable to parse dataSource");
+      }
     }
+    return dataSourceContext;
+  }
 
-    @Getter
-    public static class DataSourceContext {
-        private Object source;
-        private String sourceClass;
+  private static Object evaluateDataSource(String dsb, String source, EntityContext entityContext) {
+    switch (dsb) {
+      case "bean":
+        return entityContext.getBean(source, Object.class);
+      case "entityByClass":
+        return entityContext.getEntity(source);
     }
+    return null;
+  }
+
+  @Getter
+  public static class DataSourceContext {
+
+    private Object source;
+    private String sourceClass;
+  }
 }

@@ -1,5 +1,6 @@
 package org.touchhome.app.rest.widget;
 
+import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -7,37 +8,40 @@ import lombok.experimental.Accessors;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 
-import java.util.List;
-
 @Getter
 @RequiredArgsConstructor
 @Accessors(chain = true)
 public class TimeSeriesContext<T extends HasChartDataSource> {
-    private final String id;
-    private final T seriesEntity;
-    private final HasTimeValueSeries series;
 
-    @Setter
-    private TimeSeriesValues<T> owner;
+  private final String id;
+  private final T seriesEntity;
+  private final HasTimeValueSeries series;
 
-    @Setter
-    private List<Object[]> value;
+  @Setter
+  private TimeSeriesValues<T> owner;
 
-    @Setter
-    private List<List<Float>> values;
+  @Setter
+  private List<Object[]> value;
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+  @Setter
+  private List<List<Float>> values;
 
-        TimeSeriesContext<T> that = (TimeSeriesContext<T>) o;
-
-        return id.equals(that.id);
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
     }
 
-    @Override
-    public int hashCode() {
-        return id.hashCode();
-    }
+    TimeSeriesContext<T> that = (TimeSeriesContext<T>) o;
+
+    return id.equals(that.id);
+  }
+
+  @Override
+  public int hashCode() {
+    return id.hashCode();
+  }
 }

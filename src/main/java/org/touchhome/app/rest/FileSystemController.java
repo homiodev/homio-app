@@ -38,7 +38,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.app.spring.ContextRefreshed;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.TreeConfiguration;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -54,14 +53,13 @@ import org.touchhome.common.util.CommonUtils;
 @RequiredArgsConstructor
 public class FileSystemController implements ContextCreated, ContextRefreshed {
 
+  // constructor parameters
+  private final EntityContextImpl entityContext;
   private List<BaseFileSystemEntity> fileSystems;
   private RaspberryFileSystem localFileSystem;
 
-  // constructor parameters
-  private final EntityContextImpl entityContext;
-
   @Override
-  public void onContextCreated(EntityContext entityContext) {
+  public void onContextCreated(EntityContextImpl entityContext) {
     this.entityContext.event().addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove",
         e -> findAllFileSystems(this.entityContext));
     this.entityContext.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create",
@@ -250,6 +248,48 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     throw new RuntimeException("Unable to find file system with id: " + fs);
   }
 
+  private Path archiveSource(String fs, String format, Set<String> sourceFileIds, String targetName, String level,
+      String password) throws IOException {
+    FileSystemProvider sourceFs = getFileSystem(fs);
+
+    Collection<TreeNode> entries = sourceFs.toTreeNodes(sourceFileIds);
+    Path tmpArchiveAssemblerPath = CommonUtils.getTmpPath().resolve("tmp_archive_assembler_" + System.currentTimeMillis());
+
+    try {
+      if (!targetName.endsWith("." + format)) {
+        targetName = targetName + "." + format;
+      }
+      Path targetPath = CommonUtils.getTmpPath().resolve(targetName);
+
+      List<Path> result = new ArrayList<>();
+      localFileSystem.copyEntries(entries, tmpArchiveAssemblerPath, new CopyOption[]{REPLACE_EXISTING}, result);
+      List<Path> filesToArchive =
+          Arrays.stream(Objects.requireNonNull(tmpArchiveAssemblerPath.toFile().listFiles())).map(File::toPath)
+              .collect(Collectors.toList());
+
+      return ArchiveUtil.zip(filesToArchive, targetPath, ArchiveUtil.ArchiveFormat.getHandlerByExtension(format), level,
+          password, null);
+    } finally {
+      FileUtils.deleteDirectory(tmpArchiveAssemblerPath.toFile());
+    }
+  }
+
+  private FileSystemProvider.UploadOption getUploadOption(BaseNodeRequest request) {
+    return request.replace ? FileSystemProvider.UploadOption.Replace : FileSystemProvider.UploadOption.Error;
+  }
+
+  private void findAllFileSystems(EntityContextImpl entityContext) {
+    fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
+  }
+
+  private Collection<BaseFileSystemEntity> getRequestedFileSystems(GetFSRequest request) {
+    if (request.fileSystemIds == null || request.fileSystemIds.isEmpty()) {
+      return this.fileSystems.stream().filter(BaseFileSystemEntity::isShowInFileManager).collect(Collectors.toList());
+    } else {
+      return request.fileSystemIds.stream().map(this::getFileSystemEntity).collect(Collectors.toList());
+    }
+  }
+
   @Getter
   @Setter
   private static class RenameNodeRequest extends BaseNodeRequest {
@@ -273,8 +313,8 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
     public String targetDir;
     public String fileHandler;
-    private String sourceFileId;
     public boolean removeSource;
+    private String sourceFileId;
   }
 
   @Getter
@@ -343,47 +383,5 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     public String targetFs;
     public String password;
     public boolean replace;
-  }
-
-  private Path archiveSource(String fs, String format, Set<String> sourceFileIds, String targetName, String level,
-      String password) throws IOException {
-    FileSystemProvider sourceFs = getFileSystem(fs);
-
-    Collection<TreeNode> entries = sourceFs.toTreeNodes(sourceFileIds);
-    Path tmpArchiveAssemblerPath = CommonUtils.getTmpPath().resolve("tmp_archive_assembler_" + System.currentTimeMillis());
-
-    try {
-      if (!targetName.endsWith("." + format)) {
-        targetName = targetName + "." + format;
-      }
-      Path targetPath = CommonUtils.getTmpPath().resolve(targetName);
-
-      List<Path> result = new ArrayList<>();
-      localFileSystem.copyEntries(entries, tmpArchiveAssemblerPath, new CopyOption[]{REPLACE_EXISTING}, result);
-      List<Path> filesToArchive =
-          Arrays.stream(Objects.requireNonNull(tmpArchiveAssemblerPath.toFile().listFiles())).map(File::toPath)
-              .collect(Collectors.toList());
-
-      return ArchiveUtil.zip(filesToArchive, targetPath, ArchiveUtil.ArchiveFormat.getHandlerByExtension(format), level,
-          password, null);
-    } finally {
-      FileUtils.deleteDirectory(tmpArchiveAssemblerPath.toFile());
-    }
-  }
-
-  private FileSystemProvider.UploadOption getUploadOption(BaseNodeRequest request) {
-    return request.replace ? FileSystemProvider.UploadOption.Replace : FileSystemProvider.UploadOption.Error;
-  }
-
-  private void findAllFileSystems(EntityContextImpl entityContext) {
-    fileSystems = entityContext.getEntityServices(BaseFileSystemEntity.class);
-  }
-
-  private Collection<BaseFileSystemEntity> getRequestedFileSystems(GetFSRequest request) {
-    if (request.fileSystemIds == null || request.fileSystemIds.isEmpty()) {
-      return this.fileSystems.stream().filter(BaseFileSystemEntity::isShowInFileManager).collect(Collectors.toList());
-    } else {
-      return request.fileSystemIds.stream().map(this::getFileSystemEntity).collect(Collectors.toList());
-    }
   }
 }

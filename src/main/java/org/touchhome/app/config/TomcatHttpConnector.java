@@ -10,13 +10,13 @@ import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 @RequiredArgsConstructor
 public class TomcatHttpConnector implements WebServerFactoryCustomizer<TomcatServletWebServerFactory> {
 
-    private final TouchHomeProperties touchHomeProperties;
+  private final TouchHomeProperties touchHomeProperties;
 
-    @Override
-    public void customize(TomcatServletWebServerFactory factory) {
-        Connector connector = new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
-        connector.setPort(touchHomeProperties.getHttpPort());
-        connector.setParseBodyMethods("POST,PUT,DELETE");
-        factory.addAdditionalTomcatConnectors(connector);
-    }
+  @Override
+  public void customize(TomcatServletWebServerFactory factory) {
+    Connector connector = new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
+    connector.setPort(touchHomeProperties.getHttpPort());
+    connector.setParseBodyMethods("POST,PUT,DELETE");
+    factory.addAdditionalTomcatConnectors(connector);
+  }
 }

@@ -7,7 +7,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository("storageRepository")
 public class StorageRepository extends AbstractRepository<StorageEntity> {
 
-    public StorageRepository() {
-        super(StorageEntity.class);
-    }
+  public StorageRepository() {
+    super(StorageEntity.class);
+  }
 }

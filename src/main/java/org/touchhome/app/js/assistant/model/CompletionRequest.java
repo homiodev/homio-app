@@ -6,7 +6,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CompletionRequest {
-    private String line;
-    private String scriptEntityID;
-    private String allScript;
+
+  private String line;
+  private String scriptEntityID;
+  private String allScript;
 }

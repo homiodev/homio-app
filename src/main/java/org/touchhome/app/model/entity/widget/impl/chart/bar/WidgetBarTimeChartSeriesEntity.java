@@ -1,5 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
+import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
@@ -12,41 +13,39 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
-import javax.persistence.Entity;
-
 @Entity
 public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBarTimeChartEntity>
-        implements HasChartDataSource {
+    implements HasChartDataSource {
 
-    public static final String PREFIX = "wgsbtcs_";
+  public static final String PREFIX = "wgsbtcs_";
 
-    @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+  @Override
+  public String getEntityPrefix() {
+    return PREFIX;
+  }
+
+  @Override
+  public ChartDataset buildTargetDataset(TimeSeriesContext item) {
+    WidgetBarTimeChartSeriesEntity seriesEntity = (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
+    ChartDataset dataset = new ChartDataset(item.getId());
+
+    if (item.getValues() != null && !item.getValues().isEmpty()) {
+      dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), seriesEntity.getChartAggregationType()));
     }
+    return dataset;
+  }
 
-    @Override
-    public ChartDataset buildTargetDataset(TimeSeriesContext item) {
-        WidgetBarTimeChartSeriesEntity seriesEntity = (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
-        ChartDataset dataset = new ChartDataset(item.getId());
+  @Override
+  protected void beforePersist() {
+    HasChartDataSource.randomColor(this);
+  }
 
-        if (item.getValues() != null && !item.getValues().isEmpty()) {
-            dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), seriesEntity.getChartAggregationType()));
-        }
-        return dataset;
-    }
-
-    @Override
-    protected void beforePersist() {
-        HasChartDataSource.randomColor(this);
-    }
-
-    @UIField(order = 1, required = true)
-    @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
-    @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
-    @UIFieldGroup(value = "Chart", order = 10, borderColor = "#9C27B0")
-    @UIEditReloadWidget
-    public String getChartDataSource() {
-        return getJsonData("chartDS");
-    }
+  @UIField(order = 1, required = true)
+  @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
+  @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
+  @UIFieldGroup(value = "Chart", order = 10, borderColor = "#9C27B0")
+  @UIEditReloadWidget
+  public String getChartDataSource() {
+    return getJsonData("chartDS");
+  }
 }

@@ -40,6 +40,7 @@ import org.apache.logging.log4j.util.PropertiesUtil;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -54,7 +55,7 @@ import org.touchhome.common.util.CommonUtils;
 @RequiredArgsConstructor
 public class LoggerService implements ContextCreated {
 
-  private static Path logsDir = resolvePath("logs");
+  private static final Path logsDir = resolvePath("logs");
 
   public final EntityContext entityContext;
 
@@ -81,7 +82,7 @@ public class LoggerService implements ContextCreated {
   }
 
   @Override
-  public void onContextCreated(EntityContext entityContext) throws Exception {
+  public void onContextCreated(EntityContextImpl entityContext) throws Exception {
     Files.walkFileTree(logsDir, new SimpleFileVisitor<>() {
       @Override
       public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
@@ -98,7 +99,7 @@ public class LoggerService implements ContextCreated {
   }
 
   public boolean notExists(String logFile) {
-    return StringUtils.isEmpty(logFile) || Files.notExists(Paths.get(escapeName(logFile)));
+    return !StringUtils.hasLength(logFile) || Files.notExists(Paths.get(escapeName(logFile)));
   }
 
   public Path getOrCreateLogFile(String key, BaseEntity entity, boolean allowCreate) {
@@ -227,7 +228,7 @@ public class LoggerService implements ContextCreated {
       } else {
         t = throwable;
       }
-      stream.println(sb.toString());
+      stream.println(sb);
       if (t != null) {
         stream.print(SPACE);
         t.printStackTrace(stream);

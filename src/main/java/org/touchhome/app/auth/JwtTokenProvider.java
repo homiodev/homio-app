@@ -15,10 +15,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.setting.system.SystemDisableAuthTokenOnRestartSetting;
 import org.touchhome.app.setting.system.SystemJWTTokenValidSetting;
 import org.touchhome.app.spring.ContextCreated;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Component
@@ -32,7 +32,7 @@ public class JwtTokenProvider implements ContextCreated {
   private int jwtValidityTimeout;
 
   @Override
-  public void onContextCreated(EntityContext entityContext) throws Exception {
+  public void onContextCreated(EntityContextImpl entityContext) throws Exception {
     this.regenerateSecurityIdOnRestart = entityContext.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);
     this.jwtParser = Jwts.parser().setSigningKey(buildSecurityId());
     this.jwtValidityTimeout = entityContext.setting().getValue(SystemJWTTokenValidSetting.class);

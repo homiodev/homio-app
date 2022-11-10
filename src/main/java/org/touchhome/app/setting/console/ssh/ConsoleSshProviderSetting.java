@@ -6,25 +6,25 @@ import org.touchhome.bundle.api.setting.SettingPluginOptionsBean;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
 public class ConsoleSshProviderSetting
-        implements ConsoleSettingPlugin<SshProviderService>, SettingPluginOptionsBean<SshProviderService> {
+    implements ConsoleSettingPlugin<SshProviderService>, SettingPluginOptionsBean<SshProviderService> {
 
-    @Override
-    public Class<SshProviderService> getType() {
-        return SshProviderService.class;
-    }
+  @Override
+  public Class<SshProviderService> getType() {
+    return SshProviderService.class;
+  }
 
-    @Override
-    public String getDefaultValue() {
-        return TmateSshProvider.class.getSimpleName();
-    }
+  @Override
+  public String getDefaultValue() {
+    return TmateSshProvider.class.getSimpleName();
+  }
 
-    @Override
-    public int order() {
-        return 600;
-    }
+  @Override
+  public int order() {
+    return 600;
+  }
 
-    @Override
-    public String[] pages() {
-        return new String[]{"ssh"};
-    }
+  @Override
+  public String[] pages() {
+    return new String[]{"ssh"};
+  }
 }

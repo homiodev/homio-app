@@ -25,21 +25,21 @@ public class DynamicUpdateRequest {
 
   @Override
   public boolean equals(Object o) {
-      if (this == o) {
-          return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-          return false;
-      }
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     DynamicUpdateRequest that = (DynamicUpdateRequest) o;
 
-      if (!dynamicUpdateId.equals(that.dynamicUpdateId)) {
-          return false;
-      }
-      if (!type.equals(that.type)) {
-          return false;
-      }
+    if (!dynamicUpdateId.equals(that.dynamicUpdateId)) {
+      return false;
+    }
+    if (!type.equals(that.type)) {
+      return false;
+    }
     return Objects.equals(entityID, that.entityID);
   }
 

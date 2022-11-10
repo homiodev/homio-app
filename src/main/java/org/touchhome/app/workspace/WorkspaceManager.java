@@ -36,11 +36,10 @@ public class WorkspaceManager implements ContextRefreshed {
   private final Duration TIME_WAIT_OLD_WORKSPACE = Duration.ofSeconds(3);
   private final Set<String> ONCE_EXECUTION_BLOCKS = new HashSet<>(Arrays.asList("boolean_link", "group_variable_link"));
   private final EntityContext entityContext;
-
-  private Collection<WorkspaceEventListener> workspaceEventListeners;
-  private Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
   // tab <-> list of top blocks
   private final Map<String, WorkspaceTabHolder> tabs = new HashMap<>();
+  private Collection<WorkspaceEventListener> workspaceEventListeners;
+  private Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
 
   @Override
   public void onContextRefresh() {

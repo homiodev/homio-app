@@ -13,41 +13,41 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFi
 
 public interface HasSingleValueDataSource extends HasDynamicParameterFields {
 
-    @UIField(order = 10, required = true)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
-    @UIFieldBeanSelection(value = HasAggregateValueFromSeries.class, lazyLoading = true)
-    @UIFieldEntityByClassSelection(HasGetStatusValue.class)
-    @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
-    @UIFieldGroup(value = "Value", order = 10)
-    @UIEditReloadWidget
-    default String getValueDataSource() {
-        return getJsonData("vds");
-    }
+  @UIField(order = 10, required = true)
+  @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
+  @UIFieldBeanSelection(value = HasAggregateValueFromSeries.class, lazyLoading = true)
+  @UIFieldEntityByClassSelection(HasGetStatusValue.class)
+  @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
+  @UIFieldGroup(value = "Value", order = 10)
+  @UIEditReloadWidget
+  default String getValueDataSource() {
+    return getJsonData("vds");
+  }
 
-    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
-    @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-    @UIFieldGroup(value = "Value")
-    @UIEditReloadWidget
-    default String getSetValueDataSource() {
-        return getJsonData("svds");
-    }
+  default void setValueDataSource(String value) {
+    setJsonData("vds", value);
+  }
 
-    @UIField(order = 10)
-    @UIFieldGroup(value = "Value", order = 2)
-    @UIEditReloadWidget
-    default AggregationType getAggregationType() {
-        return getJsonDataEnum("aggrType", AggregationType.Last);
-    }
+  @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
+  @UIFieldEntityByClassSelection(HasSetStatusValue.class)
+  @UIFieldGroup(value = "Value")
+  @UIEditReloadWidget
+  default String getSetValueDataSource() {
+    return getJsonData("svds");
+  }
 
-    default void setAggregationType(AggregationType value) {
-        setJsonData("aggrType", value);
-    }
+  default void setSetValueDataSource(String value) {
+    setJsonData("svds", value);
+  }
 
-    default void setValueDataSource(String value) {
-        setJsonData("vds", value);
-    }
+  @UIField(order = 10)
+  @UIFieldGroup(value = "Value", order = 2)
+  @UIEditReloadWidget
+  default AggregationType getAggregationType() {
+    return getJsonDataEnum("aggrType", AggregationType.Last);
+  }
 
-    default void setSetValueDataSource(String value) {
-        setJsonData("svds", value);
-    }
+  default void setAggregationType(AggregationType value) {
+    setJsonData("aggrType", value);
+  }
 }

@@ -33,7 +33,7 @@ import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.spring.ContextRefreshed;
-import org.touchhome.bundle.api.BundleEntryPoint;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.model.OptionModel;
@@ -53,14 +53,12 @@ import org.touchhome.common.util.Lang;
 public class SettingController implements ContextRefreshed {
 
   private final BundleService bundleService;
-
-  private Map<String, Set<String>> settingToPages;
-  private Set<SettingEntity> descriptionSettings;
-
   private final EntityContextImpl entityContext;
-  private Map<Class<? extends SettingPlugin<?>>, SettingEntity> transientSettings;
   // true - installing, false removing
   private final Map<String, Boolean> packagesInProgress = new ConcurrentHashMap<>();
+  private Map<String, Set<String>> settingToPages;
+  private Set<SettingEntity> descriptionSettings;
+  private Map<Class<? extends SettingPlugin<?>>, SettingEntity> transientSettings;
 
   @Override
   public void onContextRefresh() {
@@ -261,7 +259,7 @@ public class SettingController implements ContextRefreshed {
       return SettingRepository.getSettingBundleName(entityContext, plugin.getClass());
     }).filter(Objects::nonNull).collect(Collectors.toSet());
 
-    for (BundleEntryPoint bundleEntrypoint : bundleService.getBundles()) {
+    for (BundleEntrypoint bundleEntrypoint : bundleService.getBundles()) {
       if (bundleSettings.contains(bundleEntrypoint.getBundleId())) {
         // find if description exists inside lang.json
         String descriptionKey = bundleEntrypoint.getBundleId() + ".setting.description";

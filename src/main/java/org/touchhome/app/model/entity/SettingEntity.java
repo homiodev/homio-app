@@ -1,6 +1,14 @@
 package org.touchhome.app.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.Collection;
+import java.util.Set;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.Lob;
+import javax.persistence.Transient;
+import javax.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -17,134 +25,112 @@ import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
-import javax.persistence.*;
-import javax.validation.constraints.NotNull;
-import java.util.Collection;
-import java.util.Set;
-
 @Getter
 @Setter
 @Entity
 @Accessors(chain = true)
 public class SettingEntity extends BaseEntity<SettingEntity> implements Comparable<SettingEntity> {
 
-    public static final String PREFIX = "st_";
+  public static final String PREFIX = "st_";
 
-    @Lob
-    @Column(length = 1000_000)
-    private String value;
+  @Lob
+  @Column(length = 1000_000)
+  private String value;
+  @Transient
+  private String color;
+  @Transient
+  private String defaultValue;
+  @Transient
+  private String groupKey;
+  @Transient
+  private String groupIcon;
+  @Transient
+  private String subGroupKey;
+  @Transient
+  private boolean visible;
+  @Transient
+  private Set<String> pages;
+  @Transient
+  private Set<ConsolePlugin.RenderType> renderTypes;
+  @Transient
+  private int order;
+  @Transient
+  private boolean advanced;
+  @Transient
+  private boolean lazyLoad;
+  @Transient
+  private boolean storable;
+  @Transient
+  private Collection<OptionModel> availableValues;
+  @Transient
+  private String icon;
+  @Transient
+  private String toggleIcon;
+  @Transient
+  private String settingType;
+  @Transient
+  private Boolean reverted;
+  @Transient
+  private Boolean disabled;
+  @Transient
+  private Boolean required;
+  @Transient
+  private JSONObject parameters;
+  @Lob
+  @Getter
+  @JsonIgnore
+  @Column(length = 1000_000)
+  @Convert(converter = JSONObjectConverter.class)
+  private JSONObject jsonData = new JSONObject();
 
-    public SettingEntity setValue(String value) {
-        this.value = value;
-        return this;
+  public static String getKey(SettingPlugin settingPlugin) {
+    if (settingPlugin instanceof DynamicConsoleHeaderSettingPlugin) {
+      return SettingEntity.PREFIX + ((DynamicConsoleHeaderSettingPlugin) settingPlugin).getKey();
     }
+    return SettingEntity.PREFIX + settingPlugin.getClass().getSimpleName();
+  }
 
-    @Transient
-    private String color;
+  public static String getKey(Class<? extends SettingPlugin> settingPluginClazz) {
+    return SettingEntity.PREFIX + settingPluginClazz.getSimpleName();
+  }
 
-    @Transient
-    private String defaultValue;
+  public void setSettingTypeRaw(String settingTypeRaw) {
+    this.settingType = settingTypeRaw;
+  }
 
-    @Transient
-    private String groupKey;
+  public SettingEntity setSettingType(UIFieldType settingType) {
+    this.settingType = settingType.name();
+    return this;
+  }
 
-    @Transient
-    private String groupIcon;
+  public String getValue() {
+    return StringUtils.defaultIfEmpty(value, defaultValue);
+  }
 
-    @Transient
-    private String subGroupKey;
+  public SettingEntity setValue(String value) {
+    this.value = value;
+    return this;
+  }
 
-    @Transient
-    private boolean visible;
+  @Override
+  public int compareTo(@NotNull SettingEntity o) {
+    return Integer.compare(order, o.order);
+  }
 
-    @Transient
-    private Set<String> pages;
+  @Override
+  public void afterFetch(EntityContext entityContext) {
+    SettingRepository.fulfillEntityFromPlugin(this, entityContext, null);
+  }
 
-    @Transient
-    private Set<ConsolePlugin.RenderType> renderTypes;
+  @Override
+  public String getEntityPrefix() {
+    return PREFIX;
+  }
 
-    @Transient
-    private int order;
-
-    @Transient
-    private boolean advanced;
-
-    @Transient
-    private boolean lazyLoad;
-
-    @Transient
-    private boolean storable;
-
-    @Transient
-    private Collection<OptionModel> availableValues;
-
-    @Transient
-    private String icon;
-
-    @Transient
-    private String toggleIcon;
-
-    @Transient
-    private String settingType;
-    @Transient
-    private Boolean reverted;
-    @Transient
-    private Boolean disabled;
-    @Transient
-    private Boolean required;
-    @Transient
-    private JSONObject parameters;
-
-    @Lob
-    @Getter
-    @JsonIgnore
-    @Column(length = 1000_000)
-    @Convert(converter = JSONObjectConverter.class)
-    private JSONObject jsonData = new JSONObject();
-
-    public static String getKey(SettingPlugin settingPlugin) {
-        if (settingPlugin instanceof DynamicConsoleHeaderSettingPlugin) {
-            return SettingEntity.PREFIX + ((DynamicConsoleHeaderSettingPlugin) settingPlugin).getKey();
-        }
-        return SettingEntity.PREFIX + settingPlugin.getClass().getSimpleName();
-    }
-
-    public static String getKey(Class<? extends SettingPlugin> settingPluginClazz) {
-        return SettingEntity.PREFIX + settingPluginClazz.getSimpleName();
-    }
-
-    public void setSettingTypeRaw(String settingTypeRaw) {
-        this.settingType = settingTypeRaw;
-    }
-
-    public SettingEntity setSettingType(UIFieldType settingType) {
-        this.settingType = settingType.name();
-        return this;
-    }
-
-    public String getValue() {
-        return StringUtils.defaultIfEmpty(value, defaultValue);
-    }
-
-    @Override
-    public int compareTo(@NotNull SettingEntity o) {
-        return Integer.compare(order, o.order);
-    }
-
-    @Override
-    public void afterFetch(EntityContext entityContext) {
-        SettingRepository.fulfillEntityFromPlugin(this, entityContext, null);
-    }
-
-    @Override
-    public String getEntityPrefix() {
-        return PREFIX;
-    }
-
-    @Override
-    public String getBundle() {
-        // dynamic settings(firmata has no parameters)
-        SettingPlugin plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
-        return plugin == null ? null : SettingRepository.getSettingBundleName(getEntityContext(), plugin.getClass());
-    }
+  @Override
+  public String getBundle() {
+    // dynamic settings(firmata has no parameters)
+    SettingPlugin plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
+    return plugin == null ? null : SettingRepository.getSettingBundleName(getEntityContext(), plugin.getClass());
+  }
 }

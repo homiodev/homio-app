@@ -64,6 +64,30 @@ public class ConsoleController implements ContextRefreshed {
   private final Set<ConsoleTab> tabs = new ArraySet<>();
   private final Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
 
+  @SneakyThrows
+  static void fetchUIHeaderActions(ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
+    Map<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
+    if (actionMap != null) {
+      for (Map.Entry<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
+        Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
+        ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(entry.getKey(),
+            CommonUtils.newInstance(settingClass).fireActionsBeforeChange(), SettingEntity.getKey(settingClass), 0);
+
+                /* TODO: actions.add(new UIActionResponse(entry.getKey())
+                        .putOpt("fabc", CommonUtils.newInstance(settingClass).fireActionsBeforeChange())
+                        .putOpt("ref", SettingEntity.getKey(settingClass)));*/
+      }
+    }
+    if (consolePlugin instanceof ConsolePluginEditor) {
+      Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction =
+          ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
+      if (nameHeaderAction != null) {
+        ((UIInputBuilderImpl) uiInputBuilder).addReferenceAction("name", SettingEntity.getKey(nameHeaderAction), 1);
+        // TODO: actions.add(new UIActionResponse("name").putOpt("ref", SettingEntity.getKey(nameHeaderAction)));
+      }
+    }
+  }
+
   @Override
   public void onContextRefresh() {
     EntityContextUIImpl.consolePluginsMap.clear();
@@ -252,31 +276,6 @@ public class ConsoleController implements ContextRefreshed {
       this.children.add(consoleTab);
     }
   }
-
-  @SneakyThrows
-  static void fetchUIHeaderActions(ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
-    Map<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> actionMap = consolePlugin.getHeaderActions();
-    if (actionMap != null) {
-      for (Map.Entry<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> entry : actionMap.entrySet()) {
-        Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
-        ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(entry.getKey(),
-            CommonUtils.newInstance(settingClass).fireActionsBeforeChange(), SettingEntity.getKey(settingClass), 0);
-
-                /* TODO: actions.add(new UIActionResponse(entry.getKey())
-                        .putOpt("fabc", CommonUtils.newInstance(settingClass).fireActionsBeforeChange())
-                        .putOpt("ref", SettingEntity.getKey(settingClass)));*/
-      }
-    }
-    if (consolePlugin instanceof ConsolePluginEditor) {
-      Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction =
-          ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
-      if (nameHeaderAction != null) {
-        ((UIInputBuilderImpl) uiInputBuilder).addReferenceAction("name", SettingEntity.getKey(nameHeaderAction), 1);
-        // TODO: actions.add(new UIActionResponse("name").putOpt("ref", SettingEntity.getKey(nameHeaderAction)));
-      }
-    }
-  }
-
 
   @Getter
   @Setter

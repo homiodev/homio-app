@@ -6,13 +6,13 @@ import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
 public class ConsoleStickToLastLineOnOpenSetting implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
 
-    @Override
-    public int order() {
-        return 700;
-    }
+  @Override
+  public int order() {
+    return 700;
+  }
 
-    @Override
-    public ConsolePlugin.RenderType[] renderTypes() {
-        return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines, ConsolePlugin.RenderType.comm};
-    }
+  @Override
+  public ConsolePlugin.RenderType[] renderTypes() {
+    return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines, ConsolePlugin.RenderType.comm};
+  }
 }

@@ -104,12 +104,13 @@ import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.app.workspace.WorkspaceController;
 import org.touchhome.app.workspace.WorkspaceManager;
-import org.touchhome.bundle.api.BundleEntryPoint;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
+import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.inmemory.InMemoryDB;
 import org.touchhome.bundle.api.model.ActionResponseModel;
@@ -128,6 +129,8 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.raspberry.repository.RaspberryDeviceRepository;
+import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
+import org.touchhome.bundle.zigbee.model.ZigBeeEndpointEntity;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.model.UpdatableValue;
 import org.touchhome.common.util.CommonUtils;
@@ -138,13 +141,18 @@ import org.touchhome.common.util.Lang;
 @Component
 public class EntityContextImpl implements EntityContext {
 
-  // count how much addBundle/removeBundle invokes
-  public static int BUNDLE_UPDATE_COUNT = 0;
-
+  public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
   private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
   private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
+  // count how much addBundle/removeBundle invokes
+  public static int BUNDLE_UPDATE_COUNT = 0;
+  public static Map<String, AbstractRepository> repositories = new HashMap<>();
+  public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
+  public static Map<String, AbstractRepository> repositoriesByPrefix;
+  private static Map<String, PureRepository> pureRepositories = new HashMap<>();
 
   static {
+    BEAN_CONTEXT_CREATED.add(LogService.class);
     BEAN_CONTEXT_CREATED.add(FileSystemController.class);
     BEAN_CONTEXT_CREATED.add(ItemController.class);
     BEAN_CONTEXT_CREATED.add(PortService.class);
@@ -166,14 +174,6 @@ public class EntityContextImpl implements EntityContext {
     BEAN_CONTEXT_REFRESH.add(AudioService.class);
   }
 
-  public static final String CREATE_TABLE_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
-
-  public static Map<String, AbstractRepository> repositories = new HashMap<>();
-  public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
-  public static Map<String, AbstractRepository> repositoriesByPrefix;
-  private static Map<String, PureRepository> pureRepositories = new HashMap<>();
-
-  private EntityManager entityManager;
   private final EntityContextUIImpl entityContextUI;
   private final EntityContextUDPImpl entityContextUDP;
   private final EntityContextEventImpl entityContextEvent;
@@ -184,16 +184,13 @@ public class EntityContextImpl implements EntityContext {
   private final Environment environment;
   private final StartupHardwareRepository startupHardwareRepository;
   private final EntityContextStorage entityContextStorage;
-
   private final ClassFinder classFinder;
   @Getter
   private final CacheService cacheService;
-
   @Getter
   private final TouchHomeProperties touchHomeProperties;
-
   private final Map<String, Boolean> deviceFeatures = new HashMap<>();
-
+  private EntityManager entityManager;
   private TransactionTemplate transactionTemplate;
   private Boolean showEntityState;
   private ApplicationContext applicationContext;
@@ -207,6 +204,7 @@ public class EntityContextImpl implements EntityContext {
   private String latestVersion;
 
   private Set<ApplicationContext> allApplicationContexts = new HashSet<>();
+  private Map<Class, Boolean> entityClassToHasUISidebarMenu = new HashMap<>();
 
   public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, ThreadPoolTaskScheduler taskScheduler,
       SimpMessagingTemplate messagingTemplate, Environment environment,
@@ -226,8 +224,6 @@ public class EntityContextImpl implements EntityContext {
     this.entityContextWidget = new EntityContextWidgetImpl(this);
     this.entityContextStorage = new EntityContextStorage(this);
     this.entityContextVar = new EntityContextVarImpl(this);
-
-    LogService.scanEntityLogs(classFinder);
   }
 
   @SneakyThrows
@@ -251,6 +247,8 @@ public class EntityContextImpl implements EntityContext {
 
     entityContextVar.onContextCreated();
     entityContextUI.onContextCreated();
+    entityContextBGP.onContextCreated();
+    entityContextEvent.onContextCreated();
 
     for (Class<? extends ContextCreated> beanUpdateClass : BEAN_CONTEXT_CREATED) {
       applicationContext.getBean(beanUpdateClass).onContextCreated(this);
@@ -277,9 +275,9 @@ public class EntityContextImpl implements EntityContext {
 
   private void initialiseInlineBundles(ApplicationContext applicationContext) {
     log.info("Initialize bundles...");
-    ArrayList<BundleEntryPoint> bundleEntryPoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntryPoint.class).values());
-    Collections.sort(bundleEntryPoints);
-    for (BundleEntryPoint bundleEntrypoint : bundleEntryPoints) {
+    ArrayList<BundleEntrypoint> bundleEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
+    Collections.sort(bundleEntrypoints);
+    for (BundleEntrypoint bundleEntrypoint : bundleEntrypoints) {
       this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, null));
       log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
       try {
@@ -625,6 +623,12 @@ public class EntityContextImpl implements EntityContext {
 
     SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
     EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
+    registry.getEventListenerGroup(EventType.POST_LOAD).appendListener(postLoadEvent -> {
+      Object entity = postLoadEvent.getEntity();
+      if (entity instanceof BaseEntity) {
+        loadEntityService(entity);
+      }
+    });
     registry.getEventListenerGroup(EventType.PRE_DELETE).appendListener((PreDeleteEventListener) event -> {
       Object entity = event.getEntity();
       if (entity instanceof BaseEntity) {
@@ -688,17 +692,21 @@ public class EntityContextImpl implements EntityContext {
 
   private void postInsertUpdate(Object entity, boolean persist) {
     if (entity instanceof BaseEntity) {
-      // Try instantiate service associated with entity
-      if (entity instanceof EntityService) {
-        EntityService.ServiceInstance service = ((EntityService<?, ?>) entity).getOrCreateService(this, false, true);
-        // Update entity into service
-        if (service != null) {
-          service.entityUpdated((EntityService) entity);
-        }
-      }
+      loadEntityService(entity);
       ((BaseEntity) entity).afterUpdate(this, persist);
       // Do not send updates to UI in case of Status.DELETED
       sendEntityUpdateNotification(entity, persist ? ItemAction.Insert : ItemAction.Update);
+    }
+  }
+
+  // Try to instantiate service associated with entity
+  private void loadEntityService(Object entity) {
+    if (entity instanceof EntityService) {
+      EntityService.ServiceInstance service = ((EntityService<?, ?>) entity).getOrCreateService(this, false, true);
+      // Update entity into service
+      if (service != null) {
+        service.entityUpdated((EntityService) entity);
+      }
     }
   }
 
@@ -712,8 +720,6 @@ public class EntityContextImpl implements EntityContext {
           CommonUtils.getErrorMessage(ex));
     }
   }
-
-  private Map<Class, Boolean> entityClassToHasUISidebarMenu = new HashMap<>();
 
   public void sendEntityUpdateNotification(Object entity, ItemAction type) {
     if (!(entity instanceof BaseEntity)) {
@@ -761,7 +767,7 @@ public class EntityContextImpl implements EntityContext {
   private void removeBundle(BundleContext bundleContext) {
     if (!bundleContext.isInternal() && bundleContext.isInstalled()) {
       ApplicationContext context = bundleContext.getApplicationContext();
-      context.getBean(BundleEntryPoint.class).destroy();
+      context.getBean(BundleEntrypoint.class).destroy();
       this.allApplicationContexts.remove(context);
 
       this.cacheService.clearCache();
@@ -793,7 +799,7 @@ public class EntityContextImpl implements EntityContext {
       rebuildAllRepositories(context, true);
       updateBeans(bundleContext, context, true);
 
-      for (BundleEntryPoint bundleEntrypoint : context.getBeansOfType(BundleEntryPoint.class).values()) {
+      for (BundleEntrypoint bundleEntrypoint : context.getBeansOfType(BundleEntrypoint.class).values()) {
         log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
         bundleEntrypoint.init();
         this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, bundleContext));
@@ -819,12 +825,23 @@ public class EntityContextImpl implements EntityContext {
 
     registerUpdatableSettings(context);
 
-    // test all services
-    for (EntityService entityService : getEntityServices(EntityService.class)) {
-      entityService.getOrCreateService(this, false, true);
+    // fetch entities fires load services if any
+    log.info("Loading entities and initialise all related services");
+    for (BaseEntity baseEntity : findAllBaseEntities()) {
+      if (baseEntity instanceof BaseFileSystemEntity) {
+        ((BaseFileSystemEntity<?, ?>) baseEntity).getFileSystem(this).restart(false);
+      }
     }
 
     log.info("Finish update all app bundles");
+  }
+
+  public List<BaseEntity> findAllBaseEntities() {
+    List<BaseEntity> entities = new ArrayList<>();
+    entities.addAll(findAll(DeviceBaseEntity.class));
+    entities.addAll(findAll(ZigBeeDeviceEntity.class));
+    entities.addAll(findAll(ZigBeeEndpointEntity.class));
+    return entities;
   }
 
   private void rebuildAllRepositories(ApplicationContext context, boolean addBundle) {
@@ -987,39 +1004,6 @@ public class EntityContextImpl implements EntityContext {
     this.workspaceManager.fireAllBroadcastLock(handler);
   }
 
-  @AllArgsConstructor
-  public enum ItemAction {
-    Insert("addItem", context -> {
-      context.ui().sendInfoMessage("TOASTR.ENTITY_INSERTED");
-    }), Update("addItem", context -> {
-      context.ui().sendInfoMessage("TOASTR.ENTITY_UPDATED");
-    }), Remove("removeItem", context -> {
-      context.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED");
-    });
-    private final String name;
-    private final Consumer<EntityContextImpl> messageEvent;
-  }
-
-  public static class InternalBundleContext {
-
-    @Getter
-    private final BundleEntryPoint bundleEntrypoint;
-    @Getter
-    private final BundleContext bundleContext;
-    private final Map<String, Object> fieldTypes = new HashMap<>();
-
-    public InternalBundleContext(BundleEntryPoint bundleEntrypoint, BundleContext bundleContext) {
-      this.bundleEntrypoint = bundleEntrypoint;
-      this.bundleContext = bundleContext;
-      if (bundleContext != null) {
-        for (WidgetBaseTemplate widgetBaseTemplate : bundleContext.getApplicationContext()
-            .getBeansOfType(WidgetBaseTemplate.class).values()) {
-          fieldTypes.put(widgetBaseTemplate.getClass().getSimpleName(), widgetBaseTemplate);
-        }
-      }
-    }
-  }
-
   private String getInternalIpAddress() {
     return StringUtils.defaultString(checkUrlAccessible(),
         applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress());
@@ -1036,5 +1020,38 @@ public class EntityContextImpl implements EntityContext {
 
   public <T> T getEnv(String key, Class<T> classType, T defaultValue) {
     return environment.getProperty(key, classType, defaultValue);
+  }
+
+  @AllArgsConstructor
+  public enum ItemAction {
+    Insert("addItem", context -> {
+      context.ui().sendInfoMessage("TOASTR.ENTITY_INSERTED");
+    }), Update("addItem", context -> {
+      context.ui().sendInfoMessage("TOASTR.ENTITY_UPDATED");
+    }), Remove("removeItem", context -> {
+      context.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED");
+    });
+    private final String name;
+    private final Consumer<EntityContextImpl> messageEvent;
+  }
+
+  public static class InternalBundleContext {
+
+    @Getter
+    private final BundleEntrypoint bundleEntrypoint;
+    @Getter
+    private final BundleContext bundleContext;
+    private final Map<String, Object> fieldTypes = new HashMap<>();
+
+    public InternalBundleContext(BundleEntrypoint bundleEntrypoint, BundleContext bundleContext) {
+      this.bundleEntrypoint = bundleEntrypoint;
+      this.bundleContext = bundleContext;
+      if (bundleContext != null) {
+        for (WidgetBaseTemplate widgetBaseTemplate : bundleContext.getApplicationContext()
+            .getBeansOfType(WidgetBaseTemplate.class).values()) {
+          fieldTypes.put(widgetBaseTemplate.getClass().getSimpleName(), widgetBaseTemplate);
+        }
+      }
+    }
   }
 }

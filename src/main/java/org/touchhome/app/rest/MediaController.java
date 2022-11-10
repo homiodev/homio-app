@@ -66,24 +66,21 @@ import org.touchhome.common.util.CommonUtils;
 @RequiredArgsConstructor
 public class MediaController {
 
+  private static final Map<String, String> fileIdToLocalStorage = new HashMap<>();
   private final ImageService imageService;
   private final EntityContext entityContext;
   private final AudioService audioService;
-
   private final RetryPolicy<Path> PLAYBACK_THUMBNAIL_RETRY_POLICY = RetryPolicy.<Path>builder()
       .handle(Exception.class)
       .withDelay(Duration.ofSeconds(3))
       .withMaxRetries(3)
       .build();
-
   private final RetryPolicy<DownloadFile> PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY =
       RetryPolicy.<DownloadFile>builder()
           .handle(Exception.class)
           .withDelay(Duration.ofSeconds(5))
           .withMaxRetries(3)
           .build();
-
-  private static final Map<String, String> fileIdToLocalStorage = new HashMap<>();
 
   public static String createVideoLink(String dataSource) {
     String id = "file_" + System.currentTimeMillis();
@@ -158,13 +155,6 @@ public class MediaController {
     return new ResponseEntity<>(result, HttpStatus.OK);
   }
 
-  @Getter
-  @Setter
-  public static class ThumbnailRequest {
-
-    private List<String> fileIds;
-  }
-
   @GetMapping(value = "/video/playback/{entityID}/{fileId}/thumbnail/jpg", produces = MediaType.IMAGE_JPEG_VALUE)
   public ResponseEntity<byte[]> getPlaybackThumbnailJpg(@PathVariable("entityID") String entityID,
       @PathVariable("fileId") String fileId,
@@ -224,18 +214,6 @@ public class MediaController {
     }
   }
 
-    /* TODO: @GetMapping("/audio")
-    public Collection<OptionModel> getAudioFiles() {
-        return SettingPluginOptionsFileExplorer.getFilePath(TouchHomeUtils.getAudioPath(), 7, false,
-                false, true, null, null,
-                null, (path, basicFileAttributes) -> {
-                    // return new Tika().detect(path).startsWith("audio/");
-                    String name = path.getFileName().toString();
-                    return name.endsWith(".mp4") || name.endsWith(".wav") || name.endsWith(".mp3");
-                }, null,
-                path -> path.getFileName() == null ? path.toString() : path.getFileName().toString());
-    }*/
-
   @GetMapping("/audioSource")
   public Collection<OptionModel> audioSource() {
     Collection<OptionModel> optionModels = new ArrayList<>();
@@ -254,6 +232,18 @@ public class MediaController {
 
     return optionModels;
   }
+
+    /* TODO: @GetMapping("/audio")
+    public Collection<OptionModel> getAudioFiles() {
+        return SettingPluginOptionsFileExplorer.getFilePath(TouchHomeUtils.getAudioPath(), 7, false,
+                false, true, null, null,
+                null, (path, basicFileAttributes) -> {
+                    // return new Tika().detect(path).startsWith("audio/");
+                    String name = path.getFileName().toString();
+                    return name.endsWith(".mp4") || name.endsWith(".wav") || name.endsWith(".mp3");
+                }, null,
+                path -> path.getFileName() == null ? path.toString() : path.getFileName().toString());
+    }*/
 
   @GetMapping("/sink")
   public Collection<OptionModel> getAudioSink() {
@@ -309,5 +299,12 @@ public class MediaController {
       // long rangeLength = Math.min(1024 * 1024, contentLength);
       return new ResourceRegion(video, 0, contentLength);
     }
+  }
+
+  @Getter
+  @Setter
+  public static class ThumbnailRequest {
+
+    private List<String> fileIds;
   }
 }

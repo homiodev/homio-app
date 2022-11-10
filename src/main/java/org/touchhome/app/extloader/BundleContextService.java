@@ -20,7 +20,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.spring.ContextCreated;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.util.Constants;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.common.exception.ServerException;
@@ -150,7 +149,7 @@ public class BundleContextService implements ContextCreated {
    * Load context from specific file 'contextFile' and wraps logging info
    */
   @Override
-  public void onContextCreated(EntityContext entityContext) throws Exception {
+  public void onContextCreated(EntityContextImpl entityContext) throws Exception {
     Path bundlePath = TouchHomeUtils.getBundlePath();
     for (Path bundleContextFile : findBundleContextFilesFromPath(bundlePath)) {
       BundleContext bundleContext = new BundleContext(bundleContextFile);

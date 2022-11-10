@@ -36,7 +36,6 @@ import org.touchhome.app.notification.HeaderButtonNotification;
 import org.touchhome.app.notification.ProgressNotification;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.rest.widget.WidgetChartsController;
-import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -61,28 +60,25 @@ public class EntityContextUIImpl implements EntityContextUI {
   public static final Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
 
   public static final Set<String> customConsolePluginNames = new HashSet<>();
-
-  private final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
-
-  private final Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
-  private final Map<String, BellNotification> bellNotifications = new ConcurrentHashMap<>();
-  private final Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
-  private final Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
-  private Map<String, BellNotification> bundleEntryPointNotifications = new HashMap<>();
-
-  // constructor parameters
-  @Getter
-  private final EntityContextImpl entityContext;
-  private final SimpMessagingTemplate messagingTemplate;
-
   private static final Set<String> ALLOWED_DYNAMIC_VALUES = new HashSet<>(
       Arrays.asList(
+          String.class.getSimpleName(), // for logs
           BgpProcessResponse.class.getSimpleName(),
           WidgetChartsController.SingleValueData.class.getSimpleName(),
           WidgetChartsController.TimeSeriesChartData.class.getSimpleName(),
           TreeNode.class.getSimpleName() // console tree
       )
   );
+  private final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
+  private final Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
+  private final Map<String, BellNotification> bellNotifications = new ConcurrentHashMap<>();
+  private final Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
+  private final Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
+  // constructor parameters
+  @Getter
+  private final EntityContextImpl entityContext;
+  private final SimpMessagingTemplate messagingTemplate;
+  private Map<String, BellNotification> bundleEntrypointNotifications = new HashMap<>();
 
   public void onContextCreated() {
     // run hourly script to drop not used dynamicUpdateRegisters
@@ -319,8 +315,8 @@ public class EntityContextUIImpl implements EntityContextUI {
     notificationResponse.headerButtonNotifications = headerButtonNotifications.values();
     notificationResponse.progress = progressMap.values();
 
-    this.bundleEntryPointNotifications = assembleBundleNotifications();
-    notificationResponse.bellNotifications.addAll(this.bundleEntryPointNotifications.values());
+    this.bundleEntrypointNotifications = assembleBundleNotifications();
+    notificationResponse.bellNotifications.addAll(this.bundleEntrypointNotifications.values());
     return notificationResponse;
   }
 
@@ -430,7 +426,7 @@ public class EntityContextUIImpl implements EntityContextUI {
   public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, String value) {
     BellNotification bellNotification = bellNotifications.get(entityID);
     if (bellNotification == null) {
-      bellNotification = this.bundleEntryPointNotifications.get(entityID);
+      bellNotification = this.bundleEntrypointNotifications.get(entityID);
     }
     if (bellNotification == null) {
       throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
@@ -456,6 +452,14 @@ public class EntityContextUIImpl implements EntityContextUI {
     throw new IllegalStateException("Unable to evaluate dynamic type from value: " + value.getClass().getSimpleName());
   }
 
+  enum GlobalSendType {
+    popup, json, setting, progress, bell, headerButton, openConsole, reload, addItem, dialog,
+    // send audio to play on ui
+    audio,
+    // next generation
+    dynamicUpdate
+  }
+
   @Getter
   public static class NotificationResponse {
 
@@ -467,15 +471,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
   private static class DynamicUpdateContext {
 
-    private long timeout = System.currentTimeMillis();
     private final AtomicInteger registerCounter = new AtomicInteger(0);
-  }
-
-  enum GlobalSendType {
-    popup, json, setting, progress, bell, headerButton, openConsole, reload, addItem, dialog,
-    // send audio to play on ui
-    audio,
-    // next generation
-    dynamicUpdate
+    private long timeout = System.currentTimeMillis();
   }
 }

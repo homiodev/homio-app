@@ -8,18 +8,18 @@ import org.touchhome.bundle.api.setting.SettingPluginBoolean;
  */
 public class SystemShowEntityStateSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
-    @Override
-    public GroupKey getGroupKey() {
-        return GroupKey.system;
-    }
+  @Override
+  public GroupKey getGroupKey() {
+    return GroupKey.system;
+  }
 
-    @Override
-    public String getSubGroupKey() {
-        return "EVENTS";
-    }
+  @Override
+  public String getSubGroupKey() {
+    return "EVENTS";
+  }
 
-    @Override
-    public int order() {
-        return 500;
-    }
+  @Override
+  public int order() {
+    return 500;
+  }
 }

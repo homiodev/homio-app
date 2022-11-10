@@ -95,6 +95,15 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     });
   }
 
+  private static float getAudioLength(AudioHeader audioHeader) {
+    if (audioHeader instanceof GenericAudioHeader) {
+      return ((GenericAudioHeader) audioHeader).getPreciseLength();
+    } else if (audioHeader instanceof MP3AudioHeader) {
+      return (float) ((MP3AudioHeader) audioHeader).getPreciseTrackLength();
+    }
+    throw new IllegalArgumentException("Unable to get length from audio length");
+  }
+
   private RawType getTextToAudioReporter(WorkspaceBlock workspaceBlock) {
     String text = workspaceBlock.getInputString(VALUE);
     if (!text.isEmpty()) {
@@ -146,15 +155,6 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
       playAudio(file, workspaceBlock, Math.abs(from), Math.abs(to));
       return null;
     });
-  }
-
-  private static float getAudioLength(AudioHeader audioHeader) {
-    if (audioHeader instanceof GenericAudioHeader) {
-      return ((GenericAudioHeader) audioHeader).getPreciseLength();
-    } else if (audioHeader instanceof MP3AudioHeader) {
-      return (float) ((MP3AudioHeader) audioHeader).getPreciseTrackLength();
-    }
-    throw new IllegalArgumentException("Unable to get length from audio length");
   }
 
   private long getAudioFrames(AudioHeader audioHeader, File file) throws IOException, UnsupportedAudioFileException {

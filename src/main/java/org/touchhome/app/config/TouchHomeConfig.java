@@ -57,6 +57,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
+import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -102,6 +103,10 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
     threadPoolTaskScheduler.setThreadNamePrefix("th-async-");
     threadPoolTaskScheduler.setRemoveOnCancelPolicy(true);
     return threadPoolTaskScheduler;
+  }
+
+  public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
+    configurer.setTaskExecutor(threadPoolTaskScheduler());
   }
 
   @Bean
@@ -155,7 +160,7 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
   @Bean
   public CommonsMultipartResolver multipartResolver() {
     CommonsMultipartResolver resolver = new CommonsMultipartResolver();
-    resolver.setDefaultEncoding("utf-8");
+    resolver.setDefaultEncoding("UTF-8");
     resolver.setMaxUploadSize(20971520);
     return resolver;
   }

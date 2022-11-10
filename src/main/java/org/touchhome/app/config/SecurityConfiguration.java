@@ -25,65 +25,65 @@ import org.touchhome.bundle.api.repository.UserRepository;
 @AllArgsConstructor
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
-    private final PasswordEncoder passwordEncoder;
-    private final UserEntityDetailsService userEntityDetailsService;
-    private final JwtTokenProvider jwtTokenProvider;
-    private final TouchHomeProperties touchHomeProperties;
-    private final Log log = LogFactory.getLog(RequestFilter.class);
+  private final PasswordEncoder passwordEncoder;
+  private final UserEntityDetailsService userEntityDetailsService;
+  private final JwtTokenProvider jwtTokenProvider;
+  private final TouchHomeProperties touchHomeProperties;
+  private final Log log = LogFactory.getLog(RequestFilter.class);
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        // Disable CSRF (cross site request forgery)
-        http.csrf().disable();
+  @Override
+  protected void configure(HttpSecurity http) throws Exception {
+    // Disable CSRF (cross site request forgery)
+    http.csrf().disable();
 
-        // No session will be created or used by spring security
-        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+    // No session will be created or used by spring security
+    http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
-        // Entry points
-        if (touchHomeProperties.isDisableSecurity()) {
-            log.warn("!!! TouchHome security disabled !!!");
-            http.authorizeRequests().antMatchers(WebSocketConfig.ENDPOINT, "/rest/**").permitAll();
-        } else {
-            http.authorizeRequests()//
-                    .antMatchers(
-                            WebSocketConfig.ENDPOINT,
-                            "/rest/media/audio/**/play",
-                            "/rest/media/video/**/play",
-                            "/rest/media/video/playback/**/download",
-                            "/rest/media/video/playback/**/thumbnail/**",
-                            "/rest/auth/status",
-                            "/rest/auth/login",
-                            "/rest/bundle/image/**",
-                            "/rest/device/**").permitAll()
-                    // Disallow everything else..
-                    .anyRequest().authenticated();
-        }
-
-        // If a user try to access a resource without having enough permissions
-        http.exceptionHandling().accessDeniedPage("/login");
-
-        // Apply JWT
-        http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider));
+    // Entry points
+    if (touchHomeProperties.isDisableSecurity()) {
+      log.warn("!!! TouchHome security disabled !!!");
+      http.authorizeRequests().antMatchers(WebSocketConfig.ENDPOINT, "/rest/**").permitAll();
+    } else {
+      http.authorizeRequests()//
+          .antMatchers(
+              WebSocketConfig.ENDPOINT,
+              "/rest/media/audio/**/play",
+              "/rest/media/video/**/play",
+              "/rest/media/video/playback/**/download",
+              "/rest/media/video/playback/**/thumbnail/**",
+              "/rest/auth/status",
+              "/rest/auth/login",
+              "/rest/bundle/image/**",
+              "/rest/device/**").permitAll()
+          // Disallow everything else..
+          .anyRequest().authenticated();
     }
 
-    @Override
-    @Bean(name = "authenticationManager")
-    public AuthenticationManager authenticationManagerBean() throws Exception {
-        return super.authenticationManagerBean();
-    }
+    // If a user try to access a resource without having enough permissions
+    http.exceptionHandling().accessDeniedPage("/login");
 
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider(UserRepository userRepository) {
-        DoubleCheckPasswordAuthenticationProvider authProvider = new DoubleCheckPasswordAuthenticationProvider(userRepository);
-        authProvider.setUserDetailsService(userEntityDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder);
-        return authProvider;
-    }
+    // Apply JWT
+    http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider));
+  }
 
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) {
-        auth.authenticationProvider(authenticationProvider(null));
-    }
+  @Override
+  @Bean(name = "authenticationManager")
+  public AuthenticationManager authenticationManagerBean() throws Exception {
+    return super.authenticationManagerBean();
+  }
+
+  @Bean
+  public DaoAuthenticationProvider authenticationProvider(UserRepository userRepository) {
+    DoubleCheckPasswordAuthenticationProvider authProvider = new DoubleCheckPasswordAuthenticationProvider(userRepository);
+    authProvider.setUserDetailsService(userEntityDetailsService);
+    authProvider.setPasswordEncoder(passwordEncoder);
+    return authProvider;
+  }
+
+  @Override
+  protected void configure(AuthenticationManagerBuilder auth) {
+    auth.authenticationProvider(authenticationProvider(null));
+  }
 
     /*@Bean
     public FilterRegistrationBean remoteAddressFilter() {

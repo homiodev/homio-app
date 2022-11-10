@@ -74,13 +74,12 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
       block.appendSpace();
     });
 
-
-    blockHat(60, "udp_listener",        "UDP in [HOST]/[PORT]", this::onUdpEventHandler, block -> {
+    blockHat(60, "udp_listener", "UDP in [HOST]/[PORT]", this::onUdpEventHandler, block -> {
       block.addArgument("HOST", "0.0.0.0");
       block.addArgument("PORT", 8888);
     });
 
-    blockCommand(70, "udp_send",        "UDP text [VALUE] out [HOST]/[PORT]", this::sendUDPHandler, block -> {
+    blockCommand(70, "udp_send", "UDP text [VALUE] out [HOST]/[PORT]", this::sendUDPHandler, block -> {
       block.addArgument("HOST", "255.255.255.255");
       block.addArgument("PORT", 8888);
       block.addArgument(VALUE, "payload");

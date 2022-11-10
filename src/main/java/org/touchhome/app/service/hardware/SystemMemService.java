@@ -8,12 +8,12 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent;
 @UIFieldSelectionParent("selection.hardware")
 public class SystemMemService extends BaseSystemService {
 
-    public SystemMemService() {
-        super("mem", "SYS_MEM", "SYS.MEM_FREE", "SYS.MEM_AGGR", "SYS.MEM_TS");
-    }
+  public SystemMemService() {
+    super("mem", "SYS_MEM", "SYS.MEM_FREE", "SYS.MEM_AGGR", "SYS.MEM_TS");
+  }
 
-    @Override
-    public Object getStatusValue(GetStatusValueRequest request) {
-        return EntityContextStorage.cpuStorage.getLatest().getMem();
-    }
+  @Override
+  public Object getStatusValue(GetStatusValueRequest request) {
+    return EntityContextStorage.cpuStorage.getLatest().getMem();
+  }
 }

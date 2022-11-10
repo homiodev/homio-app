@@ -5,18 +5,18 @@ import org.touchhome.bundle.api.setting.SettingPluginBoolean;
 
 public class DashboardShowActionButtonsSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
-    @Override
-    public GroupKey getGroupKey() {
-        return GroupKey.dashboard;
-    }
+  @Override
+  public GroupKey getGroupKey() {
+    return GroupKey.dashboard;
+  }
 
-    @Override
-    public boolean defaultValue() {
-        return true;
-    }
+  @Override
+  public boolean defaultValue() {
+    return true;
+  }
 
-    @Override
-    public int order() {
-        return 300;
-    }
+  @Override
+  public int order() {
+    return 300;
+  }
 }

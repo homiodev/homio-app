@@ -4,8 +4,8 @@ import org.touchhome.bundle.api.setting.SettingPluginBoolean;
 
 public class SideMenuStatusSetting implements SettingPluginBoolean {
 
-    @Override
-    public int order() {
-        return 2;
-    }
+  @Override
+  public int order() {
+    return 2;
+  }
 }
