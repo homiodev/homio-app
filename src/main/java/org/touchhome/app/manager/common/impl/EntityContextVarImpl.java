@@ -155,7 +155,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         .addSaveListener("", broadcastMessage -> {
           entityContext.event().fireEvent(variableId, broadcastMessage.getValue());
         });
-    VariableContext context = new VariableContext(variable, service);
+    VariableContext context = new VariableContext(service, variable);
     globalVarStorageMap.put(variableId, context);
 
     // initialise variable to put first value. require to getLatest(), ...

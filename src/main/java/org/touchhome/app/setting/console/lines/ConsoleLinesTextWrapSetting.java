@@ -1,4 +1,4 @@
-package org.touchhome.app.setting.console.lines.log;
+package org.touchhome.app.setting.console.lines;
 
 import java.util.Collection;
 import org.json.JSONObject;

@@ -4,7 +4,7 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.setting.SettingPluginBoolean;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
-public class ConsoleShowDatesSetting implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
+public class ConsoleShowDateSetting implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
 
   @Override
   public int order() {
@@ -18,6 +18,6 @@ public class ConsoleShowDatesSetting implements ConsoleSettingPlugin<Boolean>, S
 
   @Override
   public ConsolePlugin.RenderType[] renderTypes() {
-    return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines, ConsolePlugin.RenderType.comm};
+    return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines};
   }
 }

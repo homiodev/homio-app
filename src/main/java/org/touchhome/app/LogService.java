@@ -1,6 +1,7 @@
 package org.touchhome.app;
 
-import static org.touchhome.bundle.api.util.TouchHomeUtils.getOrCreatePath;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import com.pivovarit.function.ThrowingConsumer;
 import java.io.File;
@@ -20,9 +21,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import lombok.SneakyThrows;
 import lombok.ToString;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Appender;
@@ -37,21 +41,17 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.setting.console.lines.log.ConsoleLogLevelSetting;
+import org.touchhome.app.setting.console.lines.ConsoleDebugLevelSetting;
 import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.ui.UIEntityLog;
-import org.touchhome.bundle.api.ui.UIEntityLogs;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Component
 public class LogService implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
 
-  private static final Path LOGS_DIR = getOrCreatePath("logs/entities");
   private static final Map<String, LogAppenderHandler> logAppenderHandlers = new HashMap<>();
   private static final Map<String, LogConsumer> LOG_CONSUMERS = new HashMap<>();
 
@@ -82,23 +82,14 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     }
   }
 
-  private static void scanEntityLogs(ClassFinder classFinder, EntityContextImpl entityContext) {
+  private static void scanEntityLogs(EntityContextImpl entityContext) {
     for (BaseEntity entity : entityContext.findAllBaseEntities()) {
-      for (Class<?> entityClass : classFinder.getClassesWithAnnotation(UIEntityLogs.class)) {
-        LogConsumer logConsumer = new LogConsumer(entityClass);
+      UIEntityLog[] annotations = entity.getClass().getDeclaredAnnotationsByType(UIEntityLog.class);
+      if (annotations.length > 0) {
+        LogConsumer logConsumer = new LogConsumer(entity.getEntityID(), entity.getClass());
         LOG_CONSUMERS.put(entity.getEntityID(), logConsumer);
-        for (UIEntityLog uiEntityLog : entityClass.getDeclaredAnnotationsByType(UIEntityLog.class)) {
-          String topic = uiEntityLog.topic().getName();
-          if (!topic.equals(Void.class.getSimpleName())) {
-            logConsumer.topics.add(topic);
-          }
-          String rawTopic = uiEntityLog.rawTopic();
-          if (StringUtils.hasLength(rawTopic)) {
-            logConsumer.topics.add(topic);
-          }
-          if (logConsumer.topics.isEmpty()) {
-            throw new IllegalStateException("Unable to find topics @UIEntityLog for entity: " + entity);
-          }
+        for (UIEntityLog uiEntityLog : annotations) {
+          logConsumer.add(uiEntityLog.topic(), uiEntityLog.rawTopic(), uiEntityLog.filterByField(), entity);
         }
       }
     }
@@ -107,17 +98,15 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
   /**
    * Scan LogConsumers and send to ui if match
    */
-  private static void sendEntityLogs(EntityContext entityContext, LogEvent event) {
-    System.out.println("asdasd");
-    /*for (LogConsumer logConsumer : LOG_CONSUMERS) {
-      if (logConsumer.accept(event)) {
+  private static void sendEntityLogs(EntityContextImpl entityContext, LogEvent event) {
+    for (LogConsumer logConsumer : LOG_CONSUMERS.values()) {
+      if (logConsumer.logTopics.stream().anyMatch(l -> l.test(event))) {
         sendLogEvent(event, message -> {
           Files.writeString(logConsumer.path, message + System.lineSeparator(), StandardOpenOption.APPEND);
-          ((EntityContextUIImpl) entityContext.ui()).sendDynamicUpdate(
-              "entity-log-" + logConsumer.className, "String", message);
+          entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, "String", message);
         });
       }
-    }*/
+    }
   }
 
   private static void sendLogEvent(String appenderName, LogEvent event, EntityContext entityContext) {
@@ -166,7 +155,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
   @Override
   public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-    LogService.scanEntityLogs(entityContext.getBean(ClassFinder.class), entityContext);
+    LogService.scanEntityLogs(entityContext);
     for (LogAppenderHandler logAppenderHandler : logAppenderHandlers.values()) {
       logAppenderHandler.setEntityContext(entityContext);
     }
@@ -192,7 +181,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
       this.start();
     }
 
-    public synchronized void setEntityContext(EntityContext entityContext) {
+    public synchronized void setEntityContext(EntityContextImpl entityContext) {
       listenAndUpdateLogLevel(entityContext);
 
       // attach extra handler for appLog appender
@@ -223,17 +212,16 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
     }
 
     private void listenAndUpdateLogLevel(EntityContext entityContext) {
-      Level level = entityContext.setting().getValue(ConsoleLogLevelSetting.class).getLevel();
-      if (level != Level.DEBUG) {
-        updateLogLevel(level);
-      }
-      entityContext.setting()
-          .listenValue(ConsoleLogLevelSetting.class, "log-set-level", logLevel -> updateLogLevel(logLevel.getLevel()));
+      entityContext.setting().listenValueAndGet(ConsoleDebugLevelSetting.class, "log-set-level",
+          logLevel -> updateLogLevel(entityContext.setting().getValue(ConsoleDebugLevelSetting.class)));
     }
 
-    private void updateLogLevel(Level level) {
-      for (LogAppenderHandler logAppenderHandler : logAppenderHandlers.values()) {
-        logAppenderHandler.intLevel = level.intLevel();
+    private void updateLogLevel(boolean includeDebug) {
+      Level level = includeDebug ? Level.DEBUG : Level.INFO;
+      if (level.intLevel() != this.intLevel) {
+        for (LogAppenderHandler logAppenderHandler : logAppenderHandlers.values()) {
+          logAppenderHandler.intLevel = level.intLevel();
+        }
       }
     }
   }
@@ -241,17 +229,19 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
   @ToString
   private static class LogConsumer {
 
+    private final String entityID;
     private final Class<?> targetClass;
     private final String className;
 
-    private final Set<String> topics = new HashSet<>();
+    private final List<Predicate<LogEvent>> logTopics = new ArrayList<>();
     public Path path;
 
     @SneakyThrows
-    public LogConsumer(Class<?> targetClass) {
+    public LogConsumer(String entityID, Class<?> targetClass) {
+      this.entityID = entityID;
       this.targetClass = targetClass;
       this.className = targetClass.getSimpleName();
-      this.path = LogService.LOGS_DIR.resolve(className + ".log");
+      this.path = TouchHomeUtils.getOrCreatePath("logs/entities/" + className).resolve(entityID + ".log");
       Files.write(path, new byte[0], StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
@@ -274,23 +264,24 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
       return className.hashCode();
     }
 
-    public boolean accept(LogEvent event) {
-      if (event.getThreadName() != null) {
-        if (topics.contains(event.getLoggerName())) {
-          return true;
-        }
-        String message = event.getMessage().getFormattedMessage();
+    @SneakyThrows
+    public void add(Class<?> topicClass, String rawTopic, String filterByField, BaseEntity entity) {
+      if (topicClass == Void.class && isEmpty(rawTopic)) {
+        throw new IllegalStateException("Unable to find topics @UIEntityLog for entity: " + entity);
       }
-      return false;
-    }
-
-    public boolean accept(String line) {
-      for (String topic : topics) {
-        if (line.contains(topic)) {
-          return true;
-        }
+      String topic = defaultIfEmpty(rawTopic, topicClass.getName());
+      Predicate<LogEvent> predicate;
+      String filterValue = isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity, "get" + StringUtils.capitalize(filterByField)));
+      if (isEmpty(rawTopic)) {
+        predicate = filterValue == null ?
+            logEvent -> logEvent.getLoggerName().equals(topic) :
+            logEvent -> logEvent.getLoggerName().equals(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue);
+      } else {
+        predicate = filterValue == null ?
+            logEvent -> logEvent.getLoggerName().startsWith(topic) :
+            logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue);
       }
-      return false;
+      logTopics.add(predicate);
     }
   }
 }

@@ -292,7 +292,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     };
   }
 
-  private <T> ThreadContext<T> createSchedule(ThreadContextImpl<T> threadContext,
+  private <T> void createSchedule(ThreadContextImpl<T> threadContext,
       @NotNull Function<Runnable, ScheduledFuture<?>> scheduleHandler) {
 
     this.cancelThread(threadContext.name);
@@ -305,6 +305,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         threadContext.setRetValue(threadContext.getCommand().apply(threadContext));
         threadContext.state = "FINISHED";
         if (threadContext.scheduleType == ScheduleType.SINGLE) {
+          if (threadContext.scheduledFuture == null) {
+            Thread.sleep(100); // hack: sleep 100ms to allow assign threadContext.scheduledFuture = ....
+          }
           threadContext.cancelProcessInternal();
         }
       } catch (Exception ex) {
@@ -332,7 +335,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
       }
     };
     threadContext.scheduledFuture = (ScheduledFuture<T>) scheduleHandler.apply(runnable);
-    return threadContext;
   }
 
   @RequiredArgsConstructor
