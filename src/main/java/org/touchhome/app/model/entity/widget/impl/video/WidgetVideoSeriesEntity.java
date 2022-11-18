@@ -126,6 +126,11 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
     return PREFIX;
   }
 
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
+
   public static class VideoSeriesDataSourceDynamicOptionLoader implements DynamicOptionLoader {
 
     @Override

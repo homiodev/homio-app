@@ -3,7 +3,7 @@ package org.touchhome.app.rest;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
-import static org.touchhome.bundle.raspberry.entity.RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID;
+import static org.touchhome.bundle.raspberry.RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,7 +41,7 @@ import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.bundle.api.entity.TreeConfiguration;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.raspberry.entity.RaspberryDeviceEntity;
+import org.touchhome.bundle.raspberry.RaspberryDeviceEntity;
 import org.touchhome.bundle.raspberry.fs.RaspberryFileSystem;
 import org.touchhome.common.fs.FileSystemProvider;
 import org.touchhome.common.fs.TreeNode;

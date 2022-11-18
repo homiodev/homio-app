@@ -61,6 +61,11 @@ public class WidgetSliderEntity extends WidgetBaseEntityAndSeries<WidgetSliderEn
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     super.beforePersist();
     setLayout(UIFieldLayout.LayoutBuilder.builder(15, 20, 50, 15).addRow(rb -> rb

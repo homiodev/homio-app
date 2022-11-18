@@ -28,6 +28,11 @@ public class WidgetVideoEntity extends WidgetBaseEntityAndSeries<WidgetVideoEnti
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     super.beforePersist();
     setBh(3);

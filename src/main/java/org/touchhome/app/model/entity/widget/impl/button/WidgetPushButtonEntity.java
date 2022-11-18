@@ -50,6 +50,11 @@ public class WidgetPushButtonEntity extends WidgetBaseEntityAndSeries<WidgetPush
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     super.beforePersist();
     setLayout(UIFieldLayout.LayoutBuilder.builder(30, 70).addRow(rb -> rb

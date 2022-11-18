@@ -60,6 +60,11 @@ public class WidgetBarTimeChartEntity
     return PREFIX;
   }
 
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
+
   public enum BarChartType {
     Horizontal, Vertical
   }

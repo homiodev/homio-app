@@ -7,9 +7,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -18,28 +20,58 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.manager.BundleService;
 import org.touchhome.app.repository.device.WorkspaceRepository;
 import org.touchhome.app.setting.system.SystemClearWorkspaceButtonSetting;
 import org.touchhome.app.spring.ContextRefreshed;
+import org.touchhome.app.workspace.block.Scratch3Space;
+import org.touchhome.app.workspace.block.core.Scratch3ControlBlocks;
+import org.touchhome.app.workspace.block.core.Scratch3DataBlocks;
+import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
+import org.touchhome.app.workspace.block.core.Scratch3MiscBlocks;
+import org.touchhome.app.workspace.block.core.Scratch3MutatorBlocks;
+import org.touchhome.app.workspace.block.core.Scratch3OperatorBlocks;
+import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.api.workspace.WorkspaceEventListener;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.hardware.Scratch3HardwareBlocks;
+import org.touchhome.bundle.http.Scratch3NetworkBlocks;
+import org.touchhome.bundle.media.Scratch3AudioBlocks;
+import org.touchhome.bundle.media.Scratch3ImageEditBlocks;
+import org.touchhome.bundle.ui.Scratch3UIBlocks;
+import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
 
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class WorkspaceManager implements ContextRefreshed {
+public class WorkspaceService implements ContextRefreshed {
+
+  private static final Pattern ID_PATTERN = Pattern.compile("[\\w-_]*");
+
+  private static final List<Class<?>> systemScratches = Arrays.asList(Scratch3ControlBlocks.class, Scratch3MiscBlocks.class,
+      Scratch3DataBlocks.class, Scratch3EventsBlocks.class, Scratch3OperatorBlocks.class, Scratch3MutatorBlocks.class);
+
+  private static final List<Class<?>> inlineScratches = Arrays.asList(Scratch3AudioBlocks.class,
+      Scratch3NetworkBlocks.class, Scratch3HardwareBlocks.class, Scratch3UIBlocks.class, Scratch3ImageEditBlocks.class);
 
   private final Duration TIME_WAIT_OLD_WORKSPACE = Duration.ofSeconds(3);
   private final Set<String> ONCE_EXECUTION_BLOCKS = new HashSet<>(Arrays.asList("boolean_link", "group_variable_link"));
-  private final EntityContext entityContext;
   // tab <-> list of top blocks
   private final Map<String, WorkspaceTabHolder> tabs = new HashMap<>();
   private Collection<WorkspaceEventListener> workspaceEventListeners;
   private Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
+
+  @Getter
+  private final Set<Scratch3ExtensionImpl> extensions = new HashSet<>();
+
+  // constructor parameters
+  private final EntityContext entityContext;
+  private final BundleService bundleService;
 
   @Override
   public void onContextRefresh() {
@@ -47,6 +79,7 @@ public class WorkspaceManager implements ContextRefreshed {
         .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
     workspaceEventListeners = entityContext.getBeansOfType(WorkspaceEventListener.class);
 
+    loadExtensions();
     loadWorkspace();
   }
 
@@ -244,6 +277,57 @@ public class WorkspaceManager implements ContextRefreshed {
       this.scratch3Blocks = scratch3Blocks;
       this.entityContext = entityContext;
       this.broadcastLockManager = new BroadcastLockManagerImpl(tabId);
+    }
+  }
+
+  public void registerScratch3Extension(Scratch3ExtensionBlocks scratch3ExtensionBlock) {
+    initScratch3ExtensionBlocks(scratch3ExtensionBlock);
+  }
+
+  private void loadExtensions() {
+    for (Scratch3ExtensionBlocks scratch3ExtensionBlock : entityContext.getBeansOfType(Scratch3ExtensionBlocks.class)) {
+      initScratch3ExtensionBlocks(scratch3ExtensionBlock);
+    }
+  }
+
+  private void initScratch3ExtensionBlocks(Scratch3ExtensionBlocks scratch3ExtensionBlock) {
+    scratch3ExtensionBlock.init();
+
+    if (!ID_PATTERN.matcher(scratch3ExtensionBlock.getId()).matches()) {
+      throw new IllegalArgumentException(
+          "Wrong Scratch3Extension: <" + scratch3ExtensionBlock.getId() + ">. Must contains [a-z] or '-'");
+    }
+
+    if (!systemScratches.contains(scratch3ExtensionBlock.getClass())) {
+      BundleEntrypoint bundleEntrypoint = bundleService.findBundle(scratch3ExtensionBlock.getId());
+      if (bundleEntrypoint == null && scratch3ExtensionBlock.getId().contains("-")) {
+        String tryId = scratch3ExtensionBlock.getId().substring(0, scratch3ExtensionBlock.getId().indexOf("-"));
+        bundleEntrypoint = bundleService.findBundle(tryId);
+      }
+      int order = Integer.MAX_VALUE;
+      if (bundleEntrypoint == null) {
+        if (!inlineScratches.contains(scratch3ExtensionBlock.getClass())) {
+          throw new ServerException("Unable to find bundle context with id: " + scratch3ExtensionBlock.getId());
+        }
+      } else {
+        order = bundleEntrypoint.order();
+      }
+      Scratch3ExtensionImpl scratch3ExtensionImpl = new Scratch3ExtensionImpl(scratch3ExtensionBlock, order);
+
+      if (!extensions.contains(scratch3ExtensionImpl)) {
+        insertScratch3Spaces(scratch3ExtensionBlock);
+      }
+      extensions.add(scratch3ExtensionImpl);
+    }
+  }
+
+  private void insertScratch3Spaces(Scratch3ExtensionBlocks scratch3ExtensionBlock) {
+    ListIterator scratch3BlockListIterator = scratch3ExtensionBlock.getBlocks().listIterator();
+    while (scratch3BlockListIterator.hasNext()) {
+      Scratch3Block scratch3Block = (Scratch3Block) scratch3BlockListIterator.next();
+      if (scratch3Block.getSpaceCount() > 0) {
+        scratch3BlockListIterator.add(new Scratch3Space(scratch3Block.getSpaceCount()));
+      }
     }
   }
 }

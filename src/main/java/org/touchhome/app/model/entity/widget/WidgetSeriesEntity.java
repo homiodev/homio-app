@@ -34,8 +34,7 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries> ex
   @ManyToOne(fetch = FetchType.LAZY, targetEntity = WidgetBaseEntityAndSeries.class)
   private T widgetEntity;
 
-  @Lob
-  @Column(length = 1000_000)
+  @Column(length = 65535)
   @Convert(converter = JSONObjectConverter.class)
   private JSONObject jsonData = new JSONObject();
 

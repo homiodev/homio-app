@@ -15,4 +15,9 @@ public class DeviceFallbackEntity extends DeviceBaseEntity<DeviceFallbackEntity>
   public String getEntityPrefix() {
     return "misc_fallback";
   }
+
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 }

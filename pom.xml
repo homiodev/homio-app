@@ -300,6 +300,12 @@
 
     <dependency>
       <groupId>org.touchhome.bundle.extra</groupId>
+      <artifactId>touchhome-bundle-rabbitmq</artifactId>
+      <version>1.3.0-SNAPSHOT</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.touchhome.bundle.extra</groupId>
       <artifactId>touchhome-bundle-gcloud_tts</artifactId>
       <version>1.3.0-SNAPSHOT</version>
     </dependency>
@@ -532,12 +538,6 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-thymeleaf</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.pi4j</groupId>
-      <artifactId>pi4j-core</artifactId>
       <scope>compile</scope>
     </dependency>
 

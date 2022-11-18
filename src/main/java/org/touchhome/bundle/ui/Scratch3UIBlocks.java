@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.setting.SendBroadcastSetting;
-import org.touchhome.app.workspace.WorkspaceManager;
+import org.touchhome.app.workspace.WorkspaceService;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.util.NotificationLevel;
@@ -26,7 +26,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
   private final Scratch3EventsBlocks scratch3EventsBlocks;
 
   public Scratch3UIBlocks(EntityContext entityContext, Scratch3EventsBlocks scratch3EventsBlocks,
-      WorkspaceManager workspaceManager) {
+      WorkspaceService workspaceService) {
     super("#7C4B96", entityContext, null, "ui");
     this.scratch3EventsBlocks = scratch3EventsBlocks;
 
@@ -59,7 +59,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
     entityContext.setting().listenValue(SendBroadcastSetting.class, "listen-ui-header-click", json -> {
       String workspaceEntityID = json.getString("entityID");
-      WorkspaceBlock workspaceBlock = workspaceManager.getWorkspaceBlockById(workspaceEntityID);
+      WorkspaceBlock workspaceBlock = workspaceService.getWorkspaceBlockById(workspaceEntityID);
       if (workspaceBlock != null) {
         String broadcastID = workspaceBlock.getInputString("BROADCAST");
         scratch3EventsBlocks.fireBroadcastEvent(broadcastID);

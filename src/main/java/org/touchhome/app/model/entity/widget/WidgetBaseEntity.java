@@ -41,20 +41,25 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
   @ManyToOne(fetch = FetchType.LAZY)
   private WidgetTabEntity widgetTabEntity;
+
   @Getter
   private int xb = 0;
+
   @Getter
   private int yb = 0;
+
   @Getter
   private int bw = 1;
+
   @Getter
   private int bh = 1;
-  @Lob
-  @Column(length = 1000_000)
+
+  @Column(length = 65535)
   @Convert(converter = JSONObjectConverter.class)
   private JSONObject jsonData = new JSONObject();
+
   @Lob
-  @Column(length = 100_000)
+  @Column(length = 1000_000)
   private byte[] backgroundImage;
 
   /**

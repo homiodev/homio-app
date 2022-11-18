@@ -45,6 +45,11 @@ public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDo
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     if (!getJsonData().has("chartC")) {
       setChartColor(UI.Color.random());

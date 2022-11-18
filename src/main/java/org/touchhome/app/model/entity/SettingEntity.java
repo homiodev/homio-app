@@ -33,53 +33,72 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
 
   public static final String PREFIX = "st_";
 
-  @Lob
-  @Column(length = 1000_000)
+  @Column(length = 65535)
   private String value;
+
   @Transient
   private String color;
+
   @Transient
   private String defaultValue;
+
   @Transient
   private String groupKey;
+
   @Transient
   private String groupIcon;
+
   @Transient
   private String subGroupKey;
+
   @Transient
   private boolean visible;
+
   @Transient
   private Set<String> pages;
+
   @Transient
   private Set<ConsolePlugin.RenderType> renderTypes;
+
   @Transient
   private int order;
+
   @Transient
   private boolean advanced;
+
   @Transient
   private boolean lazyLoad;
+
   @Transient
   private boolean storable;
+
   @Transient
   private Collection<OptionModel> availableValues;
+
   @Transient
   private String icon;
+
   @Transient
   private String toggleIcon;
+
   @Transient
   private String settingType;
+
   @Transient
   private Boolean reverted;
+
   @Transient
   private Boolean disabled;
+
   @Transient
   private Boolean required;
+
   @Transient
   private JSONObject parameters;
-  @Lob
+
   @Getter
   @JsonIgnore
-  @Column(length = 1000_000)
+  @Column(length = 65535)
   @Convert(converter = JSONObjectConverter.class)
   private JSONObject jsonData = new JSONObject();
 
@@ -125,6 +144,11 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
   @Override
   public String getEntityPrefix() {
     return PREFIX;
+  }
+
+  @Override
+  public String getDefaultName() {
+    return null;
   }
 
   @Override

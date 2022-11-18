@@ -1,6 +1,5 @@
 package org.touchhome.app.service.ssh;
 
-import com.pi4j.system.SystemInfo;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.concurrent.CountDownLatch;
@@ -15,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.service.SshProviderService;
+import org.touchhome.bundle.api.util.BoardInfo;
 import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.Curl;
 
@@ -91,7 +91,7 @@ public class TmateSshProvider implements SshProviderService {
       networkHardwareRepository.generateSSHKeys();
     }
     if (sshHardwareRepository.getTmateVersion() == null) {
-      if ("7".equals(SystemInfo.getCpuArchitecture())) {
+      if ("7".equals(BoardInfo.cpuArchitecture)) {
         sshHardwareRepository.installTmate("arm32v7");
       }
 

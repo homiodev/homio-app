@@ -43,6 +43,11 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     if (!getJsonData().has("chartC")) {
       setChartColor(UI.Color.random());

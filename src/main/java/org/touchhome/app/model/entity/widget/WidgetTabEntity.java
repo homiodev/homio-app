@@ -31,6 +31,11 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> implement
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void validate() {
     if (getName() == null || getName().length() < 2 || getName().length() > 10) {
       throw new ServerException("Widget tab name must be between 2..10 characters");

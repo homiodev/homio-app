@@ -60,6 +60,11 @@ public class WidgetBarChartEntity extends ChartBaseEntity<WidgetBarChartEntity, 
     return PREFIX;
   }
 
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
+
   public enum BarChartType {
     Horizontal, Vertical
   }

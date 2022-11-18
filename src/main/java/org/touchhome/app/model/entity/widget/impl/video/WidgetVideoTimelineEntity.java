@@ -60,6 +60,11 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     super.beforePersist();
     setBh(4);

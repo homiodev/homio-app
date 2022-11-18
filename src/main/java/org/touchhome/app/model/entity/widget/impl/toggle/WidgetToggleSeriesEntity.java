@@ -112,6 +112,11 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     HasIcon.randomColor(this);
     if (!getJsonData().has("color")) {

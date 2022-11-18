@@ -60,4 +60,9 @@ public class WidgetDoughnutChartEntity extends ChartBaseEntity<WidgetDoughnutCha
   public String getEntityPrefix() {
     return PREFIX;
   }
+
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 }

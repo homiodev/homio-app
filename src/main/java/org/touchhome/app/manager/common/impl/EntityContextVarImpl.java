@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.codehaus.plexus.util.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.var.WorkspaceGroup;
 import org.touchhome.app.manager.var.WorkspaceVariable;
@@ -31,7 +32,7 @@ public class EntityContextVarImpl implements EntityContextVar {
   private final EntityContextImpl entityContext;
 
   public static void createBroadcastGroup(EntityContext entityContext) {
-    entityContext.var().createGroup("broadcasts", "Broadcasts", false, "fas fa-tower-broadcast", "#A32677", null);
+    entityContext.var().createGroup("broadcasts", "Broadcasts", false, "fas fa-tower-broadcast", "#A32677");
   }
 
   public void onContextCreated() {
@@ -54,14 +55,14 @@ public class EntityContextVarImpl implements EntityContextVar {
   }
 
   @Override
-  public Object get(String variableId) {
+  public Object get(@NotNull String variableId) {
     WorkspaceVariableMessage latest = getOrCreateContext(variableId).service.getLatest();
     return latest == null ? null : latest.getValue();
   }
 
   @SneakyThrows
   @Override
-  public void set(String variableId, Object value) {
+  public void set(@NotNull String variableId, Object value) {
     if (value == null) {
       return;
     }
@@ -96,40 +97,53 @@ public class EntityContextVarImpl implements EntityContextVar {
   }
 
   @Override
-  public String getTitle(String variableId, String defaultTitle) {
+  public String getTitle(@NotNull String variableId, String defaultTitle) {
     WorkspaceVariable variable = entityContext.getEntity(WorkspaceVariable.PREFIX + getVariableId(variableId));
     return variable == null ? defaultTitle : variable.getTitle();
   }
 
   @Override
-  public long count(String variableId) {
+  public long count(@NotNull String variableId) {
     return getOrCreateContext(variableId).service.count();
   }
 
   @Override
-  public boolean exists(String variableId) {
+  public boolean exists(@NotNull String variableId) {
     return globalVarStorageMap.containsKey(getVariableId(variableId));
   }
 
   @Override
-  public String createVariable(String groupId, String variableId, String variableName, VariableType variableType) {
-    WorkspaceVariable entity = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
+  public String createVariable(@NotNull String groupId, String variableId, @NotNull String variableName,
+      @NotNull VariableType variableType, String description, String color) {
+    WorkspaceVariable entity = variableId == null ? null : entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
+    String varId = StringUtils.defaultString(variableId, String.valueOf(System.currentTimeMillis()));
+
     if (entity == null) {
+      WorkspaceGroup groupEntity = entityContext.getEntity(WorkspaceGroup.PREFIX + groupId);
+      if (groupEntity == null) {
+        throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
+      }
       entity = entityContext.save(new WorkspaceVariable()
-          .computeEntityID(() -> variableId)
+          .computeEntityID(() -> varId)
           .setName(variableName)
+          .setDescription(description)
           .setRestriction(variableType)
-          .setVariableId(variableId)
-          .setWorkspaceGroup(entityContext.getEntity(WorkspaceGroup.PREFIX + groupId)));
+          .setColor(color)
+          .setVariableId(varId)
+          .setWorkspaceGroup(groupEntity));
     }
     return entity.getVariableId();
   }
 
   @Override
-  public boolean createGroup(String groupId, String groupName, boolean locked, String icon, String iconColor, String description) {
+  public boolean createGroup(@NotNull String groupId, @NotNull String groupName, boolean locked, @NotNull String icon, @NotNull String iconColor, String description) {
     if (entityContext.getEntity(WorkspaceGroup.PREFIX + groupId) == null) {
-      entityContext.save(new WorkspaceGroup().setGroupId(groupId).setLocked(locked)
-          .setName(groupName).setIcon(icon).setIconColor(iconColor).setDescription(description));
+      entityContext.save(new WorkspaceGroup()
+          .setGroupId(groupId).setLocked(locked)
+          .setName(groupName)
+          .setIcon(icon)
+          .setIconColor(iconColor)
+          .setDescription(description));
       return true;
     }
     return false;

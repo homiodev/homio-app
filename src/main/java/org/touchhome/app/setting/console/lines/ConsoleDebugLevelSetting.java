@@ -13,7 +13,7 @@ public class ConsoleDebugLevelSetting implements ConsoleSettingPlugin<Boolean>, 
 
   @Override
   public boolean defaultValue() {
-    return true;
+    return false;
   }
 
   @Override

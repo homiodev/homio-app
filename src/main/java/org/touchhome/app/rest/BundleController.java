@@ -68,10 +68,6 @@ public class BundleController {
     return bundles;
   }
 
-  public BundleEntrypoint getBundle(String id) {
-    return bundleService.getBundles().stream().filter(s -> s.getBundleId().equals(id)).findAny().orElse(null);
-  }
-
   @Getter
   @RequiredArgsConstructor
   static class BundleJson implements Comparable<BundleJson> {

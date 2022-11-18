@@ -1,5 +1,7 @@
 package org.touchhome.app.model.rest;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import java.util.Objects;
 import javax.validation.constraints.NotNull;
 import lombok.Getter;
@@ -11,6 +13,7 @@ public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
 
   private String label;
   private Boolean readOnly;
+  private Boolean disableEdit;
   private Boolean hideOnEmpty;
   private Boolean revert;
   private Boolean onlyEdit;

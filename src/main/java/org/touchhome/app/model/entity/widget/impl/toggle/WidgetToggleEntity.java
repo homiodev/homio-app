@@ -57,6 +57,11 @@ public class WidgetToggleEntity extends WidgetBaseEntityAndSeries<WidgetToggleEn
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     super.beforePersist();
     setLayout(UIFieldLayout.LayoutBuilder.builder(10, 60, 30).addRow(rb -> rb

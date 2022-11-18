@@ -36,4 +36,9 @@ public class WidgetFMSeriesEntity extends WidgetSeriesEntity<WidgetFMEntity>
   public AggregationType getAggregationType() {
     throw new ProhibitedExecution();
   }
+
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 }

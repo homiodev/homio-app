@@ -78,11 +78,11 @@ import org.touchhome.bundle.api.entity.ImageEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.dependency.RequireExecutableDependency;
 import org.touchhome.bundle.api.model.ActionResponseModel;
+import org.touchhome.bundle.api.model.HasEntityLog;
 import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.service.EntityService;
-import org.touchhome.bundle.api.ui.UIEntityLogs;
 import org.touchhome.bundle.api.ui.UISidebarButton;
 import org.touchhome.bundle.api.ui.UISidebarChildren;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
@@ -269,7 +269,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         itemContexts.add(new ItemContext(
             classType.getSimpleName(),
-            classType.isAnnotationPresent(UIEntityLogs.class),
+            HasEntityLog.class.isAssignableFrom(classType),
             entityUIMetaData,
             actions));
       }
@@ -295,6 +295,18 @@ public class ItemController implements ContextCreated, ContextRefreshed {
       list.add(getUISideBarMenuOption(aClass));
     }
     return list;
+  }
+
+  @PostMapping(value = "/{entityID}/logs/debug/{value}")
+  public void setEntityDebugLogLevel(@PathVariable("entityID") String entityID, @PathVariable("value") boolean debug) {
+    BaseEntity entity = entityContext.getEntity(entityID);
+    if (entity instanceof HasEntityLog) {
+      HasEntityLog hasEntityLog = (HasEntityLog) entity;
+      if (hasEntityLog.isDebug() != debug) {
+        hasEntityLog.setDebug(debug);
+        entityContext.save(entity);
+      }
+    }
   }
 
   @GetMapping(value = "/{entityID}/logs")

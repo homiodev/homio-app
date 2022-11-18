@@ -6,8 +6,8 @@ import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
+import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 
 public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue, HasTimePeriod {
 
@@ -107,7 +107,16 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
   }
 
   enum PointStyle {
-    circle, cross, crossRot, dash, line, rect, rectRounded, rectRot, star, triangle;
+    circle,
+    cross,
+    crossRot,
+    dash,
+    line,
+    rect,
+    rectRounded,
+    rectRot,
+    star,
+    triangle
   }
 
   enum Stepped {
@@ -115,7 +124,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     True,
     Before,
     After,
-    Middle;
+    Middle
   }
 
   enum Fill {

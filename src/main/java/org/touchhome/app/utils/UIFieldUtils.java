@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -61,7 +60,6 @@ import org.touchhome.bundle.api.ui.field.UIFieldNumber;
 import org.touchhome.bundle.api.ui.field.UIFieldPort;
 import org.touchhome.bundle.api.ui.field.UIFieldPosition;
 import org.touchhome.bundle.api.ui.field.UIFieldProgress;
-import org.touchhome.bundle.api.ui.field.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.UIFieldTableLayout;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
@@ -78,6 +76,8 @@ import org.touchhome.bundle.api.ui.field.color.UIFieldColorMatch;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorRef;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorSource;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorStatusMatch;
+import org.touchhome.bundle.api.ui.field.condition.UIFieldDisableEditOnCondition;
+import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImage;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImageSrc;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
@@ -211,35 +211,21 @@ public class UIFieldUtils {
     }
 
     entityUIMetaData.setLabel(trimToNull(uiField.label()));
-    if (uiField.inlineEdit()) {
-      entityUIMetaData.setInlineEdit(true);
-    }
-    if (uiField.copyButton()) {
-      entityUIMetaData.setCopyButton(true);
-    }
-    if (uiField.inlineEditWhenEmpty()) {
-      entityUIMetaData.setInlineEditWhenEmpty(true);
-    }
     entityUIMetaData.setColor(trimToNull(uiField.color()));
     entityUIMetaData.setIcon(trimToNull(uiField.icon()));
+    entityUIMetaData.setInlineEdit(nullIfFalse(uiField.inlineEdit()));
+    entityUIMetaData.setCopyButton(nullIfFalse(uiField.copyButton()));
+    entityUIMetaData.setInlineEditWhenEmpty(nullIfFalse(uiField.inlineEditWhenEmpty()));
+    entityUIMetaData.setReadOnly(nullIfFalse(uiField.readOnly()));
+    entityUIMetaData.setDisableEdit(nullIfFalse(uiField.disableEdit()));
+    entityUIMetaData.setHideOnEmpty(nullIfFalse(uiField.hideOnEmpty()));
+    entityUIMetaData.setRevert(nullIfFalse(uiField.isRevert()));
+    entityUIMetaData.setOnlyEdit(nullIfFalse(uiField.onlyEdit()));
 
-    if (uiField.readOnly()) {
-      entityUIMetaData.setReadOnly(true);
-    }
-    if (uiField.hideOnEmpty()) {
-      entityUIMetaData.setHideOnEmpty(true);
-    }
-    if (uiField.isRevert()) {
-      entityUIMetaData.setRevert(true);
-    }
-    if (uiField.onlyEdit()) {
-      entityUIMetaData.setOnlyEdit(true);
-    }
     entityUIMetaData.setStyle(uiField.style());
     entityUIMetaData.setDefaultValue(uiFieldContext.getDefaultValue(instance));
 
-    ObjectMapper mapper = CommonUtils.OBJECT_MAPPER;
-    ObjectNode jsonTypeMetadata = mapper.createObjectNode();
+    ObjectNode jsonTypeMetadata = CommonUtils.OBJECT_MAPPER.createObjectNode();
 
     if (uiField.type().equals(UIFieldType.AutoDetect)) {
       if (type.isEnum() || uiFieldContext.isAnnotationPresent(UIFieldTreeNodeSelection.class) ||
@@ -360,6 +346,10 @@ public class UIFieldUtils {
     if (uiFieldShowOnCondition != null) {
       jsonTypeMetadata.put("showCondition", uiFieldShowOnCondition.value());
     }
+    UIFieldDisableEditOnCondition disableEditOnCondition = uiFieldContext.getDeclaredAnnotation(UIFieldDisableEditOnCondition.class);
+    if (disableEditOnCondition != null) {
+      jsonTypeMetadata.put("disableEditCondition", disableEditOnCondition.value());
+    }
 
     UIFieldGroup uiFieldGroup = uiFieldContext.getDeclaredAnnotation(UIFieldGroup.class);
     if (uiFieldGroup != null) {
@@ -464,7 +454,7 @@ public class UIFieldUtils {
       JSONObject colors = new JSONObject();
       colors.put("true", uiFieldColorBooleanMatch.False());
       colors.put("false", uiFieldColorBooleanMatch.True());
-      jsonTypeMetadata.put("valueColor", OBJECT_MAPPER.valueToTree(colors));
+      jsonTypeMetadata.set("valueColor", OBJECT_MAPPER.valueToTree(colors));
     }
 
     UIFieldColorRef uiFieldColorRef = uiFieldContext.getDeclaredAnnotation(UIFieldColorRef.class);
@@ -491,7 +481,7 @@ public class UIFieldUtils {
       selectValueOnEmpty.put("color", uiFieldSelectValueOnEmpty.color());
       selectValueOnEmpty.put("label", uiFieldSelectValueOnEmpty.label());
       selectValueOnEmpty.put("icon", uiFieldSelectValueOnEmpty.icon());
-      jsonTypeMetadata.put("selectValueOnEmpty", selectValueOnEmpty);
+      jsonTypeMetadata.set("selectValueOnEmpty", selectValueOnEmpty);
     }
 
     UIFieldSelectNoValue uiFieldSelectNoValue = uiFieldContext.getDeclaredAnnotation(UIFieldSelectNoValue.class);
@@ -544,13 +534,16 @@ public class UIFieldUtils {
 
     UIFieldInlineEntityWidth uiFieldInlineEntityWidth = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntityWidth.class);
     if (uiFieldInlineEntityWidth != null) {
-      jsonTypeMetadata.put("inlineEditWidth", uiFieldInlineEntityWidth.editWidth());
-      jsonTypeMetadata.put("inlineViewWidth", uiFieldInlineEntityWidth.viewWidth());
+      if (uiFieldInlineEntityWidth.editWidth() >= 0) {
+        jsonTypeMetadata.put("inlineEditWidth", uiFieldInlineEntityWidth.editWidth());
+      }
+      if (uiFieldInlineEntityWidth.viewWidth() >= 0) {
+        jsonTypeMetadata.put("inlineViewWidth", uiFieldInlineEntityWidth.viewWidth());
+      }
     }
 
     UIFieldInlineEntity uiFieldInline = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntity.class);
     if (uiFieldInline != null) {
-
       if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
         Type inlineType =
             extractSetEntityType(instance, uiFieldContext, entityUIMetaData, (ParameterizedType) genericType,
@@ -560,9 +553,12 @@ public class UIFieldUtils {
 
         jsonTypeMetadata.set("inlineTypeFields",
             OBJECT_MAPPER.valueToTree(UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext)));
-        entityUIMetaData.setStyle("height: 100%; padding: 0; background: " + uiFieldInline.bg() + ";");
+        entityUIMetaData.setStyle("padding: 0; background: " + uiFieldInline.bg() + ";");
         jsonTypeMetadata.put("fw", true);
         jsonTypeMetadata.put("addRow", uiFieldInline.addRow());
+        jsonTypeMetadata.put("addRowCondition", uiFieldInline.addRowCondition());
+        jsonTypeMetadata.put("delRowCondition", uiFieldInline.removeRowCondition());
+        jsonTypeMetadata.put("noContentTitle", uiFieldInline.noContentTitle());
         jsonTypeMetadata.put("showInGeneral", true);
       } else {
         throw new IllegalStateException(
@@ -588,12 +584,16 @@ public class UIFieldUtils {
     entityUIMetaDataList.add(entityUIMetaData);
   }
 
+  private static Boolean nullIfFalse(boolean value) {
+    return value ? true : null;
+  }
+
   private static Type extractSetEntityType(Object instance, UIFieldContext uiFieldContext, EntityUIMetaData entityUIMetaData,
       ParameterizedType genericType, ObjectNode jsonTypeMetadata) {
     Type typeArgument = genericType.getActualTypeArguments()[0];
     if (!trySetListType(typeArgument, entityUIMetaData, uiFieldContext, jsonTypeMetadata)) {
       typeArgument = findClassGenericClass(typeArgument, instance);
-      if (!trySetListType(typeArgument, entityUIMetaData, uiFieldContext, jsonTypeMetadata)) {
+      if (typeArgument != null && !trySetListType(typeArgument, entityUIMetaData, uiFieldContext, jsonTypeMetadata)) {
         entityUIMetaData.setType(UIFieldType.Chips.name());
         jsonTypeMetadata.put("type", ((Class) typeArgument).getSimpleName());
       } else {

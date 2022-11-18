@@ -69,6 +69,11 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     if (!getJsonData().has("btnClr")) {
       setButtonColor(UI.Color.random());

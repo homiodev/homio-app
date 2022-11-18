@@ -11,6 +11,8 @@ import javax.imageio.ImageIO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
+import org.touchhome.app.manager.common.EntityContextImpl;
+import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.app.utils.color.ColorThief;
 import org.touchhome.app.utils.color.MMCQ;
@@ -22,13 +24,18 @@ import org.touchhome.common.exception.NotFoundException;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class BundleService implements ContextRefreshed {
+public class BundleService implements ContextCreated, ContextRefreshed {
 
   // constructor parameters
   private final EntityContext entityContext;
   private Map<String, String> bundleColorMap;
   private Map<String, BundleEntrypoint> bundleMap;
   private Collection<BundleEntrypoint> bundleEntrypoints;
+
+  @Override
+  public void onContextCreated(EntityContextImpl entityContext) throws Exception {
+    onContextRefresh();
+  }
 
   @Override
   public void onContextRefresh() throws Exception {
@@ -49,6 +56,10 @@ public class BundleService implements ContextRefreshed {
         throw ex;
       }
     }
+  }
+
+  public BundleEntrypoint findBundle(String bundleID) {
+    return bundleMap.get(bundleID);
   }
 
   public BundleEntrypoint getBundle(String bundleID) {

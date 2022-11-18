@@ -153,4 +153,9 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
   public String getEntityPrefix() {
     return PREFIX;
   }
+
+  @Override
+  public String getDefaultName() {
+    return "Script";
+  }
 }

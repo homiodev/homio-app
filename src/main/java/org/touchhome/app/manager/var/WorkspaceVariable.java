@@ -13,7 +13,6 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import lombok.Getter;
 import lombok.Setter;
@@ -38,10 +37,12 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldInlineEntityWidth;
 import org.touchhome.bundle.api.ui.field.UIFieldProgress;
-import org.touchhome.bundle.api.ui.field.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
+import org.touchhome.bundle.api.ui.field.color.UIFieldColorRef;
+import org.touchhome.bundle.api.ui.field.color.UIFieldColorSource;
+import org.touchhome.bundle.api.ui.field.condition.UIFieldDisableEditOnCondition;
+import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent;
-import org.touchhome.common.util.CommonUtils;
 import org.touchhome.common.util.Lang;
 
 @Entity
@@ -54,24 +55,55 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
     UIFieldSelectionParent.SelectionParent, HasTimeValueSeries, HasGetStatusValue, HasSetStatusValue {
 
   public static final String PREFIX = "wgv_";
-  @UIField(order = 12)
-  @UIFieldInlineEntityWidth(viewWidth = 20, editWidth = 20)
+
+  @Override
+  @UIField(order = 10, required = true)
+  @UIFieldColorRef("color")
+  @UIFieldInlineEntityWidth(viewWidth = 18, editWidth = 20)
+  @UIFieldDisableEditOnCondition("return context.getParent('locked')")
+  public String getName() {
+    return super.getName();
+  }
+
+  @UIField(order = 12, color = "#7A7A7A")
+  @UIFieldDisableEditOnCondition("return context.getParent('locked')")
+  @UIFieldInlineEntityWidth(viewWidth = -1, editWidth = 25)
   public String description;
+
   @UIField(order = 20, label = "format")
   @Enumerated(EnumType.STRING)
-  @UIFieldShowOnCondition("return context.item.groupId === 'broadcasts'")
-  @UIFieldInlineEntityWidth(viewWidth = 20, editWidth = 20)
+  @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
+  @UIFieldDisableEditOnCondition("return context.getParent('locked')")
+  @UIFieldInlineEntityWidth(viewWidth = 15, editWidth = 20)
   public EntityContextVar.VariableType restriction = EntityContextVar.VariableType.Any;
+
   @UIField(order = 25)
-  @UIFieldSlider(min = 100, max = 100000, step = 100)
+  @UIFieldSlider(min = 500, max = 100000, step = 500)
   @UIFieldGroup(order = 10, value = "Quota")
-  @UIFieldInlineEntityWidth(viewWidth = 15, editWidth = 40)
+  @UIFieldInlineEntityWidth(viewWidth = 14, editWidth = -1)
   public int quota = 1000;
+
+  @UIField(order = 30, readOnly = true)
+  @UIFieldProgress
+  @UIFieldGroup("Quota")
+  @UIFieldInlineEntityWidth(viewWidth = 25, editWidth = 0)
+  public UIFieldProgress.Progress getUsedQuota() {
+    int count = 0;
+    if (getEntityID() != null && getEntityContext().var().exists(getEntityID())) {
+      count = (int) getEntityContext().var().count(getEntityID());
+    }
+    return new UIFieldProgress.Progress(count, this.quota);
+  }
+
   @Column(unique = true, nullable = false)
   public String variableId;
+
+  @UIFieldColorSource
+  public String color;
+
   @ManyToOne(fetch = FetchType.LAZY)
   private WorkspaceGroup workspaceGroup;
-  @Lob
+
   @Getter
   @Column(length = 10_000)
   @Convert(converter = JSONObjectConverter.class)
@@ -80,13 +112,6 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
   @Override
   public String getEntityPrefix() {
     return PREFIX;
-  }
-
-  @Override
-  @UIField(order = 10, required = true)
-  @UIFieldInlineEntityWidth(viewWidth = 20, editWidth = 20)
-  public String getName() {
-    return super.getName();
   }
 
   @Override
@@ -103,23 +128,15 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
     return super.getUpdateTime();
   }
 
-  @UIField(order = 30, readOnly = true)
-  @UIFieldProgress
-  @UIFieldGroup("Quota")
-  @SuppressWarnings("unused")
-  @UIFieldInlineEntityWidth(viewWidth = 25, editWidth = 0)
-  public UIFieldProgress.Progress getUsedQuota() {
-    int count = 0;
-    if (getEntityID() != null && getEntityContext().var().exists(getEntityID())) {
-      count = (int) getEntityContext().var().count(getEntityID());
-    }
-    return new UIFieldProgress.Progress(count, this.quota);
+  @Override
+  public String getDefaultName() {
+    return null;
   }
 
   @Override
   protected void beforePersist() {
-    setVariableId(defaultIfEmpty(variableId, CommonUtils.generateUUID()));
-    setEntityID(WorkspaceVariable.PREFIX + variableId);
+    setVariableId(defaultIfEmpty(variableId, "" + System.currentTimeMillis()));
+    computeEntityID(this::getVariableId);
   }
 
   @Override

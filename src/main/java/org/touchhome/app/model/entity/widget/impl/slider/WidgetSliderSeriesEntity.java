@@ -98,6 +98,11 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     HasIcon.randomColor(this);
     if (!getJsonData().has("sc")) {

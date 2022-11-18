@@ -1,7 +1,6 @@
 package org.touchhome.app.console;
 
 import com.fazecast.jSerialComm.SerialPort;
-import com.pi4j.system.SystemInfo;
 import com.pivovarit.function.ThrowingSupplier;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,6 +23,7 @@ import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.util.BoardInfo;
 import org.touchhome.bundle.cloud.setting.ConsoleCloudProviderSetting;
 
 @Component
@@ -49,7 +49,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     List<HardwarePluginEntity> list = new ArrayList<>();
 
     list.add(new HardwarePluginEntity("Cpu load", machineHardwareRepository.getCpuLoad()));
-    list.add(new HardwarePluginEntity("Cpu temperature", onLinux(SystemInfo::getCpuTemperature)));
+    list.add(new HardwarePluginEntity("Cpu temperature", onLinux(machineHardwareRepository::getCpuTemperature)));
     list.add(new HardwarePluginEntity("Ram memory", machineHardwareRepository.getMemory()));
     list.add(new HardwarePluginEntity("SD memory", toString(machineHardwareRepository.getSDCardMemory())));
     list.add(new HardwarePluginEntity("Uptime", machineHardwareRepository.getUptime()));
@@ -58,11 +58,10 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     list.add(new HardwarePluginEntity("Internet stat", toString(networkHardwareRepository.stat(activeNetworkInterface))));
     list.add(new HardwarePluginEntity("Network description",
         toString(networkHardwareRepository.getNetworkDescription(activeNetworkInterface))));
-    list.add(new HardwarePluginEntity("Cpu features", onLinux(SystemInfo::getCpuFeatures)));
     list.add(new HardwarePluginEntity("Cpu num", Runtime.getRuntime().availableProcessors()));
-    list.add(new HardwarePluginEntity("Java", SystemUtils.JAVA_RUNTIME_NAME));
     list.add(new HardwarePluginEntity("Os", "Name: " + SystemUtils.OS_NAME +
         ". Version: " + SystemUtils.OS_VERSION + ". Arch: " + SystemUtils.OS_ARCH));
+    list.add(new HardwarePluginEntity("Java", "Name: " + SystemUtils.JAVA_RUNTIME_NAME + ". Version: " + SystemUtils.JAVA_RUNTIME_VERSION));
 
     list.add(new HardwarePluginEntity("IP address", networkHardwareRepository.getIPAddress()));
     list.add(new HardwarePluginEntity("Device model",
@@ -72,6 +71,20 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     list.add(new HardwarePluginEntity("Cloud keystore",
         user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));
     list.add(new HardwarePluginEntity("Features", getFeatures()));
+
+    list.add(new HardwarePluginEntity("Board type", BoardInfo.boardType));
+    list.add(new HardwarePluginEntity("Processor", BoardInfo.processor));
+    list.add(new HardwarePluginEntity("BogoMIPS", BoardInfo.bogoMIPS));
+    list.add(new HardwarePluginEntity("Processor features", String.join(";", BoardInfo.features)));
+    list.add(new HardwarePluginEntity("Cpu implementor", BoardInfo.cpuImplementer));
+    list.add(new HardwarePluginEntity("Cpu architecture", BoardInfo.cpuArchitecture));
+    list.add(new HardwarePluginEntity("Cpu variant", BoardInfo.cpuVariant));
+    list.add(new HardwarePluginEntity("Cpu part", BoardInfo.cpuPart));
+    list.add(new HardwarePluginEntity("Cpu revision", BoardInfo.cpuRevision));
+    list.add(new HardwarePluginEntity("Cpu Hardware", BoardInfo.hardware));
+    list.add(new HardwarePluginEntity("Cpu Revision", BoardInfo.revision));
+    list.add(new HardwarePluginEntity("Cpu Serial", BoardInfo.serial));
+    list.add(new HardwarePluginEntity("Hostname", machineHardwareRepository.getHostname()));
 
     for (SerialPort serialPort : SerialPort.getCommPorts()) {
       list.add(new HardwarePluginEntity("Com port <" + serialPort.getSystemPortName() + ">",

@@ -39,6 +39,11 @@ public class CommonVideoStreamEntity extends BaseFFMPEGVideoStreamEntity<CommonV
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   public String toString() {
     return getIeeeAddress();
   }

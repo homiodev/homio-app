@@ -32,4 +32,9 @@ public class WidgetPieChartEntity extends ChartBaseEntity<WidgetPieChartEntity, 
   public String getEntityPrefix() {
     return PREFIX;
   }
+
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 }

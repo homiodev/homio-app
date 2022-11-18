@@ -22,6 +22,11 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     HasChartDataSource.randomColor(this);
   }

@@ -13,8 +13,8 @@ import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
-import org.touchhome.bundle.api.ui.field.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
+import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
 @Entity
@@ -83,6 +83,11 @@ public class WidgetDisplayEntity extends WidgetBaseEntityAndSeries<WidgetDisplay
 
   public void setChartType(ChartType value) {
     setJsonData("ct", value);
+  }
+
+  @Override
+  public String getDefaultName() {
+    return null;
   }
 
   @Override

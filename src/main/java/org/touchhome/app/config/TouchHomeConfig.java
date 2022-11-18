@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module;
 import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule;
-import com.pi4j.io.gpio.Pin;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -186,15 +185,6 @@ public class TouchHomeConfig implements WebMvcConfigurer, SchedulingConfigurer, 
       public void serialize(SecureString secureString, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
           throws IOException {
         jsonGenerator.writeString(secureString.toString());
-      }
-    });
-    simpleModule.addSerializer(Pin.class, new JsonSerializer<>() {
-      @Override
-      public void serialize(Pin pin, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
-          throws IOException {
-        jsonGenerator.writeStartObject();
-        jsonGenerator.writeStringField("name", pin.getName());
-        jsonGenerator.writeEndObject();
       }
     });
 

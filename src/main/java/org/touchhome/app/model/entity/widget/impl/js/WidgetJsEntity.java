@@ -65,6 +65,11 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
   }
 
   @Override
+  public String getDefaultName() {
+    return null;
+  }
+
+  @Override
   protected void beforePersist() {
     super.beforePersist();
     setJavaScriptParameters("{\"text\":\"Hello world!\"}");

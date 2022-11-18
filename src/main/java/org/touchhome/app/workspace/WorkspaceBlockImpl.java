@@ -27,7 +27,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.touchhome.app.workspace.WorkspaceManager.WorkspaceTabHolder;
+import org.touchhome.app.workspace.WorkspaceService.WorkspaceTabHolder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.entity.BaseEntity;

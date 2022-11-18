@@ -32,4 +32,8 @@ public class WidgetLineChartEntity extends ChartBaseEntity<WidgetLineChartEntity
     return HasChartDataSource.ChartType.line;
   }
 
+  @Override
+  public String getDefaultName() {
+    return null;
+  }
 }

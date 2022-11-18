@@ -102,8 +102,7 @@ import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.app.utils.HardwareUtils;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
-import org.touchhome.app.workspace.WorkspaceController;
-import org.touchhome.app.workspace.WorkspaceManager;
+import org.touchhome.app.workspace.WorkspaceService;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextVar;
@@ -128,7 +127,8 @@ import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
-import org.touchhome.bundle.raspberry.repository.RaspberryDeviceRepository;
+import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.raspberry.RaspberryDeviceRepository;
 import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
 import org.touchhome.bundle.zigbee.model.ZigBeeEndpointEntity;
 import org.touchhome.common.exception.NotFoundException;
@@ -152,6 +152,8 @@ public class EntityContextImpl implements EntityContext {
   private static Map<String, PureRepository> pureRepositories = new HashMap<>();
 
   static {
+    BEAN_CONTEXT_CREATED.add(BundleService.class);
+
     BEAN_CONTEXT_CREATED.add(LogService.class);
     BEAN_CONTEXT_CREATED.add(FileSystemController.class);
     BEAN_CONTEXT_CREATED.add(ItemController.class);
@@ -167,8 +169,7 @@ public class EntityContextImpl implements EntityContext {
     BEAN_CONTEXT_REFRESH.add(ConsoleController.class);
     BEAN_CONTEXT_REFRESH.add(SettingRepository.class);
     BEAN_CONTEXT_REFRESH.add(SettingController.class);
-    BEAN_CONTEXT_REFRESH.add(WorkspaceManager.class);
-    BEAN_CONTEXT_REFRESH.add(WorkspaceController.class);
+    BEAN_CONTEXT_REFRESH.add(WorkspaceService.class);
     BEAN_CONTEXT_REFRESH.add(ItemController.class);
     BEAN_CONTEXT_REFRESH.add(PortService.class);
     BEAN_CONTEXT_REFRESH.add(AudioService.class);
@@ -197,7 +198,7 @@ public class EntityContextImpl implements EntityContext {
   private AllDeviceRepository allDeviceRepository;
   private EntityManagerFactory entityManagerFactory;
   private PlatformTransactionManager transactionManager;
-  private WorkspaceManager workspaceManager;
+  private WorkspaceService workspaceService;
 
   @Getter
   private Map<String, InternalBundleContext> bundles = new LinkedHashMap<>();
@@ -236,7 +237,7 @@ public class EntityContextImpl implements EntityContext {
     this.entityManagerFactory = this.applicationContext.getBean(EntityManagerFactory.class);
     this.allDeviceRepository = this.applicationContext.getBean(AllDeviceRepository.class);
     this.transactionTemplate = new TransactionTemplate(transactionManager);
-    this.workspaceManager = applicationContext.getBean(WorkspaceManager.class);
+    this.workspaceService = applicationContext.getBean(WorkspaceService.class);
     this.entityManager = applicationContext.getBean(EntityManager.class);
 
     rebuildAllRepositories(applicationContext, true);
@@ -319,6 +320,11 @@ public class EntityContextImpl implements EntityContext {
   @Override
   public EntityContextVar var() {
     return entityContextVar;
+  }
+
+  @Override
+  public void registerScratch3Extension(Scratch3ExtensionBlocks scratch3ExtensionBlocks) {
+    workspaceService.registerScratch3Extension(scratch3ExtensionBlocks);
   }
 
   public EntityContextWidgetImpl widget() {
@@ -438,8 +444,11 @@ public class EntityContextImpl implements EntityContext {
         foundRepo == null && entity instanceof DeviceBaseEntity ? allDeviceRepository : foundRepo;
     EntityContextEventImpl.EntityListener entityUpdateListeners = this.event().getEntityUpdateListeners();
 
-    T oldEntity = entity.getEntityID() == null || !fireNotifyListeners ? null :
-        entityUpdateListeners.isRequireFetchOldEntity(entity) ? getEntity(entity.getEntityID(), false) : null;
+    String entityID = entity.getEntityID();
+    // for new entities entityID still null
+    T oldEntity = entityID == null ? null : getEntity(entityID, false);
+    /*entity.getEntityID() == null || !fireNotifyListeners ? null :
+        entityUpdateListeners.isRequireFetchOldEntity(entity) ? getEntity(entity.getEntityID(), false) : null;*/
 
     T updatedEntity = transactionTemplate.execute(status -> {
       T t = (T) repository.save(entity);
@@ -1001,7 +1010,7 @@ public class EntityContextImpl implements EntityContext {
   }
 
   public void fireAllBroadcastLock(Consumer<BroadcastLockManagerImpl> handler) {
-    this.workspaceManager.fireAllBroadcastLock(handler);
+    this.workspaceService.fireAllBroadcastLock(handler);
   }
 
   private String getInternalIpAddress() {
