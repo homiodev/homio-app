@@ -223,7 +223,11 @@ public class UIFieldUtils {
     entityUIMetaData.setOnlyEdit(nullIfFalse(uiField.onlyEdit()));
 
     entityUIMetaData.setStyle(uiField.style());
-    entityUIMetaData.setDefaultValue(uiFieldContext.getDefaultValue(instance));
+
+    // make sense keep defaultValue(for revert) only if able to edit value
+    if (!uiField.disableEdit() && !uiField.readOnly()) {
+      entityUIMetaData.setDefaultValue(uiFieldContext.getDefaultValue(instance));
+    }
 
     ObjectNode jsonTypeMetadata = CommonUtils.OBJECT_MAPPER.createObjectNode();
 
@@ -812,7 +816,12 @@ public class UIFieldUtils {
       if (methods.get(0).isAnnotationPresent(UIFieldIgnoreGetDefault.class)) {
         return null;
       }
-      return methods.get(0).invoke(instance);
+      try {
+        return methods.get(0).invoke(instance);
+      } catch (Exception ex) {
+        throw new RuntimeException("Unable to evaluate default value for method: " + methods.get(0).getName() +
+            " of instance: " + instance.getClass().getSimpleName());
+      }
     }
 
     @Override

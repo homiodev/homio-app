@@ -17,6 +17,7 @@ import lombok.SneakyThrows;
 import org.apache.commons.lang3.SystemUtils;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.console.ConsolePluginTable;
 import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
@@ -65,7 +66,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
 
     list.add(new HardwarePluginEntity("IP address", networkHardwareRepository.getIPAddress()));
     list.add(new HardwarePluginEntity("Device model",
-        EntityContext.isLinuxEnvironment() ? machineHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
+        EntityContextSetting.isLinuxEnvironment() ? machineHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
     list.add(new HardwarePluginEntity("Cloud status",
         this.entityContext.setting().getValue(ConsoleCloudProviderSetting.class).getStatus()));
     list.add(new HardwarePluginEntity("Cloud keystore",
@@ -102,7 +103,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
   }
 
   private Object onLinux(ThrowingSupplier<Object, Exception> supplier) throws Exception {
-    return EntityContext.isLinuxEnvironment() ? supplier.get() : "N/A";
+    return EntityContextSetting.isLinuxEnvironment() ? supplier.get() : "N/A";
   }
 
   private String getFeatures() {

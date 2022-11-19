@@ -4,6 +4,7 @@
     "VARIABLE_GET_STATUS": "Variables get last value",
     "VARIABLE_SET_STATUS": "Variables set value"
   },
+  "ENTITY_CREATED": "Entity created: {{NAME}}",
   "DEFAULT_PLACES": "Kitchen;Bath;Сorridor;Bedroom;Hall;Boiler room;Playroom;Garage;Basement;Entrance;",
   "USED_QUOTA": "Used {{PC}}% quota {{VAL}}/{{MAX}}",
   "UDP_ERROR": "Unable to listen udp: {{key}}. Error: {{msg}}",

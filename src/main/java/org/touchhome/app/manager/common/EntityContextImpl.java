@@ -105,6 +105,7 @@ import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.app.workspace.WorkspaceService;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
@@ -128,6 +129,7 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.raspberry.RaspberryDeviceEntity;
 import org.touchhome.bundle.raspberry.RaspberryDeviceRepository;
 import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
 import org.touchhome.bundle.zigbee.model.ZigBeeEndpointEntity;
@@ -272,6 +274,12 @@ public class EntityContextImpl implements EntityContext {
     this.updateDeviceFeatures();
 
     this.entityContextStorage.init();
+
+    RaspberryDeviceEntity entity = getEntity(RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID);
+    bgp().builder("wwwwwwwwwwwwwwwwwwwwwwwwwww").interval(Duration.ofSeconds(3)).execute(() -> {
+      Status status = entity.getStatus() == Status.ONLINE ? Status.ERROR : Status.ONLINE;
+      entity.setStatus(status);
+    });
   }
 
   private void initialiseInlineBundles(ApplicationContext applicationContext) {
@@ -644,7 +652,7 @@ public class EntityContextImpl implements EntityContext {
         BaseEntity baseEntity = (BaseEntity) entity;
         String entityID = baseEntity.getEntityID();
         // remove all status for entity
-        TouchHomeUtils.STATUS_MAP.remove(entityID);
+        EntityContextStorage.ENTITY_MEMORY_MAP.remove(entityID);
         // remove in-memory data if any exists
         InMemoryDB.removeService(entityID);
         // clear all registered console plugins if any exists
@@ -668,6 +676,9 @@ public class EntityContextImpl implements EntityContext {
         Object entity = event.getEntity();
         postInsertUpdate(entity, true);
         updateCacheEntity(event.getEntity(), ItemAction.Insert);
+        if (entity instanceof BaseEntity) {
+          ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", "NAME", ((BaseEntity<?>) entity).getTitle()));
+        }
       }
     });
     registry.getEventListenerGroup(EventType.POST_UPDATE).appendListener(new PostUpdateEventListenerStandardImpl() {
@@ -766,6 +777,7 @@ public class EntityContextImpl implements EntityContext {
                 }*/
         }
       }
+
       ui().sendNotification("-global", metadata);
     }
     if (showEntityState) {
@@ -989,10 +1001,10 @@ public class EntityContextImpl implements EntityContext {
     for (String feature : new String[]{"HotSpot", "SSH"}) {
       deviceFeatures.put(feature, true);
     }
-    if (EntityContext.isDevEnvironment() || EntityContext.isDockerEnvironment()) {
+    if (EntityContextSetting.isDevEnvironment() || EntityContextSetting.isDockerEnvironment()) {
       setFeatureState("HotSpot", false);
     }
-    if (!EntityContext.isLinuxOrDockerEnvironment()) {
+    if (!EntityContextSetting.isLinuxOrDockerEnvironment()) {
       setFeatureState("SSH", false);
     }
   }
@@ -1035,9 +1047,11 @@ public class EntityContextImpl implements EntityContext {
   public enum ItemAction {
     Insert("addItem", context -> {
       context.ui().sendInfoMessage("TOASTR.ENTITY_INSERTED");
-    }), Update("addItem", context -> {
+    }),
+    Update("addItem", context -> {
       context.ui().sendInfoMessage("TOASTR.ENTITY_UPDATED");
-    }), Remove("removeItem", context -> {
+    }),
+    Remove("removeItem", context -> {
       context.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED");
     });
     private final String name;

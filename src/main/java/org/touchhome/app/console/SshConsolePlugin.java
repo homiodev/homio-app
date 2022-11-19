@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 
 @Component
@@ -25,7 +26,7 @@ public class SshConsolePlugin implements ConsolePlugin<Object> {
 
   @Override
   public boolean isEnabled() {
-    return entityContext.isAdminUserOrNone() && EntityContext.isLinuxEnvironment();
+    return entityContext.isAdminUserOrNone() && EntityContextSetting.isLinuxEnvironment();
   }
 
   @Override
