@@ -16,6 +16,7 @@ import org.touchhome.app.setting.system.SystemCPUHistorySizeSetting;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.EntityContextSetting.MemSetterHandler;
+import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.inmemory.InMemoryDB;
 import org.touchhome.bundle.api.inmemory.InMemoryDBService;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
@@ -46,11 +47,11 @@ public class EntityContextStorage {
             Level level = status == Status.ERROR ? Level.ERROR : Level.INFO;
             Object message = data.VALUE_MAP.get(key + "_msg");
             if (message == null) {
-              LogManager.getLogger(entity.getClass()).log(level, "Set {} status: {}", entity.getTitle(), status);
+              LogManager.getLogger(entity.getClass()).log(level, "[{}]: Set {} status: {}", entity.getEntityID(), entity, status);
             } else {
-              LogManager.getLogger(entity.getClass()).log(level, "Set {} status: {}. Msg: {}", entity.getTitle(), status, message);
+              LogManager.getLogger(entity.getClass()).log(level, "[{}]: Set {} status: {}. Msg: {}", entity.getEntityID(), entity, status, message);
             }
-            entityContext.ui().updateItem(entity);
+            entityContext.ui().updateItem((BaseEntity<?>) entity, true);
           }
         }
       }

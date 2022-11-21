@@ -149,6 +149,11 @@ public class EntityContextVarImpl implements EntityContextVar {
     return false;
   }
 
+  @Override
+  public boolean removeGroup(@NotNull String groupId) {
+    return entityContext.delete(WorkspaceGroup.PREFIX + groupId) != null;
+  }
+
   private VariableContext getOrCreateContext(String varId) {
     final String variableId = getVariableId(varId);
     VariableContext context = globalVarStorageMap.get(variableId);

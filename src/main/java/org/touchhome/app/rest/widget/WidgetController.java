@@ -163,7 +163,7 @@ public class WidgetController {
       throw new NotFoundException("Unable to find base video for series: " + series.getTitle());
     }
 
-    UIInputBuilder uiInputBuilder = streamEntity.getVideoHandler().assembleActions();
+    UIInputBuilder uiInputBuilder = streamEntity.getService().assembleActions();
     UIActionHandler actionHandler = uiInputBuilder.findActionHandler(request.name);
     if (actionHandler == null) {
       throw new RuntimeException("No video action " + request.name + "found");

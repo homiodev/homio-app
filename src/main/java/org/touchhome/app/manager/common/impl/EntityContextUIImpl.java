@@ -30,11 +30,13 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.manager.common.v1.item.UIInputEntityActionHandler;
 import org.touchhome.app.model.entity.SettingEntity;
+import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.app.notification.BellNotification;
 import org.touchhome.app.notification.HeaderButtonNotification;
 import org.touchhome.app.notification.ProgressNotification;
 import org.touchhome.app.repository.SettingRepository;
+import org.touchhome.app.rest.ItemController;
 import org.touchhome.app.rest.widget.WidgetChartsController;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.console.ConsolePlugin;
@@ -45,6 +47,7 @@ import org.touchhome.bundle.api.setting.SettingPluginStatus;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.action.UIActionHandler;
 import org.touchhome.bundle.api.ui.dialog.DialogModel;
+import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.util.NotificationLevel;
@@ -62,6 +65,7 @@ public class EntityContextUIImpl implements EntityContextUI {
   public static final Set<String> customConsolePluginNames = new HashSet<>();
   private static final Set<String> ALLOWED_DYNAMIC_VALUES = new HashSet<>(
       Arrays.asList(
+          JSONObject.class.getSimpleName(), // for entities
           String.class.getSimpleName(), // for logs
           BgpProcessResponse.class.getSimpleName(),
           WidgetChartsController.SingleValueData.class.getSimpleName(),
@@ -119,6 +123,10 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
   }
 
+  public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @NotNull Object value) {
+    sendDynamicUpdate(dynamicUpdateId, value.getClass().getSimpleName(), null, value);
+  }
+
   public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @NotNull String type, @Nullable Object value) {
     sendDynamicUpdate(dynamicUpdateId, type, null, value);
   }
@@ -169,9 +177,38 @@ public class EntityContextUIImpl implements EntityContextUI {
     sendGlobal(GlobalSendType.reload, reason, null, null, null);
   }
 
+  public void removeItem(@NotNull BaseEntity<?> entity) {
+    JSONObject metadata = new JSONObject().put("type", "remove").put("entity", entity);
+    sendDynamicUpdate("entity-type-" + entity.getType(), metadata);
+  }
+
+  public void updateItem(@NotNull BaseEntity<?> entity, boolean ignoreExtra) {
+    JSONObject metadata = new JSONObject().put("type", "add").put("entity", entity);
+    if (!ignoreExtra) {
+      // add install dependencies if require
+      ItemController.ItemsByTypeResponse.TypeDependency dependency =
+          ItemController.getTypeDependency(entity.getClass(), getEntityContext()).orElse(null);
+      if (dependency != null && !dependency.getDependencies().isEmpty()) {
+        metadata.append("requireDependencies", dependency.getDependencies());
+      }
+
+      // insert context actions ixf we need
+      if (entity instanceof HasDynamicContextMenuActions) {
+        UIInputBuilder uiInputBuilder = inputBuilder();
+        ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
+        metadata.put("actions", uiInputBuilder.buildAll());
+     /* TODO: if (actions != null && !actions.isEmpty()) {
+        metadata.put("actions", actions.stream().map(UIActionResponse::new).collect(Collectors.toSet()));
+     }*/
+      }
+    }
+    String entityType = entity instanceof WidgetBaseEntity ? "widget" : entity.getType();
+    sendDynamicUpdate("entity-type-" + entityType, metadata);
+  }
+
   @Override
-  public void updateItem(@NotNull BaseEntity<?> baseEntity) {
-    sendGlobal(GlobalSendType.addItem, baseEntity.getEntityID(), baseEntity, null, null);
+  public void updateItem(@NotNull BaseEntity<?> entity) {
+    updateItem(entity, true);
   }
 
   @Override

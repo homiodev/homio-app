@@ -1,12 +1,15 @@
 package org.touchhome.app.manager.common;
 
 import static org.apache.xmlbeans.XmlBeans.getTitle;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.FFMPEG_LOCATION;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.MACHINE_IP_ADDRESS;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -32,6 +35,7 @@ import lombok.extern.log4j.Log4j2;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.hibernate.engine.spi.EntityEntry;
@@ -50,7 +54,6 @@ import org.hibernate.metamodel.spi.MetamodelImplementor;
 import org.hibernate.persister.entity.Joinable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.json.JSONObject;
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
@@ -109,9 +112,11 @@ import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
+import org.touchhome.bundle.api.entity.PinBaseEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
+import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.inmemory.InMemoryDB;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
@@ -122,14 +127,10 @@ import org.touchhome.bundle.api.repository.UserRepository;
 import org.touchhome.bundle.api.service.EntityService;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.UISidebarMenu;
-import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
-import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.raspberry.RaspberryDeviceEntity;
 import org.touchhome.bundle.raspberry.RaspberryDeviceRepository;
 import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
 import org.touchhome.bundle.zigbee.model.ZigBeeEndpointEntity;
@@ -207,7 +208,6 @@ public class EntityContextImpl implements EntityContext {
   private String latestVersion;
 
   private Set<ApplicationContext> allApplicationContexts = new HashSet<>();
-  private Map<Class, Boolean> entityClassToHasUISidebarMenu = new HashMap<>();
 
   public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, ThreadPoolTaskScheduler taskScheduler,
       SimpMessagingTemplate messagingTemplate, Environment environment,
@@ -267,19 +267,16 @@ public class EntityContextImpl implements EntityContext {
     bgp().builder("check-app-version").interval(Duration.ofDays(1)).execute(this::fetchReleaseVersion);
 
     event().fireEventIfNotSame("app-status", Status.ONLINE);
-    event().runOnceOnInternetUp("internal-ctx", () -> MACHINE_IP_ADDRESS = getInternalIpAddress());
+    event().runOnceOnInternetUp("internal-ctx", () -> {
+      MACHINE_IP_ADDRESS = getInternalIpAddress();
+      installFFMPEG();
+    });
     setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", cacheService::clearCache);
     setting().listenValueAndGet(SystemLanguageSetting.class, "listen-lang", lang -> Lang.CURRENT_LANG = lang.name());
 
     this.updateDeviceFeatures();
 
     this.entityContextStorage.init();
-
-    RaspberryDeviceEntity entity = getEntity(RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID);
-    bgp().builder("wwwwwwwwwwwwwwwwwwwwwwwwwww").interval(Duration.ofSeconds(3)).execute(() -> {
-      Status status = entity.getStatus() == Status.ONLINE ? Status.ERROR : Status.ONLINE;
-      entity.setStatus(status);
-    });
   }
 
   private void initialiseInlineBundles(ApplicationContext applicationContext) {
@@ -676,7 +673,7 @@ public class EntityContextImpl implements EntityContext {
         Object entity = event.getEntity();
         postInsertUpdate(entity, true);
         updateCacheEntity(event.getEntity(), ItemAction.Insert);
-        if (entity instanceof BaseEntity) {
+        if (entity instanceof BaseEntity && !(entity instanceof PinBaseEntity)) {
           ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", "NAME", ((BaseEntity<?>) entity).getTitle()));
         }
       }
@@ -745,40 +742,10 @@ public class EntityContextImpl implements EntityContext {
     if (!(entity instanceof BaseEntity)) {
       return;
     }
-    // send info if item changed and it could be shown on page.
-    Boolean hasUISidebarMenu = entityClassToHasUISidebarMenu.computeIfAbsent(entity.getClass(), cursor -> {
-      while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
-        if (cursor.isAnnotationPresent(UISidebarMenu.class)) {
-          return true;
-        }
-        cursor = cursor.getSuperclass();
-      }
-      return false;
-    });
-    if (hasUISidebarMenu) {
-      JSONObject metadata = new JSONObject().put("type", type.name).put("value", entity);
-      if (type != ItemAction.Remove) {
-        if (entity instanceof BaseEntity) {
-          // add install dependencies if require
-          ItemController.ItemsByTypeResponse.TypeDependency dependency =
-              ItemController.getTypeDependency((Class<? extends BaseEntity>) entity.getClass(), this).orElse(null);
-          if (dependency != null && !dependency.getDependencies().isEmpty()) {
-            metadata.append("requireDependencies", dependency.getDependencies());
-          }
-        }
-
-        // insert context actions if need
-        if (entity instanceof HasDynamicContextMenuActions) {
-          UIInputBuilder uiInputBuilder = ui().inputBuilder();
-          ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
-          metadata.put("actions", uiInputBuilder.buildAll());
-                /* TODO: if (actions != null && !actions.isEmpty()) {
-                    metadata.put("actions", actions.stream().map(UIActionResponse::new).collect(Collectors.toSet()));
-                }*/
-        }
-      }
-
-      ui().sendNotification("-global", metadata);
+    if (type == ItemAction.Remove) {
+      ui().removeItem((BaseEntity<?>) entity);
+    } else {
+      ui().updateItem((BaseEntity<?>) entity);
     }
     if (showEntityState) {
       type.messageEvent.accept(this);
@@ -1041,6 +1008,23 @@ public class EntityContextImpl implements EntityContext {
 
   public <T> T getEnv(String key, Class<T> classType, T defaultValue) {
     return environment.getProperty(key, classType, defaultValue);
+  }
+
+  private void installFFMPEG() {
+    if (SystemUtils.IS_OS_LINUX) {
+      MachineHardwareRepository repository = getBean(MachineHardwareRepository.class);
+      if (!repository.isSoftwareInstalled("ffmpeg")) {
+        log.info("Installing ffmpeg");
+        repository.installSoftware("ffmpeg", 600);
+      }
+    } else {
+      if (!Files.exists(Paths.get(FFMPEG_LOCATION))) {
+        log.info("Installing ffmpeg");
+        DependencyExecutableInstaller.downloadAndExtract(getEnv("artifactoryFilesURL") + "/ffmpeg.7z",
+            "ffmpeg.7z", (progress, message) -> log.info("FFMPEG " + message + ". " + progress + "%"),
+            log);
+      }
+    }
   }
 
   @AllArgsConstructor

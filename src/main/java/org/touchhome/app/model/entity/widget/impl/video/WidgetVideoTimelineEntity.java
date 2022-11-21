@@ -82,7 +82,7 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
     public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
       List<OptionModel> list = new ArrayList<>();
       for (OnvifCameraEntity entity : parameters.getEntityContext().findAll(OnvifCameraEntity.class)) {
-        if (entity.getBaseBrandCameraHandler() instanceof VideoPlaybackStorage) {
+        if (entity.getService().getBrandHandler() instanceof VideoPlaybackStorage) {
           list.add(OptionModel.of(entity.getEntityID(), entity.getTitle()));
         }
       }

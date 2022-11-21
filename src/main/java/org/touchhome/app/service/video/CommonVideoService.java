@@ -6,63 +6,53 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
 import org.touchhome.app.model.entity.CommonVideoStreamEntity;
 import org.touchhome.app.service.RtspStreamScanner;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.state.State;
 import org.touchhome.bundle.api.state.StringType;
-import org.touchhome.bundle.api.video.BaseFFMPEGVideoStreamHandler;
+import org.touchhome.bundle.api.video.BaseVideoService;
 import org.touchhome.bundle.api.video.BaseVideoStreamServerHandler;
-import org.touchhome.bundle.camera.CameraCoordinator;
 import org.touchhome.bundle.camera.rtsp.message.sdp.SdpMessage;
 import org.touchhome.common.exception.ServerException;
 
-@Log4j2
-public class CommonUriStreamHandler extends BaseFFMPEGVideoStreamHandler<CommonVideoStreamEntity, CommonUriStreamHandler> {
+public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity> {
 
-  private final RtspStreamScanner rtspStreamScanner;
   private VideoSourceType videoSourceType;
 
-  public CommonUriStreamHandler(CommonVideoStreamEntity cameraEntity, EntityContext entityContext) {
-    super(cameraEntity, entityContext);
-    rtspStreamScanner = entityContext.getBean(RtspStreamScanner.class);
-    detectVideoSourceType();
+  public CommonVideoService(EntityContext entityContext, CommonVideoStreamEntity entity) {
+    super(entity, entityContext, true);
   }
 
   @Override
-  public void testOnline() {
+  public void testService() {
 
   }
 
   @Override
-  protected void initialize0() {
-    if (videoStreamEntity.getIeeeAddress() == null) {
-      throw new ServerException("Url must be not null in entity: " + videoStreamEntity.getTitle());
-    }
-    super.initialize0();
-  }
-
-  @Override
-  public void updateVideoStreamEntity(CommonVideoStreamEntity videoStreamEntity) {
-    super.updateVideoStreamEntity(videoStreamEntity);
-    detectVideoSourceType();
-  }
-
-  private void detectVideoSourceType() {
+  public void testVideoOnline() {
     videoSourceType = VideoSourceType.UNKNOWN;
-    if (videoStreamEntity.getIeeeAddress() != null) {
-      if (videoStreamEntity.getIeeeAddress().endsWith("m3u8")) {
+    String ieeeAddress = getEntity().getIeeeAddress();
+    if (ieeeAddress != null) {
+      if (ieeeAddress.endsWith("m3u8")) {
         videoSourceType = VideoSourceType.HLS;
-      } else if (videoStreamEntity.getIeeeAddress().startsWith("rtsp://")) {
+      } else if (ieeeAddress.startsWith("rtsp://")) {
         videoSourceType = VideoSourceType.RTSP;
       }
     }
   }
 
   @Override
+  protected void initialize0() {
+    if (getEntity().getIeeeAddress() == null) {
+      throw new ServerException("Url must be not null in entity: " + getEntity());
+    }
+    super.initialize0();
+  }
+
+  @Override
   public String getRtspUri(String profile) {
-    return videoStreamEntity.getIeeeAddress();
+    return getEntity().getIeeeAddress();
   }
 
   @Override
@@ -83,7 +73,7 @@ public class CommonUriStreamHandler extends BaseFFMPEGVideoStreamHandler<CommonV
   @Override
   public Map<String, State> getAttributes() {
     Map<String, State> map = new HashMap<>(super.getAttributes());
-    SdpMessage sdpMessage = CameraCoordinator.getSdpMessage(videoStreamEntity.getIeeeAddress());
+    SdpMessage sdpMessage = RtspStreamScanner.rtspUrlToSdpMessage.get(getEntity().getIeeeAddress());
     if (sdpMessage != null) {
       map.put("RTSP Description Message", new StringType(sdpMessage.toString()));
     }
@@ -99,10 +89,10 @@ public class CommonUriStreamHandler extends BaseFFMPEGVideoStreamHandler<CommonV
     private final String ffmpegInputOptions;
   }
 
-  private class RtspCameraStreamHandler extends BaseVideoStreamServerHandler<CommonUriStreamHandler> {
+  private class RtspCameraStreamHandler extends BaseVideoStreamServerHandler<CommonVideoService> {
 
-    public RtspCameraStreamHandler(CommonUriStreamHandler rtspStreamHandler) {
-      super(rtspStreamHandler);
+    public RtspCameraStreamHandler(CommonVideoService service) {
+      super(service);
     }
 
     @Override

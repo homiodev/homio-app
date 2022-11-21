@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -49,7 +50,6 @@ import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.service.scan.BaseItemsDiscovery;
 import org.touchhome.bundle.api.service.scan.VideoStreamScanner;
-import org.touchhome.bundle.camera.CameraCoordinator;
 import org.touchhome.bundle.camera.rtsp.message.sdp.SdpMessage;
 import org.touchhome.bundle.camera.rtsp.message.sdp.SdpParser;
 import org.touchhome.bundle.camera.setting.CameraScanPortRangeSetting;
@@ -63,6 +63,8 @@ import org.touchhome.common.util.Lang;
 @Component
 @RequiredArgsConstructor
 public class RtspStreamScanner implements VideoStreamScanner {
+
+  public static Map<String, SdpMessage> rtspUrlToSdpMessage = new ConcurrentHashMap<>();
 
   public static final AttributeKey<URI> URL = AttributeKey.valueOf("url");
   private static final int THREAD_COUNT = 8;
@@ -229,10 +231,10 @@ public class RtspStreamScanner implements VideoStreamScanner {
 
       if (msg.status().equals(HttpResponseStatus.OK)) {
         log.info("Found alive RTSP with url: <{}>. Describe message: <{}>", uri, sdpMessage);
-        CameraCoordinator.setSdpMessage(uriStr, sdpMessage);
+        rtspUrlToSdpMessage.put(uriStr, sdpMessage);
         rtspAliveHandler.accept(uriStr, sdpMessage);
       } else {
-        CameraCoordinator.removeSpdMessage(uriStr);
+        rtspUrlToSdpMessage.remove(uriStr);
       }
       ctx.channel().close();
     }

@@ -1,5 +1,7 @@
 package org.touchhome.app.rest;
 
+import static org.touchhome.bundle.api.util.TouchHomeUtils.FFMPEG_LOCATION;
+
 import dev.failsafe.Failsafe;
 import dev.failsafe.Fallback;
 import dev.failsafe.RetryPolicy;
@@ -54,7 +56,6 @@ import org.touchhome.bundle.api.audio.SelfContainedAudioSourceContainer;
 import org.touchhome.bundle.api.entity.ImageEntity;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.api.video.BaseFFMPEGVideoStreamHandler;
 import org.touchhome.bundle.api.video.DownloadFile;
 import org.touchhome.bundle.api.video.VideoPlaybackStorage;
 import org.touchhome.bundle.api.video.ffmpeg.FfmpegInputDeviceHardwareRepository;
@@ -278,8 +279,7 @@ public class MediaController {
                 CommonUtils.getErrorMessage(event.getException())))
         .get(context -> {
           log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
-          entityContext.getBean(FfmpegInputDeviceHardwareRepository.class).fireFfmpeg(
-              BaseFFMPEGVideoStreamHandler.getFfmpegLocation(),
+          entityContext.getBean(FfmpegInputDeviceHardwareRepository.class).fireFfmpeg(FFMPEG_LOCATION,
               "-y",
               "\"" + uriStr + "\"",
               "-frames:v 1 -vf scale=" + size + " -q:v 3 " + path, // q:v - jpg quality

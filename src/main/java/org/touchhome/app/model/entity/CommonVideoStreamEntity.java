@@ -4,19 +4,19 @@ import javax.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.app.service.video.CommonUriStreamHandler;
+import org.touchhome.app.service.video.CommonVideoService;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.RestartHandlerOnChange;
-import org.touchhome.bundle.api.netty.NettyUtils;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.video.AbilityToStreamHLSOverFFMPEG;
 import org.touchhome.bundle.api.video.BaseFFMPEGVideoStreamEntity;
+import org.touchhome.bundle.api.video.BaseVideoService;
 
 @Setter
 @Getter
 @Entity
 @Accessors(chain = true)
-public class CommonVideoStreamEntity extends BaseFFMPEGVideoStreamEntity<CommonVideoStreamEntity, CommonUriStreamHandler>
+public class CommonVideoStreamEntity extends BaseFFMPEGVideoStreamEntity<CommonVideoStreamEntity, CommonVideoService>
     implements AbilityToStreamHLSOverFFMPEG<CommonVideoStreamEntity> {
 
   public static final String PREFIX = "vidc_";
@@ -31,11 +31,6 @@ public class CommonVideoStreamEntity extends BaseFFMPEGVideoStreamEntity<CommonV
   @Override
   public String getFolderName() {
     return "video";
-  }
-
-  @Override
-  public CommonUriStreamHandler createVideoHandler(EntityContext entityContext) {
-    return new CommonUriStreamHandler(this, entityContext);
   }
 
   @Override
@@ -56,6 +51,16 @@ public class CommonVideoStreamEntity extends BaseFFMPEGVideoStreamEntity<CommonV
   @Override
   protected void beforePersist() {
     setSnapshotOutOptions("-update 1~~~-frames:v 1");
-    setServerPort(NettyUtils.findFreeBootstrapServerPort());
+    setServerPort(BaseVideoService.findFreeBootstrapServerPort());
+  }
+
+  @Override
+  public Class<CommonVideoService> getEntityServiceItemClass() {
+    return CommonVideoService.class;
+  }
+
+  @Override
+  public CommonVideoService createService(EntityContext entityContext) {
+    return new CommonVideoService(entityContext, this);
   }
 }
