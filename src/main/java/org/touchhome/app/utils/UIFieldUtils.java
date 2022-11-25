@@ -54,8 +54,6 @@ import org.touchhome.bundle.api.ui.field.UIFieldIconPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnoreGetDefault;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
-import org.touchhome.bundle.api.ui.field.UIFieldInlineEntity;
-import org.touchhome.bundle.api.ui.field.UIFieldInlineEntityWidth;
 import org.touchhome.bundle.api.ui.field.UIFieldNumber;
 import org.touchhome.bundle.api.ui.field.UIFieldPort;
 import org.touchhome.bundle.api.ui.field.UIFieldPosition;
@@ -80,6 +78,10 @@ import org.touchhome.bundle.api.ui.field.condition.UIFieldDisableEditOnCondition
 import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImage;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImageSrc;
+import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEditEntities;
+import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntities;
+import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntityEditWidth;
+import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldClassSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldDevicePortSelection;
@@ -216,16 +218,17 @@ public class UIFieldUtils {
     entityUIMetaData.setInlineEdit(nullIfFalse(uiField.inlineEdit()));
     entityUIMetaData.setCopyButton(nullIfFalse(uiField.copyButton()));
     entityUIMetaData.setInlineEditWhenEmpty(nullIfFalse(uiField.inlineEditWhenEmpty()));
-    entityUIMetaData.setReadOnly(nullIfFalse(uiField.readOnly()));
-    entityUIMetaData.setDisableEdit(nullIfFalse(uiField.disableEdit()));
     entityUIMetaData.setHideOnEmpty(nullIfFalse(uiField.hideOnEmpty()));
     entityUIMetaData.setRevert(nullIfFalse(uiField.isRevert()));
-    entityUIMetaData.setOnlyEdit(nullIfFalse(uiField.onlyEdit()));
+
+    entityUIMetaData.setHideInEdit(nullIfFalse(uiField.hideInEdit()));
+    entityUIMetaData.setDisableEdit(nullIfFalse(uiField.disableEdit()));
+    entityUIMetaData.setHideInView(nullIfFalse(uiField.hideInView()));
 
     entityUIMetaData.setStyle(uiField.style());
 
     // make sense keep defaultValue(for revert) only if able to edit value
-    if (!uiField.disableEdit() && !uiField.readOnly()) {
+    if (!uiField.disableEdit() && !uiField.hideInEdit()) {
       entityUIMetaData.setDefaultValue(uiFieldContext.getDefaultValue(instance));
     }
 
@@ -241,7 +244,7 @@ public class UIFieldUtils {
           uiFieldContext.isAnnotationPresent(UIFieldClassSelection.class) ||
           uiFieldContext.isAnnotationPresent(UIFieldBeanSelection.class)) {
         // detect types
-        UIFieldType uiFieldType = uiField.readOnly() ? UIFieldType.String : UIFieldType.SelectBox;
+        UIFieldType uiFieldType = (uiField.hideInEdit() || uiField.disableEdit()) ? UIFieldType.String : UIFieldType.SelectBox;
 
         if (uiFieldContext.isAnnotationPresent(UIFieldSelection.class) &&
             uiFieldContext.getDeclaredAnnotation(UIFieldSelection.class).allowInputRawText()) {
@@ -536,37 +539,44 @@ public class UIFieldUtils {
       entityUIMetaData.setType("CodeEditor");
     }
 
+    UIFieldInlineEntityEditWidth uiFieldInlineEntityEditWidth = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntityEditWidth.class);
+    if (uiFieldInlineEntityEditWidth != null && uiFieldInlineEntityEditWidth.value() >= 0) {
+      jsonTypeMetadata.put("inlineEditWidth", uiFieldInlineEntityEditWidth.value());
+    }
     UIFieldInlineEntityWidth uiFieldInlineEntityWidth = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntityWidth.class);
-    if (uiFieldInlineEntityWidth != null) {
-      if (uiFieldInlineEntityWidth.editWidth() >= 0) {
-        jsonTypeMetadata.put("inlineEditWidth", uiFieldInlineEntityWidth.editWidth());
-      }
-      if (uiFieldInlineEntityWidth.viewWidth() >= 0) {
-        jsonTypeMetadata.put("inlineViewWidth", uiFieldInlineEntityWidth.viewWidth());
+    if (uiFieldInlineEntityEditWidth != null && uiFieldInlineEntityEditWidth.value() >= 0) {
+      jsonTypeMetadata.put("inlineViewWidth", uiFieldInlineEntityEditWidth.value());
+    }
+
+    UIFieldInlineEditEntities uiFieldInlineEdit = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEditEntities.class);
+    if (uiFieldInlineEdit != null) {
+      if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
+        putUIInlineFieldIfRequire(instance, uiFieldContext, entityUIMetaData, (ParameterizedType) genericType, jsonTypeMetadata, entityContext);
+        entityUIMetaData.setStyle("padding: 0; background: " + uiFieldInlineEdit.bg() + ";");
+
+        jsonTypeMetadata.put("fw", true);
+        jsonTypeMetadata.put("addRow", uiFieldInlineEdit.addRowLabel());
+        jsonTypeMetadata.put("addRowCondition", uiFieldInlineEdit.addRowCondition());
+        jsonTypeMetadata.put("delRowCondition", uiFieldInlineEdit.removeRowCondition());
+        jsonTypeMetadata.put("noContentTitle", uiFieldInlineEdit.noContentTitle());
+        jsonTypeMetadata.put("showInGeneralEdit", true);
+      } else {
+        throw new IllegalStateException(
+            "Unable to annotate field " + uiFieldContext.getSourceName() + " with @UIFieldInlineEditEntities");
       }
     }
 
-    UIFieldInlineEntity uiFieldInline = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntity.class);
+    UIFieldInlineEntities uiFieldInline = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntities.class);
     if (uiFieldInline != null) {
       if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
-        Type inlineType =
-            extractSetEntityType(instance, uiFieldContext, entityUIMetaData, (ParameterizedType) genericType,
-                jsonTypeMetadata);
-        // fill inlineType fields!
-        Object childClassInstance = CommonUtils.newInstance((Class) inlineType);
+        putUIInlineFieldIfRequire(instance, uiFieldContext, entityUIMetaData, (ParameterizedType) genericType, jsonTypeMetadata, entityContext);
 
-        jsonTypeMetadata.set("inlineTypeFields",
-            OBJECT_MAPPER.valueToTree(UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext)));
         entityUIMetaData.setStyle("padding: 0; background: " + uiFieldInline.bg() + ";");
         jsonTypeMetadata.put("fw", true);
-        jsonTypeMetadata.put("addRow", uiFieldInline.addRow());
-        jsonTypeMetadata.put("addRowCondition", uiFieldInline.addRowCondition());
-        jsonTypeMetadata.put("delRowCondition", uiFieldInline.removeRowCondition());
         jsonTypeMetadata.put("noContentTitle", uiFieldInline.noContentTitle());
         jsonTypeMetadata.put("showInGeneral", true);
       } else {
-        throw new IllegalStateException(
-            "Unable to annotate field " + uiFieldContext.getSourceName() + " with UIFieldType.InlineEntity");
+        throw new IllegalStateException("Unable to annotate field " + uiFieldContext.getSourceName() + " with @UIFieldInlineEntities");
       }
     }
 
@@ -586,6 +596,15 @@ public class UIFieldUtils {
 
     entityUIMetaDataList.remove(entityUIMetaData);
     entityUIMetaDataList.add(entityUIMetaData);
+  }
+
+  private static void putUIInlineFieldIfRequire(Object instance, UIFieldContext uiFieldContext,
+      EntityUIMetaData entityUIMetaData, ParameterizedType genericType, ObjectNode jsonTypeMetadata, EntityContext entityContext) {
+    if (!jsonTypeMetadata.has("inlineTypeFields")) {
+      Type inlineType = extractSetEntityType(instance, uiFieldContext, entityUIMetaData, genericType, jsonTypeMetadata);
+      Object childClassInstance = CommonUtils.newInstance((Class) inlineType);
+      jsonTypeMetadata.set("inlineTypeFields", OBJECT_MAPPER.valueToTree(UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext)));
+    }
   }
 
   private static Boolean nullIfFalse(boolean value) {

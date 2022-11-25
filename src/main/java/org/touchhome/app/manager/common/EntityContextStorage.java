@@ -36,22 +36,28 @@ public class EntityContextStorage {
   {
     EntityContextSetting.MEM_HANDLER.set(new MemSetterHandler() {
       @Override
-      public void setValue(HasEntityIdentifier entity, String key, Object value) {
+      public void setValue(HasEntityIdentifier entity, String key, String title, Object value, boolean fireUIUpdate) {
         EntityMemoryData data = ENTITY_MEMORY_MAP.computeIfAbsent(entity.getEntityID(), s -> new EntityMemoryData());
         if (value == null) {
           data.VALUE_MAP.remove(key);
         } else {
           Object prevValue = data.VALUE_MAP.put(key, value);
-          if (value instanceof Status && !Objects.equals(value, prevValue)) {
-            Status status = (Status) value;
-            Level level = status == Status.ERROR ? Level.ERROR : Level.INFO;
-            Object message = data.VALUE_MAP.get(key + "_msg");
-            if (message == null) {
-              LogManager.getLogger(entity.getClass()).log(level, "[{}]: Set {} status: {}", entity.getEntityID(), entity, status);
-            } else {
-              LogManager.getLogger(entity.getClass()).log(level, "[{}]: Set {} status: {}. Msg: {}", entity.getEntityID(), entity, status, message);
+          if (!Objects.equals(value, prevValue)) {
+            if (value instanceof Status) {
+              Status status = (Status) value;
+              Level level = status == Status.ERROR ? Level.ERROR : Level.INFO;
+              Object message = data.VALUE_MAP.get(key + "_msg");
+              if (message == null) {
+                LogManager.getLogger(entity.getClass()).log(level, "[{}]: Set {} '{}' status: {}",
+                    entity.getEntityID(), entity, title, status);
+              } else {
+                LogManager.getLogger(entity.getClass()).log(level, "[{}]: Set {} '{}' status: {}. Msg: {}",
+                    entity.getEntityID(), entity, title, status, message);
+              }
             }
-            entityContext.ui().updateItem((BaseEntity<?>) entity, true);
+            if (fireUIUpdate) {
+              entityContext.ui().updateItem((BaseEntity<?>) entity, true);
+            }
           }
         }
       }

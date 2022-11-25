@@ -238,7 +238,7 @@ public class WorkspaceService implements ContextRefreshed {
       WorkspaceEntity mainWorkspace =
           entityContext.getEntity(WorkspaceEntity.PREFIX + WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME);
       if (mainWorkspace == null) {
-        entityContext.save(new WorkspaceEntity().computeEntityID(() -> WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME));
+        entityContext.save(new WorkspaceEntity().setEntityID(WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME));
       }
     } else {
       for (WorkspaceEntity workspaceTab : workspaceTabs) {

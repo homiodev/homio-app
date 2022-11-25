@@ -115,37 +115,37 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
     private String entityID;
 
-    @UIField(readOnly = true, order = 1)
+    @UIField(hideInEdit = true, order = 1)
     private String processName;
 
-    @UIField(readOnly = true, order = 3)
+    @UIField(hideInEdit = true, order = 3)
     private String description;
 
-    @UIField(order = 4, readOnly = true, type = StaticDate)
+    @UIField(order = 4, hideInEdit = true, type = StaticDate)
     private Date creationTime;
 
-    @UIField(readOnly = true, order = 5)
+    @UIField(hideInEdit = true, order = 5)
     private String state;
 
-    @UIField(readOnly = true, order = 19)
+    @UIField(hideInEdit = true, order = 19)
     private String scheduleType;
 
-    @UIField(readOnly = true, order = 20)
+    @UIField(hideInEdit = true, order = 20)
     private String timeToNextSchedule;
 
-    @UIField(readOnly = true, order = 21)
+    @UIField(hideInEdit = true, order = 21)
     private Status status;
 
-    @UIField(readOnly = true, order = 22)
+    @UIField(hideInEdit = true, order = 22)
     private String errorMessage;
 
-    @UIField(readOnly = true, order = 23)
+    @UIField(hideInEdit = true, order = 23)
     private String period;
 
-    @UIField(readOnly = true, order = 24)
+    @UIField(hideInEdit = true, order = 24)
     private Integer runCount;
 
-    @UIField(readOnly = true, order = 25, style = "max-width: 50px;")
+    @UIField(hideInEdit = true, order = 25, style = "max-width: 300px;overflow: hidden;white-space: nowrap;")
     private String bigDescription;
   }
 }

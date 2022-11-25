@@ -116,21 +116,17 @@ public class EntityContextVarImpl implements EntityContextVar {
   public String createVariable(@NotNull String groupId, String variableId, @NotNull String variableName,
       @NotNull VariableType variableType, String description, String color) {
     WorkspaceVariable entity = variableId == null ? null : entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
-    String varId = StringUtils.defaultString(variableId, String.valueOf(System.currentTimeMillis()));
 
     if (entity == null) {
       WorkspaceGroup groupEntity = entityContext.getEntity(WorkspaceGroup.PREFIX + groupId);
       if (groupEntity == null) {
         throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
       }
-      entity = entityContext.save(new WorkspaceVariable()
-          .computeEntityID(() -> varId)
-          .setName(variableName)
+      String varId = StringUtils.defaultString(variableId, String.valueOf(System.currentTimeMillis()));
+      entity = entityContext.save(new WorkspaceVariable(varId, variableName, groupEntity)
           .setDescription(description)
           .setRestriction(variableType)
-          .setColor(color)
-          .setVariableId(varId)
-          .setWorkspaceGroup(groupEntity));
+          .setColor(color));
     }
     return entity.getVariableId();
   }

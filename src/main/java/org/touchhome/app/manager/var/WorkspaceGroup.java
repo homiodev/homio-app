@@ -26,7 +26,8 @@ import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldIconPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
-import org.touchhome.bundle.api.ui.field.UIFieldInlineEntity;
+import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEditEntities;
+import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntities;
 import org.touchhome.common.util.CommonUtils;
 import org.touchhome.common.util.Lang;
 
@@ -54,7 +55,8 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup> implements HasJso
   @MaxItems(100) // max 100 variables in one group
   @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
   @UIField(order = 30)
-  @UIFieldInlineEntity(bg = "#1E5E611F", addRow = "CREATE_VAR",
+  @UIFieldInlineEntities(bg = "#1E5E611F", noContentTitle = "NO_VARIABLES")
+  @UIFieldInlineEditEntities(bg = "#1E5E611F", addRowLabel = "CREATE_VAR",
       noContentTitle = "NO_VARIABLES",
       removeRowCondition = "return !context.get('locked')",
       addRowCondition = "return !context.get('locked')")

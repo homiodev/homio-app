@@ -376,7 +376,7 @@ public class WidgetController {
   public OptionModel createWidgetTab(@PathVariable("name") String name) {
     BaseEntity<?> widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
     if (widgetTab == null) {
-      widgetTab = entityContext.save(new WidgetTabEntity().computeEntityID(() -> name));
+      widgetTab = entityContext.save(new WidgetTabEntity().setEntityID(name));
       return OptionModel.of(widgetTab.getEntityID(), widgetTab.getName());
     }
     throw new ServerException("Widget tab with same name already exists");

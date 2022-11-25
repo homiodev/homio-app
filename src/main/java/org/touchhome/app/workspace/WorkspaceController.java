@@ -202,7 +202,7 @@ public class WorkspaceController {
   public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
     WorkspaceEntity workspaceEntity = entityContext.getEntity(WorkspaceEntity.PREFIX + name);
     if (workspaceEntity == null) {
-      WorkspaceEntity entity = entityContext.save(new WorkspaceEntity().setName(name).computeEntityID(() -> name));
+      WorkspaceEntity entity = entityContext.save(new WorkspaceEntity().setName(name).setEntityID(name));
       return OptionModel.of(entity.getEntityID(), entity.getTitle());
     }
     throw new IllegalArgumentException("Workspace tab with name <" + name + "> already exists");
@@ -255,8 +255,7 @@ public class WorkspaceController {
   private WorkspaceVariable createOrRenameVariable(WorkspaceGroup workspaceGroup, String variableId, String variableName) {
     WorkspaceVariable workspaceVariable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
     if (workspaceVariable == null) {
-      return entityContext.save(new WorkspaceVariable().setVariableId(variableId).setWorkspaceGroup(workspaceGroup)
-          .setName(variableName));
+      return entityContext.save(new WorkspaceVariable(variableId, variableName, workspaceGroup));
     } else if (!Objects.equals(variableName, workspaceVariable.getName())) {
       return entityContext.save(workspaceVariable.setName(variableName));
     }

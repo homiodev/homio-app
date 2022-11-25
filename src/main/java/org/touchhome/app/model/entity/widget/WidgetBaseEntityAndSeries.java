@@ -24,7 +24,7 @@ public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSer
   @Getter
   @Setter
   @OrderBy("priority asc")
-  @UIField(order = 30, onlyEdit = true)
+  @UIField(order = 30, hideInView = true)
   @MaxItems(10)
   @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetEntity",
       targetEntity = WidgetSeriesEntity.class)

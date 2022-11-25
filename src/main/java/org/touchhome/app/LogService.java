@@ -145,7 +145,12 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
   @SneakyThrows
   private static void sendLogEvent(LogEvent event, ThrowingConsumer<String, Exception> consumer) {
-    consumer.accept(formatLogMessage(event, event.getMessage().getFormattedMessage()));
+    boolean entityPrefix = Optional.ofNullable(event.getMessage().getFormat()).map(s -> s.startsWith("[{}]: ")).orElse(false);
+    String message = event.getMessage().getFormattedMessage();
+    if (entityPrefix) {
+      message = message.substring(message.indexOf("]: ") + 3);
+    }
+    consumer.accept(formatLogMessage(event, message));
 
     if (event.getThrown() != null) {
       StringWriter outError = new StringWriter();

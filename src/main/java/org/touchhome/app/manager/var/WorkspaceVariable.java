@@ -15,6 +15,7 @@ import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.ManyToOne;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
@@ -35,13 +36,14 @@ import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
-import org.touchhome.bundle.api.ui.field.UIFieldInlineEntityWidth;
 import org.touchhome.bundle.api.ui.field.UIFieldProgress;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorRef;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorSource;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
+import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntityEditWidth;
+import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent;
 import org.touchhome.common.util.Lang;
 
@@ -51,6 +53,7 @@ import org.touchhome.common.util.Lang;
 @Accessors(chain = true)
 @UIFieldSelectionParent(value = "OVERRIDES_BY_INTERFACE", icon = "fas fa-layer-group", iconColor = "#28A60C",
     description = "Group variables")
+@NoArgsConstructor
 public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements HasJsonData, HasAggregateValueFromSeries,
     UIFieldSelectionParent.SelectionParent, HasTimeValueSeries, HasGetStatusValue, HasSetStatusValue {
 
@@ -59,7 +62,8 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
   @Override
   @UIField(order = 10, required = true)
   @UIFieldColorRef("color")
-  @UIFieldInlineEntityWidth(viewWidth = 18, editWidth = 20)
+  @UIFieldInlineEntityWidth(18)
+  @UIFieldInlineEntityEditWidth(20)
   @UIFieldDisableEditOnCondition("return context.getParent('locked')")
   public String getName() {
     return super.getName();
@@ -67,26 +71,27 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
 
   @UIField(order = 12, color = "#7A7A7A")
   @UIFieldDisableEditOnCondition("return context.getParent('locked')")
-  @UIFieldInlineEntityWidth(viewWidth = -1, editWidth = 25)
+  @UIFieldInlineEntityEditWidth(25)
   public String description;
 
   @UIField(order = 20, label = "format")
   @Enumerated(EnumType.STRING)
   @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
   @UIFieldDisableEditOnCondition("return context.getParent('locked')")
-  @UIFieldInlineEntityWidth(viewWidth = 15, editWidth = 20)
+  @UIFieldInlineEntityWidth(15)
+  @UIFieldInlineEntityEditWidth(20)
   public EntityContextVar.VariableType restriction = EntityContextVar.VariableType.Any;
 
   @UIField(order = 25)
   @UIFieldSlider(min = 500, max = 100000, step = 500)
   @UIFieldGroup(order = 10, value = "Quota")
-  @UIFieldInlineEntityWidth(viewWidth = 14, editWidth = -1)
+  @UIFieldInlineEntityWidth(14)
   public int quota = 1000;
 
-  @UIField(order = 30, readOnly = true)
+  @UIField(order = 30, hideInEdit = true)
   @UIFieldProgress
   @UIFieldGroup("Quota")
-  @UIFieldInlineEntityWidth(viewWidth = 25, editWidth = 0)
+  @UIFieldInlineEntityWidth(20)
   public UIFieldProgress.Progress getUsedQuota() {
     int count = 0;
     if (getEntityID() != null && getEntityContext().var().exists(getEntityID())) {
@@ -136,7 +141,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
   @Override
   protected void beforePersist() {
     setVariableId(defaultIfEmpty(variableId, "" + System.currentTimeMillis()));
-    computeEntityID(this::getVariableId);
+    setEntityID(this.getVariableId());
   }
 
   @Override
@@ -211,5 +216,12 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
   @Override
   public void setStatusValue(SetStatusValueRequest request) {
     request.getEntityContext().var().set(variableId, request.getValue());
+  }
+
+  public WorkspaceVariable(@NotNull String variableId, @NotNull String variableName, WorkspaceGroup workspaceGroup) {
+    this.variableId = variableId;
+    this.setName(variableName);
+    this.setEntityID(variableId);
+    this.setWorkspaceGroup(workspaceGroup);
   }
 }

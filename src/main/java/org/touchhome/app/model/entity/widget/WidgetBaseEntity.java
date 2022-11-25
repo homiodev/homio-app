@@ -8,7 +8,6 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -57,10 +56,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
   @Column(length = 65535)
   @Convert(converter = JSONObjectConverter.class)
   private JSONObject jsonData = new JSONObject();
-
-  @Lob
-  @Column(length = 1000_000)
-  private byte[] backgroundImage;
 
   /**
    * Uses for grouping widget by type on UI

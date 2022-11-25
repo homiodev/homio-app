@@ -125,6 +125,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.repository.UserRepository;
 import org.touchhome.bundle.api.service.EntityService;
+import org.touchhome.bundle.api.service.EntityService.ServiceInstance;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
@@ -132,7 +133,6 @@ import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.raspberry.RaspberryDeviceRepository;
-import org.touchhome.bundle.zigbee.model.ZigBeeDeviceEntity;
 import org.touchhome.bundle.zigbee.model.ZigBeeEndpointEntity;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.model.UpdatableValue;
@@ -719,10 +719,19 @@ public class EntityContextImpl implements EntityContext {
   // Try to instantiate service associated with entity
   private void loadEntityService(Object entity) {
     if (entity instanceof EntityService) {
-      EntityService.ServiceInstance service = ((EntityService<?, ?>) entity).getOrCreateService(this, false, true);
+      Optional<?> serviceOptional = ((EntityService<?, ?>) entity).getOrCreateService(this);
       // Update entity into service
-      if (service != null) {
-        service.entityUpdated((EntityService) entity);
+      if (serviceOptional.isPresent()) {
+        try {
+          EntityService.ServiceInstance service = (ServiceInstance) serviceOptional.get();
+          if (service.entityUpdated((EntityService) entity)) {
+            if (service.testService()) {
+              ((EntityService<?, ?>) entity).setStatusOnline();
+            }
+          }
+        } catch (Exception ex) {
+          ((EntityService<?, ?>) entity).setStatusError(ex);
+        }
       }
     }
   }
@@ -827,7 +836,6 @@ public class EntityContextImpl implements EntityContext {
   public List<BaseEntity> findAllBaseEntities() {
     List<BaseEntity> entities = new ArrayList<>();
     entities.addAll(findAll(DeviceBaseEntity.class));
-    entities.addAll(findAll(ZigBeeDeviceEntity.class));
     entities.addAll(findAll(ZigBeeEndpointEntity.class));
     return entities;
   }

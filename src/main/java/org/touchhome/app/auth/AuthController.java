@@ -78,7 +78,8 @@ public class AuthController {
     if (user != null) {
       throw new ServerException("User already exists");
     }
-    return entityContext.save(new UserEntity().computeEntityID(credentials::getEmail)
+    return entityContext.save(new UserEntity()
+        .setEntityID(credentials.getEmail())
         .setUserId(credentials.getEmail())
         .setPassword(credentials.getPassword(), this.passwordEncoder)
         .setRoles(new HashSet<>(Arrays.asList(roles))));

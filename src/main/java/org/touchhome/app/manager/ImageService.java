@@ -63,7 +63,7 @@ public class ImageService {
         imageEntity = new ImageEntity();
         imageEntity.setPath(imagePath.toAbsolutePath().toString());
       }
-      imageEntity.computeEntityID(() -> entityID.substring(0, entityID.length() - ext.length() - 1));
+      imageEntity.setEntityID(entityID.substring(0, entityID.length() - ext.length() - 1));
       imageEntity.setOriginalWidth(bufferedImage.getWidth());
       imageEntity.setOriginalHeight(bufferedImage.getHeight());
       return entityContext.save(imageEntity);
