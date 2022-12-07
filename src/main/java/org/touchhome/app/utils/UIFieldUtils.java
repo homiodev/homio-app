@@ -431,7 +431,7 @@ public class UIFieldUtils {
           inputs.put(new ActionInputParameter(actionInput).toJson());
         }
         actionButtons.put(new JSONObject().put("name", actionButton.name()).put("icon", actionButton.icon())
-            .put("color", actionButton.color()).put("inputs", inputs).put("style", actionButton.style()));
+                                          .put("color", actionButton.color()).put("inputs", inputs).put("style", actionButton.style()));
       }
       jsonTypeMetadata.set("actionButtons", OBJECT_MAPPER.valueToTree(actionButtons));
     }
@@ -855,7 +855,7 @@ public class UIFieldUtils {
     @Override
     public UIField getUIField() {
       return methods.stream().filter(m -> m.isAnnotationPresent(UIField.class)).findFirst().get()
-          .getDeclaredAnnotation(UIField.class);
+                    .getDeclaredAnnotation(UIField.class);
     }
 
     @Override

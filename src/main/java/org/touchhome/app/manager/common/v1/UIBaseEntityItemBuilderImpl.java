@@ -19,7 +19,7 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value> implements UIEnt
   private final String entityID;
   private String title;
   private int order;
-  private boolean disabled;
+  private Boolean disabled;
   @JsonIgnore
   private Map<String, Runnable> fetchValueHandlers;
 
@@ -32,13 +32,13 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value> implements UIEnt
   private Map<String, String> styleMap;
   private String icon;
   private String iconColor;
+  private String separatedText;
 
   public UIBaseEntityItemBuilderImpl(UIItemType uiItemType, String entityID, int order, UIActionHandler actionHandler) {
     this.itemType = uiItemType.name();
     this.entityID = entityID;
     this.actionHandler = actionHandler;
     this.order = order;
-    this.title = entityID;
   }
 
   @Override
@@ -66,7 +66,7 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value> implements UIEnt
   @Override
   public String getStyle() {
     return styleMap == null ? null : styleMap.entrySet().stream().map(e -> e.getKey() + ":" + e.getValue() + ";")
-        .collect(Collectors.joining());
+                                             .collect(Collectors.joining());
   }
 
   @Override
@@ -91,6 +91,12 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value> implements UIEnt
   }
 
   @Override
+  public Owner setSeparatedText(String sepText) {
+    this.separatedText = sepText;
+    return (Owner) this;
+  }
+
+  @Override
   public Owner setValue(Value value) {
     this.value = value;
     return (Owner) this;
@@ -98,7 +104,7 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value> implements UIEnt
 
   @Override
   public Owner setDisabled(boolean disabled) {
-    this.disabled = disabled;
+    this.disabled = disabled ? true : null;
     return (Owner) this;
   }
 

@@ -23,10 +23,10 @@ import org.touchhome.app.manager.common.v1.item.UITextInputItemBuilderImpl;
 import org.touchhome.bundle.api.ui.field.action.UIActionInput;
 import org.touchhome.bundle.api.ui.field.action.v1.UIEntityBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.touchhome.bundle.api.ui.field.action.v1.item.UICheckboxItemBuilder;
-import org.touchhome.bundle.api.ui.field.action.v1.item.UIInfoItemBuilder;
+import org.touchhome.bundle.api.ui.field.action.v1.item.UIInfoItemBuilder.InfoType;
 import org.touchhome.bundle.api.ui.field.action.v1.item.UISliderItemBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.item.UITextInputItemBuilder;
+import org.touchhome.bundle.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
 
 @Getter
@@ -72,14 +72,14 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
   }
 
   @Override
-  public DialogEntity<UIDialogLayoutBuilder> addFlex(@NotNull String name) {
-    return addEntity(name, new UIDialogLayoutBuilderImpl(name, null).setOrder(nextOrder()));
+  public DialogEntity<UIFlexLayoutBuilder> addFlex(@NotNull String name) {
+    return addEntity(name, new UIFlexLayoutBuilderImpl(name, nextOrder()));
   }
 
   @Override
   public String getStyle() {
     return styleMap == null ? null : styleMap.entrySet().stream().map(e -> e.getKey() + ":" + e.getValue() + ";")
-        .collect(Collectors.joining());
+                                             .collect(Collectors.joining());
   }
 
   @Override
@@ -87,13 +87,9 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
     if (this.styleMap == null) {
       this.styleMap = new HashMap<>(2);
     }
+    value = value.endsWith(";") ? value.substring(0, value.length() - 1) : value;
     this.styleMap.put(style, value);
     return this;
-  }
-
-  @Override
-  public DialogEntity<UISliderItemBuilder> addSlider(@NotNull String name, float value, float min, float max) {
-    return addEntity(name, new UISliderItemBuilderImpl(name, nextOrder(), null, value, min, max));
   }
 
   public DialogEntity<UITextInputItemBuilder> addInput(@NotNull String name, String defaultValue,
@@ -101,16 +97,6 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
       boolean required) {
     return addEntity(name, new UITextInputItemBuilderImpl(name, nextOrder(), defaultValue, inputType)
         .setRequired(required));
-  }
-
-  @Override
-  public DialogEntity<UICheckboxItemBuilder> addCheckbox(@NotNull String name, boolean defaultValue) {
-    return addEntity(name, new UICheckboxItemBuilderImpl(name, nextOrder(), null, defaultValue));
-  }
-
-  @Override
-  public DialogEntity<UIInfoItemBuilder> addInfo(@NotNull String value, UIInfoItemBuilder.InfoType infoType) {
-    return addEntity(value, new UIInfoItemBuilderImpl("txt_" + value.hashCode(), nextOrder(), value, infoType));
   }
 
   public <T extends UIEntityBuilder> DialogEntity<T> addEntity(String key, T entityBuilder) {
@@ -151,22 +137,24 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
         addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.Password, input.required());
         break;
       case number:
-        addSlider(input.name(), Float.parseFloat(input.value()), (float) input.min(), (float) input.max())
-            .edit(sliderBuilder ->
+        addEntity(input.name(), new UISliderItemBuilderImpl(input.name(), nextOrder(), null,
+            Float.parseFloat(input.value()), (float) input.min(), (float) input.max())).
+            edit(sliderBuilder ->
                 sliderBuilder.setSliderType(UISliderItemBuilder.SliderType.Input).setRequired(input.required()));
         break;
       case info:
-        addInfo(input.value());
+        addEntity(input.value(), new UIInfoItemBuilderImpl("txt_" + input.value().hashCode(),
+            nextOrder(), input.value(), InfoType.Text));
         break;
       case bool:
-        addCheckbox(input.name(), Boolean.parseBoolean(input.value()));
+        addEntity(input.name(), new UICheckboxItemBuilderImpl(input.name(), nextOrder(), null, Boolean.parseBoolean(input.value())));
         break;
     }
   }
 
   public UIInputEntity buildEntity() {
     List<UIInputEntity> entities = getInputBuilders().values().stream().map(UIEntityBuilder::buildEntity)
-        .sorted(Comparator.comparingInt(UIInputEntity::getOrder)).collect(Collectors.toList());
+                                                     .sorted(Comparator.comparingInt(UIInputEntity::getOrder)).collect(Collectors.toList());
     return new UIDialogInputEntity(entityID, this.order, UIItemType.Dialog.name(), title, icon, iconColor, getStyle(), width,
         entities);
   }

@@ -104,6 +104,7 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicP
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
+import org.touchhome.common.util.Lang;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 @Log4j2
@@ -129,15 +130,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
   private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
 
-  @PostConstruct
-  public void postConstruct() {
-    entityContext.setting().listenValue(SystemClearCacheButtonSetting.class, "ic-clear-cache", () -> {
-      typeToEntityClassNames.clear();
-      typeToRequireDependencies.clear();
-      sidebarClassButtonToInstance.clear();
-    });
-  }
-
   @SneakyThrows
   static ActionResponseModel executeMethodAction(Method method, Object actionHolder, EntityContext entityContext,
       BaseEntity actionEntity, JSONObject params) {
@@ -162,10 +154,19 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     TypeToRequireDependenciesContext dependenciesContext = typeToRequireDependencies.get(aClass.getSimpleName());
     if (dependenciesContext != null) {
       Set<String> notInstalledDependencies = dependenciesContext.installers.stream().filter(i -> i.isEnabled(entityContext))
-          .map(DependencyExecutableInstaller::getName).collect(Collectors.toSet());
+                                                                           .map(DependencyExecutableInstaller::getName).collect(Collectors.toSet());
       return Optional.of(new ItemsByTypeResponse.TypeDependency(aClass.getSimpleName(), notInstalledDependencies));
     }
     return Optional.empty();
+  }
+
+  @PostConstruct
+  public void postConstruct() {
+    entityContext.setting().listenValue(SystemClearCacheButtonSetting.class, "ic-clear-cache", () -> {
+      typeToEntityClassNames.clear();
+      typeToRequireDependencies.clear();
+      sidebarClassButtonToInstance.clear();
+    });
   }
 
   public <T extends UIActionHandler> T getOrCreateUIActionHandler(Class<T> actionHandlerClass) {
@@ -195,7 +196,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
       AccessibleObject field =
           Optional.ofNullable((AccessibleObject) FieldUtils.getField(actionHolder.getClass(), fieldName, true))
-              .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
+                  .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
       if (field != null) {
         for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
           if (actionButton.name().equals(actionRequestModel.name)) {
@@ -266,7 +267,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
           for (EntityUIMetaData data : subTypeFieldMetadata) {
             data.setTypeMetaData(
                 new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true)
-                    .toString());
+                                                                                       .toString());
           }
           entityUIMetaData.addAll(subTypeFieldMetadata);
         }
@@ -346,7 +347,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
   public void reloadItems(Collection<String> type) {
     entityContext.ui().sendNotification("-global", OBJECT_MAPPER.createObjectNode()
-        .put("type", "reloadItems").putPOJO("value", type));
+                                                                .put("type", "reloadItems").putPOJO("value", type));
   }
 
   @PostMapping(value = "/{type}/installDep/{dependency}")
@@ -431,8 +432,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
   }
 
   /**
-   * synchronized because if we add few series to item/widget/etc... and pushing changes to server in parallel we may face with loose changes when merging changes from new income
-   * data and saved in db
+   * synchronized because if we add few series to item/widget/etc... and pushing changes to server in parallel we may face with loose changes when merging changes from new income data and saved in db
    */
   @PutMapping
   @SneakyThrows
@@ -526,11 +526,15 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
   @PostMapping("/fireRouteAction")
   public ActionResponseModel fireRouteAction(@RequestBody RouteActionRequest routeActionRequest) {
-    Class<? extends BaseEntity> aClass = baseEntitySimpleClasses.get(routeActionRequest.type);
-    for (UISidebarButton button : aClass.getAnnotationsByType(UISidebarButton.class)) {
-      if (button.handlerClass().getSimpleName().equals(routeActionRequest.handlerClass)) {
-        return getOrCreateUIActionHandler(button.handlerClass()).handleAction(entityContext, null);
+    try {
+      Class<? extends BaseEntity> aClass = baseEntitySimpleClasses.get(routeActionRequest.type);
+      for (UISidebarButton button : aClass.getAnnotationsByType(UISidebarButton.class)) {
+        if (button.handlerClass().getSimpleName().equals(routeActionRequest.handlerClass)) {
+          return getOrCreateUIActionHandler(button.handlerClass()).handleAction(entityContext, null);
+        }
       }
+    } catch (Exception ex) {
+      throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
     }
     return null;
   }
@@ -708,7 +712,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
   private Set<OptionModel> fetchCreateItemTypes(Class<?> entityClassByType) {
     return classFinder.getClassesWithParent(entityClassByType).stream().map(this::getUISideBarMenuOption)
-        .collect(Collectors.toSet());
+                      .collect(Collectors.toSet());
   }
 
   private OptionModel getUISideBarMenuOption(Class<?> aClass) {
@@ -728,14 +732,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
       if (baseEntityByName != null) {
         if (Modifier.isAbstract(baseEntityByName.getModifiers())) {
           typeToEntityClassNames.get(type).addAll(classFinder.getClassesWithParent(baseEntityByName).stream()
-              .filter((Predicate<Class>) child -> {
-                if (child.isAnnotationPresent(UISidebarChildren.class)) {
-                  UISidebarChildren uiSidebarChildren =
-                      (UISidebarChildren) child.getDeclaredAnnotation(UISidebarChildren.class);
-                  return uiSidebarChildren.allowCreateItem();
-                }
-                return true;
-              }).collect(Collectors.toList()));
+                                                             .filter((Predicate<Class>) child -> {
+                                                               if (child.isAnnotationPresent(UISidebarChildren.class)) {
+                                                                 UISidebarChildren uiSidebarChildren =
+                                                                     (UISidebarChildren) child.getDeclaredAnnotation(UISidebarChildren.class);
+                                                                 return uiSidebarChildren.allowCreateItem();
+                                                               }
+                                                               return true;
+                                                             }).collect(Collectors.toList()));
         } else {
           typeToEntityClassNames.get(type).add(baseEntityByName);
         }
@@ -813,11 +817,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     // if Class has only one selection and only one filtered method - use it
     long count = FieldUtils.getFieldsListWithAnnotation(entity.getClass(), UIField.class).stream()
-        .map(p -> p.getAnnotation(UIField.class).type()).filter(f -> f == UIFieldType.SelectBox).count();
+                           .map(p -> p.getAnnotation(UIField.class).type()).filter(f -> f == UIFieldType.SelectBox).count();
     if (count == 1) {
       List<Method> methodsListWithAnnotation =
           Stream.of(entity.getClass().getDeclaredMethods()).filter(m -> m.isAnnotationPresent(UIFilterOptions.class))
-              .collect(Collectors.toList());
+                .collect(Collectors.toList());
 
       if (methodsListWithAnnotation.size() == 1) {
         return methodsListWithAnnotation.get(0);

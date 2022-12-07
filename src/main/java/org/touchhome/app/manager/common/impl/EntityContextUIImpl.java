@@ -76,8 +76,8 @@ public class EntityContextUIImpl implements EntityContextUI {
   public void onContextCreated() {
     // run hourly script to drop not used dynamicUpdateRegisters
     entityContext.bgp().builder("drop-outdated-dynamicContext").delay(Duration.ofHours(1))
-        .interval(Duration.ofHours(1)).execute(() -> this.dynamicUpdateRegisters.values().removeIf(v ->
-            TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - v.timeout) > 1));
+                 .interval(Duration.ofHours(1)).execute(() -> this.dynamicUpdateRegisters.values().removeIf(v ->
+                     TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - v.timeout) > 1));
   }
 
   @Override
@@ -161,9 +161,9 @@ public class EntityContextUIImpl implements EntityContextUI {
 
   public void removeItem(@NotNull BaseEntity<?> entity) {
     ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
-        .put("type", "remove")
-        .put("entityID", entity.getEntityID())
-        .putPOJO("entity", entity);
+                                       .put("type", "remove")
+                                       .put("entityID", entity.getEntityID())
+                                       .putPOJO("entity", entity);
     sendDynamicUpdate("entity-type-" + entity.getType(), metadata);
   }
 
@@ -175,10 +175,10 @@ public class EntityContextUIImpl implements EntityContextUI {
   @Override
   public void updateItem(@NotNull BaseEntity<?> entity, @NotNull String updateField, @Nullable Object value) {
     ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
-        .put("type", "add")
-        .putPOJO("entityID", entity.getEntityID())
-        .put("updateField", updateField)
-        .putPOJO("value", value);
+                                       .put("type", "add")
+                                       .putPOJO("entityID", entity.getEntityID())
+                                       .put("updateField", updateField)
+                                       .putPOJO("value", value);
 
     sendDynamicUpdate("entity-type-" + entity.getType(), metadata);
   }
@@ -187,23 +187,23 @@ public class EntityContextUIImpl implements EntityContextUI {
   public void updateInnerSetItem(@NotNull BaseEntity<?> parentEntity, @NotNull String parentFieldName,
       @NotNull BaseEntity<?> innerEntity, @NotNull String updateField, @NotNull Object value) {
     ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
-        .put("type", "add")
-        .put("entityID", parentEntity.getEntityID())
-        .put("updateField", updateField)
-        .putPOJO("value", value);
+                                       .put("type", "add")
+                                       .put("entityID", parentEntity.getEntityID())
+                                       .put("updateField", updateField)
+                                       .putPOJO("value", value);
 
     metadata.putPOJO("inner", OBJECT_MAPPER.createObjectNode()
-        .put("id", innerEntity.getEntityID())
-        .put("parentField", parentFieldName));
+                                           .put("id", innerEntity.getEntityID())
+                                           .put("parentField", parentFieldName));
 
     sendDynamicUpdate("entity-type-" + parentEntity.getType(), metadata);
   }
 
   public void updateItem(@NotNull BaseEntity<?> entity, boolean ignoreExtra) {
     ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
-        .put("type", "add")
-        .put("entityID", entity.getEntityID())
-        .putPOJO("entity", entity);
+                                       .put("type", "add")
+                                       .put("entityID", entity.getEntityID())
+                                       .putPOJO("entity", entity);
 
     if (!ignoreExtra) {
       // add install dependencies if require
@@ -256,7 +256,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
       if (dialogModel.getMaxTimeoutInSec() > 0) {
         entityContext.bgp().builder(key + "-dialog-timeout").delay(Duration.ofSeconds(dialogModel.getMaxTimeoutInSec()))
-            .execute(() -> handleDialog(key, DialogResponseType.Timeout, null, null));
+                     .execute(() -> handleDialog(key, DialogResponseType.Timeout, null, null));
       }
 
       sendGlobal(GlobalSendType.dialog, key, dialogModel, null, null);
@@ -513,7 +513,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     return false;
   }
 
-  public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, String value) {
+  public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, String value) throws Exception {
     BellNotification bellNotification = bellNotifications.get(entityID);
     if (bellNotification == null) {
       bellNotification = this.bundleEntrypointNotifications.get(entityID);
@@ -523,8 +523,8 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
     UIInputEntity action =
         bellNotification.getActions().stream().filter(a -> a.getEntityID().equals(actionEntityID)).findAny()
-            .orElseThrow(() ->
-                new IllegalStateException("Unable to find action: <" + entityID + ">"));
+                        .orElseThrow(() ->
+                            new IllegalStateException("Unable to find action: <" + entityID + ">"));
     if (action instanceof UIInputEntityActionHandler) {
       UIActionHandler actionHandler = ((UIInputEntityActionHandler) action).getActionHandler();
       if (actionHandler != null) {

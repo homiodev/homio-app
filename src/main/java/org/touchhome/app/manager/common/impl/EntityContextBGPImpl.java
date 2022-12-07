@@ -4,6 +4,7 @@ import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -393,7 +394,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
       if (scheduledFuture == null || (period == null && delay == null)) {
         return null;
       }
-      return Duration.ofMillis(scheduledFuture.getDelay(TimeUnit.MILLISECONDS)).toString().substring(2);
+      return Duration.ofMillis(scheduledFuture.getDelay(TimeUnit.MILLISECONDS))
+                     .truncatedTo(ChronoUnit.SECONDS).toString().substring(2);
     }
 
     @Override
@@ -453,7 +455,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
       // fire listeners if require
       if (this.valueListeners != null) {
         for (Iterator<ThrowingBiFunction<T, T, Boolean, Exception>> iterator = this.valueListeners.values().iterator();
-            iterator.hasNext(); ) {
+             iterator.hasNext(); ) {
           ThrowingBiFunction<T, T, Boolean, Exception> fn = iterator.next();
           try {
             if (Boolean.TRUE.equals(fn.apply(value, oldValue))) {

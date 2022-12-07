@@ -2,6 +2,7 @@ package org.touchhome.app.manager.common.v1;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -19,6 +20,7 @@ import org.touchhome.app.manager.common.v1.item.UIInfoItemBuilderImpl;
 import org.touchhome.app.manager.common.v1.item.UIMultiButtonItemBuilderImpl;
 import org.touchhome.app.manager.common.v1.item.UISelectBoxItemBuilderImpl;
 import org.touchhome.app.manager.common.v1.item.UISliderItemBuilderImpl;
+import org.touchhome.app.manager.common.v1.item.UITextInputItemBuilderImpl;
 import org.touchhome.app.manager.common.v1.layout.UIDialogLayoutBuilderImpl;
 import org.touchhome.app.manager.common.v1.layout.UIFlexLayoutBuilderImpl;
 import org.touchhome.app.manager.common.v1.layout.UIStickyDialogItemBuilderImpl;
@@ -31,6 +33,8 @@ import org.touchhome.bundle.api.ui.field.action.v1.item.UIInfoItemBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.item.UISliderItemBuilder;
+import org.touchhome.bundle.api.ui.field.action.v1.item.UITextInputItemBuilder;
+import org.touchhome.bundle.api.ui.field.action.v1.item.UITextInputItemBuilder.InputType;
 import org.touchhome.bundle.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
@@ -39,7 +43,9 @@ import org.touchhome.bundle.api.ui.field.action.v1.layout.dialog.UIStickyDialogI
 public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
   @Getter
+  @JsonIgnore
   protected final Map<String, UIEntityBuilder> inputBuilders = new HashMap<>();
+  @JsonIgnore
   private Map<String, String> styleMap;
 
   public abstract int getOrder();
@@ -52,7 +58,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
   @Override
   public String getStyle() {
     return styleMap == null ? null : styleMap.entrySet().stream().map(e -> e.getKey() + ":" + e.getValue() + ";")
-        .collect(Collectors.joining());
+                                             .collect(Collectors.joining());
   }
 
   @Override
@@ -112,7 +118,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
       buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, iconColor, null, order))
           .setStickyDialogEntityBuilder(stickyDialogBuilder);
     }
-    return new DialogEntity<UIStickyDialogItemBuilder>() {
+    return new DialogEntity<>() {
       @Override
       public UIStickyDialogItemBuilder up() {
         return stickyDialogBuilder;
@@ -133,7 +139,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     UIDialogLayoutBuilderImpl dialogEntityBuilder = new UIDialogLayoutBuilderImpl(entityID, width);
     UIButtonItemBuilderImpl buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, iconColor, null, order))
         .setDialogEntityBuilder(dialogEntityBuilder);
-    return new DialogEntity<UIDialogLayoutBuilder>() {
+    return new DialogEntity<>() {
       @Override
       public UIDialogLayoutBuilder up() {
         return dialogEntityBuilder;
@@ -145,6 +151,11 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
         return dialogEntityBuilder;
       }
     };
+  }
+
+  @Override
+  public UITextInputItemBuilder addInput(@NotNull String name, String defaultValue, InputType inputType, boolean required) {
+    return addEntity(new UITextInputItemBuilderImpl(name, getNextOrder(), defaultValue, inputType).setRequired(required));
   }
 
   @Override
@@ -175,7 +186,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
   @Override
   public UISliderItemBuilder addSlider(@NotNull String name, float value, float min, float max, UIActionHandler action,
       UISliderItemBuilder.SliderType sliderType, int order) {
-    return addEntity(new UISliderItemBuilderImpl(name, order, action, value, min, max));
+    return addEntity(new UISliderItemBuilderImpl(name, order, action, value, min, max).setSliderType(sliderType));
   }
 
   @Override
@@ -189,7 +200,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
       int order) {
     return addEntity(new UIButtonItemBuilderImpl(UIItemType.TableLayout, name, defaultString(icon, "fas fa-table"),
         iconColor, order, action).setMetadata(new JSONObject().put("maxRows", maxRows).put("maxColumns", maxColumns)
-        .put("value", value)));
+                                                              .put("value", value)));
   }
 
   @Override

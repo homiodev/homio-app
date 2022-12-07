@@ -13,7 +13,7 @@ import org.touchhome.bundle.api.ui.field.action.v1.item.UIMultiButtonItemBuilder
 public class UIMultiButtonItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UIMultiButtonItemBuilder, String>
     implements UIMultiButtonItemBuilder {
 
-  private List<ExtraButton> buttons = new ArrayList<>();
+  private final List<ExtraButton> buttons = new ArrayList<>();
 
   public UIMultiButtonItemBuilderImpl(String entityID, int order, UIActionHandler actionHandler) {
     super(UIItemType.MultiButton, entityID, order, actionHandler);

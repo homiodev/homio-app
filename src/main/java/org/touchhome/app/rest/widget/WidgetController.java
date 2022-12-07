@@ -71,6 +71,7 @@ import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.fs.FileSystemProvider;
 import org.touchhome.common.fs.TreeNode;
 import org.touchhome.common.util.CommonUtils;
+import org.touchhome.common.util.Lang;
 
 @Log4j2
 @RestController
@@ -125,9 +126,9 @@ public class WidgetController {
         Set<WidgetFMNodeValue> items = null;
         if (!Objects.equals(snapshot, lastUpdated)) {
           Set<TreeNode> children = fileSystem.getChildren(parentId).stream().filter(n -> !n.getAttributes().isDir())
-              .collect(Collectors.toSet());
+                                             .collect(Collectors.toSet());
           items = children.stream().map(treeNode -> new WidgetFMNodeValue(treeNode, width, height))
-              .collect(Collectors.toSet());
+                          .collect(Collectors.toSet());
 
         }
         nodes.add(new WidgetFMNodes(fileSystemEntity.getTitle(), seriesEntity.getEntityID(), lastUpdated, items));
@@ -157,26 +158,21 @@ public class WidgetController {
   @PostMapping("/video/action")
   public void fireVideoAction(@RequestBody VideoActionRequest request) {
     WidgetVideoSeriesEntity series = getSeriesEntity(request);
+    try {
+      BaseFFMPEGVideoStreamEntity streamEntity = entityContext.getEntity(series.getValueDataSource());
+      if (streamEntity == null) {
+        throw new NotFoundException("video.error.seriesNotFound");
+      }
 
-    BaseFFMPEGVideoStreamEntity streamEntity = entityContext.getEntity(series.getValueDataSource());
-    if (streamEntity == null) {
-      throw new NotFoundException("Unable to find base video for series: " + series.getTitle());
+      UIInputBuilder uiInputBuilder = streamEntity.getService().assembleActions();
+      UIActionHandler actionHandler = uiInputBuilder.findActionHandler(request.name);
+      if (actionHandler == null) {
+        throw new NotFoundException("video.error.actionNotFound");
+      }
+      actionHandler.handleAction(entityContext, new JSONObject().put("value", request.value));
+    } catch (Exception ex) {
+      throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
     }
-
-    UIInputBuilder uiInputBuilder = streamEntity.getService().assembleActions();
-    UIActionHandler actionHandler = uiInputBuilder.findActionHandler(request.name);
-    if (actionHandler == null) {
-      throw new RuntimeException("No video action " + request.name + "found");
-    }
-    actionHandler.handleAction(entityContext, new JSONObject().put("value", request.value));
-
-        /*TODO: Set<StatefulContextMenuAction> statefulContextMenuActions = streamEntity.getVideoHandler().getCameraActions
-           (false);
-
-        StatefulContextMenuAction statefulContextMenuAction = statefulContextMenuActions.stream()
-                .filter(ca -> ca.getName().equals(cameraActionRequest.name)).findAny().orElseThrow(
-                        () -> new RuntimeException("No camera action " + cameraActionRequest.name + "found"));
-        statefulContextMenuAction.getAction().accept(new JSONObject().put("value", cameraActionRequest.value));*/
   }
 
   @PostMapping("/button/values")
@@ -267,8 +263,8 @@ public class WidgetController {
 
   @GetMapping("/tab/{tabId}")
   public List<WidgetEntity> getWidgetsInTab(@PathVariable("tabId") String tabId) {
-    List<WidgetBaseEntity> widgets = entityContext.findAll(WidgetBaseEntity.class).stream()
-        .filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId)).collect(Collectors.toList());
+    List<WidgetBaseEntity> widgets = entityContext.findAll(WidgetBaseEntity.class).stream().filter(
+        w -> w.getWidgetTabEntity().getEntityID().equals(tabId)).collect(Collectors.toList());
 
     boolean updated = false;
     for (WidgetBaseEntity<?> widget : widgets) {
@@ -298,7 +294,7 @@ public class WidgetController {
       try {
         jsEntity.setJavaScriptErrorResponse(null);
         ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(jsEntity.getJavaScript())
-            .setJavaScriptParameters(jsEntity.getJavaScriptParameters());
+                                                      .setJavaScriptParameters(jsEntity.getJavaScriptParameters());
 
         CompileScriptContext compileScriptContext = scriptService.createCompiledScript(scriptEntity, null);
         jsEntity.setJavaScriptResponse(scriptService.runJavaScript(compileScriptContext).stringValue());
@@ -340,7 +336,7 @@ public class WidgetController {
       throw new NotFoundException("Unable to find bundle: " + tabId + " or widgets in bundle");
     }
     WidgetBaseTemplate template = widgets.stream().filter(w -> w.getClass().getSimpleName().equals(type)).findAny()
-        .orElseThrow(() -> new NotFoundException("Unable to find widget: " + type + " in bundle: " + bundle));
+                                         .orElseThrow(() -> new NotFoundException("Unable to find widget: " + type + " in bundle: " + bundle));
 
     String js = template.toJavaScript();
     String params = "";
@@ -358,7 +354,7 @@ public class WidgetController {
 
     WidgetJsEntity widgetJsEntity =
         new WidgetJsEntity().setJavaScriptParameters(params).setJavaScriptParametersReadOnly(paramReadOnly)
-            .setJavaScript(js);
+                            .setJavaScript(js);
 
     widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(bundle + ":" + template.getClass().getSimpleName());
 
@@ -367,8 +363,8 @@ public class WidgetController {
 
   @GetMapping("/tab")
   public List<OptionModel> getWidgetTabs() {
-    return entityContext.findAll(WidgetTabEntity.class).stream().sorted()
-        .map(t -> OptionModel.of(t.getEntityID(), t.getName())).collect(Collectors.toList());
+    return entityContext.findAll(WidgetTabEntity.class).stream().sorted().map(
+        t -> OptionModel.of(t.getEntityID(), t.getName())).collect(Collectors.toList());
   }
 
   @SneakyThrows
@@ -415,7 +411,7 @@ public class WidgetController {
   private <T extends WidgetSeriesEntity> T getSeriesEntity(SingleValueRequest<?> request) {
     WidgetBaseEntityAndSeries entity = entityContext.getEntity(request.entityID);
     T series = ((Set<T>) entity.getSeries()).stream().filter(s -> s.getEntityID().equals(request.seriesEntityID)).findAny()
-        .orElse(null);
+                                            .orElse(null);
     if (series == null) {
       throw new NotFoundException("Unable to find series: " + request.seriesEntityID + " for entity: " + entity.getTitle());
     }

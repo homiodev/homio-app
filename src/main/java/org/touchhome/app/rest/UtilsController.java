@@ -148,7 +148,7 @@ public class UtilsController {
       Files.copy(tempFile, outputStream);
       runScriptOnceJSON.logUrl = "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
     } else {
-      runScriptOnceJSON.log = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
+      runScriptOnceJSON.log = outputStream.toString(StandardCharsets.UTF_8);
     }
 
     return runScriptOnceJSON;
@@ -163,7 +163,11 @@ public class UtilsController {
   @PostMapping("/notification/{entityID}/action")
   public ActionResponseModel acceptNotificationAction(@PathVariable("entityID") String entityID,
       @RequestBody BellHeaderActionRequest actionRequest) {
-    return entityContext.ui().handleNotificationAction(entityID, actionRequest.entityID, actionRequest.value);
+    try {
+      return entityContext.ui().handleNotificationAction(entityID, actionRequest.entityID, actionRequest.value);
+    } catch (Exception ex) {
+      throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
+    }
   }
 
   @SneakyThrows

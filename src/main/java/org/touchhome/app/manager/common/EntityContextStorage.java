@@ -33,7 +33,8 @@ public class EntityContextStorage {
   public static final Map<String, EntityMemoryData> ENTITY_MEMORY_MAP = new ConcurrentHashMap<>();
   public static final long TOTAL_MEMORY = osBean.getTotalPhysicalMemorySize();
   public static InMemoryDBService<SystemMessage> cpuStorage;
-
+  // constructor parameters
+  private final EntityContextImpl entityContext;
   private EntityContextBGP.ThreadContext<Void> hardwareCpuScheduler;
 
   {
@@ -48,7 +49,7 @@ public class EntityContextStorage {
           if (!Objects.equals(value, prevValue)) {
             if (value instanceof Status) {
               Status status = (Status) value;
-              Level level = status == Status.ERROR ? Level.ERROR : Level.INFO;
+              Level level = status == Status.ERROR ? Level.ERROR : Level.DEBUG;
               Object message = data.VALUE_MAP.get(key + "_msg");
               if (message == null) {
                 LogManager.getLogger(entity.getClass()).log(level, "[{}]: Set {} '{}' status: {}",
@@ -73,9 +74,6 @@ public class EntityContextStorage {
     });
   }
 
-  // constructor parameters
-  private final EntityContextImpl entityContext;
-
   public void init() {
     initSystemCpuListening();
   }
@@ -91,11 +89,11 @@ public class EntityContextStorage {
         this.hardwareCpuScheduler.cancel();
       }
       this.hardwareCpuScheduler = entityContext.bgp().builder("hardware-cpu").interval(Duration.ofSeconds(timeout)).
-          execute(() -> {
-            SystemMessage systemMessage = new SystemMessage(osBean, TOTAL_MEMORY);
-            cpuStorage.save(systemMessage);
-            entityContext.event().fireEvent("cpu", systemMessage);
-          });
+                                               execute(() -> {
+                                                 SystemMessage systemMessage = new SystemMessage(osBean, TOTAL_MEMORY);
+                                                 cpuStorage.save(systemMessage);
+                                                 entityContext.event().fireEvent("cpu", systemMessage);
+                                               });
     });
   }
 

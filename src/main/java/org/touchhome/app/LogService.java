@@ -62,6 +62,8 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 public class LogService implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
 
   private static final GlobalAppender globalAppender = new GlobalAppender();
+  private static final Set<String> excludeDebugPackages = Set.of("org.springframework", "com.mongodb",
+      "de.bwaldvogel");
 
   @SneakyThrows
   private static void initLogAppender() {
@@ -83,10 +85,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
       // hack: add global logger for every log since DEBUG level.
       configuration.addFilter(new AbstractFilter() {
         public void logIfRequire(Logger logger, Level level, Marker marker, String message, Throwable t, Object... params) {
-          if (level.intLevel() == Level.DEBUG.intLevel() &&
-              // to avoid loop if logging from inside send message to UI
-              (logger.getName().equals("org.springframework.web.SimpLogging") ||
-                  logger.getName().startsWith("org.springframework.messaging"))) {
+          if (level.intLevel() == Level.DEBUG.intLevel() && disabledDebugPackage(logger.getName())) {
             return;
           }
           if (level.intLevel() <= Level.DEBUG.intLevel()) {
@@ -111,6 +110,15 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
       configuration.getRootLogger().addAppender(globalAppender, Level.DEBUG, null);
       loggerContext.updateLoggers();
     }
+  }
+
+  private static boolean disabledDebugPackage(String name) {
+    for (String excludeDebugPackage : excludeDebugPackages) {
+      if (name.startsWith(excludeDebugPackage)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static void scanEntityLogs(EntityContextImpl entityContext) {
@@ -175,6 +183,16 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
   private static String maxLength(String text) {
     return text.length() > 25 ? text.substring(text.length() - 25) : text;
+  }
+
+  private static Set<String> fetchAppenderPrefixSet(Configuration configuration, String appenderName) {
+    Set<String> prefixSet = new HashSet<>();
+    for (LoggerConfig config : configuration.getLoggers().values()) {
+      if (config.getAppenders().containsKey(appenderName)) {
+        prefixSet.add(config.getName());
+      }
+    }
+    return prefixSet;
   }
 
   public Set<String> getTabs() {
@@ -246,7 +264,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         if (logConsumer.logTopics.stream().anyMatch(l -> l.test(event))) {
           sendLogEvent(event, message -> {
             Files.writeString(logConsumer.path, message + System.lineSeparator(), StandardOpenOption.APPEND);
-            entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID,  message);
+            entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, message);
           });
         }
       }
@@ -287,12 +305,11 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
   @Getter
   private static class LogConsumer {
 
+    public final Path path;
     private final List<Predicate<LogEvent>> logTopics = new ArrayList<>();
     private final String entityID;
     private final Class<?> targetClass;
     private final String className;
-    public final Path path;
-
     private boolean debug;
 
     @SneakyThrows
@@ -304,16 +321,6 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
       this.debug = debug;
       Files.write(path, new byte[0], StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
-  }
-
-  private static Set<String> fetchAppenderPrefixSet(Configuration configuration, String appenderName) {
-    Set<String> prefixSet = new HashSet<>();
-    for (LoggerConfig config : configuration.getLoggers().values()) {
-      if (config.getAppenders().containsKey(appenderName)) {
-        prefixSet.add(config.getName());
-      }
-    }
-    return prefixSet;
   }
 
   @RequiredArgsConstructor

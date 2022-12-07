@@ -1,4 +1,10 @@
 {
+  "video": {
+    "error": {
+      "seriesNotFound": "Unable to find base video for series",
+      "actionNotFound": "No video action found"
+    }
+  },
   "DESCRIPTION": {
     "VARIABLE_TIME_SERIES": "Variables time-value series",
     "VARIABLE_GET_STATUS": "Variables get last value",

@@ -1,559 +1,604 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <modelVersion>4.0.0</modelVersion>
   <artifactId>touchhome-core</artifactId>
-  <url>https://github.com/touchhome/touchhome-core</url>
+  <build>
+    <finalName>${project.artifactId}</finalName>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <release>11</release>
+        </configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+      </plugin>
+      <plugin>
+        <artifactId>checksum-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>artifacts</goal>
+            </goals>
+          </execution>
+        </executions>
+        <groupId>net.ju-n.maven.plugins</groupId>
+        <version>1.2</version>
+      </plugin>
 
-  <packaging>jar</packaging>
-  <version>1.6-SNAPSHOT</version>
+      <plugin>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <fork>true</fork>
+          <mainClass>${start-class}</mainClass>
+          <skip>false</skip>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+        <groupId>org.springframework.boot</groupId>
+      </plugin>
 
-  <parent>
-    <groupId>org.touchhome</groupId>
-    <artifactId>touchhome-dependency</artifactId>
-    <version>2.4.4</version>
-  </parent>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <development>true</development>
+          </systemPropertyVariables>
+        </configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+      </plugin>
+    </plugins>
 
-  <scm>
-    <url>https://github.com/touchhome/${project.artifactId}</url>
-    <connection>scm:git:git://github.com/github.com/touchhome/${project.artifactId}.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/touchhome/${project.artifactId}.git</developerConnection>
-    <tag>HEAD</tag>
-  </scm>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>application.yml</include>
+        </includes>
+      </resource>
 
-  <properties>
-    <!--<graalvm.version>21.1.0</graalvm.version>-->
-    <start-class>org.touchhome.app.TouchHomeApplication</start-class>
-    <touchhome-bundle-api.version>1.2.1-SNAPSHOT</touchhome-bundle-api.version>
-    <touchhome-bundle.version>1.2.1-SNAPSHOT</touchhome-bundle.version>
-
-    <os.detected.classifier>linux-armhf</os.detected.classifier>
-  </properties>
-
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+        <includes>
+          <include>**/*</include>
+        </includes>
+      </resource>
+    </resources>
+  </build>
   <dependencies>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
+      <artifactId>uom-se</artifactId>
+      <groupId>tec.uom</groupId>
+    </dependency>
+    <dependency>
       <artifactId>spring-boot-configuration-processor</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.springframework.boot</groupId>
+    </dependency>
+    <dependency>
       <artifactId>spring-boot-starter-validation</artifactId>
+      <groupId>org.springframework.boot</groupId>
     </dependency>
     <dependency>
-      <groupId>com.sun.xml.messaging.saaj</groupId>
       <artifactId>saaj-impl</artifactId>
+      <groupId>com.sun.xml.messaging.saaj</groupId>
     </dependency>
     <dependency>
-      <groupId>de.bwaldvogel</groupId>
       <artifactId>mongo-java-server</artifactId>
+      <groupId>de.bwaldvogel</groupId>
     </dependency>
     <dependency>
-      <groupId>org.mongodb</groupId>
       <artifactId>mongo-java-driver</artifactId>
+      <groupId>org.mongodb</groupId>
     </dependency>
     <dependency>
-      <groupId>org.apache.tika</groupId>
       <artifactId>tika-core</artifactId>
+      <groupId>org.apache.tika</groupId>
     </dependency>
     <dependency>
-      <groupId>co.elastic.thumbnails4j</groupId>
       <artifactId>thumbnails4j-all</artifactId>
+      <groupId>co.elastic.thumbnails4j</groupId>
       <version>1.0.0</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty-codec-http</artifactId>
-      <version>${netty.version}</version>
+      <groupId>io.netty</groupId>
       <scope>compile</scope>
+      <version>${netty.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>
-      <version>${netty.version}</version>
+      <groupId>io.netty</groupId>
       <scope>compile</scope>
+      <version>${netty.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty-buffer</artifactId>
-      <version>${netty.version}</version>
+      <groupId>io.netty</groupId>
       <scope>compile</scope>
+      <version>${netty.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty-transport</artifactId>
-      <version>${netty.version}</version>
+      <groupId>io.netty</groupId>
       <scope>compile</scope>
+      <version>${netty.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty-codec</artifactId>
-      <version>${netty.version}</version>
+      <groupId>io.netty</groupId>
       <scope>compile</scope>
+      <version>${netty.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty-resolver</artifactId>
-      <version>${netty.version}</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-handler</artifactId>
+      <scope>compile</scope>
       <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <artifactId>netty-handler</artifactId>
+      <groupId>io.netty</groupId>
       <scope>compile</scope>
+      <version>${netty.version}</version>
     </dependency>
 
     <dependency>
-      <groupId>org.touchhome</groupId>
       <artifactId>touchhome-bluetooth</artifactId>
-      <version>1.0</version>
+      <groupId>org.touchhome</groupId>
       <scope>compile</scope>
+      <version>1.0</version>
     </dependency>
     <dependency>
-      <groupId>org.touchhome</groupId>
       <artifactId>touchhome-common</artifactId>
-      <version>1.0</version>
+      <groupId>org.touchhome</groupId>
       <scope>compile</scope>
+      <version>1.0</version>
     </dependency>
     <dependency>
-      <groupId>org.touchhome</groupId>
       <artifactId>touchhome-hquery</artifactId>
-      <version>1.0</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.11.0</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>dev.failsafe</groupId>
-      <artifactId>failsafe</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>net.coobird</groupId>
-      <artifactId>thumbnailator</artifactId>
-      <version>0.4.16</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org</groupId>
-      <artifactId>jaudiotagger</artifactId>
-      <version>2.0.3</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.fathzer</groupId>
-      <artifactId>javaluator</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.squareup.retrofit2</groupId>
-      <artifactId>retrofit</artifactId>
-      <version>2.9.0</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.squareup.retrofit2</groupId>
-      <artifactId>converter-gson</artifactId>
-      <version>2.9.0</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.squareup.okhttp3</groupId>
-      <artifactId>okhttp</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.squareup.okhttp3</groupId>
-      <artifactId>logging-interceptor</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.mongodb</groupId>
-      <artifactId>bson</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>io.etcd</groupId>
-      <artifactId>jetcd-core</artifactId>
-      <version>0.7.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jmdns</groupId>
-      <artifactId>jmdns</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-compress</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>org.touchhome</groupId>
+      <scope>compile</scope>
+      <version>1.0</version>
+    </dependency>
+    <dependency>
+      <artifactId>commons-io</artifactId>
+      <groupId>commons-io</groupId>
+      <scope>compile</scope>
+      <version>2.11.0</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>failsafe</artifactId>
+      <groupId>dev.failsafe</groupId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <artifactId>thumbnailator</artifactId>
+      <groupId>net.coobird</groupId>
+      <scope>compile</scope>
+      <version>0.4.16</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>jaudiotagger</artifactId>
+      <groupId>org</groupId>
+      <scope>compile</scope>
+      <version>2.0.3</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>javaluator</artifactId>
+      <groupId>com.fathzer</groupId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <artifactId>retrofit</artifactId>
+      <groupId>com.squareup.retrofit2</groupId>
+      <scope>compile</scope>
+      <version>2.9.0</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>converter-gson</artifactId>
+      <groupId>com.squareup.retrofit2</groupId>
+      <scope>compile</scope>
+      <version>2.9.0</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>okhttp</artifactId>
+      <groupId>com.squareup.okhttp3</groupId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <artifactId>logging-interceptor</artifactId>
+      <groupId>com.squareup.okhttp3</groupId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <artifactId>bson</artifactId>
+      <groupId>org.mongodb</groupId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <artifactId>jetcd-core</artifactId>
+      <groupId>io.etcd</groupId>
+      <scope>compile</scope>
+      <version>0.7.1</version>
+    </dependency>
+    <dependency>
+      <artifactId>jmdns</artifactId>
+      <groupId>org.jmdns</groupId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <artifactId>commons-compress</artifactId>
+      <groupId>org.apache.commons</groupId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <artifactId>arduino-core</artifactId>
+      <groupId>org.touchhome</groupId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.jetbrains</groupId>
       <artifactId>annotations</artifactId>
+      <groupId>org.jetbrains</groupId>
     </dependency>
     <dependency>
-      <groupId>com.github.hypfvieh</groupId>
       <artifactId>dbus-java</artifactId>
+      <groupId>com.github.hypfvieh</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>com.jayway.jsonpath</groupId>
       <artifactId>json-path</artifactId>
+      <groupId>com.jayway.jsonpath</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.tukaani</groupId>
       <artifactId>xz</artifactId>
+      <groupId>org.tukaani</groupId>
       <scope>compile</scope>
       <version>1.9</version>
     </dependency>
 
     <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
+      <groupId>org.apache.httpcomponents</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
+      <groupId>org.projectlombok</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>com.sun.jersey.contribs</groupId>
       <artifactId>jersey-apache-client</artifactId>
-      <version>1.19</version>
+      <groupId>com.sun.jersey.contribs</groupId>
       <scope>compile</scope>
+      <version>1.19</version>
     </dependency>
 
     <dependency>
-      <groupId>org.apache.tomcat.embed</groupId>
       <artifactId>tomcat-embed-websocket</artifactId>
+      <groupId>org.apache.tomcat.embed</groupId>
     </dependency>
 
     <dependency>
-      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
       <exclusions>
         <exclusion>
-          <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-logging</artifactId>
+          <groupId>org.springframework.boot</groupId>
         </exclusion>
       </exclusions>
+      <groupId>org.springframework.boot</groupId>
     </dependency>
 
     <dependency>
-      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>org.springframework.boot</groupId>
+    </dependency>
+
+    <dependency>
       <artifactId>spring-boot-starter-log4j2</artifactId>
+      <groupId>org.springframework.boot</groupId>
     </dependency>
 
     <dependency>
-      <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
+      <groupId>org.apache.commons</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>30.0-jre</version>
+      <groupId>com.google.guava</groupId>
       <scope>compile</scope>
+      <version>30.0-jre</version>
     </dependency>
 
     <dependency>
-      <groupId>org.touchhome.bundle.extra</groupId>
       <artifactId>touchhome-bundle-serial</artifactId>
+      <groupId>org.touchhome.bundle.extra</groupId>
       <version>1.3.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
-      <groupId>org.touchhome.bundle.extra</groupId>
       <artifactId>touchhome-bundle-mqtt</artifactId>
+      <groupId>org.touchhome.bundle.extra</groupId>
       <version>1.3.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
-      <groupId>org.touchhome.bundle.extra</groupId>
       <artifactId>touchhome-bundle-rabbitmq</artifactId>
-      <version>1.3.0-SNAPSHOT</version>
-    </dependency>
-
-    <dependency>
       <groupId>org.touchhome.bundle.extra</groupId>
-      <artifactId>touchhome-bundle-gcloud_tts</artifactId>
       <version>1.3.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
-      <groupId>commons-net</groupId>
+      <artifactId>touchhome-bundle-gcloud_tts</artifactId>
+      <groupId>org.touchhome.bundle.extra</groupId>
+      <version>1.3.0-SNAPSHOT</version>
+    </dependency>
+
+    <dependency>
       <artifactId>commons-net</artifactId>
+      <groupId>commons-net</groupId>
       <version>3.6</version>
     </dependency>
 
 
     <dependency>
-      <groupId>org.touchhome.bundle</groupId>
       <artifactId>touchhome-bundle-cloud</artifactId>
-      <version>${touchhome-bundle.version}</version>
+      <groupId>org.touchhome.bundle</groupId>
       <scope>compile</scope>
+      <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>
-      <groupId>org.touchhome.bundle</groupId>
       <artifactId>touchhome-bundle-camera</artifactId>
-      <version>${touchhome-bundle.version}</version>
+      <groupId>org.touchhome.bundle</groupId>
       <scope>compile</scope>
+      <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>
-      <groupId>org.touchhome.bundle</groupId>
       <artifactId>touchhome-bundle-raspberry</artifactId>
-      <version>${touchhome-bundle.version}</version>
+      <groupId>org.touchhome.bundle</groupId>
       <scope>compile</scope>
+      <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>
-      <groupId>org.touchhome.bundle</groupId>
       <artifactId>touchhome-bundle-telegram</artifactId>
-      <version>${touchhome-bundle.version}</version>
+      <groupId>org.touchhome.bundle</groupId>
       <scope>compile</scope>
+      <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>
-      <groupId>org.touchhome.bundle</groupId>
       <artifactId>touchhome-bundle-zigbee</artifactId>
-      <version>${touchhome-bundle.version}</version>
+      <groupId>org.touchhome.bundle</groupId>
       <scope>compile</scope>
+      <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>
-      <groupId>org.touchhome.bundle</groupId>
       <artifactId>touchhome-bundle-xaomi</artifactId>
-      <version>${touchhome-bundle.version}</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
       <groupId>org.touchhome.bundle</groupId>
-      <artifactId>touchhome-bundle-bluetooth</artifactId>
+      <scope>compile</scope>
       <version>${touchhome-bundle.version}</version>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.reflections</groupId>
+      <artifactId>touchhome-bundle-bluetooth</artifactId>
+      <groupId>org.touchhome.bundle</groupId>
+      <scope>compile</scope>
+      <version>${touchhome-bundle.version}</version>
+    </dependency>
+
+    <dependency>
       <artifactId>reflections</artifactId>
+      <groupId>org.reflections</groupId>
+      <scope>compile</scope>
       <version>0.9.12</version>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.xeustechnologies</groupId>
       <artifactId>jcl-core</artifactId>
+      <groupId>org.xeustechnologies</groupId>
+      <scope>compile</scope>
       <version>2.8</version>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.apache.maven</groupId>
       <artifactId>maven-model</artifactId>
+      <groupId>org.apache.maven</groupId>
+      <scope>compile</scope>
       <version>3.3.9</version>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt</artifactId>
+      <groupId>io.jsonwebtoken</groupId>
+      <scope>compile</scope>
       <version>0.9.1</version>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>net.sourceforge.javaflacencoder</groupId>
       <artifactId>java-flac-encoder</artifactId>
+      <groupId>net.sourceforge.javaflacencoder</groupId>
+      <scope>compile</scope>
       <version>0.3.7</version>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>uk.co.caprica</groupId>
       <artifactId>vlcj</artifactId>
+      <groupId>uk.co.caprica</groupId>
+      <scope>compile</scope>
       <version>3.10.1</version>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>javax.validation</groupId>
       <artifactId>validation-api</artifactId>
+      <groupId>javax.validation</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>cglib</groupId>
       <artifactId>cglib</artifactId>
+      <groupId>cglib</groupId>
+      <scope>compile</scope>
       <version>3.2.1</version>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
+      <groupId>org.postgresql</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-messaging</artifactId>
+      <groupId>org.springframework.security</groupId>
     </dependency>
 
     <dependency>
-      <groupId>com.googlecode.soundlibs</groupId>
       <artifactId>mp3spi</artifactId>
+      <groupId>com.googlecode.soundlibs</groupId>
+      <scope>compile</scope>
       <version>1.9.5-1</version>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
+      <groupId>com.fasterxml.jackson.core</groupId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-hibernate5</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.dataformat</groupId>
-      <artifactId>jackson-dataformat-xml</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <artifactId>jackson-dataformat-xml</artifactId>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <artifactId>jackson-datatype-json-org</artifactId>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.springframework</groupId>
       <artifactId>spring-messaging</artifactId>
+      <groupId>org.springframework</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
+      <groupId>org.springframework.boot</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-websocket</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.java-websocket</groupId>
-      <artifactId>Java-WebSocket</artifactId>
-      <version>1.5.0</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
       <groupId>org.springframework.boot</groupId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <artifactId>Java-WebSocket</artifactId>
+      <groupId>org.java-websocket</groupId>
+      <scope>compile</scope>
+      <version>1.5.0</version>
+    </dependency>
+
+    <dependency>
       <artifactId>spring-boot-starter</artifactId>
       <exclusions>
         <exclusion>
-          <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-logging</artifactId>
+          <groupId>org.springframework.boot</groupId>
         </exclusion>
       </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>commons-fileupload</groupId>
-      <artifactId>commons-fileupload</artifactId>
-      <version>1.4</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>net.rossillo.mvc.cache</groupId>
-      <artifactId>spring-mvc-cache-control</artifactId>
-      <version>1.1.1-RELEASE</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.touchhome</groupId>
-      <artifactId>touchhome-bundle-api</artifactId>
-      <version>${touchhome-bundle-api.version}</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
+    </dependency>
+
+    <dependency>
+      <artifactId>commons-fileupload</artifactId>
+      <groupId>commons-fileupload</groupId>
+      <scope>compile</scope>
+      <version>1.4</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>spring-mvc-cache-control</artifactId>
+      <groupId>net.rossillo.mvc.cache</groupId>
+      <scope>compile</scope>
+      <version>1.1.1-RELEASE</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>h2</artifactId>
+      <groupId>com.h2database</groupId>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <artifactId>touchhome-bundle-api</artifactId>
+      <groupId>org.touchhome</groupId>
+      <scope>compile</scope>
+      <version>${touchhome-bundle-api.version}</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>spring-boot-starter-test</artifactId>
       <exclusions>
         <exclusion>
-          <groupId>com.vaadin.external.google</groupId>
           <artifactId>android-json</artifactId>
+          <groupId>com.vaadin.external.google</groupId>
         </exclusion>
       </exclusions>
-    </dependency>
-
-    <dependency>
       <groupId>org.springframework.boot</groupId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
       <artifactId>spring-boot-starter-thymeleaf</artifactId>
+      <groupId>org.springframework.boot</groupId>
       <scope>compile</scope>
     </dependency>
 
     <dependency>
-      <groupId>com.pivovarit</groupId>
       <artifactId>throwing-function</artifactId>
+      <groupId>com.pivovarit</groupId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.fazecast</groupId>
       <artifactId>jSerialComm</artifactId>
+      <groupId>com.fazecast</groupId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>io.swagger</groupId>
       <artifactId>swagger-annotations</artifactId>
+      <groupId>io.swagger</groupId>
       <scope>compile</scope>
     </dependency>
     <!--<dependency>
@@ -575,87 +620,46 @@
     </dependency>-->
   </dependencies>
 
-  <build>
-    <finalName>${project.artifactId}</finalName>
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-        <filtering>true</filtering>
-        <includes>
-          <include>application.yml</include>
-        </includes>
-      </resource>
+  <modelVersion>4.0.0</modelVersion>
+  <packaging>jar</packaging>
 
-      <resource>
-        <directory>src/main/resources</directory>
-        <filtering>false</filtering>
-        <includes>
-          <include>**/*</include>
-        </includes>
-      </resource>
-    </resources>
-
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <release>11</release>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>net.ju-n.maven.plugins</groupId>
-        <artifactId>checksum-maven-plugin</artifactId>
-        <version>1.2</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>artifacts</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <configuration>
-          <fork>true</fork>
-          <skip>false</skip>
-          <mainClass>${start-class}</mainClass>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>repackage</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <systemPropertyVariables>
-            <development>true</development>
-          </systemPropertyVariables>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
+  <parent>
+    <artifactId>touchhome-dependency</artifactId>
+    <groupId>org.touchhome</groupId>
+    <version>2.4.4</version>
+  </parent>
 
   <profiles>
     <profile>
-      <id>intellij-properties-launcher</id>
-
       <dependencies>
         <dependency>
-          <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-loader</artifactId>
+          <groupId>org.springframework.boot</groupId>
         </dependency>
       </dependencies>
 
+      <id>intellij-properties-launcher</id>
+
     </profile>
   </profiles>
+
+  <properties>
+    <!--<graalvm.version>21.1.0</graalvm.version>-->
+    <os.detected.classifier>linux-armhf</os.detected.classifier>
+    <start-class>org.touchhome.app.TouchHomeApplication</start-class>
+    <touchhome-bundle-api.version>1.2.1-SNAPSHOT</touchhome-bundle-api.version>
+
+    <touchhome-bundle.version>1.2.1-SNAPSHOT</touchhome-bundle.version>
+  </properties>
+
+  <scm>
+    <connection>scm:git:git://github.com/github.com/touchhome/${project.artifactId}.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/touchhome/${project.artifactId}.git</developerConnection>
+    <tag>HEAD</tag>
+    <url>https://github.com/touchhome/${project.artifactId}</url>
+  </scm>
+
+  <url>https://github.com/touchhome/touchhome-core</url>
+
+  <version>1.6-SNAPSHOT</version>
 </project>

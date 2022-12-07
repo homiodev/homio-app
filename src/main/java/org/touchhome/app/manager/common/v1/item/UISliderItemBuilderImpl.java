@@ -10,8 +10,8 @@ import org.touchhome.bundle.api.ui.field.action.v1.item.UISliderItemBuilder;
 public class UISliderItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UISliderItemBuilder, Float>
     implements UISliderItemBuilder {
 
-  private Float min;
-  private Float max;
+  private final Float min;
+  private final Float max;
   private Float step;
   private boolean required;
 
