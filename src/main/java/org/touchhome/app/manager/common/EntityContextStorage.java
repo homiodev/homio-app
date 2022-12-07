@@ -6,10 +6,12 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
+import org.jetbrains.annotations.Nullable;
 import org.touchhome.app.service.hardware.SystemMessage;
 import org.touchhome.app.setting.system.SystemCPUFetchValueIntervalSetting;
 import org.touchhome.app.setting.system.SystemCPUHistorySizeSetting;
@@ -17,6 +19,7 @@ import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.EntityContextSetting.MemSetterHandler;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.entity.HasStatusAndMsg;
 import org.touchhome.bundle.api.inmemory.InMemoryDB;
 import org.touchhome.bundle.api.inmemory.InMemoryDBService;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
@@ -36,7 +39,7 @@ public class EntityContextStorage {
   {
     EntityContextSetting.MEM_HANDLER.set(new MemSetterHandler() {
       @Override
-      public void setValue(HasEntityIdentifier entity, String key, String title, Object value, boolean fireUIUpdate) {
+      public void setValue(@NotNull HasEntityIdentifier entity, @NotNull String key, @NotNull String title, @Nullable Object value) {
         EntityMemoryData data = ENTITY_MEMORY_MAP.computeIfAbsent(entity.getEntityID(), s -> new EntityMemoryData());
         if (value == null) {
           data.VALUE_MAP.remove(key);
@@ -55,8 +58,8 @@ public class EntityContextStorage {
                     entity.getEntityID(), entity, title, status, message);
               }
             }
-            if (fireUIUpdate) {
-              entityContext.ui().updateItem((BaseEntity<?>) entity, true);
+            if (entity instanceof HasStatusAndMsg && HasStatusAndMsg.DISTINGUISH_KEY.equals(key)) {
+              entityContext.ui().updateItem((BaseEntity<?>) entity, "status", ((HasStatusAndMsg<?>) entity).getStatus());
             }
           }
         }

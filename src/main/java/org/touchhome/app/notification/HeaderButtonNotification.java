@@ -13,11 +13,15 @@ import org.touchhome.bundle.api.ui.dialog.DialogModel;
 public class HeaderButtonNotification extends BaseNotificationModel<HeaderButtonNotification> {
 
   private final Set<DialogModel> dialogs = new LinkedHashSet<>();
-  private String color;
   private Integer duration;
+
   private String icon;
+  private String iconColor;
   private Boolean iconRotate;
-  private Integer border;
+
+  private Integer borderWidth = 1;
+  private String borderColor;
+
   private String stopAction;
   private String page;
 

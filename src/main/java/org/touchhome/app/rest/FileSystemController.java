@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -27,6 +28,7 @@ import org.apache.commons.io.FileUtils;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -77,9 +79,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
   @PostMapping("")
   public List<TreeConfiguration> getFileSystems(@RequestBody GetFSRequest request) {
     List<TreeConfiguration> configurations = new ArrayList<>();
-    String firstAvailableFS = request.fileSystemIds == null || request.fileSystemIds.isEmpty() ?
-        this.localFileSystem.getEntity().getEntityID() :
-        request.fileSystemIds.get(0);
+    String firstAvailableFS = getFS(Optional.ofNullable(request.fileSystemIds).map(ids -> ids.isEmpty() ? null : ids.get(0)).orElse(null));
     // if not fs - set as local
     for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
       selectedNode.fs = defaultString(selectedNode.fs, firstAvailableFS);
@@ -90,7 +90,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
       for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
         if (selectedNode.fs.equals(fileSystem.getEntityID())) {
-          Set<TreeNode> treeNodes = fileSystem.getFileSystem(entityContext).loadTreeUpToChild(selectedNode.id);
+          Set<TreeNode> treeNodes = fileSystem.getFileSystem(entityContext).loadTreeUpToChild(request.getRootPath(), selectedNode.id);
           if (treeNodes != null) {
             configuration.setChildren(treeNodes);
           }
@@ -290,6 +290,10 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     }
   }
 
+  private String getFS(String id) {
+    return LOCAL_FS.equals(id) || id == null ? this.localFileSystem.getEntity().getEntityID() : id;
+  }
+
   @Getter
   @Setter
   private static class RenameNodeRequest extends BaseNodeRequest {
@@ -365,6 +369,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
     private SelectedNode[] selectedNodes;
     private List<String> fileSystemIds;
+    private String rootPath;
 
     @Getter
     @Setter

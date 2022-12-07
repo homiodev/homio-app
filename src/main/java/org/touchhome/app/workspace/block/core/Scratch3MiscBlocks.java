@@ -1,9 +1,11 @@
 package org.touchhome.app.workspace.block.core;
 
+import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
+
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.model.entity.ScriptEntity;
@@ -61,8 +63,11 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
     } else if ("text/plain".equals(rawType.getMimeType())) {
       rawType = new RawType(workspaceBlock.getInputStringRequiredWithContext(VALUE).getBytes());
     }
-    JSONObject node = new JSONObject().put("block", workspaceBlock.getId()).put("value", rawType.toFullString())
-        .put("mimeType", rawType.getMimeType()).put("name", rawType.getName());
+    ObjectNode node = OBJECT_MAPPER.createObjectNode()
+        .put("block", workspaceBlock.getId())
+        .put("value", rawType.stringValue())
+        .put("mimeType", rawType.getMimeType())
+        .put("name", rawType.getName());
     entityContext.ui().sendNotification("-workspace-block-update", node);
   }
 }

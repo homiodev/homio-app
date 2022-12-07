@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -82,6 +83,12 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
       // hack: add global logger for every log since DEBUG level.
       configuration.addFilter(new AbstractFilter() {
         public void logIfRequire(Logger logger, Level level, Marker marker, String message, Throwable t, Object... params) {
+          if (level.intLevel() == Level.DEBUG.intLevel() &&
+              // to avoid loop if logging from inside send message to UI
+              (logger.getName().equals("org.springframework.web.SimpLogging") ||
+                  logger.getName().startsWith("org.springframework.messaging"))) {
+            return;
+          }
           if (level.intLevel() <= Level.DEBUG.intLevel()) {
             Message msg = messageFactory.newMessage(message, params);
             globalAppender.append(log4jLogEventFactory.createEvent(logger.getName(), marker, null, level, msg, null, msg.getThrowable()));
@@ -200,7 +207,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
   public static class GlobalAppender extends CountingNoOpAppender {
 
-    private final Map<String, LogConsumer> logConsumers = new HashMap<>();
+    private final Map<String, LogConsumer> logConsumers = new ConcurrentHashMap<>();
     private final Map<String, DefinedAppenderConsumer> definedAppender = new HashMap<>();
     // allow debug level for appender
     private boolean allowDebugLevel;
@@ -227,7 +234,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         for (Entry<String, DefinedAppenderConsumer> entry : definedAppender.entrySet()) {
           if (entry.getValue().accept(event.getLoggerName())) {
             sendLogEvent(event, message -> {
-              entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), "String", message);
+              entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message);
             });
           }
         }
@@ -239,7 +246,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
         if (logConsumer.logTopics.stream().anyMatch(l -> l.test(event))) {
           sendLogEvent(event, message -> {
             Files.writeString(logConsumer.path, message + System.lineSeparator(), StandardOpenOption.APPEND);
-            entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, "String", message);
+            entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID,  message);
           });
         }
       }

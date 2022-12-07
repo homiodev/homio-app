@@ -271,6 +271,7 @@ public final class UIFieldSelectionUtil {
       selectTypes.add("file");
       ObjectNode parameters = OBJECT_MAPPER.createObjectNode();
       parameters.set("fileSystemIds", OBJECT_MAPPER.valueToTree(fileSelection.fileSystemIds()));
+      parameters.put("rootPath", fileSelection.rootPath());
       parameters.put("ASD", fileSelection.allowSelectDirs());
       parameters.put("AMS", fileSelection.allowMultiSelect());
       parameters.put("ASF", fileSelection.allowSelectFiles());
@@ -487,6 +488,7 @@ public final class UIFieldSelectionUtil {
   }
 
   @Setter
+  @Getter
   private static class SelectionParent {
 
     private String key;

@@ -27,7 +27,7 @@ public class WidgetLineChartEntity extends ChartBaseEntity<WidgetLineChartEntity
     return EntityContextWidget.LINE_CHART_WIDGET_PREFIX;
   }
 
-  @UIField(order = 0, visible = false)
+  @UIField(order = 0, hideInView = true, hideInEdit = true)
   public HasChartDataSource.ChartType getChartType() {
     return HasChartDataSource.ChartType.line;
   }

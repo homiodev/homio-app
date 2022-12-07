@@ -66,7 +66,7 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
   /**
    * Determine to check if toggle is on compare server value with list of OnValues
    */
-  @UIField(order = 2, type = UIFieldType.Chips)
+  @UIField(order = 2)
   @UIFieldGroup("ON")
   public List<String> getOnValues() {
     return getJsonDataList("onValues");

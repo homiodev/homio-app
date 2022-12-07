@@ -1,9 +1,10 @@
 package org.touchhome.app.manager.common.impl;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,7 +26,6 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.touchhome.app.config.WebSocketConfig;
-import org.touchhome.app.json.BgpProcessResponse;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.manager.common.v1.item.UIInputEntityActionHandler;
@@ -37,7 +37,6 @@ import org.touchhome.app.notification.HeaderButtonNotification;
 import org.touchhome.app.notification.ProgressNotification;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.rest.ItemController;
-import org.touchhome.app.rest.widget.WidgetChartsController;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -51,7 +50,6 @@ import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.util.NotificationLevel;
-import org.touchhome.common.fs.TreeNode;
 import org.touchhome.common.util.FlowMap;
 import org.touchhome.common.util.Lang;
 
@@ -63,16 +61,7 @@ public class EntityContextUIImpl implements EntityContextUI {
   public static final Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
 
   public static final Set<String> customConsolePluginNames = new HashSet<>();
-  private static final Set<String> ALLOWED_DYNAMIC_VALUES = new HashSet<>(
-      Arrays.asList(
-          JSONObject.class.getSimpleName(), // for entities
-          String.class.getSimpleName(), // for logs
-          BgpProcessResponse.class.getSimpleName(),
-          WidgetChartsController.SingleValueData.class.getSimpleName(),
-          WidgetChartsController.TimeSeriesChartData.class.getSimpleName(),
-          TreeNode.class.getSimpleName() // console tree
-      )
-  );
+
   private final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
   private final Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
   private final Map<String, BellNotification> bellNotifications = new ConcurrentHashMap<>();
@@ -101,7 +90,7 @@ public class EntityContextUIImpl implements EntityContextUI {
       bellNotification.setActions(uiInputBuilder.buildAll());
     }
     bellNotifications.put(entityID, bellNotification);
-    sendGlobal(GlobalSendType.bell, entityID, value, name, new JSONObject().put("level", level.name()));
+    sendGlobal(GlobalSendType.bell, entityID, value, name, OBJECT_MAPPER.createObjectNode().put("level", level.name()));
   }
 
   public void registerForUpdates(DynamicUpdateRequest request) {
@@ -112,7 +101,7 @@ public class EntityContextUIImpl implements EntityContextUI {
       context.timeout = System.currentTimeMillis(); // refresh timer
       context.registerCounter.incrementAndGet();
     }
-    entityContext.event().addEventListener(request.getDynamicUpdateId() + "_" + request.getType(), o ->
+    entityContext.event().addEventListener(request.getDynamicUpdateId(), o ->
         this.sendDynamicUpdate(request, o));
   }
 
@@ -123,30 +112,23 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
   }
 
-  public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @NotNull Object value) {
-    sendDynamicUpdate(dynamicUpdateId, value.getClass().getSimpleName(), null, value);
+  public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @Nullable Object value) {
+    sendDynamicUpdate(dynamicUpdateId, null, value);
   }
 
-  public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @NotNull String type, @Nullable Object value) {
-    sendDynamicUpdate(dynamicUpdateId, type, null, value);
-  }
-
-  public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @NotNull String type, @Nullable String entityId, @Nullable Object value) {
-    sendDynamicUpdate(new DynamicUpdateRequest(dynamicUpdateId, type, entityId), value);
+  public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @Nullable String entityId, @Nullable Object value) {
+    sendDynamicUpdate(new DynamicUpdateRequest(dynamicUpdateId, entityId), value);
   }
 
   public void sendDynamicUpdate(@NotNull DynamicUpdateRequest request, @Nullable Object value) {
     if (value != null) {
-      String type = calcDynamicTypeFromValue(value);
-      if (request.getType().equals(type)) {
-        DynamicUpdateContext context = dynamicUpdateRegisters.get(request);
-        if (context != null) {
-          if (System.currentTimeMillis() - context.timeout > 60000) {
-            dynamicUpdateRegisters.remove(request);
-          } else {
-            sendGlobal(GlobalSendType.dynamicUpdate, null, value, null,
-                new JSONObject().put("dynamicRequest", request));
-          }
+      DynamicUpdateContext context = dynamicUpdateRegisters.get(request);
+      if (context != null) {
+        if (System.currentTimeMillis() - context.timeout > 60000) {
+          dynamicUpdateRegisters.remove(request);
+        } else {
+          sendGlobal(GlobalSendType.dynamicUpdate, null, value, null,
+              OBJECT_MAPPER.createObjectNode().putPOJO("dynamicRequest", request));
         }
       }
     }
@@ -155,7 +137,7 @@ public class EntityContextUIImpl implements EntityContextUI {
   @Override
   public void removeBellNotification(@NotNull String entityID) {
     bellNotifications.remove(entityID);
-    sendGlobal(GlobalSendType.bell, entityID, null, null, new JSONObject().put("action", "remove"));
+    sendGlobal(GlobalSendType.bell, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "remove"));
   }
 
   public void sendAudio(String url) {
@@ -178,25 +160,64 @@ public class EntityContextUIImpl implements EntityContextUI {
   }
 
   public void removeItem(@NotNull BaseEntity<?> entity) {
-    JSONObject metadata = new JSONObject().put("type", "remove").put("entity", entity);
+    ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
+        .put("type", "remove")
+        .put("entityID", entity.getEntityID())
+        .putPOJO("entity", entity);
     sendDynamicUpdate("entity-type-" + entity.getType(), metadata);
   }
 
+  @Override
+  public void updateItem(@NotNull BaseEntity<?> entity) {
+    updateItem(entity, false);
+  }
+
+  @Override
+  public void updateItem(@NotNull BaseEntity<?> entity, @NotNull String updateField, @Nullable Object value) {
+    ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
+        .put("type", "add")
+        .putPOJO("entityID", entity.getEntityID())
+        .put("updateField", updateField)
+        .putPOJO("value", value);
+
+    sendDynamicUpdate("entity-type-" + entity.getType(), metadata);
+  }
+
+  @Override
+  public void updateInnerSetItem(@NotNull BaseEntity<?> parentEntity, @NotNull String parentFieldName,
+      @NotNull BaseEntity<?> innerEntity, @NotNull String updateField, @NotNull Object value) {
+    ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
+        .put("type", "add")
+        .put("entityID", parentEntity.getEntityID())
+        .put("updateField", updateField)
+        .putPOJO("value", value);
+
+    metadata.putPOJO("inner", OBJECT_MAPPER.createObjectNode()
+        .put("id", innerEntity.getEntityID())
+        .put("parentField", parentFieldName));
+
+    sendDynamicUpdate("entity-type-" + parentEntity.getType(), metadata);
+  }
+
   public void updateItem(@NotNull BaseEntity<?> entity, boolean ignoreExtra) {
-    JSONObject metadata = new JSONObject().put("type", "add").put("entity", entity);
+    ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
+        .put("type", "add")
+        .put("entityID", entity.getEntityID())
+        .putPOJO("entity", entity);
+
     if (!ignoreExtra) {
       // add install dependencies if require
       ItemController.ItemsByTypeResponse.TypeDependency dependency =
           ItemController.getTypeDependency(entity.getClass(), getEntityContext()).orElse(null);
       if (dependency != null && !dependency.getDependencies().isEmpty()) {
-        metadata.append("requireDependencies", dependency.getDependencies());
+        metadata.putPOJO("requireDependencies", dependency.getDependencies());
       }
 
       // insert context actions ixf we need
       if (entity instanceof HasDynamicContextMenuActions) {
         UIInputBuilder uiInputBuilder = inputBuilder();
         ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
-        metadata.put("actions", uiInputBuilder.buildAll());
+        metadata.putPOJO("actions", uiInputBuilder.buildAll());
      /* TODO: if (actions != null && !actions.isEmpty()) {
         metadata.put("actions", actions.stream().map(UIActionResponse::new).collect(Collectors.toSet()));
      }*/
@@ -204,11 +225,6 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
     String entityType = entity instanceof WidgetBaseEntity ? "widget" : entity.getType();
     sendDynamicUpdate("entity-type-" + entityType, metadata);
-  }
-
-  @Override
-  public void updateItem(@NotNull BaseEntity<?> entity) {
-    updateItem(entity, true);
   }
 
   @Override
@@ -225,7 +241,7 @@ public class EntityContextUIImpl implements EntityContextUI {
       progressMap.put(key, new ProgressNotification(key, progress, message, cancellable));
     }
     sendGlobal(GlobalSendType.progress, key, progress, message,
-        cancellable ? new JSONObject().put("cancellable", true) : null);
+        cancellable ? OBJECT_MAPPER.createObjectNode().put("cancellable", true) : null);
   }
 
   @Override
@@ -255,34 +271,67 @@ public class EntityContextUIImpl implements EntityContextUI {
   }
 
   @Override
-  public void sendNotification(@NotNull String destination, @NotNull JSONObject param) {
+  public void sendNotification(@NotNull String destination, @NotNull ObjectNode param) {
     messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + destination, param);
   }
 
   @Override
-  public void addHeaderButton(@NotNull String entityID, @NotNull String color, @Nullable String title,
-      @Nullable String icon, boolean rotate, Integer border,
-      @Nullable Integer duration, @Nullable Class<? extends BaseEntity> page,
-      @Nullable Class<? extends SettingPluginButton> hideAction) {
-    HeaderButtonNotification topJson = new HeaderButtonNotification(entityID).setIcon(icon).setColor(color)
-        .setTitle(title).setColor(color).setDuration(duration).setIconRotate(rotate).setBorder(border);
-    if (page != null) {
-      if (!page.isAnnotationPresent(UISidebarMenu.class)) {
-        throw new IllegalArgumentException("Trying add header button to page without annotation UISidebarMenu");
+  public HeaderButtonBuilder headerButtonBuilder(@NotNull String entityID) {
+    return new HeaderButtonBuilder() {
+      private final HeaderButtonNotification builder = new HeaderButtonNotification(entityID);
+
+      @Override
+      public HeaderButtonBuilder title(@Nullable String title) {
+        builder.setTitle(title);
+        return this;
       }
-      topJson.setPage(StringUtils.defaultIfEmpty(page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(),
-          page.getSimpleName()));
-    }
-    if (hideAction != null) {
-      topJson.setStopAction("st_" + hideAction.getSimpleName());
-    }
-    HeaderButtonNotification existedModel = headerButtonNotifications.get(entityID);
-    // preserve confirmations
-    if (existedModel != null) {
-      topJson.getDialogs().addAll(existedModel.getDialogs());
-    }
-    headerButtonNotifications.put(entityID, topJson);
-    sendHeaderButtonToUI(topJson, null);
+
+      @Override
+      public HeaderButtonBuilder icon(@Nullable String icon, @Nullable String iconColor, boolean rotate) {
+        builder.setIcon(icon).setIconRotate(rotate).setIconColor(iconColor);
+        return this;
+      }
+
+      @Override
+      public HeaderButtonBuilder border(int width, String color) {
+        builder.setBorderWidth(width);
+        builder.setBorderColor(color);
+        return this;
+      }
+
+      @Override
+      public HeaderButtonBuilder duration(int duration) {
+        builder.setDuration(duration);
+        return this;
+      }
+
+      @Override
+      public HeaderButtonBuilder availableForPage(@NotNull Class<? extends BaseEntity> page) {
+        if (!page.isAnnotationPresent(UISidebarMenu.class)) {
+          throw new IllegalArgumentException("Trying add header button to page without annotation UISidebarMenu");
+        }
+        builder.setPage(StringUtils.defaultIfEmpty(page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(),
+            page.getSimpleName()));
+        return this;
+      }
+
+      @Override
+      public HeaderButtonBuilder clickAction(@NotNull Class<? extends SettingPluginButton> clickAction) {
+        builder.setStopAction("st_" + clickAction.getSimpleName());
+        return this;
+      }
+
+      @Override
+      public void build() {
+        HeaderButtonNotification existedModel = headerButtonNotifications.get(entityID);
+        // preserve confirmations
+        if (existedModel != null) {
+          builder.getDialogs().addAll(existedModel.getDialogs());
+        }
+        headerButtonNotifications.put(entityID, builder);
+        sendHeaderButtonToUI(builder, null);
+      }
+    };
   }
 
   @Override
@@ -307,36 +356,40 @@ public class EntityContextUIImpl implements EntityContextUI {
 
   @Override
   public void sendMessage(@Nullable String title, @Nullable String message, @Nullable NotificationLevel level) {
-    sendGlobal(GlobalSendType.popup, null, message, title, new JSONObject().put("level", level));
+    ObjectNode param = OBJECT_MAPPER.createObjectNode();
+    if (level != null) {
+      param.put("level", level.name());
+    }
+    sendGlobal(GlobalSendType.popup, null, message, title, param);
   }
 
   public void disableHeaderButton(String entityID, boolean disable) {
     sendGlobal(GlobalSendType.headerButton, entityID, null, null,
-        new JSONObject().put("action", "toggle").put("disable", disable));
+        OBJECT_MAPPER.createObjectNode().put("action", "toggle").put("disable", disable));
   }
 
-  private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<JSONObject> additionalSupplier) {
-    JSONObject jsonObject = new JSONObject()
-        .put("creationTime", notification.getCreationTime())
-        .putOpt("icon", notification.getIcon())
-        .putOpt("duration", notification.getDuration())
-        .putOpt("color", notification.getColor())
-        .putOpt("iconRotate", notification.getIconRotate())
-        .putOpt("border", notification.getBorder())
-        .putOpt("stopAction", notification.getStopAction());
+  private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<ObjectNode> additionalSupplier) {
+    ObjectNode jsonNode = OBJECT_MAPPER.valueToTree(notification);
     if (additionalSupplier != null) {
-      additionalSupplier.accept(jsonObject);
+      additionalSupplier.accept(jsonNode);
     }
-    sendGlobal(GlobalSendType.headerButton, notification.getEntityID(), null, notification.getTitle(), jsonObject);
+    sendGlobal(GlobalSendType.headerButton, notification.getEntityID(), null, notification.getTitle(), jsonNode);
   }
 
   void sendGlobal(@NotNull GlobalSendType type, @Nullable String entityID, @Nullable Object value,
-      @Nullable String title, @Nullable JSONObject jsonObject) {
-    if (jsonObject == null) {
-      jsonObject = new JSONObject();
+      @Nullable String title, @Nullable ObjectNode objectNode) {
+    if (objectNode == null) {
+      objectNode = OBJECT_MAPPER.createObjectNode();
     }
-    sendNotification("-global", jsonObject.put("entityID", entityID).put("type", type.name())
-        .putOpt("value", value).putOpt("title", title));
+    objectNode.put("entityID", entityID).put("type", type.name());
+    if (value != null) {
+      objectNode.putPOJO("value", value);
+    }
+    if (title != null) {
+      objectNode.put("title", title);
+    }
+
+    sendNotification("-global", objectNode);
   }
 
   public NotificationResponse getNotifications() {
@@ -417,7 +470,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     return map;
   }
 
-  public void handleDialog(String entityID, DialogResponseType dialogResponseType, String pressedButton, JSONObject params) {
+  public void handleDialog(String entityID, DialogResponseType dialogResponseType, String pressedButton, ObjectNode params) {
     DialogModel model = dialogRequest.remove(entityID);
     if (model != null) {
       model.getActionHandler().handle(dialogResponseType, pressedButton, params);
@@ -479,14 +532,6 @@ public class EntityContextUIImpl implements EntityContextUI {
       }
     }
     throw new RuntimeException("Action: " + entityID + " has incorrect format");
-  }
-
-  private String calcDynamicTypeFromValue(Object value) {
-    String dynamicType = value.getClass().getSimpleName();
-    if (ALLOWED_DYNAMIC_VALUES.contains(dynamicType)) {
-      return dynamicType;
-    }
-    throw new IllegalStateException("Unable to evaluate dynamic type from value: " + value.getClass().getSimpleName());
   }
 
   enum GlobalSendType {

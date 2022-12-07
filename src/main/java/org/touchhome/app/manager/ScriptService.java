@@ -180,7 +180,7 @@ public class ScriptService implements ContextCreated {
   public String callJavaScriptOnce(ScriptEntity scriptEntity, CompileScriptContext compiledScriptContext)
       throws InterruptedException, ExecutionException {
     ScheduleBuilder<String> builder = this.entityContext.bgp().builder(scriptEntity.getEntityID());
-    EntityContextBGP.ThreadContext<String> threadContext = builder.execute(arg -> runJavaScript(compiledScriptContext).toFullString());
+    EntityContextBGP.ThreadContext<String> threadContext = builder.execute(arg -> runJavaScript(compiledScriptContext).stringValue());
     try {
       return threadContext.await(properties.getMaxJavaScriptOnceCallBeforeInterrupt());
     } catch (TimeoutException ex) {

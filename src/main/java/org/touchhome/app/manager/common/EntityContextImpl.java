@@ -133,7 +133,6 @@ import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.raspberry.RaspberryDeviceRepository;
-import org.touchhome.bundle.zigbee.model.ZigBeeEndpointEntity;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.model.UpdatableValue;
 import org.touchhome.common.util.CommonUtils;
@@ -836,7 +835,6 @@ public class EntityContextImpl implements EntityContext {
   public List<BaseEntity> findAllBaseEntities() {
     List<BaseEntity> entities = new ArrayList<>();
     entities.addAll(findAll(DeviceBaseEntity.class));
-    entities.addAll(findAll(ZigBeeEndpointEntity.class));
     return entities;
   }
 

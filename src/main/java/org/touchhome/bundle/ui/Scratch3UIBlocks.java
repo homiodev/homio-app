@@ -9,6 +9,7 @@ import org.touchhome.app.setting.SendBroadcastSetting;
 import org.touchhome.app.workspace.WorkspaceService;
 import org.touchhome.app.workspace.block.core.Scratch3EventsBlocks;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextUI.HeaderButtonBuilder;
 import org.touchhome.bundle.api.util.NotificationLevel;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.ArgumentType;
@@ -81,13 +82,13 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
           String title = workspaceBlock.getInputString("MSG");
           String color = workspaceBlock.getInputString("COLOR");
           // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
+          HeaderButtonBuilder headerButtonBuilder = entityContext.ui().headerButtonBuilder(workspaceBlock.getId())
+              .title(title).border(3, color).clickAction(SendBroadcastSetting.class);
+
           if (isFetchDuration) {
-            entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title, null, false, 3,
-                workspaceBlock.getInputInteger("DURATION"), null, SendBroadcastSetting.class);
+            headerButtonBuilder.duration(workspaceBlock.getInputInteger("DURATION")).build();
           } else {
-            entityContext.ui().addHeaderButton(workspaceBlock.getId(), color, title,
-                "fas fa-" + workspaceBlock.getInputString("ICON"), false, 3, null, null,
-                SendBroadcastSetting.class);
+            headerButtonBuilder.icon("fas fa-" + workspaceBlock.getInputString("ICON"), null, false).build();
           }
         },
         () -> entityContext.ui().removeHeaderButton(workspaceBlock.getId())

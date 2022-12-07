@@ -42,7 +42,7 @@ public interface HasValueTemplate extends HasJsonData {
     setJsonData("noVal", value);
   }
 
-  @UIField(order = 0, visible = false)
+  @UIField(order = 0, hideInView = true, hideInEdit = true)
   default double getValueTemplateFontSize() {
     return getJsonData("vtfs", 1D);
   }
@@ -51,7 +51,7 @@ public interface HasValueTemplate extends HasJsonData {
     setJsonData("vtfs", value);
   }
 
-  @UIField(order = 0, visible = false)
+  @UIField(order = 0, hideInView = true, hideInEdit = true)
   default double getValueTemplatePrefixFontSize() {
     return getJsonData("vtpfs", 1D);
   }
@@ -60,7 +60,7 @@ public interface HasValueTemplate extends HasJsonData {
     setJsonData("vtpfs", value);
   }
 
-  @UIField(order = 0, visible = false)
+  @UIField(order = 0, hideInView = true, hideInEdit = true)
   default double getValueTemplateSuffixFontSize() {
     return getJsonData("vtsfs", 1D);
   }

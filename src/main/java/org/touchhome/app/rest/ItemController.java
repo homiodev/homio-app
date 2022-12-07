@@ -1,6 +1,7 @@
 package org.touchhome.app.rest;
 
 import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.awt.image.BufferedImage;
@@ -26,6 +27,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.PostConstruct;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
@@ -65,6 +67,7 @@ import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.model.rest.EntityUIMetaData;
+import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemShowEntityCreateTimeSetting;
 import org.touchhome.app.setting.system.SystemShowEntityUpdateTimeSetting;
 import org.touchhome.app.spring.ContextCreated;
@@ -109,9 +112,10 @@ import org.touchhome.common.util.CommonUtils;
 @RequiredArgsConstructor
 public class ItemController implements ContextCreated, ContextRefreshed {
 
-  private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new HashMap<>();
-  private static final Map<String, TypeToRequireDependenciesContext> typeToRequireDependencies = new HashMap<>();
+  private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames = new ConcurrentHashMap<>();
+  private static final Map<String, TypeToRequireDependenciesContext> typeToRequireDependencies = new ConcurrentHashMap<>();
   private final Map<String, List<ItemContext>> itemsBootstrapContextMap = new ConcurrentHashMap<>();
+  private final Map<Class<? extends UIActionHandler>, UIActionHandler> sidebarClassButtonToInstance = new ConcurrentHashMap<>();
 
   private final ObjectMapper objectMapper;
   private final EntityContextImpl entityContext;
@@ -124,7 +128,15 @@ public class ItemController implements ContextCreated, ContextRefreshed {
   private final ReentrantLock updateItemLock = new ReentrantLock();
 
   private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
-  private Map<Class<? extends UIActionHandler>, UIActionHandler> sidebarClassButtonToInstance = new HashMap<>();
+
+  @PostConstruct
+  public void postConstruct() {
+    entityContext.setting().listenValue(SystemClearCacheButtonSetting.class, "ic-clear-cache", () -> {
+      typeToEntityClassNames.clear();
+      typeToRequireDependencies.clear();
+      sidebarClassButtonToInstance.clear();
+    });
+  }
 
   @SneakyThrows
   static ActionResponseModel executeMethodAction(Method method, Object actionHolder, EntityContext entityContext,
@@ -248,7 +260,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
           Object subClassObject =
               entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]);
           List<EntityUIMetaData> subTypeFieldMetadata =
-              UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext);
+              UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false);
           // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json
           // parameter)
           for (EntityUIMetaData data : subTypeFieldMetadata) {
@@ -333,7 +345,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
   }
 
   public void reloadItems(Collection<String> type) {
-    entityContext.ui().sendNotification("-global", new JSONObject().put("type", "reloadItems").put("value", type));
+    entityContext.ui().sendNotification("-global", OBJECT_MAPPER.createObjectNode()
+        .put("type", "reloadItems").putPOJO("value", type));
   }
 
   @PostMapping(value = "/{type}/installDep/{dependency}")
@@ -413,7 +426,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
     Optional<AbstractRepository> repositoryOpt = entityContext.getRepository(entity);
     AbstractRepository repository = repositoryOpt.orElseThrow();
-    List<BaseEntity<?>> usages = getUsages(entityID, repository);
+    Collection<BaseEntity> usages = getUsages(entityID, repository);
     return usages.stream().map(Object::toString).collect(Collectors.toList());
   }
 
@@ -753,9 +766,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
   }
 
-  private List<BaseEntity<?>> getUsages(String entityID, AbstractRepository<BaseEntity<?>> repository) {
+  private Collection<BaseEntity> getUsages(String entityID, AbstractRepository<BaseEntity<?>> repository) {
     Object baseEntity = repository.getByEntityIDWithFetchLazy(entityID, false);
-    List<BaseEntity<?>> usages = new ArrayList<>();
+    Map<String, BaseEntity> usages = new HashMap<>();
+    fillEntityRelationships(baseEntity, usages);
+    return usages.values();
+  }
+
+  private void fillEntityRelationships(Object baseEntity, Map<String, BaseEntity> usages) {
     if (baseEntity != null) {
       FieldUtils.getAllFieldsList(baseEntity.getClass()).forEach(field -> {
         try {
@@ -767,11 +785,15 @@ public class ItemController implements ContextCreated, ContextRefreshed {
               if (!((Collection<?>) targetValue).isEmpty()) {
                 for (Object o : (Collection<?>) targetValue) {
                   o.toString(); // hibernate initialize
-                  usages.add((BaseEntity<?>) o);
+                  BaseEntity entity = (BaseEntity) o;
+                  usages.put(entity.getEntityID(), entity);
+                  fillEntityRelationships(entity, usages);
                 }
               }
             } else if (targetValue != null) {
-              usages.add((BaseEntity<?>) targetValue);
+              BaseEntity entity = (BaseEntity) targetValue;
+              usages.put(entity.getEntityID(), entity);
+              fillEntityRelationships(entity, usages);
             }
           }
         } catch (Exception e) {
@@ -779,7 +801,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
       });
     }
-    return usages;
   }
 
   private Method findFilterOptionMethod(String fieldName, Object entity) {

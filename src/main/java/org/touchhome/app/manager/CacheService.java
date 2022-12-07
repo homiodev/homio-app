@@ -57,7 +57,6 @@ public class CacheService {
     for (String cache : cacheManager.getCacheNames()) {
       cacheManager.getCache(cache).clear();
     }
-
   }
 
   public void entityUpdated(BaseEntity entity) {

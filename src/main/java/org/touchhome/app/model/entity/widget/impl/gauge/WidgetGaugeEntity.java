@@ -113,7 +113,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     setJsonData("unit", value);
   }
 
-  @UIField(order = 0, visible = false)
+  @UIField(order = 0, hideInView = true, hideInEdit = true)
   public double getUnitFontSize() {
     return getJsonData("unitFS", 1D);
   }

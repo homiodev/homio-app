@@ -62,7 +62,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
   public void onContextCreated() {
     this.builder("send-bgp-to-ui").interval(Duration.ofSeconds(1)).cancelOnError(false).execute(() ->
-        this.entityContext.ui().sendDynamicUpdate("bgp", BgpProcessResponse.class.getSimpleName(), getProcesses()));
+        this.entityContext.ui().sendDynamicUpdate("bgp", getProcesses()));
   }
 
   public BgpProcessResponse getProcesses() {
@@ -388,6 +388,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
       this.hideOnUIAfterCancel = hideOnUIAfterCancel;
     }
 
+    @Override
     public String getTimeToNextSchedule() {
       if (scheduledFuture == null || (period == null && delay == null)) {
         return null;

@@ -2,6 +2,7 @@ package org.touchhome.app.utils;
 
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
+import static org.hibernate.internal.util.StringHelper.nullIfEmpty;
 import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -69,17 +70,20 @@ import org.touchhome.bundle.api.ui.field.action.UIContextMenuAction;
 import org.touchhome.bundle.api.ui.field.action.UIContextMenuUploadAction;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
+import org.touchhome.bundle.api.ui.field.color.UIFieldColorBgRef;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorBooleanMatch;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorMatch;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorRef;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorSource;
 import org.touchhome.bundle.api.ui.field.color.UIFieldColorStatusMatch;
+import org.touchhome.bundle.api.ui.field.condition.UIFieldDisableCreateTab;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImage;
 import org.touchhome.bundle.api.ui.field.image.UIFieldImageSrc;
 import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEditEntities;
 import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntities;
+import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntityColSpan;
 import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntityEditWidth;
 import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
@@ -152,11 +156,11 @@ public class UIFieldUtils {
     if (instance == null) {
       throw new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName());
     }
-    return fillEntityUIMetadataList(instance, entityUIMetaDataSet, entityContext);
+    return fillEntityUIMetadataList(instance, entityUIMetaDataSet, entityContext, false);
   }
 
   public static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet,
-      EntityContext entityContext) {
+      EntityContext entityContext, boolean fullDisableEdit) {
     Map<String, List<Method>> fieldNameToGetters = new HashMap<>();
 
     List<Class<?>> classes = getAllSuperclassesAndInterfaces(instance.getClass());
@@ -178,7 +182,7 @@ public class UIFieldUtils {
     }
 
     for (UIFieldMethodContext uiFieldMethodContext : uiFieldNameToGetters.values()) {
-      generateUIField(instance, entityUIMetaDataSet, uiFieldMethodContext, entityContext);
+      generateUIField(instance, entityUIMetaDataSet, uiFieldMethodContext, entityContext, fullDisableEdit);
     }
 
     Set<String> processedMethods =
@@ -190,7 +194,7 @@ public class UIFieldUtils {
         List<Method> fieldGetterMethods =
             fieldNameToGetters.getOrDefault("get" + capitalizeMethodName, new ArrayList<>());
         fieldGetterMethods.addAll(fieldNameToGetters.getOrDefault("is" + capitalizeMethodName, Collections.emptyList()));
-        generateUIField(instance, entityUIMetaDataSet, new UIFieldFieldContext(field, fieldGetterMethods), entityContext);
+        generateUIField(instance, entityUIMetaDataSet, new UIFieldFieldContext(field, fieldGetterMethods), entityContext, fullDisableEdit);
       }
     });
 
@@ -199,7 +203,7 @@ public class UIFieldUtils {
 
   @SneakyThrows
   private static void generateUIField(Object instance, Set<EntityUIMetaData> entityUIMetaDataList,
-      UIFieldContext uiFieldContext, EntityContext entityContext) {
+      UIFieldContext uiFieldContext, EntityContext entityContext, boolean fullDisableEdit) {
     EntityUIMetaData entityUIMetaData = new EntityUIMetaData();
     entityUIMetaData.setEntityName(uiFieldContext.getName());
     Type genericType = uiFieldContext.getGenericType();
@@ -228,11 +232,11 @@ public class UIFieldUtils {
     entityUIMetaData.setStyle(uiField.style());
 
     // make sense keep defaultValue(for revert) only if able to edit value
-    if (!uiField.disableEdit() && !uiField.hideInEdit()) {
+    if (!fullDisableEdit && !uiField.disableEdit() && !uiField.hideInEdit()) {
       entityUIMetaData.setDefaultValue(uiFieldContext.getDefaultValue(instance));
     }
 
-    ObjectNode jsonTypeMetadata = CommonUtils.OBJECT_MAPPER.createObjectNode();
+    ObjectNode jsonTypeMetadata = OBJECT_MAPPER.createObjectNode();
 
     if (uiField.type().equals(UIFieldType.AutoDetect)) {
       if (type.isEnum() || uiFieldContext.isAnnotationPresent(UIFieldTreeNodeSelection.class) ||
@@ -291,18 +295,26 @@ public class UIFieldUtils {
       entityUIMetaData.setType(uiField.type().name());
     }
 
-    if (uiField.fullWidth()) {
-      jsonTypeMetadata.put("fw", true);
+    // @UIField(order = 9999, disableEdit = true)
+    // @UIFieldInlineEntities(bg = "#27FF000D")
+    if (entityUIMetaData.getType() == null) {
+      if (uiFieldContext.isAnnotationPresent(UIFieldInlineEntities.class)) {
+        entityUIMetaData.setType("List");
+      } else if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
+        Type typeArgument = ((ParameterizedType) genericType).getActualTypeArguments()[0];
+        if (typeArgument instanceof Class) {
+          if (String.class.isAssignableFrom((Class<?>) typeArgument)) {
+            entityUIMetaData.setType(UIFieldType.Chips.name());
+          } else if (UIInputEntity.class.isAssignableFrom((Class<?>) typeArgument)) {
+            entityUIMetaData.setType("Actions");
+          }
+        }
+      }
     }
-    if (uiField.hideLabelInFullWidth()) {
-      jsonTypeMetadata.put("showLabelInFw", true);
-    }
-    if (!uiField.visible()) {
-      jsonTypeMetadata.put("hideFromUI", true);
-    }
-    if (StringUtils.isNotEmpty(uiField.bg())) {
-      jsonTypeMetadata.put("bg", uiField.bg());
-    }
+
+    jsonTypeMetadata.put("fw", nullIfFalse(uiField.fullWidth()));
+    jsonTypeMetadata.put("showLabelInFw", nullIfFalse(uiField.hideLabelInFullWidth()));
+    jsonTypeMetadata.put("bg", nullIfEmpty(uiField.bg()));
 
     UIFieldIconPicker uiFieldIconPicker = uiFieldContext.getDeclaredAnnotation(UIFieldIconPicker.class);
     if (uiFieldIconPicker != null) {
@@ -333,15 +345,17 @@ public class UIFieldUtils {
       jsonTypeMetadata.put("maxColumns", uiFieldTableLayout.maxColumns());
     }
 
-    UIFieldSelectionUtil.handleFieldSelections(uiFieldContext, entityContext, entityUIMetaData, jsonTypeMetadata);
+    if (entityUIMetaData.getType() != null) {
+      UIFieldSelectionUtil.handleFieldSelections(uiFieldContext, entityContext, entityUIMetaData, jsonTypeMetadata);
+    }
 
-    UIFieldMarkers uiFieldMarkers = uiFieldContext.getDeclaredAnnotation(UIFieldMarkers.class);
+    var uiFieldMarkers = uiFieldContext.getDeclaredAnnotation(UIFieldMarkers.class);
     if (uiFieldMarkers != null) {
       entityUIMetaData.setType("Markers");
       jsonTypeMetadata.set("markerOP", OBJECT_MAPPER.valueToTree(uiFieldMarkers.value()));
     }
 
-    UIFieldLayout uiFieldLayout = uiFieldContext.getDeclaredAnnotation(UIFieldLayout.class);
+    var uiFieldLayout = uiFieldContext.getDeclaredAnnotation(UIFieldLayout.class);
     if (uiFieldLayout != null) {
       entityUIMetaData.setType("Layout");
       jsonTypeMetadata.put("layoutRows", uiFieldLayout.rows());
@@ -349,16 +363,16 @@ public class UIFieldUtils {
       jsonTypeMetadata.set("layoutOptions", OBJECT_MAPPER.valueToTree(uiFieldLayout.options()));
     }
 
-    UIFieldShowOnCondition uiFieldShowOnCondition = uiFieldContext.getDeclaredAnnotation(UIFieldShowOnCondition.class);
+    var uiFieldShowOnCondition = uiFieldContext.getDeclaredAnnotation(UIFieldShowOnCondition.class);
     if (uiFieldShowOnCondition != null) {
       jsonTypeMetadata.put("showCondition", uiFieldShowOnCondition.value());
     }
-    UIFieldDisableEditOnCondition disableEditOnCondition = uiFieldContext.getDeclaredAnnotation(UIFieldDisableEditOnCondition.class);
+    var disableEditOnCondition = uiFieldContext.getDeclaredAnnotation(UIFieldDisableEditOnCondition.class);
     if (disableEditOnCondition != null) {
       jsonTypeMetadata.put("disableEditCondition", disableEditOnCondition.value());
     }
 
-    UIFieldGroup uiFieldGroup = uiFieldContext.getDeclaredAnnotation(UIFieldGroup.class);
+    var uiFieldGroup = uiFieldContext.getDeclaredAnnotation(UIFieldGroup.class);
     if (uiFieldGroup != null) {
       jsonTypeMetadata.put("group", uiFieldGroup.value());
       if (uiFieldGroup.order() > 0) {
@@ -369,10 +383,7 @@ public class UIFieldUtils {
       }
     }
 
-    UIEditReloadWidget uiEditReloadWidget = uiFieldContext.getDeclaredAnnotation(UIEditReloadWidget.class);
-    if (uiEditReloadWidget != null) {
-      jsonTypeMetadata.put("reloadOnUpdate", true);
-    }
+    jsonTypeMetadata.put("reloadOnUpdate", nullIfFalse(uiFieldContext.isAnnotationPresent(UIEditReloadWidget.class)));
 
     Pattern pattern = uiFieldContext.getDeclaredAnnotation(Pattern.class);
     if (pattern != null) {
@@ -380,12 +391,12 @@ public class UIFieldUtils {
       jsonTypeMetadata.put("regexpMsg", pattern.message());
     }
 
-    UIFieldTimeSlider uiFieldTimeSlider = uiFieldContext.getDeclaredAnnotation(UIFieldTimeSlider.class);
+    var uiFieldTimeSlider = uiFieldContext.getDeclaredAnnotation(UIFieldTimeSlider.class);
     if (uiFieldTimeSlider != null) {
       entityUIMetaData.setType("TimeSlider");
     }
 
-    UIFieldProgress uiFieldProgress = uiFieldContext.getDeclaredAnnotation(UIFieldProgress.class);
+    var uiFieldProgress = uiFieldContext.getDeclaredAnnotation(UIFieldProgress.class);
     if (uiFieldProgress != null) {
       entityUIMetaData.setType("Progress");
       jsonTypeMetadata.put("color", uiFieldProgress.color());
@@ -396,14 +407,14 @@ public class UIFieldUtils {
                   UIFieldProgress.UIFieldProgressColorChange::whenMoreThan))));
     }
 
-    UIFieldImage uiFieldImage = uiFieldContext.getDeclaredAnnotation(UIFieldImage.class);
+    var uiFieldImage = uiFieldContext.getDeclaredAnnotation(UIFieldImage.class);
     if (uiFieldImage != null) {
       entityUIMetaData.setType("Image");
       jsonTypeMetadata.put("maxWidth", uiFieldImage.maxWidth());
       jsonTypeMetadata.put("maxHeight", uiFieldImage.maxHeight());
     }
 
-    UIFieldImageSrc uiFieldImageSrc = uiFieldContext.getDeclaredAnnotation(UIFieldImageSrc.class);
+    var uiFieldImageSrc = uiFieldContext.getDeclaredAnnotation(UIFieldImageSrc.class);
     if (uiFieldImageSrc != null) {
       entityUIMetaData.setType("ImageSrc");
       jsonTypeMetadata.put("maxWidth", uiFieldImageSrc.maxWidth());
@@ -424,7 +435,7 @@ public class UIFieldUtils {
       }
       jsonTypeMetadata.set("actionButtons", OBJECT_MAPPER.valueToTree(actionButtons));
     }
-    UIFieldPort uiFieldPort = uiFieldContext.getDeclaredAnnotation(UIFieldPort.class);
+    var uiFieldPort = uiFieldContext.getDeclaredAnnotation(UIFieldPort.class);
     if (uiFieldPort != null) {
       jsonTypeMetadata.put("min", uiFieldPort.min());
       jsonTypeMetadata.put("max", uiFieldPort.max());
@@ -440,10 +451,11 @@ public class UIFieldUtils {
       jsonTypeMetadata.set("valueColor", OBJECT_MAPPER.valueToTree(colors));
     }
 
-    UIFieldColorStatusMatch uiFieldColorStatusMatch = uiFieldContext.getDeclaredAnnotation(UIFieldColorStatusMatch.class);
+    var uiFieldColorStatusMatch = uiFieldContext.getDeclaredAnnotation(UIFieldColorStatusMatch.class);
     if (uiFieldColorStatusMatch != null) {
       ObjectNode colors = OBJECT_MAPPER.createObjectNode();
       colors.put(Status.OFFLINE.name(), uiFieldColorStatusMatch.offline());
+      colors.put(Status.INITIALIZE.name(), uiFieldColorStatusMatch.init());
       colors.put(Status.ONLINE.name(), uiFieldColorStatusMatch.online());
       colors.put(Status.UNKNOWN.name(), uiFieldColorStatusMatch.unknown());
       colors.put(Status.ERROR.name(), uiFieldColorStatusMatch.error());
@@ -452,11 +464,15 @@ public class UIFieldUtils {
       colors.put(Status.NOT_SUPPORTED.name(), uiFieldColorStatusMatch.notSupported());
       colors.put(Status.RUNNING.name(), uiFieldColorStatusMatch.running());
       colors.put(Status.WAITING.name(), uiFieldColorStatusMatch.waiting());
+      colors.put(Status.INITIALIZE.name(), uiFieldColorStatusMatch.init());
+      colors.put(Status.CLOSING.name(), uiFieldColorStatusMatch.closing());
+      colors.put(Status.RESTARTING.name(), uiFieldColorStatusMatch.restarting());
+      colors.put(Status.NOT_READY.name(), uiFieldColorStatusMatch.notReady());
       jsonTypeMetadata.set("valueColor", colors);
       jsonTypeMetadata.put("valueColorPrefix", uiFieldColorStatusMatch.handlePrefixes());
     }
 
-    UIFieldColorBooleanMatch uiFieldColorBooleanMatch = uiFieldContext.getDeclaredAnnotation(UIFieldColorBooleanMatch.class);
+    var uiFieldColorBooleanMatch = uiFieldContext.getDeclaredAnnotation(UIFieldColorBooleanMatch.class);
     if (uiFieldColorBooleanMatch != null) {
       JSONObject colors = new JSONObject();
       colors.put("true", uiFieldColorBooleanMatch.False());
@@ -464,7 +480,7 @@ public class UIFieldUtils {
       jsonTypeMetadata.set("valueColor", OBJECT_MAPPER.valueToTree(colors));
     }
 
-    UIFieldColorRef uiFieldColorRef = uiFieldContext.getDeclaredAnnotation(UIFieldColorRef.class);
+    var uiFieldColorRef = uiFieldContext.getDeclaredAnnotation(UIFieldColorRef.class);
     if (uiFieldColorRef != null) {
       if (instance.getClass().getDeclaredField(uiFieldColorRef.value()) == null) {
         throw new ServerException("Unable to find field <" + uiFieldColorRef.value() + "> declared in UIFieldColorRef");
@@ -472,17 +488,25 @@ public class UIFieldUtils {
       jsonTypeMetadata.put("colorRef", uiFieldColorRef.value());
     }
 
-    UIFieldExpand uiFieldExpand = uiFieldContext.getDeclaredAnnotation(UIFieldExpand.class);
+    var uiFieldColorBgRef = uiFieldContext.getDeclaredAnnotation(UIFieldColorBgRef.class);
+    if (uiFieldColorBgRef != null) {
+      if (instance.getClass().getDeclaredField(uiFieldColorBgRef.value()) == null) {
+        throw new ServerException("Unable to find field <" + uiFieldColorBgRef.value() + "> declared in UIFieldColorBgRef");
+      }
+      jsonTypeMetadata.put("colorBgRef", uiFieldColorBgRef.value());
+    }
+
+    var uiFieldExpand = uiFieldContext.getDeclaredAnnotation(UIFieldExpand.class);
     if (uiFieldExpand != null && type.isAssignableFrom(List.class)) {
       jsonTypeMetadata.put("expand", "true");
     }
 
-    UIFieldColorSource uiFieldRowColor = uiFieldContext.getDeclaredAnnotation(UIFieldColorSource.class);
+    var uiFieldRowColor = uiFieldContext.getDeclaredAnnotation(UIFieldColorSource.class);
     if (uiFieldRowColor != null) {
       jsonTypeMetadata.put("rc", sourceName);
     }
 
-    UIFieldSelectValueOnEmpty uiFieldSelectValueOnEmpty = uiFieldContext.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
+    var uiFieldSelectValueOnEmpty = uiFieldContext.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
     if (uiFieldSelectValueOnEmpty != null) {
       ObjectNode selectValueOnEmpty = OBJECT_MAPPER.createObjectNode();
       selectValueOnEmpty.put("color", uiFieldSelectValueOnEmpty.color());
@@ -491,12 +515,12 @@ public class UIFieldUtils {
       jsonTypeMetadata.set("selectValueOnEmpty", selectValueOnEmpty);
     }
 
-    UIFieldSelectNoValue uiFieldSelectNoValue = uiFieldContext.getDeclaredAnnotation(UIFieldSelectNoValue.class);
+    var uiFieldSelectNoValue = uiFieldContext.getDeclaredAnnotation(UIFieldSelectNoValue.class);
     if (uiFieldSelectNoValue != null) {
       jsonTypeMetadata.put("optionsNotFound", uiFieldSelectNoValue.value());
     }
 
-    if (entityUIMetaData.getType().equals(String.class.getSimpleName())) {
+    if (String.class.getSimpleName().equals(entityUIMetaData.getType())) {
       UIKeyValueField uiKeyValueField = uiFieldContext.getDeclaredAnnotation(UIKeyValueField.class);
       if (uiKeyValueField != null) {
         jsonTypeMetadata.put("maxSize", uiKeyValueField.maxSize());
@@ -511,19 +535,19 @@ public class UIFieldUtils {
       }
     }
 
-    UIFieldUpdateFontSize uiFieldUpdateFontSize = uiFieldContext.getDeclaredAnnotation(UIFieldUpdateFontSize.class);
+    var uiFieldUpdateFontSize = uiFieldContext.getDeclaredAnnotation(UIFieldUpdateFontSize.class);
     if (uiFieldUpdateFontSize != null) {
       jsonTypeMetadata.put("fsMin", uiFieldUpdateFontSize.min());
       jsonTypeMetadata.put("fsMax", uiFieldUpdateFontSize.max());
     }
 
-    UIFieldNumber uiFieldNumber = uiFieldContext.getDeclaredAnnotation(UIFieldNumber.class);
+    var uiFieldNumber = uiFieldContext.getDeclaredAnnotation(UIFieldNumber.class);
     if (uiFieldNumber != null) {
       jsonTypeMetadata.put("min", uiFieldNumber.min());
       jsonTypeMetadata.put("max", uiFieldNumber.max());
     }
 
-    UIFieldSlider uiFieldSlider = uiFieldContext.getDeclaredAnnotation(UIFieldSlider.class);
+    var uiFieldSlider = uiFieldContext.getDeclaredAnnotation(UIFieldSlider.class);
     if (uiFieldSlider != null) {
       jsonTypeMetadata.put("min", uiFieldSlider.min());
       jsonTypeMetadata.put("max", uiFieldSlider.max());
@@ -531,7 +555,7 @@ public class UIFieldUtils {
       entityUIMetaData.setType(UIFieldType.Slider.name());
     }
 
-    UIFieldCodeEditor uiFieldCodeEditor = uiFieldContext.getDeclaredAnnotation(UIFieldCodeEditor.class);
+    var uiFieldCodeEditor = uiFieldContext.getDeclaredAnnotation(UIFieldCodeEditor.class);
     if (uiFieldCodeEditor != null) {
       jsonTypeMetadata.put("wordWrap", uiFieldCodeEditor.wordWrap());
       jsonTypeMetadata.put("autoFormat", uiFieldCodeEditor.autoFormat());
@@ -539,16 +563,22 @@ public class UIFieldUtils {
       entityUIMetaData.setType("CodeEditor");
     }
 
-    UIFieldInlineEntityEditWidth uiFieldInlineEntityEditWidth = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntityEditWidth.class);
+    jsonTypeMetadata.put("disableCreateTab", nullIfFalse(uiFieldContext.isAnnotationPresent(UIFieldDisableCreateTab.class)));
+
+    var uiFieldInlineEntityEditWidth = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntityEditWidth.class);
     if (uiFieldInlineEntityEditWidth != null && uiFieldInlineEntityEditWidth.value() >= 0) {
       jsonTypeMetadata.put("inlineEditWidth", uiFieldInlineEntityEditWidth.value());
     }
-    UIFieldInlineEntityWidth uiFieldInlineEntityWidth = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntityWidth.class);
-    if (uiFieldInlineEntityEditWidth != null && uiFieldInlineEntityEditWidth.value() >= 0) {
-      jsonTypeMetadata.put("inlineViewWidth", uiFieldInlineEntityEditWidth.value());
+    var uiFieldInlineEntityWidth = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntityWidth.class);
+    if (uiFieldInlineEntityWidth != null && uiFieldInlineEntityWidth.value() >= 0) {
+      jsonTypeMetadata.put("inlineViewWidth", uiFieldInlineEntityWidth.value());
+    }
+    var uiFieldInlineEntityColSpan = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntityColSpan.class);
+    if (uiFieldInlineEntityColSpan != null && uiFieldInlineEntityColSpan.value() >= 0) {
+      jsonTypeMetadata.put("inlineViewColSpan", uiFieldInlineEntityColSpan.value());
     }
 
-    UIFieldInlineEditEntities uiFieldInlineEdit = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEditEntities.class);
+    var uiFieldInlineEdit = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEditEntities.class);
     if (uiFieldInlineEdit != null) {
       if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
         putUIInlineFieldIfRequire(instance, uiFieldContext, entityUIMetaData, (ParameterizedType) genericType, jsonTypeMetadata, entityContext);
@@ -566,7 +596,7 @@ public class UIFieldUtils {
       }
     }
 
-    UIFieldInlineEntities uiFieldInline = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntities.class);
+    var uiFieldInline = uiFieldContext.getDeclaredAnnotation(UIFieldInlineEntities.class);
     if (uiFieldInline != null) {
       if (genericType instanceof ParameterizedType && Collection.class.isAssignableFrom(type)) {
         putUIInlineFieldIfRequire(instance, uiFieldContext, entityUIMetaData, (ParameterizedType) genericType, jsonTypeMetadata, entityContext);
@@ -580,18 +610,21 @@ public class UIFieldUtils {
       }
     }
 
-    if (uiField.showInContextMenu() && entityUIMetaData.getType().equals(Boolean.class.getSimpleName())) {
-      entityUIMetaData.setShowInContextMenu(true);
-    }
+    entityUIMetaData.setShowInContextMenu(nullIfFalse(uiField.showInContextMenu() &&
+        entityUIMetaData.getType().equals(Boolean.class.getSimpleName())));
+
     if (jsonTypeMetadata.size() != 0) {
       entityUIMetaData.setTypeMetaData(jsonTypeMetadata.toString());
     }
     entityUIMetaData.setOrder(uiField.order());
-    if (uiField.required()) {
-      entityUIMetaData.setRequired(true);
-    }
+    entityUIMetaData.setRequired(nullIfFalse(uiField.required()));
+
     if (BaseEntity.class.isAssignableFrom(type) && type.getDeclaredAnnotation(UISidebarMenu.class) != null) {
       entityUIMetaData.setNavLink("/client/items/" + type.getSimpleName());
+    }
+    if (entityUIMetaData.getType() == null) {
+      throw new RuntimeException("Unable to evaluate field '" + sourceName + "' type for class: " +
+          instance.getClass().getSimpleName());
     }
 
     entityUIMetaDataList.remove(entityUIMetaData);
@@ -602,8 +635,14 @@ public class UIFieldUtils {
       EntityUIMetaData entityUIMetaData, ParameterizedType genericType, ObjectNode jsonTypeMetadata, EntityContext entityContext) {
     if (!jsonTypeMetadata.has("inlineTypeFields")) {
       Type inlineType = extractSetEntityType(instance, uiFieldContext, entityUIMetaData, genericType, jsonTypeMetadata);
+      // for non BaseEntity types
+      if (inlineType == null) {
+        inlineType = genericType.getActualTypeArguments()[0];
+      }
       Object childClassInstance = CommonUtils.newInstance((Class) inlineType);
-      jsonTypeMetadata.set("inlineTypeFields", OBJECT_MAPPER.valueToTree(UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext)));
+      boolean fullDisableEdit = uiFieldContext.getUIField().disableEdit();
+      jsonTypeMetadata.set("inlineTypeFields",
+          OBJECT_MAPPER.valueToTree(UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext, fullDisableEdit)));
     }
   }
 

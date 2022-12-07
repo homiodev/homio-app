@@ -25,7 +25,7 @@ public interface HasName extends HasJsonData {
     setJsonData("nc", value);
   }
 
-  @UIField(order = 0, visible = false)
+  @UIField(order = 0, hideInView = true, hideInEdit = true)
   default double getNameFontSize() {
     return getJsonData("nfs", 1D);
   }

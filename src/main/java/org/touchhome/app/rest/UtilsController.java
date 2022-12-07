@@ -2,6 +2,7 @@ package org.touchhome.app.rest;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
+import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.ByteArrayOutputStream;
@@ -22,11 +23,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.json.JSONObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -165,10 +166,11 @@ public class UtilsController {
     return entityContext.ui().handleNotificationAction(entityID, actionRequest.entityID, actionRequest.value);
   }
 
+  @SneakyThrows
   @PostMapping("/dialog/{entityID}")
   public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
     entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Accepted,
-        dialogRequest.pressedButton, new JSONObject(dialogRequest.params));
+        dialogRequest.pressedButton, OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
   }
 
   @DeleteMapping("/dialog/{entityID}")
@@ -177,6 +179,7 @@ public class UtilsController {
   }
 
   @Getter
+  @Setter
   private static class BellHeaderActionRequest {
 
     private String entityID;
@@ -184,6 +187,7 @@ public class UtilsController {
   }
 
   @Getter
+  @Setter
   private static class DialogRequest {
 
     private String pressedButton;

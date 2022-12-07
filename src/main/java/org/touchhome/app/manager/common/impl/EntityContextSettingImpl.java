@@ -1,5 +1,7 @@
 package org.touchhome.app.manager.common.impl;
 
+import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
+
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,7 +18,6 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
-import org.json.JSONObject;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.SettingEntity;
@@ -58,7 +59,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
 
     Collection<OptionModel> options = SettingRepository.getOptions(pluginOptions, entityContext, null);
     entityContext.ui().sendGlobal(EntityContextUIImpl.GlobalSendType.setting, entityID, options, null,
-        new JSONObject().put("subType", "list"));
+        OBJECT_MAPPER.createObjectNode().put("subType", "list"));
   }
 
   @Override
@@ -71,7 +72,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
 
     entityContext.ui().sendGlobal(EntityContextUIImpl.GlobalSendType.setting,
         SettingEntity.PREFIX + dynamicSettingPluginClass.getSimpleName(),
-        dynamicEntities, null, new JSONObject().put("subType", "dynamic"));
+        dynamicEntities, null, OBJECT_MAPPER.createObjectNode().put("subType", "dynamic"));
   }
 
   public Object getObjectValue(Class<?> settingPluginClazz) {
@@ -177,7 +178,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
 
     if (fireUpdatesToUI) {
       entityContext.ui().sendGlobal(EntityContextUIImpl.GlobalSendType.setting, SettingEntity.getKey(settingPluginClazz),
-          value, null, new JSONObject().put("subType", "single"));
+          value, null, OBJECT_MAPPER.createObjectNode().put("subType", "single"));
     }
   }
 
