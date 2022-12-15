@@ -81,7 +81,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     setJsonDataEnum("gaugeCapType", lineType);
   }
 
-  @UIField(order = 6)
+  @UIField(order = 6, isRevert = true)
   @UIFieldGroup("UI")
   @UIFieldColorPicker(allowThreshold = true)
   public String getGaugeForeground() {
@@ -122,7 +122,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     setJsonData("unitFS", value);
   }
 
-  @UIField(order = 2)
+  @UIField(order = 2, isRevert = true)
   @UIFieldGroup("Text")
   @UIFieldColorPicker
   public String getUnitColor() {
@@ -139,7 +139,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     return super.getName();
   }
 
-  @UIField(order = 4)
+  @UIField(order = 4, isRevert = true)
   @UIFieldGroup("Text")
   @UIFieldColorPicker(allowThreshold = true)
   public String getTextColor() {
@@ -203,7 +203,6 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
   }
 
   @UIField(order = 100, label = "duration_aggr")
-  @UIFieldTimeSlider
   @UIFieldGroup("Value")
   @UIEditReloadWidget
   public int getMinutesToShow() {

@@ -3,6 +3,9 @@ package org.touchhome.app.manager.common.impl;
 import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -21,6 +24,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import lombok.Getter;
@@ -146,6 +150,11 @@ public class EntityContextBGPImpl implements EntityContextBGP {
       batchRunContext.processes.put(entry.getKey(), batchRunContext.executor.submit(entry.getValue()));
     }
     return waitBatchToDone(batchName, maxTerminateTimeout, progressConsumer, batchRunContext);
+  }
+
+  @Override
+  public void executeOnExit(Runnable runnable) {
+    Runtime.getRuntime().addShutdownHook(new Thread(runnable));
   }
 
   @Override
@@ -290,7 +299,43 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         context.cancelOnError = value;
         return this;
       }
+
+      @Override
+      public ScheduleBuilder<T> linkLogFile(Path logFile) {
+        context.logFile = logFile;
+        return this;
+      }
     };
+  }
+
+  @Override
+  @SneakyThrows
+  public ThreadContext<Void> runFileWatchdog(@NotNull Path file, String key, @NotNull ThrowingRunnable<Exception> onUpdateCommand) {
+    if (!Files.exists(file)) {throw new IllegalArgumentException("File: " + file + " does not exists");}
+    if (!Files.isRegularFile(file)) {throw new IllegalArgumentException("File: " + file + " is not a regular file");}
+    if (!Files.isReadable(file)) {throw new IllegalArgumentException("File: " + file + " is not readable");}
+
+    ThreadContext<Void> fileWatchDog = (ThreadContext<Void>) this.schedulers.get("file-watchdog" + file);
+    if (fileWatchDog != null) {
+      ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners.put(key, onUpdateCommand);
+    } else {
+      ScheduleBuilder<Void> scheduleBuilder = builder("file-watchdog" + file);
+      final AtomicLong lastModified = new AtomicLong(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis());
+      fileWatchDog = scheduleBuilder.delay(Duration.ofSeconds(10)).interval(Duration.ofSeconds(10)).execute(context -> {
+        BasicFileAttributes attr = Files.readAttributes(file, BasicFileAttributes.class);
+        if (attr.lastModifiedTime().toMillis() > lastModified.get()) {
+          lastModified.set(attr.lastModifiedTime().toMillis());
+          Map<String, ThrowingRunnable<Exception>> listeners = ((ThreadContextImpl) context).simpleWorkUnitListeners;
+          for (ThrowingRunnable<Exception> runnable : listeners.values()) {
+            runnable.run();
+          }
+        }
+        return null;
+      });
+      ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners = new ConcurrentHashMap<>();
+      ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners.put(key, onUpdateCommand);
+    }
+    return fileWatchDog;
   }
 
   private <T> void createSchedule(ThreadContextImpl<T> threadContext,
@@ -356,6 +401,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     private final JSONObject metadata = new JSONObject();
     private final Date creationTime = new Date();
+    private Path logFile;
     private Duration delay;
     private String name;
     private ThrowingFunction<ThreadContext<T>, T, Exception> command;
@@ -376,6 +422,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     @Setter
     private boolean cancelOnError = true;
     private Map<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
+    private Map<String, ThrowingRunnable<Exception>> simpleWorkUnitListeners;
 
     private Consumer<Exception> errorListener;
 

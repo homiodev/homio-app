@@ -41,7 +41,7 @@ public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEnt
     return HasSingleValueDataSource.super.getSetValueDataSource();
   }
 
-  @UIField(order = 3)
+  @UIField(order = 3, isRevert = true)
   @UIFieldColorPicker
   @UIFieldGroup("UI")
   public String getColor() {

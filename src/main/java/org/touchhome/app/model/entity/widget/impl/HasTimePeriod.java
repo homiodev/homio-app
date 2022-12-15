@@ -19,7 +19,6 @@ public interface HasTimePeriod extends HasJsonData {
   @UIField(order = 1)
   @UIFieldTimeSlider
   @UIFieldGroup(value = "Time period", order = 7, borderColor = "#166F37")
-  @UIEditReloadWidget
   default int getMinutesToShow() {
     return getJsonData("mts", 60);
   }

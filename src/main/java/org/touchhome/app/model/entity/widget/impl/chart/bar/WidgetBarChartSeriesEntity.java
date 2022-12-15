@@ -15,7 +15,7 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
 
   public static final String PREFIX = "wgsbcs_";
 
-  @UIField(order = 50)
+  @UIField(order = 50, isRevert = true)
   @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
   @UIFieldColorPicker
   public String getChartColor() {

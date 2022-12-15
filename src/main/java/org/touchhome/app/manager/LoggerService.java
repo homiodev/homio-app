@@ -44,6 +44,7 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
 
@@ -54,8 +55,6 @@ import org.touchhome.common.util.CommonUtils;
 @Controller
 @RequiredArgsConstructor
 public class LoggerService implements ContextCreated {
-
-  private static final Path logsDir = resolvePath("logs");
 
   public final EntityContext entityContext;
 
@@ -83,7 +82,7 @@ public class LoggerService implements ContextCreated {
 
   @Override
   public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-    Files.walkFileTree(logsDir, new SimpleFileVisitor<>() {
+    Files.walkFileTree(TouchHomeUtils.getLogsPath(), new SimpleFileVisitor<>() {
       @Override
       public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
         if (file.getFileName().toString().endsWith(".lck")) {
@@ -109,7 +108,7 @@ public class LoggerService implements ContextCreated {
 
   private Path getOrCreateLogFile(String group, String fileName, boolean allowCreate) {
     try {
-      Path logGroup = logsDir.resolve(group);
+      Path logGroup = TouchHomeUtils.getLogsPath().resolve(group);
       if (!Files.exists(logGroup)) {
         Files.createDirectory(logGroup);
       }

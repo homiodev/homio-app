@@ -11,7 +11,7 @@ import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent;
 
 @Component
-@UIFieldSelectionParent("selection.hardware")
+@UIFieldSelectionParent(value = "selection.hardware", icon = "fas fa-microchip", iconColor = "#31BDB6", description = "SYSTEM_HARDWARE_SERVICES")
 public class SystemTotalMemService implements HasGetStatusValue {
 
   @Override

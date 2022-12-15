@@ -16,7 +16,6 @@ public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
   private Boolean hideInView;
 
   private Boolean hideOnEmpty;
-  private Boolean revert;
   private Object defaultValue;
   private String entityName;
   private String type;

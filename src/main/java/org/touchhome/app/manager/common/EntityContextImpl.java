@@ -112,6 +112,7 @@ import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
+import org.touchhome.bundle.api.entity.DisableCacheEntity;
 import org.touchhome.bundle.api.entity.PinBaseEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
@@ -245,7 +246,7 @@ public class EntityContextImpl implements EntityContext {
 
     getBean(UserRepository.class).ensureUserExists();
     getBean(RaspberryDeviceRepository.class).ensureDeviceExists();
-    setting().fetchSettingPlugins("org.touchhome", classFinder, true);
+    setting().fetchSettingPlugins(null, classFinder, true);
 
     entityContextVar.onContextCreated();
     entityContextUI.onContextCreated();
@@ -433,11 +434,11 @@ public class EntityContextImpl implements EntityContext {
       EntityContextEventImpl.EntityListener... entityListeners) {
     if (updatedEntity != null || oldEntity != null) {
       bgp().builder("entity-" + (updatedEntity == null ? oldEntity : updatedEntity).getEntityID() + "-updated")
-          .hideOnUI(true).execute(() -> {
-            for (EntityContextEventImpl.EntityListener entityListener : entityListeners) {
-              entityListener.notify(updatedEntity, oldEntity);
-            }
-          });
+           .hideOnUI(true).execute(() -> {
+             for (EntityContextEventImpl.EntityListener entityListener : entityListeners) {
+               entityListener.notify(updatedEntity, oldEntity);
+             }
+           });
     }
   }
 
@@ -522,7 +523,7 @@ public class EntityContextImpl implements EntityContext {
   @Override
   public <T> T getBean(String beanName, Class<T> clazz) {
     return this.allApplicationContexts.stream().filter(c -> c.containsBean(beanName)).map(c -> c.getBean(beanName, clazz))
-        .findAny().orElseThrow(() -> new NoSuchBeanDefinitionException(beanName));
+                                      .findAny().orElseThrow(() -> new NoSuchBeanDefinitionException(beanName));
   }
 
   @Override
@@ -572,21 +573,13 @@ public class EntityContextImpl implements EntityContext {
   }
 
   @Override
-  public <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation) {
+  public <T> List<Class<? extends T>> getClassesWithAnnotation(@NotNull Class<? extends Annotation> annotation) {
     return classFinder.getClassesWithAnnotation(annotation);
   }
 
   @Override
-  public <T> List<Class<? extends T>> getClassesWithParent(Class<T> baseClass, String... packages) {
-    List<Class<? extends T>> classes = new ArrayList<>();
-    if (packages.length > 0) {
-      for (String basePackage : packages) {
-        classes.addAll(classFinder.getClassesWithParent(baseClass, null, basePackage));
-      }
-    } else {
-      classes.addAll(classFinder.getClassesWithParent(baseClass, null, baseClass.getPackage().getName()));
-    }
-    return classes;
+  public <T> List<Class<? extends T>> getClassesWithParent(@NotNull Class<T> baseClass) {
+    return classFinder.getClassesWithParent(baseClass);
   }
 
   @Override
@@ -621,6 +614,9 @@ public class EntityContextImpl implements EntityContext {
   }
 
   private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz) {
+    if (clazz.isAnnotationPresent(DisableCacheEntity.class)) {
+      return getRepository(clazz).listAll();
+    }
     return entityManager.getEntityIDsByEntityClassFullName(clazz).stream().map(entityID -> {
       T entity = entityManager.getEntityWithFetchLazy(entityID);
       if (entity != null) {
@@ -698,6 +694,8 @@ public class EntityContextImpl implements EntityContext {
         super.onPostDelete(event);
         Object entity = event.getEntity();
         if (entity instanceof BaseEntity) {
+          // remove in-memory data
+          entityContextStorage.remove(((BaseEntity<?>) entity).getEntityID());
           ((BaseEntity) entity).afterDelete(EntityContextImpl.this);
         }
         sendEntityUpdateNotification(event.getEntity(), ItemAction.Remove);
@@ -840,7 +838,7 @@ public class EntityContextImpl implements EntityContext {
 
   private void rebuildAllRepositories(ApplicationContext context, boolean addBundle) {
     Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values().stream()
-        .collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
+                                                           .collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
 
     if (addBundle) {
       pureRepositories.putAll(pureRepositoryMap);
@@ -849,8 +847,8 @@ public class EntityContextImpl implements EntityContext {
       pureRepositories.keySet().removeAll(pureRepositoryMap.keySet());
       repositories.keySet().removeAll(context.getBeansOfType(AbstractRepository.class).keySet());
     }
-    baseEntityNameToClass = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream()
-        .collect(Collectors.toMap(Class::getSimpleName, s -> s));
+    baseEntityNameToClass = classFinder.getClassesWithParent(BaseEntity.class).stream()
+                                       .collect(Collectors.toMap(Class::getSimpleName, s -> s));
 
     rebuildRepositoryByPrefixMap();
   }
@@ -924,9 +922,9 @@ public class EntityContextImpl implements EntityContext {
   }
 
   private void createTableIndexes() {
-    List<Class<? extends BaseEntity>> list = classFinder.getClassesWithParent(BaseEntity.class, null, null).stream()
-        .filter(l -> !(WidgetBaseEntity.class.isAssignableFrom(l) || DeviceBaseEntity.class.isAssignableFrom(l)))
-        .collect(Collectors.toList());
+    List<Class<? extends BaseEntity>> list = classFinder.getClassesWithParent(BaseEntity.class).stream()
+                                                        .filter(l -> !(WidgetBaseEntity.class.isAssignableFrom(l) || DeviceBaseEntity.class.isAssignableFrom(l)))
+                                                        .collect(Collectors.toList());
     list.add(DeviceBaseEntity.class);
     list.add(WidgetBaseEntity.class);
 
@@ -939,7 +937,7 @@ public class EntityContextImpl implements EntityContext {
           String tableName = ((Joinable) meta.entityPersister(aClass)).getTableName();
           try {
             em.createNativeQuery(String.format(CREATE_TABLE_INDEX, aClass.getSimpleName(), tableName))
-                .executeUpdate();
+              .executeUpdate();
           } catch (Exception ex) {
             log.error("Error while creating index for table: <{}>", tableName, ex);
           }
@@ -984,7 +982,7 @@ public class EntityContextImpl implements EntityContext {
 
   public <T> List<T> getEntityServices(Class<T> serviceClass) {
     return allDeviceRepository.listAll().stream().filter(e -> serviceClass.isAssignableFrom(e.getClass())).map(e -> (T) e)
-        .collect(Collectors.toList());
+                              .collect(Collectors.toList());
   }
 
   public BaseEntity<?> copyEntity(BaseEntity entity) {
@@ -1061,7 +1059,7 @@ public class EntityContextImpl implements EntityContext {
       this.bundleContext = bundleContext;
       if (bundleContext != null) {
         for (WidgetBaseTemplate widgetBaseTemplate : bundleContext.getApplicationContext()
-            .getBeansOfType(WidgetBaseTemplate.class).values()) {
+                                                                  .getBeansOfType(WidgetBaseTemplate.class).values()) {
           fieldTypes.put(widgetBaseTemplate.getClass().getSimpleName(), widgetBaseTemplate);
         }
       }

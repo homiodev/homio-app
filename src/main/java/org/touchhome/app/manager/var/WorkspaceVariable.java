@@ -45,14 +45,14 @@ import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntityEditWidth;
 import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent;
-import org.touchhome.common.util.Lang;
+import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
 
 @Entity
 @Setter
 @Getter
 @Accessors(chain = true)
 @UIFieldSelectionParent(value = "OVERRIDES_BY_INTERFACE", icon = "fas fa-layer-group", iconColor = "#28A60C",
-    description = "Group variables")
+                        description = "Group variables")
 @NoArgsConstructor
 public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements HasJsonData, HasAggregateValueFromSeries,
     UIFieldSelectionParent.SelectionParent, HasTimeValueSeries, HasGetStatusValue, HasSetStatusValue {
@@ -62,7 +62,6 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
   @Override
   @UIField(order = 10, required = true)
   @UIFieldColorRef("color")
-  @UIFieldInlineEntityWidth(18)
   @UIFieldInlineEntityEditWidth(20)
   @UIFieldDisableEditOnCondition("return context.getParent('locked')")
   public String getName() {
@@ -110,7 +109,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
   private WorkspaceGroup workspaceGroup;
 
   @Getter
-  @Column(length = 10_000)
+  @Column(length = 100)
   @Convert(converter = JSONObjectConverter.class)
   private JSONObject jsonData = new JSONObject();
 
@@ -147,6 +146,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
   @Override
   public void getAllRelatedEntities(Set<BaseEntity> set) {
     set.add(workspaceGroup);
+    workspaceGroup.getAllRelatedEntities(set);
   }
 
   @Override
@@ -167,9 +167,13 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
     entityContext.event().addEventListener(variableId, key, listener);
   }
 
+  public String getParentId() {
+    return getWorkspaceGroup().getEntityID();
+  }
+
   @Override
   public String getParentName() {
-    return Lang.getServerMessage(getWorkspaceGroup().getName());
+    return getWorkspaceGroup().getName();
   }
 
   @Override
@@ -185,6 +189,14 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable> implements 
   @Override
   public String getParentDescription() {
     return getWorkspaceGroup().getDescription();
+  }
+
+  @Override
+  public SelectionParent getSuperParent() {
+    if (workspaceGroup.getParent() != null) {
+      return workspaceGroup.getParent();
+    }
+    return null;
   }
 
   @Override

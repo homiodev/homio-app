@@ -109,7 +109,7 @@ public class CodeParser {
         stack.add(new Param(from, fromClass));
         addCompetitionFromStatic(StringUtils.isEmpty(from) ? 0 : 1, items, list, fromClass, stack);
       } else {
-        List<Class<?>> classesWithParent = classFinder.getClassesWithParent(Object.class, firstItem, null);
+        List<Class<?>> classesWithParent = classFinder.getClassesWithParentSpecific(Object.class, firstItem, null);
         if (classesWithParent.size() == 1) {
           fromClass = classesWithParent.get(0);
           stack.add(new Param(from, fromClass));

@@ -47,7 +47,7 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
     return HasSingleValueDataSource.super.getSetValueDataSource();
   }
 
-  @UIField(order = 1)
+  @UIField(order = 1, isRevert = true)
   @UIFieldGroup(value = "Slider", order = 2, borderColor = "#6AA427")
   @UIFieldColorPicker(allowThreshold = true)
   public String getSliderColor() {

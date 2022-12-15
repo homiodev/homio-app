@@ -16,7 +16,7 @@ public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDo
 
   public static final String PREFIX = "wgspcs_";
 
-  @UIField(order = 20)
+  @UIField(order = 20, isRevert = true)
   @UIFieldGroup("Chart ui")
   @UIFieldColorPicker
   public String getChartColor() {

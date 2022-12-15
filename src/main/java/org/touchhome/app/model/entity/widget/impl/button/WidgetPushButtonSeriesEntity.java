@@ -41,7 +41,7 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
     setJsonData("valToPush", value);
   }
 
-  @UIField(order = 1)
+  @UIField(order = 1, isRevert = true)
   @UIFieldGroup("UI")
   @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
   public String getButtonColor() {

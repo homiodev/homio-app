@@ -161,8 +161,8 @@ public class UtilsController {
   }
 
   @PostMapping("/notification/{entityID}/action")
-  public ActionResponseModel acceptNotificationAction(@PathVariable("entityID") String entityID,
-      @RequestBody BellHeaderActionRequest actionRequest) {
+  public ActionResponseModel notificationAction(@PathVariable("entityID") String entityID,
+      @RequestBody HeaderActionRequest actionRequest) {
     try {
       return entityContext.ui().handleNotificationAction(entityID, actionRequest.entityID, actionRequest.value);
     } catch (Exception ex) {
@@ -171,20 +171,20 @@ public class UtilsController {
   }
 
   @SneakyThrows
-  @PostMapping("/dialog/{entityID}")
+  @PostMapping("/header/dialog/{entityID}")
   public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
     entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Accepted,
         dialogRequest.pressedButton, OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
   }
 
-  @DeleteMapping("/dialog/{entityID}")
+  @DeleteMapping("/header/dialog/{entityID}")
   public void discardDialog(@PathVariable("entityID") String entityID) {
     entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
   }
 
   @Getter
   @Setter
-  private static class BellHeaderActionRequest {
+  private static class HeaderActionRequest {
 
     private String entityID;
     private String value;

@@ -72,8 +72,9 @@
   </build>
   <dependencies>
     <dependency>
-      <artifactId>uom-se</artifactId>
-      <groupId>tec.uom</groupId>
+      <groupId>tech.units</groupId>
+      <artifactId>indriya</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <artifactId>spring-boot-configuration-processor</artifactId>
@@ -325,6 +326,12 @@
     </dependency>
 
     <dependency>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
       <artifactId>guava</artifactId>
       <groupId>com.google.guava</groupId>
       <scope>compile</scope>
@@ -333,12 +340,6 @@
 
     <dependency>
       <artifactId>touchhome-bundle-serial</artifactId>
-      <groupId>org.touchhome.bundle.extra</groupId>
-      <version>1.3.0-SNAPSHOT</version>
-    </dependency>
-
-    <dependency>
-      <artifactId>touchhome-bundle-mqtt</artifactId>
       <groupId>org.touchhome.bundle.extra</groupId>
       <version>1.3.0-SNAPSHOT</version>
     </dependency>
@@ -385,6 +386,13 @@
 
     <dependency>
       <artifactId>touchhome-bundle-telegram</artifactId>
+      <groupId>org.touchhome.bundle</groupId>
+      <scope>compile</scope>
+      <version>${touchhome-bundle.version}</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>touchhome-bundle-mqtt</artifactId>
       <groupId>org.touchhome.bundle</groupId>
       <scope>compile</scope>
       <version>${touchhome-bundle.version}</version>

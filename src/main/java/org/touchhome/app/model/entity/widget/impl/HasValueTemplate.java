@@ -21,7 +21,7 @@ public interface HasValueTemplate extends HasJsonData {
     setJsonData("vt", value);
   }
 
-  @UIField(order = 240)
+  @UIField(order = 240, isRevert = true)
   @UIFieldColorPicker(allowThreshold = true)
   @UIFieldGroup("Value")
   default String getValueColor() {

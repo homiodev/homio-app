@@ -37,7 +37,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     setJsonData("sdl", value);
   }
 
-  @UIField(order = 2)
+  @UIField(order = 2, isRevert = true)
   @UIFieldGroup("Data labels")
   @UIFieldColorPicker
   public String getDataLabelsColor() {

@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationContext;
@@ -99,11 +100,26 @@ public class ClassFinder {
    */
   @Cacheable(CLASSES_WITH_PARENT_CLASS)
   public <T> List<Class<? extends T>> getClassesWithParent(Class<T> parentClass) {
-    return getClassesWithParent(parentClass, null, null);
+    return getClassesWithParent(parentClass, null);
   }
 
-  // TODO: make it as Cacheable!!!!!!!!!!
-  public <T> List<Class<? extends T>> getClassesWithParent(Class<T> parentClass, String className, String basePackage) {
+  public <T> List<Class<? extends T>> getClassesWithParent(@NotNull Class<T> parentClass, String basePackage) {
+    List<Class<? extends T>> foundClasses = new ArrayList<>();
+    for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(false)) {
+      scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
+
+      getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.touchhome"), null, scanner,
+          foundClasses);
+
+      if (foundClasses.isEmpty() && basePackage == null) {
+        getClassesWithParentFromPackage("com.pi4j", null, scanner, foundClasses);
+      }
+    }
+
+    return foundClasses;
+  }
+
+  public <T> List<Class<? extends T>> getClassesWithParentSpecific(@NotNull Class<T> parentClass, String className, String basePackage) {
     List<Class<? extends T>> foundClasses = new ArrayList<>();
     for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(false)) {
       scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));

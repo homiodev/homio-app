@@ -17,7 +17,7 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
 
   public static final String PREFIX = "wgsdps_";
 
-  @UIField(order = 1)
+  @UIField(order = 1, isRevert = true)
   @UIFieldGroup("UI")
   @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
   public String getBackground() {

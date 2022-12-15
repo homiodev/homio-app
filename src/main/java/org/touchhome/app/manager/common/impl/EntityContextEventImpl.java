@@ -66,7 +66,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     ScheduleBuilder<Boolean> builder = this.entityContext.bgp().builder("internet-test");
     Duration interval = touchHomeProperties.getInternetTestInterval();
     this.internetAccessBuilder = builder.interval(interval).delay(interval).interval(interval)
-        .tap(context -> this.internetThreadContext = context);
+                                        .tap(context -> this.internetThreadContext = context);
   }
 
   public void onContextCreated() {
@@ -95,7 +95,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
   @Override
   public EntityContextEvent addEventListener(String key, String discriminator, Consumer<Object> listener) {
     eventListeners.computeIfAbsent(discriminator, d -> new ConcurrentHashMap<>())
-        .put(key, listener);
+                  .put(key, listener);
     return this;
   }
 
@@ -113,14 +113,13 @@ public class EntityContextEventImpl implements EntityContextEvent {
   private EntityContextEventImpl fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
     // fire by key and key + value type
     fireEventInternal(key, value, compareValues);
-    if (value != null) {
+    if (value != null && !(value instanceof String)) {
       fireEventInternal(key + "_" + value.getClass().getSimpleName(), value, compareValues);
     }
     return this;
   }
 
   private void fireEventInternal(@NotNull String key, @Nullable Object value, boolean compareValues) {
-    addEvent(key);
     if (StringUtils.isEmpty(key)) {
       throw new IllegalArgumentException("Unable to fire event with empty key");
     }
@@ -140,7 +139,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     entityContext.fireAllBroadcastLock(broadcastLockManager -> broadcastLockManager.signalAll(key, value));
   }
 
-  private void addEvent(String key) {
+  public void addEvent(String key) {
     OptionModel optionModel = OptionModel.of(key, Lang.getServerMessage(key));
     this.events.add(optionModel);
   }
@@ -282,7 +281,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
     private <T extends HasEntityIdentifier> void notifyByType(String name, T saved, T oldEntity) {
       for (EntityContext.EntityUpdateListener listener : typeBiListeners.getOrDefault(name, emptyMap())
-          .values()) {
+                                                                        .values()) {
         listener.entityUpdated(saved, oldEntity);
       }
       for (Consumer listener : typeListeners.getOrDefault(name, emptyMap()).values()) {

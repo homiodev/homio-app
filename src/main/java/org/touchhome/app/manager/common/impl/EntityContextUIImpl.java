@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -159,6 +160,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     sendGlobal(GlobalSendType.reload, reason, null, null, null);
   }
 
+  @Override
   public void removeItem(@NotNull BaseEntity<?> entity) {
     ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
                                        .put("type", "remove")
@@ -240,7 +242,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     } else {
       progressMap.put(key, new ProgressNotification(key, progress, message, cancellable));
     }
-    sendGlobal(GlobalSendType.progress, key, progress, message,
+    sendGlobal(GlobalSendType.progress, key, Math.round(progress), message,
         cancellable ? OBJECT_MAPPER.createObjectNode().put("cancellable", true) : null);
   }
 
@@ -317,7 +319,16 @@ public class EntityContextUIImpl implements EntityContextUI {
 
       @Override
       public HeaderButtonBuilder clickAction(@NotNull Class<? extends SettingPluginButton> clickAction) {
-        builder.setStopAction("st_" + clickAction.getSimpleName());
+        builder.setClickAction(() -> {
+          entityContext.setting().setValue(clickAction, null);
+          return null;
+        });
+        return this;
+      }
+
+      @Override
+      public HeaderButtonBuilder clickAction(@NotNull Supplier<ActionResponseModel> clickAction) {
+        builder.setClickAction(clickAction);
         return this;
       }
 
@@ -328,6 +339,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         if (existedModel != null) {
           builder.getDialogs().addAll(existedModel.getDialogs());
         }
+        builder.setHandleActionID(entityID);
         headerButtonNotifications.put(entityID, builder);
         sendHeaderButtonToUI(builder, null);
       }
@@ -519,7 +531,11 @@ public class EntityContextUIImpl implements EntityContextUI {
       bellNotification = this.bundleEntrypointNotifications.get(entityID);
     }
     if (bellNotification == null) {
-      throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
+      HeaderButtonNotification headerButtonNotification = headerButtonNotifications.get(entityID);
+      if (headerButtonNotification == null) {
+        throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
+      }
+      return headerButtonNotification.getClickAction().get();
     }
     UIInputEntity action =
         bellNotification.getActions().stream().filter(a -> a.getEntityID().equals(actionEntityID)).findAny()

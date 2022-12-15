@@ -20,7 +20,7 @@ public interface HasHorizontalLine extends HasJsonData {
     setJsonData("slpos", value);
   }
 
-  @UIField(order = 2)
+  @UIField(order = 2, isRevert = true)
   @UIFieldGroup("CHART_HL")
   @UIFieldColorPicker
   default String getSingleLineColor() {
@@ -53,7 +53,7 @@ public interface HasHorizontalLine extends HasJsonData {
     setJsonData("sdyn", value);
   }
 
-  @UIField(order = 5)
+  @UIField(order = 5, isRevert = true)
   @UIFieldGroup("CHART_HL")
   @UIFieldColorPicker
   default String getDynamicLineColor() {

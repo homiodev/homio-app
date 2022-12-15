@@ -66,6 +66,7 @@ import org.touchhome.app.manager.ImageService;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.EntityManager;
+import org.touchhome.app.model.UIHideEntityIfFieldNotNull;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemShowEntityCreateTimeSetting;
@@ -232,7 +233,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
   @Override
   public void onContextRefresh() {
-    List<Class<? extends BaseEntity>> baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class, null, null);
+    List<Class<? extends BaseEntity>> baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class);
     this.baseEntitySimpleClasses = baseEntityClasses.stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
 
     for (Class<? extends BaseEntity> baseEntityClass : baseEntityClasses) {
@@ -486,6 +487,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
       typeDependency.ifPresent(typeDependencies::add);
     }
     List<Collection<UIInputEntity>> contextActions = new ArrayList<>();
+    items.removeIf(this::isRemoveItemFromResult);
     for (BaseEntity item : items) {
       UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
       if (item instanceof HasDynamicContextMenuActions) {
@@ -494,6 +496,15 @@ public class ItemController implements ContextCreated, ContextRefreshed {
       contextActions.add(uiInputBuilder.buildAll());
     }
     return new ItemsByTypeResponse(items, contextActions, typeDependencies);
+  }
+
+  @SneakyThrows
+  private boolean isRemoveItemFromResult(BaseEntity baseEntity) {
+    UIHideEntityIfFieldNotNull hideCondition = baseEntity.getClass().getDeclaredAnnotation(UIHideEntityIfFieldNotNull.class);
+    if (hideCondition != null && FieldUtils.readDeclaredField(baseEntity, hideCondition.value(), true) != null) {
+      return true;
+    }
+    return false;
   }
 
   @GetMapping("/service/{esName}")

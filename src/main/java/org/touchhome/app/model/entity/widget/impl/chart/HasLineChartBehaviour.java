@@ -82,7 +82,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     setJsonDataEnum("pstyle", value);
   }
 
-  @UIField(order = 3)
+  @UIField(order = 3, isRevert = true)
   @UIFieldGroup(value = "Chart point")
   @UIFieldColorPicker
   @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
@@ -94,7 +94,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     setJsonData("pbg", value);
   }
 
-  @UIField(order = 4)
+  @UIField(order = 4, isRevert = true)
   @UIFieldGroup(value = "Chart point")
   @UIFieldColorPicker
   @UIFieldShowOnCondition("return context.get('chartType') == 'line'")

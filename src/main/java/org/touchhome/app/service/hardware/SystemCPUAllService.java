@@ -5,7 +5,7 @@ import org.touchhome.app.manager.common.EntityContextStorage;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent;
 
 @Component
-@UIFieldSelectionParent("selection.hardware")
+@UIFieldSelectionParent(value = "selection.hardware", icon = "fas fa-microchip", iconColor = "#31BDB6", description = "SYSTEM_HARDWARE_SERVICES")
 public class SystemCPUAllService extends BaseSystemService {
 
   public SystemCPUAllService() {

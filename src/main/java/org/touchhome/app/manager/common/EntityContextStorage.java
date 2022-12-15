@@ -42,15 +42,18 @@ public class EntityContextStorage {
       @Override
       public void setValue(@NotNull HasEntityIdentifier entity, @NotNull String key, @NotNull String title, @Nullable Object value) {
         EntityMemoryData data = ENTITY_MEMORY_MAP.computeIfAbsent(entity.getEntityID(), s -> new EntityMemoryData());
-        if (value == null) {
-          data.VALUE_MAP.remove(key);
+        boolean sendUpdateToUI = entity instanceof HasStatusAndMsg && key.startsWith("status");
+        if (value == null || (value instanceof String && value.toString().isEmpty())) {
+          if (data.VALUE_MAP.remove(key) == null) {
+            sendUpdateToUI = false;
+          }
         } else {
           Object prevValue = data.VALUE_MAP.put(key, value);
           if (!Objects.equals(value, prevValue)) {
             if (value instanceof Status) {
               Status status = (Status) value;
               Level level = status == Status.ERROR ? Level.ERROR : Level.DEBUG;
-              Object message = data.VALUE_MAP.get(key + "_msg");
+              Object message = data.VALUE_MAP.get(key + "Message");
               if (message == null) {
                 LogManager.getLogger(entity.getClass()).log(level, "[{}]: Set {} '{}' status: {}",
                     entity.getEntityID(), entity, title, status);
@@ -59,10 +62,13 @@ public class EntityContextStorage {
                     entity.getEntityID(), entity, title, status, message);
               }
             }
-            if (entity instanceof HasStatusAndMsg && HasStatusAndMsg.DISTINGUISH_KEY.equals(key)) {
-              entityContext.ui().updateItem((BaseEntity<?>) entity, "status", ((HasStatusAndMsg<?>) entity).getStatus());
-            }
+          } else {
+            sendUpdateToUI = false;
           }
+        }
+
+        if (sendUpdateToUI) {
+          entityContext.ui().updateItem((BaseEntity<?>) entity, key, value);
         }
       }
 
@@ -95,6 +101,10 @@ public class EntityContextStorage {
                                                  entityContext.event().fireEvent("cpu", systemMessage);
                                                });
     });
+  }
+
+  public void remove(String entityID) {
+    ENTITY_MEMORY_MAP.remove(entityID);
   }
 
   private static class EntityMemoryData {

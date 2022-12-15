@@ -2,6 +2,7 @@ package org.touchhome.app.console;
 
 import static org.touchhome.bundle.api.ui.field.UIFieldType.StaticDate;
 
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Date;
@@ -17,9 +18,11 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.impl.EntityContextBGPImpl;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.console.ConsolePluginTable;
+import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.action.UIContextMenuAction;
 
 @RequiredArgsConstructor
 public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<BaseProcessesConsolePlugin.BackgroundProcessJSON> {
@@ -39,7 +42,8 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
   @Override
   public Collection<BackgroundProcessJSON> getValue() {
-    Collection<BackgroundProcessJSON> result = entityContext.bgp().getSchedulers().values()
+    Collection<BackgroundProcessJSON> result = entityContext
+        .bgp().getSchedulers().values()
         .stream()
         .filter(EntityContextBGPImpl.ThreadContextImpl::isShowOnUI)
         .filter(threadContext -> {
@@ -51,6 +55,9 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
         })
         .map(e -> {
           BackgroundProcessJSON bgp = new BackgroundProcessJSON();
+          if (e.getLogFile() != null && Files.exists(e.getLogFile())) {
+            bgp = new BackgroundProcessJSONWithLogs();
+          }
           bgp.entityID = e.getName();
           bgp.processName = e.getName();
           bgp.description = e.getDescription();
@@ -147,5 +154,13 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
     @UIField(hideInEdit = true, order = 25, style = "max-width: 300px;overflow: hidden;white-space: nowrap;")
     private String bigDescription;
+  }
+
+  public static class BackgroundProcessJSONWithLogs extends BackgroundProcessJSON {
+
+    @UIContextMenuAction("CONTEXT.ITEM.SHOW_LOGS")
+    public ActionResponseModel showLogs(BackgroundProcessJSON json) {
+      return ActionResponseModel.showSuccess("!!!!!!!!");
+    }
   }
 }

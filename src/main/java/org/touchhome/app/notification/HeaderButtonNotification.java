@@ -2,9 +2,13 @@ package org.touchhome.app.notification;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.json.JSONObject;
+import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.ui.dialog.DialogModel;
 
 @Getter
@@ -22,8 +26,9 @@ public class HeaderButtonNotification extends BaseNotificationModel<HeaderButton
   private Integer borderWidth = 1;
   private String borderColor;
 
-  private String stopAction;
+  private String handleActionID;
   private String page;
+  private Supplier<ActionResponseModel> clickAction;
 
   public HeaderButtonNotification(String entityID) {
     super(entityID);

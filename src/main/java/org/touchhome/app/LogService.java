@@ -63,7 +63,7 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
   private static final GlobalAppender globalAppender = new GlobalAppender();
   private static final Set<String> excludeDebugPackages = Set.of("org.springframework", "com.mongodb",
-      "de.bwaldvogel");
+      "de.bwaldvogel", "org.mongodb", "com.zaxxer", "org.hibernate");
 
   @SneakyThrows
   private static void initLogAppender() {
@@ -96,13 +96,17 @@ public class LogService implements ApplicationListener<ApplicationEnvironmentPre
 
         @Override
         public Result filter(Logger logger, Level level, Marker marker, String msg, Object... params) {
-          logIfRequire(logger, level, marker, msg, null, params);
+          if (msg != null) {
+            logIfRequire(logger, level, marker, msg, null, params);
+          }
           return super.filter(logger, level, marker, msg, params);
         }
 
         @Override
         public Result filter(final Logger logger, final Level level, final Marker marker, final Object msg, final Throwable t) {
-          logIfRequire(logger, level, marker, String.valueOf(msg), t);
+          if (msg != null) {
+            logIfRequire(logger, level, marker, String.valueOf(msg), t);
+          }
           return super.filter(logger, level, marker, msg, t);
         }
       });

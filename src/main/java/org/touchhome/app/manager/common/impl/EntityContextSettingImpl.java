@@ -255,7 +255,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
   }
 
   public void fetchSettingPlugins(String basePackage, ClassFinder classFinder, boolean addBundle) {
-    List<Class<? extends SettingPlugin>> classes = classFinder.getClassesWithParent(SettingPlugin.class, null, basePackage);
+    List<Class<? extends SettingPlugin>> classes = classFinder.getClassesWithParent(SettingPlugin.class, basePackage);
     for (Class<? extends SettingPlugin> settingPlugin : classes) {
       updatePlugins(settingPlugin, addBundle);
     }

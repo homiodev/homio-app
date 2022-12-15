@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -69,13 +70,10 @@ public final class UIFieldSelectionUtil {
   private static List<OptionModel> getOptionsForClassSelection(EntityContext entityContext,
       UIFieldClassSelection uiFieldClassSelection) {
     ClassFinder classFinder = entityContext.getBean(ClassFinder.class);
-    List<Class<?>> list = new ArrayList<>();
-    for (String basePackage : uiFieldClassSelection.basePackages()) {
-      list.addAll(classFinder.getClassesWithParent(uiFieldClassSelection.value(), null, basePackage));
-    }
+    List<Class<?>> list = classFinder.getClassesWithParent((Class<Object>) uiFieldClassSelection.value());
     Predicate<Class<?>> predicate = CommonUtils.newInstance(uiFieldClassSelection.filter());
     return list.stream().filter(predicate).map(c -> OptionModel.of(c.getName(), c.getSimpleName()))
-        .collect(Collectors.toList());
+               .collect(Collectors.toList());
   }
 
   public static List<OptionModel> loadOptions(Object classEntity, EntityContext entityContext, String fieldName,
@@ -169,12 +167,28 @@ public final class UIFieldSelectionUtil {
         result.add(option);
       }
     }
+    Map<String, OptionModel> parentModels = new HashMap<>();
     for (Map.Entry<SelectionParent, List<OptionModel>> entry : groupedModels.entrySet()) {
-      OptionModel optionModel =
-          OptionModel.of(entry.getKey().key).setIcon(entry.getKey().icon).setColor(entry.getKey().iconColor)
-              .setDescription(entry.getKey().description).setChildren(entry.getValue());
-      result.add(optionModel);
+      SelectionParent parent = entry.getKey();
+      OptionModel parentModel = OptionModel.of(parent.key, parent.getName())
+                                           .setIcon(parent.icon)
+                                           .setColor(parent.iconColor)
+                                           .setDescription(parent.description)
+                                           .setChildren(entry.getValue());
+      if (parent.getParent() != null) {
+        JsonNode superParent = entry.getKey().getParent();
+        String superParentKey = superParent.get("key").asText();
+        parentModels.computeIfAbsent(superParentKey, key ->
+                        OptionModel.of(key, superParent.get("name").asText())
+                                   .setIcon(superParent.path("icon").asText())
+                                   .setColor(superParent.path("iconColor").asText())
+                                   .setDescription(superParent.path("description").asText()))
+                    .addChild(parentModel);
+      } else {
+        result.add(parentModel);
+      }
     }
+    result.addAll(parentModels.values());
 
     return result;
   }
@@ -334,10 +348,12 @@ public final class UIFieldSelectionUtil {
 
     if (target instanceof UIFieldSelectionParent.SelectionParent) {
       UIFieldSelectionParent.SelectionParent parent = (UIFieldSelectionParent.SelectionParent) target;
-      item.key = defaultIfEmpty(parent.getParentName(), item.key);
-      item.icon = defaultIfEmpty(parent.getParentIcon(), item.icon);
-      item.iconColor = defaultIfEmpty(parent.getParentIconColor(), item.iconColor);
-      item.description = defaultIfEmpty(parent.getParentDescription(), item.description);
+      item.mergeFrom(parent);
+
+      UIFieldSelectionParent.SelectionParent superParent = parent.getSuperParent();
+      if (superParent != null) {
+        item.parent = OBJECT_MAPPER.valueToTree(new SelectionParent().mergeFrom(superParent));
+      }
     }
 
     if (item.key != null) {
@@ -450,8 +466,7 @@ public final class UIFieldSelectionUtil {
           params.field.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class);
       for (UIFieldEntityByClassSelection item : entityClasses) {
         Class<? extends HasEntityIdentifier> sourceClassType = item.value();
-        for (Class<? extends HasEntityIdentifier> foundTargetType : params.entityContext.getClassesWithParent(
-            sourceClassType, item.basePackages())) {
+        for (Class<? extends HasEntityIdentifier> foundTargetType : params.entityContext.getClassesWithParent(sourceClassType)) {
           if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
             for (BaseEntity baseEntity : params.entityContext.findAll((Class<BaseEntity>) foundTargetType)) {
               OptionModel optionModel = OptionModel.of(baseEntity.getEntityID(), baseEntity.getTitle());
@@ -489,12 +504,25 @@ public final class UIFieldSelectionUtil {
 
   @Setter
   @Getter
+  @NoArgsConstructor
   private static class SelectionParent {
 
+    public JsonNode parent;
+
     private String key;
+    private String name;
     private String icon;
     private String iconColor;
     private String description;
+
+    public SelectionParent mergeFrom(UIFieldSelectionParent.SelectionParent parent) {
+      key = defaultIfEmpty(parent.getParentId(), key);
+      name = defaultIfEmpty(parent.getParentName(), key);
+      icon = defaultIfEmpty(parent.getParentIcon(), icon);
+      iconColor = defaultIfEmpty(parent.getParentIconColor(), iconColor);
+      description = defaultIfEmpty(parent.getParentDescription(), description);
+      return this;
+    }
 
     @Override
     public boolean equals(Object o) {

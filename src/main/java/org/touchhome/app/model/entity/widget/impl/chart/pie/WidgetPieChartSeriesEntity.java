@@ -16,7 +16,7 @@ public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChar
 
   public static final String PREFIX = "wgspcs_";
 
-  @UIField(order = 20)
+  @UIField(order = 20, isRevert = true)
   @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
   @UIFieldColorPicker
   public String getChartColor() {

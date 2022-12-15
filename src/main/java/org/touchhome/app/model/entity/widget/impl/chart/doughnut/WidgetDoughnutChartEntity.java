@@ -29,7 +29,7 @@ public class WidgetDoughnutChartEntity extends ChartBaseEntity<WidgetDoughnutCha
     setJsonData("vfs", value);
   }
 
-  @UIField(order = 4)
+  @UIField(order = 4, isRevert = true)
   @UIFieldGroup("Value")
   @UIFieldColorPicker(allowThreshold = true)
   public String getValueColor() {

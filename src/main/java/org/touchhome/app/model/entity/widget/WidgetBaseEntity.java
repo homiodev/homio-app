@@ -148,7 +148,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     return (T) this;
   }
 
-  @UIField(order = 21)
+  @UIField(order = 21, isRevert = true)
   @UIFieldGroup("UI")
   @UIFieldColorPicker(allowThreshold = true)
   public String getBackground() {
