@@ -13,32 +13,35 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection;
 
 @Entity
 public class WidgetFMSeriesEntity extends WidgetSeriesEntity<WidgetFMEntity>
-    implements HasSingleValueDataSource {
+        implements HasSingleValueDataSource {
 
-  public static final String PREFIX = "wgsfms_";
+    public static final String PREFIX = "wgsfms_";
 
-  @Override
-  @UIField(order = 14, required = true)
-  @UIFieldTreeNodeSelection(allowSelectDirs = true, allowSelectFiles = false, iconColor = "#14A669")
-  @UIFieldIgnoreParent
-  public String getValueDataSource() {
-    return HasSingleValueDataSource.super.getValueDataSource();
-  }
+    @Override
+    @UIField(order = 14, required = true)
+    @UIFieldTreeNodeSelection(
+            allowSelectDirs = true,
+            allowSelectFiles = false,
+            iconColor = "#14A669")
+    @UIFieldIgnoreParent
+    public String getValueDataSource() {
+        return HasSingleValueDataSource.super.getValueDataSource();
+    }
 
-  @Override
-  public String getEntityPrefix() {
-    return PREFIX;
-  }
+    @Override
+    public String getEntityPrefix() {
+        return PREFIX;
+    }
 
-  @Override
-  @JsonIgnore
-  @UIFieldIgnore
-  public AggregationType getAggregationType() {
-    throw new ProhibitedExecution();
-  }
+    @Override
+    @JsonIgnore
+    @UIFieldIgnore
+    public AggregationType getAggregationType() {
+        throw new ProhibitedExecution();
+    }
 
-  @Override
-  public String getDefaultName() {
-    return null;
-  }
+    @Override
+    public String getDefaultName() {
+        return null;
+    }
 }

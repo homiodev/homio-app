@@ -4,20 +4,21 @@ import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.setting.SettingPluginBoolean;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 
-public class ConsoleDebugLevelSetting implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
+public class ConsoleDebugLevelSetting
+        implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
 
-  @Override
-  public int order() {
-    return 970;
-  }
+    @Override
+    public int order() {
+        return 970;
+    }
 
-  @Override
-  public boolean defaultValue() {
-    return false;
-  }
+    @Override
+    public boolean defaultValue() {
+        return false;
+    }
 
-  @Override
-  public ConsolePlugin.RenderType[] renderTypes() {
-    return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines};
-  }
+    @Override
+    public ConsolePlugin.RenderType[] renderTypes() {
+        return new ConsolePlugin.RenderType[] {ConsolePlugin.RenderType.lines};
+    }
 }

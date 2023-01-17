@@ -20,57 +20,63 @@ import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 
 @Getter
 @Component
-public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks implements WorkspaceEventListener {
+public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
+        implements WorkspaceEventListener {
 
-  private final Map<Integer, CompileScriptContext> compileScriptContextMap = new HashMap<>();
-  private final ScriptService scriptService;
+    private final Map<Integer, CompileScriptContext> compileScriptContextMap = new HashMap<>();
+    private final ScriptService scriptService;
 
-  public Scratch3MutatorBlocks(EntityContext entityContext, ScriptService scriptService) {
-    super("mutator", entityContext);
-    this.scriptService = scriptService;
+    public Scratch3MutatorBlocks(EntityContext entityContext, ScriptService scriptService) {
+        super("mutator", entityContext);
+        this.scriptService = scriptService;
 
-    blockReporter("join", this::joinStringEvaluate);
-    blockReporter("json_reduce", this::jsonReduceEvaluate);
-    blockReporter("map", this::mapEvaluate);
-  }
-
-  public static State reduceJSON(String json, String query) {
-    if (StringUtils.isNotEmpty(query)) {
-      Object filteredObject = JsonPath.read(json, query);
-      return State.of(filteredObject);
+        blockReporter("join", this::joinStringEvaluate);
+        blockReporter("json_reduce", this::jsonReduceEvaluate);
+        blockReporter("map", this::mapEvaluate);
     }
-    return new JsonType(json);
-  }
 
-  @Override
-  public void release(String id) {
-    this.compileScriptContextMap.clear();
-  }
+    public static State reduceJSON(String json, String query) {
+        if (StringUtils.isNotEmpty(query)) {
+            Object filteredObject = JsonPath.read(json, query);
+            return State.of(filteredObject);
+        }
+        return new JsonType(json);
+    }
 
-  @SneakyThrows
-  private State mapEvaluate(WorkspaceBlock workspaceBlock) {
-    String source = workspaceBlock.getInputString("SOURCE");
-    String map = workspaceBlock.getInputString("MAP");
+    @Override
+    public void release(String id) {
+        this.compileScriptContextMap.clear();
+    }
 
-    CompileScriptContext compileScriptContext = this.compileScriptContextMap.computeIfAbsent(map.hashCode(), integer -> {
-      String code = map;
-      if (ScriptEntity.getFunctionWithName(code, "run") == null) {
-        code = "function run() { " + code + " }";
-      }
-      ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(code);
-      return scriptService.createCompiledScript(scriptEntity, null);
-    });
-    compileScriptContext.getEngine().put("input", source);
-    return scriptService.runJavaScript(compileScriptContext);
-  }
+    @SneakyThrows
+    private State mapEvaluate(WorkspaceBlock workspaceBlock) {
+        String source = workspaceBlock.getInputString("SOURCE");
+        String map = workspaceBlock.getInputString("MAP");
 
-  private State jsonReduceEvaluate(WorkspaceBlock workspaceBlock) {
-    String json = workspaceBlock.getInputString("JSON");
-    String query = workspaceBlock.getInputString("REDUCE");
-    return reduceJSON(json, query);
-  }
+        CompileScriptContext compileScriptContext =
+                this.compileScriptContextMap.computeIfAbsent(
+                        map.hashCode(),
+                        integer -> {
+                            String code = map;
+                            if (ScriptEntity.getFunctionWithName(code, "run") == null) {
+                                code = "function run() { " + code + " }";
+                            }
+                            ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(code);
+                            return scriptService.createCompiledScript(scriptEntity, null);
+                        });
+        compileScriptContext.getEngine().put("input", source);
+        return scriptService.runJavaScript(compileScriptContext);
+    }
 
-  private State joinStringEvaluate(WorkspaceBlock workspaceBlock) {
-    return new StringType(workspaceBlock.getInputString("STRING1") + workspaceBlock.getInputString("STRING2"));
-  }
+    private State jsonReduceEvaluate(WorkspaceBlock workspaceBlock) {
+        String json = workspaceBlock.getInputString("JSON");
+        String query = workspaceBlock.getInputString("REDUCE");
+        return reduceJSON(json, query);
+    }
+
+    private State joinStringEvaluate(WorkspaceBlock workspaceBlock) {
+        return new StringType(
+                workspaceBlock.getInputString("STRING1")
+                        + workspaceBlock.getInputString("STRING2"));
+    }
 }

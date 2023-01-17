@@ -11,19 +11,19 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository
 public class WidgetSeriesRepository extends AbstractRepository<WidgetSeriesEntity> {
 
-  public WidgetSeriesRepository() {
-    super(WidgetSeriesEntity.class);
-  }
+    public WidgetSeriesRepository() {
+        super(WidgetSeriesEntity.class);
+    }
 
-  @Override
-  @Transactional(readOnly = true)
-  public WidgetSeriesEntity getByEntityID(String entityID) {
-    return super.getByEntityID(entityID);
-  }
+    @Override
+    @Transactional(readOnly = true)
+    public WidgetSeriesEntity getByEntityID(String entityID) {
+        return super.getByEntityID(entityID);
+    }
 
-  @Override
-  @Transactional(readOnly = true)
-  public List listAll() {
-    return super.listAll();
-  }
+    @Override
+    @Transactional(readOnly = true)
+    public List listAll() {
+        return super.listAll();
+    }
 }

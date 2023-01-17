@@ -11,50 +11,52 @@ import org.touchhome.bundle.api.setting.SettingPluginOptions;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
-public class ConsoleRefreshContentPeriodSetting implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
+public class ConsoleRefreshContentPeriodSetting
+        implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
 
-  @Override
-  public UIFieldType getSettingType() {
-    return UIFieldType.SelectBox;
-  }
+    @Override
+    public UIFieldType getSettingType() {
+        return UIFieldType.SelectBox;
+    }
 
-  @Override
-  public String getDefaultValue() {
-    return "0";
-  }
+    @Override
+    public String getDefaultValue() {
+        return "0";
+    }
 
-  @Override
-  public Class<Integer> getType() {
-    return Integer.class;
-  }
+    @Override
+    public Class<Integer> getType() {
+        return Integer.class;
+    }
 
-  @Override
-  public String getIcon() {
-    return "far fa-clock";
-  }
+    @Override
+    public String getIcon() {
+        return "far fa-clock";
+    }
 
-  @Override
-  public Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
-    return new ArrayList<>(Arrays.asList(
-        OptionModel.of("0", "time.NEVER"),
-        OptionModel.of("5", "time.SEC_5"),
-        OptionModel.of("10", "time.SEC_10"),
-        OptionModel.of("30", "time.SEC_30"),
-        OptionModel.of("60", "time.SEC_60")));
-  }
+    @Override
+    public Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
+        return new ArrayList<>(
+                Arrays.asList(
+                        OptionModel.of("0", "time.NEVER"),
+                        OptionModel.of("5", "time.SEC_5"),
+                        OptionModel.of("10", "time.SEC_10"),
+                        OptionModel.of("30", "time.SEC_30"),
+                        OptionModel.of("60", "time.SEC_60")));
+    }
 
-  @Override
-  public int order() {
-    return 700;
-  }
+    @Override
+    public int order() {
+        return 700;
+    }
 
-  @Override
-  public String[] pages() {
-    return new String[0];
-  }
+    @Override
+    public String[] pages() {
+        return new String[0];
+    }
 
-  @Override
-  public boolean acceptConsolePluginPage(ConsolePlugin consolePlugin) {
-    return consolePlugin.hasRefreshIntervalSetting();
-  }
+    @Override
+    public boolean acceptConsolePluginPage(ConsolePlugin consolePlugin) {
+        return consolePlugin.hasRefreshIntervalSetting();
+    }
 }

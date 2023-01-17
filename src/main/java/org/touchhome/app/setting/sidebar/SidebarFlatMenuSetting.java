@@ -4,13 +4,13 @@ import org.touchhome.bundle.api.setting.SettingPluginBoolean;
 
 public class SidebarFlatMenuSetting implements SettingPluginBoolean {
 
-  @Override
-  public boolean defaultValue() {
-    return true;
-  }
+    @Override
+    public boolean defaultValue() {
+        return true;
+    }
 
-  @Override
-  public int order() {
-    return 1;
-  }
+    @Override
+    public int order() {
+        return 1;
+    }
 }

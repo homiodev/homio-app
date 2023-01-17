@@ -11,13 +11,13 @@ import org.touchhome.bundle.api.ui.UISidebarChildren;
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
 public class DeviceFallbackEntity extends DeviceBaseEntity<DeviceFallbackEntity> {
 
-  @Override
-  public String getEntityPrefix() {
-    return "misc_fallback";
-  }
+    @Override
+    public String getEntityPrefix() {
+        return "misc_fallback";
+    }
 
-  @Override
-  public String getDefaultName() {
-    return null;
-  }
+    @Override
+    public String getDefaultName() {
+        return null;
+    }
 }

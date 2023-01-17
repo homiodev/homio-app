@@ -5,11 +5,6 @@
       "actionNotFound": "No video action found"
     }
   },
-  "DESCRIPTION": {
-    "VARIABLE_TIME_SERIES": "Variables time-value series",
-    "VARIABLE_GET_STATUS": "Variables get last value",
-    "VARIABLE_SET_STATUS": "Variables set value"
-  },
   "ENTITY_CREATED": "Entity created: {{NAME}}",
   "ENTITY_DELETED": "Entity deleted: {{NAME}}",
   "DEFAULT_PLACES": "Kitchen;Bath;Сorridor;Bedroom;Hall;Boiler room;Playroom;Garage;Basement;Entrance;",

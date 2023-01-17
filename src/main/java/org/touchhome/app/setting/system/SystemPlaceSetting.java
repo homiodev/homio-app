@@ -9,23 +9,23 @@ import org.touchhome.common.util.Lang;
 
 public class SystemPlaceSetting implements CoreSettingPlugin<Set<String>>, SettingPluginTextSet {
 
-  @Override
-  public GroupKey getGroupKey() {
-    return GroupKey.system;
-  }
+    @Override
+    public GroupKey getGroupKey() {
+        return GroupKey.system;
+    }
 
-  @Override
-  public String getIconColor() {
-    return DANGER_COLOR;
-  }
+    @Override
+    public String getIconColor() {
+        return DANGER_COLOR;
+    }
 
-  @Override
-  public int order() {
-    return 200;
-  }
+    @Override
+    public int order() {
+        return 200;
+    }
 
-  @Override
-  public String[] defaultValue() {
-    return Lang.getServerMessage("DEFAULT_PLACES").split(";");
-  }
+    @Override
+    public String[] defaultValue() {
+        return Lang.getServerMessage("DEFAULT_PLACES").split(";");
+    }
 }

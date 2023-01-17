@@ -14,32 +14,36 @@ import org.touchhome.bundle.api.ui.field.action.v1.layout.dialog.UIStickyDialogI
 
 @Getter
 @RequiredArgsConstructor
-public class UIStickyDialogItemBuilderImpl extends UIBaseLayoutBuilderImpl implements UIStickyDialogItemBuilder,
-    UIInputEntity {
+public class UIStickyDialogItemBuilderImpl extends UIBaseLayoutBuilderImpl
+        implements UIStickyDialogItemBuilder, UIInputEntity {
 
-  private final String entityID;
-  private final String itemType = UIItemType.StickDialog.name();
-  private String background;
+    private final String entityID;
+    private final String itemType = UIItemType.StickDialog.name();
+    private String background;
 
-  @Override
-  public UIStickyDialogItemBuilder setBackgroundColor(String backgroundColor) {
-    this.background = backgroundColor;
-    return this;
-  }
+    @Override
+    public UIStickyDialogItemBuilder setBackgroundColor(String backgroundColor) {
+        this.background = backgroundColor;
+        return this;
+    }
 
-  @Override
-  public String getTitle() {
-    return null;
-  }
+    @Override
+    public String getTitle() {
+        return null;
+    }
 
-  @Override
-  public int getOrder() {
-    return 0;
-  }
+    @Override
+    public int getOrder() {
+        return 0;
+    }
 
-  public UIInputEntity buildEntity() {
-    List<UIInputEntity> entities = getUiEntityBuilders(false).stream().map(UIEntityBuilder::buildEntity)
-        .sorted(Comparator.comparingInt(UIInputEntity::getOrder)).collect(Collectors.toList());
-    return new UIDialogInputEntity(entityID, 0, itemType, getTitle(), null, null, getStyle(), null, entities);
-  }
+    public UIInputEntity buildEntity() {
+        List<UIInputEntity> entities =
+                getUiEntityBuilders(false).stream()
+                        .map(UIEntityBuilder::buildEntity)
+                        .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
+                        .collect(Collectors.toList());
+        return new UIDialogInputEntity(
+                entityID, 0, itemType, getTitle(), null, null, getStyle(), null, entities);
+    }
 }

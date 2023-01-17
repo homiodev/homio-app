@@ -10,36 +10,39 @@ import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 
-public class CrudRepositoryFactoryBean<R extends JpaRepository<T, Integer>, T extends HasEntityIdentifier>
-    extends JpaRepositoryFactoryBean<R, T, Integer> {
+public class CrudRepositoryFactoryBean<
+                R extends JpaRepository<T, Integer>, T extends HasEntityIdentifier>
+        extends JpaRepositoryFactoryBean<R, T, Integer> {
 
-  /**
-   * Creates a new {@link JpaRepositoryFactoryBean} for the given repository interface.
-   *
-   * @param repositoryInterface must not be {@literal null}.
-   */
-  public CrudRepositoryFactoryBean(Class<? extends R> repositoryInterface) {
-    super(repositoryInterface);
-  }
-
-  protected RepositoryFactorySupport createRepositoryFactory(EntityManager entityManager) {
-    return new MyRepositoryFactory(entityManager);
-  }
-
-  private static class MyRepositoryFactory<T extends HasEntityIdentifier> extends JpaRepositoryFactory {
-
-    MyRepositoryFactory(EntityManager entityManager) {
-      super(entityManager);
+    /**
+     * Creates a new {@link JpaRepositoryFactoryBean} for the given repository interface.
+     *
+     * @param repositoryInterface must not be {@literal null}.
+     */
+    public CrudRepositoryFactoryBean(Class<? extends R> repositoryInterface) {
+        super(repositoryInterface);
     }
 
-    @Override
-    protected JpaRepositoryImplementation<?, ?> getTargetRepository(RepositoryInformation information,
-        EntityManager entityManager) {
-      return new BaseCrudRepositoryImpl<>((Class<T>) information.getDomainType(), entityManager);
+    protected RepositoryFactorySupport createRepositoryFactory(EntityManager entityManager) {
+        return new MyRepositoryFactory(entityManager);
     }
 
-    protected Class<?> getRepositoryBaseClass(RepositoryMetadata metadata) {
-      return BaseCrudRepository.class;
+    private static class MyRepositoryFactory<T extends HasEntityIdentifier>
+            extends JpaRepositoryFactory {
+
+        MyRepositoryFactory(EntityManager entityManager) {
+            super(entityManager);
+        }
+
+        @Override
+        protected JpaRepositoryImplementation<?, ?> getTargetRepository(
+                RepositoryInformation information, EntityManager entityManager) {
+            return new BaseCrudRepositoryImpl<>(
+                    (Class<T>) information.getDomainType(), entityManager);
+        }
+
+        protected Class<?> getRepositoryBaseClass(RepositoryMetadata metadata) {
+            return BaseCrudRepository.class;
+        }
     }
-  }
 }

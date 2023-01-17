@@ -9,9 +9,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UIFieldMarkers {
 
-  MarkerOP value();
+    MarkerOP value();
 
-  enum MarkerOP {
-    label, opacity
-  }
+    enum MarkerOP {
+        label,
+        opacity
+    }
 }

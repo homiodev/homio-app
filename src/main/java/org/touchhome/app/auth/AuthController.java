@@ -21,9 +21,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.touchhome.app.repository.UserRepository;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.UserEntity;
-import org.touchhome.bundle.api.repository.UserRepository;
 import org.touchhome.common.exception.ServerException;
 
 @Log4j2

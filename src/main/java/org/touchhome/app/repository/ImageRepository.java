@@ -8,29 +8,12 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository
 public class ImageRepository extends AbstractRepository<ImageEntity> {
 
-  public ImageRepository() {
-    super(ImageEntity.class);
-  }
+    public ImageRepository() {
+        super(ImageEntity.class);
+    }
 
-  @Transactional(readOnly = true)
-  public ImageEntity getByPath(String path) {
-    return findSingleByField("path", path);
-  }
+    @Transactional(readOnly = true)
+    public ImageEntity getByPath(String path) {
+        return findSingleByField("path", path);
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

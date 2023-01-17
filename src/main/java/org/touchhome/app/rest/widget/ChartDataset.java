@@ -12,7 +12,7 @@ import lombok.experimental.Accessors;
 @RequiredArgsConstructor
 public class ChartDataset {
 
-  private final String id;
-  private String label;
-  private List<Float> data;
+    private final String id;
+    private String label;
+    private List<Float> data;
 }

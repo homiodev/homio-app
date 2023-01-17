@@ -10,11 +10,11 @@ import org.json.JSONObject;
 @RequiredArgsConstructor
 public class CompileScriptContext {
 
-  private final CompiledScript compiledScript;
-  private final String formattedJavaScript;
-  private final JSONObject jsonParams;
+    private final CompiledScript compiledScript;
+    private final String formattedJavaScript;
+    private final JSONObject jsonParams;
 
-  public ScriptEngine getEngine() {
-    return compiledScript.getEngine();
-  }
+    public ScriptEngine getEngine() {
+        return compiledScript.getEngine();
+    }
 }

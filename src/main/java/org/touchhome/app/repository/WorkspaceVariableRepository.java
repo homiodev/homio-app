@@ -8,31 +8,14 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository
 public class WorkspaceVariableRepository extends AbstractRepository<WorkspaceVariable> {
 
-  public WorkspaceVariableRepository() {
-    super(WorkspaceVariable.class);
-  }
-
-  @Transactional
-  public void deleteAll() {
-    for (WorkspaceVariable workspaceVariable : listAll()) {
-      deleteByEntityID(workspaceVariable.getEntityID());
+    public WorkspaceVariableRepository() {
+        super(WorkspaceVariable.class);
     }
-  }
+
+    @Transactional
+    public void deleteAll() {
+        for (WorkspaceVariable workspaceVariable : listAll()) {
+            deleteByEntityID(workspaceVariable.getEntityID());
+        }
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

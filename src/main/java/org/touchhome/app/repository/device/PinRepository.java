@@ -7,7 +7,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository
 public class PinRepository extends AbstractRepository<PinBaseEntity> {
 
-  public PinRepository() {
-    super(PinBaseEntity.class);
-  }
+    public PinRepository() {
+        super(PinBaseEntity.class);
+    }
 }

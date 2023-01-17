@@ -19,20 +19,20 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 @RequiredArgsConstructor
 public class BackgroundProcessController {
 
-  private final EntityContextImpl entityContext;
+    private final EntityContextImpl entityContext;
 
-  @DeleteMapping("/{name}")
-  @Secured(ADMIN_ROLE)
-  public void cancelProcess(@PathVariable("name") String name) {
-    entityContext.bgp().cancelThread(name);
-  }
+    @DeleteMapping("/{name}")
+    @Secured(ADMIN_ROLE)
+    public void cancelProcess(@PathVariable("name") String name) {
+        entityContext.bgp().cancelThread(name);
+    }
 
-  @GetMapping
-  public BgpProcessResponse getProcesses() {
-    return entityContext.bgp().getProcesses();
-  }
+    @GetMapping
+    public BgpProcessResponse getProcesses() {
+        return entityContext.bgp().getProcesses();
+    }
 
-   /* @GetMapping("/dynamic/stop/{url}")
+    /* @GetMapping("/dynamic/stop/{url}")
     @Secured(ADMIN_ROLE)
     public void stopScriptByName(@PathVariable String url) {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);

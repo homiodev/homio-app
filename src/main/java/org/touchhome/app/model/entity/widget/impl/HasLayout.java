@@ -4,9 +4,9 @@ import org.touchhome.bundle.api.entity.HasJsonData;
 
 public interface HasLayout extends HasJsonData {
 
-  String getLayout();
+    String getLayout();
 
-  default void setLayout(String value) {
-    setJsonData("layout", value);
-  }
+    default void setLayout(String value) {
+        setJsonData("layout", value);
+    }
 }

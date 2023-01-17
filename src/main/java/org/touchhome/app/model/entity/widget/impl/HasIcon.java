@@ -9,32 +9,32 @@ import org.touchhome.bundle.api.ui.field.UIFieldIconPicker;
 
 public interface HasIcon extends HasJsonData {
 
-  static void randomColor(HasJsonData widget) {
-    String randomColor = UI.Color.random();
-    if (!widget.getJsonData().has("iconColor")) {
-      widget.setJsonData("iconColor", randomColor);
+    static void randomColor(HasJsonData widget) {
+        String randomColor = UI.Color.random();
+        if (!widget.getJsonData().has("iconColor")) {
+            widget.setJsonData("iconColor", randomColor);
+        }
     }
-  }
 
-  @UIField(order = 1)
-  @UIFieldIconPicker(allowEmptyIcon = true, allowThreshold = true)
-  @UIFieldGroup(value = "Icon", order = 20, borderColor = "#009688")
-  default String getIcon() {
-    return getJsonData("icon", "fas fa-adjust");
-  }
+    @UIField(order = 1)
+    @UIFieldIconPicker(allowEmptyIcon = true, allowThreshold = true)
+    @UIFieldGroup(value = "Icon", order = 20, borderColor = "#009688")
+    default String getIcon() {
+        return getJsonData("icon", "fas fa-adjust");
+    }
 
-  default void setIcon(String value) {
-    setJsonData("icon", value);
-  }
+    default void setIcon(String value) {
+        setJsonData("icon", value);
+    }
 
-  @UIField(order = 2, isRevert = true)
-  @UIFieldColorPicker(allowThreshold = true)
-  @UIFieldGroup("Icon")
-  default String getIconColor() {
-    return getJsonData("iconColor", UI.Color.WHITE);
-  }
+    @UIField(order = 2, isRevert = true)
+    @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldGroup("Icon")
+    default String getIconColor() {
+        return getJsonData("iconColor", UI.Color.WHITE);
+    }
 
-  default void setIconColor(String value) {
-    setJsonData("iconColor", value);
-  }
+    default void setIconColor(String value) {
+        setJsonData("iconColor", value);
+    }
 }

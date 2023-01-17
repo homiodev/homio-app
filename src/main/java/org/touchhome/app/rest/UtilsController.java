@@ -64,166 +64,189 @@ import org.touchhome.common.util.Lang;
 @RequiredArgsConstructor
 public class UtilsController {
 
-  private final EntityContextImpl entityContext;
-  private final ScriptService scriptService;
-  private final CodeParser codeParser;
+    private final EntityContextImpl entityContext;
+    private final ScriptService scriptService;
+    private final CodeParser codeParser;
 
-  @PutMapping("/dynamicUpdates")
-  public void registerForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
-    entityContext.ui().registerForUpdates(request);
-  }
-
-  @DeleteMapping("/dynamicUpdates")
-  public void unregisterForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
-    entityContext.ui().unRegisterForUpdates(request);
-  }
-
-  @GetMapping("/app/config")
-  public DeviceConfig getAppConfiguration() {
-    DeviceConfig deviceConfig = new DeviceConfig();
-    UserEntity userEntity = entityContext.getUser(false);
-    deviceConfig.hasKeystore = userEntity.getKeystore() != null;
-    deviceConfig.keystoreDate = userEntity.getKeystoreDate();
-    return deviceConfig;
-  }
-
-  @PostMapping("/github/readme")
-  public GitHubReadme getUrlContent(@RequestBody String url) {
-    try {
-      if (url.endsWith("/wiki")) {
-        url = url.substring(0, url.length() - 5);
-      }
-      return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
-    } catch (Exception ex) {
-      throw new ServerException("No readme found");
-    }
-  }
-
-  @PostMapping("/getCompletions")
-  public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest) throws NoSuchMethodException {
-    ParserContext context = ParserContext.noneContext();
-    return codeParser.addCompetitionFromManagerOrClass(
-        CodeParser.removeAllComments(completionRequest.getLine()),
-        new Stack<>(),
-        context,
-        completionRequest.getAllScript());
-  }
-
-  @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
-  public ResponseEntity<StreamingResponseBody> downloadFile(@PathVariable("fileName") String fileName) {
-    Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
-    if (!Files.exists(outputPath)) {
-      throw new NotFoundException("Unable to find file: " + fileName);
-    }
-    HttpHeaders headers = new HttpHeaders();
-    headers.add(HttpHeaders.CONTENT_DISPOSITION, String.format("attachment; filename=\"%s\"", outputPath.getFileName()));
-    headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
-
-    return new ResponseEntity<>(outputStream -> {
-      FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ);
-      long size = inChannel.size();
-      WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
-      inChannel.transferTo(0, size, writableByteChannel);
-    },
-        headers, HttpStatus.OK);
-  }
-
-  @PostMapping("/code/run")
-  @Secured(PRIVILEGED_USER_ROLE)
-  public RunScriptOnceJSON runScriptOnce(@RequestBody ScriptEntity scriptEntity) throws IOException {
-    RunScriptOnceJSON runScriptOnceJSON = new RunScriptOnceJSON();
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    PrintStream logOutputStream = new PrintStream(outputStream);
-    try {
-      runScriptOnceJSON.result =
-          scriptService.executeJavaScriptOnce(scriptEntity, scriptEntity.getJavaScriptParameters(), logOutputStream,
-              false);
-    } catch (Exception ex) {
-      runScriptOnceJSON.error = ExceptionUtils.getStackTrace(ex);
-    }
-    int size = outputStream.size();
-    if (size > 50000) {
-      String name = scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___.log";
-      Path tempFile = CommonUtils.getTmpPath().resolve(name);
-      Files.copy(tempFile, outputStream);
-      runScriptOnceJSON.logUrl = "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
-    } else {
-      runScriptOnceJSON.log = outputStream.toString(StandardCharsets.UTF_8);
+    @PutMapping("/dynamicUpdates")
+    public void registerForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
+        entityContext.ui().registerForUpdates(request);
     }
 
-    return runScriptOnceJSON;
-  }
-
-  @GetMapping("/i18n/{lang}.json")
-  @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-  public ObjectNode getI18NFromBundles(@PathVariable("lang") String lang) {
-    return Lang.getLangJson(lang);
-  }
-
-  @PostMapping("/notification/{entityID}/action")
-  public ActionResponseModel notificationAction(@PathVariable("entityID") String entityID,
-      @RequestBody HeaderActionRequest actionRequest) {
-    try {
-      return entityContext.ui().handleNotificationAction(entityID, actionRequest.entityID, actionRequest.value);
-    } catch (Exception ex) {
-      throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
+    @DeleteMapping("/dynamicUpdates")
+    public void unregisterForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
+        entityContext.ui().unRegisterForUpdates(request);
     }
-  }
 
-  @SneakyThrows
-  @PostMapping("/header/dialog/{entityID}")
-  public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
-    entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Accepted,
-        dialogRequest.pressedButton, OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
-  }
+    @GetMapping("/app/config")
+    public DeviceConfig getAppConfiguration() {
+        DeviceConfig deviceConfig = new DeviceConfig();
+        UserEntity userEntity = entityContext.getUser(false);
+        deviceConfig.hasKeystore = userEntity.getKeystore() != null;
+        deviceConfig.keystoreDate = userEntity.getKeystoreDate();
+        return deviceConfig;
+    }
 
-  @DeleteMapping("/header/dialog/{entityID}")
-  public void discardDialog(@PathVariable("entityID") String entityID) {
-    entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
-  }
+    @PostMapping("/github/readme")
+    public GitHubReadme getUrlContent(@RequestBody String url) {
+        try {
+            if (url.endsWith("/wiki")) {
+                url = url.substring(0, url.length() - 5);
+            }
+            return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
+        } catch (Exception ex) {
+            throw new ServerException("No readme found");
+        }
+    }
 
-  @Getter
-  @Setter
-  private static class HeaderActionRequest {
+    @PostMapping("/getCompletions")
+    public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest)
+            throws NoSuchMethodException {
+        ParserContext context = ParserContext.noneContext();
+        return codeParser.addCompetitionFromManagerOrClass(
+                CodeParser.removeAllComments(completionRequest.getLine()),
+                new Stack<>(),
+                context,
+                completionRequest.getAllScript());
+    }
 
-    private String entityID;
-    private String value;
-  }
+    @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
+    public ResponseEntity<StreamingResponseBody> downloadFile(
+            @PathVariable("fileName") String fileName) {
+        Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
+        if (!Files.exists(outputPath)) {
+            throw new NotFoundException("Unable to find file: " + fileName);
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(
+                HttpHeaders.CONTENT_DISPOSITION,
+                String.format("attachment; filename=\"%s\"", outputPath.getFileName()));
+        headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
 
-  @Getter
-  @Setter
-  private static class DialogRequest {
+        return new ResponseEntity<>(
+                outputStream -> {
+                    FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ);
+                    long size = inChannel.size();
+                    WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+                    inChannel.transferTo(0, size, writableByteChannel);
+                },
+                headers,
+                HttpStatus.OK);
+    }
 
-    private String pressedButton;
-    private String params;
-  }
+    @PostMapping("/code/run")
+    @Secured(PRIVILEGED_USER_ROLE)
+    public RunScriptOnceJSON runScriptOnce(@RequestBody ScriptEntity scriptEntity)
+            throws IOException {
+        RunScriptOnceJSON runScriptOnceJSON = new RunScriptOnceJSON();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        PrintStream logOutputStream = new PrintStream(outputStream);
+        try {
+            runScriptOnceJSON.result =
+                    scriptService.executeJavaScriptOnce(
+                            scriptEntity,
+                            scriptEntity.getJavaScriptParameters(),
+                            logOutputStream,
+                            false);
+        } catch (Exception ex) {
+            runScriptOnceJSON.error = ExceptionUtils.getStackTrace(ex);
+        }
+        int size = outputStream.size();
+        if (size > 50000) {
+            String name = scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___.log";
+            Path tempFile = CommonUtils.getTmpPath().resolve(name);
+            Files.copy(tempFile, outputStream);
+            runScriptOnceJSON.logUrl =
+                    "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
+        } else {
+            runScriptOnceJSON.log = outputStream.toString(StandardCharsets.UTF_8);
+        }
 
-  @Getter
-  @AllArgsConstructor
-  private static class GitHubReadme {
+        return runScriptOnceJSON;
+    }
 
-    private String url;
-    private String content;
-  }
+    @GetMapping("/i18n/{lang}.json")
+    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
+    public ObjectNode getI18NFromBundles(@PathVariable("lang") String lang) {
+        return Lang.getLangJson(lang);
+    }
 
-  @Getter
-  private static class RunScriptOnceJSON {
+    @PostMapping("/notification/{entityID}/action")
+    public ActionResponseModel notificationAction(
+            @PathVariable("entityID") String entityID,
+            @RequestBody HeaderActionRequest actionRequest) {
+        try {
+            return entityContext
+                    .ui()
+                    .handleNotificationAction(
+                            entityID, actionRequest.entityID, actionRequest.value);
+        } catch (Exception ex) {
+            throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
+        }
+    }
 
-    private Object result;
-    private String log;
-    private String error;
-    private String logUrl;
-  }
+    @SneakyThrows
+    @PostMapping("/header/dialog/{entityID}")
+    public void acceptDialog(
+            @PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
+        entityContext
+                .ui()
+                .handleDialog(
+                        entityID,
+                        EntityContextUI.DialogResponseType.Accepted,
+                        dialogRequest.pressedButton,
+                        OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
+    }
 
-  @Getter
-  @Setter
-  private static class DeviceConfig {
+    @DeleteMapping("/header/dialog/{entityID}")
+    public void discardDialog(@PathVariable("entityID") String entityID) {
+        entityContext
+                .ui()
+                .handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
+    }
 
-    public final boolean hasUserPassword = true;
-    private final boolean bootOnly = false;
-    private final boolean hasApp = true;
-    private final boolean hasInitSetup = true;
-    private boolean hasKeystore;
-    private Date keystoreDate;
-  }
+    @Getter
+    @Setter
+    private static class HeaderActionRequest {
+
+        private String entityID;
+        private String value;
+    }
+
+    @Getter
+    @Setter
+    private static class DialogRequest {
+
+        private String pressedButton;
+        private String params;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private static class GitHubReadme {
+
+        private String url;
+        private String content;
+    }
+
+    @Getter
+    private static class RunScriptOnceJSON {
+
+        private Object result;
+        private String log;
+        private String error;
+        private String logUrl;
+    }
+
+    @Getter
+    @Setter
+    private static class DeviceConfig {
+
+        public final boolean hasUserPassword = true;
+        private final boolean bootOnly = false;
+        private final boolean hasApp = true;
+        private final boolean hasInitSetup = true;
+        private boolean hasKeystore;
+        private Date keystoreDate;
+    }
 }

@@ -6,6 +6,5 @@ import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.repository.PureRepository;
 
 @NoRepositoryBean
-public interface BaseCrudRepository<T extends HasEntityIdentifier> extends JpaRepository<T, Integer>, PureRepository<T> {
-
-}
+public interface BaseCrudRepository<T extends HasEntityIdentifier>
+        extends JpaRepository<T, Integer>, PureRepository<T> {}

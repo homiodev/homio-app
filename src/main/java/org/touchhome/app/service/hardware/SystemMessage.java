@@ -13,15 +13,15 @@ import org.touchhome.bundle.api.inmemory.InMemoryDBEntity;
 @NoArgsConstructor
 public class SystemMessage extends InMemoryDBEntity {
 
-  private float scl;
-  private float mem;
-  private float cpl;
+    private float scl;
+    private float mem;
+    private float cpl;
 
-  public SystemMessage(OperatingSystemMXBean osBean, long totalMemory) {
-    super();
-    this.cpl = (float) (osBean.getProcessCpuLoad() * 100);
+    public SystemMessage(OperatingSystemMXBean osBean, long totalMemory) {
+        super();
+        this.cpl = (float) (osBean.getProcessCpuLoad() * 100);
 
-    this.mem = (float) ((totalMemory - osBean.getFreePhysicalMemorySize()) / GB_DIVIDER);
-    this.scl = (float) (osBean.getSystemCpuLoad() * 100);
-  }
+        this.mem = (float) ((totalMemory - osBean.getFreePhysicalMemorySize()) / GB_DIVIDER);
+        this.scl = (float) (osBean.getSystemCpuLoad() * 100);
+    }
 }

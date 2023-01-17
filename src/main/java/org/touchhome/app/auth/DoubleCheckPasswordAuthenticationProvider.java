@@ -11,8 +11,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.touchhome.app.repository.UserRepository;
 import org.touchhome.bundle.api.entity.UserEntity;
-import org.touchhome.bundle.api.repository.UserRepository;
 
 /**
  * Checks with encoded password and raw

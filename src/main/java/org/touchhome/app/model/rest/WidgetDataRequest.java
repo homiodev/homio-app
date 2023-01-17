@@ -12,15 +12,15 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 @Setter
 public class WidgetDataRequest {
 
-  @NotNull
-  private String entityID;
-  private String liveEntity;
+    @NotNull private String entityID;
+    private String liveEntity;
 
-  @SneakyThrows
-  public <T extends BaseEntity> T getEntity(EntityContext entityContext, ObjectMapper objectMapper, Class<T> tClass) {
-    if (liveEntity != null) {
-      return objectMapper.readValue(liveEntity, tClass);
+    @SneakyThrows
+    public <T extends BaseEntity> T getEntity(
+            EntityContext entityContext, ObjectMapper objectMapper, Class<T> tClass) {
+        if (liveEntity != null) {
+            return objectMapper.readValue(liveEntity, tClass);
+        }
+        return entityContext.getEntity(entityID);
     }
-    return entityContext.getEntity(entityID);
-  }
 }

@@ -8,30 +8,12 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository("executeRepository")
 public class ScriptRepository extends AbstractRepository<ScriptEntity> {
 
-  public ScriptRepository() {
-    super(ScriptEntity.class);
-  }
+    public ScriptRepository() {
+        super(ScriptEntity.class);
+    }
 
-  @Transactional(readOnly = true)
-  public ScriptEntity getByURL(String url) {
-    return findSingleByField("url", url);
-  }
-
+    @Transactional(readOnly = true)
+    public ScriptEntity getByURL(String url) {
+        return findSingleByField("url", url);
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

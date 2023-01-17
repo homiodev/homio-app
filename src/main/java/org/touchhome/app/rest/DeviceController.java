@@ -18,16 +18,17 @@ import org.touchhome.bundle.bluetooth.BluetoothBundleEntrypoint;
 @RequiredArgsConstructor
 public class DeviceController {
 
-  private final BluetoothBundleEntrypoint bluetoothBundleEntrypoint;
+    private final BluetoothBundleEntrypoint bluetoothBundleEntrypoint;
 
-  @GetMapping("/characteristic/{uuid}")
-  public OptionModel getDeviceCharacteristic(@PathVariable("uuid") String uuid) {
-    return OptionModel.key(bluetoothBundleEntrypoint.getDeviceCharacteristic(uuid));
-  }
+    @GetMapping("/characteristic/{uuid}")
+    public OptionModel getDeviceCharacteristic(@PathVariable("uuid") String uuid) {
+        String characteristic = bluetoothBundleEntrypoint.getDeviceCharacteristic(uuid);
+        return characteristic == null ? null : OptionModel.key(characteristic);
+    }
 
-  @PutMapping("/characteristic/{uuid}")
-  @Secured(ADMIN_ROLE)
-  public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
-    bluetoothBundleEntrypoint.setDeviceCharacteristic(uuid, value);
-  }
+    @PutMapping("/characteristic/{uuid}")
+    @Secured(ADMIN_ROLE)
+    public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
+        bluetoothBundleEntrypoint.setDeviceCharacteristic(uuid, value);
+    }
 }

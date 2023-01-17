@@ -23,58 +23,70 @@ import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 @RequiredArgsConstructor
 public class WidgetService implements ContextCreated {
 
-  private final EntityContext entityContext;
-  private final List<WidgetBaseEntity<?>> widgetBaseEntities;
+    private final EntityContext entityContext;
+    private final List<WidgetBaseEntity<?>> widgetBaseEntities;
 
-  @Override
-  public void onContextCreated(EntityContextImpl entityContext) {
-    if (this.entityContext.getEntity(GENERAL_WIDGET_TAB_NAME) == null) {
-      this.entityContext.save(new WidgetTabEntity().setEntityID(GENERAL_WIDGET_TAB_NAME).setName("MainTab"));
-    }
-  }
-
-  public List<AvailableWidget> getAvailableWidgets() {
-    List<AvailableWidget> options = new ArrayList<>();
-    AvailableWidget chartWidgets = new AvailableWidget("chart-widgets", "fas fa-chart-simple", null, new ArrayList<>());
-    AvailableWidget mediaWidgets = new AvailableWidget("media-widgets", "fas fa-compact-disc", null, new ArrayList<>());
-    options.add(chartWidgets);
-    options.add(mediaWidgets);
-    for (WidgetBaseEntity<?> entity : this.widgetBaseEntities) {
-      AvailableWidget widget = new AvailableWidget(entity.getType(), entity.getImage(), null, null);
-      if (entity.getGroup() == WidgetGroup.Chart) {
-        chartWidgets.children.add(widget);
-      } else if (entity.getGroup() == WidgetGroup.Media) {
-        mediaWidgets.children.add(widget);
-      } else {
-        options.add(widget);
-      }
+    @Override
+    public void onContextCreated(EntityContextImpl entityContext) {
+        if (this.entityContext.getEntity(GENERAL_WIDGET_TAB_NAME) == null) {
+            this.entityContext.save(
+                    new WidgetTabEntity().setEntityID(GENERAL_WIDGET_TAB_NAME).setName("MainTab"));
+        }
     }
 
-    AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", null, new ArrayList<>());
-    for (Map.Entry<String, Collection<WidgetBaseTemplate>> entry : entityContext.getBeansOfTypeByBundles(
-        WidgetBaseTemplate.class).entrySet()) {
-      AvailableWidget bundleExtraWidget = new AvailableWidget(entry.getKey(), "http", null, new ArrayList<>());
-      for (WidgetBaseTemplate widgetBase : entry.getValue()) {
-        bundleExtraWidget.children.add(
-            new AvailableWidget(widgetBase.getClass().getSimpleName(), widgetBase.getIcon(), null, null));
-      }
-      if (!bundleExtraWidget.children.isEmpty()) {
-        extraWidgets.children.add(bundleExtraWidget);
-      }
-    }
-    if (!extraWidgets.children.isEmpty()) {
-      options.add(extraWidgets);
-    }
-    return options;
-  }
+    public List<AvailableWidget> getAvailableWidgets() {
+        List<AvailableWidget> options = new ArrayList<>();
+        AvailableWidget chartWidgets =
+                new AvailableWidget(
+                        "chart-widgets", "fas fa-chart-simple", null, new ArrayList<>());
+        AvailableWidget mediaWidgets =
+                new AvailableWidget(
+                        "media-widgets", "fas fa-compact-disc", null, new ArrayList<>());
+        options.add(chartWidgets);
+        options.add(mediaWidgets);
+        for (WidgetBaseEntity<?> entity : this.widgetBaseEntities) {
+            AvailableWidget widget =
+                    new AvailableWidget(entity.getType(), entity.getImage(), null, null);
+            if (entity.getGroup() == WidgetGroup.Chart) {
+                chartWidgets.children.add(widget);
+            } else if (entity.getGroup() == WidgetGroup.Media) {
+                mediaWidgets.children.add(widget);
+            } else {
+                options.add(widget);
+            }
+        }
 
-  @Getter
-  @RequiredArgsConstructor
-  public static class AvailableWidget {
+        AvailableWidget extraWidgets =
+                new AvailableWidget("extra-widgets", "fas fa-cheese", null, new ArrayList<>());
+        for (Map.Entry<String, Collection<WidgetBaseTemplate>> entry :
+                entityContext.getBeansOfTypeByBundles(WidgetBaseTemplate.class).entrySet()) {
+            AvailableWidget bundleExtraWidget =
+                    new AvailableWidget(entry.getKey(), "http", null, new ArrayList<>());
+            for (WidgetBaseTemplate widgetBase : entry.getValue()) {
+                bundleExtraWidget.children.add(
+                        new AvailableWidget(
+                                widgetBase.getClass().getSimpleName(),
+                                widgetBase.getIcon(),
+                                null,
+                                null));
+            }
+            if (!bundleExtraWidget.children.isEmpty()) {
+                extraWidgets.children.add(bundleExtraWidget);
+            }
+        }
+        if (!extraWidgets.children.isEmpty()) {
+            options.add(extraWidgets);
+        }
+        return options;
+    }
 
-    private final String key;
-    private final String icon;
-    private final String color;
-    private final List<AvailableWidget> children;
-  }
+    @Getter
+    @RequiredArgsConstructor
+    public static class AvailableWidget {
+
+        private final String key;
+        private final String icon;
+        private final String color;
+        private final List<AvailableWidget> children;
+    }
 }

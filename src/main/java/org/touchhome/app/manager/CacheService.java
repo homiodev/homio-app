@@ -29,123 +29,129 @@ import org.touchhome.common.exception.ServerException;
 @RequiredArgsConstructor
 public class CacheService {
 
-  public static final String CACHE_CLASS_BY_TYPE = "CACHE_CLASS_BY_TYPE";
-  public static final String ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI = "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
-  public static final String ENTITY_IDS_BY_CLASS_NAME = "ENTITY_IDS_BY_CLASS_NAME";
-  public static final String REPOSITORY_BY_ENTITY_ID = "REPOSITORY_BY_ENTITY_ID";
+    public static final String CACHE_CLASS_BY_TYPE = "CACHE_CLASS_BY_TYPE";
+    public static final String ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI =
+            "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
+    public static final String ENTITY_IDS_BY_CLASS_NAME = "ENTITY_IDS_BY_CLASS_NAME";
+    public static final String REPOSITORY_BY_ENTITY_ID = "REPOSITORY_BY_ENTITY_ID";
 
-  private final Map<String, UpdateStatement> entityCache = new ConcurrentHashMap<>();
+    private final Map<String, UpdateStatement> entityCache = new ConcurrentHashMap<>();
 
-  private final CacheManager cacheManager;
-  private final ApplicationContext applicationContext;
+    private final CacheManager cacheManager;
+    private final ApplicationContext applicationContext;
 
-  public static CacheManager createCacheManager() {
-    return new ConcurrentMapCacheManager(
-        CLASSES_WITH_PARENT_CLASS,
-
-        ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI,
-        ENTITY_IDS_BY_CLASS_NAME,
-
-        REPOSITORY_BY_CLAZZ,
-
-        CACHE_CLASS_BY_TYPE,
-        REPOSITORY_BY_ENTITY_ID);
-  }
-
-  public void clearCache() {
-    log.info("Clear cache");
-    for (String cache : cacheManager.getCacheNames()) {
-      cacheManager.getCache(cache).clear();
+    public static CacheManager createCacheManager() {
+        return new ConcurrentMapCacheManager(
+                CLASSES_WITH_PARENT_CLASS,
+                ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI,
+                ENTITY_IDS_BY_CLASS_NAME,
+                REPOSITORY_BY_CLAZZ,
+                CACHE_CLASS_BY_TYPE,
+                REPOSITORY_BY_ENTITY_ID);
     }
-  }
 
-  public void entityUpdated(BaseEntity entity) {
-    Set<BaseEntity> relatedEntities = CollectionUtils.nullSafeSet();
-    entity.getAllRelatedEntities(relatedEntities);
-    relatedEntities.add(entity);
-    for (BaseEntity relatedEntity : relatedEntities) {
-      if (relatedEntity != null) {
-        singleEntityUpdated(relatedEntity);
-      }
-    }
-  }
-
-  private void singleEntityUpdated(BaseEntity entity) {
-    Objects.requireNonNull(cacheManager.getCache(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI)).evict(entity.getEntityID());
-    Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME))
-        .clear(); // need remove all because entity may create alos another entities
-  }
-
-  public void putToCache(PureRepository repository, HasEntityIdentifier entity, Map<String, Object[]> changeFields) {
-    String identifier = entity.getIdentifier();
-    if (identifier == null) {
-      throw new ServerException("Unable update state without id" + entity);
-    }
-    synchronized (entityCache) {
-      if (entityCache.containsKey(identifier)) {
-        // override changed fields
-        entityCache.get(identifier).changeFields.putAll(changeFields);
-      } else {
-        entityCache.put(identifier, new UpdateStatement(identifier, repository, changeFields));
-      }
-    }
-  }
-
-  @SneakyThrows
-  public void merge(BaseEntity baseEntity) {
-    UpdateStatement updateStatement = entityCache.get(baseEntity.getIdentifier());
-    if (updateStatement != null && updateStatement.changeFields != null) {
-      for (Map.Entry<String, Object[]> entry : updateStatement.changeFields.entrySet()) {
-        MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
-      }
-    }
-  }
-
-  public void delete(String entityId) {
-    entityCache.remove(entityId);
-  }
-
-  @Scheduled(fixedDelay = 30000)
-  public void flushDelayedUpdates() {
-    if (!entityCache.isEmpty()) {
-      synchronized (entityCache) {
-        EntityContext entityContext = applicationContext.getBean(EntityContext.class);
-        for (UpdateStatement updateStatement : entityCache.values()) {
-          try {
-            if (updateStatement.changeFields != null) {
-              HasEntityIdentifier baseEntity = entityContext.getEntity(updateStatement.entityID, false);
-              for (Map.Entry<String, Object[]> entry : updateStatement.changeFields.entrySet()) {
-                MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
-              }
-              updateStatement.repository.flushCashedEntity(baseEntity);
-
-              if (baseEntity instanceof BaseEntity) {
-                entityUpdated((BaseEntity) baseEntity);
-              }
-            }
-          } catch (Exception ex) {
-            log.error("Error delay update entity <{}>", updateStatement.entityID, ex);
-          }
+    public void clearCache() {
+        log.info("Clear cache");
+        for (String cache : cacheManager.getCacheNames()) {
+            cacheManager.getCache(cache).clear();
         }
-        entityCache.clear();
-      }
     }
-  }
 
-  public Object getFieldValue(String identifier, String key) {
-    synchronized (entityCache) {
-      if (entityCache.containsKey(identifier)) {
-        return entityCache.get(identifier).changeFields.get(key);
-      }
+    public void entityUpdated(BaseEntity entity) {
+        Set<BaseEntity> relatedEntities = CollectionUtils.nullSafeSet();
+        entity.getAllRelatedEntities(relatedEntities);
+        relatedEntities.add(entity);
+        for (BaseEntity relatedEntity : relatedEntities) {
+            if (relatedEntity != null) {
+                singleEntityUpdated(relatedEntity);
+            }
+        }
     }
-    return null;
-  }
 
-  @AllArgsConstructor
-  private static class UpdateStatement {
+    private void singleEntityUpdated(BaseEntity entity) {
+        Objects.requireNonNull(cacheManager.getCache(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI))
+                .evict(entity.getEntityID());
+        Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME))
+                .clear(); // need remove all because entity may create alos another entities
+    }
 
-    String entityID;
-    PureRepository repository;
-    Map<String, Object[]> changeFields;
-  }
+    public void putToCache(
+            PureRepository repository,
+            HasEntityIdentifier entity,
+            Map<String, Object[]> changeFields) {
+        String identifier = entity.getIdentifier();
+        if (identifier == null) {
+            throw new ServerException("Unable update state without id" + entity);
+        }
+        synchronized (entityCache) {
+            if (entityCache.containsKey(identifier)) {
+                // override changed fields
+                entityCache.get(identifier).changeFields.putAll(changeFields);
+            } else {
+                entityCache.put(
+                        identifier, new UpdateStatement(identifier, repository, changeFields));
+            }
+        }
+    }
+
+    @SneakyThrows
+    public void merge(BaseEntity baseEntity) {
+        UpdateStatement updateStatement = entityCache.get(baseEntity.getIdentifier());
+        if (updateStatement != null && updateStatement.changeFields != null) {
+            for (Map.Entry<String, Object[]> entry : updateStatement.changeFields.entrySet()) {
+                MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
+    public void delete(String entityId) {
+        entityCache.remove(entityId);
+    }
+
+    @Scheduled(fixedDelay = 30000)
+    public void flushDelayedUpdates() {
+        if (!entityCache.isEmpty()) {
+            synchronized (entityCache) {
+                EntityContext entityContext = applicationContext.getBean(EntityContext.class);
+                for (UpdateStatement updateStatement : entityCache.values()) {
+                    try {
+                        if (updateStatement.changeFields != null) {
+                            HasEntityIdentifier baseEntity =
+                                    entityContext.getEntity(updateStatement.entityID, false);
+                            for (Map.Entry<String, Object[]> entry :
+                                    updateStatement.changeFields.entrySet()) {
+                                MethodUtils.invokeMethod(
+                                        baseEntity, entry.getKey(), entry.getValue());
+                            }
+                            updateStatement.repository.flushCashedEntity(baseEntity);
+
+                            if (baseEntity instanceof BaseEntity) {
+                                entityUpdated((BaseEntity) baseEntity);
+                            }
+                        }
+                    } catch (Exception ex) {
+                        log.error("Error delay update entity <{}>", updateStatement.entityID, ex);
+                    }
+                }
+                entityCache.clear();
+            }
+        }
+    }
+
+    public Object getFieldValue(String identifier, String key) {
+        synchronized (entityCache) {
+            if (entityCache.containsKey(identifier)) {
+                return entityCache.get(identifier).changeFields.get(key);
+            }
+        }
+        return null;
+    }
+
+    @AllArgsConstructor
+    private static class UpdateStatement {
+
+        String entityID;
+        PureRepository repository;
+        Map<String, Object[]> changeFields;
+    }
 }

@@ -18,67 +18,72 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection
 
 @Entity
 public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushButtonEntity>
-    implements HasChartDataSource, HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasValueConverter {
+        implements HasChartDataSource,
+                HasSingleValueDataSource,
+                HasIcon,
+                HasValueTemplate,
+                HasName,
+                HasValueConverter {
 
-  public static final String PREFIX = "wgsbs_";
+    public static final String PREFIX = "wgsbs_";
 
-  @Override
-  @UIField(order = 1, required = true, label = "widget.pushValueDataSource")
-  @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-  @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
-  @UIFieldGroup(value = "Action Data source", order = 1)
-  public String getSetValueDataSource() {
-    return HasSingleValueDataSource.super.getSetValueDataSource();
-  }
-
-  @UIField(order = 2, required = true)
-  @UIFieldGroup(value = "Action Data source")
-  public String getValueToPush() {
-    return getJsonData("valToPush");
-  }
-
-  public void setValueToPush(String value) {
-    setJsonData("valToPush", value);
-  }
-
-  @UIField(order = 1, isRevert = true)
-  @UIFieldGroup("UI")
-  @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
-  public String getButtonColor() {
-    return getJsonData("btnClr", UI.Color.WHITE);
-  }
-
-  public WidgetPushButtonSeriesEntity setButtonColor(String value) {
-    setJsonData("btnClr", value);
-    return this;
-  }
-
-  @UIField(order = 2)
-  @UIFieldGroup("UI")
-  public String getConfirmMessage() {
-    return getJsonData("confirm", "");
-  }
-
-  public void setConfirmMessage(String value) {
-    setJsonData("confirm", value);
-  }
-
-  @Override
-  public String getEntityPrefix() {
-    return PREFIX;
-  }
-
-  @Override
-  public String getDefaultName() {
-    return null;
-  }
-
-  @Override
-  protected void beforePersist() {
-    if (!getJsonData().has("btnClr")) {
-      setButtonColor(UI.Color.random());
+    @Override
+    @UIField(order = 1, required = true, label = "widget.pushValueDataSource")
+    @UIFieldEntityByClassSelection(HasSetStatusValue.class)
+    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
+    @UIFieldGroup(value = "Action Data source", order = 1)
+    public String getSetValueDataSource() {
+        return HasSingleValueDataSource.super.getSetValueDataSource();
     }
-    HasChartDataSource.randomColor(this);
-    HasIcon.randomColor(this);
-  }
+
+    @UIField(order = 2, required = true)
+    @UIFieldGroup(value = "Action Data source")
+    public String getValueToPush() {
+        return getJsonData("valToPush");
+    }
+
+    public void setValueToPush(String value) {
+        setJsonData("valToPush", value);
+    }
+
+    @UIField(order = 1, isRevert = true)
+    @UIFieldGroup("UI")
+    @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
+    public String getButtonColor() {
+        return getJsonData("btnClr", UI.Color.WHITE);
+    }
+
+    public WidgetPushButtonSeriesEntity setButtonColor(String value) {
+        setJsonData("btnClr", value);
+        return this;
+    }
+
+    @UIField(order = 2)
+    @UIFieldGroup("UI")
+    public String getConfirmMessage() {
+        return getJsonData("confirm", "");
+    }
+
+    public void setConfirmMessage(String value) {
+        setJsonData("confirm", value);
+    }
+
+    @Override
+    public String getEntityPrefix() {
+        return PREFIX;
+    }
+
+    @Override
+    public String getDefaultName() {
+        return null;
+    }
+
+    @Override
+    protected void beforePersist() {
+        if (!getJsonData().has("btnClr")) {
+            setButtonColor(UI.Color.random());
+        }
+        HasChartDataSource.randomColor(this);
+        HasIcon.randomColor(this);
+    }
 }

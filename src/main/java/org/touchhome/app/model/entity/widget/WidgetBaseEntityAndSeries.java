@@ -18,35 +18,35 @@ import org.touchhome.common.exception.ServerException;
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
-    extends WidgetBaseEntity<T> {
+public abstract class WidgetBaseEntityAndSeries<
+                T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
+        extends WidgetBaseEntity<T> {
 
-  @Getter
-  @Setter
-  @OrderBy("priority asc")
-  @UIField(order = 30, hideInView = true)
-  @MaxItems(10)
-  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetEntity",
-      targetEntity = WidgetSeriesEntity.class)
-  private Set<S> series;
+    @Getter
+    @Setter
+    @OrderBy("priority asc")
+    @UIField(order = 30, hideInView = true)
+    @MaxItems(10)
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetEntity", targetEntity = WidgetSeriesEntity.class)
+    private Set<S> series;
 
-  @Override
-  public boolean updateRelations(EntityContext entityContext) {
-    boolean updated = false;
-    if (series != null) {
-      for (S item : series) {
-        updated |= invalidateWrongEntity(entityContext, item);
-      }
+    @Override
+    public boolean updateRelations(EntityContext entityContext) {
+        boolean updated = false;
+        if (series != null) {
+            for (S item : series) {
+                updated |= invalidateWrongEntity(entityContext, item);
+            }
+        }
+        return updated;
     }
-    return updated;
-  }
 
-  @Override
-  protected void validate() {
-    if (getWidgetTabEntity() == null) {
-      throw new ServerException("Unable to save widget without attach to tab");
+    @Override
+    protected void validate() {
+        if (getWidgetTabEntity() == null) {
+            throw new ServerException("Unable to save widget without attach to tab");
+        }
     }
-  }
 
     /* Looks like we may need verify relations only during fetch all variables from UI
     @Override
@@ -56,9 +56,9 @@ public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSer
         }
     }*/
 
-  @Override
-  public void copy() {
-    super.copy();
-    series.forEach(BaseEntity::copy);
-  }
+    @Override
+    public void copy() {
+        super.copy();
+        series.forEach(BaseEntity::copy);
+    }
 }

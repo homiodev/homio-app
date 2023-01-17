@@ -7,7 +7,7 @@ import org.touchhome.bundle.api.repository.AbstractRepository;
 @Repository("communicationRepository")
 public class CommunicationRepository extends AbstractRepository<CommunicationEntity> {
 
-  public CommunicationRepository() {
-    super(CommunicationEntity.class);
-  }
+    public CommunicationRepository() {
+        super(CommunicationEntity.class);
+    }
 }

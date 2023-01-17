@@ -3,20 +3,21 @@ package org.touchhome.app.setting.system;
 import org.touchhome.app.setting.CoreSettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginBoolean;
 
-public class SystemShowEntityCreateTimeSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
+public class SystemShowEntityCreateTimeSetting
+        implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
-  @Override
-  public int order() {
-    return 1100;
-  }
+    @Override
+    public int order() {
+        return 1100;
+    }
 
-  @Override
-  public boolean defaultValue() {
-    return true;
-  }
+    @Override
+    public boolean defaultValue() {
+        return true;
+    }
 
-  @Override
-  public GroupKey getGroupKey() {
-    return GroupKey.system;
-  }
+    @Override
+    public GroupKey getGroupKey() {
+        return GroupKey.system;
+    }
 }

@@ -19,131 +19,145 @@ import org.touchhome.common.util.CommonUtils;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UIFieldLayout {
 
-  String[] options();
+    String[] options();
 
-  String rows() default "1:3";
+    String rows() default "1:3";
 
-  String columns() default "1:6";
+    String columns() default "1:6";
 
-  enum VerticalAlign {
-    top, middle, bottom
-  }
+    enum VerticalAlign {
+        top,
+        middle,
+        bottom
+    }
 
-  enum HorizontalAlign {
-    left, center, right
-  }
+    enum HorizontalAlign {
+        left,
+        center,
+        right
+    }
 
-  @Getter
-  class LayoutBuilder {
+    @Getter
+    class LayoutBuilder {
 
-    private final List<ColBuilder> c = new ArrayList<>();
-    private final List<RowBuilder> r = new ArrayList<>();
-    private final float[] columnWidthInPercent;
+        private final List<ColBuilder> c = new ArrayList<>();
+        private final List<RowBuilder> r = new ArrayList<>();
+        private final float[] columnWidthInPercent;
 
-    public LayoutBuilder(float[] columnWidthInPercent) {
-      float sum = 0;
-      for (float width : columnWidthInPercent) {
-        if (width < 10F) {
-          throw new IllegalArgumentException("Width must be at least 10%");
+        public LayoutBuilder(float[] columnWidthInPercent) {
+            float sum = 0;
+            for (float width : columnWidthInPercent) {
+                if (width < 10F) {
+                    throw new IllegalArgumentException("Width must be at least 10%");
+                }
+                sum += width;
+            }
+            if (sum > 100F) {
+                throw new IllegalArgumentException("Unable to set summ of column width > 100");
+            }
+            this.columnWidthInPercent = columnWidthInPercent;
         }
-        sum += width;
-      }
-      if (sum > 100F) {
-        throw new IllegalArgumentException("Unable to set summ of column width > 100");
-      }
-      this.columnWidthInPercent = columnWidthInPercent;
-    }
 
-    /**
-     * Specify column width Restrictions: sum(columnWidthInPercent) must be 100. columnWidthInPercent[i] must be >= 10%
-     */
-    public static LayoutBuilder builder(float... columnWidthInPercent) {
-      return new LayoutBuilder(columnWidthInPercent);
-    }
-
-    public LayoutBuilder addRow(Consumer<RowBuilder> rowBuilder) {
-      RowBuilder builder = new RowBuilder();
-      r.add(builder);
-      rowBuilder.accept(builder);
-      return this;
-    }
-
-    @SneakyThrows
-    public String build() {
-      if (this.r.size() == 0) {
-        throw new RuntimeException("Layout must have at least one row");
-      }
-      for (float width : this.columnWidthInPercent) {
-        c.add(new ColBuilder(width));
-      }
-      for (RowBuilder rowBuilder : this.r) {
-        if (this.columnWidthInPercent.length != rowBuilder.cell.size()) {
-          throw new RuntimeException(
-              "Row columns must be equal to specified column size: " + this.columnWidthInPercent.length);
+        /**
+         * Specify column width Restrictions: sum(columnWidthInPercent) must be 100.
+         * columnWidthInPercent[i] must be >= 10%
+         */
+        public static LayoutBuilder builder(float... columnWidthInPercent) {
+            return new LayoutBuilder(columnWidthInPercent);
         }
-        for (int i = 0; i < this.columnWidthInPercent.length; i++) {
-          // hide next columns if colSPan > 1
-          for (int j = 1; j < rowBuilder.cell.get(i).collSpan; j++) {
-            rowBuilder.cell.get(i + j).collSpan = 0;
-          }
-          int width = 0;
-          for (int w = i; w < i + rowBuilder.cell.get(i).collSpan; w++) {
-            width += this.columnWidthInPercent[w];
-          }
 
-          rowBuilder.cell.get(i).width = width;
+        public LayoutBuilder addRow(Consumer<RowBuilder> rowBuilder) {
+            RowBuilder builder = new RowBuilder();
+            r.add(builder);
+            rowBuilder.accept(builder);
+            return this;
         }
-      }
-      return CommonUtils.OBJECT_MAPPER.writeValueAsString(this);
+
+        @SneakyThrows
+        public String build() {
+            if (this.r.size() == 0) {
+                throw new RuntimeException("Layout must have at least one row");
+            }
+            for (float width : this.columnWidthInPercent) {
+                c.add(new ColBuilder(width));
+            }
+            for (RowBuilder rowBuilder : this.r) {
+                if (this.columnWidthInPercent.length != rowBuilder.cell.size()) {
+                    throw new RuntimeException(
+                            "Row columns must be equal to specified column size: "
+                                    + this.columnWidthInPercent.length);
+                }
+                for (int i = 0; i < this.columnWidthInPercent.length; i++) {
+                    // hide next columns if colSPan > 1
+                    for (int j = 1; j < rowBuilder.cell.get(i).collSpan; j++) {
+                        rowBuilder.cell.get(i + j).collSpan = 0;
+                    }
+                    int width = 0;
+                    for (int w = i; w < i + rowBuilder.cell.get(i).collSpan; w++) {
+                        width += this.columnWidthInPercent[w];
+                    }
+
+                    rowBuilder.cell.get(i).width = width;
+                }
+            }
+            return CommonUtils.OBJECT_MAPPER.writeValueAsString(this);
+        }
     }
-  }
 
-  @Getter
-  @RequiredArgsConstructor
-  class ColBuilder {
+    @Getter
+    @RequiredArgsConstructor
+    class ColBuilder {
 
-    private final float w;
-  }
-
-  @Getter
-  class RowBuilder {
-
-    private final List<Column> cell = new ArrayList<>();
-
-    public RowBuilder addCol(Consumer<Column> columnConsumer) {
-      Column column = new Column();
-      columnConsumer.accept(column);
-      cell.add(column);
-      return this;
+        private final float w;
     }
 
-    public RowBuilder addCol(String value, HorizontalAlign horizontalAlign) {
-      return addCol(value, horizontalAlign, 1);
+    @Getter
+    class RowBuilder {
+
+        private final List<Column> cell = new ArrayList<>();
+
+        public RowBuilder addCol(Consumer<Column> columnConsumer) {
+            Column column = new Column();
+            columnConsumer.accept(column);
+            cell.add(column);
+            return this;
+        }
+
+        public RowBuilder addCol(String value, HorizontalAlign horizontalAlign) {
+            return addCol(value, horizontalAlign, 1);
+        }
+
+        public RowBuilder addCol(String value, HorizontalAlign horizontalAlign, int colSpan) {
+            return addCol(
+                    column ->
+                            column.setValue(value)
+                                    .setHorizontalAlign(horizontalAlign)
+                                    .setCollSpan(1));
+        }
     }
 
-    public RowBuilder addCol(String value, HorizontalAlign horizontalAlign, int colSpan) {
-      return addCol(column -> column.setValue(value).setHorizontalAlign(horizontalAlign).setCollSpan(1));
+    @Getter
+    @Accessors(chain = true)
+    @RequiredArgsConstructor
+    class Column {
+
+        @JsonProperty("w")
+        private float width;
+
+        @Setter
+        @JsonProperty("v")
+        private String value = "none";
+
+        @Setter
+        @JsonProperty("ha")
+        private HorizontalAlign horizontalAlign = HorizontalAlign.left;
+
+        @Setter
+        @JsonProperty("va")
+        private VerticalAlign verticalAlign = VerticalAlign.middle;
+
+        @Setter
+        @JsonProperty("cs")
+        private int collSpan = 1;
     }
-  }
-
-  @Getter
-  @Accessors(chain = true)
-  @RequiredArgsConstructor
-  class Column {
-
-    @JsonProperty("w")
-    private float width;
-    @Setter
-    @JsonProperty("v")
-    private String value = "none";
-    @Setter
-    @JsonProperty("ha")
-    private HorizontalAlign horizontalAlign = HorizontalAlign.left;
-    @Setter
-    @JsonProperty("va")
-    private VerticalAlign verticalAlign = VerticalAlign.middle;
-    @Setter
-    @JsonProperty("cs")
-    private int collSpan = 1;
-  }
 }

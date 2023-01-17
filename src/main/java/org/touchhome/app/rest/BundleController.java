@@ -30,55 +30,68 @@ import org.touchhome.common.exception.NotFoundException;
 @RequiredArgsConstructor
 public class BundleController {
 
-  private final BundleService bundleService;
+    private final BundleService bundleService;
 
-  @GetMapping("/image/{bundleID}")
-  @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-  public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID) throws IOException {
-    BundleEntrypoint bundleEntrypoint =
-        bundleService.getBundle(bundleID.contains("-") ? bundleID.substring(0, bundleID.indexOf("-")) : bundleID);
-    URL imageUrl = bundleEntrypoint.getResource(bundleID + ".png");
-    if (imageUrl == null) {
-      imageUrl = bundleEntrypoint.getBundleImageURL();
+    @GetMapping("/image/{bundleID}")
+    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
+    public ResponseEntity<InputStreamResource> getBundleImage(
+            @PathVariable("bundleID") String bundleID) throws IOException {
+        BundleEntrypoint bundleEntrypoint =
+                bundleService.getBundle(
+                        bundleID.contains("-")
+                                ? bundleID.substring(0, bundleID.indexOf("-"))
+                                : bundleID);
+        URL imageUrl = bundleEntrypoint.getResource(bundleID + ".png");
+        if (imageUrl == null) {
+            imageUrl = bundleEntrypoint.getBundleImageURL();
+        }
+        if (imageUrl == null) {
+            throw new NotFoundException("Unable to find bundle image of bundle: " + bundleID);
+        }
+        return TouchHomeUtils.inputStreamToResource(imageUrl.openStream(), MediaType.IMAGE_PNG);
     }
-    if (imageUrl == null) {
-      throw new NotFoundException("Unable to find bundle image of bundle: " + bundleID);
+
+    @GetMapping("/image/{bundleID}/{baseEntityType:.+}")
+    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
+    public ResponseEntity<InputStreamResource> getBundleImage(
+            @PathVariable("bundleID") String bundleID, @PathVariable String baseEntityType) {
+        BundleEntrypoint bundleEntrypoint = bundleService.getBundle(bundleID);
+        InputStream stream =
+                bundleEntrypoint
+                        .getClass()
+                        .getClassLoader()
+                        .getResourceAsStream("images/" + baseEntityType);
+        if (stream == null) {
+            throw new NotFoundException(
+                    "Unable to find image <" + baseEntityType + "> of bundle: " + bundleID);
+        }
+        return TouchHomeUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
     }
-    return TouchHomeUtils.inputStreamToResource(imageUrl.openStream(), MediaType.IMAGE_PNG);
-  }
 
-  @GetMapping("/image/{bundleID}/{baseEntityType:.+}")
-  @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-  public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID,
-      @PathVariable String baseEntityType) {
-    BundleEntrypoint bundleEntrypoint = bundleService.getBundle(bundleID);
-    InputStream stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream("images/" + baseEntityType);
-    if (stream == null) {
-      throw new NotFoundException("Unable to find image <" + baseEntityType + "> of bundle: " + bundleID);
+    public List<BundleJson> getBundles() {
+        List<BundleJson> bundles = new ArrayList<>();
+        for (BundleEntrypoint bundle : bundleService.getBundles()) {
+            bundles.add(
+                    new BundleJson(
+                            bundle.getBundleId(),
+                            bundleService.getBundleColor(bundle.getBundleId()),
+                            bundle.order()));
+        }
+        Collections.sort(bundles);
+        return bundles;
     }
-    return TouchHomeUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
-  }
 
-  public List<BundleJson> getBundles() {
-    List<BundleJson> bundles = new ArrayList<>();
-    for (BundleEntrypoint bundle : bundleService.getBundles()) {
-      bundles.add(new BundleJson(bundle.getBundleId(), bundleService.getBundleColor(bundle.getBundleId()), bundle.order()));
+    @Getter
+    @RequiredArgsConstructor
+    static class BundleJson implements Comparable<BundleJson> {
+
+        private final String id;
+        private final String color;
+        private final int order;
+
+        @Override
+        public int compareTo(@NotNull BundleJson o) {
+            return Integer.compare(order, o.order);
+        }
     }
-    Collections.sort(bundles);
-    return bundles;
-  }
-
-  @Getter
-  @RequiredArgsConstructor
-  static class BundleJson implements Comparable<BundleJson> {
-
-    private final String id;
-    private final String color;
-    private final int order;
-
-    @Override
-    public int compareTo(@NotNull BundleJson o) {
-      return Integer.compare(order, o.order);
-    }
-  }
 }

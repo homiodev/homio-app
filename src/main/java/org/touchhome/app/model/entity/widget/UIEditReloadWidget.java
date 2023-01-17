@@ -5,11 +5,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Fire reload widget content from server when field is edited
- */
+/** Fire reload widget content from server when field is edited */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface UIEditReloadWidget {
-
-}
+public @interface UIEditReloadWidget {}

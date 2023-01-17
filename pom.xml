@@ -5,6 +5,10 @@
     <finalName>${project.artifactId}</finalName>
     <plugins>
       <plugin>
+        <artifactId>git-code-format-maven-plugin</artifactId>
+        <groupId>com.cosium.code</groupId>
+      </plugin>
+      <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <release>11</release>
@@ -23,7 +27,6 @@
         <groupId>net.ju-n.maven.plugins</groupId>
         <version>1.2</version>
       </plugin>
-
       <plugin>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
@@ -40,7 +43,6 @@
         </executions>
         <groupId>org.springframework.boot</groupId>
       </plugin>
-
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>

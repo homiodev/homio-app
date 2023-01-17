@@ -13,10 +13,10 @@ import org.touchhome.bundle.api.model.OptionModel;
 @RequiredArgsConstructor
 public class HardwareController {
 
-  private final EntityContextImpl entityContext;
+    private final EntityContextImpl entityContext;
 
-  @GetMapping("/event")
-  public Collection<OptionModel> getHardwareEvents() {
-    return entityContext.event().getEvents();
-  }
+    @GetMapping("/event")
+    public Collection<OptionModel> getHardwareEvents() {
+        return entityContext.event().getEvents();
+    }
 }

@@ -18,7 +18,7 @@ import org.touchhome.app.auth.DoubleCheckPasswordAuthenticationProvider;
 import org.touchhome.app.auth.JwtTokenFilterConfigurer;
 import org.touchhome.app.auth.JwtTokenProvider;
 import org.touchhome.app.auth.UserEntityDetailsService;
-import org.touchhome.bundle.api.repository.UserRepository;
+import org.touchhome.app.repository.UserRepository;
 
 @Configuration
 @EnableWebSecurity

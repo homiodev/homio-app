@@ -29,82 +29,88 @@ import org.touchhome.common.fs.TreeNode;
 @Getter
 public class WidgetFMNodeValue {
 
-  private final TreeNode treeNode;
-  private String content;
-  private ResolveContentType resolveType = ResolveContentType.unknown;
+    private final TreeNode treeNode;
+    private String content;
+    private ResolveContentType resolveType = ResolveContentType.unknown;
 
-  @SneakyThrows
-  public WidgetFMNodeValue(TreeNode treeNode, int width, int height) {
-    this.treeNode = treeNode;
-    List<Dimensions> outputDimensions = Collections.singletonList(new Dimensions(width, height));
+    @SneakyThrows
+    public WidgetFMNodeValue(TreeNode treeNode, int width, int height) {
+        this.treeNode = treeNode;
+        List<Dimensions> outputDimensions =
+                Collections.singletonList(new Dimensions(width, height));
 
-    String contentType = treeNode.getAttributes().getContentType();
-    if (contentType != null) {
-      Thumbnailer thumbnailer = buildThumbnail(contentType);
+        String contentType = treeNode.getAttributes().getContentType();
+        if (contentType != null) {
+            Thumbnailer thumbnailer = buildThumbnail(contentType);
 
-      if (thumbnailer != null) {
-        try {
-          try (InputStream stream = treeNode.getInputStream()) {
-            BufferedImage output = thumbnailer.getThumbnails(stream, outputDimensions).get(0);
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            OutputStream b64 = new Base64OutputStream(os);
-            ImageIO.write(output, "png", b64);
-            b64.close();
-            this.content = os.toString();
-            this.resolveType = ResolveContentType.image;
-          }
-        } catch (Exception ex) {
-          log.debug("Unable to fetch thumbnail from file: <{}>", treeNode.getName());
+            if (thumbnailer != null) {
+                try {
+                    try (InputStream stream = treeNode.getInputStream()) {
+                        BufferedImage output =
+                                thumbnailer.getThumbnails(stream, outputDimensions).get(0);
+                        ByteArrayOutputStream os = new ByteArrayOutputStream();
+                        OutputStream b64 = new Base64OutputStream(os);
+                        ImageIO.write(output, "png", b64);
+                        b64.close();
+                        this.content = os.toString();
+                        this.resolveType = ResolveContentType.image;
+                    }
+                } catch (Exception ex) {
+                    log.debug("Unable to fetch thumbnail from file: <{}>", treeNode.getName());
+                }
+                // String encodedValue = "data:image/jpeg;base64," +
+                // Base64.getEncoder().encodeToString(convertedValue);
+            } else if (contentType.startsWith("text/")
+                    || contentType.equals("application/javascript")
+                    || contentType.equals("application/json")) {
+                if (treeNode.getAttributes().getSize() <= FileUtils.ONE_MB) {
+                    try (InputStream stream = treeNode.getInputStream()) {
+                        this.content = IOUtils.toString(stream, StandardCharsets.UTF_8);
+                        this.resolveType = ResolveContentType.text;
+                    }
+                }
+            } else {
+                switch (contentType) {
+                    case "audio/mpeg":
+                    case "video/mp4":
+                        break;
+                }
+            }
+        } else {
+            log.debug("Unable to find contentType for file: <{}>", treeNode.getName());
         }
-        // String encodedValue = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(convertedValue);
-      } else if (contentType.startsWith("text/") || contentType.equals("application/javascript")
-          || contentType.equals("application/json")) {
-        if (treeNode.getAttributes().getSize() <= FileUtils.ONE_MB) {
-          try (InputStream stream = treeNode.getInputStream()) {
-            this.content = IOUtils.toString(stream, StandardCharsets.UTF_8);
-            this.resolveType = ResolveContentType.text;
-          }
-        }
-      } else {
+    }
+
+    @Override
+    public int hashCode() {
+        return treeNode.hashCode();
+    }
+
+    private Thumbnailer buildThumbnail(String contentType) {
         switch (contentType) {
-          case "audio/mpeg":
-          case "video/mp4":
-            break;
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                return new DOCXThumbnailer();
+            case "application/msword":
+                return new DOCThumbnailer();
+            case "image/jpeg":
+            case "image/gif":
+            case "image/png":
+                return new ImageThumbnailer("png");
+            case "application/pdf":
+                return new PDFThumbnailer();
+            case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+                return new PPTXThumbnailer();
+            case "application/vnd.ms-excel":
+                return new XLSThumbnailer();
+            case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+                return new XLSXThumbnailer();
         }
-      }
-    } else {
-      log.debug("Unable to find contentType for file: <{}>", treeNode.getName());
+        return null;
     }
-  }
 
-  @Override
-  public int hashCode() {
-    return treeNode.hashCode();
-  }
-
-  private Thumbnailer buildThumbnail(String contentType) {
-    switch (contentType) {
-      case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        return new DOCXThumbnailer();
-      case "application/msword":
-        return new DOCThumbnailer();
-      case "image/jpeg":
-      case "image/gif":
-      case "image/png":
-        return new ImageThumbnailer("png");
-      case "application/pdf":
-        return new PDFThumbnailer();
-      case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-        return new PPTXThumbnailer();
-      case "application/vnd.ms-excel":
-        return new XLSThumbnailer();
-      case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-        return new XLSXThumbnailer();
+    private enum ResolveContentType {
+        image,
+        text,
+        unknown
     }
-    return null;
-  }
-
-  private enum ResolveContentType {
-    image, text, unknown
-  }
 }

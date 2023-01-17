@@ -26,55 +26,61 @@ import org.touchhome.common.exception.NotFoundException;
 @RequiredArgsConstructor
 public class BundleService implements ContextCreated, ContextRefreshed {
 
-  // constructor parameters
-  private final EntityContext entityContext;
-  private Map<String, String> bundleColorMap;
-  private Map<String, BundleEntrypoint> bundleMap;
-  private Collection<BundleEntrypoint> bundleEntrypoints;
+    // constructor parameters
+    private final EntityContext entityContext;
+    private Map<String, String> bundleColorMap;
+    private Map<String, BundleEntrypoint> bundleMap;
+    private Collection<BundleEntrypoint> bundleEntrypoints;
 
-  @Override
-  public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-    onContextRefresh();
-  }
-
-  @Override
-  public void onContextRefresh() throws Exception {
-    this.bundleEntrypoints = entityContext.getBeansOfType(BundleEntrypoint.class);
-    this.bundleMap = bundleEntrypoints.stream().collect(Collectors.toMap(BundleEntrypoint::getBundleId, s -> s));
-    this.bundleColorMap = new HashMap<>();
-
-    for (BundleEntrypoint bundleEntrypoint : bundleEntrypoints) {
-      try {
-        URL imageURL = bundleEntrypoint.getBundleImageURL();
-        BufferedImage img = ImageIO.read(Objects.requireNonNull(imageURL));
-        MMCQ.CMap result = ColorThief.getColorMap(img, 5);
-        MMCQ.VBox dominantColor = result.vboxes.get(bundleEntrypoint.getBundleImageColorIndex().ordinal());
-        int[] rgb = dominantColor.avg(false);
-        bundleColorMap.put(bundleEntrypoint.getBundleId(), RGBUtil.toRGBHexString(rgb));
-      } catch (Exception ex) {
-        log.error("Unable to start app due error in bundle: <{}>", bundleEntrypoint.getBundleId(), ex);
-        throw ex;
-      }
+    @Override
+    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
+        onContextRefresh();
     }
-  }
 
-  public BundleEntrypoint findBundle(String bundleID) {
-    return bundleMap.get(bundleID);
-  }
+    @Override
+    public void onContextRefresh() throws Exception {
+        this.bundleEntrypoints = entityContext.getBeansOfType(BundleEntrypoint.class);
+        this.bundleMap =
+                bundleEntrypoints.stream()
+                        .collect(Collectors.toMap(BundleEntrypoint::getBundleId, s -> s));
+        this.bundleColorMap = new HashMap<>();
 
-  public BundleEntrypoint getBundle(String bundleID) {
-    BundleEntrypoint bundleEntrypoint = bundleMap.get(bundleID);
-    if (bundleEntrypoint == null) {
-      throw new NotFoundException("Unable to find bundle: " + bundleID);
+        for (BundleEntrypoint bundleEntrypoint : bundleEntrypoints) {
+            try {
+                URL imageURL = bundleEntrypoint.getBundleImageURL();
+                BufferedImage img = ImageIO.read(Objects.requireNonNull(imageURL));
+                MMCQ.CMap result = ColorThief.getColorMap(img, 5);
+                MMCQ.VBox dominantColor =
+                        result.vboxes.get(bundleEntrypoint.getBundleImageColorIndex().ordinal());
+                int[] rgb = dominantColor.avg(false);
+                bundleColorMap.put(bundleEntrypoint.getBundleId(), RGBUtil.toRGBHexString(rgb));
+            } catch (Exception ex) {
+                log.error(
+                        "Unable to start app due error in bundle: <{}>",
+                        bundleEntrypoint.getBundleId(),
+                        ex);
+                throw ex;
+            }
+        }
     }
-    return bundleEntrypoint;
-  }
 
-  public String getBundleColor(String bundleID) {
-    return bundleColorMap.get(bundleID);
-  }
+    public BundleEntrypoint findBundle(String bundleID) {
+        return bundleMap.get(bundleID);
+    }
 
-  public Collection<BundleEntrypoint> getBundles() {
-    return bundleEntrypoints;
-  }
+    public BundleEntrypoint getBundle(String bundleID) {
+        BundleEntrypoint bundleEntrypoint = bundleMap.get(bundleID);
+        if (bundleEntrypoint == null) {
+            throw new NotFoundException("Unable to find bundle: " + bundleID);
+        }
+        return bundleEntrypoint;
+    }
+
+    public String getBundleColor(String bundleID) {
+        return bundleColorMap.get(bundleID);
+    }
+
+    public Collection<BundleEntrypoint> getBundles() {
+        return bundleEntrypoints;
+    }
 }

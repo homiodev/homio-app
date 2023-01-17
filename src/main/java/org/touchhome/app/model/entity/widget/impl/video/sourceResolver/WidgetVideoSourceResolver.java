@@ -8,21 +8,20 @@ import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 
 public interface WidgetVideoSourceResolver {
 
-  VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item);
+    VideoEntityResponse resolveDataSource(WidgetVideoSeriesEntity item);
 
-  @Getter
-  class VideoEntityResponse {
+    @Getter
+    class VideoEntityResponse {
 
-    private final String dataSource;
-    private final String source;
-    private final String type;
-    @Setter
-    private Collection<UIInputEntity> actions;
+        private final String dataSource;
+        private final String source;
+        private final String type;
+        @Setter private Collection<UIInputEntity> actions;
 
-    public VideoEntityResponse(String dataSource, String source, String type) {
-      this.dataSource = dataSource;
-      this.source = source;
-      this.type = type;
+        public VideoEntityResponse(String dataSource, String source, String type) {
+            this.dataSource = dataSource;
+            this.source = source;
+            this.type = type;
+        }
     }
-  }
 }

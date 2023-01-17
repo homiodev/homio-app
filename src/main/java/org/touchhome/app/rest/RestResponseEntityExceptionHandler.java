@@ -22,35 +22,38 @@ import org.touchhome.common.util.CommonUtils;
 @RestController
 public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
 
-  @Override
-  protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers, HttpStatus status,
-      WebRequest request) {
-    if (HttpStatus.INTERNAL_SERVER_ERROR.equals(status)) {
-      request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex, WebRequest.SCOPE_REQUEST);
+    @Override
+    protected ResponseEntity<Object> handleExceptionInternal(
+            Exception ex, Object body, HttpHeaders headers, HttpStatus status, WebRequest request) {
+        if (HttpStatus.INTERNAL_SERVER_ERROR.equals(status)) {
+            request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex, WebRequest.SCOPE_REQUEST);
+        }
+        String msg = CommonUtils.getErrorMessage(ex);
+        if (ex instanceof NullPointerException) {
+            msg += ". src: " + ex.getStackTrace()[0].toString();
+        }
+        log.error("Error <{}>", msg, ex);
+        ((ServletWebRequest) request)
+                .getResponse()
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        return new ResponseEntity<>(new ErrorHolderModel("Error", msg, ex), headers, status);
     }
-    String msg = CommonUtils.getErrorMessage(ex);
-    if (ex instanceof NullPointerException) {
-      msg += ". src: " + ex.getStackTrace()[0].toString();
+
+    @ExceptionHandler({HardwareException.class})
+    public ErrorHolderModel handleHardwareException(HardwareException ex) {
+        log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
+        return new ErrorHolderModel("Hardware error", String.join("; ", ex.getInputs()), ex);
     }
-    log.error("Error <{}>", msg, ex);
-    ((ServletWebRequest) request).getResponse().setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-    return new ResponseEntity<>(new ErrorHolderModel("Error", msg, ex), headers, status);
-  }
 
-  @ExceptionHandler({HardwareException.class})
-  public ErrorHolderModel handleHardwareException(HardwareException ex) {
-    log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
-    return new ErrorHolderModel("Hardware error", String.join("; ", ex.getInputs()), ex);
-  }
+    @ExceptionHandler({DirectoryNotEmptyException.class})
+    public ErrorHolderModel handleDirectoryNotEmptyException(DirectoryNotEmptyException ex) {
+        String msg = CommonUtils.getErrorMessage(ex);
+        return new ErrorHolderModel(
+                "Unable remove directory", "Directory " + msg + " not empty", ex);
+    }
 
-  @ExceptionHandler({DirectoryNotEmptyException.class})
-  public ErrorHolderModel handleDirectoryNotEmptyException(DirectoryNotEmptyException ex) {
-    String msg = CommonUtils.getErrorMessage(ex);
-    return new ErrorHolderModel("Unable remove directory", "Directory " + msg + " not empty", ex);
-  }
-
-  @ExceptionHandler({Exception.class})
-  public ResponseEntity<Object> handleUnknownException(Exception ex, WebRequest request) {
-    return handleExceptionInternal(ex, null, null, HttpStatus.INTERNAL_SERVER_ERROR, request);
-  }
+    @ExceptionHandler({Exception.class})
+    public ResponseEntity<Object> handleUnknownException(Exception ex, WebRequest request) {
+        return handleExceptionInternal(ex, null, null, HttpStatus.INTERNAL_SERVER_ERROR, request);
+    }
 }
