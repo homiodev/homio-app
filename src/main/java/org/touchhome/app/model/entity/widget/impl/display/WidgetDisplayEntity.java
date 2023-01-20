@@ -47,7 +47,7 @@ public class WidgetDisplayEntity
     }
 
     @Override
-    @UIFieldColorPicker
+    @UIFieldColorPicker(allowThreshold = true)
     public String getBackground() {
         return super.getBackground();
     }

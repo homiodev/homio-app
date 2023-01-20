@@ -44,38 +44,26 @@ public class TmateSshProvider implements SshProviderService {
         if (tmateThread == null) {
             checkHardware();
             CountDownLatch countDownLatch = new CountDownLatch(1);
-            tmateThread =
-                    new Thread(
-                            () -> {
-                                try {
-                                    log.info("Open ssh session using tmate provider");
-                                    Process process =
-                                            Runtime.getRuntime()
-                                                    .exec(
-                                                            new String[] {
-                                                                "/bin/sh",
-                                                                "-c",
-                                                                "/opt/touchhome/ssh/tmate -F"
-                                                            });
-                                    process.waitFor(10, TimeUnit.SECONDS);
-                                    InputStream inputStream = process.getInputStream();
-                                    byte[] array = new byte[inputStream.available()];
-                                    IOUtils.read(inputStream, array);
-                                    this.sshSession =
-                                            parse(
-                                                    new String(array, Charset.defaultCharset())
-                                                            .split("\\r?\\n"));
-                                    countDownLatch.countDown();
+            tmateThread = new Thread(() -> {
+                try {
+                    log.info("Open ssh session using tmate provider");
+                    Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "/opt/touchhome/ssh/tmate -F"});
+                    process.waitFor(10, TimeUnit.SECONDS);
+                    InputStream inputStream = process.getInputStream();
+                    byte[] array = new byte[inputStream.available()];
+                    IOUtils.read(inputStream, array);
+                    this.sshSession = parse(new String(array, Charset.defaultCharset()).split("\\r?\\n"));
+                    countDownLatch.countDown();
 
-                                    process.waitFor();
-                                } catch (InterruptedException ie) {
-                                    log.info("Close ssh session using tmate provider");
-                                } catch (Exception e) {
-                                    log.error("Error while running tmate");
-                                }
-                                sshSession = null;
-                                tmateThread = null;
-                            });
+                    process.waitFor();
+                } catch (InterruptedException ie) {
+                    log.info("Close ssh session using tmate provider");
+                } catch (Exception e) {
+                    log.error("Error while running tmate");
+                }
+                sshSession = null;
+                tmateThread = null;
+            });
             tmateThread.start();
             countDownLatch.await();
         }
@@ -127,10 +115,10 @@ public class TmateSshProvider implements SshProviderService {
 
         public String find(String[] lines) {
             return Stream.of(lines)
-                    .filter(l -> l.startsWith(prefix))
-                    .map(l -> l.substring(prefix.length()))
-                    .findAny()
-                    .orElse(null);
+                         .filter(l -> l.startsWith(prefix))
+                         .map(l -> l.substring(prefix.length()))
+                         .findAny()
+                         .orElse(null);
         }
     }
 }

@@ -1,6 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.chart;
 
-import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
+import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -9,7 +9,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 
-public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue, HasTimePeriod {
+public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue, HasChartTimePeriod {
 
     HasChartDataSource.ChartType getChartType();
 

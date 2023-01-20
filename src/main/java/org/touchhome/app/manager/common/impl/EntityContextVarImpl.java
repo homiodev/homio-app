@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -25,8 +24,11 @@ import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.inmemory.InMemoryDB;
 import org.touchhome.bundle.api.inmemory.InMemoryDBService;
+import org.touchhome.bundle.api.state.DecimalType;
+import org.touchhome.bundle.api.state.QuantityType;
 import org.touchhome.bundle.api.state.State;
 import org.touchhome.common.exception.NotFoundException;
+import tech.units.indriya.internal.function.Calculator;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -57,6 +59,11 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @Override
+    public void setLinkListener(@NotNull String variableId, @NotNull Consumer<Object> listener) {
+        getOrCreateContext(getVariableId(variableId)).linkListener = listener;
+    }
+
+    @Override
     public Object get(@NotNull String variableId) {
         WorkspaceVariableMessage latest = getOrCreateContext(variableId).service.getLatest();
         return latest == null ? null : latest.getValue();
@@ -73,11 +80,17 @@ public class EntityContextVarImpl implements EntityContextVar {
         VariableContext context = getOrCreateContext(variableId);
         if (value instanceof State) {
             switch (context.groupVariable.getRestriction()) {
-                case Boolean:
+                case Bool:
                     value = ((State) value).boolValue();
                     break;
                 case Float:
-                    value = ((State) value).floatValue();
+                    if (value instanceof DecimalType) {
+                        value = convertBigDecimal(((DecimalType) value).getValue());
+                    } else if (value instanceof QuantityType) {
+                        value = convertBigDecimal(((QuantityType) value).getQuantity().getValue());
+                    } else {
+                        value = ((State) value).floatValue();
+                    }
                     break;
             }
         }
@@ -85,20 +98,28 @@ public class EntityContextVarImpl implements EntityContextVar {
         if (!(value instanceof Boolean) && !(value instanceof Number)) {
             String strValue = value instanceof State ? ((State) value).stringValue() : value.toString();
             if (StringUtils.isNumeric(strValue)) {
-                value = NumberFormat.getInstance().parse(strValue).floatValue();
+                value = convertBigDecimal(NumberFormat.getInstance().parse(strValue));
             } else if (strValue.equalsIgnoreCase("true") || strValue.equalsIgnoreCase("false")) {
-                value = NumberFormat.getInstance().parse(value.toString()).floatValue();
+                value = strValue.equalsIgnoreCase("true");
             } else {
                 value = strValue;
             }
         }
-        if (!context.groupVariable.getRestriction().getValidate().test(value)) {
+        if (validateValueBeforeSave(value, context)) {
             String error = format("Validation type restriction: Unable to set value: '%s' to variable: '%s/%s' of type: '%s'", value,
                 context.groupVariable.getName(), context.groupVariable.getWorkspaceGroup().getGroupId(), context.groupVariable.getRestriction().name());
             throw new IllegalArgumentException(error);
         }
         convertedValue.accept(value);
         context.service.save(new WorkspaceVariableMessage(value));
+        entityContext.event().fireEvent(variableId, value);
+        if (context.linkListener != null) {
+            context.linkListener.accept(value);
+        }
+    }
+
+    private Object convertBigDecimal(Number value) {
+        return Calculator.of(value).peek();
     }
 
     @Override
@@ -148,7 +169,20 @@ public class EntityContextVarImpl implements EntityContextVar {
 
     @Override
     public @NotNull String createVariable(@NotNull String groupId, @Nullable String variableId, @NotNull String variableName,
-        @NotNull VariableType variableType, @Nullable String description, boolean readOnly, @Nullable String color) {
+        @NotNull VariableType variableType, @Nullable String description, boolean readOnly, @Nullable String color, String unit) {
+        return createVariableInternal(groupId, variableId, variableName, variableType, description, readOnly, color, unit, wv -> {});
+    }
+
+    @Override
+    public @NotNull String createEnumVariable(@NotNull String groupId, @Nullable String variableId, @NotNull String variableName, @Nullable String description,
+        boolean readOnly, @Nullable String color, @NotNull List<String> values) {
+        return createVariableInternal(groupId, variableId, variableName, VariableType.Enum, description, readOnly, color, null, wv ->
+            wv.setJsonData("options", String.join("~~~", values)));
+    }
+
+    private String createVariableInternal(@NotNull String groupId, @Nullable String variableId, @NotNull String variableName,
+        @NotNull VariableType variableType, @Nullable String description, boolean readOnly, @Nullable String color, @Nullable String unit,
+        Consumer<WorkspaceVariable> beforeSaveHandler) {
         WorkspaceVariable entity = variableId == null ? null : entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
 
         if (entity == null) {
@@ -157,7 +191,10 @@ public class EntityContextVarImpl implements EntityContextVar {
                 throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
             }
             String varId = StringUtils.defaultString(variableId, String.valueOf(System.currentTimeMillis()));
-            entity = entityContext.save(new WorkspaceVariable(varId, variableName, groupEntity, variableType, description, color, readOnly));
+            entity = new WorkspaceVariable(varId, variableName, groupEntity, variableType, description, color, readOnly, unit);
+            beforeSaveHandler.accept(entity);
+            entity = entityContext.save(entity);
+            beforeSaveHandler.accept(entity);
         } else if (!Objects.equals(entity.getName(), variableName)
             || !Objects.equals(entity.getDescription(), description)
             || !Objects.equals(entity.getColor(), color)) {
@@ -208,11 +245,10 @@ public class EntityContextVarImpl implements EntityContextVar {
 
     private VariableContext createContext(WorkspaceVariable variable) {
         String variableId = variable.getVariableId();
-        var service =
-            InMemoryDB.getOrCreateService(WorkspaceVariableMessage.class, variable.getEntityID(), (long) variable.getQuota())
-                      .addSaveListener("", broadcastMessage -> entityContext.event().fireEvent(variableId, broadcastMessage.getValue()));
+        var service = InMemoryDB.getOrCreateService(WorkspaceVariableMessage.class, variable.getEntityID(), (long) variable.getQuota());
 
-        VariableContext context = new VariableContext(service, variable);
+        VariableContext context = new VariableContext(service);
+        context.groupVariable = variable;
         globalVarStorageMap.put(variableId, context);
 
         // initialise variable to put first value. require to getLatest(), ...
@@ -239,11 +275,16 @@ public class EntityContextVarImpl implements EntityContextVar {
         return getOrCreateContext(variableId).service.getTimeSeries(from, to, null, null, "value");
     }
 
-    @AllArgsConstructor
+    public boolean isLinked(String variableId) {
+        return getOrCreateContext(getVariableId(getVariableId(variableId))).linkListener != null;
+    }
+
+    @RequiredArgsConstructor
     private static class VariableContext {
 
         private final InMemoryDBService<WorkspaceVariableMessage> service;
         private WorkspaceVariable groupVariable;
+        private Consumer<Object> linkListener;
     }
 
     private boolean saveOrUpdateGroup(@NotNull String groupId, @NotNull String groupName, boolean locked, @NotNull String icon, @NotNull String iconColor,
@@ -264,5 +305,13 @@ public class EntityContextVarImpl implements EntityContextVar {
             entityContext.save(entity.setName(groupName).setDescription(description).setIconColor(iconColor).setIcon(icon).setLocked(locked));
         }
         return false;
+    }
+
+    private boolean validateValueBeforeSave(@NotNull Object value, VariableContext context) {
+        if (context.groupVariable.getRestriction() == VariableType.Enum &&
+            !context.groupVariable.getJsonDataList("values").contains(value.toString())) {
+            return false;
+        }
+        return !context.groupVariable.getRestriction().getValidate().test(value);
     }
 }

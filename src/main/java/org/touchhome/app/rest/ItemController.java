@@ -570,6 +570,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 hasPosition.setYb(position.yb);
                 hasPosition.setBw(position.bw);
                 hasPosition.setBh(position.bh);
+                hasPosition.setXbl(position.xbl);
+                hasPosition.setYbl(position.ybl);
                 entityContext.save(entity);
             } else {
                 throw new IllegalArgumentException("Entity: " + entityID + " has no ability to update position");
@@ -857,6 +859,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         private int yb;
         private int bw;
         private int bh;
+        private Integer xbl;
+        private Integer ybl;
     }
 
     @Getter

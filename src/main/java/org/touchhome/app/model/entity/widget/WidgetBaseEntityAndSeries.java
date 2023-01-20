@@ -31,17 +31,6 @@ public abstract class WidgetBaseEntityAndSeries<
     private Set<S> series;
 
     @Override
-    public boolean updateRelations(EntityContext entityContext) {
-        boolean updated = false;
-        if (series != null) {
-            for (S item : series) {
-                updated |= invalidateWrongEntity(entityContext, item);
-            }
-        }
-        return updated;
-    }
-
-    @Override
     protected void validate() {
         if (getWidgetTabEntity() == null) {
             throw new ServerException("Unable to save widget without attach to tab");

@@ -313,7 +313,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public EntityContextVar var() {
+    public EntityContextVarImpl var() {
         return entityContextVar;
     }
 

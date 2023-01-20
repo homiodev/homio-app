@@ -13,7 +13,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>
-        implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasValueConverter {
+    implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasValueConverter {
 
     public static final String PREFIX = "wgsdps_";
 

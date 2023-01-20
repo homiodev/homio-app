@@ -14,16 +14,16 @@ import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
-public interface HasTimePeriod extends HasJsonData {
+public interface HasChartTimePeriod extends HasJsonData {
 
     @UIField(order = 1)
     @UIFieldTimeSlider
     @UIFieldGroup(value = "Time period", order = 7, borderColor = "#166F37")
-    default int getMinutesToShow() {
+    default int getChartMinutesToShow() {
         return getJsonData("mts", 60);
     }
 
-    default void setMinutesToShow(int value) {
+    default void setChartMinutesToShow(int value) {
         setJsonData("mts", value);
     }
 
@@ -31,18 +31,18 @@ public interface HasTimePeriod extends HasJsonData {
     @UIFieldSlider(min = 10, max = 600, step = 5) // max 10 point per minute
     @UIFieldGroup(value = "Time period")
     @UIEditReloadWidget
-    default int getPointsPerHour() {
+    default int getChartPointsPerHour() {
         return getJsonData("pph", 30);
     }
 
-    default void setPointsPerHour(int value) {
+    default void setChartPointsPerHour(int value) {
         setJsonData("pph", value);
     }
 
     default TimePeriod buildTimePeriod() {
         return new TimePeriod() {
-            private final int minutes = getMinutesToShow();
-            private final int pointsPerHour = getPointsPerHour();
+            private final int minutes = getChartMinutesToShow();
+            private final int pointsPerHour = getChartPointsPerHour();
 
             @Override
             public Date getFrom() {

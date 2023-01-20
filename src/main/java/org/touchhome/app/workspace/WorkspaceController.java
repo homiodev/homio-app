@@ -123,6 +123,9 @@ public class WorkspaceController {
     @PostMapping("/{entityID}")
     public void saveWorkspace(@PathVariable("entityID") String entityID, @RequestBody String json) {
         WorkspaceEntity workspaceEntity = entityContext.getEntity(entityID);
+        if (workspaceEntity == null) {
+            throw new NotFoundException("Unable to find workspace: " + entityID);
+        }
         entityContext.save(workspaceEntity.setContent(json));
     }
 
@@ -137,6 +140,9 @@ public class WorkspaceController {
         if (broadcastGroup == null) {
             EntityContextVarImpl.createBroadcastGroup(entityContext);
             broadcastGroup = entityContext.getEntity(WorkspaceGroup.PREFIX + "broadcasts");
+        }
+        if (broadcastGroup == null) {
+            broadcastGroup = entityContext.save(new WorkspaceGroup().setGroupId("broadcasts"));
         }
         Set<String> existedBroadcasts = Optional.ofNullable(broadcastGroup.getWorkspaceVariables())
                                                 .orElse(Collections.emptySet())
@@ -246,7 +252,8 @@ public class WorkspaceController {
     private WorkspaceVariable createOrRenameVariable(WorkspaceGroup workspaceGroup, String variableId, String variableName) {
         WorkspaceVariable workspaceVariable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
         if (workspaceVariable == null) {
-            return entityContext.save(new WorkspaceVariable(variableId, variableName, workspaceGroup, VariableType.Any, null, null, false));
+            return entityContext.save(new WorkspaceVariable(variableId, variableName, workspaceGroup, VariableType.Any,
+                null, null, false, null));
         } else if (!Objects.equals(variableName, workspaceVariable.getName())) {
             return entityContext.save(workspaceVariable.setName(variableName));
         }

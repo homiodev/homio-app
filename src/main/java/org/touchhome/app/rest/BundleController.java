@@ -34,13 +34,8 @@ public class BundleController {
 
     @GetMapping("/image/{bundleID}")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public ResponseEntity<InputStreamResource> getBundleImage(
-            @PathVariable("bundleID") String bundleID) throws IOException {
-        BundleEntrypoint bundleEntrypoint =
-                bundleService.getBundle(
-                        bundleID.contains("-")
-                                ? bundleID.substring(0, bundleID.indexOf("-"))
-                                : bundleID);
+    public ResponseEntity<InputStreamResource> getBundleImage(@PathVariable("bundleID") String bundleID) throws IOException {
+        BundleEntrypoint bundleEntrypoint = bundleService.getBundle(bundleID.contains("-") ? bundleID.substring(0, bundleID.indexOf("-")) : bundleID);
         URL imageUrl = bundleEntrypoint.getResource(bundleID + ".png");
         if (imageUrl == null) {
             imageUrl = bundleEntrypoint.getBundleImageURL();
@@ -54,16 +49,11 @@ public class BundleController {
     @GetMapping("/image/{bundleID}/{baseEntityType:.+}")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ResponseEntity<InputStreamResource> getBundleImage(
-            @PathVariable("bundleID") String bundleID, @PathVariable String baseEntityType) {
+        @PathVariable("bundleID") String bundleID, @PathVariable String baseEntityType) {
         BundleEntrypoint bundleEntrypoint = bundleService.getBundle(bundleID);
-        InputStream stream =
-                bundleEntrypoint
-                        .getClass()
-                        .getClassLoader()
-                        .getResourceAsStream("images/" + baseEntityType);
+        InputStream stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream("images/" + baseEntityType);
         if (stream == null) {
-            throw new NotFoundException(
-                    "Unable to find image <" + baseEntityType + "> of bundle: " + bundleID);
+            throw new NotFoundException("Unable to find image <" + baseEntityType + "> of bundle: " + bundleID);
         }
         return TouchHomeUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
     }
@@ -71,11 +61,7 @@ public class BundleController {
     public List<BundleJson> getBundles() {
         List<BundleJson> bundles = new ArrayList<>();
         for (BundleEntrypoint bundle : bundleService.getBundles()) {
-            bundles.add(
-                    new BundleJson(
-                            bundle.getBundleId(),
-                            bundleService.getBundleColor(bundle.getBundleId()),
-                            bundle.order()));
+            bundles.add(new BundleJson(bundle.getBundleId(), bundleService.getBundleColor(bundle.getBundleId()), bundle.order()));
         }
         Collections.sort(bundles);
         return bundles;

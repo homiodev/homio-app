@@ -46,7 +46,9 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
 
-/** TODO: refactor code */
+/**
+ * TODO: refactor code
+ */
 @Log4j2
 @Controller
 @RequiredArgsConstructor
@@ -78,24 +80,19 @@ public class LoggerService implements ContextCreated {
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        Files.walkFileTree(
-                TouchHomeUtils.getLogsPath(),
-                new SimpleFileVisitor<>() {
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                        if (file.getFileName().toString().endsWith(".lck")) {
-                            try {
-                                Files.delete(file);
-                            } catch (Exception ex) {
-                                log.error(
-                                        "Can't delete lock file: <{}>",
-                                        CommonUtils.getErrorMessage(ex),
-                                        ex);
-                            }
-                        }
-                        return FileVisitResult.CONTINUE;
+        Files.walkFileTree(TouchHomeUtils.getLogsPath(), new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                if (file.getFileName().toString().endsWith(".lck")) {
+                    try {
+                        Files.delete(file);
+                    } catch (Exception ex) {
+                        log.error("Can't delete lock file: <{}>", CommonUtils.getErrorMessage(ex), ex);
                     }
-                });
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 
     public boolean notExists(String logFile) {
@@ -191,17 +188,8 @@ public class LoggerService implements ContextCreated {
         private PrintStream stream;
 
         InternalLogger(boolean showDateTime, PrintStream stream) {
-            super(
-                    "OutputStreamLogger",
-                    Level.DEBUG,
-                    false,
-                    false,
-                    showDateTime,
-                    false,
-                    Strings.EMPTY,
-                    ParameterizedNoReferenceMessageFactory.INSTANCE,
-                    new PropertiesUtil(new Properties()),
-                    stream);
+            super("OutputStreamLogger", Level.DEBUG, false, false, showDateTime, false, Strings.EMPTY, ParameterizedNoReferenceMessageFactory.INSTANCE,
+                new PropertiesUtil(new Properties()), stream);
             this.showDateTime = showDateTime;
             if (showDateTime) {
                 this.dateFormatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:SSS zzz");
@@ -213,7 +201,7 @@ public class LoggerService implements ContextCreated {
 
         @Override
         public void logMessage(
-                String fqcn, Level mgsLevel, Marker marker, Message msg, Throwable throwable) {
+            String fqcn, Level mgsLevel, Marker marker, Message msg, Throwable throwable) {
             final StringBuilder sb = new StringBuilder();
             // Append date-time if so configured
             if (showDateTime) {
@@ -232,10 +220,7 @@ public class LoggerService implements ContextCreated {
 
             final Object[] params = msg.getParameters();
             Throwable t;
-            if (throwable == null
-                    && params != null
-                    && params.length > 0
-                    && params[params.length - 1] instanceof Throwable) {
+            if (throwable == null && params != null && params.length > 0 && params[params.length - 1] instanceof Throwable) {
                 t = (Throwable) params[params.length - 1];
             } else {
                 t = throwable;
@@ -266,8 +251,7 @@ public class LoggerService implements ContextCreated {
 
         public List<String> getOldNotifications(Integer toLine) {
             try {
-                OutputStream outputStream =
-                        (OutputStream) FieldUtils.readField(stream, "out", true);
+                OutputStream outputStream = (OutputStream) FieldUtils.readField(stream, "out", true);
                 if (outputStream instanceof FileOutputStream) {
                     String path = (String) FieldUtils.readField(outputStream, "path", true);
 
@@ -280,8 +264,8 @@ public class LoggerService implements ContextCreated {
                 }
             } catch (Exception ignore) {
                 log.warn(
-                        "Unable to fetch old logs from stream <{}>",
-                        stream.getClass().getSimpleName());
+                    "Unable to fetch old logs from stream <{}>",
+                    stream.getClass().getSimpleName());
             }
             return Collections.emptyList();
         }

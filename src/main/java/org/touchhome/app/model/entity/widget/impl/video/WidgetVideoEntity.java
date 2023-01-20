@@ -44,10 +44,4 @@ public class WidgetVideoEntity
     public String getEntityPrefix() {
         return PREFIX;
     }
-
-    // hard to validate video series
-    @Override
-    public boolean updateRelations(EntityContext entityContext) {
-        return false;
-    }
 }

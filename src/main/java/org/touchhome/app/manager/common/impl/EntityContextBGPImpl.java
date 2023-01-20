@@ -117,7 +117,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public void registerThreadsPuller(        @NotNull String entityId, @NotNull Consumer<ThreadPuller> threadPullerConsumer) {
+    public void registerThreadsPuller(@NotNull String entityId, @NotNull Consumer<ThreadPuller> threadPullerConsumer) {
         this.threadsPullers.put(entityId, threadPullerConsumer);
     }
 
@@ -369,7 +369,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     threadContext.state = "FINISHED";
                     if (threadContext.scheduleType == ScheduleType.SINGLE) {
                         if (threadContext.scheduledFuture == null) {
-                            Thread.sleep(100); // hack: sleep 100ms to allow assign
+                            try {
+                                Thread.sleep(100); // hack: sleep 100ms to allow assign
+                            } catch (InterruptedException ignore) {}
                             // threadContext.scheduledFuture = ....
                         }
                         threadContext.cancelProcessInternal();
@@ -443,7 +445,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
         private Consumer<Exception> errorListener;
 
-        public ThreadContextImpl(String name, ThrowingFunction<ThreadContext<T>, T, Exception> command, ScheduleType scheduleType, Duration period, boolean showOnUI, boolean hideOnUIAfterCancel) {
+        public ThreadContextImpl(String name, ThrowingFunction<ThreadContext<T>, T, Exception> command, ScheduleType scheduleType, Duration period,
+            boolean showOnUI, boolean hideOnUIAfterCancel) {
             this.name = name;
             this.command = command;
             this.scheduleType = scheduleType;

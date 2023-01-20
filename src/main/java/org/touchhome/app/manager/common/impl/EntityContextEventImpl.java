@@ -78,6 +78,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     private final EntityContextImpl entityContext;
     private ThreadContext<Boolean> internetThreadContext;
     private final BlockingQueue<EntityUpdate> entityUpdatesQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Event> eventQueue = new LinkedBlockingQueue<>();
 
     public EntityContextEventImpl(EntityContextImpl entityContext, EntityManagerFactory entityManagerFactory) {
         this.entityContext = entityContext;
@@ -96,6 +97,23 @@ public class EntityContextEventImpl implements EntityContextEvent {
                     entityUpdate.itemAction.handler.accept(entityContext, entityUpdate.entity);
                 } catch (Exception ex) {
                     log.error("Error while execute postUpdate action", ex);
+                }
+            }
+        }).start();
+        // event handler
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Event event = eventQueue.take();
+                    for (Map<String, Consumer<Object>> eventListenerMap : eventListeners.values()) {
+                        if (eventListenerMap.containsKey(event.key)) {
+                            eventListenerMap.get(event.key).accept(event.value);
+                        }
+                    }
+                    globalEvenListeners.forEach(l -> l.accept(event.key, event.value));
+                    entityContext.fireAllBroadcastLock(broadcastLockManager -> broadcastLockManager.signalAll(event.key, event.value));
+                } catch (Exception ex) {
+                    log.error("Error while execute event handler", ex);
                 }
             }
         }).start();
@@ -160,14 +178,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
             }
             lastValues.put(key, value);
         }
-
-        for (Map<String, Consumer<Object>> eventListenerMap : eventListeners.values()) {
-            if (eventListenerMap.containsKey(key)) {
-                eventListenerMap.get(key).accept(value);
-            }
-        }
-        globalEvenListeners.forEach(l -> l.accept(key, value));
-        entityContext.fireAllBroadcastLock(broadcastLockManager -> broadcastLockManager.signalAll(key, value));
+        eventQueue.add(new Event(key, value));
     }
 
     public void addEvent(String key) {
@@ -327,6 +338,10 @@ public class EntityContextEventImpl implements EntityContextEvent {
             }
             return false;
         }
+
+        public int getCount(String key) {
+            return 0;
+        }
     }
 
     private void registerEntityListeners(EntityManagerFactory entityManagerFactory) {
@@ -417,6 +432,13 @@ public class EntityContextEventImpl implements EntityContextEvent {
         } catch (Exception ex) {
             log.error("Unable to update cache entity <{}> for entity: <{}>. Msg: <{}>", type, entity, CommonUtils.getErrorMessage(ex));
         }
+    }
+
+    @RequiredArgsConstructor
+    private static class Event {
+
+        private final String key;
+        private final Object value;
     }
 
     @RequiredArgsConstructor

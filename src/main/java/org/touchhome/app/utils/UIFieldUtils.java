@@ -128,7 +128,7 @@ public class UIFieldUtils {
                         }
                     });
                 } else {
-                    uiInputBuilder.addSelectableButton(action.value(), action.icon(), action.iconColor(), null);
+                    uiInputBuilder.addSelectableButton(action.value(), action.icon(), action.iconColor(), null).setText(action.value());
                 }
             }
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuUploadAction.class)) {

@@ -1,7 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.chart.pie;
 
 import javax.persistence.Entity;
-import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
+import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
@@ -9,7 +9,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 @Entity
 public class WidgetPieChartEntity
         extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity>
-        implements HasTimePeriod {
+        implements HasChartTimePeriod {
 
     public static final String PREFIX = "wgtpc_";
 

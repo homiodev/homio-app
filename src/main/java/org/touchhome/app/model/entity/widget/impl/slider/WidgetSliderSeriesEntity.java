@@ -113,14 +113,19 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
     @Override
     @JsonIgnore
     @UIFieldIgnore
-    public AggregationType getAggregationType() {
+    public String getNoValueText() {
         throw new ProhibitedExecution();
     }
 
     @Override
-    @JsonIgnore
     @UIFieldIgnore
-    public String getNoValueText() {
-        throw new ProhibitedExecution();
+    public AggregationType getValueAggregationType() {
+        return HasSingleValueDataSource.super.getValueAggregationType();
+    }
+
+    @Override
+    @UIFieldIgnore
+    public int getValueAggregationPeriod() {
+        return HasSingleValueDataSource.super.getValueAggregationPeriod();
     }
 }

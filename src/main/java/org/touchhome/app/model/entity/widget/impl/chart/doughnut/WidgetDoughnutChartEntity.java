@@ -1,8 +1,8 @@
 package org.touchhome.app.model.entity.widget.impl.chart.doughnut;
 
 import javax.persistence.Entity;
+import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
 import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
@@ -14,8 +14,8 @@ import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
 public class WidgetDoughnutChartEntity
-        extends ChartBaseEntity<WidgetDoughnutChartEntity, WidgetDoughnutChartSeriesEntity>
-        implements HasSingleValueDataSource, HasTimePeriod, HasValueConverter, HasValueTemplate {
+    extends ChartBaseEntity<WidgetDoughnutChartEntity, WidgetDoughnutChartSeriesEntity>
+    implements HasSingleValueDataSource, HasChartTimePeriod, HasValueConverter, HasValueTemplate {
 
     public static final String PREFIX = "wgtpc_";
 

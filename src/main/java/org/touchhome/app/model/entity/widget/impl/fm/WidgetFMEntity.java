@@ -36,11 +36,6 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     }
 
     @Override
-    public boolean updateRelations(EntityContext entityContext) {
-        return false;
-    }
-
-    @Override
     public String getDefaultName() {
         return null;
     }

@@ -1,7 +1,5 @@
 package org.touchhome.app.model.entity.widget;
 
-import static org.apache.commons.lang3.ObjectUtils.isNotEmpty;
-
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -13,10 +11,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.converter.JSONConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.HasJsonData;
@@ -36,24 +30,18 @@ import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 @Accessors(chain = true)
 @NoArgsConstructor
 public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity<T>
-        implements HasPosition<WidgetBaseEntity>, HasJsonData {
+    implements HasPosition<WidgetBaseEntity>, HasJsonData {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private WidgetTabEntity widgetTabEntity;
-
-    @Getter private int xb = 0;
-
-    @Getter private int yb = 0;
-
-    @Getter private int bw = 1;
-
-    @Getter private int bh = 1;
 
     @Column(length = 65535)
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
 
-    /** Uses for grouping widget by type on UI */
+    /**
+     * Uses for grouping widget by type on UI
+     */
     public WidgetGroup getGroup() {
         return null;
     }
@@ -61,7 +49,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     @UIField(order = 1000)
     @UIFieldGroup(value = "UI", order = 10, borderColor = "#009688")
     public boolean isAdjustFontSize() {
-        return getJsonData("adjfs", Boolean.TRUE);
+        return getJsonData("adjfs", Boolean.FALSE);
     }
 
     public void setAdjustFontSize(boolean value) {
@@ -85,11 +73,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     public abstract String getImage();
 
-    public boolean updateRelations(EntityContext entityContext) {
-        return false;
-    }
-
-    protected boolean invalidateWrongEntity(EntityContext entityContext, Object item) {
+    /*protected boolean invalidateWrongEntity(EntityContext entityContext, Object item) {
         boolean updated = false;
         if (item instanceof HasSingleValueDataSource) {
             HasSingleValueDataSource source = (HasSingleValueDataSource) item;
@@ -99,28 +83,25 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
                 source.setValueDataSource(null);
             }
 
-            if (isNotEmpty(source.getSetValueDataSource())
-                    && isEntityNotExists(entityContext, source.getSetValueDataSource())) {
+            if (isNotEmpty(source.getSetValueDataSource()) && isEntityNotExists(entityContext, source.getSetValueDataSource())) {
                 updated = true;
                 source.setSetValueDataSource(null);
             }
         }
         if (item instanceof HasChartDataSource) {
             HasChartDataSource source = (HasChartDataSource) item;
-            if (isNotEmpty(source.getChartDataSource())
-                    && isEntityNotExists(entityContext, source.getChartDataSource())) {
+            if (isNotEmpty(source.getChartDataSource()) && isEntityNotExists(entityContext, source.getChartDataSource())) {
                 updated = true;
                 ((HasChartDataSource) item).setChartDataSource(null);
             }
         }
         return updated;
-    }
+    }*/
 
-    private boolean isEntityNotExists(EntityContext entityContext, String source) {
-        DataSourceUtil.DataSourceContext dsContext =
-                DataSourceUtil.getSource(entityContext, source);
+  /*  private boolean isEntityNotExists(EntityContext entityContext, String source) {
+        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, source);
         return dsContext.getSource() == null;
-    }
+    }*/
 
     @UIField(order = 2)
     @UIFieldGroup("Update")
@@ -146,7 +127,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     @UIField(order = 21, isRevert = true)
     @UIFieldGroup("UI")
-    @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldColorPicker
     public String getBackground() {
         return getJsonData("bg", "transparent");
     }

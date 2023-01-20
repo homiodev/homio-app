@@ -81,7 +81,7 @@
 
     </Appenders>
     <Loggers>
-        <Logger name="org.touchhome.bundle.zigbee" additivity="false" level="info">
+        <Logger name="org.touchhome.bundle.z2m" additivity="false" level="info">
             <AppenderRef ref="zigBeeLog"/>
             <AppenderRef ref="appLog"/>
             <AppenderRef ref="Console"/>

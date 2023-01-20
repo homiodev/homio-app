@@ -9,10 +9,9 @@ import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasTextConverter;
-import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
+import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
 import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
@@ -25,7 +24,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 @Entity
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         implements HasSingleValueDataSource,
-                HasTimePeriod,
+    HasChartTimePeriod,
                 HasIcon,
                 HasValueConverter,
                 HasTextConverter,
@@ -209,25 +208,20 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     @UIField(order = 100, label = "duration_aggr")
     @UIFieldGroup("Value")
     @UIEditReloadWidget
-    public int getMinutesToShow() {
-        return HasTimePeriod.super.getMinutesToShow();
+    public int getChartMinutesToShow() {
+        return HasChartTimePeriod.super.getChartMinutesToShow();
     }
 
     @Override
     @JsonIgnore
     @UIFieldIgnore
-    public int getPointsPerHour() {
+    public int getChartPointsPerHour() {
         return 0;
     }
 
     @Override
     public String getImage() {
         return "fas fa-tachometer-alt";
-    }
-
-    @Override
-    public boolean updateRelations(EntityContext entityContext) {
-        return invalidateWrongEntity(entityContext, this);
     }
 
     @Override

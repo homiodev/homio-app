@@ -5,6 +5,7 @@ import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 
 @Entity
@@ -39,6 +40,12 @@ public class WidgetSliderEntity
     @Override
     public String getImage() {
         return "fas fa-sliders-h";
+    }
+
+    @Override
+    @UIFieldColorPicker(allowThreshold = true)
+    public String getBackground() {
+        return super.getBackground();
     }
 
     @Override

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
+import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
@@ -29,7 +29,7 @@ public final class EvaluateDatesAndValues {
 
     public static <T extends HasDynamicParameterFields & HasChartDataSource>
             List<Date> calculateDates(
-                    HasTimePeriod.TimePeriod timePeriod,
+                    HasChartTimePeriod.TimePeriod timePeriod,
                     List<TimeSeriesValues<T>> timeSeriesValues) {
         // get dates split by algorithm
         List<Date> dates = evaluateDates(timePeriod, timeSeriesValues);
@@ -56,7 +56,7 @@ public final class EvaluateDatesAndValues {
     }
 
     private static <T extends HasChartDataSource> List<Date> evaluateDates(
-            HasTimePeriod.TimePeriod timePeriod, List<TimeSeriesValues<T>> timeSeriesValues) {
+            HasChartTimePeriod.TimePeriod timePeriod, List<TimeSeriesValues<T>> timeSeriesValues) {
         List<Date> dates = timePeriod.evaluateDateRange();
         if (dates == null) {
             // TODO: currently not invokes

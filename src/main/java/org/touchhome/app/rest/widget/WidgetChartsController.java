@@ -86,8 +86,7 @@ public class WidgetChartsController {
     @PostMapping("/bartime/series")
     public TimeSeriesChartData<ChartDataset> getBartimeSeries(
         @Valid @RequestBody WidgetDataRequest request) {
-        WidgetBarTimeChartEntity entity =
-            request.getEntity(entityContext, objectMapper, WidgetBarTimeChartEntity.class);
+        WidgetBarTimeChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetBarTimeChartEntity.class);
 
         return timeSeriesUtil.buildTimeSeriesFullData(
             entity.getEntityID(),

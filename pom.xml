@@ -5,10 +5,6 @@
     <finalName>${project.artifactId}</finalName>
     <plugins>
       <plugin>
-        <artifactId>git-code-format-maven-plugin</artifactId>
-        <groupId>com.cosium.code</groupId>
-      </plugin>
-      <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <release>11</release>
@@ -401,14 +397,7 @@
     </dependency>
 
     <dependency>
-      <artifactId>touchhome-bundle-zigbee</artifactId>
-      <groupId>org.touchhome.bundle</groupId>
-      <scope>compile</scope>
-      <version>${touchhome-bundle.version}</version>
-    </dependency>
-
-    <dependency>
-      <artifactId>touchhome-bundle-xaomi</artifactId>
+      <artifactId>touchhome-bundle-z2m</artifactId>
       <groupId>org.touchhome.bundle</groupId>
       <scope>compile</scope>
       <version>${touchhome-bundle.version}</version>

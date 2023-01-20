@@ -2,7 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIFieldJSONLine;
-import org.touchhome.app.model.entity.widget.impl.HasTimePeriod;
+import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.HasAxis;
 import org.touchhome.app.model.entity.widget.impl.chart.HasHorizontalLine;
@@ -13,7 +13,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 @Entity
 public class WidgetBarTimeChartEntity
         extends ChartBaseEntity<WidgetBarTimeChartEntity, WidgetBarTimeChartSeriesEntity>
-        implements HasTimePeriod, HasMinMaxChartValue, HasHorizontalLine, HasAxis {
+        implements HasChartTimePeriod, HasMinMaxChartValue, HasHorizontalLine, HasAxis {
 
     public static final String PREFIX = "wgtbtc_";
 

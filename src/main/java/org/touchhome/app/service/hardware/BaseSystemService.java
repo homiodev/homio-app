@@ -9,14 +9,14 @@ import org.json.JSONObject;
 import org.touchhome.app.manager.common.EntityContextStorage;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
-import org.touchhome.bundle.api.entity.widget.ChartRequest;
+import org.touchhome.bundle.api.entity.widget.PeriodRequest;
 import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 
 @RequiredArgsConstructor
 public abstract class BaseSystemService
-        implements HasGetStatusValue, HasAggregateValueFromSeries, HasTimeValueSeries {
+    implements HasGetStatusValue, HasAggregateValueFromSeries, HasTimeValueSeries {
 
     private final String aggregateField;
     private final String entityID;
@@ -26,32 +26,21 @@ public abstract class BaseSystemService
 
     @Override
     public void addUpdateValueListener(
-            EntityContext entityContext,
-            String key,
-            JSONObject dynamicParameters,
-            Consumer<Object> listener) {
+        EntityContext entityContext,
+        String key,
+        JSONObject dynamicParameters,
+        Consumer<Object> listener) {
         entityContext.event().addEventListener("cpu", key, listener);
     }
 
     @Override
-    public @Nullable Object getAggregateValueFromSeries(
-            @NotNull ChartRequest request,
-            @NotNull AggregationType aggregationType,
-            boolean exactNumber) {
-        return EntityContextStorage.cpuStorage.aggregate(
-                request.getFromTime(),
-                request.getToTime(),
-                null,
-                null,
-                aggregationType,
-                false,
-                aggregateField);
+    public @Nullable Object getAggregateValueFromSeries(@NotNull PeriodRequest request, @NotNull AggregationType aggregationType, boolean exactNumber) {
+        return EntityContextStorage.cpuStorage.aggregate(request.getFromTime(), request.getToTime(), null, null, aggregationType, false, aggregateField);
     }
 
     @Override
-    public @NotNull List<Object[]> getTimeValueSeries(@NotNull ChartRequest request) {
-        return EntityContextStorage.cpuStorage.getTimeSeries(
-                request.getFromTime(), request.getToTime(), null, null, aggregateField);
+    public @NotNull List<Object[]> getTimeValueSeries(@NotNull PeriodRequest request) {
+        return EntityContextStorage.cpuStorage.getTimeSeries(request.getFromTime(), request.getToTime(), null, null, aggregateField);
     }
 
     @Override
@@ -72,5 +61,11 @@ public abstract class BaseSystemService
     @Override
     public String getTimeValueSeriesDescription() {
         return timeSeriesDesc;
+    }
+
+    @Override
+    public String getStatusValueRepresentation(EntityContext entityContext) {
+        Object value = getStatusValue(null);
+        return value == null ? null : value.toString();
     }
 }

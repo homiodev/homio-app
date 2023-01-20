@@ -22,8 +22,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.UIHideEntityIfFieldNotNull;
-import org.touchhome.bundle.api.EntityContextVar;
+import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.converter.JSONConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.HasJsonData;
@@ -169,10 +170,11 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
             }
         }
         if (workspaceVariables != null) {
+            EntityContext entityContext = getEntityContext();
             List<WorkspaceVariable> sortedVariables = new ArrayList<>(workspaceVariables);
             sortedVariables.sort(Comparator.comparing(WorkspaceVariable::getName));
             for (WorkspaceVariable workspaceVariable : sortedVariables) {
-                list.add(new WorkspaceVariableEntity(workspaceVariable));
+                list.add(new WorkspaceVariableEntity(workspaceVariable, (EntityContextImpl) entityContext));
             }
         }
         return list;
@@ -234,7 +236,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         @UIField(order = 20, label = "format")
         @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
         @UIFieldInlineEntityWidth(12)
-        public EntityContextVar.VariableType restriction;
+        public String restriction;
 
         @UIField(order = 30, inlineEdit = true)
         @UIFieldInlineEntityWidth(12)
@@ -255,16 +257,25 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
             this.color = childrenGroup.getIconColor();
         }
 
-        public WorkspaceVariableEntity(WorkspaceVariable variable) {
+        public WorkspaceVariableEntity(WorkspaceVariable variable, EntityContextImpl entityContext) {
             this.entityID = variable.getEntityID();
             String description = isEmpty(variable.getDescription()) ? "" : format("<span>%s</span>", variable.getDescription());
             String preVarNamePart = isEmpty(variable.getColor()) ? "" : format(" style=\"color:%s;\"", variable.getColor());
-            this.name = format("<div class=\"inline-2row_d\"><div%s><span>[%s]</span>%s</div>%s</div>",
-                preVarNamePart, variable.isReadOnly() ? "R" : "W", variable.getName(), description);
-            this.restriction = variable.getRestriction();
+            int listenerCount = entityContext.event().getEntityUpdateListeners().getCount(variable.getEntityID());
+            String meta = variable.isReadOnly() ? "" : format("<i class=\"fas fa-%s\"></i>",
+                entityContext.var().isLinked(variable.getVariableId()) ? "link" : "link-slash");
+
+            this.name = format("<div class=\"inline-2row_d\"><div%s>%s<div class=\"info\">%s<span>(%s)</span></div></div>%s</div>",
+                preVarNamePart, variable.getName(), meta, listenerCount, description);
+            this.restriction = variable.getRestriction().name().toLowerCase();
             this.quota = variable.getQuota();
             this.usedQuota = variable.getUsedQuota();
             this.nameTitle = variable.getName();
         }
+    }
+
+    @Override
+    public String toString() {
+        return "GroupVariable: " + getTitle();
     }
 }

@@ -1,6 +1,9 @@
 package org.touchhome.app.manager.var;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Date;
@@ -29,7 +32,7 @@ import org.touchhome.bundle.api.converter.JSONConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
-import org.touchhome.bundle.api.entity.widget.ChartRequest;
+import org.touchhome.bundle.api.entity.widget.PeriodRequest;
 import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
@@ -122,17 +125,28 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
 
     private String color;
 
+    private String unit;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private WorkspaceGroup workspaceGroup;
 
     @Getter
-    @Column(length = 100)
+    @Column(length = 10_000)
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
 
     @Override
     public String getEntityPrefix() {
         return PREFIX;
+    }
+
+    @Override
+    public String getTitle() {
+        String title = super.getTitle();
+        if (isNotEmpty(unit)) {
+            return format("%s %s", title, unit);
+        }
+        return title;
     }
 
     @Override
@@ -167,7 +181,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }
 
     @Override
-    public @Nullable Object getAggregateValueFromSeries(@NotNull ChartRequest request, @NotNull AggregationType aggregationType, boolean exactNumber) {
+    public @Nullable Object getAggregateValueFromSeries(@NotNull PeriodRequest request, @NotNull AggregationType aggregationType, boolean exactNumber) {
         return ((EntityContextVarImpl) request.getEntityContext().var())
             .aggregate(variableId, request.getFromTime(), request.getToTime(), aggregationType, exactNumber);
     }
@@ -230,7 +244,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }
 
     @Override
-    public List<Object[]> getTimeValueSeries(ChartRequest request) {
+    public List<Object[]> getTimeValueSeries(PeriodRequest request) {
         return ((EntityContextVarImpl) request.getEntityContext().var()).getTimeSeries(variableId, request.getFromTime(), request.getToTime());
     }
 
@@ -241,17 +255,24 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
 
     @Override
     public void setStatusValue(SetStatusValueRequest request) {
-        request.getEntityContext().var().set(variableId, request.getValue());
+        request.getEntityContext().var().set(variableId, request.getValue(), ignore -> {});
+    }
+
+    @Override
+    public String getStatusValueRepresentation(EntityContext entityContext) {
+        Object value = entityContext.var().get(variableId);
+        return isEmpty(unit) ? value == null ? null : value.toString() : format("%s <small>%s</small>", value == null ? "-" : value, unit);
     }
 
     public WorkspaceVariable(@NotNull String variableId, @NotNull String variableName, @NotNull WorkspaceGroup workspaceGroup,
-        @NotNull VariableType variableType, @Nullable String description, @Nullable String color, boolean readOnly) {
+        @NotNull VariableType variableType, @Nullable String description, @Nullable String color, boolean readOnly, @Nullable String unit) {
         this.variableId = variableId;
         this.readOnly = readOnly;
         this.workspaceGroup = workspaceGroup;
         this.restriction = variableType;
         this.color = color;
         this.description = description;
+        this.unit = unit;
         this.setName(variableName);
         this.setEntityID(variableId);
     }
@@ -259,5 +280,10 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     @Override
     public boolean isAbleToSetValue() {
         return !readOnly;
+    }
+
+    @Override
+    public String toString() {
+        return "Variable: " + getTitle();
     }
 }

@@ -260,14 +260,6 @@ public class WidgetController {
                                                       .filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId))
                                                       .collect(Collectors.toList());
 
-        boolean updated = false;
-        for (WidgetBaseEntity<?> widget : widgets) {
-            updated |= widget.updateRelations(entityContext);
-        }
-        if (updated) {
-            widgets = entityContext.findAll(WidgetBaseEntity.class);
-        }
-
         List<WidgetEntity> result = new ArrayList<>();
         for (WidgetBaseEntity<?> widget : widgets) {
             updateWidgetBeforeReturnToUI(widget);
