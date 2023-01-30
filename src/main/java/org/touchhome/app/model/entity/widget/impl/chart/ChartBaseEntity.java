@@ -4,6 +4,7 @@ import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetGroup;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
@@ -11,7 +12,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 @Entity
 public abstract class ChartBaseEntity<
                 T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
-        extends WidgetBaseEntityAndSeries<T, S> implements HasLegend {
+        extends WidgetBaseEntityAndSeries<T, S> implements HasLegend, HasSourceServerUpdates {
 
     @Override
     public WidgetGroup getGroup() {

@@ -8,8 +8,8 @@ import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
 public class WidgetPieChartEntity
-        extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity>
-        implements HasChartTimePeriod {
+    extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity>
+    implements HasChartTimePeriod {
 
     public static final String PREFIX = "wgtpc_";
 

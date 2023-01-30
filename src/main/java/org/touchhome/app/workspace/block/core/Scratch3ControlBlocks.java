@@ -52,30 +52,30 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         if (workspaceBlock.hasChild()) {
             WorkspaceBlock child = workspaceBlock.getChild();
             String cron =
-                    workspaceBlock.getInputString("SEC")
-                            + " "
-                            + workspaceBlock.getInputString("MIN")
-                            + " "
-                            + workspaceBlock.getInputString("HOUR")
-                            + " "
-                            + workspaceBlock.getInputString("DAY")
-                            + " "
-                            + workspaceBlock.getInputString("MONTH")
-                            + " "
-                            + workspaceBlock.getInputString("DOW");
+                workspaceBlock.getInputString("SEC")
+                    + " "
+                    + workspaceBlock.getInputString("MIN")
+                    + " "
+                    + workspaceBlock.getInputString("HOUR")
+                    + " "
+                    + workspaceBlock.getInputString("DAY")
+                    + " "
+                    + workspaceBlock.getInputString("MONTH")
+                    + " "
+                    + workspaceBlock.getInputString("DOW");
             AtomicInteger index = new AtomicInteger();
             entityContext
-                    .bgp()
-                    .builder("workspace-schedule-cron-" + workspaceBlock.getId())
-                    .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
-                    .interval(cron)
-                    .execute(
-                            () -> {
-                                ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
-                                workspaceBlock.setValue(
-                                        "INDEX", new DecimalType(index.getAndIncrement()));
-                                child.handle();
-                            });
+                .bgp()
+                .builder("workspace-schedule-cron-" + workspaceBlock.getId())
+                .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
+                .interval(cron)
+                .execute(
+                    () -> {
+                        ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
+                        workspaceBlock.setValue(
+                            "INDEX", new DecimalType(index.getAndIncrement()));
+                        child.handle();
+                    });
         }
     }
 
@@ -101,16 +101,9 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         // cal.get(Calendar.MINUTE));
 
         LocalDateTime nowDateTime = LocalDateTime.now();
-        LocalDateTime nextFromRun =
-                nowDateTime
-                        .withHour(from.toHoursPart())
-                        .withMinute(from.toMinutesPart())
-                        .withSecond(0);
-        LocalDateTime nextToRun =
-                nowDateTime.withHour(to.toHoursPart()).withMinute(to.toMinutesPart()).withSecond(0);
-        int toDiffFrom =
-                to.compareTo(
-                        from); // 1 = same day. -1 = to less than from and mean to 'in next day'
+        LocalDateTime nextFromRun = nowDateTime.withHour(from.toHoursPart()).withMinute(from.toMinutesPart()).withSecond(0);
+        LocalDateTime nextToRun = nowDateTime.withHour(to.toHoursPart()).withMinute(to.toMinutesPart()).withSecond(0);
+        int toDiffFrom = to.compareTo(from); // 1 = same day. -1 = to less than from and mean to 'in next day'
 
         int diffWithTo = nowDateTime.compareTo(nextToRun);
 
@@ -129,46 +122,44 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
         Duration duration = Duration.between(nowDateTime, nextFromRun);
         entityContext
-                .bgp()
-                .builder("when-time-in-range" + workspaceBlock.getId())
-                .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
-                .delay(duration)
-                .interval(Duration.ofDays(1))
-                .execute(
-                        () -> {
-                            runWhenTimeInRange(workspaceBlock, timeToExecute);
-                        });
+            .bgp()
+            .builder("when-time-in-range" + workspaceBlock.getId())
+            .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
+            .delay(duration)
+            .interval(Duration.ofDays(1))
+            .execute(
+                () -> {
+                    runWhenTimeInRange(workspaceBlock, timeToExecute);
+                });
     }
 
     private void runWhenTimeInRange(WorkspaceBlock workspaceBlock, Duration timeToExecute) {
         workspaceBlock.logInfo("Fire when-time-execution. Duration: {}", timeToExecute);
         AtomicInteger index = new AtomicInteger(0);
         ThreadContext<Void> executeContext =
-                entityContext
-                        .bgp()
-                        .builder("when-time-execution" + workspaceBlock.getId())
-                        .interval(Duration.ofMillis(100))
-                        .execute(
-                                () -> {
-                                    ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
-                                    workspaceBlock.setValue(
-                                            "INDEX", new DecimalType(index.getAndIncrement()));
-                                    workspaceBlock.getChild().handle();
-                                });
+            entityContext
+                .bgp()
+                .builder("when-time-execution" + workspaceBlock.getId())
+                .interval(Duration.ofMillis(100))
+                .execute(
+                    () -> {
+                        ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
+                        workspaceBlock.setValue("INDEX", new DecimalType(index.getAndIncrement()));
+                        workspaceBlock.getChild().handle();
+                    });
 
         ThreadContext<Void> threadKiller =
-                entityContext
-                        .bgp()
-                        .builder("when-time-execution-killer-" + workspaceBlock.getId())
-                        .delay(timeToExecute)
-                        .execute(
-                                () -> {
-                                    workspaceBlock.logInfo(
-                                            "Cancelling thread: {}", executeContext.getName());
-                                    executeContext.cancel();
-                                    // reset active to 'when-time-in-range' thread
-                                    ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
-                                });
+            entityContext
+                .bgp()
+                .builder("when-time-execution-killer-" + workspaceBlock.getId())
+                .delay(timeToExecute)
+                .execute(
+                    () -> {
+                        workspaceBlock.logInfo("Cancelling thread: {}", executeContext.getName());
+                        executeContext.cancel();
+                        // reset active to 'when-time-in-range' thread
+                        ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
+                    });
         workspaceBlock.onRelease(executeContext::cancel);
         workspaceBlock.onRelease(threadKiller::cancel);
     }
@@ -188,79 +179,61 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     private Duration getTimeMilliseconds(WorkspaceBlock workspaceBlock, String key) {
         String[] items = workspaceBlock.getField(key).split(":");
-        return Duration.ofMinutes(
-                HOURS.toMinutes(Integer.parseInt(items[0])) + Integer.parseInt(items[1]));
+        return Duration.ofMinutes(HOURS.toMinutes(Integer.parseInt(items[0])) + Integer.parseInt(items[1]));
     }
 
     private void whenValueChangedHandler(WorkspaceBlock workspaceBlock) {
         AtomicReference<Object> ref = new AtomicReference<>();
-        lockForEvent(
-                workspaceBlock,
-                VALUE,
-                () -> {
-                    Object value = workspaceBlock.getInput(VALUE, true);
-                    if (!Objects.equals(ref.get(), value)) {
-                        ref.set(value);
-                        return true;
-                    }
-                    return false;
-                });
+        lockForEvent(workspaceBlock, VALUE, () -> {
+            Object value = workspaceBlock.getInput(VALUE, true);
+            if (!Objects.equals(ref.get(), value)) {
+                ref.set(value);
+                return true;
+            }
+            return false;
+        });
     }
 
     private void whenConditionChangedHandler(WorkspaceBlock workspaceBlock) {
         AtomicReference<Boolean> ref = new AtomicReference<>();
-        lockForEvent(
-                workspaceBlock,
-                CONDITION,
-                () -> {
-                    if (!Objects.equals(ref.get(), workspaceBlock.getInputBoolean(CONDITION))) {
-                        ref.set(!ref.get());
-                        return true;
-                    }
-                    return false;
-                });
+        lockForEvent(workspaceBlock, CONDITION, () -> {
+            if (!Objects.equals(ref.get(), workspaceBlock.getInputBoolean(CONDITION))) {
+                ref.set(!ref.get());
+                return true;
+            }
+            return false;
+        });
     }
 
-    private void lockForEvent(
-            WorkspaceBlock workspaceBlock, String inputName, Supplier<Boolean> supplier) {
+    private void lockForEvent(WorkspaceBlock workspaceBlock, String inputName, Supplier<Boolean> supplier) {
         workspaceBlock.handleChildOptional(
-                child -> {
-                    if (workspaceBlock.hasInput(inputName)) {
-                        BroadcastLock lock =
-                                workspaceBlock
-                                        .getBroadcastLockManager()
-                                        .listenEvent(workspaceBlock, supplier);
-                        workspaceBlock.subscribeToLock(lock, child::handle);
-                    }
-                });
+            child -> {
+                if (workspaceBlock.hasInput(inputName)) {
+                    BroadcastLock lock = workspaceBlock.getBroadcastLockManager().listenEvent(workspaceBlock, supplier);
+                    workspaceBlock.subscribeToLock(lock, child::handle);
+                }
+            });
     }
 
     private void repeatUntilHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleChildOptional(
-                child -> {
-                    if (workspaceBlock.hasInput(CONDITION)) {
-                        buildSchedule(
-                                "until",
-                                workspaceBlock,
-                                0,
-                                () -> {
-                                    if (workspaceBlock.getInputBoolean(CONDITION)) {
-                                        child.handle();
-                                    } else {
-                                        throw new CancellationException();
-                                    }
-                                });
-                    }
-                });
+            child -> {
+                if (workspaceBlock.hasInput(CONDITION)) {
+                    buildSchedule("until", workspaceBlock, 0,
+                        () -> {
+                            if (workspaceBlock.getInputBoolean(CONDITION)) {
+                                child.handle();
+                            } else {
+                                throw new CancellationException();
+                            }
+                        });
+                }
+            });
     }
 
     @SneakyThrows
     private void waitUntilHandler(WorkspaceBlock workspaceBlock) {
-        BroadcastLock lock =
-                workspaceBlock
-                        .getBroadcastLockManager()
-                        .listenEvent(
-                                workspaceBlock, () -> workspaceBlock.getInputBoolean(CONDITION));
+        BroadcastLock lock = workspaceBlock.getBroadcastLockManager().listenEvent(workspaceBlock, () -> workspaceBlock.getInputBoolean(CONDITION));
         lock.await(workspaceBlock);
     }
 
@@ -276,23 +249,23 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
         // set minimum as 100ms
         Duration stopInDuration = Duration.ofMillis(Math.max(100, timeUnit.toMillis(timeout)));
         entityContext
-                .bgp()
-                .builder("stop-in-timeout" + workspaceBlock.getId())
-                .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
-                .interval(stopInDuration)
-                .execute(
-                        () -> {
-                            if (thread.isAlive()) {
-                                ((WorkspaceBlockImpl) workspaceBlock).release();
-                                thread.interrupt();
-                            }
-                        });
+            .bgp()
+            .builder("stop-in-timeout" + workspaceBlock.getId())
+            .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
+            .interval(stopInDuration)
+            .execute(
+                () -> {
+                    if (thread.isAlive()) {
+                        ((WorkspaceBlockImpl) workspaceBlock).release();
+                        thread.interrupt();
+                    }
+                });
     }
 
     private void ifElseHandler(WorkspaceBlock workspaceBlock) {
         if (workspaceBlock.hasChild()
-                && workspaceBlock.hasInput("SUBSTACK2")
-                && workspaceBlock.hasInput(CONDITION)) {
+            && workspaceBlock.hasInput("SUBSTACK2")
+            && workspaceBlock.hasInput(CONDITION)) {
             if (workspaceBlock.getInputBoolean(CONDITION)) {
                 workspaceBlock.getChild().handle();
             } else {
@@ -303,62 +276,52 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
 
     private void ifHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleChildOptional(
-                child -> {
-                    if (workspaceBlock.hasInput(CONDITION)
-                            && workspaceBlock.getInputBoolean(CONDITION)) {
-                        child.handle();
-                    }
-                });
+            child -> {
+                if (workspaceBlock.hasInput(CONDITION)
+                    && workspaceBlock.getInputBoolean(CONDITION)) {
+                    child.handle();
+                }
+            });
     }
 
     private void repeatHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleChildOptional(
-                child -> {
-                    AtomicInteger times =
-                            new AtomicInteger(workspaceBlock.getInputInteger("TIMES"));
-                    if (times.get() > 0) {
-                        buildSchedule(
-                                "ntimes",
-                                workspaceBlock,
-                                0,
-                                () -> {
-                                    child.handle();
-                                    if (times.decrementAndGet() <= 0) {
-                                        throw new CancellationException();
-                                    }
-                                });
-                    }
-                });
+            child -> {
+                AtomicInteger times = new AtomicInteger(workspaceBlock.getInputInteger("TIMES"));
+                if (times.get() > 0) {
+                    buildSchedule("ntimes", workspaceBlock, 0, () -> {
+                        child.handle();
+                        if (times.decrementAndGet() <= 0) {
+                            throw new CancellationException();
+                        }
+                    });
+                }
+            });
     }
 
-    /** */
-    private void buildSchedule(
-            String name,
-            WorkspaceBlock workspaceBlock,
-            long timeout,
-            ThrowingRunnable<Exception> handler) {
+    /**
+     *
+     */
+    private void buildSchedule(String name, WorkspaceBlock workspaceBlock, long timeout, ThrowingRunnable<Exception> handler) {
         AtomicInteger index = new AtomicInteger(0);
         entityContext
-                .bgp()
-                .builder("workspace-schedule-" + name + "-" + workspaceBlock.getId())
-                .interval(Duration.ofMillis(Math.max(100, (int) timeout)))
-                .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
-                .execute(
-                        () -> {
-                            ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
-                            workspaceBlock.setValue(
-                                    "INDEX", new DecimalType(index.getAndIncrement()));
-                            handler.run();
-                        });
+            .bgp()
+            .builder("workspace-schedule-" + name + "-" + workspaceBlock.getId())
+            .interval(Duration.ofMillis(Math.max(100, (int) timeout)))
+            .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
+            .execute(
+                () -> {
+                    ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
+                    workspaceBlock.setValue("INDEX", new DecimalType(index.getAndIncrement()));
+                    handler.run();
+                });
     }
 
     @SneakyThrows
     private void waitHandler(WorkspaceBlock workspaceBlock) {
         int duration = workspaceBlock.getInputInteger("DURATION");
         if (duration < 1 || duration > 3600) {
-            throw new ServerException(
-                    "Unable to sleep current block, because duration is more than 1 hour. Actual value is: "
-                            + duration);
+            throw new ServerException("Unable to sleep current block, because duration is more than 1 hour. Actual value is: " + duration);
         }
         TimeUnit.SECONDS.sleep(duration);
     }
@@ -366,8 +329,8 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
     @SneakyThrows
     private void foreverHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleChildOptional(
-                child -> {
-                    buildSchedule("forever", workspaceBlock, 0, child::handle);
-                });
+            child -> {
+                buildSchedule("forever", workspaceBlock, 0, child::handle);
+            });
     }
 }

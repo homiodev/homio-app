@@ -21,6 +21,7 @@ import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
 import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.PeriodRequest;
@@ -96,7 +97,7 @@ public class TimeSeriesUtil {
             });
     }
 
-    public <T extends WidgetBaseEntity<T>, DS extends HasSingleValueDataSource & HasEntityIdentifier, R> R
+    public <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, DS extends HasSingleValueDataSource & HasEntityIdentifier, R> R
     getSingleValue(@NotNull T entity, @NotNull DS dataSource, @NotNull Function<Object, R> resultConverter) {
         String seriesEntityId = dataSource.getEntityID();
         JSONObject dynamicParameters = dataSource.getValueDynamicParameterFields();
@@ -130,7 +131,7 @@ public class TimeSeriesUtil {
     }
 
     @Nullable
-    private <T extends WidgetBaseEntity<T>, R> Object getValueFromHasAggregationValue(@NotNull T entity, @NotNull Function<Object, R> resultConverter,
+    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromHasAggregationValue(@NotNull T entity, @NotNull Function<Object, R> resultConverter,
         String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID,
         AggregationType aggregationType, @Nullable Long diffMilliseconds) {
         Object value;
@@ -145,7 +146,7 @@ public class TimeSeriesUtil {
         return value;
     }
 
-    private <T extends WidgetBaseEntity<T>, R> Object getValueFromGetStatusValue(@NotNull T entity, @NotNull Function<Object, R> resultConverter,
+    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromGetStatusValue(@NotNull T entity, @NotNull Function<Object, R> resultConverter,
         String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID) {
 
         Object value;

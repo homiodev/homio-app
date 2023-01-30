@@ -99,7 +99,8 @@ public class WorkspaceController {
         JSONObject groupVariables = new JSONObject();
         result.put("group_variables", groupVariables);
         for (WorkspaceGroup workspaceGroup : groups.values()) {
-            groupVariables.put(workspaceGroup.getGroupId(), new JSONArray().put(workspaceGroup.getName()).put(new JSONArray()).put(new JSONArray()));
+            groupVariables.put(workspaceGroup.getGroupId(),
+                new JSONArray().put(workspaceGroup.getName()).put(new JSONArray()).put(new JSONArray()));
 
             for (WorkspaceVariable variable : workspaceGroup.getWorkspaceVariables()) {
                 JSONArray variables = groupVariables.getJSONArray(variable.getWorkspaceGroup().getGroupId()).getJSONArray(2);

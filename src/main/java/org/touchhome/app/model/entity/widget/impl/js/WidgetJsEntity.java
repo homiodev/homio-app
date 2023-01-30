@@ -1,19 +1,20 @@
 package org.touchhome.app.model.entity.widget.impl.js;
 
-import javax.persistence.Entity;
 import javax.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
+import org.jetbrains.annotations.NotNull;
+import org.touchhome.bundle.api.entity.HasJsonData;
+import org.touchhome.bundle.api.model.JSON;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 
-@Entity
+// @Entity
 @Getter
 @Setter
 @Accessors(chain = true)
-public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
+public class WidgetJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJsEntity>*/ implements HasJsonData {
 
     public static final String PREFIX = "wgtjs_";
 
@@ -52,7 +53,7 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
         return this;
     }
 
-    @Override
+   /* @Override
     public String getImage() {
         return "fab fa-js-square";
     }
@@ -72,5 +73,10 @@ public class WidgetJsEntity extends WidgetBaseEntity<WidgetJsEntity> {
         super.beforePersist();
         setJavaScriptParameters("{\"text\":\"Hello world!\"}");
         setJavaScript("function run() {\n\treturn params.get('text');\n}");
+    }*/
+
+    @Override
+    public @NotNull JSON getJsonData() {
+        return null;
     }
 }

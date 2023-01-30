@@ -1,5 +1,6 @@
 package org.touchhome.app.model.entity.widget;
 
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -11,6 +12,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.tuple.Pair;
+import org.touchhome.app.setting.dashboard.DashboardHorizontalBlockCountSetting;
+import org.touchhome.app.setting.dashboard.DashboardVerticalBlockCountSetting;
 import org.touchhome.bundle.api.converter.JSONConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.HasJsonData;
@@ -103,28 +107,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         return dsContext.getSource() == null;
     }*/
 
-    @UIField(order = 2)
-    @UIFieldGroup("Update")
-    public Boolean getListenSourceUpdates() {
-        return getJsonData("lsu", Boolean.TRUE);
-    }
-
-    public T setListenSourceUpdates(Boolean value) {
-        setJsonData("lsu", value);
-        return (T) this;
-    }
-
-    @UIField(order = 10)
-    @UIFieldGroup("Update")
-    public Boolean getShowLastUpdateTimer() {
-        return getJsonData("slut", Boolean.FALSE);
-    }
-
-    public T setShowLastUpdateTimer(Boolean value) {
-        setJsonData("slut", value);
-        return (T) this;
-    }
-
     @UIField(order = 21, isRevert = true)
     @UIFieldGroup("UI")
     @UIFieldColorPicker
@@ -134,5 +116,70 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     public void setBackground(String value) {
         setJsonData("bg", value);
+    }
+
+    @Override
+    protected void beforePersist() {
+        super.beforePersist();
+        this.findSuitablePosition();
+    }
+
+    /**
+     * Find free space in matrix for new item
+     */
+    protected void findSuitablePosition() {
+        List<WidgetBaseEntity> widgets = getEntityContext().findAll(WidgetBaseEntity.class);
+        var hBlockCount = getEntityContext().setting().getValue(DashboardHorizontalBlockCountSetting.class);
+        var vBlockCount = getEntityContext().setting().getValue(DashboardVerticalBlockCountSetting.class);
+        boolean[][] matrix = new boolean[vBlockCount][hBlockCount];
+        for (int j = 0; j < vBlockCount; j++) {
+            matrix[j] = new boolean[hBlockCount];
+        }
+        initMatrix(widgets, matrix);
+        if (!isSatisfyPosition(matrix, getXb(), getYb(), getBw(), getBh(), hBlockCount, vBlockCount)) {
+            Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, getBw(), getBh(), hBlockCount, vBlockCount);
+            if (freePosition == null) {
+                throw new IllegalStateException("WIDGET.NO_FREE_POSITION");
+            }
+            setXb(freePosition.getKey());
+            setYb(freePosition.getValue());
+        }
+    }
+
+    /**
+     * Check if matrix has free slot for specific width/height and return first available position
+     */
+    private static Pair<Integer, Integer> findMatrixFreePosition(boolean[][] matrix, int bw, int bh, int hBlockCount, int vBlockCount) {
+        for (int j = 0; j < hBlockCount; j++) {
+            for (int i = 0; i < vBlockCount; i++) {
+                if (isSatisfyPosition(matrix, i, j, bw, bh, hBlockCount, vBlockCount)) {
+                    return Pair.of(i, j);
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean isSatisfyPosition(boolean[][] matrix, int xPos, int yPos, int width, int height, int hBlockCount, int vBlockCount) {
+        for (int j = xPos; j < xPos + width; j++) {
+            for (int i = yPos; i < yPos + height; i++) {
+                if (i >= vBlockCount || j >= hBlockCount || matrix[i][j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static void initMatrix(List<WidgetBaseEntity> widgets, boolean[][] matrix) {
+        for (WidgetBaseEntity model : widgets) {
+            if (model.getXbl() == null) {
+                for (int j = model.getXb(); j < model.getXb() + model.getBw(); j++) {
+                    for (int i = model.getYb(); i < model.getYb() + model.getBh(); i++) {
+                        matrix[i][j] = true;
+                    }
+                }
+            }
+        }
     }
 }

@@ -4,14 +4,15 @@ import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
+import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 
 @Entity
 public class WidgetSliderEntity
-        extends WidgetBaseEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity>
-        implements HasLayout {
+    extends WidgetBaseEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity>
+    implements HasLayout, HasSourceServerUpdates {
 
     public static final String PREFIX = "wgtsl_";
 
@@ -77,17 +78,13 @@ public class WidgetSliderEntity
     protected void beforePersist() {
         super.beforePersist();
         setLayout(
-                UIFieldLayout.LayoutBuilder.builder(15, 20, 50, 15)
-                        .addRow(
-                                rb ->
-                                        rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
-                                                .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                                                .addCol(
-                                                        "slider",
-                                                        UIFieldLayout.HorizontalAlign.center)
-                                                .addCol(
-                                                        "value",
-                                                        UIFieldLayout.HorizontalAlign.center))
-                        .build());
+            UIFieldLayout.LayoutBuilder
+                .builder(15, 20, 50, 15)
+                .addRow(rb ->
+                    rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
+                      .addCol("name", UIFieldLayout.HorizontalAlign.left)
+                      .addCol("slider", UIFieldLayout.HorizontalAlign.center)
+                      .addCol("value", UIFieldLayout.HorizontalAlign.center))
+                .build());
     }
 }

@@ -22,6 +22,9 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     private final String workspaceTabId;
     private final WorkspaceWarehouseContext workspaceWarehouse = new WorkspaceWarehouseContext();
 
+    /**
+     * Signal all lock with specified name and value
+     */
     @Override
     public void signalAll(String key, Object value) {
         if (workspaceWarehouse.broadcastListeners.containsKey(key)) {
@@ -29,13 +32,14 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
         }
     }
 
+    /**
+     * Create lock with unique key or get existed.
+     */
     @Override
-    public BroadcastLockImpl getOrCreateLock(
-            WorkspaceBlock workspaceBlock, String key, Object expectedValue) {
-        WorkspaceWarehouseContext listenerWorkspaceWarehouseContext = workspaceWarehouse;
+    public BroadcastLockImpl getOrCreateLock(WorkspaceBlock workspaceBlock, String key, Object expectedValue) {
         BroadcastLockImpl lock = new BroadcastLockImpl(key, expectedValue);
-        listenerWorkspaceWarehouseContext.broadcastListeners.putIfAbsent(key, new ArrayList<>());
-        listenerWorkspaceWarehouseContext.broadcastListeners.get(key).add(lock);
+        workspaceWarehouse.broadcastListeners.putIfAbsent(key, new ArrayList<>());
+        workspaceWarehouse.broadcastListeners.get(key).add(lock);
         ((WorkspaceBlockImpl) workspaceBlock).addLock(lock);
         return lock;
     }
@@ -54,26 +58,22 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     public BroadcastLock listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
         BroadcastLockImpl lock = getOrCreateLock(workspaceBlock);
         workspaceWarehouse.broadcastListenersMap.put(
-                workspaceBlock.getId(), Pair.of(lock, supplier));
+            workspaceBlock.getId(), Pair.of(lock, supplier));
 
         if (workspaceWarehouse.threadContext == null) {
             workspaceBlock
-                    .getEntityContext()
-                    .bgp()
-                    .builder("BroadcastListenEvent-" + workspaceTabId)
-                    .interval(Duration.ofMillis(1000))
-                    .tap(context -> workspaceWarehouse.threadContext = context)
-                    .execute(
-                            () -> {
-                                for (Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>>
-                                        item :
-                                                workspaceWarehouse.broadcastListenersMap
-                                                        .entrySet()) {
-                                    if (item.getValue().getSecond().get()) {
-                                        item.getValue().getFirst().signalAll();
-                                    }
-                                }
-                            });
+                .getEntityContext()
+                .bgp()
+                .builder("BroadcastListenEvent-" + workspaceTabId)
+                .interval(Duration.ofMillis(1000))
+                .tap(context -> workspaceWarehouse.threadContext = context)
+                .execute(() -> {
+                    for (Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item : workspaceWarehouse.broadcastListenersMap.entrySet()) {
+                        if (item.getValue().getSecond().get()) {
+                            item.getValue().getFirst().signalAll();
+                        }
+                    }
+                });
         }
 
         return lock;
@@ -81,7 +81,7 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
     public void release() {
         for (Pair<BroadcastLockImpl, Supplier<Boolean>> pair :
-                workspaceWarehouse.broadcastListenersMap.values()) {
+            workspaceWarehouse.broadcastListenersMap.values()) {
             pair.getFirst().release();
         }
         workspaceWarehouse.broadcastListenersMap.clear();
@@ -99,10 +99,8 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
     private static class WorkspaceWarehouseContext {
 
-        private final Map<String, List<BroadcastLockImpl>> broadcastListeners =
-                new ConcurrentHashMap<>();
-        private final Map<String, Pair<BroadcastLockImpl, Supplier<Boolean>>>
-                broadcastListenersMap = new ConcurrentHashMap<>();
+        private final Map<String, List<BroadcastLockImpl>> broadcastListeners = new ConcurrentHashMap<>();
+        private final Map<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> broadcastListenersMap = new ConcurrentHashMap<>();
         private ThreadContext<Object> threadContext;
     }
 }

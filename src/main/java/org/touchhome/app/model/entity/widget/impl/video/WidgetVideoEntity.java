@@ -4,7 +4,6 @@ import java.util.Set;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetGroup;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.validation.MaxItems;
 
 @Entity
@@ -35,9 +34,9 @@ public class WidgetVideoEntity
 
     @Override
     protected void beforePersist() {
-        super.beforePersist();
         setBh(3);
         setBw(3);
+        super.beforePersist();
     }
 
     @Override

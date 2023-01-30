@@ -275,7 +275,7 @@ public class WidgetController {
     }
 
     private void updateWidgetBeforeReturnToUI(WidgetBaseEntity<?> widget) {
-        if (widget instanceof WidgetJsEntity) {
+        /*TODO: fix:::if (widget instanceof WidgetJsEntity) {
             WidgetJsEntity jsEntity = (WidgetJsEntity) widget;
             try {
                 jsEntity.setJavaScriptErrorResponse(null);
@@ -288,7 +288,7 @@ public class WidgetController {
             } catch (Exception ex) {
                 jsEntity.setJavaScriptErrorResponse(CommonUtils.getErrorMessage(ex));
             }
-        }
+        }*/
     }
 
     @Secured(PRIVILEGED_USER_ROLE)
@@ -344,9 +344,9 @@ public class WidgetController {
 
         WidgetJsEntity widgetJsEntity = new WidgetJsEntity().setJavaScriptParameters(params).setJavaScriptParametersReadOnly(paramReadOnly).setJavaScript(js);
 
-        widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(bundle + ":" + template.getClass().getSimpleName());
+      //TODO: fix:::  widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(bundle + ":" + template.getClass().getSimpleName());
 
-        return entityContext.save(widgetJsEntity);
+        return null; // TODO: fix::::entityContext.save(widgetJsEntity);
     }
 
     @GetMapping("/tab")

@@ -6,6 +6,7 @@ import org.touchhome.app.model.entity.widget.UIFieldJSONLine;
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
+import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.touchhome.app.model.entity.widget.impl.chart.HasLineChartBehaviour;
@@ -24,7 +25,8 @@ public class WidgetDisplayEntity
     HasDynamicParameterFields,
     HasChartDataSource,
     HasHorizontalLine,
-    HasLayout {
+    HasLayout,
+    HasSourceServerUpdates {
 
     public static final String PREFIX = "wgtdp_";
 
@@ -100,16 +102,17 @@ public class WidgetDisplayEntity
     @Override
     protected void beforePersist() {
         super.beforePersist();
-        setLayout(UIFieldLayout.LayoutBuilder.builder(50, 50)
-                                             .addRow(rb -> rb
-                                                 .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                                                 .addCol("icon", UIFieldLayout.HorizontalAlign.right))
-                                             .addRow(rb -> rb
-                                                 .addCol("value", UIFieldLayout.HorizontalAlign.left)
-                                                 .addCol("none", UIFieldLayout.HorizontalAlign.center))
-                                             .addRow(rb -> rb
-                                                 .addCol("none", UIFieldLayout.HorizontalAlign.center)
-                                                 .addCol("none", UIFieldLayout.HorizontalAlign.center))
-                                             .build());
+        setLayout(UIFieldLayout.LayoutBuilder
+            .builder(50, 50)
+            .addRow(rb -> rb
+                .addCol("name", UIFieldLayout.HorizontalAlign.left)
+                .addCol("icon", UIFieldLayout.HorizontalAlign.right))
+            .addRow(rb -> rb
+                .addCol("value", UIFieldLayout.HorizontalAlign.left)
+                .addCol("none", UIFieldLayout.HorizontalAlign.center))
+            .addRow(rb -> rb
+                .addCol("none", UIFieldLayout.HorizontalAlign.center)
+                .addCol("none", UIFieldLayout.HorizontalAlign.center))
+            .build());
     }
 }

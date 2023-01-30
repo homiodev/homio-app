@@ -70,4 +70,10 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
         }
         return false;
     }
+
+    @Override
+    protected void beforePersist() {
+        setBw(2);
+        super.beforePersist();
+    }
 }

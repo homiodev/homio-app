@@ -5,11 +5,12 @@ import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.UIFieldMarkers;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
+import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.app.model.entity.widget.impl.HasTextConverter;
-import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
 import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
 import org.touchhome.bundle.api.ui.UI;
@@ -23,13 +24,14 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 @Entity
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
-        implements HasSingleValueDataSource,
+    implements HasSingleValueDataSource,
     HasChartTimePeriod,
-                HasIcon,
-                HasValueConverter,
-                HasTextConverter,
-                HasName,
-                HasValueTemplate {
+    HasIcon,
+    HasValueConverter,
+    HasTextConverter,
+    HasName,
+    HasValueTemplate,
+    HasSourceServerUpdates {
 
     public static final String PREFIX = "wgtgg_";
 

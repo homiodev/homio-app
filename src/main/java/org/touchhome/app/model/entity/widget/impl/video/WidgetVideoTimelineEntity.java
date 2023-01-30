@@ -66,9 +66,9 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
 
     @Override
     protected void beforePersist() {
-        super.beforePersist();
         setBh(4);
         setBw(3);
+        super.beforePersist();
     }
 
     @Override
@@ -82,7 +82,7 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
             for (OnvifCameraEntity entity :
-                    parameters.getEntityContext().findAll(OnvifCameraEntity.class)) {
+                parameters.getEntityContext().findAll(OnvifCameraEntity.class)) {
                 if (entity.getService().getBrandHandler() instanceof VideoPlaybackStorage) {
                     list.add(OptionModel.of(entity.getEntityID(), entity.getTitle()));
                 }

@@ -5,6 +5,7 @@ import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
+import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
@@ -12,7 +13,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 @Entity
 public class WidgetPushButtonEntity
     extends WidgetBaseEntityAndSeries<WidgetPushButtonEntity, WidgetPushButtonSeriesEntity>
-    implements HasLayout {
+    implements HasLayout, HasSourceServerUpdates {
 
     public static final String PREFIX = "wgtbn_";
 
@@ -58,8 +59,10 @@ public class WidgetPushButtonEntity
     @Override
     protected void beforePersist() {
         super.beforePersist();
-        setLayout(UIFieldLayout.LayoutBuilder.builder(30, 70).addRow(rb ->
-            rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
-              .addCol("name", UIFieldLayout.HorizontalAlign.center)).build());
+        setLayout(UIFieldLayout.LayoutBuilder
+            .builder(30, 70)
+            .addRow(rb ->
+                rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
+                  .addCol("name", UIFieldLayout.HorizontalAlign.center)).build());
     }
 }

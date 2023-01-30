@@ -10,7 +10,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import lombok.Getter;
 import lombok.Setter;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.validation.MaxItems;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -19,8 +18,8 @@ import org.touchhome.common.exception.ServerException;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class WidgetBaseEntityAndSeries<
-                T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
-        extends WidgetBaseEntity<T> {
+    T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
+    extends WidgetBaseEntity<T> {
 
     @Getter
     @Setter

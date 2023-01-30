@@ -233,7 +233,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             private Function<Runnable, ScheduledFuture<?>> scheduleHandler;
 
             @Override
-            public ThreadContext<T> execute(@NotNull ThrowingFunction<ThreadContext<T>, T, Exception> command) {
+            public ThreadContext<T> execute(@NotNull ThrowingFunction<ThreadContext<T>, T, Exception> command, boolean start) {
                 context.command = command;
                 if (scheduleHandler == null) {
                     scheduleHandler = runnable -> {
@@ -249,17 +249,24 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     };
                 }
 
-                createSchedule(context, scheduleHandler);
+                if (start) {
+                    createSchedule(context, scheduleHandler);
+                } else {
+                    context.postponeScheduleHandler = scheduleHandler;
+                    cancelThread(context.name);
+                    schedulers.put(context.name, context);
+
+                }
                 return context;
             }
 
             @Override
-            public ThreadContext<Void> execute(@NotNull ThrowingRunnable<Exception> command) {
+            public ThreadContext<Void> execute(@NotNull ThrowingRunnable<Exception> command, boolean start) {
                 context.command = arg -> {
                     command.run();
                     return null;
                 };
-                return (ThreadContext<Void>) execute(context.command);
+                return (ThreadContext<Void>) execute(context.command, start);
             }
 
             @Override
@@ -333,26 +340,26 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         } else {
             ScheduleBuilder<Void> scheduleBuilder = builder("file-watchdog" + file);
             final AtomicLong lastModified = new AtomicLong(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis());
-            fileWatchDog =
-                scheduleBuilder
-                    .delay(Duration.ofSeconds(10))
-                    .interval(Duration.ofSeconds(10))
-                    .execute(
-                        context -> {
-                            BasicFileAttributes attr = Files.readAttributes(file, BasicFileAttributes.class);
-                            if (attr.lastModifiedTime().toMillis() > lastModified.get()) {
-                                lastModified.set(attr.lastModifiedTime().toMillis());
-                                Map<String, ThrowingRunnable<Exception>> listeners = ((ThreadContextImpl) context).simpleWorkUnitListeners;
-                                for (ThrowingRunnable<Exception> runnable : listeners.values()) {
-                                    runnable.run();
-                                }
-                            }
-                            return null;
-                        });
+            fileWatchDog = scheduleBuilder.delay(Duration.ofSeconds(10)).interval(Duration.ofSeconds(10))
+                                          .execute(context -> {
+                                              checkFileModifiedAndFireHandler(file, lastModified, (ThreadContextImpl) context);
+                                              return null;
+                                          });
             ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners = new ConcurrentHashMap<>();
             ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners.put(key, onUpdateCommand);
         }
         return fileWatchDog;
+    }
+
+    private void checkFileModifiedAndFireHandler(@NotNull Path file, AtomicLong lastModified, ThreadContextImpl context) throws Exception {
+        BasicFileAttributes attr = Files.readAttributes(file, BasicFileAttributes.class);
+        if (attr.lastModifiedTime().toMillis() > lastModified.get()) {
+            lastModified.set(attr.lastModifiedTime().toMillis());
+            Map<String, ThrowingRunnable<Exception>> listeners = context.simpleWorkUnitListeners;
+            for (ThrowingRunnable<Exception> runnable : listeners.values()) {
+                runnable.run();
+            }
+        }
     }
 
     private <T> void createSchedule(ThreadContextImpl<T> threadContext, @NotNull Function<Runnable, ScheduledFuture<?>> scheduleHandler) {
@@ -443,6 +450,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private Map<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
         private Map<String, ThrowingRunnable<Exception>> simpleWorkUnitListeners;
 
+        // in case if start = false
+        public Function<Runnable, ScheduledFuture<?>> postponeScheduleHandler;
+
         private Consumer<Exception> errorListener;
 
         public ThreadContextImpl(String name, ThrowingFunction<ThreadContext<T>, T, Exception> command, ScheduleType scheduleType, Duration period,
@@ -479,13 +489,21 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             cancelProcessInternal();
         }
 
-        private void cancelProcessInternal() {
-            if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
-                stopped = true;
-                if (!showOnUI || hideOnUIAfterCancel) {
-                    EntityContextBGPImpl.this.schedulers.remove(name);
+        @Override
+        public void reset() {
+            createSchedule(this, this.postponeScheduleHandler);
+        }
+
+        private ThreadContextImpl<?> cancelProcessInternal() {
+            if (scheduledFuture != null) {
+                if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
+                    stopped = true;
+                    if (!showOnUI || hideOnUIAfterCancel) {
+                        return EntityContextBGPImpl.this.schedulers.remove(name);
+                    }
                 }
             }
+            return null;
         }
 
         @Override
