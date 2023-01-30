@@ -15,7 +15,6 @@ public class TouchHomeProperties {
   private int version;
   private int httpPort;
   private String serverSiteURL;
-  private String checkConnectivityURL;
   private boolean disableSecurity;
   private Duration internetTestInterval;
   private Duration checkPortInterval;

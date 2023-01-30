@@ -126,8 +126,7 @@ public class WidgetChartsController {
 
     @PostMapping("/gauge/value")
     public Object getGaugeValue(@Valid @RequestBody WidgetDataRequest request) {
-        WidgetGaugeEntity entity =
-            request.getEntity(entityContext, objectMapper, WidgetGaugeEntity.class);
+        WidgetGaugeEntity entity = request.getEntity(entityContext, objectMapper, WidgetGaugeEntity.class);
         return timeSeriesUtil.getSingleValue(entity, entity, o -> o);
     }
 

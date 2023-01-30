@@ -1,10 +1,10 @@
 package org.touchhome.app.notification;
 
 import java.util.Collection;
-import javax.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.jetbrains.annotations.NotNull;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.util.NotificationLevel;
 

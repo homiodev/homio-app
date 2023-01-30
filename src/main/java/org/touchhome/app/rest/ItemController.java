@@ -473,16 +473,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
             contextActions.add(uiInputBuilder.buildAll());
         }
+        Collections.sort(items);
         return new ItemsByTypeResponse(items, contextActions);
     }
 
     @SneakyThrows
     private boolean isRemoveItemFromResult(BaseEntity baseEntity) {
         UIHideEntityIfFieldNotNull hideCondition = baseEntity.getClass().getDeclaredAnnotation(UIHideEntityIfFieldNotNull.class);
-        if (hideCondition != null && FieldUtils.readDeclaredField(baseEntity, hideCondition.value(), true) != null) {
-            return true;
-        }
-        return false;
+        return hideCondition != null && FieldUtils.readDeclaredField(baseEntity, hideCondition.value(), true) != null;
     }
 
     @GetMapping("/service/{esName}")

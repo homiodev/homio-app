@@ -33,8 +33,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.manager.WidgetService;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.model.CompileScriptContext;
-import org.touchhome.app.model.entity.ScriptEntity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
@@ -42,10 +40,11 @@ import org.touchhome.app.model.entity.widget.WidgetTabEntity;
 import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonSeriesEntity;
+import org.touchhome.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMEntity;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.js.WidgetJsEntity;
+import org.touchhome.app.model.entity.widget.impl.js.WidgetJavaJsEntity;
 import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.touchhome.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
@@ -70,7 +69,6 @@ import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.fs.FileSystemProvider;
 import org.touchhome.common.fs.TreeNode;
-import org.touchhome.common.util.CommonUtils;
 import org.touchhome.common.util.Lang;
 
 @Log4j2
@@ -186,15 +184,8 @@ public class WidgetController {
     @PostMapping("/button/update")
     public void handleButtonClick(@RequestBody SingleValueRequest<Void> request) {
         WidgetPushButtonSeriesEntity series = getSeriesEntity(request);
-        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, series.getSetValueDataSource());
-        if (dsContext.getSource() == null) {
-            throw new IllegalArgumentException("Unable to find source set data source");
-        }
-        if (dsContext.getSource() instanceof HasSetStatusValue) {
-            ((HasSetStatusValue) dsContext.getSource()).setStatusValue(new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(), series.getValueToPush()));
-        } else {
-            throw new IllegalArgumentException("Set data source must be of type HasSetStatusValue");
-        }
+        DataSourceUtil.setValue(entityContext, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields(),
+            series.getValueToPush());
     }
 
     @PostMapping("/slider/values")
@@ -218,33 +209,45 @@ public class WidgetController {
         return values;
     }
 
-    @PostMapping("/slider/update")
-    public void updateSliderValue(@RequestBody SingleValueRequest<Integer> request) {
-        WidgetSliderSeriesEntity series = getSeriesEntity(request);
-        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, series.getSetValueDataSource());
-        if (dsContext.getSource() == null) {
-            throw new IllegalArgumentException("Unable to find source set data source");
-        }
-        if (dsContext.getSource() instanceof HasSetStatusValue) {
-            ((HasSetStatusValue) dsContext.getSource()).setStatusValue(new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(), request.value));
-        } else {
-            throw new IllegalArgumentException("Set data source must be of type HasSetStatusValue");
+    @PostMapping("/colors/value")
+    public WidgetColorValue getColorValues(@RequestBody WidgetDataRequest request) {
+        WidgetColorEntity entity = request.getEntity(entityContext, objectMapper, WidgetColorEntity.class);
+        return new WidgetColorValue(
+            timeSeriesUtil.getSingleValue(entity,
+                entity.getBrightnessValueDataSource(),
+                entity.getDynamicParameterFields("brightness"),
+                o -> (Integer) o),
+            timeSeriesUtil.getSingleValue(entity,
+                entity.getColorValueDataSource(),
+                entity.getDynamicParameterFields("color"),
+                o -> (String) o),
+            timeSeriesUtil.getSingleValue(entity,
+                entity.getOnOffValueDataSource(),
+                entity.getDynamicParameterFields("onOff"),
+                o -> (Boolean) o));
+    }
+
+    @PostMapping("/colors/update")
+    public void updateColorsValue(@RequestBody ColorValueRequest request) {
+        WidgetColorEntity entity = entityContext.getEntity(request.entityID);
+        switch (request.type) {
+            case color:
+                DataSourceUtil.setValue(entityContext, entity.getColorSetValueDataSource(), entity.getDynamicParameterFields("color"), request.value);
+                break;
+            case onOff:
+                DataSourceUtil.setValue(entityContext, entity.getOnOffSetValueDataSource(), entity.getDynamicParameterFields("onOff"), request.value);
+                break;
+            case brightness:
+                DataSourceUtil.setValue(entityContext, entity.getBrightnessSetValueDataSource(), entity.getDynamicParameterFields("brightness"), request.value);
+                break;
         }
     }
 
     @PostMapping("/toggle/update")
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
         WidgetToggleSeriesEntity series = getSeriesEntity(request);
-        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, series.getSetValueDataSource());
-        if (dsContext.getSource() == null) {
-            throw new IllegalArgumentException("Unable to find source set data source");
-        }
-        if (dsContext.getSource() instanceof HasSetStatusValue) {
-            ((HasSetStatusValue) dsContext.getSource()).setStatusValue(
-                new HasSetStatusValue.SetStatusValueRequest(entityContext, series.getSetValueDynamicParameterFields(), request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue()));
-        } else {
-            throw new IllegalArgumentException("Set data source must be of type HasSetStatusValue");
-        }
+        DataSourceUtil.setValue(entityContext, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields(),
+            request.value ? series.getPushToggleOnValue() : series.getPushToggleOffValue());
     }
 
     @GetMapping("/{entityID}")
@@ -279,7 +282,8 @@ public class WidgetController {
             WidgetJsEntity jsEntity = (WidgetJsEntity) widget;
             try {
                 jsEntity.setJavaScriptErrorResponse(null);
-                ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(jsEntity.getJavaScript()).setJavaScriptParameters(jsEntity.getJavaScriptParameters());
+                ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(jsEntity.getJavaScript()).setJavaScriptParameters(jsEntity
+                .getJavaScriptParameters());
 
                 CompileScriptContext compileScriptContext =
                     scriptService.createCompiledScript(scriptEntity, null);
@@ -342,9 +346,10 @@ public class WidgetController {
             }
         }
 
-        WidgetJsEntity widgetJsEntity = new WidgetJsEntity().setJavaScriptParameters(params).setJavaScriptParametersReadOnly(paramReadOnly).setJavaScript(js);
+        WidgetJavaJsEntity widgetJavaJsEntity = new WidgetJavaJsEntity().setJavaScriptParameters(params).setJavaScriptParametersReadOnly(paramReadOnly)
+                                                                        .setJavaScript(js);
 
-      //TODO: fix:::  widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(bundle + ":" + template.getClass().getSimpleName());
+        //TODO: fix:::  widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(bundle + ":" + template.getClass().getSimpleName());
 
         return null; // TODO: fix::::entityContext.save(widgetJsEntity);
     }
@@ -443,9 +448,32 @@ public class WidgetController {
 
     @Getter
     @AllArgsConstructor
-    private class WidgetEntity {
+    private static class WidgetEntity {
 
         private WidgetBaseEntity widget;
         private Collection<UIInputEntity> actions;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private static class WidgetColorValue {
+
+        private Integer brightness;
+        private String color;
+        private Boolean onOffValue;
+    }
+
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    private static class ColorValueRequest {
+
+        private String entityID;
+        private Object value;
+        private Type type;
+
+        private enum Type {
+            color, onOff, brightness
+        }
     }
 }

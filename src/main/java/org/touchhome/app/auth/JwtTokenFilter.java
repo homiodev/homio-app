@@ -14,21 +14,21 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class JwtTokenFilter extends OncePerRequestFilter {
 
-  private final JwtTokenProvider jwtTokenProvider;
+    private final JwtTokenProvider jwtTokenProvider;
 
-  @Override
-  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-      throws ServletException, IOException {
-    String token = jwtTokenProvider.resolveToken(request.getHeader("Authorization"));
-    try {
-      if (token != null && jwtTokenProvider.validateToken(token)) {
-        Authentication auth = jwtTokenProvider.getAuthentication(token);
-        SecurityContextHolder.getContext().setAuthentication(auth);
-      }
-      chain.doFilter(request, response);
-    } catch (BadCredentialsException ex) {
-      SecurityContextHolder.clearContext();
-      response.sendError(419, ex.getMessage());
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+        throws ServletException, IOException {
+        String token = jwtTokenProvider.resolveToken(request.getHeader("Authorization"));
+        try {
+            if (token != null && jwtTokenProvider.validateToken(token)) {
+                Authentication auth = jwtTokenProvider.getAuthentication(token);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
+            chain.doFilter(request, response);
+        } catch (BadCredentialsException ex) {
+            SecurityContextHolder.clearContext();
+            response.sendError(419, ex.getMessage());
+        }
     }
-  }
 }

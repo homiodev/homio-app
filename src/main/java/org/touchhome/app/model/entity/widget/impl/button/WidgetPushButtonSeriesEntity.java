@@ -1,13 +1,17 @@
 package org.touchhome.app.model.entity.widget.impl.button;
 
 import javax.persistence.Entity;
+import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasStyle;
 import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
 import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
+import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
+import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -18,12 +22,13 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection
 
 @Entity
 public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushButtonEntity>
-        implements HasChartDataSource,
-                HasSingleValueDataSource,
-                HasIcon,
-                HasValueTemplate,
-                HasName,
-                HasValueConverter {
+    implements HasChartDataSource,
+    HasSingleValueDataSource,
+    HasIcon,
+    HasValueTemplate,
+    HasName,
+    HasValueConverter,
+    HasStyle {
 
     public static final String PREFIX = "wgsbs_";
 
@@ -34,6 +39,18 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
     @UIFieldGroup(value = "Action Data source", order = 1)
     public String getSetValueDataSource() {
         return HasSingleValueDataSource.super.getSetValueDataSource();
+    }
+
+    @Override
+    @UIField(order = 10) // Override and remove require
+    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
+    @UIFieldBeanSelection(value = HasAggregateValueFromSeries.class, lazyLoading = true)
+    @UIFieldEntityByClassSelection(HasGetStatusValue.class)
+    @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
+    @UIFieldGroup(value = "Value", order = 10)
+    @UIEditReloadWidget
+    public String getValueDataSource() {
+        return HasSingleValueDataSource.super.getValueDataSource();
     }
 
     @UIField(order = 2, required = true)

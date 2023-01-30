@@ -5,12 +5,35 @@ import java.util.Collections;
 import java.util.List;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
+import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 
 public class DataSourceUtil {
 
     /**
-     * Samples:  0 = "entityByClass", 1 = "HasAggregateValueFromSeries", 2 = "wgv_0x00158d0002a4dd24_state_left", 3 = "wg_z2m_0x00158d0002a4dd24", 4 = "wg_zigbee"
+     * Try update target data source value
+     */
+    public static void setValue(EntityContextImpl entityContext, String setValueDataSource, JSONObject dynamicParameterFields, Object value) {
+        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSourceRequire(entityContext, setValueDataSource);
+        ((HasSetStatusValue) dsContext.getSource()).setStatusValue(new HasSetStatusValue.SetStatusValueRequest(entityContext, dynamicParameterFields, value));
+    }
+
+    public static DataSourceContext getSourceRequire(EntityContext entityContext, String dataSource) {
+        DataSourceContext dsContext = getSource(entityContext, dataSource);
+        if (dsContext.getSource() == null) {
+            throw new IllegalArgumentException("Unable to find source set data source");
+        }
+        if (!(dsContext.getSource() instanceof HasSetStatusValue)) {
+            throw new IllegalArgumentException("Set data source must be of type HasSetStatusValue");
+        }
+        return dsContext;
+    }
+
+    /**
+     * Samples:  0 = "entityByClass", 1 = "HasAggregateValueFromSeries", 2 = "wgv_0x00158d0002a4dd24_state_left", 3 = "wg_z2m_0x00158d0002a4dd24", 4 =
+     * "wg_zigbee"
      */
     public static DataSourceContext getSource(EntityContext entityContext, String dataSource) {
         DataSourceContext dataSourceContext = new DataSourceContext();

@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIFieldJSONLine;
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
+import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
+import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.HasHorizontalLine;
@@ -26,9 +28,17 @@ public class WidgetDisplayEntity
     HasChartDataSource,
     HasHorizontalLine,
     HasLayout,
+    HasName,
     HasSourceServerUpdates {
 
     public static final String PREFIX = "wgtdp_";
+
+    @UIField(order = 1)
+    @UIFieldGroup(value = "Name", order = 1)
+    @UIFieldUpdateFontSize
+    public String getName() {
+        return super.getName();
+    }
 
     @Override
     public String getImage() {

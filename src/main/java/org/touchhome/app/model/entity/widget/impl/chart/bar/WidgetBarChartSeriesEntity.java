@@ -11,7 +11,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
 public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChartEntity>
-        implements HasSingleValueDataSource {
+    implements HasSingleValueDataSource {
 
     public static final String PREFIX = "wgsbcs_";
 

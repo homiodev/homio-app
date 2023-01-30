@@ -1,7 +1,5 @@
 package org.touchhome.app.model.entity.widget.impl;
 
-import java.util.Date;
-import java.util.concurrent.TimeUnit;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.UIFieldTimeSlider;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
@@ -31,6 +29,7 @@ public interface HasSingleValueDataSource extends HasDynamicParameterFields {
         setJsonData("vds", value);
     }
 
+    @UIField(order = 12)
     @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     @UIFieldGroup(value = "Value")

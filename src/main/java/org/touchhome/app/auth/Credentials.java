@@ -9,11 +9,11 @@ import lombok.Setter;
 @Setter
 class Credentials {
 
-  @Email
-  private String email;
+    @Email
+    private String email;
 
-  @NotEmpty
-  private String password;
+    @NotEmpty
+    private String password;
 
-  private String op;
+    private String op;
 }

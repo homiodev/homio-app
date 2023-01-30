@@ -7,11 +7,11 @@ import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
 import javax.persistence.Transient;
-import javax.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.repository.SettingRepository;
@@ -29,7 +29,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldType;
 @Setter
 @Entity
 @Accessors(chain = true)
-public class SettingEntity extends BaseEntity<SettingEntity> implements Comparable<SettingEntity> {
+public class SettingEntity extends BaseEntity<SettingEntity> {
 
     public static final String PREFIX = "st_";
 
@@ -85,7 +85,7 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     public static String getKey(SettingPlugin settingPlugin) {
         if (settingPlugin instanceof DynamicConsoleHeaderSettingPlugin) {
             return SettingEntity.PREFIX
-                    + ((DynamicConsoleHeaderSettingPlugin) settingPlugin).getKey();
+                + ((DynamicConsoleHeaderSettingPlugin) settingPlugin).getKey();
         }
         return SettingEntity.PREFIX + settingPlugin.getClass().getSimpleName();
     }
@@ -113,8 +113,11 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     }
 
     @Override
-    public int compareTo(@NotNull SettingEntity o) {
-        return Integer.compare(order, o.order);
+    public int compareTo(@NotNull BaseEntity o) {
+        if (o instanceof SettingEntity) {
+            return Integer.compare(order, ((SettingEntity) o).order);
+        }
+        return super.compareTo(o);
     }
 
     @Override
@@ -136,9 +139,9 @@ public class SettingEntity extends BaseEntity<SettingEntity> implements Comparab
     public String getBundle() {
         // dynamic settings(firmata has no parameters)
         SettingPlugin plugin =
-                EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
+            EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
         return plugin == null
-                ? null
-                : SettingRepository.getSettingBundleName(getEntityContext(), plugin.getClass());
+            ? null
+            : SettingRepository.getSettingBundleName(getEntityContext(), plugin.getClass());
     }
 }

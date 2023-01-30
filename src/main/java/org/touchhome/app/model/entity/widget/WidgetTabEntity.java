@@ -5,9 +5,9 @@ import java.util.Set;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
-import javax.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
+import org.jetbrains.annotations.NotNull;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.common.exception.ServerException;
@@ -15,8 +15,7 @@ import org.touchhome.common.exception.ServerException;
 @Getter
 @Setter
 @Entity
-public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity>
-        implements Comparable<WidgetTabEntity> {
+public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
 
     public static final String PREFIX = "wtab_";
     public static final String GENERAL_WIDGET_TAB_NAME = PREFIX + "main";
@@ -27,7 +26,7 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity>
     private Set<WidgetBaseEntity> widgetBaseEntities;
 
     @Override
-    public int compareTo(@NotNull WidgetTabEntity o) {
+    public int compareTo(@NotNull BaseEntity o) {
         return this.getCreationTime().compareTo(o.getCreationTime());
     }
 

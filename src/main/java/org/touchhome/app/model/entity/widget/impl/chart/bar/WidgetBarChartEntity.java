@@ -12,8 +12,8 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 
 @Entity
 public class WidgetBarChartEntity
-        extends ChartBaseEntity<WidgetBarChartEntity, WidgetBarChartSeriesEntity>
-        implements HasChartTimePeriod, HasHorizontalLine, HasMinMaxChartValue, HasAxis {
+    extends ChartBaseEntity<WidgetBarChartEntity, WidgetBarChartSeriesEntity>
+    implements HasChartTimePeriod, HasHorizontalLine, HasMinMaxChartValue, HasAxis {
 
     public static final String PREFIX = "wgtbc_";
 
@@ -42,7 +42,7 @@ public class WidgetBarChartEntity
     @UIField(order = 12)
     @UIFieldGroup("Chart ui")
     @UIFieldJSONLine(
-            template = "{\"top\": number}, \"left\": number, \"bottom\": number, \"right\": number")
+        template = "{\"top\": number}, \"left\": number, \"bottom\": number, \"right\": number")
     public String getBarBorderWidth() {
         return getJsonData("bbw", "{\"top\": 0, \"left\": 0, \"bottom\": 0, \"right\": 0}");
     }

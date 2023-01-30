@@ -10,7 +10,7 @@ import org.touchhome.bundle.api.ui.field.UIField;
 
 @Entity
 public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBarTimeChartEntity>
-        implements HasChartDataSource {
+    implements HasChartDataSource {
 
     public static final String PREFIX = "wgsbtcs_";
 
@@ -22,13 +22,13 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
     @Override
     public ChartDataset buildTargetDataset(TimeSeriesContext item) {
         WidgetBarTimeChartSeriesEntity seriesEntity =
-                (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
+            (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
         ChartDataset dataset = new ChartDataset(item.getId());
 
         if (item.getValues() != null && !item.getValues().isEmpty()) {
             dataset.setData(
-                    EvaluateDatesAndValues.aggregate(
-                            item.getValues(), seriesEntity.getChartAggregationType()));
+                EvaluateDatesAndValues.aggregate(
+                    item.getValues(), seriesEntity.getChartAggregationType()));
         }
         return dataset;
     }

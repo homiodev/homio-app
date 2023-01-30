@@ -62,20 +62,20 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     @Override
     public void onContextCreated(EntityContextImpl entityContext) {
         this.entityContext
-                .event()
-                .addEntityRemovedListener(
-                        BaseFileSystemEntity.class,
-                        "fs-remove",
-                        e -> findAllFileSystems(this.entityContext));
+            .event()
+            .addEntityRemovedListener(
+                BaseFileSystemEntity.class,
+                "fs-remove",
+                e -> findAllFileSystems(this.entityContext));
         this.entityContext
-                .event()
-                .addEntityCreateListener(
-                        BaseFileSystemEntity.class,
-                        "fs-create",
-                        e -> findAllFileSystems(this.entityContext));
+            .event()
+            .addEntityCreateListener(
+                BaseFileSystemEntity.class,
+                "fs-create",
+                e -> findAllFileSystems(this.entityContext));
 
         RaspberryDeviceEntity raspberryDeviceEntity =
-                this.entityContext.getEntity(DEFAULT_DEVICE_ENTITY_ID);
+            this.entityContext.getEntity(DEFAULT_DEVICE_ENTITY_ID);
         localFileSystem = raspberryDeviceEntity.getFileSystem(this.entityContext);
     }
 
@@ -88,10 +88,10 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     public List<TreeConfiguration> getFileSystems(@RequestBody GetFSRequest request) {
         List<TreeConfiguration> configurations = new ArrayList<>();
         String firstAvailableFS =
-                getFS(
-                        Optional.ofNullable(request.fileSystemIds)
-                                .map(ids -> ids.isEmpty() ? null : ids.get(0))
-                                .orElse(null));
+            getFS(
+                Optional.ofNullable(request.fileSystemIds)
+                        .map(ids -> ids.isEmpty() ? null : ids.get(0))
+                        .orElse(null));
         // if not fs - set as local
         for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
             selectedNode.fs = defaultString(selectedNode.fs, firstAvailableFS);
@@ -99,14 +99,14 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
         Collection<BaseFileSystemEntity> fsItems = getRequestedFileSystems(request);
         for (BaseFileSystemEntity fileSystem : fsItems) {
             TreeConfiguration configuration =
-                    fileSystem.buildFileSystemConfiguration(entityContext);
+                fileSystem.buildFileSystemConfiguration(entityContext);
 
             for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
                 if (selectedNode.fs.equals(fileSystem.getEntityID())) {
                     Set<TreeNode> treeNodes =
-                            fileSystem
-                                    .getFileSystem(entityContext)
-                                    .loadTreeUpToChild(request.getRootPath(), selectedNode.id);
+                        fileSystem
+                            .getFileSystem(entityContext)
+                            .loadTreeUpToChild(request.getRootPath(), selectedNode.id);
                     if (treeNodes != null) {
                         configuration.setChildren(treeNodes);
                     }
@@ -129,7 +129,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
     @PostMapping("/download")
     public ResponseEntity<InputStreamResource> download(@RequestBody DownloadRequest request)
-            throws Exception {
+        throws Exception {
         FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
         if (request.sourceFileIds.size() == 1) {
             TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileIds.iterator().next());
@@ -144,15 +144,15 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
             return TouchHomeUtils.inputStreamToResource(inputStream, mediaType);
         } else {
             Path zipFile =
-                    archiveSource(
-                            request.sourceFs,
-                            "zip",
-                            request.sourceFileIds,
-                            "downloadContent",
-                            null,
-                            null);
+                archiveSource(
+                    request.sourceFs,
+                    "zip",
+                    request.sourceFileIds,
+                    "downloadContent",
+                    null,
+                    null);
             return TouchHomeUtils.inputStreamToResource(
-                    Files.newInputStream(zipFile), new MediaType("application", "zip"));
+                Files.newInputStream(zipFile), new MediaType("application", "zip"));
         }
     }
 
@@ -160,7 +160,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     public TreeNode createNode(@RequestBody CreateNodeRequest request) {
         FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
         return fileSystem.create(
-                request.sourceFileId, request.name, request.dir, getUploadOption(request));
+            request.sourceFileId, request.name, request.dir, getUploadOption(request));
     }
 
     @PostMapping("/unarchive")
@@ -174,25 +174,25 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
         String fileExtension = CommonUtils.getExtension(sourceItem.getName());
         String fileWithoutExtension =
-                sourceItem
-                        .getName()
-                        .substring(0, sourceItem.getName().length() - fileExtension.length());
+            sourceItem
+                .getName()
+                .substring(0, sourceItem.getName().length() - fileExtension.length());
         Path targetPath = CommonUtils.getTmpPath().resolve(fileWithoutExtension);
 
         ArchiveUtil.UnzipFileIssueHandler issueHandler =
-                ArchiveUtil.UnzipFileIssueHandler.valueOf(request.fileHandler);
+            ArchiveUtil.UnzipFileIssueHandler.valueOf(request.fileHandler);
         ArchiveUtil.ArchiveFormat zipFormat =
-                ArchiveUtil.ArchiveFormat.getHandlerByExtension(fileExtension);
+            ArchiveUtil.ArchiveFormat.getHandlerByExtension(fileExtension);
         ArchiveUtil.unzip(archive, zipFormat, targetPath, null, null, issueHandler);
         Set<String> ids =
-                Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles()))
-                        .map(File::toString)
-                        .collect(Collectors.toSet());
+            Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles()))
+                  .map(File::toString)
+                  .collect(Collectors.toSet());
         TreeNode fileSystemItem =
-                targetFs.copy(
-                        localFileSystem.toTreeNodes(ids),
-                        request.targetDir,
-                        FileSystemProvider.UploadOption.Replace);
+            targetFs.copy(
+                localFileSystem.toTreeNodes(ids),
+                request.targetDir,
+                FileSystemProvider.UploadOption.Replace);
 
         if (request.removeSource) {
             sourceFs.delete(Collections.singleton(request.sourceFileId));
@@ -204,19 +204,19 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     public TreeNode archive(@RequestBody ArchiveNodeRequest request) throws Exception {
         // make archive from requested files/folders
         Path zipFile =
-                archiveSource(
-                        request.sourceFs,
-                        request.format,
-                        request.sourceFileIds,
-                        request.targetName,
-                        request.level,
-                        request.password);
+            archiveSource(
+                request.sourceFs,
+                request.format,
+                request.sourceFileIds,
+                request.targetName,
+                request.level,
+                request.password);
 
         try {
             TreeNode zipTreeNode = TreeNode.of(zipFile.toString(), zipFile, localFileSystem);
 
             return getFileSystem(request.targetFs)
-                    .copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
+                .copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
         } finally {
             Files.deleteIfExists(zipFile);
         }
@@ -229,7 +229,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
         Set<TreeNode> entries = sourceFs.toTreeNodes(request.getSourceFileIds());
         TreeNode fileSystemItem =
-                targetFs.copy(entries, request.targetPath, FileSystemProvider.UploadOption.Replace);
+            targetFs.copy(entries, request.targetPath, FileSystemProvider.UploadOption.Replace);
 
         if (request.removeSource) {
             sourceFs.delete(request.getSourceFileIds());
@@ -239,10 +239,10 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
     @PostMapping("/upload")
     public TreeNode upload(
-            @RequestParam("sourceFs") String sourceFs,
-            @RequestParam("sourceFileId") String sourceFileId,
-            @RequestParam("replace") boolean replace,
-            @RequestParam("data") MultipartFile[] files) {
+        @RequestParam("sourceFs") String sourceFs,
+        @RequestParam("sourceFileId") String sourceFileId,
+        @RequestParam("replace") boolean replace,
+        @RequestParam("data") MultipartFile[] files) {
         FileSystemProvider fileSystem = getFileSystem(sourceFs);
         Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
         return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);
@@ -251,7 +251,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     @PostMapping("/rename")
     public TreeNode rename(@RequestBody RenameNodeRequest request) {
         return getFileSystem(request.sourceFs)
-                .rename(request.sourceFileId, request.newName, getUploadOption(request));
+            .rename(request.sourceFileId, request.newName, getUploadOption(request));
     }
 
     @GetMapping("/search")
@@ -297,19 +297,19 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     }
 
     private Path archiveSource(
-            String fs,
-            String format,
-            Set<String> sourceFileIds,
-            String targetName,
-            String level,
-            String password)
-            throws IOException {
+        String fs,
+        String format,
+        Set<String> sourceFileIds,
+        String targetName,
+        String level,
+        String password)
+        throws IOException {
         FileSystemProvider sourceFs = getFileSystem(fs);
 
         Collection<TreeNode> entries = sourceFs.toTreeNodes(sourceFileIds);
         Path tmpArchiveAssemblerPath =
-                CommonUtils.getTmpPath()
-                        .resolve("tmp_archive_assembler_" + System.currentTimeMillis());
+            CommonUtils.getTmpPath()
+                       .resolve("tmp_archive_assembler_" + System.currentTimeMillis());
 
         try {
             if (!targetName.endsWith("." + format)) {
@@ -319,21 +319,21 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
             List<Path> result = new ArrayList<>();
             localFileSystem.copyEntries(
-                    entries, tmpArchiveAssemblerPath, new CopyOption[] {REPLACE_EXISTING}, result);
+                entries, tmpArchiveAssemblerPath, new CopyOption[]{REPLACE_EXISTING}, result);
             List<Path> filesToArchive =
-                    Arrays.stream(
-                                    Objects.requireNonNull(
-                                            tmpArchiveAssemblerPath.toFile().listFiles()))
-                            .map(File::toPath)
-                            .collect(Collectors.toList());
+                Arrays.stream(
+                          Objects.requireNonNull(
+                              tmpArchiveAssemblerPath.toFile().listFiles()))
+                      .map(File::toPath)
+                      .collect(Collectors.toList());
 
             return ArchiveUtil.zip(
-                    filesToArchive,
-                    targetPath,
-                    ArchiveUtil.ArchiveFormat.getHandlerByExtension(format),
-                    level,
-                    password,
-                    null);
+                filesToArchive,
+                targetPath,
+                ArchiveUtil.ArchiveFormat.getHandlerByExtension(format),
+                level,
+                password,
+                null);
         } finally {
             FileUtils.deleteDirectory(tmpArchiveAssemblerPath.toFile());
         }
@@ -341,8 +341,8 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
     private FileSystemProvider.UploadOption getUploadOption(BaseNodeRequest request) {
         return request.replace
-                ? FileSystemProvider.UploadOption.Replace
-                : FileSystemProvider.UploadOption.Error;
+            ? FileSystemProvider.UploadOption.Replace
+            : FileSystemProvider.UploadOption.Error;
     }
 
     private void findAllFileSystems(EntityContextImpl entityContext) {
@@ -352,19 +352,19 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     private Collection<BaseFileSystemEntity> getRequestedFileSystems(GetFSRequest request) {
         if (request.fileSystemIds == null || request.fileSystemIds.isEmpty()) {
             return this.fileSystems.stream()
-                    .filter(BaseFileSystemEntity::isShowInFileManager)
-                    .collect(Collectors.toList());
+                                   .filter(BaseFileSystemEntity::isShowInFileManager)
+                                   .collect(Collectors.toList());
         } else {
             return request.fileSystemIds.stream()
-                    .map(this::getFileSystemEntity)
-                    .collect(Collectors.toList());
+                                        .map(this::getFileSystemEntity)
+                                        .collect(Collectors.toList());
         }
     }
 
     private String getFS(String id) {
         return LOCAL_FS.equals(id) || id == null
-                ? this.localFileSystem.getEntity().getEntityID()
-                : id;
+            ? this.localFileSystem.getEntity().getEntityID()
+            : id;
     }
 
     @Getter

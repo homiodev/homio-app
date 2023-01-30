@@ -12,7 +12,7 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection
 
 @Entity
 public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineChartEntity>
-        implements HasChartDataSource {
+    implements HasChartDataSource {
 
     public static final String PREFIX = "wgslcs_";
 

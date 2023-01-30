@@ -7,7 +7,6 @@ touchhome:
   git-hub-url: https://api.github.com/repos/touchhome/touchhome-core/releases/latest
   max-java-script-compile-before-interrupt: PT5S
   max-java-script-once-call-before-interrupt: PT60S
-  check-connectivity-u-r-l: www.google.com
   server-site-url: https://touchhome.org
   http-port: 9119
   check-port-interval: PT10S

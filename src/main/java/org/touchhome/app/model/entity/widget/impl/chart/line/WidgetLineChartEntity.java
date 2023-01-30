@@ -15,8 +15,8 @@ import org.touchhome.bundle.api.ui.field.UIField;
 @Setter
 @Entity
 public class WidgetLineChartEntity
-        extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
-        implements HasLineChartBehaviour, HasHorizontalLine, HasAxis {
+    extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
+    implements HasLineChartBehaviour, HasHorizontalLine, HasAxis {
 
     @Override
     public String getImage() {

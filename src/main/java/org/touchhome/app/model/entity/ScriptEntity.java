@@ -22,6 +22,7 @@ import org.springframework.core.env.Environment;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.Status;
+import org.touchhome.bundle.api.ui.field.MonacoLanguage;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 import org.touchhome.common.util.SpringUtils;
@@ -43,7 +44,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @Getter
     @Setter
     @UIField(order = 13)
-    @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript, autoFormat = true)
+    @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript, autoFormat = true)
     private String javaScriptParameters = "{}";
 
     @Getter
@@ -58,7 +59,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @Setter
     @UIField(order = 30)
     @Column(length = 1000_000)
-    @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript, autoFormat = true)
+    @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript, autoFormat = true)
     private String javaScript =
             "function before() { };\nfunction run() { };\nfunction after() { };";
 

@@ -1,6 +1,7 @@
 package org.touchhome.app.utils;
 
 import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
@@ -544,6 +545,7 @@ public class UIFieldUtils {
                 jsonTypeMetadata.put("keyFormat", uiKeyValueField.keyFormat());
                 jsonTypeMetadata.put("valueFormat", uiKeyValueField.valueFormat());
                 jsonTypeMetadata.put("keyValueType", uiKeyValueField.keyValueType().name());
+                jsonTypeMetadata.put("showKey", uiKeyValueField.showKey());
                 entityUIMetaData.setType("KeyValue");
             }
         }
@@ -572,7 +574,12 @@ public class UIFieldUtils {
         if (fieldCodeEditor != null) {
             jsonTypeMetadata.put("wordWrap", fieldCodeEditor.wordWrap());
             jsonTypeMetadata.put("autoFormat", fieldCodeEditor.autoFormat());
-            jsonTypeMetadata.set("editorType", OBJECT_MAPPER.valueToTree(fieldCodeEditor.editorType()));
+            jsonTypeMetadata.put("editorType", fieldCodeEditor.editorType().name());
+            String editorTypeRef = fieldCodeEditor.editorTypeRef();
+            if (isNotEmpty(editorTypeRef)) {
+                assertFieldExists(instance, editorTypeRef);
+            }
+            jsonTypeMetadata.put("editorTypeRef", editorTypeRef);
             entityUIMetaData.setType("CodeEditor");
         }
 

@@ -12,28 +12,28 @@ import org.touchhome.bundle.api.entity.BaseEntity;
  */
 public class JSOGResolver extends SimpleObjectIdResolver {
 
-  private Map<ObjectIdGenerator.IdKey, Object> _items;
+    private Map<ObjectIdGenerator.IdKey, Object> _items;
 
-  public void bindItem(ObjectIdGenerator.IdKey id, Object ob) {
-    if (this._items == null) {
-      this._items = new HashMap<>();
+    public void bindItem(ObjectIdGenerator.IdKey id, Object ob) {
+        if (this._items == null) {
+            this._items = new HashMap<>();
+        }
+
+        this._items.put(id, ob);
+        JSOGRef key = (JSOGRef) id.key;
+        ((BaseEntity) ob).setEntityID(key.ref);
     }
 
-    this._items.put(id, ob);
-    JSOGRef key = (JSOGRef) id.key;
-    ((BaseEntity) ob).setEntityID(key.ref);
-  }
+    public Object resolveId(ObjectIdGenerator.IdKey id) {
+        return this._items == null ? null : this._items.get(id);
+    }
 
-  public Object resolveId(ObjectIdGenerator.IdKey id) {
-    return this._items == null ? null : this._items.get(id);
-  }
+    public boolean canUseFor(ObjectIdResolver resolverType) {
+        return resolverType.getClass() == this.getClass();
+    }
 
-  public boolean canUseFor(ObjectIdResolver resolverType) {
-    return resolverType.getClass() == this.getClass();
-  }
-
-  public ObjectIdResolver newForDeserialization(Object context) {
-    return new JSOGResolver();
-  }
+    public ObjectIdResolver newForDeserialization(Object context) {
+        return new JSOGResolver();
+    }
 
 }

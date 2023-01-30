@@ -59,8 +59,7 @@ public @interface UIFieldLayout {
         }
 
         /**
-         * Specify column width Restrictions: sum(columnWidthInPercent) must be 100.
-         * columnWidthInPercent[i] must be >= 10%
+         * Specify column width Restrictions: sum(columnWidthInPercent) must be 100. columnWidthInPercent[i] must be >= 10%
          */
         public static LayoutBuilder builder(float... columnWidthInPercent) {
             return new LayoutBuilder(columnWidthInPercent);
@@ -82,25 +81,27 @@ public @interface UIFieldLayout {
                 c.add(new ColBuilder(width));
             }
             for (RowBuilder rowBuilder : this.r) {
-                if (this.columnWidthInPercent.length != rowBuilder.cell.size()) {
-                    throw new RuntimeException(
-                            "Row columns must be equal to specified column size: "
-                                    + this.columnWidthInPercent.length);
-                }
-                for (int i = 0; i < this.columnWidthInPercent.length; i++) {
-                    // hide next columns if colSPan > 1
-                    for (int j = 1; j < rowBuilder.cell.get(i).collSpan; j++) {
-                        rowBuilder.cell.get(i + j).collSpan = 0;
-                    }
-                    int width = 0;
-                    for (int w = i; w < i + rowBuilder.cell.get(i).collSpan; w++) {
-                        width += this.columnWidthInPercent[w];
-                    }
-
-                    rowBuilder.cell.get(i).width = width;
-                }
+                buildRow(rowBuilder);
             }
             return CommonUtils.OBJECT_MAPPER.writeValueAsString(this);
+        }
+
+        private void buildRow(RowBuilder rowBuilder) {
+            if (this.columnWidthInPercent.length != rowBuilder.getCell().size()) {
+                throw new RuntimeException("Row columns must be equal to specified column size: " + this.columnWidthInPercent.length);
+            }
+            for (int i = 0; i < this.columnWidthInPercent.length; i++) {
+                // hide next columns if colSPan > 1
+                for (int j = 1; j < rowBuilder.cell.get(i).collSpan; j++) {
+                    rowBuilder.cell.get(i + j).collSpan = 0;
+                }
+                int width = 0;
+                for (int w = i; w < i + rowBuilder.cell.get(i).collSpan; w++) {
+                    width += this.columnWidthInPercent[w];
+                }
+
+                rowBuilder.cell.get(i).width = width;
+            }
         }
     }
 
@@ -128,11 +129,11 @@ public @interface UIFieldLayout {
         }
 
         public RowBuilder addCol(String value, HorizontalAlign horizontalAlign, int colSpan) {
-            return addCol(
-                    column ->
-                            column.setValue(value)
-                                    .setHorizontalAlign(horizontalAlign)
-                                    .setCollSpan(1));
+            RowBuilder rowBuilder = addCol(column -> column.setValue(value).setHorizontalAlign(horizontalAlign).setCollSpan(colSpan));
+            for (int i = 1; i < colSpan; i++) {
+                addCol(column -> {});
+            }
+            return rowBuilder;
         }
     }
 

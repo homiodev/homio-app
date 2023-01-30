@@ -24,7 +24,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
 
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(
-            Exception ex, Object body, HttpHeaders headers, HttpStatus status, WebRequest request) {
+        Exception ex, Object body, HttpHeaders headers, HttpStatus status, WebRequest request) {
         if (HttpStatus.INTERNAL_SERVER_ERROR.equals(status)) {
             request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex, WebRequest.SCOPE_REQUEST);
         }
@@ -34,8 +34,8 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         }
         log.error("Error <{}>", msg, ex);
         ((ServletWebRequest) request)
-                .getResponse()
-                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+            .getResponse()
+            .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         return new ResponseEntity<>(new ErrorHolderModel("Error", msg, ex), headers, status);
     }
 
@@ -49,7 +49,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
     public ErrorHolderModel handleDirectoryNotEmptyException(DirectoryNotEmptyException ex) {
         String msg = CommonUtils.getErrorMessage(ex);
         return new ErrorHolderModel(
-                "Unable remove directory", "Directory " + msg + " not empty", ex);
+            "Unable remove directory", "Directory " + msg + " not empty", ex);
     }
 
     @ExceptionHandler({Exception.class})

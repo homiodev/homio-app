@@ -23,10 +23,10 @@ public class TimeSeriesValues<T extends HasChartDataSource> {
         if (this.itemSeries.equals(updatedContext)) {
             for (TimeSeriesContext<T> item : this.itemSeries) {
                 TimeSeriesContext<T> otherItem =
-                        updatedContext.stream()
-                                .filter(c -> c.getId().equals(item.getId()))
-                                .findAny()
-                                .get();
+                    updatedContext.stream()
+                                  .filter(c -> c.getId().equals(item.getId()))
+                                  .findAny()
+                                  .get();
 
                 if (!item.getValue().equals(otherItem.getValue())) {
                     return false;

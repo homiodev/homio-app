@@ -12,7 +12,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
 public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChartEntity>
-        implements HasSingleValueDataSource, HasValueConverter {
+    implements HasSingleValueDataSource, HasValueConverter {
 
     public static final String PREFIX = "wgspcs_";
 

@@ -5,7 +5,6 @@ import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetGroup;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
 import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
@@ -17,7 +16,7 @@ import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 
 @Entity
 public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, WidgetFMSeriesEntity>
-        implements HasDynamicContextMenuActions, HasLayout, HasSourceServerUpdates {
+    implements HasDynamicContextMenuActions, HasLayout, HasSourceServerUpdates {
 
     public static final String PREFIX = "wgtfm_";
 
@@ -137,17 +136,17 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
         uiInputBuilder.addTableLayoutButton(
-                "field.layout",
-                8,
-                8,
-                this.getLayout(),
-                null,
-                null,
-                (entityContext, params) -> {
-                    this.setLayout(params.getString("value"));
-                    entityContext.save(this);
-                    return ActionResponseModel.showSuccess("SUCCESS");
-                },
-                0);
+            "field.layout",
+            8,
+            8,
+            this.getLayout(),
+            null,
+            null,
+            (entityContext, params) -> {
+                this.setLayout(params.getString("value"));
+                entityContext.save(this);
+                return ActionResponseModel.showSuccess("SUCCESS");
+            },
+            0);
     }
 }

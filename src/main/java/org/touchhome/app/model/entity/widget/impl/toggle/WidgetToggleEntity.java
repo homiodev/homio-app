@@ -2,8 +2,10 @@ package org.touchhome.app.model.entity.widget.impl.toggle;
 
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIFieldLayout;
+import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
+import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
@@ -11,21 +13,22 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 @Entity
 public class WidgetToggleEntity
     extends WidgetBaseEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
-    implements HasLayout, HasSourceServerUpdates {
+    implements HasLayout, HasSourceServerUpdates, HasName {
 
     public static final String PREFIX = "wgttg_";
+
+    @UIField(order = 1)
+    @UIFieldGroup(value = "Name", order = 1)
+    @UIFieldUpdateFontSize
+    public String getName() {
+        return super.getName();
+    }
 
     @Override
     @UIField(order = 50)
     @UIFieldLayout(options = {"name", "value", "icon", "button"})
     public String getLayout() {
         return getJsonData("layout");
-    }
-
-    @UIField(order = 1)
-    @UIFieldGroup(value = "Header")
-    public String getName() {
-        return super.getName();
     }
 
     @UIField(order = 1)

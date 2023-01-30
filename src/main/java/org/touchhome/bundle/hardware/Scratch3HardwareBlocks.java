@@ -35,7 +35,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3Block cityGeoLocationReporter;
 
     public Scratch3HardwareBlocks(
-            EntityContext entityContext, NetworkHardwareRepository networkHardwareRepository) {
+        EntityContext entityContext, NetworkHardwareRepository networkHardwareRepository) {
         super("#51633C", entityContext, null, "hardware");
         this.networkHardwareRepository = networkHardwareRepository;
 
@@ -45,104 +45,57 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
 
         // Blocks
         blockReporter(50, "my_ip", "my ip", this::fireGetByIP);
-        blockReporter(
-                60,
-                "server_time",
-                "time | format [FORMAT]",
-                this::fireGetServerTimeReporter,
-                block -> {
-                    block.addArgument("FORMAT");
-                });
+        blockReporter(60, "server_time", "time | format [FORMAT]", this::fireGetServerTimeReporter, block -> {
+            block.addArgument("FORMAT");
+        });
 
         this.cityGeoLocationReporter =
-                blockReporter(
-                        100,
-                        "city_geo_location",
-                        "City geo [CITY] | json",
-                        this::fireGetCityGeoLocationReporter,
-                        block -> {
-                            block.addArgument("CITY", "unknown city");
-                        });
+            blockReporter(100, "city_geo_location", "City geo [CITY] | json", this::fireGetCityGeoLocationReporter,
+                block -> block.addArgument("CITY", "unknown city"));
 
         this.ipGeoLocationReporter =
-                blockReporter(
-                        200,
-                        "ip_geo_location",
-                        "IP geo [IP] | json",
-                        this::fireGetIPGeoLocation,
-                        block -> {
-                            block.addArgument("IP", "127.0.0.1");
-                        });
+            blockReporter(200, "ip_geo_location", "IP geo [IP] | json", this::fireGetIPGeoLocation,
+                block -> block.addArgument("IP", "127.0.0.1"));
 
-        blockHat(
-                300,
-                "setting_hat",
-                "Setting [SETTING] changed to [VALUE]",
-                this::fireSettingChangeHatEvent,
-                block -> {
-                    block.addArgument(SETTING, this.settingsMenu);
-                    block.addArgument(VALUE);
-                });
+        blockHat(300, "setting_hat", "Setting [SETTING] changed to [VALUE]", this::fireSettingChangeHatEvent,
+            block -> {
+                block.addArgument(SETTING, this.settingsMenu);
+                block.addArgument(VALUE);
+            });
 
-        blockHat(
-                400,
-                "event",
-                "Hardware event [EVENT]",
-                this::fireHardwareHatEvent,
-                block -> {
-                    block.addArgument(EVENT, this.hardwareEventsMenu);
-                });
+        blockHat(400, "event", "Hardware event [EVENT]", this::fireHardwareHatEvent,
+            block -> block.addArgument(EVENT, this.hardwareEventsMenu));
 
-        entityContext
-                .event()
-                .runOnceOnInternetUp(
-                        "scratch3-hardware",
-                        () -> {
-                            this.ipGeoLocationReporter.addArgument(
-                                    "IP", fireGetByIP(null).stringValue());
-                            this.cityGeoLocationReporter.addArgument(
-                                    "CITY",
-                                    networkHardwareRepository
-                                            .getIpGeoLocation(
-                                                    networkHardwareRepository.getOuterIpAddress())
-                                            .getCity());
-                        });
+        entityContext.event().runOnceOnInternetUp("scratch3-hardware", () -> {
+            this.ipGeoLocationReporter.addArgument("IP", fireGetByIP(null).stringValue());
+            this.cityGeoLocationReporter.addArgument(
+                "CITY", networkHardwareRepository.getIpGeoLocation(networkHardwareRepository.getOuterIpAddress()).getCity());
+        });
     }
 
     private State fireGetServerTimeReporter(WorkspaceBlock workspaceBlock) {
         String format = workspaceBlock.getInputString("FORMAT");
         return isEmpty(format)
-                ? new DecimalType(System.currentTimeMillis())
-                : new StringType(new SimpleDateFormat(format).format(new Date()));
+            ? new DecimalType(System.currentTimeMillis())
+            : new StringType(new SimpleDateFormat(format).format(new Date()));
     }
 
     private void fireHardwareHatEvent(WorkspaceBlock workspaceBlock) {
-        workspaceBlock.handleNext(
-                next -> {
-                    String eventName = workspaceBlock.getMenuValue(EVENT, this.hardwareEventsMenu);
-                    BroadcastLock lock =
-                            workspaceBlock
-                                    .getBroadcastLockManager()
-                                    .getOrCreateLock(workspaceBlock, eventName);
-                    workspaceBlock.subscribeToLock(lock, next::handle);
-                });
+        workspaceBlock.handleNext(next -> {
+            String eventName = workspaceBlock.getMenuValue(EVENT, this.hardwareEventsMenu);
+            BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, eventName);
+            workspaceBlock.subscribeToLock(lock, next::handle);
+        });
     }
 
     private void fireSettingChangeHatEvent(WorkspaceBlock workspaceBlock) {
-        workspaceBlock.handleNext(
-                next -> {
-                    String settingName = workspaceBlock.getMenuValue(SETTING, this.settingsMenu);
-                    String value = workspaceBlock.getInputString(VALUE);
+        workspaceBlock.handleNext(next -> {
+            String settingName = workspaceBlock.getMenuValue(SETTING, this.settingsMenu);
+            String value = workspaceBlock.getInputString(VALUE);
 
-                    BroadcastLock lock =
-                            workspaceBlock
-                                    .getBroadcastLockManager()
-                                    .getOrCreateLock(workspaceBlock, settingName);
-                    workspaceBlock.subscribeToLock(
-                            lock,
-                            lockValue -> isEmpty(value) || value.equals(lockValue),
-                            next::handle);
-                });
+            BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, settingName);
+            workspaceBlock.subscribeToLock(lock, lockValue -> isEmpty(value) || value.equals(lockValue), next::handle);
+        });
     }
 
     private State fireGetByIP(WorkspaceBlock workspaceBlock) {
@@ -151,13 +104,13 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
 
     private State fireGetIPGeoLocation(WorkspaceBlock workspaceBlock) {
         return new ObjectType(
-                this.networkHardwareRepository.getIpGeoLocation(
-                        workspaceBlock.getInputString("IP")));
+            this.networkHardwareRepository.getIpGeoLocation(
+                workspaceBlock.getInputString("IP")));
     }
 
     private State fireGetCityGeoLocationReporter(WorkspaceBlock workspaceBlock) {
         return new ObjectType(
-                this.networkHardwareRepository.findCityGeolocation(
-                        workspaceBlock.getInputString("CITY")));
+            this.networkHardwareRepository.findCityGeolocation(
+                workspaceBlock.getInputString("CITY")));
     }
 }

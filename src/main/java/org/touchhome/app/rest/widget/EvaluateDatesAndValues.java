@@ -16,21 +16,21 @@ public final class EvaluateDatesAndValues {
 
     public static List<Float> aggregate(List<List<Float>> values, AggregationType aggregationType) {
         return values.stream()
-                .map(
-                        items -> {
-                            Stream<Float> stream = items.stream();
-                            if (aggregationType.isRequireSorting()) {
-                                stream = stream.sorted();
-                            }
-                            return aggregationType.evaluate(stream);
-                        })
-                .collect(Collectors.toList());
+                     .map(
+                         items -> {
+                             Stream<Float> stream = items.stream();
+                             if (aggregationType.isRequireSorting()) {
+                                 stream = stream.sorted();
+                             }
+                             return aggregationType.evaluate(stream);
+                         })
+                     .collect(Collectors.toList());
     }
 
     public static <T extends HasDynamicParameterFields & HasChartDataSource>
-            List<Date> calculateDates(
-                    HasChartTimePeriod.TimePeriod timePeriod,
-                    List<TimeSeriesValues<T>> timeSeriesValues) {
+    List<Date> calculateDates(
+        HasChartTimePeriod.TimePeriod timePeriod,
+        List<TimeSeriesValues<T>> timeSeriesValues) {
         // get dates split by algorithm
         List<Date> dates = evaluateDates(timePeriod, timeSeriesValues);
         // List<Date> initialDates = new ArrayList<>(dates);
@@ -56,7 +56,7 @@ public final class EvaluateDatesAndValues {
     }
 
     private static <T extends HasChartDataSource> List<Date> evaluateDates(
-            HasChartTimePeriod.TimePeriod timePeriod, List<TimeSeriesValues<T>> timeSeriesValues) {
+        HasChartTimePeriod.TimePeriod timePeriod, List<TimeSeriesValues<T>> timeSeriesValues) {
         List<Date> dates = timePeriod.evaluateDateRange();
         if (dates == null) {
             // TODO: currently not invokes
@@ -72,15 +72,15 @@ public final class EvaluateDatesAndValues {
             long delta = (max - min) / 30;
             long finalMin = min;
             dates =
-                    IntStream.range(0, 30)
-                            .mapToObj(value -> new Date(finalMin + delta * value))
-                            .collect(Collectors.toList());
+                IntStream.range(0, 30)
+                         .mapToObj(value -> new Date(finalMin + delta * value))
+                         .collect(Collectors.toList());
         }
         return dates;
     }
 
     private static <T extends HasDynamicParameterFields & HasChartDataSource> void fulfillValues(
-            List<Date> dates, List<TimeSeriesValues<T>> timeSeriesValues) {
+        List<Date> dates, List<TimeSeriesValues<T>> timeSeriesValues) {
         List<Iterator<List<Float>>> fullChartValueIterators = new ArrayList<>();
 
         for (TimeSeriesValues<T> timeSeriesValue : timeSeriesValues) {
@@ -93,9 +93,9 @@ public final class EvaluateDatesAndValues {
                 // push values to date between buckets
                 for (Object[] chartItem : timeSeriesContext.getValue()) {
                     long time =
-                            chartItem[0] instanceof Date
-                                    ? ((Date) chartItem[0]).getTime()
-                                    : (Long) chartItem[0];
+                        chartItem[0] instanceof Date
+                            ? ((Date) chartItem[0]).getTime()
+                            : (Long) chartItem[0];
                     int index = getDateIndex(dates, time);
                     if (index >= 0) {
                         values.get(index).add((Float) chartItem[1]);

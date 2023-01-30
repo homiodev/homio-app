@@ -11,27 +11,27 @@ import org.touchhome.bundle.api.entity.UserEntity;
 @Service
 public class UserEntityDetailsService implements UserDetailsService {
 
-  @Autowired
-  private UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-  private UserEntity user;
+    private UserEntity user;
 
-  @Override
-  public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-    if (this.user == null) {
-      this.user = userRepository.getUser(email);
-      if (user == null) {
-        throw new UsernameNotFoundException("User with email: " + email + " not found");
-      }
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        if (this.user == null) {
+            this.user = userRepository.getUser(email);
+            if (user == null) {
+                throw new UsernameNotFoundException("User with email: " + email + " not found");
+            }
+        }
+        return org.springframework.security.core.userdetails.User
+            .withUsername(user.getEntityID())
+            .password(user.getPassword())
+            .authorities(user.getRoles().toArray(new String[0]))
+            .accountExpired(false)
+            .accountLocked(false)
+            .credentialsExpired(false)
+            .disabled(false)
+            .build();
     }
-    return org.springframework.security.core.userdetails.User
-        .withUsername(user.getEntityID())
-        .password(user.getPassword())
-        .authorities(user.getRoles().toArray(new String[0]))
-        .accountExpired(false)
-        .accountLocked(false)
-        .credentialsExpired(false)
-        .disabled(false)
-        .build();
-  }
 }

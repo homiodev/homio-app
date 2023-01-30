@@ -1,9 +1,9 @@
 package org.touchhome.app.model.rest;
 
 import java.util.Objects;
-import javax.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
+import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter

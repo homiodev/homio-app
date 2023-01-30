@@ -1,6 +1,7 @@
 package org.touchhome.app.rest.widget;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -97,6 +98,34 @@ public class TimeSeriesUtil {
             });
     }
 
+    /**
+     * Evaluate single value from specific data source and attach listener on it for dynamic updates
+     */
+    public <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> R getSingleValue(
+        @NotNull T entity,
+        @Nullable String valueDataSource,
+        @Nullable JSONObject dynamicParameters,
+        @NotNull Function<Object, R> resultConverter) {
+        if (isEmpty(valueDataSource)) {
+            return null;
+        }
+        String seriesEntityId = entity.getEntityID();
+        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, valueDataSource);
+        Object source = dsContext.getSource();
+        if (source == null) {
+            return null;
+        }
+
+        Object value;
+        if (source instanceof HasGetStatusValue) {
+            value = getValueFromGetStatusValue(entity, resultConverter, seriesEntityId, dynamicParameters, source, valueDataSource);
+        } else {
+            value = getValueFromHasAggregationValue(entity, resultConverter, seriesEntityId, dynamicParameters, source, valueDataSource,
+                AggregationType.Last, null);
+        }
+        return resultConverter.apply(value);
+    }
+
     public <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, DS extends HasSingleValueDataSource & HasEntityIdentifier, R> R
     getSingleValue(@NotNull T entity, @NotNull DS dataSource, @NotNull Function<Object, R> resultConverter) {
         String seriesEntityId = dataSource.getEntityID();
@@ -131,7 +160,8 @@ public class TimeSeriesUtil {
     }
 
     @Nullable
-    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromHasAggregationValue(@NotNull T entity, @NotNull Function<Object, R> resultConverter,
+    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromHasAggregationValue(@NotNull T entity,
+        @NotNull Function<Object, R> resultConverter,
         String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID,
         AggregationType aggregationType, @Nullable Long diffMilliseconds) {
         Object value;
@@ -146,7 +176,8 @@ public class TimeSeriesUtil {
         return value;
     }
 
-    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromGetStatusValue(@NotNull T entity, @NotNull Function<Object, R> resultConverter,
+    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromGetStatusValue(@NotNull T entity,
+        @NotNull Function<Object, R> resultConverter,
         String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID) {
 
         Object value;

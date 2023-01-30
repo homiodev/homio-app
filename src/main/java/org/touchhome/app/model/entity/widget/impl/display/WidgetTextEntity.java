@@ -1,15 +1,15 @@
 package org.touchhome.app.model.entity.widget.impl.display;
 
-import java.util.List;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
+import org.touchhome.app.model.entity.widget.impl.HasStyle;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldType;
 
 @Entity
-public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> {
+public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> implements
+    HasStyle {
 
     public static final String PREFIX = "wgttht_";
 
@@ -30,7 +30,7 @@ public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> {
 
     @UIField(order = 1)
     @UIFieldGroup(value = "Text", order = 10, borderColor = "#4AB64D")
-    @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.text)
+    @UIFieldCodeEditor(editorTypeRef = "contentType")
     public String getValue() {
         return getJsonData("text", "");
     }
@@ -49,17 +49,7 @@ public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> {
         setJsonDataEnum("ct", value);
     }
 
-    @UIField(order = 4, type = UIFieldType.Chips)
-    @UIFieldGroup("Text")
-    public List<String> getStyle() {
-        return getJsonDataList("st");
-    }
-
-    public void setStyle(String value) {
-        setJsonData("st", value);
-    }
-
     private enum ContentType {
-        Text, Html, Markdown, AutoDetect
+        HTML, Text, Markdown
     }
 }

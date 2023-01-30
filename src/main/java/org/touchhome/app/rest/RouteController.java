@@ -33,11 +33,11 @@ public class RouteController {
     private final TouchHomeProperties touchHomeProperties;
 
     public RouteController(
-            ClassFinder classFinder,
-            BundleController bundleController,
-            TouchHomeProperties touchHomeProperties,
-            SettingController settingController,
-            EntityContext entityContext) {
+        ClassFinder classFinder,
+        BundleController bundleController,
+        TouchHomeProperties touchHomeProperties,
+        SettingController settingController,
+        EntityContext entityContext) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
         this.bundleController = bundleController;
         this.settingController = settingController;
@@ -75,9 +75,9 @@ public class RouteController {
     }
 
     private void getSubMenu(
-            Map<String, List<SidebarMenuItem>> sidebarMenus,
-            Class<?> item,
-            UISidebarMenu uiSidebarMenu) {
+        Map<String, List<SidebarMenuItem>> sidebarMenus,
+        Class<?> item,
+        UISidebarMenu uiSidebarMenu) {
         String parent = uiSidebarMenu.parent().name().toLowerCase();
         if (!sidebarMenus.containsKey(parent)) {
             sidebarMenus.put(parent, new ArrayList<>());
@@ -96,16 +96,16 @@ public class RouteController {
     }
 
     private void addRouteFromUISideBarMenu(
-            List<RouteJSON> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
+        List<RouteJSON> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
         String href =
-                StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), aClass.getSimpleName());
+            StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), aClass.getSimpleName());
         RouteJSON route = new RouteJSON(uiSidebarMenu.parent().name().toLowerCase() + "/" + href);
         route.type = aClass.getSimpleName();
         route.path = href;
         route.itemType =
-                UISidebarMenu.class.isAssignableFrom(uiSidebarMenu.itemType())
-                        ? aClass
-                        : uiSidebarMenu.itemType();
+            UISidebarMenu.class.isAssignableFrom(uiSidebarMenu.itemType())
+                ? aClass
+                : uiSidebarMenu.itemType();
         route.allowCreateNewItems = uiSidebarMenu.allowCreateNewItems();
         routes.add(route);
     }
@@ -134,11 +134,11 @@ public class RouteController {
 
         static SidebarMenuItem fromAnnotation(Class<?> clazz, UISidebarMenu uiSidebarMenu) {
             return new SidebarMenuItem(
-                    StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), clazz.getSimpleName()),
-                    uiSidebarMenu.icon(),
-                    uiSidebarMenu.bg(),
-                    clazz.getSimpleName(),
-                    uiSidebarMenu.order());
+                StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), clazz.getSimpleName()),
+                uiSidebarMenu.icon(),
+                uiSidebarMenu.bg(),
+                clazz.getSimpleName(),
+                uiSidebarMenu.order());
         }
     }
 

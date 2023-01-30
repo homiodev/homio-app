@@ -4,10 +4,10 @@ import static org.apache.commons.lang3.StringUtils.defaultString;
 
 import java.util.Date;
 import java.util.Objects;
-import javax.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter

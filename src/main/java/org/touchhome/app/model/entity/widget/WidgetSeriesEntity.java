@@ -26,8 +26,8 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFi
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
-        extends BaseEntity<WidgetSeriesEntity>
-        implements HasDynamicParameterFields, Comparable<WidgetSeriesEntity>, HasJsonData {
+    extends BaseEntity<WidgetSeriesEntity>
+    implements HasDynamicParameterFields, HasJsonData {
 
     private int priority;
 
@@ -55,7 +55,10 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
     }
 
     @Override
-    public int compareTo(@NotNull WidgetSeriesEntity entity) {
-        return Integer.compare(this.priority, entity.priority);
+    public int compareTo(@NotNull BaseEntity o) {
+        if (o instanceof WidgetSeriesEntity) {
+            return Integer.compare(this.priority, ((WidgetSeriesEntity<?>) o).priority);
+        }
+        return super.compareTo(o);
     }
 }

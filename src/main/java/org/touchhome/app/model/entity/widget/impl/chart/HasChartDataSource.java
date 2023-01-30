@@ -8,6 +8,7 @@ import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.ui.UI;
+import org.touchhome.bundle.api.ui.field.MonacoLanguage;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
@@ -51,7 +52,7 @@ public interface HasChartDataSource extends HasJsonData {
 
     @UIField(order = 6)
     @UIFieldGroup("Chart")
-    @UIFieldCodeEditor(autoFormat = true, editorType = UIFieldCodeEditor.CodeEditorType.javascript)
+    @UIFieldCodeEditor(autoFormat = true, editorType = MonacoLanguage.JavaScript)
     default String getFinalChartValueConverter() {
         return getJsonData("finValConv", "return value;");
     }

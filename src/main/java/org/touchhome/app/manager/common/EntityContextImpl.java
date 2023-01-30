@@ -6,12 +6,9 @@ import static org.touchhome.bundle.api.util.TouchHomeUtils.MACHINE_IP_ADDRESS;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DateFormat;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -64,7 +61,6 @@ import org.touchhome.app.config.ExtRequestMappingHandlerMapping;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.extloader.BundleContext;
 import org.touchhome.app.extloader.BundleContextService;
-import org.touchhome.app.hardware.StartupHardwareRepository;
 import org.touchhome.app.manager.BundleService;
 import org.touchhome.app.manager.CacheService;
 import org.touchhome.app.manager.LoggerService;
@@ -72,6 +68,7 @@ import org.touchhome.app.manager.PortService;
 import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.manager.UserService;
 import org.touchhome.app.manager.WidgetService;
+import org.touchhome.app.manager.bgp.BgpService;
 import org.touchhome.app.manager.common.impl.EntityContextBGPImpl;
 import org.touchhome.app.manager.common.impl.EntityContextEventImpl;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
@@ -95,12 +92,12 @@ import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
 import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.app.utils.HardwareUtils;
+import org.touchhome.app.utils.InternalUtil;
 import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.app.workspace.WorkspaceService;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextSetting;
-import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.DisableCacheEntity;
@@ -108,7 +105,6 @@ import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
-import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.repository.AbstractRepository;
@@ -117,8 +113,6 @@ import org.touchhome.bundle.api.service.scan.BeansItemsDiscovery;
 import org.touchhome.bundle.api.service.scan.MicroControllerScanner;
 import org.touchhome.bundle.api.service.scan.VideoStreamScanner;
 import org.touchhome.bundle.api.setting.SettingPlugin;
-import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
@@ -126,7 +120,6 @@ import org.touchhome.bundle.raspberry.RaspberryEntrypoint;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.model.UpdatableValue;
 import org.touchhome.common.util.CommonUtils;
-import org.touchhome.common.util.Curl;
 import org.touchhome.common.util.Lang;
 
 @Log4j2
@@ -176,7 +169,6 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextVarImpl entityContextVar;
     private final EntityContextWidgetImpl entityContextWidget;
     private final Environment environment;
-    private final StartupHardwareRepository startupHardwareRepository;
     @Getter private final EntityContextStorage entityContextStorage;
     private final ClassFinder classFinder;
     @Getter private final CacheService cacheService;
@@ -190,18 +182,17 @@ public class EntityContextImpl implements EntityContext {
     private PlatformTransactionManager transactionManager;
     private WorkspaceService workspaceService;
 
-    @Getter private Map<String, InternalBundleContext> bundles = new LinkedHashMap<>();
+    @Getter private final Map<String, InternalBundleContext> bundles = new LinkedHashMap<>();
     private String latestVersion;
 
-    private Set<ApplicationContext> allApplicationContexts = new HashSet<>();
+    private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
 
-    public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, ThreadPoolTaskScheduler taskScheduler, SimpMessagingTemplate messagingTemplate,
-        Environment environment, StartupHardwareRepository startupHardwareRepository, EntityManagerFactory entityManagerFactory,
-        TouchHomeProperties touchHomeProperties) {
+    public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, ThreadPoolTaskScheduler taskScheduler,
+        SimpMessagingTemplate messagingTemplate, Environment environment,
+        EntityManagerFactory entityManagerFactory, TouchHomeProperties touchHomeProperties) {
         this.classFinder = classFinder;
         this.environment = environment;
         this.cacheService = cacheService;
-        this.startupHardwareRepository = startupHardwareRepository;
         this.touchHomeProperties = touchHomeProperties;
 
         this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
@@ -235,7 +226,6 @@ public class EntityContextImpl implements EntityContext {
         entityContextVar.onContextCreated();
         entityContextUI.onContextCreated();
         entityContextBGP.onContextCreated();
-        entityContextEvent.onContextCreated();
 
         for (Class<? extends ContextCreated> beanUpdateClass : BEAN_CONTEXT_CREATED) {
             applicationContext.getBean(beanUpdateClass).onContextCreated(this);
@@ -247,8 +237,6 @@ public class EntityContextImpl implements EntityContext {
         initialiseInlineBundles(applicationContext);
 
         ui().addBellInfoNotification("app-status", "app", "Started at " + DateFormat.getDateTimeInstance().format(new Date()));
-
-        bgp().builder("check-app-version").interval(Duration.ofDays(1)).execute(this::fetchReleaseVersion);
 
         event().fireEventIfNotSame("app-status", Status.ONLINE);
         event().runOnceOnInternetUp("internal-ctx", () -> {
@@ -267,6 +255,14 @@ public class EntityContextImpl implements EntityContext {
         this.updateDeviceFeatures();
 
         this.entityContextStorage.init();
+
+        runUtilBackgroundServices(applicationContext);
+    }
+
+    private void runUtilBackgroundServices(ApplicationContext applicationContext) {
+        for (BgpService bgpService : applicationContext.getBeansOfType(BgpService.class).values()) {
+            bgpService.startUp();
+        }
     }
 
     private void initialiseInlineBundles(ApplicationContext applicationContext) {
@@ -422,8 +418,7 @@ public class EntityContextImpl implements EntityContext {
         if (updatedEntity != null || oldEntity != null) {
             bgp().builder("entity-" + (updatedEntity == null ? oldEntity : updatedEntity).getEntityID() + "-updated").hideOnUI(true)
                  .execute(() -> {
-                     for (EntityContextEventImpl.EntityListener entityListener :
-                         entityListeners) {
+                     for (EntityContextEventImpl.EntityListener entityListener : entityListeners) {
                          entityListener.notify(updatedEntity, oldEntity);
                      }
                  });
@@ -794,26 +789,6 @@ public class EntityContextImpl implements EntityContext {
         });
     }
 
-    private void fetchReleaseVersion() {
-        try {
-            log.info("Try fetch latest version from server");
-            ui().addBellInfoNotification("version", "app", "version: " + touchHomeProperties.getVersion());
-            this.latestVersion = Curl.get(touchHomeProperties.getGitHubUrl(), Map.class).get("tag_name").toString();
-
-            if (!String.valueOf(touchHomeProperties.getVersion()).equals(this.latestVersion)) {
-                log.info("Found newest version <{}>. Current version: <{}>", this.latestVersion, touchHomeProperties.getVersion());
-                String description = "Require update app version from " + touchHomeProperties.getVersion() + " to " + this.latestVersion;
-                ui().addBellErrorNotification("version", "app", description,
-                    uiInputBuilder -> uiInputBuilder.addButton("handle-version", "fas fa-registered", UI.Color.PRIMARY_COLOR,
-                                                        (entityContext, params) -> ActionResponseModel.showInfo(startupHardwareRepository.updateApp(TouchHomeUtils.getFilesPath())))
-                                                    .setText("Update"));
-                this.event().fireEventIfNotSame("app-release", this.latestVersion);
-            }
-        } catch (Exception ex) {
-            log.warn("Unable to fetch latest version");
-        }
-    }
-
     private void updateDeviceFeatures() {
         for (String feature : new String[]{"HotSpot", "SSH"}) {
             deviceFeatures.put(feature, true);
@@ -845,16 +820,8 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private String getInternalIpAddress() {
-        return defaultString(checkUrlAccessible(), applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress());
-    }
-
-    public String checkUrlAccessible() {
-        try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(touchHomeProperties.getCheckConnectivityURL(), 80));
-            return socket.getLocalAddress().getHostAddress();
-        } catch (Exception ignore) {
-        }
-        return null;
+        return defaultString(InternalUtil.checkUrlAccessible(),
+            applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress());
     }
 
     public <T> T getEnv(String key, Class<T> classType, T defaultValue) {

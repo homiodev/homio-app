@@ -7,6 +7,7 @@ import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.model.JSON;
+import org.touchhome.bundle.api.ui.field.MonacoLanguage;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 
@@ -14,32 +15,32 @@ import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 @Getter
 @Setter
 @Accessors(chain = true)
-public class WidgetJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJsEntity>*/ implements HasJsonData {
+public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJsEntity>*/ implements HasJsonData {
 
-    public static final String PREFIX = "wgtjs_";
+    public static final String PREFIX = "wgtjjs_";
 
     @Transient private String javaScriptResponse;
 
     @Transient private String javaScriptErrorResponse;
 
     @UIField(order = 13)
-    @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.javascript)
+    @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript)
     public String getJavaScript() {
         return getJsonData("js");
     }
 
-    public WidgetJsEntity setJavaScript(String value) {
+    public WidgetJavaJsEntity setJavaScript(String value) {
         setJsonData("js", value);
         return this;
     }
 
     @UIField(order = 12)
-    @UIFieldCodeEditor(editorType = UIFieldCodeEditor.CodeEditorType.json, autoFormat = true)
+    @UIFieldCodeEditor(editorType = MonacoLanguage.Json, autoFormat = true)
     public String getJavaScriptParameters() {
         return getJsonData("jsp", "{}");
     }
 
-    public WidgetJsEntity setJavaScriptParameters(String value) {
+    public WidgetJavaJsEntity setJavaScriptParameters(String value) {
         setJsonData("jsp", value);
         return this;
     }
@@ -48,7 +49,7 @@ public class WidgetJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJsEnti
         return getJsonData("jspro", Boolean.FALSE);
     }
 
-    public WidgetJsEntity setJavaScriptParametersReadOnly(Boolean value) {
+    public WidgetJavaJsEntity setJavaScriptParametersReadOnly(Boolean value) {
         setJsonData("jspro", value);
         return this;
     }

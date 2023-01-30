@@ -14,17 +14,17 @@ import java.io.IOException;
  */
 public class JSOGRefSerializer extends JsonSerializer<JSOGRef> {
 
-  @Override
-  public void serialize(JSOGRef value, JsonGenerator jgen, SerializerProvider provider)
-      throws IOException, JsonProcessingException {
-    if (value.used) {
-      jgen.writeStartObject();
-      jgen.writeObjectField(JSOGRef.REF_KEY, value.ref);
-      jgen.writeEndObject();
-    } else {
-      value.used = true;
-      jgen.writeObject(value.ref);
+    @Override
+    public void serialize(JSOGRef value, JsonGenerator jgen, SerializerProvider provider)
+        throws IOException {
+        if (value.used) {
+            jgen.writeStartObject();
+            jgen.writeObjectField(JSOGRef.REF_KEY, value.ref);
+            jgen.writeEndObject();
+        } else {
+            value.used = true;
+            jgen.writeObject(value.ref);
+        }
     }
-  }
 
 }

@@ -16,17 +16,17 @@ import java.io.IOException;
  */
 public class JSOGRefDeserializer extends JsonDeserializer<JSOGRef> {
 
-  @Override
-  public JSOGRef deserialize(JsonParser jp, DeserializationContext ctx) throws IOException, JsonProcessingException {
-    JsonNode node = jp.readValueAsTree();
-    if (node instanceof NullNode) {
-      return null;
+    @Override
+    public JSOGRef deserialize(JsonParser jp, DeserializationContext ctx) throws IOException {
+        JsonNode node = jp.readValueAsTree();
+        if (node instanceof NullNode) {
+            return null;
+        }
+        if (node.isTextual()) {
+            return new JSOGRef(node.asText());
+        } else {
+            return new JSOGRef(node.get(JSOGRef.REF_KEY).asText());
+        }
     }
-    if (node.isTextual()) {
-      return new JSOGRef(node.asText());
-    } else {
-      return new JSOGRef(node.get(JSOGRef.REF_KEY).asText());
-    }
-  }
 
 }

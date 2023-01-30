@@ -48,6 +48,7 @@ import org.touchhome.app.js.assistant.model.CompletionRequest;
 import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
+import org.touchhome.app.model.entity.widget.impl.js.WidgetFrameEntity;
 import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.entity.UserEntity;
@@ -87,6 +88,12 @@ public class UtilsController {
         return deviceConfig;
     }
 
+    @GetMapping("/frame/{entityID}")
+    public String getFrame(@PathVariable("entityID") String entityID) {
+        WidgetFrameEntity widgetFrameEntity = entityContext.getEntity(entityID);
+        return widgetFrameEntity.getFrame();
+    }
+
     @PostMapping("/github/readme")
     public GitHubReadme getUrlContent(@RequestBody String url) {
         try {
@@ -101,53 +108,53 @@ public class UtilsController {
 
     @PostMapping("/getCompletions")
     public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest)
-            throws NoSuchMethodException {
+        throws NoSuchMethodException {
         ParserContext context = ParserContext.noneContext();
         return codeParser.addCompetitionFromManagerOrClass(
-                CodeParser.removeAllComments(completionRequest.getLine()),
-                new Stack<>(),
-                context,
-                completionRequest.getAllScript());
+            CodeParser.removeAllComments(completionRequest.getLine()),
+            new Stack<>(),
+            context,
+            completionRequest.getAllScript());
     }
 
     @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
     public ResponseEntity<StreamingResponseBody> downloadFile(
-            @PathVariable("fileName") String fileName) {
+        @PathVariable("fileName") String fileName) {
         Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
         if (!Files.exists(outputPath)) {
             throw new NotFoundException("Unable to find file: " + fileName);
         }
         HttpHeaders headers = new HttpHeaders();
         headers.add(
-                HttpHeaders.CONTENT_DISPOSITION,
-                String.format("attachment; filename=\"%s\"", outputPath.getFileName()));
+            HttpHeaders.CONTENT_DISPOSITION,
+            String.format("attachment; filename=\"%s\"", outputPath.getFileName()));
         headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
 
         return new ResponseEntity<>(
-                outputStream -> {
-                    FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ);
-                    long size = inChannel.size();
-                    WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
-                    inChannel.transferTo(0, size, writableByteChannel);
-                },
-                headers,
-                HttpStatus.OK);
+            outputStream -> {
+                FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ);
+                long size = inChannel.size();
+                WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+                inChannel.transferTo(0, size, writableByteChannel);
+            },
+            headers,
+            HttpStatus.OK);
     }
 
     @PostMapping("/code/run")
     @Secured(PRIVILEGED_USER_ROLE)
     public RunScriptOnceJSON runScriptOnce(@RequestBody ScriptEntity scriptEntity)
-            throws IOException {
+        throws IOException {
         RunScriptOnceJSON runScriptOnceJSON = new RunScriptOnceJSON();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintStream logOutputStream = new PrintStream(outputStream);
         try {
             runScriptOnceJSON.result =
-                    scriptService.executeJavaScriptOnce(
-                            scriptEntity,
-                            scriptEntity.getJavaScriptParameters(),
-                            logOutputStream,
-                            false);
+                scriptService.executeJavaScriptOnce(
+                    scriptEntity,
+                    scriptEntity.getJavaScriptParameters(),
+                    logOutputStream,
+                    false);
         } catch (Exception ex) {
             runScriptOnceJSON.error = ExceptionUtils.getStackTrace(ex);
         }
@@ -157,7 +164,7 @@ public class UtilsController {
             Path tempFile = CommonUtils.getTmpPath().resolve(name);
             Files.copy(tempFile, outputStream);
             runScriptOnceJSON.logUrl =
-                    "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
+                "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
         } else {
             runScriptOnceJSON.log = outputStream.toString(StandardCharsets.UTF_8);
         }
@@ -173,13 +180,13 @@ public class UtilsController {
 
     @PostMapping("/notification/{entityID}/action")
     public ActionResponseModel notificationAction(
-            @PathVariable("entityID") String entityID,
-            @RequestBody HeaderActionRequest actionRequest) {
+        @PathVariable("entityID") String entityID,
+        @RequestBody HeaderActionRequest actionRequest) {
         try {
             return entityContext
-                    .ui()
-                    .handleNotificationAction(
-                            entityID, actionRequest.entityID, actionRequest.value);
+                .ui()
+                .handleNotificationAction(
+                    entityID, actionRequest.entityID, actionRequest.value);
         } catch (Exception ex) {
             throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
         }
@@ -188,21 +195,21 @@ public class UtilsController {
     @SneakyThrows
     @PostMapping("/header/dialog/{entityID}")
     public void acceptDialog(
-            @PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
+        @PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
         entityContext
-                .ui()
-                .handleDialog(
-                        entityID,
-                        EntityContextUI.DialogResponseType.Accepted,
-                        dialogRequest.pressedButton,
-                        OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
+            .ui()
+            .handleDialog(
+                entityID,
+                EntityContextUI.DialogResponseType.Accepted,
+                dialogRequest.pressedButton,
+                OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
     }
 
     @DeleteMapping("/header/dialog/{entityID}")
     public void discardDialog(@PathVariable("entityID") String entityID) {
         entityContext
-                .ui()
-                .handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
+            .ui()
+            .handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
     }
 
     @Getter
@@ -248,5 +255,12 @@ public class UtilsController {
         private final boolean hasInitSetup = true;
         private boolean hasKeystore;
         private Date keystoreDate;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private class FrameResponse {
+
+        private String html;
     }
 }

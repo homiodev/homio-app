@@ -17,7 +17,7 @@ public class WidgetDataRequest {
 
     @SneakyThrows
     public <T extends BaseEntity> T getEntity(
-            EntityContext entityContext, ObjectMapper objectMapper, Class<T> tClass) {
+        EntityContext entityContext, ObjectMapper objectMapper, Class<T> tClass) {
         if (liveEntity != null) {
             return objectMapper.readValue(liveEntity, tClass);
         }

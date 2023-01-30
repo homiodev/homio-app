@@ -67,6 +67,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     public void onContextCreated() {
+        // send update to UI about changed processes. Send only of user open console with thread/scheduler tab!
         this.builder("send-bgp-to-ui")
             .interval(Duration.ofSeconds(1))
             .cancelOnError(false)
