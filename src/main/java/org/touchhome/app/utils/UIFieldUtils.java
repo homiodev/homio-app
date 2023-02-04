@@ -36,7 +36,6 @@ import org.json.JSONObject;
 import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
 import org.touchhome.app.manager.common.v1.layout.UIDialogLayoutBuilderImpl;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
-import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.UIFieldMarkers;
 import org.touchhome.app.model.entity.widget.UIFieldTimeSlider;
 import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
@@ -55,6 +54,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIconPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
+import org.touchhome.bundle.api.ui.field.UIFieldLayout;
 import org.touchhome.bundle.api.ui.field.UIFieldLinkToEntity;
 import org.touchhome.bundle.api.ui.field.UIFieldNumber;
 import org.touchhome.bundle.api.ui.field.UIFieldOrder;
@@ -378,8 +378,7 @@ public class UIFieldUtils {
         if (fieldShowOnCondition != null) {
             jsonTypeMetadata.put("showCondition", fieldShowOnCondition.value());
         }
-        var disableEditOnCondition =
-            fieldContext.getDeclaredAnnotation(UIFieldDisableEditOnCondition.class);
+        var disableEditOnCondition = fieldContext.getDeclaredAnnotation(UIFieldDisableEditOnCondition.class);
         if (disableEditOnCondition != null) {
             jsonTypeMetadata.put("disableEditCondition", disableEditOnCondition.value());
         }

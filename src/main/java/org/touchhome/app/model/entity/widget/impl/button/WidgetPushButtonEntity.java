@@ -2,7 +2,6 @@ package org.touchhome.app.model.entity.widget.impl.button;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.Entity;
-import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
@@ -13,6 +12,7 @@ import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
+import org.touchhome.bundle.api.ui.field.UIFieldLayout;
 
 @Entity
 public class WidgetPushButtonEntity
@@ -56,10 +56,10 @@ public class WidgetPushButtonEntity
     }
 
     @Override
-    @UIField(order = 50)
+    @UIField(order = 50, isRevert = true)
     @UIFieldLayout(options = {"name", "value", "icon"})
     public String getLayout() {
-        return getJsonData("layout");
+        return getJsonData("layout", getDefaultLayout());
     }
 
     @Override
@@ -67,13 +67,11 @@ public class WidgetPushButtonEntity
         return null;
     }
 
-    @Override
-    protected void beforePersist() {
-        super.beforePersist();
-        setLayout(UIFieldLayout.LayoutBuilder
+    private String getDefaultLayout() {
+        return UIFieldLayout.LayoutBuilder
             .builder(30, 70)
             .addRow(rb ->
                 rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
-                  .addCol("name", UIFieldLayout.HorizontalAlign.center)).build());
+                  .addCol("name", UIFieldLayout.HorizontalAlign.center)).build();
     }
 }

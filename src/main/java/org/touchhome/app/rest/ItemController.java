@@ -123,25 +123,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
 
-    @SneakyThrows
-    static ActionResponseModel executeMethodAction(Method method, Object actionHolder, EntityContext entityContext,
-        BaseEntity actionEntity, JSONObject params) {
-        List<Object> objects = new ArrayList<>();
-        for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
-            if (actionHolder.getClass().isAssignableFrom((Class) parameterType.getType())) {
-                objects.add(actionHolder);
-            } else if (BaseEntity.class.isAssignableFrom((Class) parameterType.getType())) {
-                objects.add(actionEntity);
-            } else if (JSONObject.class.isAssignableFrom((Class<?>) parameterType.getType())) {
-                objects.add(params);
-            } else {
-                objects.add(entityContext.getBean((Class) parameterType.getType()));
-            }
-        }
-        method.setAccessible(true);
-        return (ActionResponseModel) method.invoke(actionHolder, objects.toArray());
-    }
-
     @PostConstruct
     public void postConstruct() {
         entityContext
@@ -333,6 +314,12 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         return list;
     }
 
+    @PostMapping(value = "/{entityID}/action")
+    public ActionResponseModel callAction(@PathVariable("entityID") String entityID,
+        @RequestBody ActionRequestModel requestModel) {
+        return callActionWithBinary(entityID, requestModel, null);
+    }
+
     /*TODO: @PostMapping(value = "/{type}/installDep/{dependency}")
     public void installDep(@PathVariable("type") String type, @PathVariable("dependency") String dependency) {
       if (typeToRequireDependencies.containsKey(type)) {
@@ -347,12 +334,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
       }
     }*/
-
-    @PostMapping(value = "/{entityID}/action")
-    public ActionResponseModel callAction(@PathVariable("entityID") String entityID,
-        @RequestBody ActionRequestModel requestModel) {
-        return callActionWithBinary(entityID, requestModel, null);
-    }
 
     @PostMapping(value = "/{entityID}/actionWithBinary")
     public ActionResponseModel callActionWithBinary(@PathVariable("entityID") String entityID, @RequestPart ActionRequestModel actionRequestModel,
@@ -466,6 +447,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
         List<Collection<UIInputEntity>> contextActions = new ArrayList<>();
         items.removeIf(this::isRemoveItemFromResult);
+        Collections.sort(items);
+
         for (BaseEntity item : items) {
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             if (item instanceof HasDynamicContextMenuActions) {
@@ -473,14 +456,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
             contextActions.add(uiInputBuilder.buildAll());
         }
-        Collections.sort(items);
         return new ItemsByTypeResponse(items, contextActions);
-    }
-
-    @SneakyThrows
-    private boolean isRemoveItemFromResult(BaseEntity baseEntity) {
-        UIHideEntityIfFieldNotNull hideCondition = baseEntity.getClass().getDeclaredAnnotation(UIHideEntityIfFieldNotNull.class);
-        return hideCondition != null && FieldUtils.readDeclaredField(baseEntity, hideCondition.value(), true) != null;
     }
 
     @GetMapping("/service/{esName}")
@@ -518,11 +494,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         return entityManager.getEntityWithFetchLazy(entityID);
     }
 
-    /*@PostMapping("/{entityID}/image")
-    public DeviceBaseEntity updateItemImage(@PathVariable("entityID") String entityID, @RequestBody ImageEntity imageEntity) {
-        return updateItem(entityID, true, baseEntity -> baseEntity.setImageEntity(imageEntity));
-    }*/
-
     @SneakyThrows
     @PutMapping("/{entityID}/mappedBy/{mappedBy}")
     public BaseEntity<?> putToItem(@PathVariable("entityID") String entityID, @PathVariable("mappedBy") String mappedBy, @RequestBody String json) {
@@ -556,6 +527,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         entityContext.delete(entityToRemove);
         return entityContext.getEntity(entity);
     }
+
+    /*@PostMapping("/{entityID}/image")
+    public DeviceBaseEntity updateItemImage(@PathVariable("entityID") String entityID, @RequestBody ImageEntity imageEntity) {
+        return updateItem(entityID, true, baseEntity -> baseEntity.setImageEntity(imageEntity));
+    }*/
 
     @PostMapping("/{entityID}/block")
     public void updateBlockPosition(
@@ -649,6 +625,31 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }
         return UIFieldSelectionUtil.loadOptions(dynamicParameterFields, entityContext, fieldName, selectedClassEntity, null, null, null);
+    }
+
+    @SneakyThrows
+    static ActionResponseModel executeMethodAction(Method method, Object actionHolder, EntityContext entityContext,
+        BaseEntity actionEntity, JSONObject params) {
+        List<Object> objects = new ArrayList<>();
+        for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
+            if (actionHolder.getClass().isAssignableFrom((Class) parameterType.getType())) {
+                objects.add(actionHolder);
+            } else if (BaseEntity.class.isAssignableFrom((Class) parameterType.getType())) {
+                objects.add(actionEntity);
+            } else if (JSONObject.class.isAssignableFrom((Class<?>) parameterType.getType())) {
+                objects.add(params);
+            } else {
+                objects.add(entityContext.getBean((Class) parameterType.getType()));
+            }
+        }
+        method.setAccessible(true);
+        return (ActionResponseModel) method.invoke(actionHolder, objects.toArray());
+    }
+
+    @SneakyThrows
+    private boolean isRemoveItemFromResult(BaseEntity baseEntity) {
+        UIHideEntityIfFieldNotNull hideCondition = baseEntity.getClass().getDeclaredAnnotation(UIHideEntityIfFieldNotNull.class);
+        return hideCondition != null && FieldUtils.readDeclaredField(baseEntity, hideCondition.value(), true) != null;
     }
 
     private List<OptionModel> getEntityOptions(String fieldName, Object classEntity, Class<?> entityClass) {

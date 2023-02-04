@@ -14,8 +14,8 @@ import org.touchhome.bundle.api.ui.field.action.v1.layout.dialog.UIStickyDialogI
 
 @Getter
 public class UIButtonItemBuilderImpl
-        extends UIBaseEntityItemBuilderImpl<UIButtonItemBuilder, String>
-        implements UIButtonItemBuilder {
+    extends UIBaseEntityItemBuilderImpl<UIButtonItemBuilder, String>
+    implements UIButtonItemBuilder {
 
     private String[] fireActionsBeforeChange;
     private String actionReference;
@@ -25,17 +25,12 @@ public class UIButtonItemBuilderImpl
     @Getter private UIStickyDialogItemBuilder stickyDialogBuilder;
     private boolean primary = true;
 
-    public UIButtonItemBuilderImpl(
-            UIItemType uiItemType,
-            String entityID,
-            String icon,
-            String iconColor,
-            int order,
-            UIActionHandler actionHandler) {
+    public UIButtonItemBuilderImpl(UIItemType uiItemType, String entityID, String icon, String iconColor, int order, UIActionHandler actionHandler) {
         super(uiItemType, entityID, order, actionHandler);
         if (StringUtils.isEmpty(icon)) {
             setValue(entityID);
         }
+        setText(entityID);
         setIcon(icon, iconColor);
     }
 
@@ -45,13 +40,13 @@ public class UIButtonItemBuilderImpl
     }
 
     public UIButtonItemBuilderImpl setDialogEntityBuilder(
-            UIDialogLayoutBuilder dialogEntityBuilder) {
+        UIDialogLayoutBuilder dialogEntityBuilder) {
         this.dialogEntityBuilder = dialogEntityBuilder;
         return this;
     }
 
     public UIButtonItemBuilderImpl setStickyDialogEntityBuilder(
-            UIStickyDialogItemBuilder stickyDialogBuilder) {
+        UIStickyDialogItemBuilder stickyDialogBuilder) {
         this.stickyDialogBuilder = stickyDialogBuilder;
         return this;
     }
@@ -79,8 +74,8 @@ public class UIButtonItemBuilderImpl
 
     public UIInputEntity getDialogReference() {
         return dialogEntityBuilder == null
-                ? (stickyDialogBuilder == null ? null : stickyDialogBuilder.buildEntity())
-                : dialogEntityBuilder.buildEntity();
+            ? (stickyDialogBuilder == null ? null : stickyDialogBuilder.buildEntity())
+            : dialogEntityBuilder.buildEntity();
     }
 
     public boolean isSticky() {

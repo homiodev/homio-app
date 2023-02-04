@@ -85,28 +85,24 @@ public class RouteController {
         sidebarMenus.get(parent).add(SidebarMenuItem.fromAnnotation(item, uiSidebarMenu));
     }
 
-    private List<RouteJSON> getRoutes() {
-        List<RouteJSON> routes = new ArrayList<>();
+    private List<RouteDTO> getRoutes() {
+        List<RouteDTO> routes = new ArrayList<>();
         for (Class<?> aClass : this.uiSidebarMenuClasses) {
             addRouteFromUISideBarMenu(routes, aClass, aClass.getAnnotation(UISidebarMenu.class));
         }
 
-        routes.addAll(Stream.of("dashboard").map(RouteJSON::new).collect(Collectors.toList()));
+        routes.addAll(Stream.of("dashboard").map(RouteDTO::new).collect(Collectors.toList()));
         return routes;
     }
 
     private void addRouteFromUISideBarMenu(
-        List<RouteJSON> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
-        String href =
-            StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), aClass.getSimpleName());
-        RouteJSON route = new RouteJSON(uiSidebarMenu.parent().name().toLowerCase() + "/" + href);
+        List<RouteDTO> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
+        String href = StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), aClass.getSimpleName());
+        RouteDTO route = new RouteDTO(uiSidebarMenu.parent().name().toLowerCase() + "/" + href);
         route.type = aClass.getSimpleName();
         route.path = href;
-        route.itemType =
-            UISidebarMenu.class.isAssignableFrom(uiSidebarMenu.itemType())
-                ? aClass
-                : uiSidebarMenu.itemType();
         route.allowCreateNewItems = uiSidebarMenu.allowCreateNewItems();
+        route.sort = Stream.of(uiSidebarMenu.sort()).filter(s -> !s.isEmpty()).collect(Collectors.toList());
         routes.add(route);
     }
 
@@ -115,7 +111,7 @@ public class RouteController {
         public int appVersion;
         public int runCount;
         public int bundleUpdateCount;
-        public List<RouteJSON> routes;
+        public List<RouteDTO> routes;
         public Map<String, List<SidebarMenuItem>> menu;
         public List<BundleController.BundleJson> bundles;
         public List<SettingEntity> settings;
@@ -144,12 +140,12 @@ public class RouteController {
 
     @Getter
     @RequiredArgsConstructor
-    public static class RouteJSON {
+    public static class RouteDTO {
 
         private final String url;
+        private List<String> sort;
         private String path;
         private String type;
-        private Class<?> itemType;
         private boolean allowCreateNewItems;
     }
 }

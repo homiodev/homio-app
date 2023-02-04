@@ -1,7 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.toggle;
 
 import javax.persistence.Entity;
-import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
@@ -9,6 +8,7 @@ import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldLayout;
 
 @Entity
 public class WidgetToggleEntity
@@ -25,10 +25,10 @@ public class WidgetToggleEntity
     }
 
     @Override
-    @UIField(order = 50)
+    @UIField(order = 50, isRevert = true)
     @UIFieldLayout(options = {"name", "value", "icon", "button"})
     public String getLayout() {
-        return getJsonData("layout");
+        return getJsonData("layout", getDefaultLayout());
     }
 
     @UIField(order = 1)
@@ -66,16 +66,14 @@ public class WidgetToggleEntity
         return null;
     }
 
-    @Override
-    protected void beforePersist() {
-        super.beforePersist();
-        setLayout(UIFieldLayout.LayoutBuilder
+    private String getDefaultLayout() {
+        return UIFieldLayout.LayoutBuilder
             .builder(10, 60, 30)
             .addRow(rb ->
                 rb.addCol("icon", UIFieldLayout.HorizontalAlign.right)
                   .addCol("name", UIFieldLayout.HorizontalAlign.left)
                   .addCol("button", UIFieldLayout.HorizontalAlign.center))
-            .build());
+            .build();
     }
 
     enum ToggleType {

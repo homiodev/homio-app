@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 import javax.validation.Valid;
@@ -68,6 +69,13 @@ public class UtilsController {
     private final EntityContextImpl entityContext;
     private final ScriptService scriptService;
     private final CodeParser codeParser;
+
+    @PutMapping("/multiDynamicUpdates")
+    public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {
+        for (DynamicRequestItem requestItem : request) {
+            entityContext.ui().registerForUpdates(new DynamicUpdateRequest(requestItem.did, requestItem.eid));
+        }
+    }
 
     @PutMapping("/dynamicUpdates")
     public void registerForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
@@ -210,6 +218,14 @@ public class UtilsController {
         entityContext
             .ui()
             .handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
+    }
+
+    @Getter
+    @Setter
+    private static class DynamicRequestItem {
+
+        private String eid;
+        private String did;
     }
 
     @Getter

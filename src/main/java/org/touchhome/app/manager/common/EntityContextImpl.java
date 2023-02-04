@@ -75,7 +75,7 @@ import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.manager.common.impl.EntityContextUDPImpl;
 import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.manager.common.impl.EntityContextVarImpl;
-import org.touchhome.app.manager.common.impl.EntityContextWidgetImpl;
+import org.touchhome.app.manager.common.impl.widget.EntityContextWidgetImpl;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.app.repository.crud.base.BaseCrudRepository;
@@ -135,7 +135,7 @@ public class EntityContextImpl implements EntityContext {
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
     public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
     public static Map<String, AbstractRepository> repositoriesByPrefix;
-    private static Map<String, PureRepository> pureRepositories = new HashMap<>();
+    private static final Map<String, PureRepository> pureRepositories = new HashMap<>();
 
     static {
         BEAN_CONTEXT_CREATED.add(BundleService.class);
@@ -174,6 +174,8 @@ public class EntityContextImpl implements EntityContext {
     @Getter private final CacheService cacheService;
     @Getter private final TouchHomeProperties touchHomeProperties;
     private final Map<String, Boolean> deviceFeatures = new HashMap<>();
+    @Getter private final Map<String, InternalBundleContext> bundles = new LinkedHashMap<>();
+    private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
     private EntityManager entityManager;
     private TransactionTemplate transactionTemplate;
     private boolean showEntityState;
@@ -181,11 +183,6 @@ public class EntityContextImpl implements EntityContext {
     private AllDeviceRepository allDeviceRepository;
     private PlatformTransactionManager transactionManager;
     private WorkspaceService workspaceService;
-
-    @Getter private final Map<String, InternalBundleContext> bundles = new LinkedHashMap<>();
-    private String latestVersion;
-
-    private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
 
     public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, ThreadPoolTaskScheduler taskScheduler,
         SimpMessagingTemplate messagingTemplate, Environment environment,
@@ -257,30 +254,6 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextStorage.init();
 
         runUtilBackgroundServices(applicationContext);
-    }
-
-    private void runUtilBackgroundServices(ApplicationContext applicationContext) {
-        for (BgpService bgpService : applicationContext.getBeansOfType(BgpService.class).values()) {
-            bgpService.startUp();
-        }
-    }
-
-    private void initialiseInlineBundles(ApplicationContext applicationContext) {
-        log.info("Initialize bundles...");
-        ArrayList<BundleEntrypoint> bundleEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
-        Collections.sort(bundleEntrypoints);
-        for (BundleEntrypoint bundleEntrypoint : bundleEntrypoints) {
-            this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, null));
-            log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
-            try {
-                bundleEntrypoint.init();
-                bundleEntrypoint.onContextRefresh();
-            } catch (Exception ex) {
-                log.fatal("Unable to init bundle: " + bundleEntrypoint.getBundleId(), ex);
-                throw ex;
-            }
-        }
-        log.info("Done initialize bundles");
     }
 
     @Override
@@ -397,32 +370,10 @@ public class EntityContextImpl implements EntityContext {
         sendEntityUpdateNotification(entity, ItemAction.Update);
     }
 
-    private void putToCache(HasEntityIdentifier entity, Map<String, Object[]> changeFields) {
-        PureRepository repository;
-        if (entity instanceof BaseEntity) {
-            repository = classFinder.getRepositoryByClass(((BaseEntity) entity).getClass());
-        } else {
-            repository = pureRepositories.get(entity.getClass().getSimpleName());
-        }
-        cacheService.putToCache(repository, entity, changeFields);
-    }
-
     @Override
     public <T extends HasEntityIdentifier> void save(T entity) {
         BaseCrudRepository pureRepository = (BaseCrudRepository) pureRepositories.get(entity.getClass().getSimpleName());
         pureRepository.save(entity);
-    }
-
-    private <T extends HasEntityIdentifier> void runUpdateNotifyListeners(@Nullable T updatedEntity, T oldEntity,
-        EntityContextEventImpl.EntityListener... entityListeners) {
-        if (updatedEntity != null || oldEntity != null) {
-            bgp().builder("entity-" + (updatedEntity == null ? oldEntity : updatedEntity).getEntityID() + "-updated").hideOnUI(true)
-                 .execute(() -> {
-                     for (EntityContextEventImpl.EntityListener entityListener : entityListeners) {
-                         entityListener.notify(updatedEntity, oldEntity);
-                     }
-                 });
-        }
     }
 
     @Override
@@ -598,19 +549,6 @@ public class EntityContextImpl implements EntityContext {
         return o;
     }
 
-    private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz) {
-        if (clazz.isAnnotationPresent(DisableCacheEntity.class)) {
-            return getRepository(clazz).listAll();
-        }
-        return entityManager.getEntityIDsByEntityClassFullName(clazz).stream().map(entityID -> {
-            T entity = entityManager.getEntityWithFetchLazy(entityID);
-            if (entity != null) {
-                entity.afterFetch(this);
-            }
-            return entity;
-        }).filter(Objects::nonNull).collect(Collectors.toList());
-    }
-
     public void sendEntityUpdateNotification(Object entity, ItemAction type) {
         if (!(entity instanceof BaseEntity)) {
             return;
@@ -623,6 +561,93 @@ public class EntityContextImpl implements EntityContext {
         if (showEntityState) {
             type.messageEvent.accept(this);
         }
+    }
+
+    public List<BaseEntity> findAllBaseEntities() {
+        List<BaseEntity> entities = new ArrayList<>();
+        entities.addAll(findAll(DeviceBaseEntity.class));
+        return entities;
+    }
+
+    public <T> List<T> getEntityServices(Class<T> serviceClass) {
+        return allDeviceRepository.listAll().stream()
+                                  .filter(e -> serviceClass.isAssignableFrom(e.getClass()))
+                                  .map(e -> (T) e)
+                                  .collect(Collectors.toList());
+    }
+
+    public BaseEntity<?> copyEntity(BaseEntity entity) {
+        entity.copy();
+        BaseEntity<?> saved = save(entity, true);
+        cacheService.clearCache();
+        return saved;
+    }
+
+    public void fireAllBroadcastLock(Consumer<BroadcastLockManagerImpl> handler) {
+        this.workspaceService.fireAllBroadcastLock(handler);
+    }
+
+    public <T> T getEnv(String key, Class<T> classType, T defaultValue) {
+        return environment.getProperty(key, classType, defaultValue);
+    }
+
+    private void runUtilBackgroundServices(ApplicationContext applicationContext) {
+        for (BgpService bgpService : applicationContext.getBeansOfType(BgpService.class).values()) {
+            bgpService.startUp();
+        }
+    }
+
+    private void initialiseInlineBundles(ApplicationContext applicationContext) {
+        log.info("Initialize bundles...");
+        ArrayList<BundleEntrypoint> bundleEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
+        Collections.sort(bundleEntrypoints);
+        for (BundleEntrypoint bundleEntrypoint : bundleEntrypoints) {
+            this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, null));
+            log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
+            try {
+                bundleEntrypoint.init();
+                bundleEntrypoint.onContextRefresh();
+            } catch (Exception ex) {
+                log.fatal("Unable to init bundle: " + bundleEntrypoint.getBundleId(), ex);
+                throw ex;
+            }
+        }
+        log.info("Done initialize bundles");
+    }
+
+    private void putToCache(HasEntityIdentifier entity, Map<String, Object[]> changeFields) {
+        PureRepository repository;
+        if (entity instanceof BaseEntity) {
+            repository = classFinder.getRepositoryByClass(((BaseEntity) entity).getClass());
+        } else {
+            repository = pureRepositories.get(entity.getClass().getSimpleName());
+        }
+        cacheService.putToCache(repository, entity, changeFields);
+    }
+
+    private <T extends HasEntityIdentifier> void runUpdateNotifyListeners(@Nullable T updatedEntity, T oldEntity,
+        EntityContextEventImpl.EntityListener... entityListeners) {
+        if (updatedEntity != null || oldEntity != null) {
+            bgp().builder("entity-" + (updatedEntity == null ? oldEntity : updatedEntity).getEntityID() + "-updated").hideOnUI(true)
+                 .execute(() -> {
+                     for (EntityContextEventImpl.EntityListener entityListener : entityListeners) {
+                         entityListener.notify(updatedEntity, oldEntity);
+                     }
+                 });
+        }
+    }
+
+    private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz) {
+        if (clazz.isAnnotationPresent(DisableCacheEntity.class)) {
+            return getRepository(clazz).listAll();
+        }
+        return entityManager.getEntityIDsByEntityClassFullName(clazz).stream().map(entityID -> {
+            T entity = entityManager.getEntityWithFetchLazy(entityID);
+            if (entity != null) {
+                entity.afterFetch(this);
+            }
+            return entity;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     private void removeBundle(BundleContext bundleContext) {
@@ -694,12 +719,6 @@ public class EntityContextImpl implements EntityContext {
         }
 
         log.info("Finish update all app bundles");
-    }
-
-    public List<BaseEntity> findAllBaseEntities() {
-        List<BaseEntity> entities = new ArrayList<>();
-        entities.addAll(findAll(DeviceBaseEntity.class));
-        return entities;
     }
 
     private void rebuildAllRepositories(ApplicationContext context, boolean addBundle) {
@@ -801,31 +820,9 @@ public class EntityContextImpl implements EntityContext {
         }
     }
 
-    public <T> List<T> getEntityServices(Class<T> serviceClass) {
-        return allDeviceRepository.listAll().stream()
-                                  .filter(e -> serviceClass.isAssignableFrom(e.getClass()))
-                                  .map(e -> (T) e)
-                                  .collect(Collectors.toList());
-    }
-
-    public BaseEntity<?> copyEntity(BaseEntity entity) {
-        entity.copy();
-        BaseEntity<?> saved = save(entity, true);
-        cacheService.clearCache();
-        return saved;
-    }
-
-    public void fireAllBroadcastLock(Consumer<BroadcastLockManagerImpl> handler) {
-        this.workspaceService.fireAllBroadcastLock(handler);
-    }
-
     private String getInternalIpAddress() {
         return defaultString(InternalUtil.checkUrlAccessible(),
             applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress());
-    }
-
-    public <T> T getEnv(String key, Class<T> classType, T defaultValue) {
-        return environment.getProperty(key, classType, defaultValue);
     }
 
     private void installFFMPEG() {

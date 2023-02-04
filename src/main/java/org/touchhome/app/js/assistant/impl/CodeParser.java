@@ -37,6 +37,37 @@ public class CodeParser {
 
     private final ClassFinder classFinder;
 
+    public static String removeAllComments(String line) {
+        while (true) {
+            if (line.contains("/*") && line.contains("*/")) {
+                line = line.substring(0, line.indexOf("/*")) + line.substring(line.indexOf("*/") + 2);
+            } else {
+                return line;
+            }
+        }
+    }
+
+    public Set<Completion> addCompetitionFromManagerOrClass(String line, Stack<Param> stack, ParserContext context,
+        String allScript) throws NoSuchMethodException {
+        Set<Completion> completions = new HashSet<>();
+        List<String> items = splitSpecial(line); // list of items splitted by '.'
+        String firstItem = items.get(0);
+        // check if firstItem is previous evaluated var
+        FirsItemType firsItemType = FirsItemType.find(firstItem, line, allScript);
+        if (firsItemType != null) {
+            return getCompletionsForVarType(firstItem, allScript, line);
+        }
+        // try evaluate with
+        for (JavaScriptBinder javaScriptBinder : JavaScriptBinder.values()) {
+            Class clazz = javaScriptBinder.managerClass;
+            completions.addAll(addCompetitionFrom(javaScriptBinder.name(), clazz, line, stack, context));
+        }
+        if (completions.isEmpty()) {
+            return tryEvaFromFunctionParameter(firstItem, allScript, line);
+        }
+        return completions;
+    }
+
     private static List<String> splitSpecial(String orig) {
         List<String> parts = new ArrayList<>();
         int nextingLevel = 0;
@@ -58,16 +89,6 @@ public class CodeParser {
         // Thanks PoeHah for pointing it out. This adds the last element to it.
         parts.add(result.toString().trim());
         return parts;
-    }
-
-    public static String removeAllComments(String line) {
-        while (true) {
-            if (line.contains("/*") && line.contains("*/")) {
-                line = line.substring(0, line.indexOf("/*")) + line.substring(line.indexOf("*/") + 2);
-            } else {
-                return line;
-            }
-        }
     }
 
     /**
@@ -102,8 +123,7 @@ public class CodeParser {
             stack.add(new Param(from, fromClass));
             addCompetitionFromManager2(1, items, list, fromClass, stack, context);
         } else if (from.startsWith(firstItem) && StringUtils.isNotEmpty(from)) {
-            list.add(new Completion(from, fromClass.getSimpleName(), fromClass, "",
-                CompletionItemKind.Method));
+            list.add(new Completion(from, fromClass.getSimpleName(), fromClass, "", CompletionItemKind.Method));
         } else { // check for Class
             if (fromClass.getSimpleName().equals(from)) {
                 stack.add(new Param(from, fromClass));
@@ -119,27 +139,6 @@ public class CodeParser {
         }
 
         return list;
-    }
-
-    public Set<Completion> addCompetitionFromManagerOrClass(String line, Stack<Param> stack, ParserContext context,
-        String allScript) throws NoSuchMethodException {
-        Set<Completion> completions = new HashSet<>();
-        List<String> items = splitSpecial(line); // list of items splitted by '.'
-        String firstItem = items.get(0);
-        // check if firstItem is previous evaluated var
-        FirsItemType firsItemType = FirsItemType.find(firstItem, line, allScript);
-        if (firsItemType != null) {
-            return getCompletionsForVarType(firstItem, allScript, line);
-        }
-        // try evaluate with
-        for (JavaScriptBinder javaScriptBinder : JavaScriptBinder.values()) {
-            Class clazz = javaScriptBinder.managerClass;
-            completions.addAll(addCompetitionFrom(javaScriptBinder.name(), clazz, line, stack, context));
-        }
-        if (completions.isEmpty()) {
-            return tryEvaFromFunctionParameter(firstItem, allScript, line);
-        }
-        return completions;
     }
 
     private Set<Completion> tryEvaFromFunctionParameter(String supposeParameter, String allScript, String line)

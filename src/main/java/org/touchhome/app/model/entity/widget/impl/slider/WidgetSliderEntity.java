@@ -1,7 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.slider;
 
 import javax.persistence.Entity;
-import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
@@ -10,6 +9,7 @@ import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldLayout;
 
 @Entity
 public class WidgetSliderEntity
@@ -75,7 +75,7 @@ public class WidgetSliderEntity
     @UIField(order = 50)
     @UIFieldLayout(options = {"name", "value", "icon", "slider"})
     public String getLayout() {
-        return getJsonData("layout");
+        return getJsonData("layout", getDefaultLayout());
     }
 
     @Override
@@ -83,17 +83,14 @@ public class WidgetSliderEntity
         return null;
     }
 
-    @Override
-    protected void beforePersist() {
-        super.beforePersist();
-        setLayout(
-            UIFieldLayout.LayoutBuilder
-                .builder(15, 20, 50, 15)
-                .addRow(rb ->
-                    rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
-                      .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                      .addCol("slider", UIFieldLayout.HorizontalAlign.center)
-                      .addCol("value", UIFieldLayout.HorizontalAlign.center))
-                .build());
+    private String getDefaultLayout() {
+        return UIFieldLayout.LayoutBuilder
+            .builder(15, 20, 50, 15)
+            .addRow(rb ->
+                rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
+                  .addCol("name", UIFieldLayout.HorizontalAlign.left)
+                  .addCol("slider", UIFieldLayout.HorizontalAlign.center)
+                  .addCol("value", UIFieldLayout.HorizontalAlign.center))
+            .build();
     }
 }

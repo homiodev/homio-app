@@ -224,13 +224,21 @@ public class WidgetController {
             timeSeriesUtil.getSingleValue(entity,
                 entity.getOnOffValueDataSource(),
                 entity.getDynamicParameterFields("onOff"),
-                o -> (Boolean) o));
+                o -> (Boolean) o),
+            timeSeriesUtil.getSingleValue(entity,
+                entity.getColorTemperatureValueDataSource(),
+                entity.getDynamicParameterFields("colorTemp"),
+                o -> (Integer) o));
     }
 
     @PostMapping("/colors/update")
     public void updateColorsValue(@RequestBody ColorValueRequest request) {
         WidgetColorEntity entity = entityContext.getEntity(request.entityID);
         switch (request.type) {
+            case colorTemp:
+                DataSourceUtil.setValue(entityContext, entity.getColorTemperatureSetValueDataSource(), entity.getDynamicParameterFields("colorTemp"),
+                    request.value);
+                break;
             case color:
                 DataSourceUtil.setValue(entityContext, entity.getColorSetValueDataSource(), entity.getDynamicParameterFields("color"), request.value);
                 break;
@@ -461,6 +469,7 @@ public class WidgetController {
         private Integer brightness;
         private String color;
         private Boolean onOffValue;
+        private Integer colorTemp;
     }
 
     @Setter
@@ -473,7 +482,7 @@ public class WidgetController {
         private Type type;
 
         private enum Type {
-            color, onOff, brightness
+            color, colorTemp, onOff, brightness
         }
     }
 }

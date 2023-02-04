@@ -3,7 +3,6 @@ package org.touchhome.app.model.entity.widget.impl.display;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIFieldJSONLine;
-import org.touchhome.app.model.entity.widget.UIFieldLayout;
 import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
@@ -16,6 +15,7 @@ import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
+import org.touchhome.bundle.api.ui.field.UIFieldLayout;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
@@ -50,12 +50,10 @@ public class WidgetDisplayEntity
         return PREFIX;
     }
 
-    @UIField(order = 50)
-    @UIFieldLayout(
-        options = {"name", "value", "icon"},
-        rows = "1:10")
+    @UIField(order = 50, isRevert = true)
+    @UIFieldLayout(options = {"name", "value", "icon"}, rows = "1:10")
     public String getLayout() {
-        return getJsonData("layout");
+        return getJsonData("layout", getDefaultLayout());
     }
 
     @Override
@@ -109,10 +107,8 @@ public class WidgetDisplayEntity
         return null;
     }
 
-    @Override
-    protected void beforePersist() {
-        super.beforePersist();
-        setLayout(UIFieldLayout.LayoutBuilder
+    private String getDefaultLayout() {
+        return UIFieldLayout.LayoutBuilder
             .builder(50, 50)
             .addRow(rb -> rb
                 .addCol("name", UIFieldLayout.HorizontalAlign.left)
@@ -123,6 +119,6 @@ public class WidgetDisplayEntity
             .addRow(rb -> rb
                 .addCol("none", UIFieldLayout.HorizontalAlign.center)
                 .addCol("none", UIFieldLayout.HorizontalAlign.center))
-            .build());
+            .build();
     }
 }

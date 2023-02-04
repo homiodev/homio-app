@@ -7,11 +7,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
-import org.touchhome.app.model.entity.widget.UIFieldLayout;
-import org.touchhome.app.model.entity.widget.UIFieldLayout.HorizontalAlign;
 import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
-import org.touchhome.app.model.entity.widget.impl.HasIcon;
+import org.touchhome.app.model.entity.widget.impl.HasIconWithoutThreshold;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
 import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
@@ -21,6 +19,8 @@ import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
+import org.touchhome.bundle.api.ui.field.UIFieldLayout;
+import org.touchhome.bundle.api.ui.field.UIFieldLayout.HorizontalAlign;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIKeyValueField;
@@ -33,7 +33,7 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFi
 public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     implements HasStyle,
     HasLayout,
-    HasIcon,
+    HasIconWithoutThreshold,
     HasName,
     HasSourceServerUpdates,
     HasDynamicParameterFields {
@@ -66,13 +66,14 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIFieldIgnore
     @JsonIgnore
     public String getBackground() {
+
         return super.getBackground();
     }
 
-    @UIField(order = 10)
-    @UIFieldLayout(options = {"colors", "icon", "name", "brightness", "onOff"})
+    @UIField(order = 10, isRevert = true)
+    @UIFieldLayout(options = {"colors", "icon", "name", "brightness", "colorTemp", "onOff"})
     public String getLayout() {
-        return getJsonData("layout");
+        return getJsonData("layout", getDefaultLayout());
     }
 
     @UIField(order = 1)
@@ -165,6 +166,74 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
         setJsonData("bsvds", value);
     }
 
+    @UIField(order = 3)
+    @UIFieldGroup("Brightness")
+    public int getBrightnessMinValue() {
+        return getJsonData("brtmin", 0);
+    }
+
+    public void setBrightnessMinValue(int value) {
+        setJsonData("brtmin", value);
+    }
+
+    @UIField(order = 4)
+    @UIFieldGroup("Brightness")
+    public int getBrightnessMaxValue() {
+        return getJsonData("brtmax", 255);
+    }
+
+    public void setBrightnessMaxValue(int value) {
+        setJsonData("brtmax", value);
+    }
+
+    @UIField(order = 1)
+    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
+    @UIFieldEntityByClassSelection(HasGetStatusValue.class)
+    @UIFieldGroup(value = "ColorTemperature", order = 25, borderColor = "#29B3B1")
+    @UIEditReloadWidget
+    public String getColorTemperatureValueDataSource() {
+        return getJsonData("clrtmp");
+    }
+
+    public void setColorTemperatureValueDataSource(String value) {
+        setJsonData("clrtmp", value);
+        if (isEmpty(getColorTemperatureSetValueDataSource())) {
+            setColorTemperatureSetValueDataSource(value);
+        }
+    }
+
+    @UIField(order = 2)
+    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
+    @UIFieldEntityByClassSelection(HasSetStatusValue.class)
+    @UIFieldGroup("ColorTemperature")
+    public String getColorTemperatureSetValueDataSource() {
+        return getJsonData("clrtmps");
+    }
+
+    public void setColorTemperatureSetValueDataSource(String value) {
+        setJsonData("clrtmps", value);
+    }
+
+    @UIField(order = 3)
+    @UIFieldGroup("ColorTemperature")
+    public int getColorTemperatureMinValue() {
+        return getJsonData("clrtmpmin", 0);
+    }
+
+    public void setColorTemperatureMinValue(int value) {
+        setJsonData("clrtmpmin", value);
+    }
+
+    @UIField(order = 4)
+    @UIFieldGroup("ColorTemperature")
+    public int getColorTemperatureMaxValue() {
+        return getJsonData("clrtmpmax", 255);
+    }
+
+    public void setColorTemperatureMaxValue(int value) {
+        setJsonData("clrtmpmax", value);
+    }
+
     @UIField(order = 1)
     @UIFieldGroup(value = "OnOff", order = 30, borderColor = "#009688")
     @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
@@ -196,23 +265,23 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @Override
     protected void beforePersist() {
         super.beforePersist();
-        setColors(Stream.of("#f44336", "#e91e63", "#9c27b0", "#673ab7", "#3f51b5"
-                            , "#00bcd4", "#009688", "#4caf50", "#ffeb3b"
-                            , "#ff9800", "#795548", "#607d8b")
+        setColors(Stream.of("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FFFFFF")
                         .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
                         .collect(Collectors.joining(",", "[", "]")));
         setCircleSize(20);
         setCircleSpacing(4);
+    }
 
-        setLayout(UIFieldLayout.LayoutBuilder
+    private String getDefaultLayout() {
+        return UIFieldLayout.LayoutBuilder
             .builder(15, 20, 50, 15)
             .addRow(rb -> rb
-                .addCol("icon", UIFieldLayout.HorizontalAlign.left)
-                .addCol("name", UIFieldLayout.HorizontalAlign.left)
+                .addCol("icon", HorizontalAlign.center)
+                .addCol("name", HorizontalAlign.left)
                 .addCol("brightness", HorizontalAlign.center)
-                .addCol("onOff", UIFieldLayout.HorizontalAlign.right))
+                .addCol("onOff", HorizontalAlign.center))
             .addRow(rb -> rb
-                .addCol("colors", UIFieldLayout.HorizontalAlign.center, 4))
-            .build());
+                .addCol("colors", HorizontalAlign.center, 4))
+            .build();
     }
 }

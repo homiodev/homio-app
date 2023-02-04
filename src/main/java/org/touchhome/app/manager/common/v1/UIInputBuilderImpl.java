@@ -33,17 +33,17 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
 
     public UIButtonItemBuilder addReferenceAction(String name, String reference, int order) {
         return addEntity(
-                new UIButtonItemBuilderImpl(UIItemType.Button, name, name, null, order, null)
-                        .setActionReference(reference));
+            new UIButtonItemBuilderImpl(UIItemType.Button, name, name, null, order, null)
+                .setActionReference(reference));
     }
 
     public UIButtonItemBuilderImpl addFireActionBeforeChange(
-            String name, String[] actions, String reference, int order) {
+        String name, String[] actions, String reference, int order) {
         return addEntity(
-                        new UIButtonItemBuilderImpl(
-                                        UIItemType.Button, name, name, null, order, null)
-                                .setActionReference(reference))
-                .setFireActionsBeforeChange(actions);
+            new UIButtonItemBuilderImpl(
+                UIItemType.Button, name, name, null, order, null)
+                .setActionReference(reference))
+            .setFireActionsBeforeChange(actions);
     }
 
     @Override
@@ -59,10 +59,10 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     @Override
     public @Unmodifiable Collection<UIInputEntity> buildAll() {
         List<UIInputEntity> entities =
-                getUiEntityBuilders(false).stream()
-                        .map(UIEntityBuilder::buildEntity)
-                        .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
-                        .collect(Collectors.toList());
+            getUiEntityBuilders(false).stream()
+                                      .map(UIEntityBuilder::buildEntity)
+                                      .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
+                                      .collect(Collectors.toList());
         return Collections.unmodifiableCollection(entities);
     }
 
@@ -70,7 +70,7 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     public void fireFetchValues() {
         for (UIEntityItemBuilder itemBuilder : getUiEntityItemBuilders(true)) {
             Map<String, Runnable> handlers =
-                    ((UIBaseEntityItemBuilderImpl) itemBuilder).getFetchValueHandlers();
+                ((UIBaseEntityItemBuilderImpl) itemBuilder).getFetchValueHandlers();
             if (handlers != null) {
                 for (Runnable handler : handlers.values()) {
                     handler.run();
@@ -83,63 +83,32 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     public UIActionHandler findActionHandler(@NotNull String key) {
         for (UIEntityItemBuilder entityBuilder : this.getUiEntityItemBuilders(true)) {
             if (entityBuilder.getEntityID().equals(key)
-                    && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
+                && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
                 return ((UIBaseEntityItemBuilderImpl) entityBuilder).getActionHandler();
             }
         }
         return null;
     }
 
-    private UIActionHandler findActionHandler(UIEntityBuilder entityBuilder, String key) {
-        if (entityBuilder != null) {
-            if (entityBuilder.getEntityID().equals(key)
-                    && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
-                return ((UIBaseEntityItemBuilderImpl) entityBuilder).getActionHandler();
-            }
-            if (entityBuilder instanceof UILayoutBuilder) {
-                for (UIEntityBuilder children :
-                        ((UILayoutBuilder) entityBuilder).getUiEntityBuilders(false)) {
-                    UIActionHandler actionHandler = findActionHandler(children, key);
-                    if (actionHandler != null) {
-                        return actionHandler;
-                    }
-                }
-            }
-        }
-        return null;
+    @Override
+    public UIButtonItemBuilder addSelectableButton(@NotNull String name, String icon, String iconColor, @Nullable UIActionHandler action, int order) {
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.SelectableButton, name, icon, iconColor, order, action));
     }
 
     @Override
-    public UIButtonItemBuilder addSelectableButton(
-            @NotNull String name,
-            String icon,
-            String iconColor,
-            UIActionHandler action,
-            int order) {
-        return addEntity(
-                new UIButtonItemBuilderImpl(
-                        UIItemType.SelectableButton, name, icon, iconColor, order, action));
-    }
-
-    @Override
-    public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButton(
-            @NotNull String name,
-            String icon,
-            String color,
-            @Nullable Integer dialogWidth,
-            @NotNull UIActionHandler action,
-            int order) {
+    public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButton(@NotNull String name, String icon, String color,
+        @Nullable Integer dialogWidth, @NotNull UIActionHandler action, int order) {
         return addOpenDialogSelectableButtonInternal(name, icon, color, dialogWidth, action);
     }
 
     public UIInputBuilder.DialogEntity<UIButtonItemBuilder> addOpenDialogSelectableButtonInternal(
-            String name, String icon, String color, Integer dialogWidth, UIActionHandler action) {
+        String name, String icon, String color, Integer dialogWidth, UIActionHandler action) {
         UIDialogLayoutBuilderImpl uiDialogLayoutBuilder =
-                new UIDialogLayoutBuilderImpl(name, dialogWidth);
+            new UIDialogLayoutBuilderImpl(name, dialogWidth);
         UIDialogLayoutBuilderImpl dialogEntityBuilder = addEntity(uiDialogLayoutBuilder);
         UIButtonItemBuilder entityBuilder =
-                ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, color, action))
-                        .setActionReference(dialogEntityBuilder.getEntityID());
+            ((UIButtonItemBuilderImpl) addSelectableButton(name, icon, color, action))
+                .setActionReference(dialogEntityBuilder.getEntityID());
         return new UIInputBuilder.DialogEntity<>() {
             @Override
             public UIInputBuilder up() {
@@ -163,5 +132,24 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     @Override
     public UIInputEntity buildEntity() {
         throw new RuntimeException("Must be not fired!");
+    }
+
+    private UIActionHandler findActionHandler(UIEntityBuilder entityBuilder, String key) {
+        if (entityBuilder != null) {
+            if (entityBuilder.getEntityID().equals(key)
+                && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
+                return ((UIBaseEntityItemBuilderImpl) entityBuilder).getActionHandler();
+            }
+            if (entityBuilder instanceof UILayoutBuilder) {
+                for (UIEntityBuilder children :
+                    ((UILayoutBuilder) entityBuilder).getUiEntityBuilders(false)) {
+                    UIActionHandler actionHandler = findActionHandler(children, key);
+                    if (actionHandler != null) {
+                        return actionHandler;
+                    }
+                }
+            }
+        }
+        return null;
     }
 }

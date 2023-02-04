@@ -20,11 +20,13 @@ import org.touchhome.bundle.api.entity.zigbee.ZigBeeDeviceBaseEntity;
 import org.touchhome.bundle.api.entity.zigbee.ZigBeeProperty;
 import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.model.Status;
+import org.touchhome.bundle.api.state.OnOffType;
 import org.touchhome.bundle.api.state.QuantityType;
 import org.touchhome.bundle.api.state.State;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.MenuBlock.ServerMenuBlock;
+import org.touchhome.bundle.api.workspace.scratch.MenuBlock.StaticMenuBlock;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.z2m.Z2MEntrypoint;
 import tech.units.indriya.unit.Units;
@@ -34,13 +36,11 @@ import tech.units.indriya.unit.Units;
 public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
 
     public static final String ZIGBEE__BASE_URL = "rest/zigbee/";
-
-    private static final String DEVICE = "Device";
     public static final String ZIGBEE_CLUSTER_ID_URL = ZIGBEE__BASE_URL + "zcl/";
     public static final String ZIGBEE_CLUSTER_NAME_URL = ZIGBEE__BASE_URL + "clusterName/";
     public static final String ZIGBEE_MODEL_URL = ZIGBEE__BASE_URL + "model/";
     public static final String ZIGBEE_ALARM_URL = ZIGBEE__BASE_URL + "alarm";
-
+    private static final String DEVICE = "Device";
     private final ServerMenuBlock deviceMenu;
     private final ServerMenuBlock deviceReadMenu;
     private final ServerMenuBlock deviceWriteMenu;
@@ -49,12 +49,17 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
     private final ServerMenuBlock humidityDeviceMenu;
     private final ServerMenuBlock readPropertyMenu;
     private final ServerMenuBlock writePropertyMenu;
+    private final StaticMenuBlock<OnOff> onOffMenu;
+    private final ServerMenuBlock deviceWriteBoolMenu;
+    private final ServerMenuBlock writeBoolPropertyMenu;
 
     public Scratch3ZigBeeBlocks(EntityContext entityContext, Z2MEntrypoint z2MEntrypoint) {
         super("#6d4747", entityContext, z2MEntrypoint, null);
 
+        this.onOffMenu = menuStatic("onOffMenu", OnOff.class, OnOff.off);
         this.deviceMenu = menuServer("deviceMenu", ZIGBEE__BASE_URL + "device", DEVICE, "-");
         this.deviceReadMenu = menuServer("deviceReadMenu", ZIGBEE__BASE_URL + "device?access=read", DEVICE, "-");
+        this.deviceWriteBoolMenu = menuServer("deviceWriteBoolMenu", ZIGBEE__BASE_URL + "device?access=write&type=bool", DEVICE, "-");
         this.deviceWriteMenu = menuServer("deviceWriteMenu", ZIGBEE__BASE_URL + "device?access=write", DEVICE, "-");
         this.temperatureDeviceMenu = menuServer("temperatureDeviceMenu", ZIGBEE__BASE_URL + "device/temperature", DEVICE, "-");
         this.humidityDeviceMenu = menuServer("humidityDeviceMenu", ZIGBEE__BASE_URL + "device/humidity", DEVICE, "-");
@@ -63,6 +68,8 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
         this.readPropertyMenu = menuServer("readPropertyMenu", ZIGBEE__BASE_URL + "property?access=read", "Property", "-")
             .setDependency(this.deviceReadMenu);
         this.writePropertyMenu = menuServer("writePropertyMenu", ZIGBEE__BASE_URL + "property?access=write", "Property", "-")
+            .setDependency(this.deviceWriteMenu);
+        this.writeBoolPropertyMenu = menuServer("writeBoolPropertyMenu", ZIGBEE__BASE_URL + "property?access=write&type=bool", "Property", "-")
             .setDependency(this.deviceWriteMenu);
         // reporter blocks
         blockReporter(50, "time_since_last_event", "time since last event [PROPERTY] of [DEVICE]",
@@ -110,6 +117,15 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
             block.addArgument("PROPERTY", writePropertyMenu);
             block.addArgument("DEVICE", deviceWriteMenu);
             block.addArgument(VALUE, "-");
+        });
+
+        blockCommand(81, "write_bool", "Set [PROPERTY] [VALUE] of [DEVICE]", workspaceBlock -> {
+            OnOff value = workspaceBlock.getMenuValue(VALUE, this.onOffMenu);
+            getZigBeeProperty(workspaceBlock, deviceWriteBoolMenu, writeBoolPropertyMenu).writeValue(OnOffType.of(value == OnOff.on));
+        }, block -> {
+            block.addArgument("PROPERTY", writeBoolPropertyMenu);
+            block.addArgument("DEVICE", deviceWriteBoolMenu);
+            block.addArgument(VALUE, onOffMenu);
         });
 
         // hat blocks
@@ -251,5 +267,9 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
             }
         }
         return list;
+    }
+
+    private enum OnOff {
+        on, off
     }
 }

@@ -21,6 +21,7 @@ import org.touchhome.bundle.api.entity.types.MicroControllerBaseEntity;
 import org.touchhome.bundle.api.entity.zigbee.ZigBeeBaseCoordinatorEntity;
 import org.touchhome.bundle.api.entity.zigbee.ZigBeeDeviceBaseEntity;
 import org.touchhome.bundle.api.entity.zigbee.ZigBeeProperty;
+import org.touchhome.bundle.api.entity.zigbee.ZigBeeProperty.PropertyType;
 import org.touchhome.bundle.api.model.OptionModel;
 
 @Log4j2
@@ -37,8 +38,10 @@ public class ZigBeeController {
     }
 
     @GetMapping("/device")
-    public Collection<OptionModel> getDevices(@RequestParam(value = "access", required = false) String access) {
-        return getDevices(buildDeviceAccessFilter(access));
+    public Collection<OptionModel> getDevices(
+        @RequestParam(value = "access", required = false) String access,
+        @RequestParam(value = "type", required = false) String type) {
+        return getDevices(buildDeviceAccessFilter(access, type));
     }
 
     /**
@@ -49,8 +52,10 @@ public class ZigBeeController {
         @RequestParam(value = "deviceMenu", required = false) String ieeeAddress0,
         @RequestParam(value = "deviceReadMenu", required = false) String ieeeAddress1,
         @RequestParam(value = "deviceWriteMenu", required = false) String ieeeAddress2,
-        @RequestParam(value = "access", required = false) String access) {
-        String ieeeAddress = defaultIfEmpty(ieeeAddress0, defaultIfEmpty(ieeeAddress1, ieeeAddress2));
+        @RequestParam(value = "deviceWriteBoolMenu", required = false) String ieeeAddress3,
+        @RequestParam(value = "access", required = false) String access,
+        @RequestParam(value = "type", required = false) String type) {
+        String ieeeAddress = defaultIfEmpty(ieeeAddress0, defaultIfEmpty(ieeeAddress1, defaultIfEmpty(ieeeAddress2, ieeeAddress3)));
         return getZigBeeCoordinators().stream()
                                       .map(c -> c.getZigBeeDevice(ieeeAddress))
                                       .filter(Objects::nonNull)
@@ -70,16 +75,28 @@ public class ZigBeeController {
         return zigBeeProperty -> true;
     }
 
-    private @NotNull Predicate<ZigBeeDeviceBaseEntity> buildDeviceAccessFilter(String access) {
+    private @NotNull Predicate<ZigBeeDeviceBaseEntity> buildDeviceAccessFilter(String access, String type) {
         switch (access) {
             case "read":
                 return device -> device.getProperties().values().stream()
-                                       .anyMatch(p -> ((ZigBeeProperty) p).isReadable());
+                                       .anyMatch(p -> ((ZigBeeProperty) p).isReadable() && filterByType((ZigBeeProperty) p, type));
             case "write":
                 return device -> device.getProperties().values().stream()
-                                       .anyMatch(p -> ((ZigBeeProperty) p).isWritable());
+                                       .anyMatch(p -> ((ZigBeeProperty) p).isWritable() && filterByType((ZigBeeProperty) p, type));
         }
         return device -> true;
+    }
+
+    private boolean filterByType(ZigBeeProperty zigBeeProperty, String type) {
+        switch (type) {
+            case "bool":
+                return zigBeeProperty.getPropertyType() == PropertyType.bool;
+            case "number":
+                return zigBeeProperty.getPropertyType() == PropertyType.number;
+            case "string":
+                return zigBeeProperty.getPropertyType() == PropertyType.string;
+        }
+        return true;
     }
 
     private @NotNull Collection<OptionModel> getDevices(Predicate<ZigBeeDeviceBaseEntity> deviceFilter) {
