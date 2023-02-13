@@ -4,7 +4,7 @@ import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasName;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueAggregatedDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
 import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -13,7 +13,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>
-    implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasValueConverter {
+    implements HasSingleValueAggregatedDataSource, HasIcon, HasValueTemplate, HasName, HasValueConverter {
 
     public static final String PREFIX = "wgsdps_";
 
@@ -31,7 +31,7 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     @UIField(order = 2)
     @UIFieldGroup("UI")
     public String getPadding() {
-        return getJsonData("padding", "4px");
+        return getJsonData("padding", "0px");
     }
 
     public void setPadding(String value) {
@@ -44,12 +44,12 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     }
 
     @Override
-    protected void beforePersist() {
-        HasIcon.randomColor(this);
+    public String getEntityPrefix() {
+        return PREFIX;
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected void beforePersist() {
+        HasIcon.randomColor(this);
     }
 }

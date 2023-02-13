@@ -17,9 +17,9 @@ import org.codehaus.plexus.util.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.manager.var.WorkspaceGroup;
-import org.touchhome.app.manager.var.WorkspaceVariable;
-import org.touchhome.app.manager.var.WorkspaceVariableMessage;
+import org.touchhome.app.model.var.WorkspaceGroup;
+import org.touchhome.app.model.var.WorkspaceVariable;
+import org.touchhome.app.model.var.WorkspaceVariableMessage;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
@@ -72,8 +72,13 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @Override
-    @SneakyThrows
     public void set(@NotNull String variableId, @Nullable Object value, Consumer<Object> convertedValue) throws IllegalArgumentException {
+        set(variableId, value, convertedValue, false);
+    }
+
+    @SneakyThrows
+    public void set(@NotNull String variableId, @Nullable Object value, Consumer<Object> convertedValue, boolean logIfNoLinked)
+        throws IllegalArgumentException {
         if (value == null) {
             convertedValue.accept(null);
             return;
@@ -117,6 +122,8 @@ public class EntityContextVarImpl implements EntityContextVar {
         entityContext.event().fireEvent(variableId, value);
         if (context.linkListener != null) {
             context.linkListener.accept(value);
+        } else if (logIfNoLinked) {
+            log.warn("Updated variable: {} has no linked handler", context.groupVariable.getTitle());
         }
     }
 
@@ -160,6 +167,18 @@ public class EntityContextVarImpl implements EntityContextVar {
             && (!Objects.equals(workspaceVariable.getName(), name)
             || !Objects.equals(workspaceVariable.getDescription(), description))) {
             entityContext.save(workspaceVariable.setName(name).setDescription(description));
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean setVariableIcon(@NotNull String variableId, @NotNull String icon, @Nullable String iconColor) {
+        WorkspaceVariable workspaceVariable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
+        if (workspaceVariable != null
+            && (!Objects.equals(workspaceVariable.getIcon(), icon)
+            || !Objects.equals(workspaceVariable.getIconColor(), iconColor))) {
+            entityContext.save(workspaceVariable.setIcon(icon).setIconColor(iconColor));
             return true;
         }
         return false;

@@ -1,6 +1,10 @@
 package org.touchhome.app.model.entity.widget.impl.chart;
 
 import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
+import org.touchhome.bundle.api.EntityContextWidget.ChartType;
+import org.touchhome.bundle.api.EntityContextWidget.Fill;
+import org.touchhome.bundle.api.EntityContextWidget.PointStyle;
+import org.touchhome.bundle.api.EntityContextWidget.Stepped;
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -11,7 +15,7 @@ import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 
 public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue, HasChartTimePeriod {
 
-    HasChartDataSource.ChartType getChartType();
+    ChartType getChartType();
 
     @UIField(order = 20)
     @UIFieldGroup(value = "Chart ui", order = 11, borderColor = "#673AB7")
@@ -104,34 +108,5 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
 
     default void setPointBorderColor(String value) {
         setJsonData("pbc", value);
-    }
-
-    enum PointStyle {
-        circle,
-        cross,
-        crossRot,
-        dash,
-        line,
-        rect,
-        rectRounded,
-        rectRot,
-        star,
-        triangle
-    }
-
-    enum Stepped {
-        False,
-        True,
-        Before,
-        After,
-        Middle
-    }
-
-    enum Fill {
-        Start,
-        End,
-        Origin,
-        Disabled,
-        Stack
     }
 }

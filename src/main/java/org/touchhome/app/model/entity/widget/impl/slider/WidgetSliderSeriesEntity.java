@@ -8,44 +8,19 @@ import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasTextConverter;
 import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
-import org.touchhome.bundle.api.entity.widget.AggregationType;
-import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
-import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
-import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
 import org.touchhome.bundle.api.ui.field.UIFieldNumber;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
-import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 @Entity
 public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity>
-        implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasTextConverter {
+    implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasTextConverter {
 
     public static final String PREFIX = "wgssls_";
-
-    @Override
-    @UIField(order = 1, required = true)
-    @UIFieldEntityByClassSelection(HasGetStatusValue.class)
-    @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
-    @UIFieldGroup(value = "Value", order = 1)
-    @UIFieldIgnoreParent
-    public String getValueDataSource() {
-        return HasSingleValueDataSource.super.getValueDataSource();
-    }
-
-    @Override
-    @UIField(order = 2, required = true)
-    @UIFieldGroup(value = "Value")
-    @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
-    @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-    public String getSetValueDataSource() {
-        return HasSingleValueDataSource.super.getSetValueDataSource();
-    }
 
     @UIField(order = 1, isRevert = true)
     @UIFieldGroup(value = "Slider", order = 2, borderColor = "#6AA427")
@@ -103,14 +78,6 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
     }
 
     @Override
-    protected void beforePersist() {
-        HasIcon.randomColor(this);
-        if (!getJsonData().has("sc")) {
-            setSliderColor(UI.Color.random());
-        }
-    }
-
-    @Override
     @JsonIgnore
     @UIFieldIgnore
     public String getNoValueText() {
@@ -118,14 +85,10 @@ public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEnt
     }
 
     @Override
-    @UIFieldIgnore
-    public AggregationType getValueAggregationType() {
-        return HasSingleValueDataSource.super.getValueAggregationType();
-    }
-
-    @Override
-    @UIFieldIgnore
-    public int getValueAggregationPeriod() {
-        return HasSingleValueDataSource.super.getValueAggregationPeriod();
+    protected void beforePersist() {
+        HasIcon.randomColor(this);
+        if (!getJsonData().has("sc")) {
+            setSliderColor(UI.Color.random());
+        }
     }
 }

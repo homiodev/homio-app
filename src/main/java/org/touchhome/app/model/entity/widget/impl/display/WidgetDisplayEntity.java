@@ -11,11 +11,13 @@ import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.touchhome.app.model.entity.widget.impl.chart.HasLineChartBehaviour;
+import org.touchhome.bundle.api.EntityContextWidget.ChartType;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldLayout;
+import org.touchhome.bundle.api.ui.field.UIFieldLayout.HorizontalAlign;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
@@ -81,11 +83,11 @@ public class WidgetDisplayEntity
 
     @UIField(order = 20)
     @UIFieldJSONLine(
-        template = "{\"top\": number}, \"left\": number, \"bottom\": number, \"right\": number")
+        template = "{\"top\": number}, \"right\": number, \"bottom\": number, \"left\": number")
     @UIFieldGroup("Chart ui")
     @UIFieldShowOnCondition("return context.get('chartType') == 'bar'")
     public String getBarBorderWidth() {
-        return getJsonData("bbw", "{\"top\": 0, \"left\": 0, \"bottom\": 0, \"right\": 0}");
+        return getJsonData("bbw", "{\"top\": 0, \"right\": 0, \"bottom\": 0, \"left\": 0}");
     }
 
     public void setBarBorderWidth(String value) {
@@ -109,16 +111,11 @@ public class WidgetDisplayEntity
 
     private String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder
-            .builder(50, 50)
+            .builder(15, 50, 35)
             .addRow(rb -> rb
+                .addCol("icon", HorizontalAlign.left)
                 .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                .addCol("icon", UIFieldLayout.HorizontalAlign.right))
-            .addRow(rb -> rb
-                .addCol("value", UIFieldLayout.HorizontalAlign.left)
-                .addCol("none", UIFieldLayout.HorizontalAlign.center))
-            .addRow(rb -> rb
-                .addCol("none", UIFieldLayout.HorizontalAlign.center)
-                .addCol("none", UIFieldLayout.HorizontalAlign.center))
+                .addCol("value", HorizontalAlign.right))
             .build();
     }
 }

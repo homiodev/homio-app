@@ -6,6 +6,7 @@ import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.impl.HasLayout;
 import org.touchhome.app.model.entity.widget.impl.HasName;
 import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
+import org.touchhome.bundle.api.EntityContextWidget.ToggleType;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldLayout;
@@ -74,10 +75,5 @@ public class WidgetToggleEntity
                   .addCol("name", UIFieldLayout.HorizontalAlign.left)
                   .addCol("button", UIFieldLayout.HorizontalAlign.center))
             .build();
-    }
-
-    enum ToggleType {
-        Regular,
-        Slide
     }
 }

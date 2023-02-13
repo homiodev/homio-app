@@ -21,6 +21,7 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
 import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueAggregatedDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
@@ -138,7 +139,7 @@ public class TimeSeriesUtil {
         String dataSourceEntityID = dataSource.getValueDataSource();
 
         Object value;
-        AggregationType aggregationType = dataSource.getValueAggregationType();
+        AggregationType aggregationType = getAggregationType(dataSource);
 
         if (aggregationType == AggregationType.None) {
             if (source instanceof HasGetStatusValue) {
@@ -153,42 +154,11 @@ public class TimeSeriesUtil {
                     "Entity has to implement HasAggregateValueFromSeries");
             }
             value = getValueFromHasAggregationValue(entity, resultConverter, seriesEntityId, dynamicParameters, source,
-                dataSourceEntityID, aggregationType, TimeUnit.MINUTES.toMillis(dataSource.getValueAggregationPeriod()));
+                dataSourceEntityID, aggregationType, TimeUnit.MINUTES.toMillis(((HasSingleValueAggregatedDataSource) dataSource)
+                    .getValueAggregationPeriod()));
         }
 
         return resultConverter.apply(value);
-    }
-
-    @Nullable
-    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromHasAggregationValue(@NotNull T entity,
-        @NotNull Function<Object, R> resultConverter,
-        String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID,
-        AggregationType aggregationType, @Nullable Long diffMilliseconds) {
-        Object value;
-        PeriodRequest periodRequest = new PeriodRequest(entityContext, diffMilliseconds).setParameters(dynamicParameters);
-        value = ((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(periodRequest, aggregationType, false);
-
-        addListenValueIfRequire(entity.getListenSourceUpdates(), entity.getEntityID(), source, dynamicParameters, seriesEntityId, dataSourceEntityID,
-            object -> {
-                PeriodRequest request = new PeriodRequest(entityContext, diffMilliseconds).setParameters(dynamicParameters);
-                return resultConverter.apply(((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(request, aggregationType, false));
-            });
-        return value;
-    }
-
-    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromGetStatusValue(@NotNull T entity,
-        @NotNull Function<Object, R> resultConverter,
-        String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID) {
-
-        Object value;
-        HasGetStatusValue.GetStatusValueRequest valueRequest = new HasGetStatusValue.GetStatusValueRequest(entityContext, dynamicParameters);
-        value = ((HasGetStatusValue) source).getStatusValue(valueRequest);
-
-        addListenValueIfRequire(entity.getListenSourceUpdates(), entity.getEntityID(), source, dynamicParameters, seriesEntityId, dataSourceEntityID,
-            object -> {
-                return resultConverter.apply(((HasGetStatusValue) source).getStatusValue(valueRequest));
-            });
-        return value;
     }
 
     public <R> void addListenValueIfRequire(boolean listenSourceUpdates, @NotNull String entityID, @NotNull Object source,
@@ -229,5 +199,42 @@ public class TimeSeriesUtil {
             result.add(new TimeSeriesContext<>(tvd.getId(), item, source).setValue(entry.getValue()));
         }
         return result;
+    }
+
+    private <DS extends HasSingleValueDataSource & HasEntityIdentifier> AggregationType getAggregationType(@NotNull DS dataSource) {
+        return dataSource instanceof HasSingleValueAggregatedDataSource ? ((HasSingleValueAggregatedDataSource) dataSource).getValueAggregationType() :
+            AggregationType.None;
+    }
+
+    @Nullable
+    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromHasAggregationValue(@NotNull T entity,
+        @NotNull Function<Object, R> resultConverter,
+        String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID,
+        AggregationType aggregationType, @Nullable Long diffMilliseconds) {
+        Object value;
+        PeriodRequest periodRequest = new PeriodRequest(entityContext, diffMilliseconds).setParameters(dynamicParameters);
+        value = ((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(periodRequest, aggregationType, false);
+
+        addListenValueIfRequire(entity.getListenSourceUpdates(), entity.getEntityID(), source, dynamicParameters, seriesEntityId, dataSourceEntityID,
+            object -> {
+                PeriodRequest request = new PeriodRequest(entityContext, diffMilliseconds).setParameters(dynamicParameters);
+                return resultConverter.apply(((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(request, aggregationType, false));
+            });
+        return value;
+    }
+
+    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromGetStatusValue(@NotNull T entity,
+        @NotNull Function<Object, R> resultConverter,
+        String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID) {
+
+        Object value;
+        HasGetStatusValue.GetStatusValueRequest valueRequest = new HasGetStatusValue.GetStatusValueRequest(entityContext, dynamicParameters);
+        value = ((HasGetStatusValue) source).getStatusValue(valueRequest);
+
+        addListenValueIfRequire(entity.getListenSourceUpdates(), entity.getEntityID(), source, dynamicParameters, seriesEntityId, dataSourceEntityID,
+            object -> {
+                return resultConverter.apply(((HasGetStatusValue) source).getStatusValue(valueRequest));
+            });
+        return value;
     }
 }

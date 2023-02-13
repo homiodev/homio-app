@@ -31,7 +31,7 @@ public class CacheService {
 
     public static final String CACHE_CLASS_BY_TYPE = "CACHE_CLASS_BY_TYPE";
     public static final String ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI =
-            "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
+        "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
     public static final String ENTITY_IDS_BY_CLASS_NAME = "ENTITY_IDS_BY_CLASS_NAME";
     public static final String REPOSITORY_BY_ENTITY_ID = "REPOSITORY_BY_ENTITY_ID";
 
@@ -42,12 +42,12 @@ public class CacheService {
 
     public static CacheManager createCacheManager() {
         return new ConcurrentMapCacheManager(
-                CLASSES_WITH_PARENT_CLASS,
-                ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI,
-                ENTITY_IDS_BY_CLASS_NAME,
-                REPOSITORY_BY_CLAZZ,
-                CACHE_CLASS_BY_TYPE,
-                REPOSITORY_BY_ENTITY_ID);
+            CLASSES_WITH_PARENT_CLASS,
+            ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI,
+            ENTITY_IDS_BY_CLASS_NAME,
+            REPOSITORY_BY_CLAZZ,
+            CACHE_CLASS_BY_TYPE,
+            REPOSITORY_BY_ENTITY_ID);
     }
 
     public void clearCache() {
@@ -63,22 +63,18 @@ public class CacheService {
         relatedEntities.add(entity);
         for (BaseEntity relatedEntity : relatedEntities) {
             if (relatedEntity != null) {
-                singleEntityUpdated(relatedEntity);
+                Objects.requireNonNull(cacheManager.getCache(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI))
+                       .evict(relatedEntity.getEntityID());
             }
         }
-    }
-
-    private void singleEntityUpdated(BaseEntity entity) {
-        Objects.requireNonNull(cacheManager.getCache(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI))
-                .evict(entity.getEntityID());
-        Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME))
-                .clear(); // need remove all because entity may create alos another entities
+        // need remove all because entity may create also another entities
+        Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME)).clear();
     }
 
     public void putToCache(
-            PureRepository repository,
-            HasEntityIdentifier entity,
-            Map<String, Object[]> changeFields) {
+        PureRepository repository,
+        HasEntityIdentifier entity,
+        Map<String, Object[]> changeFields) {
         String identifier = entity.getIdentifier();
         if (identifier == null) {
             throw new ServerException("Unable update state without id" + entity);
@@ -89,7 +85,7 @@ public class CacheService {
                 entityCache.get(identifier).changeFields.putAll(changeFields);
             } else {
                 entityCache.put(
-                        identifier, new UpdateStatement(identifier, repository, changeFields));
+                    identifier, new UpdateStatement(identifier, repository, changeFields));
             }
         }
     }
@@ -117,11 +113,11 @@ public class CacheService {
                     try {
                         if (updateStatement.changeFields != null) {
                             HasEntityIdentifier baseEntity =
-                                    entityContext.getEntity(updateStatement.entityID, false);
+                                entityContext.getEntity(updateStatement.entityID, false);
                             for (Map.Entry<String, Object[]> entry :
-                                    updateStatement.changeFields.entrySet()) {
+                                updateStatement.changeFields.entrySet()) {
                                 MethodUtils.invokeMethod(
-                                        baseEntity, entry.getKey(), entry.getValue());
+                                    baseEntity, entry.getKey(), entry.getValue());
                             }
                             updateStatement.repository.flushCashedEntity(baseEntity);
 

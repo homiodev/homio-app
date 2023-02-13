@@ -17,8 +17,7 @@ import org.touchhome.common.exception.ServerException;
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-public abstract class WidgetBaseEntityAndSeries<
-    T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
+public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
     extends WidgetBaseEntity<T> {
 
     @Getter
@@ -30,10 +29,9 @@ public abstract class WidgetBaseEntityAndSeries<
     private Set<S> series;
 
     @Override
-    protected void validate() {
-        if (getWidgetTabEntity() == null) {
-            throw new ServerException("Unable to save widget without attach to tab");
-        }
+    public void copy() {
+        super.copy();
+        series.forEach(BaseEntity::copy);
     }
 
     /* Looks like we may need verify relations only during fetch all variables from UI
@@ -45,8 +43,9 @@ public abstract class WidgetBaseEntityAndSeries<
     }*/
 
     @Override
-    public void copy() {
-        super.copy();
-        series.forEach(BaseEntity::copy);
+    protected void validate() {
+        if (getWidgetTabEntity() == null) {
+            throw new ServerException("Unable to save widget without attach to tab");
+        }
     }
 }

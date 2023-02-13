@@ -14,7 +14,17 @@ public interface HasName extends HasJsonData {
     @UIFieldUpdateFontSize
     String getName();
 
-    @UIField(order = 2, isRevert = true)
+    @UIField(order = 2)
+    @UIFieldGroup("Name")
+    default Boolean isShowName() {
+        return getJsonData("shn", Boolean.TRUE);
+    }
+
+    default void setShowName(Boolean value) {
+        setJsonData("shn", value);
+    }
+
+    @UIField(order = 3, isRevert = true)
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldGroup(value = "Name")
     default String getNameColor() {

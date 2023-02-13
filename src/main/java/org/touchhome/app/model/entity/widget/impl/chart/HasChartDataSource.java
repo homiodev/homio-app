@@ -96,17 +96,12 @@ public interface HasChartDataSource extends HasJsonData {
     default ChartDataset buildTargetDataset(TimeSeriesContext item) {
         HasChartDataSource seriesEntity = item.getSeriesEntity();
         ChartDataset dataset =
-                new ChartDataset(item.getId()).setLabel(seriesEntity.getChartLabel());
+            new ChartDataset(item.getId()).setLabel(seriesEntity.getChartLabel());
         if (item.getValues() != null && !item.getValues().isEmpty()) {
             dataset.setData(
-                    EvaluateDatesAndValues.aggregate(
-                            item.getValues(), seriesEntity.getChartAggregationType()));
+                EvaluateDatesAndValues.aggregate(
+                    item.getValues(), seriesEntity.getChartAggregationType()));
         }
         return dataset;
-    }
-
-    enum ChartType {
-        line,
-        bar
     }
 }

@@ -5,10 +5,9 @@ import lombok.Getter;
 import lombok.Setter;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.HasAxis;
-import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.touchhome.app.model.entity.widget.impl.chart.HasLineChartBehaviour;
-import org.touchhome.bundle.api.EntityContextWidget;
+import org.touchhome.bundle.api.EntityContextWidget.ChartType;
 import org.touchhome.bundle.api.ui.field.UIField;
 
 @Getter
@@ -31,8 +30,8 @@ public class WidgetLineChartEntity
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)
-    public HasChartDataSource.ChartType getChartType() {
-        return HasChartDataSource.ChartType.line;
+    public ChartType getChartType() {
+        return ChartType.line;
     }
 
     @Override

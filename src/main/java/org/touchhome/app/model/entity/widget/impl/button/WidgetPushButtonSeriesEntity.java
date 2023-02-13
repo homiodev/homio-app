@@ -5,7 +5,7 @@ import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.HasIcon;
 import org.touchhome.app.model.entity.widget.impl.HasName;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.impl.HasSingleValueAggregatedDataSource;
 import org.touchhome.app.model.entity.widget.impl.HasStyle;
 import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
 import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
@@ -23,7 +23,7 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection
 @Entity
 public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushButtonEntity>
     implements HasChartDataSource,
-    HasSingleValueDataSource,
+    HasSingleValueAggregatedDataSource,
     HasIcon,
     HasValueTemplate,
     HasName,
@@ -38,7 +38,7 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
     @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldGroup(value = "Action Data source", order = 1)
     public String getSetValueDataSource() {
-        return HasSingleValueDataSource.super.getSetValueDataSource();
+        return HasSingleValueAggregatedDataSource.super.getSetValueDataSource();
     }
 
     @Override
@@ -50,7 +50,7 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
     @UIFieldGroup(value = "Value", order = 10)
     @UIEditReloadWidget
     public String getValueDataSource() {
-        return HasSingleValueDataSource.super.getValueDataSource();
+        return HasSingleValueAggregatedDataSource.super.getValueDataSource();
     }
 
     @UIField(order = 2, required = true)

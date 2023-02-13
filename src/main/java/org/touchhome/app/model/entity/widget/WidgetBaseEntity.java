@@ -129,6 +129,15 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
      */
     protected void findSuitablePosition() {
         List<WidgetBaseEntity> widgets = getEntityContext().findAll(WidgetBaseEntity.class);
+        if (getXbl() != null && getYbl() != null) {
+            WidgetBaseEntity layout = widgets.stream().filter(w -> w.getXb() == getXb() && w.getYb() == getYb()).findAny().orElse(null);
+            if (layout == null) {
+                throw new IllegalArgumentException("Widget: " + getTitle() + " has xbl/tbl and have to be belong to layout widget but it's not found");
+            }
+            // do not change position for widget which belong to layout
+            return;
+        }
+
         var hBlockCount = getEntityContext().setting().getValue(DashboardHorizontalBlockCountSetting.class);
         var vBlockCount = getEntityContext().setting().getValue(DashboardVerticalBlockCountSetting.class);
         boolean[][] matrix = new boolean[vBlockCount][hBlockCount];

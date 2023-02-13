@@ -73,7 +73,9 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
 
     @Override
     protected void beforePersist() {
-        setBw(2);
+        if (!getJsonData().has("bw")) {
+            setBw(2);
+        }
         super.beforePersist();
     }
 }

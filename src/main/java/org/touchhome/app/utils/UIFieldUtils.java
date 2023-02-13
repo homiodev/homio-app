@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.persistence.OneToMany;
@@ -33,8 +34,8 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.touchhome.app.manager.common.v1.UIInputBuilderImpl;
-import org.touchhome.app.manager.common.v1.layout.UIDialogLayoutBuilderImpl;
+import org.touchhome.app.builder.ui.UIInputBuilderImpl;
+import org.touchhome.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.UIFieldMarkers;
 import org.touchhome.app.model.entity.widget.UIFieldTimeSlider;
@@ -61,6 +62,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldOrder;
 import org.touchhome.bundle.api.ui.field.UIFieldPort;
 import org.touchhome.bundle.api.ui.field.UIFieldPosition;
 import org.touchhome.bundle.api.ui.field.UIFieldProgress;
+import org.touchhome.bundle.api.ui.field.UIFieldRequire;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.UIFieldTableLayout;
 import org.touchhome.bundle.api.ui.field.UIFieldTitleRef;
@@ -654,7 +656,9 @@ public class UIFieldUtils {
         if (fieldContext.isAnnotationPresent(UIFieldOrder.class)) {
             entityUIMetaData.setOrder(fieldContext.getDeclaredAnnotation(UIFieldOrder.class).value());
         }
-        entityUIMetaData.setRequired(nullIfFalse(field.required()));
+        Boolean require = Optional.ofNullable(fieldContext.getDeclaredAnnotation(UIFieldRequire.class))
+                                  .map(UIFieldRequire::value).orElse(field.required());
+        entityUIMetaData.setRequired(nullIfFalse(require));
 
         if (BaseEntity.class.isAssignableFrom(type) && type.getDeclaredAnnotation(UISidebarMenu.class) != null) {
             entityUIMetaData.setNavLink(getClassEntityNavLink(field, type));
