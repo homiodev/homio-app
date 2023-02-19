@@ -3,11 +3,12 @@ package org.touchhome.app.model.entity.widget.impl.display;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIFieldJSONLine;
-import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
+import org.touchhome.app.model.entity.widget.UIFieldOptionFontSize;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
-import org.touchhome.app.model.entity.widget.impl.HasLayout;
-import org.touchhome.app.model.entity.widget.impl.HasName;
-import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
+import org.touchhome.app.model.entity.widget.attributes.HasLayout;
+import org.touchhome.app.model.entity.widget.attributes.HasName;
+import org.touchhome.app.model.entity.widget.attributes.HasPadding;
+import org.touchhome.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.touchhome.app.model.entity.widget.impl.chart.HasLineChartBehaviour;
@@ -18,6 +19,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldLayout;
 import org.touchhome.bundle.api.ui.field.UIFieldLayout.HorizontalAlign;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
@@ -31,13 +33,14 @@ public class WidgetDisplayEntity
     HasHorizontalLine,
     HasLayout,
     HasName,
+    HasPadding,
     HasSourceServerUpdates {
 
     public static final String PREFIX = "wgtdp_";
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Name", order = 1)
-    @UIFieldUpdateFontSize
+    @UIFieldGroup(value = "Name", order = 3)
+    @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
     }
@@ -54,6 +57,7 @@ public class WidgetDisplayEntity
 
     @UIField(order = 50, isRevert = true)
     @UIFieldLayout(options = {"name", "value", "icon"}, rows = "1:10")
+    @UIFieldReadDefaultValue
     public String getLayout() {
         return getJsonData("layout", getDefaultLayout());
     }

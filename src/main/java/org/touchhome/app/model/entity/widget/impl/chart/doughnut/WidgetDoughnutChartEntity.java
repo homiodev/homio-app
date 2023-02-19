@@ -1,15 +1,16 @@
 package org.touchhome.app.model.entity.widget.impl.chart.doughnut;
 
 import javax.persistence.Entity;
-import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
-import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
+import org.touchhome.app.model.entity.widget.attributes.HasChartTimePeriod;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasValueConverter;
+import org.touchhome.app.model.entity.widget.attributes.HasValueTemplate;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
@@ -19,20 +20,21 @@ public class WidgetDoughnutChartEntity
 
     public static final String PREFIX = "wgtpc_";
 
-    @UIField(order = 3)
+ //   @UIField(order = 3)
 
     // TODO:??????????/
-    public double getValueFontSize() {
+    /*public double getValueFontSize() {
         return getJsonData("vfs", 18);
-    }
+    }*/
 
-    public void setValueFontSize(double value) {
+    /*public void setValueFontSize(double value) {
         setJsonData("vfs", value);
-    }
+    }*/
 
     @UIField(order = 4, isRevert = true)
     @UIFieldGroup("Value")
     @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldReadDefaultValue
     public String getValueColor() {
         return getJsonData("vc", UI.Color.WHITE);
     }

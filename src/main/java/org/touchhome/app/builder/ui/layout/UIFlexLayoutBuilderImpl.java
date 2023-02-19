@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.Nullable;
 import org.touchhome.app.builder.ui.UIBaseLayoutBuilderImpl;
 import org.touchhome.app.builder.ui.UIItemType;
 import org.touchhome.bundle.api.ui.field.action.v1.UIEntityBuilder;
@@ -21,7 +22,7 @@ public class UIFlexLayoutBuilderImpl extends UIBaseLayoutBuilderImpl
     private final int order;
 
     private String title;
-    private String titleColor; // for future
+    private String titleColor;
 
     @Override
     public UIInputEntity buildEntity() {
@@ -37,8 +38,9 @@ public class UIFlexLayoutBuilderImpl extends UIBaseLayoutBuilderImpl
     }
 
     @Override
-    public UIFlexLayoutBuilder setTitle(String title) {
+    public UIFlexLayoutBuilder setTitle(String title, @Nullable String titleColor) {
         this.title = title;
+        this.titleColor = titleColor;
         return this;
     }
 }

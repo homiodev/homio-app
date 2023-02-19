@@ -1,6 +1,6 @@
 package org.touchhome.app.model.entity.widget.impl.chart;
 
-import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
+import org.touchhome.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.touchhome.bundle.api.EntityContextWidget.ChartType;
 import org.touchhome.bundle.api.EntityContextWidget.Fill;
 import org.touchhome.bundle.api.EntityContextWidget.PointStyle;
@@ -10,6 +10,7 @@ import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 
@@ -90,6 +91,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     @UIFieldGroup(value = "Chart point")
     @UIFieldColorPicker
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
+    @UIFieldReadDefaultValue
     default String getPointBackgroundColor() {
         return getJsonData("pbg", UI.Color.WHITE);
     }
@@ -102,6 +104,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     @UIFieldGroup(value = "Chart point")
     @UIFieldColorPicker
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
+    @UIFieldReadDefaultValue
     default String getPointBorderColor() {
         return getJsonData("pbc", UI.Color.PRIMARY_COLOR);
     }

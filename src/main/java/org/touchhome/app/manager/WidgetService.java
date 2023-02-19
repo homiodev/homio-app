@@ -36,39 +36,29 @@ public class WidgetService implements ContextCreated {
 
     public List<AvailableWidget> getAvailableWidgets() {
         List<AvailableWidget> options = new ArrayList<>();
-        AvailableWidget chartWidgets =
-                new AvailableWidget(
-                        "chart-widgets", "fas fa-chart-simple", null, new ArrayList<>());
-        AvailableWidget mediaWidgets =
-                new AvailableWidget(
-                        "media-widgets", "fas fa-compact-disc", null, new ArrayList<>());
+        AvailableWidget chartWidgets = new AvailableWidget("chart-widgets", "fas fa-chart-simple", null, new ArrayList<>());
+        AvailableWidget mediaWidgets = new AvailableWidget("media-widgets", "fas fa-compact-disc", null, new ArrayList<>());
         options.add(chartWidgets);
         options.add(mediaWidgets);
         for (WidgetBaseEntity<?> entity : this.widgetBaseEntities) {
-            AvailableWidget widget =
-                    new AvailableWidget(entity.getType(), entity.getImage(), null, null);
-            if (entity.getGroup() == WidgetGroup.Chart) {
-                chartWidgets.children.add(widget);
-            } else if (entity.getGroup() == WidgetGroup.Media) {
-                mediaWidgets.children.add(widget);
-            } else {
-                options.add(widget);
+            if (entity.isVisible()) {
+                AvailableWidget widget = new AvailableWidget(entity.getType(), entity.getImage(), null, null);
+                if (entity.getGroup() == WidgetGroup.Chart) {
+                    chartWidgets.children.add(widget);
+                } else if (entity.getGroup() == WidgetGroup.Media) {
+                    mediaWidgets.children.add(widget);
+                } else {
+                    options.add(widget);
+                }
             }
         }
 
-        AvailableWidget extraWidgets =
-                new AvailableWidget("extra-widgets", "fas fa-cheese", null, new ArrayList<>());
+        AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", null, new ArrayList<>());
         for (Map.Entry<String, Collection<WidgetBaseTemplate>> entry :
                 entityContext.getBeansOfTypeByBundles(WidgetBaseTemplate.class).entrySet()) {
-            AvailableWidget bundleExtraWidget =
-                    new AvailableWidget(entry.getKey(), "http", null, new ArrayList<>());
+            AvailableWidget bundleExtraWidget = new AvailableWidget(entry.getKey(), "http", null, new ArrayList<>());
             for (WidgetBaseTemplate widgetBase : entry.getValue()) {
-                bundleExtraWidget.children.add(
-                        new AvailableWidget(
-                                widgetBase.getClass().getSimpleName(),
-                                widgetBase.getIcon(),
-                                null,
-                                null));
+                bundleExtraWidget.children.add(new AvailableWidget(widgetBase.getClass().getSimpleName(), widgetBase.getIcon(), null, null));
             }
             if (!bundleExtraWidget.children.isEmpty()) {
                 extraWidgets.children.add(bundleExtraWidget);

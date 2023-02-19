@@ -1,6 +1,5 @@
 package org.touchhome.app.utils;
 
-import java.beans.Introspector;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -21,8 +20,7 @@ public final class InternalUtil {
     }
 
     public static String getMethodShortName(Method method) {
-        return Introspector.decapitalize(
-                method.getName().substring(method.getName().startsWith("is") ? 2 : 3));
+        return StringUtils.uncapitalize(method.getName().substring(method.getName().startsWith("is") ? 2 : 3));
     }
 
     public static String checkUrlAccessible() {

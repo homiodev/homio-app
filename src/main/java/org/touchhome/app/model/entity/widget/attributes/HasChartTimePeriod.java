@@ -1,4 +1,4 @@
-package org.touchhome.app.model.entity.widget.impl;
+package org.touchhome.app.model.entity.widget.attributes;
 
 import java.util.ArrayList;
 import java.util.Date;

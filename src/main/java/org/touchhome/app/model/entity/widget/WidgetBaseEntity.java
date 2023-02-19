@@ -1,5 +1,8 @@
 package org.touchhome.app.model.entity.widget;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -13,18 +16,19 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.tuple.Pair;
+import org.touchhome.app.model.entity.widget.attributes.HasPosition;
 import org.touchhome.app.setting.dashboard.DashboardHorizontalBlockCountSetting;
 import org.touchhome.app.setting.dashboard.DashboardVerticalBlockCountSetting;
 import org.touchhome.bundle.api.converter.JSONConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.HasJsonData;
-import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.model.JSON;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 
 @Getter
 @Setter
@@ -110,12 +114,17 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     @UIField(order = 21, isRevert = true)
     @UIFieldGroup("UI")
     @UIFieldColorPicker
+    @UIFieldReadDefaultValue
     public String getBackground() {
         return getJsonData("bg", "transparent");
     }
 
     public void setBackground(String value) {
         setJsonData("bg", value);
+    }
+
+    public boolean isVisible() {
+        return true;
     }
 
     @Override
@@ -129,8 +138,8 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
      */
     protected void findSuitablePosition() {
         List<WidgetBaseEntity> widgets = getEntityContext().findAll(WidgetBaseEntity.class);
-        if (getXbl() != null && getYbl() != null) {
-            WidgetBaseEntity layout = widgets.stream().filter(w -> w.getXb() == getXb() && w.getYb() == getYb()).findAny().orElse(null);
+        if (isNotEmpty(getParent())) {
+            WidgetBaseEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(getParent())).findAny().orElse(null);
             if (layout == null) {
                 throw new IllegalArgumentException("Widget: " + getTitle() + " has xbl/tbl and have to be belong to layout widget but it's not found");
             }
@@ -182,7 +191,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     private static void initMatrix(List<WidgetBaseEntity> widgets, boolean[][] matrix) {
         for (WidgetBaseEntity model : widgets) {
-            if (model.getXbl() == null) {
+            if (isEmpty(model.getParent())) {
                 for (int j = model.getXb(); j < model.getXb() + model.getBw(); j++) {
                     for (int i = model.getYb(); i < model.getYb() + model.getBh(); i++) {
                         matrix[i][j] = true;

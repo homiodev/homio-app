@@ -2,12 +2,13 @@ package org.touchhome.app.model.entity.widget.impl.chart.pie;
 
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasValueConverter;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
@@ -17,8 +18,9 @@ public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChar
     public static final String PREFIX = "wgspcs_";
 
     @UIField(order = 20, isRevert = true)
-    @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
+    @UIFieldGroup(value = "Chart ui", order = 5, borderColor = "#673AB7")
     @UIFieldColorPicker
+    @UIFieldReadDefaultValue
     public String getChartColor() {
         return getJsonData("chartC", UI.Color.WHITE);
     }

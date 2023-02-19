@@ -2,12 +2,13 @@ package org.touchhome.app.model.entity.widget.impl.chart.doughnut;
 
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasValueConverter;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
@@ -19,6 +20,7 @@ public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDo
     @UIField(order = 20, isRevert = true)
     @UIFieldGroup("Chart ui")
     @UIFieldColorPicker
+    @UIFieldReadDefaultValue
     public String getChartColor() {
         return getJsonData("chartC", UI.Color.WHITE);
     }

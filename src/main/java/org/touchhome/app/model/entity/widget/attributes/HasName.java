@@ -1,17 +1,18 @@
-package org.touchhome.app.model.entity.widget.impl;
+package org.touchhome.app.model.entity.widget.attributes;
 
-import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
+import org.touchhome.app.model.entity.widget.UIFieldOptionFontSize;
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 
 public interface HasName extends HasJsonData {
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Name", order = 1)
-    @UIFieldUpdateFontSize
+    @UIFieldGroup(value = "Name", order = 3)
+    @UIFieldOptionFontSize
     String getName();
 
     @UIField(order = 2)
@@ -26,7 +27,8 @@ public interface HasName extends HasJsonData {
 
     @UIField(order = 3, isRevert = true)
     @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldGroup(value = "Name")
+    @UIFieldGroup("Name")
+    @UIFieldReadDefaultValue
     default String getNameColor() {
         return getJsonData("nc", UI.Color.WHITE);
     }

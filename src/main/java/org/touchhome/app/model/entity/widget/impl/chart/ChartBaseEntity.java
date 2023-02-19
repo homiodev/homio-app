@@ -4,10 +4,11 @@ import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetGroup;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
+import org.touchhome.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 
 @Entity
 public abstract class ChartBaseEntity<
@@ -42,6 +43,7 @@ public abstract class ChartBaseEntity<
     @UIField(order = 2, isRevert = true)
     @UIFieldGroup("Data labels")
     @UIFieldColorPicker
+    @UIFieldReadDefaultValue
     public String getDataLabelsColor() {
         return getJsonData("dlc", "#ADB5BD");
     }

@@ -415,7 +415,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
         Insert((context, entity) -> {
             postInsertUpdate(context, entity, true);
             if (entity instanceof BaseEntity && !(entity instanceof PinBaseEntity)) {
-                context.ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", "NAME", ((BaseEntity<?>) entity).getTitle()));
+                context.ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", "NAME", ((BaseEntity<?>) entity).getEntityID()));
             }
         }),
         Update((context, entity) -> {

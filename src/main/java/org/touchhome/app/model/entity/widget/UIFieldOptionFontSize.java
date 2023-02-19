@@ -7,9 +7,11 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface UIFieldUpdateFontSize {
+public @interface UIFieldOptionFontSize {
 
     float min() default 0.1F;
 
     float max() default 2F;
+
+    String value() default "";
 }

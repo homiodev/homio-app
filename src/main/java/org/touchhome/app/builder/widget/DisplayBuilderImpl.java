@@ -9,20 +9,33 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.touchhome.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasHorizontalLineBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasIconColorThresholdBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasLineChartBehaviourBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasMinMaxChartValueBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasNameBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasPaddingBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasValueConverterBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.touchhome.bundle.api.EntityContextWidget;
 import org.touchhome.bundle.api.EntityContextWidget.DisplayWidgetBuilder;
 import org.touchhome.bundle.api.EntityContextWidget.DisplayWidgetSeriesBuilder;
-import org.touchhome.bundle.api.EntityContextWidget.Fill;
-import org.touchhome.bundle.api.EntityContextWidget.IconColorBuilder;
-import org.touchhome.bundle.api.EntityContextWidget.PointStyle;
-import org.touchhome.bundle.api.EntityContextWidget.Stepped;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 
 public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuilder, WidgetDisplayEntity>
-    implements DisplayWidgetBuilder {
+    implements DisplayWidgetBuilder,
+    HasLineChartBehaviourBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+    HasHorizontalLineBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+    HasChartTimePeriodBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+    HasMinMaxChartValueBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+    HasChartDataSourceBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+    HasPaddingBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+    HasNameBuilder<WidgetDisplayEntity, DisplayWidgetBuilder> {
 
     @Getter
     private final List<WidgetDisplaySeriesEntity> series = new ArrayList<>();
@@ -34,18 +47,6 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     @Override
     public DisplayWidgetBuilder setLayout(String value) {
         widget.setLayout(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setShowName(boolean value) {
-        widget.setShowName(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setNameColor(String value) {
-        widget.setNameColor(value);
         return this;
     }
 
@@ -82,45 +83,10 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     @Override
     public DisplayWidgetBuilder addSeries(@Nullable String name, @NotNull Consumer<DisplayWidgetSeriesBuilder> builder) {
         WidgetDisplaySeriesEntity entity = new WidgetDisplaySeriesEntity();
+        entity.setName(name);
         series.add(entity);
         DisplaySeriesBuilderImpl seriesBuilder = new DisplaySeriesBuilderImpl(entity);
         builder.accept(seriesBuilder);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setChartDataSource(String value) {
-        widget.setChartDataSource(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setChartAggregationType(AggregationType value) {
-        widget.setChartAggregationType(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setFinalChartValueConverter(String value) {
-        widget.setFinalChartValueConverter(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setChartColor(String value) {
-        widget.setChartColor(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setChartColorOpacity(int value) {
-        widget.setChartColorOpacity(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setChartLabel(String value) {
-        widget.setChartLabel(value);
         return this;
     }
 
@@ -161,48 +127,6 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     }
 
     @Override
-    public DisplayWidgetBuilder setLineBorderWidth(int value) {
-        widget.setLineBorderWidth(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setLineFill(Fill value) {
-        widget.setLineFill(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setStepped(Stepped value) {
-        widget.setStepped(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setTension(int value) {
-        widget.setTension(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setPointRadius(double value) {
-        widget.setPointRadius(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setPointStyle(PointStyle value) {
-        widget.setPointStyle(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setPointBackgroundColor(String value) {
-        widget.setPointBackgroundColor(value);
-        return this;
-    }
-
-    @Override
     public DisplayWidgetBuilder setPointBorderColor(String value) {
         widget.setPointBorderColor(value);
         return this;
@@ -210,45 +134,13 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
 }
 
 @RequiredArgsConstructor
-class DisplaySeriesBuilderImpl implements DisplayWidgetSeriesBuilder {
+class DisplaySeriesBuilderImpl implements DisplayWidgetSeriesBuilder,
+    HasValueConverterBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder>,
+    HasValueTemplateBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder>,
+    HasIconColorThresholdBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder>,
+    HasNameBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder> {
 
     private final WidgetDisplaySeriesEntity series;
-
-    @Override
-    public DisplayWidgetSeriesBuilder setIcon(@Nullable String value) {
-        series.setIcon(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setIconColor(@Nullable String color, @Nullable Consumer<IconColorBuilder> colorBuilder) {
-        if (colorBuilder == null) {
-            series.setIconColor(color);
-        } else {
-            IconColorBuilderImpl builder = new IconColorBuilderImpl(color);
-            colorBuilder.accept(builder);
-            series.setIconColor(builder.build());
-        }
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setName(String value) {
-        series.setName(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setShowName(boolean value) {
-        series.setShowName(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setNameColor(String value) {
-        series.setNameColor(value);
-        return this;
-    }
 
     @Override
     public DisplayWidgetSeriesBuilder setValueDataSource(String value) {
@@ -275,44 +167,7 @@ class DisplaySeriesBuilderImpl implements DisplayWidgetSeriesBuilder {
     }
 
     @Override
-    public DisplayWidgetSeriesBuilder setValueConverter(String value) {
-        series.setValueConverter(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setValueTemplate(@Nullable String prefix, @Nullable String suffix) {
-        series.setValueTemplate(format("%s~~~%s", prefix == null ? "" : prefix, suffix == null ? "" : suffix));
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setValueColor(String value) {
-        series.setValueColor(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setNoValueText(String value) {
-        series.setNoValueText(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setValueTemplateFontSize(double value) {
-        series.setValueTemplateFontSize(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setValueTemplatePrefixFontSize(double value) {
-        series.setValueTemplatePrefixFontSize(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetSeriesBuilder setValueTemplateSuffixFontSize(double value) {
-        series.setValueTemplateSuffixFontSize(value);
-        return this;
+    public WidgetDisplaySeriesEntity getWidget() {
+        return series;
     }
 }

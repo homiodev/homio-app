@@ -2,11 +2,12 @@ package org.touchhome.app.model.entity.widget.impl.chart.bar;
 
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIFieldJSONLine;
-import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
+import org.touchhome.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.HasAxis;
 import org.touchhome.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.touchhome.app.model.entity.widget.impl.chart.HasMinMaxChartValue;
+import org.touchhome.bundle.api.EntityContextWidget.BarChartType;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 
@@ -29,7 +30,7 @@ public class WidgetBarTimeChartEntity
     }
 
     @UIField(order = 10)
-    @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
+    @UIFieldGroup(value = "Chart ui", order = 5, borderColor = "#673AB7")
     public BarChartType getDisplayType() {
         return getJsonDataEnum("displayType", BarChartType.Vertical);
     }
@@ -64,10 +65,5 @@ public class WidgetBarTimeChartEntity
     @Override
     public String getDefaultName() {
         return null;
-    }
-
-    public enum BarChartType {
-        Horizontal,
-        Vertical
     }
 }

@@ -1,7 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.chart.pie;
 
 import javax.persistence.Entity;
-import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
+import org.touchhome.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;

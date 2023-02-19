@@ -1,6 +1,4 @@
-package org.touchhome.app.model.entity.widget.impl;
-
-import static org.apache.commons.lang3.StringUtils.isEmpty;
+package org.touchhome.app.model.entity.widget.attributes;
 
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
@@ -16,7 +14,7 @@ public interface HasSingleValueDataSource extends HasDynamicParameterFields {
     @UIField(order = 10, required = true)
     @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
-    @UIFieldGroup(value = "Value", order = 10)
+    @UIFieldGroup(value = "Value", order = 1)
     @UIEditReloadWidget
     default String getValueDataSource() {
         return getJsonData("vds");
@@ -24,9 +22,6 @@ public interface HasSingleValueDataSource extends HasDynamicParameterFields {
 
     default void setValueDataSource(String value) {
         setJsonData("vds", value);
-        if (isEmpty(getSetValueDataSource())) {
-            setSetValueDataSource(value);
-        }
     }
 
     @UIField(order = 12)

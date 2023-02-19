@@ -1,6 +1,7 @@
 package org.touchhome.app.utils;
 
 import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
@@ -20,7 +21,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.persistence.OneToMany;
@@ -38,8 +38,11 @@ import org.touchhome.app.builder.ui.UIInputBuilderImpl;
 import org.touchhome.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.UIFieldMarkers;
+import org.touchhome.app.model.entity.widget.UIFieldOptionColor;
+import org.touchhome.app.model.entity.widget.UIFieldOptionFontSize;
+import org.touchhome.app.model.entity.widget.UIFieldOptionVerticalAlign;
+import org.touchhome.app.model.entity.widget.UIFieldPadding;
 import org.touchhome.app.model.entity.widget.UIFieldTimeSlider;
-import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -62,7 +65,6 @@ import org.touchhome.bundle.api.ui.field.UIFieldOrder;
 import org.touchhome.bundle.api.ui.field.UIFieldPort;
 import org.touchhome.bundle.api.ui.field.UIFieldPosition;
 import org.touchhome.bundle.api.ui.field.UIFieldProgress;
-import org.touchhome.bundle.api.ui.field.UIFieldRequire;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.UIFieldTableLayout;
 import org.touchhome.bundle.api.ui.field.UIFieldTitleRef;
@@ -211,7 +213,7 @@ public class UIFieldUtils {
         EntityUIMetaData entityUIMetaData = new EntityUIMetaData();
         entityUIMetaData.setEntityName(fieldContext.getName());
         Type genericType = fieldContext.getGenericType();
-        String sourceName = fieldContext.getSourceName();
+        String sourceName = StringUtils.uncapitalize(fieldContext.getSourceName());
         Class<?> type = fieldContext.getType();
         UIField field = fieldContext.getUIField();
 
@@ -321,6 +323,11 @@ public class UIFieldUtils {
         putIfTrue(jsonTypeMetadata, "fw", field.fullWidth());
         putIfTrue(jsonTypeMetadata, "showLabelInFw", field.hideLabelInFullWidth());
         putIfNonEmpty(jsonTypeMetadata, "bg", field.bg());
+
+        UIFieldPadding fieldPadding = fieldContext.getDeclaredAnnotation(UIFieldPadding.class);
+        if (fieldPadding != null) {
+            entityUIMetaData.setType("Padding");
+        }
 
         UIFieldIconPicker fieldIconPicker = fieldContext.getDeclaredAnnotation(UIFieldIconPicker.class);
         if (fieldIconPicker != null) {
@@ -551,11 +558,7 @@ public class UIFieldUtils {
             }
         }
 
-        var fieldUpdateFontSize = fieldContext.getDeclaredAnnotation(UIFieldUpdateFontSize.class);
-        if (fieldUpdateFontSize != null) {
-            jsonTypeMetadata.put("fsMin", fieldUpdateFontSize.min());
-            jsonTypeMetadata.put("fsMax", fieldUpdateFontSize.max());
-        }
+        assembleTextOptions(fieldContext, sourceName, jsonTypeMetadata);
 
         var fieldNumber = fieldContext.getDeclaredAnnotation(UIFieldNumber.class);
         if (fieldNumber != null) {
@@ -656,9 +659,7 @@ public class UIFieldUtils {
         if (fieldContext.isAnnotationPresent(UIFieldOrder.class)) {
             entityUIMetaData.setOrder(fieldContext.getDeclaredAnnotation(UIFieldOrder.class).value());
         }
-        Boolean require = Optional.ofNullable(fieldContext.getDeclaredAnnotation(UIFieldRequire.class))
-                                  .map(UIFieldRequire::value).orElse(field.required());
-        entityUIMetaData.setRequired(nullIfFalse(require));
+        entityUIMetaData.setRequired(nullIfFalse(field.required()));
 
         if (BaseEntity.class.isAssignableFrom(type) && type.getDeclaredAnnotation(UISidebarMenu.class) != null) {
             entityUIMetaData.setNavLink(getClassEntityNavLink(field, type));
@@ -669,6 +670,25 @@ public class UIFieldUtils {
 
         entityUIMetaDataList.remove(entityUIMetaData);
         entityUIMetaDataList.add(entityUIMetaData);
+    }
+
+    private static void assembleTextOptions(UIFieldContext fieldContext, String sourceName, ObjectNode jsonTypeMetadata) {
+        var fieldUpdateFontSize = fieldContext.getDeclaredAnnotation(UIFieldOptionFontSize.class);
+        if (fieldUpdateFontSize != null) {
+            jsonTypeMetadata.put("fsMin", fieldUpdateFontSize.min());
+            jsonTypeMetadata.put("fsMax", fieldUpdateFontSize.max());
+            jsonTypeMetadata.put("opt_fs", defaultIfEmpty(fieldUpdateFontSize.value(), sourceName));
+        }
+
+        var fieldVerticalAlign = fieldContext.getDeclaredAnnotation(UIFieldOptionVerticalAlign.class);
+        if (fieldVerticalAlign != null) {
+            jsonTypeMetadata.put("opt_va", defaultIfEmpty(fieldVerticalAlign.value(), sourceName));
+        }
+
+        var optionColor = fieldContext.getDeclaredAnnotation(UIFieldOptionColor.class);
+        if (fieldVerticalAlign != null) {
+            jsonTypeMetadata.put("opt_c", defaultIfEmpty(optionColor.value(), sourceName));
+        }
     }
 
     private static void putIfNonEmpty(ObjectNode metadata, String key, String value) {
@@ -702,9 +722,7 @@ public class UIFieldUtils {
                     + " and class: "
                     + entityClass.getSimpleName());
         }
-        String href =
-            StringUtils.defaultIfEmpty(
-                uiSidebarMenu.overridePath(), entityClass.getSimpleName());
+        String href =            StringUtils.defaultIfEmpty(                uiSidebarMenu.overridePath(), entityClass.getSimpleName());
         return uiSidebarMenu.parent().name().toLowerCase() + "/" + href;
     }
 

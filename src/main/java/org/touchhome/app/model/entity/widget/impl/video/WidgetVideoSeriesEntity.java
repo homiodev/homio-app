@@ -6,7 +6,7 @@ import java.util.List;
 import javax.persistence.Entity;
 import org.springframework.data.util.Pair;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.model.StylePosition;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;

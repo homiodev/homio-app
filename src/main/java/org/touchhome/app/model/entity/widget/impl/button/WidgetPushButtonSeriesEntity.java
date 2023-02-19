@@ -3,12 +3,12 @@ package org.touchhome.app.model.entity.widget.impl.button;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasIcon;
-import org.touchhome.app.model.entity.widget.impl.HasName;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueAggregatedDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasStyle;
-import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
-import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
+import org.touchhome.app.model.entity.widget.attributes.HasIcon;
+import org.touchhome.app.model.entity.widget.attributes.HasName;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueAggregatedDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasStyle;
+import org.touchhome.app.model.entity.widget.attributes.HasValueConverter;
+import org.touchhome.app.model.entity.widget.attributes.HasValueTemplate;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
@@ -17,6 +17,7 @@ import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
@@ -47,7 +48,7 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
     @UIFieldBeanSelection(value = HasAggregateValueFromSeries.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
-    @UIFieldGroup(value = "Value", order = 10)
+    @UIFieldGroup(value = "Value", order = 3)
     @UIEditReloadWidget
     public String getValueDataSource() {
         return HasSingleValueAggregatedDataSource.super.getValueDataSource();
@@ -66,6 +67,7 @@ public class WidgetPushButtonSeriesEntity extends WidgetSeriesEntity<WidgetPushB
     @UIField(order = 1, isRevert = true)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
+    @UIFieldReadDefaultValue
     public String getButtonColor() {
         return getJsonData("btnClr", UI.Color.WHITE);
     }

@@ -7,20 +7,23 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
-import org.touchhome.app.model.entity.widget.UIFieldUpdateFontSize;
+import org.touchhome.app.model.entity.widget.UIFieldOptionFontSize;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
-import org.touchhome.app.model.entity.widget.impl.HasIconWithoutThreshold;
-import org.touchhome.app.model.entity.widget.impl.HasLayout;
-import org.touchhome.app.model.entity.widget.impl.HasName;
-import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
-import org.touchhome.app.model.entity.widget.impl.HasStyle;
+import org.touchhome.app.model.entity.widget.attributes.HasIconWithoutThreshold;
+import org.touchhome.app.model.entity.widget.attributes.HasLayout;
+import org.touchhome.app.model.entity.widget.attributes.HasName;
+import org.touchhome.app.model.entity.widget.attributes.HasSourceServerUpdates;
+import org.touchhome.app.model.entity.widget.attributes.HasStyle;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
+import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
+import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldLayout;
 import org.touchhome.bundle.api.ui.field.UIFieldLayout.HorizontalAlign;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 import org.touchhome.bundle.api.ui.field.UIKeyValueField;
@@ -31,7 +34,8 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFi
 
 @Entity
 public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
-    implements HasStyle,
+    implements
+    HasStyle,
     HasLayout,
     HasIconWithoutThreshold,
     HasName,
@@ -41,10 +45,19 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     public static final String PREFIX = "wgtclr_";
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Name", order = 1)
-    @UIFieldUpdateFontSize
+    @UIFieldGroup(value = "Name", order = 3)
+    @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
+    }
+
+    @Override
+    @UIField(order = 3, isRevert = true)
+    @UIFieldColorPicker // disable thresholding
+    @UIFieldGroup("Name")
+    @UIFieldReadDefaultValue
+    public String getNameColor() {
+        return HasName.super.getNameColor();
     }
 
     @Override
@@ -72,6 +85,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     @UIField(order = 10, isRevert = true)
     @UIFieldLayout(options = {"colors", "icon", "name", "brightness", "colorTemp", "onOff"})
+    @UIFieldReadDefaultValue
     public String getLayout() {
         return getJsonData("layout", getDefaultLayout());
     }
@@ -119,6 +133,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIField(order = 4, isRevert = true)
     @UIFieldSlider(min = 0, max = 40)
     @UIFieldGroup("Colors")
+    @UIFieldReadDefaultValue
     public int getCircleSpacing() {
         return getJsonData("space", 14);
     }
@@ -130,6 +145,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIField(order = 5, isRevert = true)
     @UIFieldSlider(min = 10, max = 40)
     @UIFieldGroup("Colors")
+    @UIFieldReadDefaultValue
     public int getCircleSize() {
         return getJsonData("size", 28);
     }
@@ -184,6 +200,17 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     public void setBrightnessMaxValue(int value) {
         setJsonData("brtmax", value);
+    }
+
+    @UIField(order = 5, label = "sliderColor")
+    @UIFieldGroup("Brightness")
+    @UIFieldColorPicker
+    public String getBrightnessSliderColor() {
+        return getJsonData("brtslcol");
+    }
+
+    public void setBrightnessSliderColor(String value) {
+        setJsonData("brtslcol", value);
     }
 
     @UIField(order = 1)
@@ -265,11 +292,20 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @Override
     protected void beforePersist() {
         super.beforePersist();
-        setColors(Stream.of("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FFFFFF")
-                        .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
-                        .collect(Collectors.joining(",", "[", "]")));
-        setCircleSize(20);
-        setCircleSpacing(4);
+        if (!getJsonData().has("colors")) {
+            setColors(Stream.of("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FFFFFF")
+                            .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
+                            .collect(Collectors.joining(",", "[", "]")));
+        }
+        if (!getJsonData().has("size")) {
+            setCircleSize(20);
+        }
+        if (!getJsonData().has("space")) {
+            setCircleSpacing(4);
+        }
+        if (!getJsonData().has("brtslcol")) {
+            setBrightnessSliderColor(UI.Color.random());
+        }
     }
 
     private String getDefaultLayout() {

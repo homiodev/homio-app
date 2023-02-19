@@ -13,6 +13,7 @@ import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
@@ -42,6 +43,7 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 5)
     @UIFieldGroup("Chart")
     @UIEditReloadWidget
+    @UIFieldReadDefaultValue
     default AggregationType getChartAggregationType() {
         return getJsonDataEnum("chartAggrType", AggregationType.Average);
     }
@@ -53,6 +55,7 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 6)
     @UIFieldGroup("Chart")
     @UIFieldCodeEditor(autoFormat = true, editorType = MonacoLanguage.JavaScript)
+    @UIFieldReadDefaultValue
     default String getFinalChartValueConverter() {
         return getJsonData("finValConv", "return value;");
     }
@@ -64,6 +67,7 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 1, isRevert = true)
     @UIFieldGroup(value = "Chart ui", order = 11, borderColor = "#673AB7")
     @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldReadDefaultValue
     default String getChartColor() {
         return getJsonData("chartC", UI.Color.WHITE);
     }
@@ -72,9 +76,10 @@ public interface HasChartDataSource extends HasJsonData {
         setJsonData("chartC", value);
     }
 
-    @UIField(order = 2)
+    @UIField(order = 2, isRevert = true)
     @UIFieldSlider(min = 25, max = 100, step = 5)
     @UIFieldGroup("Chart ui")
+    @UIFieldReadDefaultValue
     default int getChartColorOpacity() {
         return getJsonData("chartCO", 50);
     }

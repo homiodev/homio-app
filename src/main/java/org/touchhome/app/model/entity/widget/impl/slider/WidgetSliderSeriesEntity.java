@@ -3,11 +3,12 @@ package org.touchhome.app.model.entity.widget.impl.slider;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasIcon;
-import org.touchhome.app.model.entity.widget.impl.HasName;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasTextConverter;
-import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
+import org.touchhome.app.model.entity.widget.attributes.HasIcon;
+import org.touchhome.app.model.entity.widget.attributes.HasName;
+import org.touchhome.app.model.entity.widget.attributes.HasPadding;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasTextConverter;
+import org.touchhome.app.model.entity.widget.attributes.HasValueTemplate;
 import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -15,16 +16,19 @@ import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldNumber;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 
 @Entity
 public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity>
-    implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasTextConverter {
+    implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasPadding,
+    HasTextConverter {
 
     public static final String PREFIX = "wgssls_";
 
     @UIField(order = 1, isRevert = true)
     @UIFieldGroup(value = "Slider", order = 2, borderColor = "#6AA427")
     @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldReadDefaultValue
     public String getSliderColor() {
         return getJsonData("sc", UI.Color.WHITE);
     }

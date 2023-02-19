@@ -61,6 +61,7 @@ public class ZigBeeController {
                                       .filter(Objects::nonNull)
                                       .flatMap(d -> ((Map<String, ZigBeeProperty>) d.getProperties()).values().stream())
                                       .filter(buildPropertyAccessFilter(access))
+                                      .filter(buildFilterByType(type))
                                       .map(this::createOptionModel)
                                       .collect(Collectors.toList());
     }
@@ -73,6 +74,20 @@ public class ZigBeeController {
                 return ZigBeeProperty::isWritable;
         }
         return zigBeeProperty -> true;
+    }
+
+    private Predicate<? super ZigBeeProperty> buildFilterByType(String type) {
+        return (Predicate<ZigBeeProperty>) zigBeeProperty -> {
+            switch (type) {
+                case "bool":
+                    return zigBeeProperty.getPropertyType() == PropertyType.bool;
+                case "number":
+                    return zigBeeProperty.getPropertyType() == PropertyType.number;
+                case "string":
+                    return zigBeeProperty.getPropertyType() == PropertyType.string;
+            }
+            return true;
+        };
     }
 
     private @NotNull Predicate<ZigBeeDeviceBaseEntity> buildDeviceAccessFilter(String access, String type) {
@@ -123,7 +138,7 @@ public class ZigBeeController {
     }
 
     private @NotNull OptionModel createOptionModel(ZigBeeProperty property) {
-        return OptionModel.of(property.getKey(), property.getName()).setDescription(property.getDescription())
+        return OptionModel.of(property.getKey(), property.getName(false)).setDescription(property.getDescription())
                           .setIcon(property.getIcon()).setColor(property.getIconColor());
     }
 }

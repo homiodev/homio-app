@@ -1,11 +1,16 @@
 package org.touchhome.app.model.entity.widget.impl;
 
+import java.util.Set;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
+import org.touchhome.app.model.entity.widget.attributes.HasLayout;
 import org.touchhome.app.setting.dashboard.WidgetBorderColorMenuSetting;
+import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldTableLayout;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldDisableEditOnCondition;
 
@@ -26,7 +31,7 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
     }
 
     @UIField(order = 35, showInContextMenu = true, icon = "fas fa-table")
-    @UIFieldTableLayout
+    @UIFieldTableLayout(maxRows = 30, maxColumns = 15)
     @UIFieldDisableEditOnCondition("return context.get('hasChildren')")
     public String getLayout() {
         return getJsonData("layout", "2x2");
@@ -40,6 +45,7 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
     @UIField(order = 24, isRevert = true)
     @UIFieldGroup("UI")
     @UIFieldColorPicker
+    @UIFieldReadDefaultValue
     public String getBorderColor() {
         return getJsonData("bc", getEntityContext().setting().getValue(WidgetBorderColorMenuSetting.class));
     }
@@ -58,24 +64,28 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
     }
 
     @Override
-    public boolean isDisableDelete() {
-        return isHasChildren();
-    }
-
-    public boolean isHasChildren() {
-        for (WidgetBaseEntity widget : getEntityContext().findAll(WidgetBaseEntity.class)) {
-            if (!widget.getEntityID().equals(this.getEntityID()) && widget.getXb() == this.getXb() && widget.getYb() == this.getYb()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override
     protected void beforePersist() {
         if (!getJsonData().has("bw")) {
             setBw(2);
         }
         super.beforePersist();
+    }
+
+    @Override
+    public void afterDelete(EntityContext entityContext) {
+        for (WidgetBaseEntity entity : getEntityContext().findAll(WidgetBaseEntity.class)) {
+            if (getEntityID().equals(entity.getParent())) {
+                entityContext.delete(entity);
+            }
+        }
+    }
+
+    @Override
+    public void getAllRelatedEntities(Set<BaseEntity> set) {
+        for (WidgetBaseEntity entity : getEntityContext().findAll(WidgetBaseEntity.class)) {
+            if (getEntityID().equals(entity.getParent())) {
+                set.add(entity);
+            }
+        }
     }
 }

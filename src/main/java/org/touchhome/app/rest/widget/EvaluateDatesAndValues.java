@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
+import org.touchhome.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;

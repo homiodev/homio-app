@@ -1,4 +1,4 @@
-package org.touchhome.app.model.entity.widget.impl;
+package org.touchhome.app.model.entity.widget.attributes;
 
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.UIFieldTimeSlider;

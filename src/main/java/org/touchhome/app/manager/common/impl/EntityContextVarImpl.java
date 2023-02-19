@@ -24,6 +24,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
+import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.inmemory.InMemoryDB;
 import org.touchhome.bundle.api.inmemory.InMemoryDBService;
 import org.touchhome.bundle.api.state.DecimalType;
@@ -225,9 +226,12 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @Override
-    public String buildDataSource(@NotNull String variableId) {
+    public String buildDataSource(@NotNull String variableId, boolean forSet) {
         // example: wg_z2m~~~wg_z2m_0x00124b001d04e04b~~~wgv_0x00124b001d04e04b_state~~~HasGetStatusValue~~~entityByClass
         WorkspaceVariable variable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
+        if (variable == null) {
+            throw new IllegalArgumentException("Unable to find variable: " + variableId);
+        }
         List<String> items = new ArrayList<>();
 
         WorkspaceGroup group = variable.getWorkspaceGroup();
@@ -236,7 +240,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
         items.add(group.getEntityID());
         items.add(variable.getEntityID());
-        items.add(HasGetStatusValue.class.getSimpleName());
+        items.add((forSet ? HasSetStatusValue.class : HasGetStatusValue.class).getSimpleName());
         items.add("entityByClass");
 
         return String.join("~~~", items);

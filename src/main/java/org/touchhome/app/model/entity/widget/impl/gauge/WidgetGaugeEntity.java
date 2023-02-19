@@ -5,20 +5,21 @@ import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
 import org.touchhome.app.model.entity.widget.UIFieldMarkers;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
-import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
-import org.touchhome.app.model.entity.widget.impl.HasIcon;
-import org.touchhome.app.model.entity.widget.impl.HasName;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
-import org.touchhome.app.model.entity.widget.impl.HasTextConverter;
-import org.touchhome.app.model.entity.widget.impl.HasValueConverter;
-import org.touchhome.app.model.entity.widget.impl.HasValueTemplate;
+import org.touchhome.app.model.entity.widget.attributes.HasChartTimePeriod;
+import org.touchhome.app.model.entity.widget.attributes.HasIcon;
+import org.touchhome.app.model.entity.widget.attributes.HasName;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasSourceServerUpdates;
+import org.touchhome.app.model.entity.widget.attributes.HasTextConverter;
+import org.touchhome.app.model.entity.widget.attributes.HasValueConverter;
+import org.touchhome.app.model.entity.widget.attributes.HasValueTemplate;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldNumber;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
 
@@ -89,6 +90,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     @UIField(order = 6, isRevert = true)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldReadDefaultValue
     public String getGaugeForeground() {
         return getJsonData("gfc", UI.Color.WHITE);
     }
@@ -130,6 +132,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     @UIField(order = 2, isRevert = true)
     @UIFieldGroup("Text")
     @UIFieldColorPicker
+    @UIFieldReadDefaultValue
     public String getUnitColor() {
         return getJsonData("uc", UI.Color.WHITE);
     }
@@ -147,6 +150,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     @UIField(order = 4, isRevert = true)
     @UIFieldGroup("Text")
     @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldReadDefaultValue
     public String getTextColor() {
         return getJsonData("tc", UI.Color.WHITE);
     }

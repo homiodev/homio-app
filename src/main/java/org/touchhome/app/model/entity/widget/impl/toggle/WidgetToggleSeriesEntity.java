@@ -1,92 +1,17 @@
 package org.touchhome.app.model.entity.widget.impl.toggle;
 
-import java.util.List;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasIcon;
-import org.touchhome.app.model.entity.widget.impl.HasName;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasIcon;
+import org.touchhome.app.model.entity.widget.attributes.HasName;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.touchhome.bundle.api.ui.UI;
-import org.touchhome.bundle.api.ui.field.UIField;
-import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
-import org.touchhome.bundle.api.ui.field.UIFieldGroup;
-import org.touchhome.bundle.api.ui.field.UIFieldRequire;
 
 @Entity
 public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEntity>
-    implements HasSingleValueDataSource, HasIcon, HasName {
+    implements HasSingleValueDataSource, HasIcon, HasName, HasToggle {
 
     public static final String PREFIX = "wgttgs_";
-
-    @UIFieldRequire
-    public String getSetValueDataSource() {
-        return HasSingleValueDataSource.super.getSetValueDataSource();
-    }
-
-    @UIField(order = 3, isRevert = true)
-    @UIFieldColorPicker
-    @UIFieldGroup("UI")
-    public String getColor() {
-        return getJsonData("color", UI.Color.WHITE);
-    }
-
-    public WidgetToggleSeriesEntity setColor(String value) {
-        setJsonData("color", value);
-        return this;
-    }
-
-    @UIField(order = 1)
-    @UIFieldGroup(value = "ON", order = 4)
-    public String getOnName() {
-        return getJsonData("onName", "On");
-    }
-
-    public void setOnName(String value) {
-        setJsonData("onName", value);
-    }
-
-    /**
-     * Determine to check if toggle is on compare server value with list of OnValues
-     */
-    @UIField(order = 2)
-    @UIFieldGroup("ON")
-    public List<String> getOnValues() {
-        return getJsonDataList("onValues");
-    }
-
-    public void setOnValues(String value) {
-        setJsonData("onValues", value);
-    }
-
-    @UIField(order = 3)
-    @UIFieldGroup("ON")
-    public String getPushToggleOnValue() {
-        return getJsonData("onValue", "true");
-    }
-
-    public void setPushToggleOnValue(String value) {
-        setJsonData("onValue", value);
-    }
-
-    @UIField(order = 1)
-    @UIFieldGroup(value = "OFF", order = 4)
-    public String getOffName() {
-        return getJsonData("offName", "Off");
-    }
-
-    public void setOffName(String value) {
-        setJsonData("offName", value);
-    }
-
-    @UIField(order = 2)
-    @UIFieldGroup("OFF")
-    public String getPushToggleOffValue() {
-        return getJsonData("offValue", "false");
-    }
-
-    public void setPushToggleOffValue(String value) {
-        setJsonData("offValue", value);
-    }
 
     @Override
     public String getEntityPrefix() {

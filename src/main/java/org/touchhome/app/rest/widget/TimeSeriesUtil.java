@@ -19,11 +19,11 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
+import org.touchhome.app.model.entity.widget.attributes.HasChartTimePeriod;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueAggregatedDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
-import org.touchhome.app.model.entity.widget.impl.HasChartTimePeriod;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueAggregatedDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
-import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.PeriodRequest;
@@ -102,7 +102,7 @@ public class TimeSeriesUtil {
     /**
      * Evaluate single value from specific data source and attach listener on it for dynamic updates
      */
-    public <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> R getSingleValue(
+    public <T extends WidgetBaseEntity<T>, R> R getSingleValue(
         @NotNull T entity,
         @Nullable String valueDataSource,
         @Nullable JSONObject dynamicParameters,
@@ -127,9 +127,9 @@ public class TimeSeriesUtil {
         return resultConverter.apply(value);
     }
 
-    public <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, DS extends HasSingleValueDataSource & HasEntityIdentifier, R> R
+    public <T extends WidgetBaseEntity<T>, DS extends HasSingleValueDataSource, R> R
     getSingleValue(@NotNull T entity, @NotNull DS dataSource, @NotNull Function<Object, R> resultConverter) {
-        String seriesEntityId = dataSource.getEntityID();
+        String seriesEntityId = ((HasEntityIdentifier) dataSource).getEntityID();
         JSONObject dynamicParameters = dataSource.getValueDynamicParameterFields();
         DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, dataSource.getValueDataSource());
         Object source = dsContext.getSource();
@@ -201,13 +201,13 @@ public class TimeSeriesUtil {
         return result;
     }
 
-    private <DS extends HasSingleValueDataSource & HasEntityIdentifier> AggregationType getAggregationType(@NotNull DS dataSource) {
+    private <DS extends HasSingleValueDataSource> AggregationType getAggregationType(@NotNull DS dataSource) {
         return dataSource instanceof HasSingleValueAggregatedDataSource ? ((HasSingleValueAggregatedDataSource) dataSource).getValueAggregationType() :
             AggregationType.None;
     }
 
     @Nullable
-    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromHasAggregationValue(@NotNull T entity,
+    private <T extends WidgetBaseEntity<T>, R> Object getValueFromHasAggregationValue(@NotNull T entity,
         @NotNull Function<Object, R> resultConverter,
         String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID,
         AggregationType aggregationType, @Nullable Long diffMilliseconds) {
@@ -215,15 +215,19 @@ public class TimeSeriesUtil {
         PeriodRequest periodRequest = new PeriodRequest(entityContext, diffMilliseconds).setParameters(dynamicParameters);
         value = ((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(periodRequest, aggregationType, false);
 
-        addListenValueIfRequire(entity.getListenSourceUpdates(), entity.getEntityID(), source, dynamicParameters, seriesEntityId, dataSourceEntityID,
-            object -> {
-                PeriodRequest request = new PeriodRequest(entityContext, diffMilliseconds).setParameters(dynamicParameters);
-                return resultConverter.apply(((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(request, aggregationType, false));
-            });
+        if (entity instanceof HasSourceServerUpdates) {
+            addListenValueIfRequire(((HasSourceServerUpdates) entity).getListenSourceUpdates(), entity.getEntityID(),
+                source, dynamicParameters, seriesEntityId,
+                dataSourceEntityID,
+                object -> {
+                    PeriodRequest request = new PeriodRequest(entityContext, diffMilliseconds).setParameters(dynamicParameters);
+                    return resultConverter.apply(((HasAggregateValueFromSeries) source).getAggregateValueFromSeries(request, aggregationType, false));
+                });
+        }
         return value;
     }
 
-    private <T extends WidgetBaseEntity<T> & HasSourceServerUpdates, R> Object getValueFromGetStatusValue(@NotNull T entity,
+    private <T extends WidgetBaseEntity<T>, R> Object getValueFromGetStatusValue(@NotNull T entity,
         @NotNull Function<Object, R> resultConverter,
         String seriesEntityId, JSONObject dynamicParameters, Object source, String dataSourceEntityID) {
 
@@ -231,10 +235,13 @@ public class TimeSeriesUtil {
         HasGetStatusValue.GetStatusValueRequest valueRequest = new HasGetStatusValue.GetStatusValueRequest(entityContext, dynamicParameters);
         value = ((HasGetStatusValue) source).getStatusValue(valueRequest);
 
-        addListenValueIfRequire(entity.getListenSourceUpdates(), entity.getEntityID(), source, dynamicParameters, seriesEntityId, dataSourceEntityID,
-            object -> {
-                return resultConverter.apply(((HasGetStatusValue) source).getStatusValue(valueRequest));
-            });
+        if (entity instanceof HasSourceServerUpdates) {
+            addListenValueIfRequire(((HasSourceServerUpdates) entity).getListenSourceUpdates(), entity.getEntityID(),
+                source, dynamicParameters, seriesEntityId, dataSourceEntityID,
+                object -> {
+                    return resultConverter.apply(((HasGetStatusValue) source).getStatusValue(valueRequest));
+                });
+        }
         return value;
     }
 }

@@ -65,6 +65,7 @@ import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.manager.common.EntityManager;
 import org.touchhome.app.model.UIHideEntityIfFieldNotNull;
+import org.touchhome.app.model.entity.widget.attributes.HasPosition;
 import org.touchhome.app.model.rest.EntityUIMetaData;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemShowEntityCreateTimeSetting;
@@ -79,7 +80,6 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.ImageEntity;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.HasEntityLog;
-import org.touchhome.bundle.api.model.HasPosition;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.service.EntityService;
@@ -138,9 +138,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @SneakyThrows
     public ActionResponseModel executeAction(
         ActionRequestModel actionRequestModel, Object actionHolder, BaseEntity actionEntity) {
-        for (Method method :
-            MethodUtils.getMethodsWithAnnotation(
-                actionHolder.getClass(), UIContextMenuAction.class)) {
+        for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuAction.class)) {
             UIContextMenuAction menuAction =
                 method.getDeclaredAnnotation(UIContextMenuAction.class);
             if (menuAction.value().equals(actionRequestModel.getName())) {
@@ -152,11 +150,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                     actionRequestModel.getParams());
             }
         }
-        for (Method method :
-            MethodUtils.getMethodsWithAnnotation(
-                actionHolder.getClass(), UIContextMenuUploadAction.class)) {
-            UIContextMenuUploadAction menuAction =
-                method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
+        for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuUploadAction.class)) {
+            UIContextMenuUploadAction menuAction = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
             if (menuAction.value().equals(actionRequestModel.getName())) {
                 return executeMethodAction(
                     method,
@@ -170,14 +165,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         if (actionRequestModel.metadata != null && actionRequestModel.metadata.has("field")) {
             String fieldName = actionRequestModel.metadata.getString("field");
 
-            AccessibleObject field =
-                Optional.ofNullable(
-                            (AccessibleObject)
-                                FieldUtils.getField(
-                                    actionHolder.getClass(), fieldName, true))
-                        .orElse(
-                            InternalUtil.findMethodByName(
-                                actionHolder.getClass(), fieldName));
+            AccessibleObject field = Optional.ofNullable((AccessibleObject) FieldUtils.getField(actionHolder.getClass(), fieldName, true))
+                                             .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
             if (field != null) {
                 for (UIActionButton actionButton :
                     field.getDeclaredAnnotationsByType(UIActionButton.class)) {
@@ -190,8 +179,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
         if (actionHolder instanceof HasDynamicContextMenuActions) {
             return ((HasDynamicContextMenuActions) actionHolder)
-                .handleAction(
-                    entityContext, actionRequestModel.name, actionRequestModel.params);
+                .handleAction(entityContext, actionRequestModel.name, actionRequestModel.params);
         }
         throw new IllegalArgumentException("Unable to find action: <" + actionRequestModel.getName() + "> for model: " + actionHolder);
     }
@@ -544,8 +532,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 hasPosition.setYb(position.yb);
                 hasPosition.setBw(position.bw);
                 hasPosition.setBh(position.bh);
-                hasPosition.setXbl(position.xbl);
-                hasPosition.setYbl(position.ybl);
+                hasPosition.setParent(position.parent);
                 entityContext.save(entity);
             } else {
                 throw new IllegalArgumentException("Entity: " + entityID + " has no ability to update position");
@@ -858,8 +845,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         private int yb;
         private int bw;
         private int bh;
-        private Integer xbl;
-        private Integer ybl;
+        private String parent;
     }
 
     @Getter

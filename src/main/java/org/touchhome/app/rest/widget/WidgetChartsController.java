@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartEntity;
@@ -27,7 +27,6 @@ import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartEnti
 import org.touchhome.app.model.entity.widget.impl.chart.pie.WidgetPieChartEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.gauge.WidgetGaugeEntity;
 import org.touchhome.app.model.rest.WidgetDataRequest;
 
 @Log4j2
@@ -124,16 +123,7 @@ public class WidgetChartsController {
         return result;
     }
 
-    @PostMapping("/gauge/value")
-    public Object getGaugeValue(@Valid @RequestBody WidgetDataRequest request) {
-        WidgetGaugeEntity entity = request.getEntity(entityContext, objectMapper, WidgetGaugeEntity.class);
-        return timeSeriesUtil.getSingleValue(entity, entity, o -> o);
-    }
-
-    private <
-        S extends WidgetSeriesEntity<T> & HasSingleValueDataSource,
-        T extends ChartBaseEntity<T, S>>
-    TimeSeriesChartData<ChartDataset> getValueDataset(
+    private <S extends WidgetSeriesEntity<T> & HasSingleValueDataSource, T extends ChartBaseEntity<T, S>> TimeSeriesChartData<ChartDataset> getValueDataset(
         WidgetDataRequest request, Class<T> chartClass) {
         T entity = request.getEntity(entityContext, objectMapper, chartClass);
         TimeSeriesChartData<ChartDataset> timeSeriesChartData = new TimeSeriesChartData<>();

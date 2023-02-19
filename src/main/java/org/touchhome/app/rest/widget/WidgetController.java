@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,6 +38,7 @@ import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.WidgetTabEntity;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonEntity;
 import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonSeriesEntity;
@@ -53,6 +55,7 @@ import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoEntity;
 import org.touchhome.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
 import org.touchhome.app.model.rest.WidgetDataRequest;
+import org.touchhome.app.rest.widget.WidgetChartsController.SingleValueData;
 import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
@@ -181,6 +184,23 @@ public class WidgetController {
         return values;
     }
 
+    @PostMapping("/value")
+    public SingleValueData getValue(@Valid @RequestBody WidgetDataRequest request) {
+        WidgetBaseEntity entity = request.getEntity(entityContext, objectMapper);
+        if (entity instanceof HasSingleValueDataSource) {
+            return new SingleValueData(timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o), null);
+        }
+        throw new IllegalStateException("Entity: " + request.getEntityID() + " not implement 'HasSingleValueDataSource'");
+    }
+
+    @PostMapping("/value/update")
+    public void updateValue(@RequestBody SingleValueRequest<Object> request) {
+        WidgetBaseEntity entity = entityContext.getEntity(request.entityID);
+        HasSingleValueDataSource source = (HasSingleValueDataSource) entity;
+        DataSourceUtil.setValue(entityContext, source.getSetValueDataSource(),
+            source.getDynamicParameterFields("value"), request.value);
+    }
+
     @PostMapping("/button/update")
     public void handleButtonClick(@RequestBody SingleValueRequest<Void> request) {
         WidgetPushButtonSeriesEntity series = getSeriesEntity(request);
@@ -190,13 +210,19 @@ public class WidgetController {
 
     @PostMapping("/slider/values")
     public List<Integer> getSliderValues(@RequestBody WidgetDataRequest request) {
-        WidgetSliderEntity entity =
-            request.getEntity(entityContext, objectMapper, WidgetSliderEntity.class);
+        WidgetSliderEntity entity = request.getEntity(entityContext, objectMapper, WidgetSliderEntity.class);
         List<Integer> values = new ArrayList<>(entity.getSeries().size());
         for (WidgetSliderSeriesEntity item : entity.getSeries()) {
             values.add(timeSeriesUtil.getSingleValue(entity, item, o -> HasSetStatusValue.SetStatusValueRequest.rawValueToNumber(o, 0).intValue()));
         }
         return values;
+    }
+
+    @PostMapping("/slider/update")
+    public void handleSlider(@RequestBody SingleValueRequest<Number> request) {
+        WidgetSliderSeriesEntity series = getSeriesEntity(request);
+        DataSourceUtil.setValue(entityContext, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields(),
+            request.value);
     }
 
     @PostMapping("/toggle/values")

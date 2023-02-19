@@ -48,10 +48,16 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
         if (entity == null) {
             throw new IllegalArgumentException("Unable to find layout: " + layoutEntityID);
         }
-        widget.setXb(entity.getXb());
-        widget.setYb(entity.getYb());
-        widget.setXbl(columnNum);
-        widget.setYbl(rowNum);
+        String[] items = entity.getLayout().split("x");
+        if (Integer.parseInt(items[1]) < rowNum + widget.getBh()) {
+            throw new IllegalArgumentException("Unable to put widget into layout. No height left");
+        }
+        if (Integer.parseInt(items[0]) < columnNum + widget.getBw()) {
+            throw new IllegalArgumentException("Unable to put widget into layout. No width left");
+        }
+        widget.setXb(columnNum);
+        widget.setYb(rowNum);
+        widget.setParent(entity.getEntityID());
         return (T) this;
     }
 

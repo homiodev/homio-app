@@ -16,7 +16,7 @@ public class LayoutBuilderImpl extends WidgetBaseBuilderImpl<LayoutWidgetBuilder
 
     @Override
     public LayoutWidgetBuilder setLayoutDimension(int rows, int columns) {
-        if (rows > 8 || columns > 8) {
+        if (rows > 30 || columns > 15) {
             throw new IllegalArgumentException("rows/columns must be less than 9");
         }
         widget.setLayout(format("%sx%s", columns, rows));

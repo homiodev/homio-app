@@ -2,7 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.display;
 
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
-import org.touchhome.app.model.entity.widget.impl.HasStyle;
+import org.touchhome.app.model.entity.widget.attributes.HasStyle;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;

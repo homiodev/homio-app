@@ -2,7 +2,7 @@ package org.touchhome.app.model.entity.widget.impl.fm;
 
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
-import org.touchhome.app.model.entity.widget.impl.HasSingleValueDataSource;
+import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnoreParent;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection;

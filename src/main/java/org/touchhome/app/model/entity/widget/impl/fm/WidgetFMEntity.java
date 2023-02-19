@@ -3,12 +3,13 @@ package org.touchhome.app.model.entity.widget.impl.fm;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetGroup;
-import org.touchhome.app.model.entity.widget.impl.HasLayout;
-import org.touchhome.app.model.entity.widget.impl.HasSourceServerUpdates;
+import org.touchhome.app.model.entity.widget.attributes.HasLayout;
+import org.touchhome.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.UIFieldTableLayout;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
@@ -49,6 +50,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
 
     @UIField(order = 24, isRevert = true)
     @UIFieldColorPicker
+    @UIFieldReadDefaultValue
     public String getBorderColor() {
         return getJsonData("bordC", "#434B5A");
     }
@@ -113,6 +115,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     @UIField(order = 54, isRevert = true)
     @UIFieldColorPicker
     @UIFieldGroup("fileName")
+    @UIFieldReadDefaultValue
     public String getFileNameColor() {
         return getJsonData("fnc", "#ADB5BD");
     }

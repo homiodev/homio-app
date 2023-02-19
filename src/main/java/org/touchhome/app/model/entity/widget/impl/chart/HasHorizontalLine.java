@@ -5,6 +5,7 @@ import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 public interface HasHorizontalLine extends HasJsonData {
@@ -23,6 +24,7 @@ public interface HasHorizontalLine extends HasJsonData {
     @UIField(order = 2, isRevert = true)
     @UIFieldGroup("CHART_HL")
     @UIFieldColorPicker
+    @UIFieldReadDefaultValue
     default String getSingleLineColor() {
         return getJsonData("slcol", UI.Color.RED);
     }
@@ -55,6 +57,7 @@ public interface HasHorizontalLine extends HasJsonData {
     @UIField(order = 5, isRevert = true)
     @UIFieldGroup("CHART_HL")
     @UIFieldColorPicker
+    @UIFieldReadDefaultValue
     default String getDynamicLineColor() {
         return getJsonData("dynlc", UI.Color.GREEN);
     }
