@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.touchhome.app.builder.widget.hasBuilder.HasActionOnClickBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasHorizontalLineBuilder;
@@ -23,12 +24,15 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
 import org.touchhome.bundle.api.EntityContextWidget;
+import org.touchhome.bundle.api.EntityContextWidget.AnimateBuilder;
 import org.touchhome.bundle.api.EntityContextWidget.DisplayWidgetBuilder;
 import org.touchhome.bundle.api.EntityContextWidget.DisplayWidgetSeriesBuilder;
+import org.touchhome.bundle.api.EntityContextWidget.ThresholdBuilder;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 
 public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuilder, WidgetDisplayEntity>
     implements DisplayWidgetBuilder,
+    HasActionOnClickBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
     HasLineChartBehaviourBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
     HasHorizontalLineBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
     HasChartTimePeriodBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
@@ -45,8 +49,33 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     }
 
     @Override
-    public DisplayWidgetBuilder setLayout(String value) {
-        widget.setLayout(value);
+    public DisplayWidgetBuilder setValueToPushConfirmMessage(String value) {
+        widget.setValueToPushConfirmMessage(value);
+        return this;
+    }
+
+    @Override
+    public DisplayWidgetBuilder setValueToPushSource(@Nullable String value) {
+        widget.setSetValueDataSource(value);
+        return this;
+    }
+
+    @Override
+    public DisplayWidgetBuilder setBackground(@Nullable String color,
+        @Nullable Consumer<ThresholdBuilder> colorBuilder,
+        @Nullable Consumer<AnimateBuilder> animateBuilder) {
+        if (colorBuilder == null && animateBuilder == null) {
+            getWidget().setBackground(color);
+        } else {
+            ThresholdBuilderImpl builder = new ThresholdBuilderImpl(color);
+            if (colorBuilder != null) {
+                colorBuilder.accept(builder);
+            }
+            if (animateBuilder != null) {
+                animateBuilder.accept(builder);
+            }
+            getWidget().setBackground(builder.build());
+        }
         return this;
     }
 
@@ -131,6 +160,18 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
         widget.setPointBorderColor(value);
         return this;
     }
+
+    @Override
+    public DisplayWidgetBuilder setShowChartFullScreenButton(boolean value) {
+        widget.setShowChartFullScreenButton(value);
+        return this;
+    }
+
+    @Override
+    public DisplayWidgetBuilder setLayout(@Nullable String value) {
+        widget.setLayout(value);
+        return this;
+    }
 }
 
 @RequiredArgsConstructor
@@ -149,12 +190,6 @@ class DisplaySeriesBuilderImpl implements DisplayWidgetSeriesBuilder,
     }
 
     @Override
-    public DisplayWidgetSeriesBuilder setSetValueDataSource(String value) {
-        series.setSetValueDataSource(value);
-        return this;
-    }
-
-    @Override
     public DisplayWidgetSeriesBuilder setValueAggregationType(AggregationType value) {
         series.setValueAggregationType(value);
         return this;
@@ -169,5 +204,11 @@ class DisplaySeriesBuilderImpl implements DisplayWidgetSeriesBuilder,
     @Override
     public WidgetDisplaySeriesEntity getWidget() {
         return series;
+    }
+
+    @Override
+    public DisplayWidgetSeriesBuilder setStyle(String... styles) {
+        series.setStyle(String.join("~~~", styles));
+        return this;
     }
 }

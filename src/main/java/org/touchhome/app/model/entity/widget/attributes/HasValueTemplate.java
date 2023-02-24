@@ -41,6 +41,7 @@ public interface HasValueTemplate extends HasJsonData {
 
     @UIField(order = 280)
     @UIFieldGroup("Value")
+    @UIFieldReadDefaultValue
     default String getNoValueText() {
         return getJsonData("noVal", "-");
     }
@@ -50,6 +51,7 @@ public interface HasValueTemplate extends HasJsonData {
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)
+    @UIFieldReadDefaultValue
     default double getValueFontSize() {
         return getJsonData("vtfs", 1D);
     }
@@ -59,6 +61,7 @@ public interface HasValueTemplate extends HasJsonData {
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)
+    @UIFieldReadDefaultValue
     default double getValuePrefixFontSize() {
         return getJsonData("vtpfs", 1D);
     }
@@ -68,6 +71,7 @@ public interface HasValueTemplate extends HasJsonData {
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)
+    @UIFieldReadDefaultValue
     default double getValueSuffixFontSize() {
         return getJsonData("vtsfs", 1D);
     }
@@ -77,6 +81,7 @@ public interface HasValueTemplate extends HasJsonData {
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)
+    @UIFieldReadDefaultValue
     default VerticalAlign getValuePrefixVerticalAlign() {
         return getJsonDataEnum("vtpva", VerticalAlign.middle);
     }
@@ -86,6 +91,7 @@ public interface HasValueTemplate extends HasJsonData {
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)
+    @UIFieldReadDefaultValue
     default VerticalAlign getValueSuffixVerticalAlign() {
         return getJsonDataEnum("vtsva", VerticalAlign.middle);
     }
@@ -95,6 +101,7 @@ public interface HasValueTemplate extends HasJsonData {
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)
+    @UIFieldReadDefaultValue
     default VerticalAlign getValueVerticalAlign() {
         return getJsonDataEnum("vtva", VerticalAlign.middle);
     }

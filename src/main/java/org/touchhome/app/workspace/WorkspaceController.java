@@ -8,8 +8,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -31,13 +29,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.manager.BundleService;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.manager.common.impl.EntityContextVarImpl;
 import org.touchhome.app.model.var.WorkspaceGroup;
 import org.touchhome.app.model.var.WorkspaceVariable;
 import org.touchhome.app.repository.device.WorkspaceRepository;
+import org.touchhome.app.utils.UIFieldSelectionUtil;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContextVar.VariableType;
-import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
@@ -82,6 +79,19 @@ public class WorkspaceController {
         return workspaceEntity.getContent();
     }
 
+    @SneakyThrows
+    @GetMapping("/variable2")
+    public List<OptionModel> getWorkspaceVariables2() {
+        List<OptionModel> options = new ArrayList<>();
+        List<WorkspaceVariable> entities = entityContext.findAll(WorkspaceVariable.class)
+                                                        .stream()
+                                                        .filter(s -> !s.getWorkspaceGroup().getGroupId().equals("broadcasts"))
+                                                        .collect(Collectors.toList());
+        UIFieldSelectionUtil.assembleItemsToOptions(options, WorkspaceVariable.class,
+            entities, entityContext, null);
+        return UIFieldSelectionUtil.groupingOptions(UIFieldSelectionUtil.filterOptions(options));
+    }
+
     @GetMapping("/variable")
     public String getWorkspaceVariables() {
         JSONObject result = new JSONObject();
@@ -92,25 +102,29 @@ public class WorkspaceController {
         result.put("broadcasts", broadcastsVariables);
         if (broadcasts != null) {
             for (WorkspaceVariable broadcastVariable : broadcasts.getWorkspaceVariables()) {
-                broadcastsVariables.put(broadcastVariable.getVariableId(), broadcastVariable.getName());
+                broadcastsVariables.put(broadcastVariable.getEntityID(), broadcastVariable.getName());
             }
         }
 
-        JSONObject groupVariables = new JSONObject();
-        result.put("group_variables", groupVariables);
-        for (WorkspaceGroup workspaceGroup : groups.values()) {
-            groupVariables.put(workspaceGroup.getGroupId(),
-                new JSONArray().put(workspaceGroup.getName()).put(new JSONArray()).put(new JSONArray()));
+        JSONObject variables = new JSONObject();
+        result.put("variables", variables);
+        variables.put("example", new JSONArray().put("example").put(0));
+        /*for (WorkspaceGroup workspaceGroup : groups.values()) {
+            groupVariables.put(workspaceGroup.getGroupId(), new JSONArray().put(workspaceGroup.getName()).put(new JSONArray()).put(new JSONArray()));
 
             for (WorkspaceVariable variable : workspaceGroup.getWorkspaceVariables()) {
                 JSONArray variables = groupVariables.getJSONArray(variable.getWorkspaceGroup().getGroupId()).getJSONArray(2);
+
+                String title = format("%s   [%s]", variable.getTitle(),
+                    variable.getWorkspaceGroup().getTitle());
+
                 variables.put(new JSONObject()
-                    .put("name", variable.getName())
+                    .put("name", title)
                     .put("type", "group_variables_group")
-                    .put("id_", variable.getVariableId())
+                    .put("id_", variable.getEntityID())
                     .put("restriction", variable.getRestriction()));
             }
-        }
+        }*/
 
         return result.toString();
     }
@@ -133,7 +147,7 @@ public class WorkspaceController {
     @SneakyThrows
     @PostMapping("/variable")
     public void saveVariables(@RequestBody String json) {
-        JSONObject request = new JSONObject(json);
+        /*JSONObject request = new JSONObject(json);
         Map<String, WorkspaceGroup> groups = entityContext.findAll(WorkspaceGroup.class).stream().collect(Collectors.toMap(WorkspaceGroup::getGroupId, g -> g));
 
         JSONObject broadcasts = request.getJSONObject("broadcasts");
@@ -185,7 +199,7 @@ public class WorkspaceController {
         for (String existedGroup : existedGroups) {
             log.warn("Remove variable: {}", existedGroup);
             entityContext.delete(existedGroup);
-        }
+        }*/
     }
 
     @GetMapping("/tab")

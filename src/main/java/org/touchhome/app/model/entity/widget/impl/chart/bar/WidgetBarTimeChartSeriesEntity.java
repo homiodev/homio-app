@@ -8,6 +8,7 @@ import org.touchhome.app.rest.widget.ChartDataset;
 import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
 import org.touchhome.app.rest.widget.TimeSeriesContext;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
+import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
@@ -28,12 +29,10 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
     public ChartDataset buildTargetDataset(TimeSeriesContext item) {
         WidgetBarTimeChartSeriesEntity seriesEntity =
             (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
-        ChartDataset dataset = new ChartDataset(item.getId());
+        ChartDataset dataset = new ChartDataset(item.getId(), ((HasEntityIdentifier) item.getSeriesEntity()).getEntityID());
 
         if (item.getValues() != null && !item.getValues().isEmpty()) {
-            dataset.setData(
-                EvaluateDatesAndValues.aggregate(
-                    item.getValues(), seriesEntity.getChartAggregationType()));
+            dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), seriesEntity.getChartAggregationType()));
         }
         return dataset;
     }

@@ -7,6 +7,7 @@ import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSerie
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
@@ -26,6 +27,7 @@ public interface HasSingleValueAggregatedDataSource extends HasSingleValueDataSo
     @UIField(order = 20)
     @UIFieldGroup("Value")
     @UIEditReloadWidget
+    @UIFieldReadDefaultValue
     default AggregationType getValueAggregationType() {
         return getJsonDataEnum("valAggrType", AggregationType.None);
     }
@@ -37,6 +39,7 @@ public interface HasSingleValueAggregatedDataSource extends HasSingleValueDataSo
     @UIField(order = 30)
     @UIFieldTimeSlider
     @UIFieldGroup("Value")
+    @UIFieldReadDefaultValue
     default int getValueAggregationPeriod() {
         return getJsonData("valAggrPeriod", 60);
     }

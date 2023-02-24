@@ -13,10 +13,12 @@ public interface HasName extends HasJsonData {
     @UIField(order = 1)
     @UIFieldGroup(value = "Name", order = 3)
     @UIFieldOptionFontSize
+    @UIFieldReadDefaultValue
     String getName();
 
     @UIField(order = 2)
     @UIFieldGroup("Name")
+    @UIFieldReadDefaultValue
     default Boolean isShowName() {
         return getJsonData("shn", Boolean.TRUE);
     }
@@ -38,6 +40,7 @@ public interface HasName extends HasJsonData {
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)
+    @UIFieldReadDefaultValue
     default double getNameFontSize() {
         return getJsonData("nfs", 1D);
     }

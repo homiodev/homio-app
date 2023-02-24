@@ -22,39 +22,29 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
 
         blockReporter("prev_variable", this::getPreviousValue);
 
-        blockHat("onchange_group_variable_to", this::onChangeVariableHatTo);
-        blockHat("onchange_group_variable", this::onChangeVariableHat);
+        blockHat("onchange_variable_to", this::onChangeVariableHatTo);
+        blockHat("onchange_variable", this::onChangeVariableHat);
 
-        blockReporter("group_variable", this::groupVariableReporter);
-        blockCommand("set_group_variable", this::setGroupVariableHandler);
-        blockCommand("change_group_variable", this::changeGroupVariableHandler);
+        blockReporter("variable", this::variableReporter);
+        blockCommand("setvariableto", this::setVariableHandler);
+        blockCommand("changevariableby", this::changeVariableHandler);
     }
 
     private void onChangeVariableHat(WorkspaceBlock workspaceBlock) {
-        workspaceBlock.handleNext(
-                next -> {
-                    String variableId = workspaceBlock.getFieldId("group_variables_group");
-                    BroadcastLock lock =
-                            workspaceBlock
-                                    .getBroadcastLockManager()
-                                    .getOrCreateLock(workspaceBlock, variableId);
-                    workspaceBlock.subscribeToLock(lock, next::handle);
-                });
+        workspaceBlock.handleNext(next -> {
+            String variableId = getVariable(workspaceBlock);
+            BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, variableId);
+            workspaceBlock.subscribeToLock(lock, next::handle);
+        });
     }
 
     private void onChangeVariableHatTo(WorkspaceBlock workspaceBlock) {
-        workspaceBlock.handleNext(
-                next -> {
-                    WhenValueOperator operator =
-                            WhenValueOperator.getByOp(workspaceBlock.getField("OPERATOR"));
-                    String variableId = workspaceBlock.getFieldId("group_variables_group");
-                    BroadcastLock lock =
-                            workspaceBlock
-                                    .getBroadcastLockManager()
-                                    .getOrCreateLock(workspaceBlock, variableId);
-                    workspaceBlock.subscribeToLock(
-                            lock, o -> operator.checkFn.apply(workspaceBlock, o), next::handle);
-                });
+        workspaceBlock.handleNext(next -> {
+            WhenValueOperator operator = WhenValueOperator.getByOp(workspaceBlock.getField("OPERATOR"));
+            String variableId = getVariable(workspaceBlock);
+            BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock, variableId);
+            workspaceBlock.subscribeToLock(lock, o -> operator.checkFn.apply(workspaceBlock, o), next::handle);
+        });
     }
 
     private State getPreviousValue(WorkspaceBlock workspaceBlock) {
@@ -69,52 +59,46 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         return Scratch3MutatorBlocks.reduceJSON(entity.getValue().toString(), query);
     }*/
 
-    private State groupVariableReporter(WorkspaceBlock workspaceBlock) {
-        String groupVariablesItem = workspaceBlock.getFieldId("group_variables_group");
-        return groupVariablesItem == null
-                ? null
-                : State.of(entityContext.var().get(groupVariablesItem));
+    private State variableReporter(WorkspaceBlock workspaceBlock) {
+        String variable = getVariable(workspaceBlock);
+        return variable == null ? null : State.of(entityContext.var().get(variable));
     }
 
-    private void changeGroupVariableHandler(WorkspaceBlock workspaceBlock) {
-        String groupVariablesItem = workspaceBlock.getFieldId("group_variables_group");
+    private void changeVariableHandler(WorkspaceBlock workspaceBlock) {
+        String variable = getVariable(workspaceBlock);
         Float value = workspaceBlock.getInputFloat("ITEM");
 
         if (value != null) {
-            entityContext.var().inc(groupVariablesItem, value);
+            entityContext.var().inc(variable, value);
         }
     }
 
-    private void setGroupVariableHandler(WorkspaceBlock workspaceBlock) {
-        String groupVariablesItem = workspaceBlock.getFieldId("group_variables_group");
+    private void setVariableHandler(WorkspaceBlock workspaceBlock) {
+        String variable = getVariable(workspaceBlock);
         Object value = workspaceBlock.getInput("ITEM", true);
         if (value != null) {
-            entityContext.var().set(groupVariablesItem, value);
+            entityContext.var().set(variable, value);
         }
+    }
+
+    private String getVariable(WorkspaceBlock workspaceBlock) {
+        String[] variable = workspaceBlock.getFieldId("VARIABLE").split("~~~");
+        return variable[variable.length - 1];
     }
 
     @RequiredArgsConstructor
     private enum WhenValueOperator {
-        More(
-                ">",
-                (workspaceBlock, value) -> toNumber(value) > workspaceBlock.getInputFloat("ITEM")),
-        Less(
-                "<",
-                (workspaceBlock, value) -> toNumber(value) < workspaceBlock.getInputFloat("ITEM")),
-        Eq(
-                "=",
-                (workspaceBlock, value) ->
-                        value.toString().equals(workspaceBlock.getInputString("ITEM", ""))),
-        Regexp(
-                "regex",
-                (workspaceBlock, value) -> {
-                    return value.toString().matches(workspaceBlock.getInputString("ITEM", ""));
-                }),
+        More(">",
+            (workspaceBlock, value) -> toNumber(value) > workspaceBlock.getInputFloat("ITEM")),
+        Less("<",
+            (workspaceBlock, value) -> toNumber(value) < workspaceBlock.getInputFloat("ITEM")),
+        Eq("=",
+            (workspaceBlock, value) -> value.toString().equals(workspaceBlock.getInputString("ITEM", ""))),
+        Regexp("regex",
+            (workspaceBlock, value) -> {return value.toString().matches(workspaceBlock.getInputString("ITEM", ""));}),
         Any("any", (workspaceBlock, o) -> true),
-        NotEq(
-                "!=",
-                (workspaceBlock, value) ->
-                        !value.toString().equals(workspaceBlock.getInputString("ITEM", "")));
+        NotEq("!=",
+            (workspaceBlock, value) -> !value.toString().equals(workspaceBlock.getInputString("ITEM", "")));
 
         private final String op;
         private final BiFunction<WorkspaceBlock, Object, Boolean> checkFn;

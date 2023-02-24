@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 import javax.persistence.Entity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.attributes.HasAlign;
+import org.touchhome.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.touchhome.bundle.api.exception.ProhibitedExecution;
@@ -20,7 +21,7 @@ import org.touchhome.bundle.api.ui.field.UIKeyValueField.KeyValueType;
 
 @Entity
 public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorEntity>
-    implements HasSourceServerUpdates, HasAlign, HasSingleValueDataSource {
+    implements HasSourceServerUpdates, HasAlign, HasSingleValueDataSource, HasSetSingleValueDataSource {
 
     public static final String PREFIX = "wgtsclr_";
 

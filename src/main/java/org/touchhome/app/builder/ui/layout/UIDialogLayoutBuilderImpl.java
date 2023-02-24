@@ -49,7 +49,7 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
     public UIDialogLayoutBuilderImpl(String entityID, Integer width) {
         this.entityID = entityID + "_dialog";
-        this.title = entityID + "_title";
+        this.title = entityID;
         this.width = width;
     }
 

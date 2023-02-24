@@ -1,6 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.toggle;
 
 import java.util.List;
+import org.touchhome.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.ui.UI;
@@ -11,13 +12,13 @@ import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
-public interface HasToggle extends HasSingleValueDataSource {
+public interface HasToggle extends HasSingleValueDataSource, HasSetSingleValueDataSource {
 
     @UIField(order = 12, required = true)
     @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
     default String getSetValueDataSource() {
-        return HasSingleValueDataSource.super.getSetValueDataSource();
+        return HasSetSingleValueDataSource.super.getSetValueDataSource();
     }
 
     @UIField(order = 3, isRevert = true)

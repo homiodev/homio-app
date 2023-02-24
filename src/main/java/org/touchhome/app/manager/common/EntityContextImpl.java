@@ -78,6 +78,7 @@ import org.touchhome.app.manager.common.impl.EntityContextUIImpl;
 import org.touchhome.app.manager.common.impl.EntityContextVarImpl;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.repository.SettingRepository;
+import org.touchhome.app.repository.VariableDataRepository;
 import org.touchhome.app.repository.crud.base.BaseCrudRepository;
 import org.touchhome.app.repository.device.AllDeviceRepository;
 import org.touchhome.app.rest.ConsoleController;
@@ -184,9 +185,15 @@ public class EntityContextImpl implements EntityContext {
     private PlatformTransactionManager transactionManager;
     private WorkspaceService workspaceService;
 
-    public EntityContextImpl(ClassFinder classFinder, CacheService cacheService, ThreadPoolTaskScheduler taskScheduler,
-        SimpMessagingTemplate messagingTemplate, Environment environment,
-        EntityManagerFactory entityManagerFactory, TouchHomeProperties touchHomeProperties) {
+    public EntityContextImpl(
+        ClassFinder classFinder,
+        CacheService cacheService,
+        ThreadPoolTaskScheduler taskScheduler,
+        SimpMessagingTemplate messagingTemplate,
+        Environment environment,
+        EntityManagerFactory entityManagerFactory,
+        VariableDataRepository variableDataRepository,
+        TouchHomeProperties touchHomeProperties) {
         this.classFinder = classFinder;
         this.environment = environment;
         this.cacheService = cacheService;
@@ -199,7 +206,7 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextSetting = new EntityContextSettingImpl(this);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
         this.entityContextStorage = new EntityContextStorage(this);
-        this.entityContextVar = new EntityContextVarImpl(this);
+        this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
     }
 
     @SneakyThrows

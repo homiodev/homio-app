@@ -11,16 +11,21 @@ import org.touchhome.app.builder.widget.hasBuilder.HasAxisBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasHorizontalLineBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasLegendBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasLineChartBehaviourBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasMinMaxChartValueBuilder;
 import org.touchhome.app.manager.common.EntityContextImpl;
+import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartEntity;
 import org.touchhome.app.model.entity.widget.impl.chart.line.WidgetLineChartSeriesEntity;
+import org.touchhome.bundle.api.EntityContextWidget.BarTimeChartBuilder;
+import org.touchhome.bundle.api.EntityContextWidget.DisplayWidgetBuilder;
 import org.touchhome.bundle.api.EntityContextWidget.LineChartBuilder;
 import org.touchhome.bundle.api.EntityContextWidget.LineChartSeriesBuilder;
 
 public class LineChartBuilderImpl extends WidgetBaseBuilderImpl<LineChartBuilder, WidgetLineChartEntity>
     implements LineChartBuilder,
+    HasLegendBuilder<WidgetLineChartEntity, LineChartBuilder>,
     HasLineChartBehaviourBuilder<WidgetLineChartEntity, LineChartBuilder>,
     HasAxisBuilder<WidgetLineChartEntity, LineChartBuilder>,
     HasMinMaxChartValueBuilder<WidgetLineChartEntity, LineChartBuilder>,
@@ -41,6 +46,12 @@ public class LineChartBuilderImpl extends WidgetBaseBuilderImpl<LineChartBuilder
         series.add(entity);
         LineSeriesBuilderImpl seriesBuilder = new LineSeriesBuilderImpl(entity);
         builder.accept(seriesBuilder);
+        return this;
+    }
+
+    @Override
+    public LineChartBuilder setShowChartFullScreenButton(boolean value) {
+        widget.setShowChartFullScreenButton(value);
         return this;
     }
 }

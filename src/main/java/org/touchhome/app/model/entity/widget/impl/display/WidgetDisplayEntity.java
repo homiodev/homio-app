@@ -8,6 +8,7 @@ import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.attributes.HasLayout;
 import org.touchhome.app.model.entity.widget.attributes.HasName;
 import org.touchhome.app.model.entity.widget.attributes.HasPadding;
+import org.touchhome.app.model.entity.widget.attributes.HasActionOnClick;
 import org.touchhome.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.app.model.entity.widget.impl.chart.HasHorizontalLine;
@@ -33,6 +34,7 @@ public class WidgetDisplayEntity
     HasHorizontalLine,
     HasLayout,
     HasName,
+    HasActionOnClick,
     HasPadding,
     HasSourceServerUpdates {
 
@@ -63,7 +65,7 @@ public class WidgetDisplayEntity
     }
 
     @Override
-    @UIFieldColorPicker(allowThreshold = true)
+    @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
     public String getBackground() {
         return super.getBackground();
     }

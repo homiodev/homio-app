@@ -11,6 +11,7 @@ import org.touchhome.app.builder.widget.hasBuilder.HasAxisBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasHorizontalLineBuilder;
+import org.touchhome.app.builder.widget.hasBuilder.HasLegendBuilder;
 import org.touchhome.app.builder.widget.hasBuilder.HasMinMaxChartValueBuilder;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartEntity;
@@ -21,6 +22,7 @@ import org.touchhome.bundle.api.EntityContextWidget.BarTimeChartSeriesBuilder;
 
 public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartBuilder, WidgetBarTimeChartEntity>
     implements BarTimeChartBuilder,
+    HasLegendBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
     HasChartTimePeriodBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
     HasHorizontalLineBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
     HasMinMaxChartValueBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
@@ -58,6 +60,12 @@ public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartB
     @Override
     public BarTimeChartBuilder setBarBorderWidth(String value) {
         widget.setBarBorderWidth(value);
+        return this;
+    }
+
+    @Override
+    public BarTimeChartBuilder setShowChartFullScreenButton(boolean value) {
+        widget.setShowChartFullScreenButton(value);
         return this;
     }
 }

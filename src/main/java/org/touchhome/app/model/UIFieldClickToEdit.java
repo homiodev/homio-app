@@ -6,11 +6,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Hide entity from UI if some field inside entity is not null.
+ * Handler to handle inline editing for field if click on another field in UI
  */
-@Target({ElementType.TYPE})
+@Target({ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface UIHideEntityIfFieldNotNull {
+public @interface UIFieldClickToEdit {
 
     String value();
 }

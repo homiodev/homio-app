@@ -29,6 +29,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
+          batch_size: 10
           lob:
             non_contextual_creation: true
     show-sql: false

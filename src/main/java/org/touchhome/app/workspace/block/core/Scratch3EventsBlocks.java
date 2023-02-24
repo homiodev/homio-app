@@ -15,7 +15,7 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
     public Scratch3EventsBlocks(EntityContext entityContext) {
         super("event", entityContext);
 
-        blockHat("got_broadcast", this::receiveEventHandler);
+        blockHat("gotbroadcast", this::receiveEventHandler);
         blockCommand("broadcast", this::broadcastEventHandler);
     }
 

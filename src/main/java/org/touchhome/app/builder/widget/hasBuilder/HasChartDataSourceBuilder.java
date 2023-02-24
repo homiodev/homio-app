@@ -44,4 +44,10 @@ public interface HasChartDataSourceBuilder<T extends BaseEntity & org.touchhome.
         getWidget().setFinalChartValueConverter(value);
         return (R) this;
     }
+
+    @Override
+    default R setSmoothing(boolean value) {
+        getWidget().setSmoothing(value);
+        return (R) this;
+    }
 }

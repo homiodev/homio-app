@@ -386,6 +386,9 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }
     }
 
+    /**
+     * Require to run inside transaction! to load lazy loaded groups/parents/etc...
+     */
     private static void updateCacheEntity(EntityContextImpl entityContext, Object entity, ItemAction type) {
         try {
             if (entity instanceof BaseEntity) {

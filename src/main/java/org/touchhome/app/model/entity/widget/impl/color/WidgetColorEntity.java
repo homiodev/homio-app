@@ -35,7 +35,6 @@ import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFi
 @Entity
 public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     implements
-    HasStyle,
     HasLayout,
     HasIconWithoutThreshold,
     HasName,

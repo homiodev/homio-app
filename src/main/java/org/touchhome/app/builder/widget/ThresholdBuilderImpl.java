@@ -1,20 +1,25 @@
 package org.touchhome.app.builder.widget;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.touchhome.bundle.api.EntityContextWidget.AnimateBuilder;
+import org.touchhome.bundle.api.EntityContextWidget.AnimateColor;
 import org.touchhome.bundle.api.EntityContextWidget.ThresholdBuilder;
+import org.touchhome.bundle.api.EntityContextWidget.ValueCompare;
 import org.touchhome.bundle.api.ui.UI;
 
 @RequiredArgsConstructor
-public class ThresholdBuilderImpl implements ThresholdBuilder {
+public class ThresholdBuilderImpl implements ThresholdBuilder, AnimateBuilder {
 
     private final JSONObject node = new JSONObject();
     private final String color;
 
     public String build() {
-        if (!node.has("threshold")) {
+        if (!node.has("threshold") && !node.has("animation")) {
             return color;
         }
         node.put("entity", StringUtils.isEmpty(color) ? UI.Color.random() : color);
@@ -33,5 +38,25 @@ public class ThresholdBuilderImpl implements ThresholdBuilder {
             .put("op", op.getOp())
             .put("entity", color));
         return this;
+    }
+
+    @Override
+    public AnimateBuilder setAnimate(AnimateColor animateColor, Object value, ValueCompare op) {
+        node.put("animation",
+            new JSONObject()
+                .put("value", value)
+                .put("op", op.getOp())
+                .put("entity", animateColor.name()));
+
+        return this;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private static class AnimationPOJO {
+
+        private final Object value;
+        private final String op;
+        private final String entity;
     }
 }

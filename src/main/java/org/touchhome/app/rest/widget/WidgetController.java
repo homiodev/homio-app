@@ -38,11 +38,11 @@ import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.WidgetTabEntity;
+import org.touchhome.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
-import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonEntity;
-import org.touchhome.app.model.entity.widget.impl.button.WidgetPushButtonSeriesEntity;
 import org.touchhome.app.model.entity.widget.impl.color.WidgetColorEntity;
+import org.touchhome.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMEntity;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMNodeValue;
 import org.touchhome.app.model.entity.widget.impl.fm.WidgetFMSeriesEntity;
@@ -140,7 +140,7 @@ public class WidgetController {
 
     @GetMapping("/video/{entityID}")
     public List<WidgetVideoSourceResolver.VideoEntityResponse> getCameraData(@PathVariable("entityID") String entityID) {
-        WidgetVideoEntity entity = entityContext.getEntity(entityID);
+        WidgetVideoEntity entity = getEntity(entityID);
         List<WidgetVideoSourceResolver.VideoEntityResponse> result = new ArrayList<>();
         for (WidgetVideoSeriesEntity item : entity.getSeries()) {
             for (WidgetVideoSourceResolver videoSourceResolver : videoSourceResolvers) {
@@ -174,16 +174,6 @@ public class WidgetController {
         }
     }
 
-    @PostMapping("/button/values")
-    public List<Object> getButtonValues(@RequestBody WidgetDataRequest request) {
-        WidgetPushButtonEntity entity = request.getEntity(entityContext, objectMapper, WidgetPushButtonEntity.class);
-        List<Object> values = new ArrayList<>(entity.getSeries().size());
-        for (WidgetPushButtonSeriesEntity item : entity.getSeries()) {
-            values.add(timeSeriesUtil.getSingleValue(entity, item, o -> o));
-        }
-        return values;
-    }
-
     @PostMapping("/value")
     public SingleValueData getValue(@Valid @RequestBody WidgetDataRequest request) {
         WidgetBaseEntity entity = request.getEntity(entityContext, objectMapper);
@@ -195,17 +185,9 @@ public class WidgetController {
 
     @PostMapping("/value/update")
     public void updateValue(@RequestBody SingleValueRequest<Object> request) {
-        WidgetBaseEntity entity = entityContext.getEntity(request.entityID);
-        HasSingleValueDataSource source = (HasSingleValueDataSource) entity;
+        HasSetSingleValueDataSource source = getEntity(request.entityID);
         DataSourceUtil.setValue(entityContext, source.getSetValueDataSource(),
             source.getDynamicParameterFields("value"), request.value);
-    }
-
-    @PostMapping("/button/update")
-    public void handleButtonClick(@RequestBody SingleValueRequest<Void> request) {
-        WidgetPushButtonSeriesEntity series = getSeriesEntity(request);
-        DataSourceUtil.setValue(entityContext, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields(),
-            series.getValueToPush());
     }
 
     @PostMapping("/slider/values")
@@ -233,6 +215,13 @@ public class WidgetController {
             values.add(timeSeriesUtil.getSingleValue(entity, item, String::valueOf));
         }
         return values;
+    }
+
+    @PostMapping("/display/update")
+    public void handleButtonClick(@RequestBody SingleValueRequest<String> request) {
+        WidgetDisplayEntity entity = getEntity(request.entityID);
+        DataSourceUtil.setValue(entityContext, entity.getSetValueDataSource(), entity.getSetValueDynamicParameterFields(),
+            request.value);
     }
 
     @PostMapping("/colors/value")
@@ -443,6 +432,14 @@ public class WidgetController {
             throw new NotFoundException("Unable to find series: " + request.seriesEntityID + " for entity: " + entity.getTitle());
         }
         return series;
+    }
+
+    private <T> T getEntity(String entityID) {
+        BaseEntity entity = entityContext.getEntity(entityID);
+        if (entity == null) {
+            throw new IllegalArgumentException("Unable to find widget with entityID: " + entityID);
+        }
+        return (T) entity;
     }
 
     @Getter

@@ -13,4 +13,11 @@ public class WorkspaceVariableMessage extends InMemoryDBEntity {
     public WorkspaceVariableMessage(Object value) {
         this.value = value;
     }
+
+    public static WorkspaceVariableMessage of(VariableBackup data, Object value) {
+        WorkspaceVariableMessage message = new WorkspaceVariableMessage(value);
+        message.setId(data.getId());
+        message.setCreated(data.getCreated());
+        return message;
+    }
 }

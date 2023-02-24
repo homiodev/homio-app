@@ -23,7 +23,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
     @UIFieldSlider(min = 0, max = 10)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default int getLineBorderWidth() {
-        return getJsonData("lbw", 3);
+        return getJsonData("lbw", 2);
     }
 
     default void setLineBorderWidth(int value) {
@@ -52,7 +52,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
         setJsonDataEnum("stpd", value);
     }
 
-    @UIField(order = 3)
+    @UIField(order = 3, isRevert = true)
     @UIFieldSlider(min = 0, max = 10)
     @UIFieldGroup("Chart ui")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
@@ -62,6 +62,16 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
 
     default void setTension(int value) {
         setJsonData("tns", value);
+    }
+
+    @UIField(order = 4)
+    @UIFieldGroup("Chart ui")
+    default Boolean getShowChartFullScreenButton() {
+        return getJsonData("sfsb", Boolean.FALSE);
+    }
+
+    default void setShowChartFullScreenButton(Boolean value) {
+        setJsonData("sfsb", value);
     }
 
     @UIField(order = 1)

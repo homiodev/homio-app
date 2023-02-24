@@ -6,6 +6,7 @@ import org.touchhome.app.model.entity.widget.WidgetSeriesEntity;
 import org.touchhome.app.model.entity.widget.attributes.HasIcon;
 import org.touchhome.app.model.entity.widget.attributes.HasName;
 import org.touchhome.app.model.entity.widget.attributes.HasPadding;
+import org.touchhome.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.touchhome.app.model.entity.widget.attributes.HasTextConverter;
 import org.touchhome.app.model.entity.widget.attributes.HasValueTemplate;
@@ -19,8 +20,14 @@ import org.touchhome.bundle.api.ui.field.UIFieldNumber;
 import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 
 @Entity
-public class WidgetSliderSeriesEntity extends WidgetSeriesEntity<WidgetSliderEntity>
-    implements HasSingleValueDataSource, HasIcon, HasValueTemplate, HasName, HasPadding,
+public class WidgetSliderSeriesEntity
+    extends WidgetSeriesEntity<WidgetSliderEntity>
+    implements HasSingleValueDataSource,
+    HasSetSingleValueDataSource,
+    HasIcon,
+    HasValueTemplate,
+    HasName,
+    HasPadding,
     HasTextConverter {
 
     public static final String PREFIX = "wgssls_";

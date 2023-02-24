@@ -7,6 +7,7 @@ public interface HasLayout extends HasJsonData {
     String getLayout();
 
     default void setLayout(String value) {
+        value = value.replaceAll("'", "\"");
         setJsonData("layout", value);
     }
 }

@@ -4,12 +4,14 @@ import org.touchhome.app.model.entity.widget.UIFieldPadding;
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 
 public interface HasPadding extends HasJsonData {
 
     @UIField(order = 101)
     @UIFieldPadding
     @UIFieldGroup("UI")
+    @UIFieldReadDefaultValue
     default String getPadding() {
         return getJsonData("pd", "{}");
     }

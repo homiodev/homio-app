@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.touchhome.app.manager.common.impl.EntityContextVarImpl;
+import org.touchhome.app.repository.VariableDataRepository;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.EntityContextVar.VariableType;
@@ -70,42 +71,57 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     HasSetStatusValue {
 
     public static final String PREFIX = "wgv_";
+
     @UIField(order = 12, color = "#7A7A7A")
     @UIFieldDisableEditOnCondition("return context.getParent('locked')")
-    @UIFieldInlineEntityEditWidth(25)
     private String description;
+
     @UIField(order = 20, label = "format")
     @Enumerated(EnumType.STRING)
+    @UIFieldInlineEntityWidth(15)
+    @UIFieldInlineEntityEditWidth(10)
     @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
     @UIFieldDisableEditOnCondition("return context.getParent('locked')")
-    @UIFieldInlineEntityWidth(15)
-    @UIFieldInlineEntityEditWidth(20)
     private EntityContextVar.VariableType restriction = EntityContextVar.VariableType.Any;
+
     @UIField(order = 25)
     @UIFieldSlider(min = 500, max = 100000, step = 500)
     @UIFieldGroup(order = 10, value = "Quota")
-    @UIFieldInlineEntityWidth(14)
+    @UIFieldInlineEntityWidth(15)
     private int quota = 1000;
     /**
      * Is it possible to write to variable from UI
      */
-    @UIField(order = 25)
-    @UIFieldSlider(min = 500, max = 10_000, step = 500)
+    @UIField(order = 25, hideInEdit = true)
     @UIFieldGroup(order = 10, value = "Quota")
-    @UIFieldInlineEntityWidth(14)
+    @UIFieldInlineEntityWidth(15)
     private boolean readOnly = false;
+
+    @UIField(order = 30)
+    @UIFieldInlineEntityWidth(15)
+    private boolean backup = false;
+
     @Column(unique = true, nullable = false)
     private String variableId;
+
+    @UIFieldInlineEntityWidth(15)
     private String color;
+
     private String icon;
     private String iconColor;
     private String unit;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private WorkspaceGroup workspaceGroup;
+
     @Getter
-    @Column(length = 10_000)
+    @Column(length = 1000)
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
+
+    public int getBackupStorageCount() {
+        return backup ? getEntityContext().getBean(VariableDataRepository.class).count(variableId) : 0;
+    }
 
     public WorkspaceVariable(@NotNull String variableId, @NotNull String variableName, @NotNull WorkspaceGroup workspaceGroup,
         @NotNull VariableType variableType, @Nullable String description, @Nullable String color, boolean readOnly, @Nullable String unit) {
@@ -123,22 +139,22 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     @Override
     @UIField(order = 10, required = true)
     @UIFieldColorRef("color")
-    @UIFieldInlineEntityEditWidth(20)
+    @UIFieldInlineEntityEditWidth(35)
     @UIFieldDisableEditOnCondition("return context.getParent('locked')")
     public String getName() {
         return super.getName();
     }
 
-    @UIField(order = 30, hideInEdit = true)
+    @UIField(order = 30, hideInEdit = true, disableEdit = true)
     @UIFieldProgress
     @UIFieldGroup("Quota")
-    @UIFieldInlineEntityWidth(20)
+    @UIFieldInlineEntityWidth(15)
     public UIFieldProgress.Progress getUsedQuota() {
         int count = 0;
         if (getEntityID() != null && getEntityContext().var().exists(getEntityID())) {
             count = (int) getEntityContext().var().count(getEntityID());
         }
-        return new UIFieldProgress.Progress(count, this.quota);
+        return UIFieldProgress.Progress.of(count, this.quota);
     }
 
     @Override

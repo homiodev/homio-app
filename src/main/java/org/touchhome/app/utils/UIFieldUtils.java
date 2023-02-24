@@ -36,7 +36,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.touchhome.app.builder.ui.UIInputBuilderImpl;
 import org.touchhome.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
+import org.touchhome.app.model.UIFieldClickToEdit;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
+import org.touchhome.app.model.entity.widget.UIFieldFunction;
 import org.touchhome.app.model.entity.widget.UIFieldMarkers;
 import org.touchhome.app.model.entity.widget.UIFieldOptionColor;
 import org.touchhome.app.model.entity.widget.UIFieldOptionFontSize;
@@ -65,6 +67,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldOrder;
 import org.touchhome.bundle.api.ui.field.UIFieldPort;
 import org.touchhome.bundle.api.ui.field.UIFieldPosition;
 import org.touchhome.bundle.api.ui.field.UIFieldProgress;
+import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.UIFieldTableLayout;
 import org.touchhome.bundle.api.ui.field.UIFieldTitleRef;
@@ -237,7 +240,8 @@ public class UIFieldUtils {
         entityUIMetaData.setStyle(field.style());
 
         // make sense keep defaultValue(for revert) only if able to edit value
-        if (field.isRevert() && !fullDisableEdit && !field.disableEdit() && !field.hideInEdit()) {
+        if (fieldContext.isAnnotationPresent(UIFieldReadDefaultValue.class) &&
+            !fullDisableEdit && !field.disableEdit()) {
             entityUIMetaData.setDefaultValue(fieldContext.getDefaultValue(instance));
         }
 
@@ -336,6 +340,7 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("allowSize", fieldIconPicker.allowSize());
             jsonTypeMetadata.put("allowSpin", fieldIconPicker.allowSpin());
             jsonTypeMetadata.put("allowThreshold", fieldIconPicker.allowThreshold());
+            jsonTypeMetadata.put("allowBackground", fieldIconPicker.allowBackground());
         }
 
         UIFieldTitleRef fieldTitleRef = fieldContext.getDeclaredAnnotation(UIFieldTitleRef.class);
@@ -348,6 +353,11 @@ public class UIFieldUtils {
         if (fieldPosition != null) {
             entityUIMetaData.setType("Position");
             jsonTypeMetadata.put("disableCenter", fieldPosition.disableCenter());
+        }
+
+        UIFieldFunction fieldFunction = fieldContext.getDeclaredAnnotation(UIFieldFunction.class);
+        if (fieldFunction != null) {
+            jsonTypeMetadata.put("func", fieldFunction.value());
         }
 
         UIFieldColorPicker fieldColorPicker = fieldContext.getDeclaredAnnotation(UIFieldColorPicker.class);
@@ -598,6 +608,7 @@ public class UIFieldUtils {
         var fieldInlineGroup = fieldContext.getDeclaredAnnotation(UIFieldInlineGroup.class);
         if (fieldInlineGroup != null) {
             jsonTypeMetadata.put("inlineShowGroupCondition", fieldInlineGroup.value());
+            jsonTypeMetadata.put("inlineGroupEditable", fieldInlineGroup.editable());
         }
         var fieldInlineEntityEditWidth =
             fieldContext.getDeclaredAnnotation(UIFieldInlineEntityEditWidth.class);
@@ -607,6 +618,12 @@ public class UIFieldUtils {
         var fieldInlineEntityWidth = fieldContext.getDeclaredAnnotation(UIFieldInlineEntityWidth.class);
         if (fieldInlineEntityWidth != null && fieldInlineEntityWidth.value() >= 0) {
             jsonTypeMetadata.put("inlineViewWidth", fieldInlineEntityWidth.value());
+        }
+
+        var fieldClickToEdit = fieldContext.getDeclaredAnnotation(UIFieldClickToEdit.class);
+        if (fieldClickToEdit != null) {
+            assertFieldExists(instance, fieldClickToEdit.value());
+            jsonTypeMetadata.put("clickToEdit", fieldClickToEdit.value());
         }
 
         var fieldInlineEdit = fieldContext.getDeclaredAnnotation(UIFieldInlineEditEntities.class);

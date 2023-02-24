@@ -44,13 +44,6 @@ public class WidgetChartsController {
         this.timeSeriesUtil = new TimeSeriesUtil(entityContext);
     }
 
-    /* @PostMapping("/button/series")
-    public TimeSeriesChartData<ChartDataset> getButtonValues(@Valid @RequestBody WidgetDataRequest request) {
-        return getTimeSeriesChartData(request, WidgetPushButtonEntity.class, entity -> {
-            return entity.getSeries().isEmpty() ? null : entity.getSeries().iterator().next();
-        });
-    }*/
-
     @PostMapping("/display/series")
     public DisplayDataResponse getDisplayValues(@RequestBody WidgetDataRequest request) {
         WidgetDisplayEntity entity = request.getEntity(entityContext, objectMapper, WidgetDisplayEntity.class);
@@ -123,18 +116,17 @@ public class WidgetChartsController {
         return result;
     }
 
-    private <S extends WidgetSeriesEntity<T> & HasSingleValueDataSource, T extends ChartBaseEntity<T, S>> TimeSeriesChartData<ChartDataset> getValueDataset(
-        WidgetDataRequest request, Class<T> chartClass) {
+    private <S extends WidgetSeriesEntity<T> & HasSingleValueDataSource, T extends ChartBaseEntity<T, S>> TimeSeriesChartData<ChartDataset>
+    getValueDataset(WidgetDataRequest request, Class<T> chartClass) {
         T entity = request.getEntity(entityContext, objectMapper, chartClass);
         TimeSeriesChartData<ChartDataset> timeSeriesChartData = new TimeSeriesChartData<>();
 
         for (S item : entity.getSeries()) {
             Object value = timeSeriesUtil.getSingleValue(entity, item, o -> o);
 
-            ChartDataset dataset = new ChartDataset(item.getEntityID());
+            ChartDataset dataset = new ChartDataset(item.getEntityID(), item.getEntityID());
             timeSeriesChartData.datasets.add(dataset);
-            dataset.setData(
-                Collections.singletonList(value == null ? 0F : ((Number) value).floatValue()));
+            dataset.setData(Collections.singletonList(value == null ? 0F : ((Number) value).floatValue()));
         }
         return timeSeriesChartData;
     }

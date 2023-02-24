@@ -49,7 +49,7 @@ public interface HasAxis extends HasJsonData {
     @UIField(order = 90)
     @UIFieldGroup("Chart axis")
     default String getAxisDateFormat() {
-        return getJsonData("timeF", "");
+        return getJsonData("timeF");
     }
 
     default void setAxisDateFormat(String value) {

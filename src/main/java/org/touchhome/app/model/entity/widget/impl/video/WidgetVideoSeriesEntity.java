@@ -138,8 +138,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
-            for (BaseVideoStreamEntity entity :
-                    parameters.getEntityContext().findAll(BaseVideoStreamEntity.class)) {
+            for (BaseVideoStreamEntity entity : parameters.getEntityContext().findAll(BaseVideoStreamEntity.class)) {
                 OptionModel model = OptionModel.of(entity.getEntityID(), entity.getTitle());
 
                 Collection<Pair<String, String>> sources = entity.getVideoSources();

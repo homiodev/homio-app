@@ -20,8 +20,20 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
     }
 
     @Override
+    public T setZIndex(int index) {
+        widget.setIndex(index);
+        return (T) this;
+    }
+
+    @Override
     public T setName(String name) {
         widget.setName(name);
+        return (T) this;
+    }
+
+    @Override
+    public T setStyle(String... styles) {
+        widget.setStyle(String.join("~~~", styles));
         return (T) this;
     }
 

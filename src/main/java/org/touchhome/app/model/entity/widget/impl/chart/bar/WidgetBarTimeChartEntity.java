@@ -21,7 +21,7 @@ public class WidgetBarTimeChartEntity
     @UIField(order = 40)
     @UIFieldGroup("Chart axis")
     public String getAxisLabel() {
-        return getJsonData("al", "example");
+        return getJsonData("al");
     }
 
     public WidgetBarTimeChartEntity setAxisLabel(String value) {

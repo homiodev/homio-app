@@ -15,8 +15,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.touchhome.app.model.entity.widget.attributes.HasPosition;
+import org.touchhome.app.model.entity.widget.attributes.HasStyle;
 import org.touchhome.app.setting.dashboard.DashboardHorizontalBlockCountSetting;
 import org.touchhome.app.setting.dashboard.DashboardVerticalBlockCountSetting;
 import org.touchhome.bundle.api.converter.JSONConverter;
@@ -29,6 +31,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
+import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 @Getter
 @Setter
@@ -38,7 +41,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 @Accessors(chain = true)
 @NoArgsConstructor
 public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity<T>
-    implements HasPosition<WidgetBaseEntity>, HasJsonData {
+    implements HasPosition<WidgetBaseEntity>, HasStyle, HasJsonData {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private WidgetTabEntity widgetTabEntity;
@@ -120,7 +123,26 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     }
 
     public void setBackground(String value) {
-        setJsonData("bg", value);
+        if (StringUtils.isNotEmpty(value)) {
+            setJsonData("bg", value);
+        } else {
+            getJsonData().remove("bg");
+        }
+    }
+
+    @UIField(order = 25)
+    @UIFieldGroup("UI")
+    @UIFieldSlider(min = 15, max = 25)
+    public int getIndex() {
+        return getJsonData("zi", 20);
+    }
+
+    public void setIndex(Integer value) {
+        if(value == null || value == 20) {
+            getJsonData().remove("zi");
+        } else {
+            setJsonData("zi", value);
+        }
     }
 
     public boolean isVisible() {

@@ -68,6 +68,9 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
         if (!getJsonData().has("bw")) {
             setBw(2);
         }
+        if(!getJsonData().has("zi")) {
+            setIndex(15);
+        }
         super.beforePersist();
     }
 
@@ -80,12 +83,13 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
         }
     }
 
-    @Override
+   /* @Override
+   // findAll has to have be in separate transaction in case of deleted entity
     public void getAllRelatedEntities(Set<BaseEntity> set) {
         for (WidgetBaseEntity entity : getEntityContext().findAll(WidgetBaseEntity.class)) {
             if (getEntityID().equals(entity.getParent())) {
                 set.add(entity);
             }
         }
-    }
+    }*/
 }

@@ -7,6 +7,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.touchhome.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
+import org.touchhome.bundle.api.model.HasEntityIdentifier;
 
 @Getter
 @RequiredArgsConstructor

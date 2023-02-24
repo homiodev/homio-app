@@ -7,6 +7,7 @@ import org.touchhome.app.rest.widget.TimeSeriesContext;
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
+import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.UI;
 import org.touchhome.bundle.api.ui.field.MonacoLanguage;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -98,14 +99,22 @@ public interface HasChartDataSource extends HasJsonData {
         setJsonData("clbl", value);
     }
 
+    @UIField(order = 6)
+    @UIFieldGroup("Chart ui")
+    default boolean getSmoothing() {
+        return getJsonData("sm", true);
+    }
+
+    default void setSmoothing(boolean value) {
+        setJsonData("sm", value);
+    }
+
     default ChartDataset buildTargetDataset(TimeSeriesContext item) {
         HasChartDataSource seriesEntity = item.getSeriesEntity();
-        ChartDataset dataset =
-            new ChartDataset(item.getId()).setLabel(seriesEntity.getChartLabel());
+        String entityID = ((HasEntityIdentifier) seriesEntity).getEntityID();
+        ChartDataset dataset = new ChartDataset(item.getId(), entityID).setLabel(seriesEntity.getChartLabel());
         if (item.getValues() != null && !item.getValues().isEmpty()) {
-            dataset.setData(
-                EvaluateDatesAndValues.aggregate(
-                    item.getValues(), seriesEntity.getChartAggregationType()));
+            dataset.setData(EvaluateDatesAndValues.aggregate(item.getValues(), seriesEntity.getChartAggregationType()));
         }
         return dataset;
     }

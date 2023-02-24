@@ -1,4 +1,4 @@
-package org.touchhome.app.model;
+package org.touchhome.app.model.entity.widget;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -6,11 +6,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Hide entity from UI if some field inside entity is not null.
+ * Evaluate value as js function. @UIField has to be in disableEdit=true format
  */
-@Target({ElementType.TYPE})
+@Target({ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface UIHideEntityIfFieldNotNull {
+public @interface UIFieldFunction {
 
     String value();
 }

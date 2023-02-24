@@ -140,7 +140,7 @@ public final class UIFieldSelectionUtil {
         return groupingOptions(options);
     }
 
-    private static List<OptionModel> groupingOptions(List<OptionModel> options) throws JsonProcessingException {
+    public static List<OptionModel> groupingOptions(List<OptionModel> options) throws JsonProcessingException {
         List<OptionModel> result = new ArrayList<>();
         Map<SelectionParent, List<OptionModel>> groupedModels = buildGroupOptionsBySelectionParent(options, result);
         Map<String, OptionModel> parentModels = new HashMap<>();
@@ -401,7 +401,7 @@ public final class UIFieldSelectionUtil {
         }
     }
 
-    private static List<OptionModel> filterOptions(List<OptionModel> options) {
+    public static List<OptionModel> filterOptions(List<OptionModel> options) {
         if (!options.isEmpty()) {
             OptionModel parent = OptionModel.of("");
             parent.addChild(OptionModel.of("empty")); // need to initialise children
@@ -495,27 +495,35 @@ public final class UIFieldSelectionUtil {
 
         for (Class<? extends HasEntityIdentifier> foundTargetType : params.entityContext.getClassesWithParent(sourceClassType)) {
             if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
-                for (BaseEntity baseEntity : params.entityContext.findAll((Class<BaseEntity>) foundTargetType)) {
-                    // hack: check if sourceClassType is HasSetStatusValue and we if we unable to write to value
-                    if (HasSetStatusValue.class.isAssignableFrom(sourceClassType) && !((HasSetStatusValue) baseEntity).isAbleToSetValue()) {
-                        continue;
-                    }
-                    String currentValue = tryFetchCurrentValueFromEntity(baseEntity, params.entityContext);
-                    String title = baseEntity.getTitle();
-                    if (currentValue != null) {
-                        title += format("<span class=\"option-value\">%s</span>", currentValue);
-                    }
-                    OptionModel optionModel = OptionModel.of(baseEntity.getEntityID(), title);
-                    if (baseEntity instanceof UIFieldSelection.SelectionConfiguration) {
-                        var conf = ((UIFieldSelection.SelectionConfiguration) baseEntity);
-                        optionModel.setIcon(conf.selectionIcon());
-                        optionModel.setColor(conf.selectionIconColor());
-                    }
-
-                    updateSelectedOptionModel(baseEntity, params.classEntityForDynamicOptionLoader, sourceClassType, optionModel, "entityByClass");
-                    list.add(optionModel);
-                }
+                List<BaseEntity> items = params.entityContext.findAll((Class<BaseEntity>) foundTargetType)
+                                                             .stream().filter(baseEntity -> {
+                        // hack: check if sourceClassType is HasSetStatusValue and we if we are unable to write to value
+                        return !HasSetStatusValue.class.isAssignableFrom(sourceClassType) || ((HasSetStatusValue) baseEntity).isAbleToSetValue();
+                    }).collect(Collectors.toList());
+                assembleItemsToOptions(list, sourceClassType, items, params.entityContext, params.classEntityForDynamicOptionLoader);
             }
+        }
+    }
+
+    public static void assembleItemsToOptions(List<OptionModel> list, Class<? extends HasEntityIdentifier> sourceClassType,
+        List<? extends BaseEntity> items, EntityContext entityContext, Object classEntityForDynamicOptionLoader) {
+        for (BaseEntity baseEntity : items) {
+            String currentValue = tryFetchCurrentValueFromEntity(baseEntity, entityContext);
+            String title = baseEntity.getTitle();
+            OptionModel optionModel = OptionModel.of(baseEntity.getEntityID(), title);
+            if (currentValue != null) {
+                optionModel.json(jsonNodes -> {
+                    jsonNodes.put("cv", currentValue);
+                });
+            }
+            if (baseEntity instanceof UIFieldSelection.SelectionConfiguration) {
+                var conf = ((UIFieldSelection.SelectionConfiguration) baseEntity);
+                optionModel.setIcon(conf.selectionIcon());
+                optionModel.setColor(conf.selectionIconColor());
+            }
+
+            updateSelectedOptionModel(baseEntity, classEntityForDynamicOptionLoader, sourceClassType, optionModel, "entityByClass");
+            list.add(optionModel);
         }
     }
 

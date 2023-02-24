@@ -13,6 +13,7 @@ import lombok.experimental.Accessors;
 public class ChartDataset {
 
     private final String id;
+    private final String entityID;
     private String label;
     private List<Float> data;
 }

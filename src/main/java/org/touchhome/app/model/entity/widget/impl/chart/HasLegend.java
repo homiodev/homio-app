@@ -1,5 +1,7 @@
 package org.touchhome.app.model.entity.widget.impl.chart;
 
+import org.touchhome.bundle.api.EntityContextWidget.LegendAlign;
+import org.touchhome.bundle.api.EntityContextWidget.LegendPosition;
 import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
@@ -34,18 +36,5 @@ public interface HasLegend extends HasJsonData {
 
     default void setLegendAlign(LegendAlign value) {
         setJsonData("la", value);
-    }
-
-    enum LegendPosition {
-        top,
-        right,
-        bottom,
-        left
-    }
-
-    enum LegendAlign {
-        start,
-        center,
-        end
     }
 }
