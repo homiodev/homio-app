@@ -14,11 +14,14 @@ import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 import org.touchhome.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 
-public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue, HasChartTimePeriod {
+public interface HasLineChartBehaviour extends
+    HasJsonData,
+    HasMinMaxChartValue,
+    HasChartTimePeriod {
 
     ChartType getChartType();
 
-    @UIField(order = 20)
+    @UIField(order = 20, isRevert = true)
     @UIFieldGroup(value = "Chart ui", order = 11, borderColor = "#673AB7")
     @UIFieldSlider(min = 0, max = 10)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
@@ -30,7 +33,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
         setJsonData("lbw", value);
     }
 
-    @UIField(order = 40)
+    @UIField(order = 40, isRevert = true)
     @UIFieldGroup("Chart ui")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default Fill getLineFill() {
@@ -41,7 +44,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
         setJsonDataEnum("fill", value);
     }
 
-    @UIField(order = 6)
+    @UIField(order = 6, isRevert = true)
     @UIFieldGroup(value = "Chart ui")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default Stepped getStepped() {
@@ -64,18 +67,19 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
         setJsonData("tns", value);
     }
 
-    @UIField(order = 4)
+    @UIField(order = 5, isRevert = true)
+    @UIFieldSlider(min = 10, max = 600)
     @UIFieldGroup("Chart ui")
-    default Boolean getShowChartFullScreenButton() {
-        return getJsonData("sfsb", Boolean.FALSE);
+    default int getFetchDataFromServerInterval() {
+        return getJsonData("fsfsi", 60);
     }
 
-    default void setShowChartFullScreenButton(Boolean value) {
-        setJsonData("sfsb", value);
+    default void setFetchDataFromServerInterval(int value) {
+        setJsonData("fsfsi", value);
     }
 
-    @UIField(order = 1)
-    @UIFieldGroup(value = "Chart point", order = 5)
+    @UIField(order = 1, isRevert = true)
+    @UIFieldGroup(value = "Chart point", order = 50)
     @UIFieldSlider(min = 0, max = 4, step = 0.2)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default double getPointRadius() {
@@ -86,7 +90,7 @@ public interface HasLineChartBehaviour extends HasJsonData, HasMinMaxChartValue,
         setJsonData("prad", value);
     }
 
-    @UIField(order = 2)
+    @UIField(order = 2, isRevert = true)
     @UIFieldGroup(value = "Chart point")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default PointStyle getPointStyle() {

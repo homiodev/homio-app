@@ -22,4 +22,5 @@ public interface HasSingleValueDataSource extends HasDynamicParameterFields {
     default void setValueDataSource(String value) {
         setJsonData("vds", value);
     }
+
 }

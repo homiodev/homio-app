@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "touchhome")
 public class TouchHomeProperties {
 
-  private int version;
+  private String version;
   private int httpPort;
   private String serverSiteURL;
   private boolean disableSecurity;
@@ -21,13 +21,4 @@ public class TouchHomeProperties {
   private Duration minScriptThreadSleep;
   private Duration maxJavaScriptOnceCallBeforeInterrupt;
   private Duration maxJavaScriptCompileBeforeInterrupt;
-  private String gitHubUrl;
-
-
-  public void setVersion(String version) {
-    if (version.endsWith("-SNAPSHOT")) {
-      version = version.substring(0, version.indexOf("-SNAPSHOT"));
-    }
-    this.version = Integer.parseInt(version.replaceAll("\\.", ""));
-  }
 }

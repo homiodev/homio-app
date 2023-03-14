@@ -115,6 +115,16 @@ public class WidgetDisplayEntity
         return null;
     }
 
+    @UIField(order = 8)
+    @UIFieldGroup("Chart ui")
+    public boolean getShowChartFullScreenButton() {
+        return getJsonData("sfsb", Boolean.FALSE);
+    }
+
+    public void setShowChartFullScreenButton(boolean value) {
+        setJsonData("sfsb", value);
+    }
+
     private String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder
             .builder(15, 50, 35)

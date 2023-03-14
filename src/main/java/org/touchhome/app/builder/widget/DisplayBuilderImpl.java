@@ -168,6 +168,12 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     }
 
     @Override
+    public DisplayWidgetBuilder setFetchDataFromServerInterval(int value) {
+        widget.setFetchDataFromServerInterval(value);
+        return this;
+    }
+
+    @Override
     public DisplayWidgetBuilder setLayout(@Nullable String value) {
         widget.setLayout(value);
         return this;

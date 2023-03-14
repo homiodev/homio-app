@@ -349,6 +349,12 @@
     </dependency>
 
     <dependency>
+      <artifactId>touchhome-bundle-gpio</artifactId>
+      <groupId>org.touchhome.bundle.extra</groupId>
+      <version>1.3.0-SNAPSHOT</version>
+    </dependency>
+
+    <dependency>
       <artifactId>touchhome-bundle-gcloud_tts</artifactId>
       <groupId>org.touchhome.bundle.extra</groupId>
       <version>1.3.0-SNAPSHOT</version>
@@ -364,49 +370,36 @@
     <dependency>
       <artifactId>touchhome-bundle-cloud</artifactId>
       <groupId>org.touchhome.bundle</groupId>
-      <scope>compile</scope>
       <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>
       <artifactId>touchhome-bundle-camera</artifactId>
       <groupId>org.touchhome.bundle</groupId>
-      <scope>compile</scope>
-      <version>${touchhome-bundle.version}</version>
-    </dependency>
-
-    <dependency>
-      <artifactId>touchhome-bundle-raspberry</artifactId>
-      <groupId>org.touchhome.bundle</groupId>
-      <scope>compile</scope>
       <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>
       <artifactId>touchhome-bundle-telegram</artifactId>
       <groupId>org.touchhome.bundle</groupId>
-      <scope>compile</scope>
       <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>
       <artifactId>touchhome-bundle-mqtt</artifactId>
       <groupId>org.touchhome.bundle</groupId>
-      <scope>compile</scope>
       <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>
       <artifactId>touchhome-bundle-z2m</artifactId>
       <groupId>org.touchhome.bundle</groupId>
-      <scope>compile</scope>
       <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>
       <artifactId>touchhome-bundle-bluetooth</artifactId>
       <groupId>org.touchhome.bundle</groupId>
-      <scope>compile</scope>
       <version>${touchhome-bundle.version}</version>
     </dependency>
 

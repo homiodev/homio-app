@@ -46,6 +46,7 @@ import org.touchhome.app.model.entity.widget.UIFieldOptionVerticalAlign;
 import org.touchhome.app.model.entity.widget.UIFieldPadding;
 import org.touchhome.app.model.entity.widget.UIFieldTimeSlider;
 import org.touchhome.app.model.rest.EntityUIMetaData;
+import org.touchhome.app.model.var.UIFieldVariable;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.validation.MaxItems;
@@ -341,6 +342,11 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("allowSpin", fieldIconPicker.allowSpin());
             jsonTypeMetadata.put("allowThreshold", fieldIconPicker.allowThreshold());
             jsonTypeMetadata.put("allowBackground", fieldIconPicker.allowBackground());
+        }
+
+        UIFieldVariable fieldVariable = fieldContext.getDeclaredAnnotation(UIFieldVariable.class);
+        if (fieldVariable != null) {
+            entityUIMetaData.setType("Variable");
         }
 
         UIFieldTitleRef fieldTitleRef = fieldContext.getDeclaredAnnotation(UIFieldTitleRef.class);

@@ -27,14 +27,14 @@ public class SystemBundleLibraryManagerSetting
     }
 
     @Override
-    public String getIconColor() {
-        return "#E8BF37";
+    public boolean isVisible(EntityContext entityContext) {
+        return false;
     }
 
     @Override
     public PackageContext allPackages(EntityContext entityContext) {
         String url =
-                entityContext.getBean(TouchHomeProperties.class).getServerSiteURL() + "/packages";
+            entityContext.getBean(TouchHomeProperties.class).getServerSiteURL() + "/packages";
         PackageContext packageContext = new PackageContext();
         try {
             packageContext.setPackages(Curl.get(url, List.class));

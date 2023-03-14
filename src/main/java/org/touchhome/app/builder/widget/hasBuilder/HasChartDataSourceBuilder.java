@@ -50,4 +50,10 @@ public interface HasChartDataSourceBuilder<T extends BaseEntity & org.touchhome.
         getWidget().setSmoothing(value);
         return (R) this;
     }
+
+    @Override
+    default R setFillEmptyValues(boolean value) {
+        getWidget().setFillEmptyValues(value);
+        return (R) this;
+    }
 }

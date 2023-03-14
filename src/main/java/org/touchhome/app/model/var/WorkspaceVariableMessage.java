@@ -3,10 +3,10 @@ package org.touchhome.app.model.var;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.touchhome.bundle.api.inmemory.InMemoryDBEntity;
+import org.touchhome.bundle.api.storage.DataStorageEntity;
 
 @NoArgsConstructor
-public class WorkspaceVariableMessage extends InMemoryDBEntity {
+public class WorkspaceVariableMessage extends DataStorageEntity {
 
     @Getter @Setter private Object value;
 

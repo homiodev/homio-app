@@ -29,11 +29,13 @@ import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
-import org.touchhome.bundle.api.inmemory.InMemoryDB;
-import org.touchhome.bundle.api.inmemory.InMemoryDBService;
 import org.touchhome.bundle.api.state.DecimalType;
 import org.touchhome.bundle.api.state.QuantityType;
 import org.touchhome.bundle.api.state.State;
+import org.touchhome.bundle.api.storage.DataStorageService;
+import org.touchhome.bundle.api.storage.InMemoryDB;
+import org.touchhome.bundle.api.storage.SourceHistory;
+import org.touchhome.bundle.api.storage.SourceHistoryItem;
 import org.touchhome.common.exception.NotFoundException;
 import tech.units.indriya.internal.function.Calculator;
 
@@ -60,12 +62,12 @@ public class EntityContextVarImpl implements EntityContextVar {
         entityContext.event().addEntityUpdateListener(WorkspaceVariable.class, "var-update", workspaceVariable -> {
             VariableContext context = getOrCreateContext(workspaceVariable.getVariableId());
             context.groupVariable = workspaceVariable;
-            context.service.updateQuota((long) workspaceVariable.getQuota());
+            context.storageService.updateQuota((long) workspaceVariable.getQuota());
         });
         entityContext.event().addEntityRemovedListener(WorkspaceVariable.class, "var-delete",
             workspaceVariable -> {
                 VariableContext context = globalVarStorageMap.remove(workspaceVariable.getVariableId());
-                context.service.deleteAll();
+                context.storageService.deleteAll();
                 if (context.groupVariable.isBackup()) {
                     variableDataRepository.delete(context.groupVariable.getVariableId());
                 }
@@ -83,7 +85,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         for (VariableContext context : globalVarStorageMap.values()) {
             if (context.groupVariable.isBackup()) {
                 long nextTime = System.currentTimeMillis();
-                List<WorkspaceVariableMessage> values = context.service.findAllSince(context.lastBackupTimestamp);
+                List<WorkspaceVariableMessage> values = context.storageService.findAllSince(context.lastBackupTimestamp);
                 if (!values.isEmpty()) {
                     variableDataRepository.save(context.groupVariable.getVariableId(), values);
                 }
@@ -97,9 +99,23 @@ public class EntityContextVarImpl implements EntityContextVar {
         getOrCreateContext(getVariableId(variableId)).linkListener = listener;
     }
 
+    public SourceHistory getSourceHistory(String variableId) {
+        VariableContext context = getOrCreateContext(variableId);
+        if (context.groupVariable.getRestriction() == VariableType.Float) {
+            return context.storageService.getSourceHistory(null, null);
+        } else {
+            Number count = (Number) context.storageService.aggregate(null, null, null, null, AggregationType.Count, false);
+            return new SourceHistory(count.intValue(), null, null, null);
+        }
+    }
+
+    public List<SourceHistoryItem> getSourceHistoryItems(String variableId, int from, int count) {
+        return getOrCreateContext(variableId).storageService.getSourceHistoryItems(null, null, from, count);
+    }
+
     @Override
     public Object get(@NotNull String variableId) {
-        WorkspaceVariableMessage latest = getOrCreateContext(variableId).service.getLatest();
+        WorkspaceVariableMessage latest = getOrCreateContext(variableId).storageService.getLatest();
         return latest == null ? null : latest.getValue();
     }
 
@@ -124,7 +140,7 @@ public class EntityContextVarImpl implements EntityContextVar {
             throw new IllegalArgumentException(error);
         }
         convertedValue.accept(value);
-        context.service.save(new WorkspaceVariableMessage(value));
+        context.storageService.save(new WorkspaceVariableMessage(value));
         entityContext.event().fireEvent(context.groupVariable.getVariableId(), value);
         entityContext.event().fireEvent(context.groupVariable.getEntityID(), value);
         if (context.linkListener != null) {
@@ -177,7 +193,7 @@ public class EntityContextVarImpl implements EntityContextVar {
 
     @Override
     public long count(@NotNull String variableId) {
-        return getOrCreateContext(variableId).service.count();
+        return getOrCreateContext(variableId).storageService.count();
     }
 
     @Override
@@ -228,14 +244,14 @@ public class EntityContextVarImpl implements EntityContextVar {
 
     @Override
     public @NotNull String createVariable(@NotNull String groupId, @Nullable String variableId, @NotNull String variableName,
-        @NotNull VariableType variableType, @Nullable String description, boolean readOnly, @Nullable String color, String unit) {
-        return createVariableInternal(groupId, variableId, variableName, variableType, description, readOnly, color, unit, wv -> {});
+        @NotNull VariableType variableType, @Nullable Consumer<VariableMetaBuilder> builder) {
+        return createVariableInternal(groupId, variableId, variableName, variableType, builder, wv -> {});
     }
 
     @Override
-    public @NotNull String createEnumVariable(@NotNull String groupId, @Nullable String variableId, @NotNull String variableName, @Nullable String description,
-        boolean readOnly, @Nullable String color, @NotNull List<String> values) {
-        return createVariableInternal(groupId, variableId, variableName, VariableType.Enum, description, readOnly, color, null, wv ->
+    public @NotNull String createEnumVariable(@NotNull String groupId, @Nullable String variableId, @NotNull String variableName, @NotNull List<String> values,
+        @Nullable Consumer<VariableMetaBuilder> builder) {
+        return createVariableInternal(groupId, variableId, variableName, VariableType.Enum, builder, wv ->
             wv.setJsonData("options", String.join("~~~", values)));
     }
 
@@ -267,14 +283,18 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @Override
-    public String buildDataSource(@NotNull String variableId, boolean forSet) {
+    public @NotNull String buildDataSource(@NotNull String variableId, boolean forSet) {
         // example: wg_z2m~~~wg_z2m_0x00124b001d04e04b~~~wgv_0x00124b001d04e04b_state~~~HasGetStatusValue~~~entityByClass
         WorkspaceVariable variable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
         if (variable == null) {
             throw new IllegalArgumentException("Unable to find variable: " + variableId);
         }
-        List<String> items = new ArrayList<>();
+        return buildDataSource(variable, forSet);
+    }
 
+    @NotNull
+    public String buildDataSource(WorkspaceVariable variable, boolean forSet) {
+        List<String> items = new ArrayList<>();
         WorkspaceGroup group = variable.getWorkspaceGroup();
         if (group.getParent() != null) {
             items.add(group.getParent().getEntityID());
@@ -289,11 +309,11 @@ public class EntityContextVarImpl implements EntityContextVar {
 
     public Object aggregate(String variableId, Long from, Long to, AggregationType aggregationType, boolean exactNumber) {
         return getOrCreateContext(variableId)
-            .service.aggregate(from, to, null, null, aggregationType, exactNumber);
+            .storageService.aggregate(from, to, null, null, aggregationType, exactNumber);
     }
 
     public List<Object[]> getTimeSeries(String variableId, Long from, Long to) {
-        return getOrCreateContext(variableId).service.getTimeSeries(from, to, null, null, "value");
+        return getOrCreateContext(variableId).storageService.getTimeSeries(from, to, null, null, "value");
     }
 
     public boolean isLinked(String variableId) {
@@ -304,10 +324,19 @@ public class EntityContextVarImpl implements EntityContextVar {
         return Calculator.of(value).peek();
     }
 
-    private String createVariableInternal(@NotNull String groupId, @Nullable String variableId, @NotNull String variableName,
-        @NotNull VariableType variableType, @Nullable String description, boolean readOnly, @Nullable String color, @Nullable String unit,
-        Consumer<WorkspaceVariable> beforeSaveHandler) {
+    private String createVariableInternal(
+        @NotNull String groupId,
+        @Nullable String variableId,
+        @NotNull String variableName,
+        @NotNull VariableType variableType,
+        @Nullable Consumer<VariableMetaBuilder> builder,
+        @NotNull Consumer<WorkspaceVariable> beforeSaveHandler) {
         WorkspaceVariable entity = variableId == null ? null : entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
+
+        VariableMetaBuilderImpl metaBuilder = new VariableMetaBuilderImpl();
+        if (builder != null) {
+            builder.accept(metaBuilder);
+        }
 
         if (entity == null) {
             WorkspaceGroup groupEntity = entityContext.getEntity(WorkspaceGroup.PREFIX + groupId);
@@ -315,14 +344,19 @@ public class EntityContextVarImpl implements EntityContextVar {
                 throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
             }
             String varId = StringUtils.defaultString(variableId, String.valueOf(System.currentTimeMillis()));
-            entity = new WorkspaceVariable(varId, variableName, groupEntity, variableType, description, color, readOnly, unit);
+            entity = new WorkspaceVariable(varId, variableName, groupEntity, variableType, metaBuilder.description, metaBuilder.color,
+                metaBuilder.readOnly, metaBuilder.unit);
+            entity.setAttributes(metaBuilder.attributes);
             beforeSaveHandler.accept(entity);
             entity = entityContext.save(entity);
             beforeSaveHandler.accept(entity);
         } else if (!Objects.equals(entity.getName(), variableName)
-            || !Objects.equals(entity.getDescription(), description)
-            || !Objects.equals(entity.getColor(), color)) {
-            entity = entityContext.save(entity.setName(variableName).setColor(color).setDescription(description));
+            || !Objects.equals(entity.getDescription(), metaBuilder.description)
+            || !Objects.equals(entity.getColor(), metaBuilder.color)) {
+            entity = entityContext.save(entity.setName(variableName)
+                                              .setColor(metaBuilder.color)
+                                              .setDescription(metaBuilder.description)
+                                              .setAttributes(metaBuilder.getAttributes()));
         }
         return entity.getVariableId();
     }
@@ -418,9 +452,49 @@ public class EntityContextVarImpl implements EntityContextVar {
     @RequiredArgsConstructor
     private static class VariableContext {
 
-        private final InMemoryDBService<WorkspaceVariableMessage> service;
+        private final DataStorageService<WorkspaceVariableMessage> storageService;
         public long lastBackupTimestamp = System.currentTimeMillis();
         private WorkspaceVariable groupVariable;
         private Consumer<Object> linkListener;
+    }
+
+    @Getter
+    private static class VariableMetaBuilderImpl implements VariableMetaBuilder {
+
+        private boolean readOnly;
+        private String description;
+        private String color;
+        private String unit;
+        private List<String> attributes;
+
+        @Override
+        public VariableMetaBuilder setReadOnly(boolean value) {
+            this.readOnly = value;
+            return this;
+        }
+
+        @Override
+        public VariableMetaBuilder setColor(String value) {
+            this.color = value;
+            return this;
+        }
+
+        @Override
+        public VariableMetaBuilder setDescription(String value) {
+            this.description = value;
+            return this;
+        }
+
+        @Override
+        public VariableMetaBuilder setUnit(String value) {
+            this.unit = value;
+            return this;
+        }
+
+        @Override
+        public VariableMetaBuilder setAttributes(List<String> attributes) {
+            this.attributes = attributes;
+            return this;
+        }
     }
 }

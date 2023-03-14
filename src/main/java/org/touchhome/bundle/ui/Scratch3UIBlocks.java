@@ -35,65 +35,37 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
         this.popupType = menuStatic("popupType", PopupType.class, PopupType.INFO);
 
-        blockCommand(
-                10,
-                "popup",
-                "Popup [MSG] [TYPE]",
-                this::showPopupHandler,
-                block -> {
-                    block.addArgument("MSG", "message");
-                    block.addArgument("TYPE", this.popupType);
-                });
+        blockCommand(10, "popup", "Popup [MSG] [TYPE]", this::showPopupHandler,
+            block -> {
+                block.addArgument("MSG", "message");
+                block.addArgument("TYPE", this.popupType);
+            });
 
-        blockCommand(
-                20,
-                "header",
-                "Bell [TYPE] notification [NAME]/[MSG]",
-                this::headerHandler,
-                block -> {
-                    block.addArgument("NAME", "name");
-                    block.addArgument("MSG", "message");
-                    block.addArgument("TYPE", this.popupType);
-                });
+        blockCommand(40, "top_header", "Top header [MSG]/[COLOR] for [DURATION] sec. | Click event [BROADCAST]", this::topHeaderHandler,
+            block -> {
+                block.addArgument("MSG", "message");
+                block.addArgument("COLOR", ArgumentType.color, COLOR);
+                block.addArgument("DURATION", 60);
+                block.addArgument("BROADCAST", ArgumentType.broadcast);
+            });
 
-        blockCommand(
-                40,
-                "top_header",
-                "Top header [MSG]/[COLOR] for [DURATION] sec. | Click event [BROADCAST]",
-                this::topHeaderHandler,
-                block -> {
-                    block.addArgument("MSG", "message");
-                    block.addArgument("COLOR", ArgumentType.color, COLOR);
-                    block.addArgument("DURATION", 60);
-                    block.addArgument("BROADCAST", ArgumentType.broadcast);
-                });
+        blockCommand(50, "top_img_header", "Top header [MSG][COLOR]/[ICON] | Click event [BROADCAST]", this::topImageHeaderHandler,
+            block -> {
+                block.addArgument("MSG", "message");
+                block.addArgument("COLOR", ArgumentType.color, COLOR);
+                block.addArgument("ICON", ArgumentType.icon, "cog");
+                block.addArgument("BROADCAST", ArgumentType.broadcast);
+            });
 
-        blockCommand(
-                50,
-                "top_img_header",
-                "Top header [MSG][COLOR]/[ICON] | Click event [BROADCAST]",
-                this::topImageHeaderHandler,
-                block -> {
-                    block.addArgument("MSG", "message");
-                    block.addArgument("COLOR", ArgumentType.color, COLOR);
-                    block.addArgument("ICON", ArgumentType.icon, "cog");
-                    block.addArgument("BROADCAST", ArgumentType.broadcast);
-                });
-
-        entityContext
-                .setting()
-                .listenValue(
-                        SendBroadcastSetting.class,
-                        "listen-ui-header-click",
-                        json -> {
-                            String workspaceEntityID = json.getString("entityID");
-                            WorkspaceBlock workspaceBlock =
-                                    workspaceService.getWorkspaceBlockById(workspaceEntityID);
-                            if (workspaceBlock != null) {
-                                String broadcastID = workspaceBlock.getInputString("BROADCAST");
-                                scratch3EventsBlocks.fireBroadcastEvent(broadcastID);
-                            }
-                        });
+        entityContext.setting().listenValue(SendBroadcastSetting.class, "listen-ui-header-click",
+            json -> {
+                String workspaceEntityID = json.getString("entityID");
+                WorkspaceBlock workspaceBlock = workspaceService.getWorkspaceBlockById(workspaceEntityID);
+                if (workspaceBlock != null) {
+                    String broadcastID = workspaceBlock.getInputString("BROADCAST");
+                    scratch3EventsBlocks.fireBroadcastEvent(broadcastID);
+                }
+            });
     }
 
     private void topImageHeaderHandler(WorkspaceBlock workspaceBlock) {
@@ -119,33 +91,12 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
                                     .clickAction(SendBroadcastSetting.class);
 
                     if (isFetchDuration) {
-                        headerButtonBuilder
-                                .duration(workspaceBlock.getInputInteger("DURATION"))
-                                .build();
+                        headerButtonBuilder.duration(workspaceBlock.getInputInteger("DURATION")).build();
                     } else {
-                        headerButtonBuilder
-                                .icon(
-                                        "fas fa-" + workspaceBlock.getInputString("ICON"),
-                                        null,
-                                        false)
-                                .build();
+                        headerButtonBuilder.icon("fas fa-" + workspaceBlock.getInputString("ICON"), null, false).build();
                     }
                 },
                 () -> entityContext.ui().removeHeaderButton(workspaceBlock.getId()));
-    }
-
-    private void headerHandler(WorkspaceBlock workspaceBlock) {
-        workspaceBlock.handleAndRelease(
-                () ->
-                        entityContext
-                                .ui()
-                                .addBellNotification(
-                                        workspaceBlock.getId(),
-                                        workspaceBlock.getInputString("NAME"),
-                                        workspaceBlock.getInputString("MSG"),
-                                        workspaceBlock.getMenuValue("TYPE", this.popupType).level,
-                                        null),
-                () -> entityContext.ui().removeBellNotification(workspaceBlock.getId()));
     }
 
     private void showPopupHandler(WorkspaceBlock workspaceBlock) {

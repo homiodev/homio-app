@@ -1,14 +1,18 @@
 package org.touchhome.app.manager.common;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.FFMPEG_LOCATION;
 import static org.touchhome.bundle.api.util.TouchHomeUtils.MACHINE_IP_ADDRESS;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -58,6 +62,7 @@ import org.touchhome.app.LogService;
 import org.touchhome.app.audio.AudioService;
 import org.touchhome.app.auth.JwtTokenProvider;
 import org.touchhome.app.builder.widget.EntityContextWidgetImpl;
+import org.touchhome.app.cb.ComputerBoardEntity;
 import org.touchhome.app.config.ExtRequestMappingHandlerMapping;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.app.extloader.BundleContext;
@@ -98,7 +103,6 @@ import org.touchhome.app.workspace.BroadcastLockManagerImpl;
 import org.touchhome.app.workspace.WorkspaceService;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.DisableCacheEntity;
@@ -109,15 +113,16 @@ import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.repository.AbstractRepository;
+import org.touchhome.bundle.api.repository.GitHubProject;
 import org.touchhome.bundle.api.repository.PureRepository;
 import org.touchhome.bundle.api.service.scan.BeansItemsDiscovery;
 import org.touchhome.bundle.api.service.scan.MicroControllerScanner;
 import org.touchhome.bundle.api.service.scan.VideoStreamScanner;
 import org.touchhome.bundle.api.setting.SettingPlugin;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.bundle.raspberry.RaspberryEntrypoint;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.model.UpdatableValue;
 import org.touchhome.common.util.CommonUtils;
@@ -127,6 +132,7 @@ import org.touchhome.common.util.Lang;
 @Component
 public class EntityContextImpl implements EntityContext {
 
+    private final GitHubProject appGitHub = new GitHubProject("touchhome", "touchhome-core");
     public static final String CREATE_TABLE_INDEX =
         "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
@@ -174,7 +180,6 @@ public class EntityContextImpl implements EntityContext {
     private final ClassFinder classFinder;
     @Getter private final CacheService cacheService;
     @Getter private final TouchHomeProperties touchHomeProperties;
-    private final Map<String, Boolean> deviceFeatures = new HashMap<>();
     @Getter private final Map<String, InternalBundleContext> bundles = new LinkedHashMap<>();
     private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
     private EntityManager entityManager;
@@ -224,7 +229,7 @@ public class EntityContextImpl implements EntityContext {
         rebuildAllRepositories(applicationContext, true);
 
         getBean(UserService.class).ensureUserExists();
-        getBean(RaspberryEntrypoint.class).ensureDeviceExists();
+        ComputerBoardEntity.ensureDeviceExists(this);
         setting().fetchSettingPlugins(null, classFinder, true);
 
         entityContextVar.onContextCreated();
@@ -240,7 +245,8 @@ public class EntityContextImpl implements EntityContext {
 
         initialiseInlineBundles(applicationContext);
 
-        ui().addBellInfoNotification("app-status", "app", "Started at " + DateFormat.getDateTimeInstance().format(new Date()));
+        bgp().builder("app-version").interval(Duration.ofDays(1)).delay(Duration.ofSeconds(1))
+             .execute(this::updateNotificationBlock);
 
         event().fireEventIfNotSame("app-status", Status.ONLINE);
         event().runOnceOnInternetUp("internal-ctx", () -> {
@@ -256,11 +262,34 @@ public class EntityContextImpl implements EntityContext {
             ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null));
         });
 
-        this.updateDeviceFeatures();
-
         this.entityContextStorage.init();
 
         runUtilBackgroundServices(applicationContext);
+    }
+
+    private void updateNotificationBlock() {
+        ui().addNotificationBlock("app", "App", "fas fa-house", "#E65100", builder -> {
+            String installedVersion = touchHomeProperties.getVersion();
+            builder.setVersion(installedVersion);
+            String latestVersion = appGitHub.getLastReleaseVersion();
+            if (!latestVersion.equals(installedVersion)) {
+                builder.setUpdatable(
+                    (progressBar, version) -> appGitHub.updating("touchhome", TouchHomeUtils.getInstallPath().resolve("touchhome"), progressBar,
+                        projectUpdate -> {
+                            projectUpdate.download(version);
+                            long pid = ProcessHandle.current().pid();
+                            Path updateScript = TouchHomeUtils.getInstallPath().resolve("app-update." + (IS_OS_WINDOWS ? "sh" : "bat"));
+                            String jarLocation = EntityContextImpl.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+                            String content = format(IS_OS_WINDOWS ? "@echo off\ntaskkill /F /PID %s\nmove %s %s\nstart javaw -jar \"%s\"\nexit"
+                                    : "#!/bin/bash\nkill -9 %s\nmv %s %s\nnohup sudo java -jar %s &>/dev/null &", pid,
+                                projectUpdate.getProjectPath(), jarLocation, jarLocation);
+                            TouchHomeUtils.writeToFile(updateScript, content, false);
+                            Runtime.getRuntime().exec(updateScript.toString());
+                            return null;
+                        }), appGitHub.getTagsSince(installedVersion));
+            }
+            builder.addInfo("Started at " + DateFormat.getDateTimeInstance().format(new Date()), null, "fas fa-clock", null);
+        });
     }
 
     @Override
@@ -450,16 +479,6 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public void setFeatureState(String feature, boolean state) {
-        deviceFeatures.put(feature, state);
-    }
-
-    @Override
-    public boolean isFeatureEnabled(String deviceFeature) {
-        return Boolean.TRUE.equals(deviceFeatures.get(deviceFeature));
-    }
-
-    @Override
     public <T> T getBean(String beanName, Class<T> clazz) {
         return this.allApplicationContexts.stream()
                                           .filter(c -> c.containsBean(beanName))
@@ -523,11 +542,6 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public <T> List<Class<? extends T>> getClassesWithParent(@NotNull Class<T> baseClass) {
         return classFinder.getClassesWithParent(baseClass);
-    }
-
-    @Override
-    public Map<String, Boolean> getDeviceFeatures() {
-        return deviceFeatures;
     }
 
     public void addBundle(Map<String, BundleContext> artifactIdContextMap) {
@@ -674,7 +688,8 @@ public class EntityContextImpl implements EntityContext {
     private void addBundle(BundleContext bundleContext, Map<String, BundleContext> artifactIdToContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
             if (!bundleContext.isLoaded()) {
-                ui().addBellErrorNotification("fail-bundle-" + bundleContext.getBundleID(), bundleContext.getBundleFriendlyName(), "Unable to load bundle");
+                ui().addBellErrorNotification("fail-bundle-" + bundleContext.getBundleID(),
+                    bundleContext.getBundleFriendlyName(), "Unable to load bundle");
                 return;
             }
             allApplicationContexts.add(bundleContext.getApplicationContext());
@@ -813,18 +828,6 @@ public class EntityContextImpl implements EntityContext {
                 }
             }
         });
-    }
-
-    private void updateDeviceFeatures() {
-        for (String feature : new String[]{"HotSpot", "SSH"}) {
-            deviceFeatures.put(feature, true);
-        }
-        if (EntityContextSetting.isDevEnvironment() || EntityContextSetting.isDockerEnvironment()) {
-            setFeatureState("HotSpot", false);
-        }
-        if (!EntityContextSetting.isLinuxOrDockerEnvironment()) {
-            setFeatureState("SSH", false);
-        }
     }
 
     private String getInternalIpAddress() {

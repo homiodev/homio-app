@@ -1,6 +1,5 @@
 package org.touchhome.app.manager.common.impl;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -8,19 +7,19 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,20 +29,20 @@ import org.touchhome.app.builder.ui.UIInputBuilderImpl;
 import org.touchhome.app.builder.ui.UIInputEntityActionHandler;
 import org.touchhome.app.config.WebSocketConfig;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.model.entity.SettingEntity;
 import org.touchhome.app.model.entity.widget.WidgetBaseEntity;
 import org.touchhome.app.model.rest.DynamicUpdateRequest;
 import org.touchhome.app.notification.BellNotification;
 import org.touchhome.app.notification.HeaderButtonNotification;
+import org.touchhome.app.notification.NotificationBlock;
+import org.touchhome.app.notification.NotificationBlock.Info;
 import org.touchhome.app.notification.ProgressNotification;
-import org.touchhome.app.repository.SettingRepository;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.model.ActionResponseModel;
+import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.setting.SettingPluginButton;
-import org.touchhome.bundle.api.setting.SettingPluginStatus;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.action.UIActionHandler;
 import org.touchhome.bundle.api.ui.dialog.DialogModel;
@@ -51,6 +50,7 @@ import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.util.NotificationLevel;
+import org.touchhome.common.model.ProgressBar;
 import org.touchhome.common.util.FlowMap;
 import org.touchhome.common.util.Lang;
 
@@ -66,12 +66,12 @@ public class EntityContextUIImpl implements EntityContextUI {
     private final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
     private final Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
     private final Map<String, BellNotification> bellNotifications = new ConcurrentHashMap<>();
+    private final Map<String, NotificationBlock> blockNotifications = new ConcurrentHashMap<>();
     private final Map<String, HeaderButtonNotification> headerButtonNotifications = new ConcurrentHashMap<>();
     private final Map<String, ProgressNotification> progressMap = new ConcurrentHashMap<>();
     // constructor parameters
     @Getter private final EntityContextImpl entityContext;
     private final SimpMessagingTemplate messagingTemplate;
-    private Map<String, BellNotification> bundleEntrypointNotifications = new HashMap<>();
 
     public void onContextCreated() {
         // run hourly script to drop not used dynamicUpdateRegisters
@@ -287,6 +287,27 @@ public class EntityContextUIImpl implements EntityContextUI {
             });
     }
 
+    public void addNotificationBlock(@NotNull String entityID, @NotNull String name,
+        @Nullable String icon, @Nullable String color,
+        @Nullable Consumer<NotificationBlockBuilder> builder) {
+        val notificationBlock = new NotificationBlock(entityID, name, icon, color);
+        if (builder != null) {
+            builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
+        }
+        blockNotifications.put(entityID, notificationBlock);
+        sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
+    }
+
+    @Override
+    public void removeNotification(@NotNull String entityID) {
+        if (blockNotifications.remove(entityID) != null) {
+            sendGlobal(GlobalSendType.notification, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "remove"));
+        }
+        if (bellNotifications.remove(entityID) != null) {
+            sendGlobal(GlobalSendType.bell, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "remove"));
+        }
+    }
+
     @Override
     public void sendNotification(@NotNull String destination, @NotNull String value) {
         messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + destination, value);
@@ -450,76 +471,12 @@ public class EntityContextUIImpl implements EntityContextUI {
 
         NotificationResponse notificationResponse = new NotificationResponse();
         notificationResponse.dialogs = dialogRequest.values();
-        notificationResponse.bellNotifications.addAll(bellNotifications.values());
+        notificationResponse.bellNotifications = bellNotifications.values();
+        notificationResponse.notifications = blockNotifications.values();
         notificationResponse.headerButtonNotifications = headerButtonNotifications.values();
         notificationResponse.progress = progressMap.values();
 
-        this.bundleEntrypointNotifications = assembleBundleNotifications();
-        notificationResponse.bellNotifications.addAll(this.bundleEntrypointNotifications.values());
         return notificationResponse;
-    }
-
-    private void addBellNotification(
-        Map<String, BellNotification> map, BellNotification bellNotification) {
-        String entityID = bellNotification.getEntityID();
-        if (map.containsKey(entityID)) {
-            entityID += "~~~" + bellNotification.getCreationTime();
-        }
-        bellNotification.setEntityID(entityID);
-        map.put(entityID, bellNotification);
-    }
-
-    private Map<String, BellNotification> assembleBundleNotifications() {
-        Map<String, BellNotification> map = new LinkedHashMap<>();
-        for (EntityContextImpl.InternalBundleContext bundleContext :
-            entityContext.getBundles().values()) {
-
-            bundleContext.getBundleEntrypoint().assembleBellNotifications(
-                (notificationLevel, entityID, title, value) ->
-                    addBellNotification(map, new BellNotification(entityID).setTitle(title).setValue(value).setLevel(notificationLevel)));
-
-            Class<? extends SettingPluginStatus> statusSettingClass =
-                bundleContext.getBundleEntrypoint().getBundleStatusSetting();
-            if (statusSettingClass != null) {
-                String bundleID = SettingRepository.getSettingBundleName(entityContext, statusSettingClass);
-                SettingPluginStatus.BundleStatusInfo bundleStatusInfo =
-                    entityContext.setting().getValue(statusSettingClass);
-                SettingPluginStatus settingPlugin = (SettingPluginStatus) EntityContextSettingImpl.settingPluginsByPluginKey.get(SettingEntity.getKey(statusSettingClass));
-                String statusEntityID = bundleID + "-status";
-                if (bundleStatusInfo != null) {
-                    BellNotification bundleStatusNotification = new BellNotification(statusEntityID)
-                        .setLevel(bundleStatusInfo.getLevel())
-                        .setTitle(bundleID)
-                        .setValue(defaultIfEmpty(bundleStatusInfo.getMessage(), bundleStatusInfo.getStatus().name()));
-
-                    UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
-                    settingPlugin.setActions(uiInputBuilder);
-                    bundleStatusNotification.setActions(uiInputBuilder.buildAll());
-
-                    addBellNotification(map, bundleStatusNotification);
-                }
-
-                List<SettingPluginStatus.BundleStatusInfo> transientStatuses =
-                    settingPlugin.getTransientStatuses(entityContext);
-                if (transientStatuses != null) {
-                    for (SettingPluginStatus.BundleStatusInfo transientStatus : transientStatuses) {
-                        BellNotification bundleStatusNotification = new BellNotification(statusEntityID)
-                            .setLevel(transientStatus.getLevel())
-                            .setTitle(bundleID)
-                            .setValue(defaultIfEmpty(transientStatus.getMessage(), transientStatus.getStatus().name()));
-
-                        if (transientStatus.getActionHandler() != null) {
-                            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
-                            transientStatus.getActionHandler().accept(uiInputBuilder);
-                            bundleStatusNotification.setActions(uiInputBuilder.buildAll());
-                        }
-
-                        addBellNotification(map, bundleStatusNotification);
-                    }
-                }
-            }
-        }
-        return map;
     }
 
     public void handleDialog(String entityID, DialogResponseType dialogResponseType, String pressedButton, ObjectNode params) {
@@ -568,30 +525,59 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, String value) throws Exception {
         BellNotification bellNotification = bellNotifications.get(entityID);
-        if (bellNotification == null) {
-            bellNotification = this.bundleEntrypointNotifications.get(entityID);
-        }
-        if (bellNotification == null) {
-            HeaderButtonNotification headerButtonNotification = headerButtonNotifications.get(entityID);
-            if (headerButtonNotification == null) {
-                throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
+        if (bellNotification != null) {
+            UIInputEntity action = bellNotification.getActions().stream()
+                                                   .filter(a -> a.getEntityID().equals(actionEntityID))
+                                                   .findAny()
+                                                   .orElseThrow(() -> new IllegalStateException("Unable to find action: <" + entityID + ">"));
+            if (action instanceof UIInputEntityActionHandler) {
+                UIActionHandler actionHandler = ((UIInputEntityActionHandler) action).getActionHandler();
+                if (actionHandler != null) {
+                    return actionHandler.handleAction(entityContext, new JSONObject().put("value", value));
+                }
             }
+            throw new RuntimeException("Action: " + entityID + " has incorrect format");
+        }
+
+        HeaderButtonNotification headerButtonNotification = headerButtonNotifications.get(entityID);
+        if (headerButtonNotification != null) {
             return headerButtonNotification.getClickAction().get();
         }
-        UIInputEntity action = bellNotification.getActions().stream()
-                                               .filter(a -> a.getEntityID().equals(actionEntityID))
-                                               .findAny()
-                                               .orElseThrow(() -> new IllegalStateException("Unable to find action: <" + entityID + ">"));
-        if (action instanceof UIInputEntityActionHandler) {
-            UIActionHandler actionHandler = ((UIInputEntityActionHandler) action).getActionHandler();
-            if (actionHandler != null) {
-                return actionHandler.handleAction(entityContext, new JSONObject().put("value", value));
-            }
-        }
-        throw new RuntimeException("Action: " + entityID + " has incorrect format");
+        return handleNotificationBlockAction(entityID, actionEntityID, value);
     }
 
-    public void handleResponse(ActionResponseModel response) {
+    private ActionResponseModel handleNotificationBlockAction(String entityID, String actionEntityID, String value) throws Exception {
+        NotificationBlock notificationBlock = blockNotifications.get(entityID);
+        if (notificationBlock != null) {
+            if ("UPDATE".equals(actionEntityID)) {
+                notificationBlock.setUpdating(true);
+                entityContext.bgp().runWithProgress("update-" + entityID, false, progressBar ->
+                    handleResponse(notificationBlock.getUpdateHandler().apply(progressBar, value)));
+                return null;
+            }
+            Info info = notificationBlock.getInfoItems().stream()
+                                         .filter(i -> actionEntityID.equals(i.getActionEntityID()))
+                                         .findAny().orElse(null);
+            if (info != null) {
+                return info.getHandler().handleAction(entityContext, null);
+            }
+            UIInputEntity action = notificationBlock.getContextMenuActions().stream().filter(ca -> ca.getEntityID().equals(actionEntityID)).findAny()
+                                                    .orElse(null);
+            if (action == null && notificationBlock.getActions() != null) {
+                action = notificationBlock.getActions().stream().filter(ca -> ca.getEntityID().equals(actionEntityID)).findAny().orElse(null);
+            }
+            if (action instanceof UIInputEntityActionHandler) {
+                UIActionHandler actionHandler = ((UIInputEntityActionHandler) action).getActionHandler();
+                if (actionHandler != null) {
+                    return actionHandler.handleAction(entityContext, new JSONObject().put("value", value));
+                }
+            }
+        }
+        throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
+    }
+
+    public void handleResponse(@Nullable ActionResponseModel response) {
+        if (response == null) {return;}
         switch (response.getResponseAction()) {
             case info:
                 this.sendInfoMessage(String.valueOf(response.getValue()));
@@ -616,6 +602,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         setting,
         progress,
         bell,
+        notification,
         headerButton,
         openConsole,
         reload,
@@ -630,15 +617,77 @@ public class EntityContextUIImpl implements EntityContextUI {
     @Getter
     public static class NotificationResponse {
 
-        private final Set<BellNotification> bellNotifications = new TreeSet<>();
         private Collection<HeaderButtonNotification> headerButtonNotifications;
         private Collection<ProgressNotification> progress;
         private Collection<DialogModel> dialogs;
+        private Collection<NotificationBlock> notifications;
+        private Collection<BellNotification> bellNotifications;
     }
 
     private static class DynamicUpdateContext {
 
         private final AtomicInteger registerCounter = new AtomicInteger(0);
         private long timeout = System.currentTimeMillis();
+    }
+
+    @RequiredArgsConstructor
+    private static class NotificationBlockBuilderImpl implements NotificationBlockBuilder {
+
+        private final NotificationBlock notificationBlock;
+        private final EntityContextImpl entityContext;
+
+        @Override
+        public NotificationBlockBuilder blockActionBuilder(Consumer<UIInputBuilder> builder) {
+            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            builder.accept(uiInputBuilder);
+            notificationBlock.setActions(uiInputBuilder.buildAll());
+            return this;
+        }
+
+        @Override
+        public NotificationBlockBuilder contextMenuActionBuilder(Consumer<UIInputBuilder> builder) {
+            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            builder.accept(uiInputBuilder);
+            notificationBlock.setContextMenuActions(uiInputBuilder.buildAll());
+            return this;
+        }
+
+        @Override
+        public NotificationBlockBuilder setStatus(Status status) {
+            notificationBlock.setStatus(status);
+            return this;
+        }
+
+        @Override
+        public NotificationBlockBuilder setUpdating(boolean value) {
+            notificationBlock.setUpdating(value);
+            return this;
+        }
+
+        @Override
+        public NotificationBlockBuilder setVersion(@NotNull String version) {
+            notificationBlock.setVersion(version);
+            return this;
+        }
+
+        @Override
+        public NotificationBlockBuilder setUpdatable(@NotNull BiFunction<ProgressBar, String, ActionResponseModel> updateHandler,
+            @NotNull List<String> versions) {
+            notificationBlock.setUpdatable(updateHandler, versions);
+            return this;
+        }
+
+        @Override
+        public NotificationBlockBuilder addInfo(String info, String color, String icon, String iconColor) {
+            notificationBlock.addInfo(info, color, icon, iconColor, null, null, null);
+            return this;
+        }
+
+        @Override
+        public NotificationBlockBuilder addButtonInfo(String info, String color, String icon, String iconColor, String buttonIcon, String buttonText,
+            UIActionHandler handler) {
+            notificationBlock.addInfo(info, color, icon, iconColor, buttonIcon, buttonText, handler);
+            return this;
+        }
     }
 }

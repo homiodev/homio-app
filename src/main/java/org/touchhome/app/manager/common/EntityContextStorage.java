@@ -1,5 +1,7 @@
 package org.touchhome.app.manager.common;
 
+import static org.touchhome.app.utils.InternalUtil.GB_DIVIDER;
+
 import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;
 import java.time.Duration;
@@ -12,16 +14,13 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.touchhome.app.service.hardware.SystemMessage;
 import org.touchhome.app.setting.system.SystemCPUFetchValueIntervalSetting;
-import org.touchhome.app.setting.system.SystemCPUHistorySizeSetting;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.EntityContextSetting.MemSetterHandler;
+import org.touchhome.bundle.api.EntityContextVar.VariableType;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.HasStatusAndMsg;
-import org.touchhome.bundle.api.inmemory.InMemoryDB;
-import org.touchhome.bundle.api.inmemory.InMemoryDBService;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.Status;
 
@@ -32,7 +31,6 @@ public class EntityContextStorage {
     public static final OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
     public static final Map<String, EntityMemoryData> ENTITY_MEMORY_MAP = new ConcurrentHashMap<>();
     public static final long TOTAL_MEMORY = osBean.getTotalPhysicalMemorySize();
-    public static InMemoryDBService<SystemMessage> cpuStorage;
     // constructor parameters
     private final EntityContextImpl entityContext;
     private EntityContextBGP.ThreadContext<Void> hardwareCpuScheduler;
@@ -93,8 +91,17 @@ public class EntityContextStorage {
     }
 
     private void initSystemCpuListening() {
-        cpuStorage = InMemoryDB.getOrCreateService(SystemMessage.class, (long) entityContext.setting().getValue(SystemCPUHistorySizeSetting.class));
-        entityContext.setting().listenValue(SystemCPUHistorySizeSetting.class, "listen-cpu-history", size -> cpuStorage.updateQuota((long) size));
+        entityContext.var().createGroup("hardware", "Hardware", true, "fas fa-microchip",
+            "#31BDB6", "sys.hardware");
+        String cpuUsageID = entityContext.var().createVariable("hardware", "sys_cpu_load", "sys.cpu_load",
+            VariableType.Float, builder ->
+                builder.setDescription("sys.cpu_load_description").setReadOnly(true).setUnit("%").setColor("#7B37B0"));
+        String javaCpuUsageID = entityContext.var().createVariable("hardware", "java_cpu_load", "sys.java_cpu_load",
+            VariableType.Float, builder ->
+                builder.setDescription("sys.java_cpu_load_description").setReadOnly(true).setUnit("%").setColor("#B03780"));
+        String memID = entityContext.var().createVariable("hardware", "sys_mem", "sys.memory",
+            VariableType.Float, builder ->
+                builder.setDescription("sys.memory_description").setReadOnly(true).setColor("#939C35"));
 
         entityContext.setting().listenValueAndGet(SystemCPUFetchValueIntervalSetting.class,
             "hardware-cpu",
@@ -104,9 +111,9 @@ public class EntityContextStorage {
                 }
                 this.hardwareCpuScheduler = entityContext.bgp().builder("hardware-cpu").interval(Duration.ofSeconds(timeout)).execute(
                     () -> {
-                        SystemMessage systemMessage = new SystemMessage(osBean, TOTAL_MEMORY);
-                        cpuStorage.save(systemMessage);
-                        entityContext.event().fireEvent("cpu", systemMessage);
+                        entityContext.var().set(cpuUsageID, (float) (osBean.getSystemCpuLoad() * 100));
+                        entityContext.var().set(javaCpuUsageID, (float) (osBean.getProcessCpuLoad() * 100));
+                        entityContext.var().set(memID, (float) ((TOTAL_MEMORY - osBean.getFreePhysicalMemorySize()) / GB_DIVIDER));
                     });
             });
     }

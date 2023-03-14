@@ -1,6 +1,7 @@
 package org.touchhome.app.rest;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
+import static org.touchhome.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
 import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
@@ -19,6 +20,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,9 +29,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import net.rossillo.spring.web.mvc.CacheControl;
 import net.rossillo.spring.web.mvc.CachePolicy;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.json.JSONObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -49,11 +55,24 @@ import org.touchhome.app.js.assistant.model.CompletionRequest;
 import org.touchhome.app.manager.ScriptService;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.model.entity.ScriptEntity;
+import org.touchhome.app.model.entity.widget.impl.DataSourceUtil;
+import org.touchhome.app.model.entity.widget.impl.DataSourceUtil.DataSourceContext;
 import org.touchhome.app.model.entity.widget.impl.js.WidgetFrameEntity;
 import org.touchhome.app.model.rest.DynamicUpdateRequest;
+import org.touchhome.app.rest.widget.ChartDataset;
+import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
+import org.touchhome.app.rest.widget.WidgetChartsController;
+import org.touchhome.app.rest.widget.WidgetChartsController.TimeSeriesChartData;
 import org.touchhome.bundle.api.EntityContextUI;
 import org.touchhome.bundle.api.entity.UserEntity;
+import org.touchhome.bundle.api.entity.widget.AggregationType;
+import org.touchhome.bundle.api.entity.widget.PeriodRequest;
+import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
+import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue.GetStatusValueRequest;
+import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.model.ActionResponseModel;
+import org.touchhome.bundle.api.storage.SourceHistory;
+import org.touchhome.bundle.api.storage.SourceHistoryItem;
 import org.touchhome.common.exception.NotFoundException;
 import org.touchhome.common.exception.ServerException;
 import org.touchhome.common.util.CommonUtils;
@@ -90,15 +109,67 @@ public class UtilsController {
     @GetMapping("/app/config")
     public DeviceConfig getAppConfiguration() {
         DeviceConfig deviceConfig = new DeviceConfig();
-        UserEntity userEntity = entityContext.getUser(false);
+        UserEntity userEntity = entityContext.getUserRequire(false);
         deviceConfig.hasKeystore = userEntity.getKeystore() != null;
         deviceConfig.keystoreDate = userEntity.getKeystoreDate();
         return deviceConfig;
     }
 
+    @PostMapping("/source/history/info")
+    public SourceHistory getSourceHistory(@RequestBody SourceHistoryRequest request) {
+        DataSourceContext context = DataSourceUtil.getSource(entityContext, request.dataSource);
+        val historyRequest = new GetStatusValueRequest(entityContext, request.dynamicParameters);
+        return ((HasGetStatusValue) context.getSource()).getSourceHistory(historyRequest);
+    }
+
+    @PostMapping("/source/chart")
+    public WidgetChartsController.TimeSeriesChartData<ChartDataset> getSourceChart(@RequestBody SourceHistoryChartRequest request) {
+        DataSourceContext context = DataSourceUtil.getSource(entityContext, request.dataSource);
+        WidgetChartsController.TimeSeriesChartData<ChartDataset> chartData = new TimeSeriesChartData<>();
+        if (context.getSource() instanceof HasTimeValueSeries) {
+            PeriodRequest periodRequest = new PeriodRequest(entityContext, null, null).setParameters(request.getDynamicParameters());
+            val timeSeries = ((HasTimeValueSeries) context.getSource()).getMultipleTimeValueSeries(periodRequest);
+            List<Object[]> rawValues = timeSeries.values().iterator().next();
+
+            if (!timeSeries.isEmpty()) {
+                Pair<Long, Long> minMax = this.findMinAndMax(rawValues);
+                long min = minMax.getLeft(), max = minMax.getRight();
+                long delta = (max - min) / request.splitCount;
+                List<Date> dates = IntStream.range(0, request.splitCount)
+                                            .mapToObj(value -> new Date(min + delta * value))
+                                            .collect(Collectors.toList());
+                List<List<Float>> values = convertValuesToFloat(dates, rawValues);
+
+                chartData.setTimestamp(dates.stream().map(Date::getTime).collect(Collectors.toList()));
+
+                ChartDataset dataset = new ChartDataset(null, null);
+                dataset.setData(EvaluateDatesAndValues.aggregate(values, AggregationType.AverageNoZero));
+                chartData.getDatasets().add(dataset);
+            }
+        }
+        return chartData;
+    }
+
+    private Pair<Long, Long> findMinAndMax(List<Object[]> rawValues) {
+        long min = Long.MAX_VALUE, max = Long.MIN_VALUE;
+        for (Object[] chartItem : rawValues) {
+            min = Math.min(min, (long) chartItem[0]);
+            max = Math.max(max, (long) chartItem[0]);
+        }
+        return Pair.of(min, max);
+    }
+
+    @PostMapping("/source/history/items")
+    public List<SourceHistoryItem> getSourceHistoryItems(@RequestBody SourceHistoryRequest request) {
+        DataSourceContext context = DataSourceUtil.getSource(entityContext, request.dataSource);
+        val historyRequest = new GetStatusValueRequest(entityContext, request.dynamicParameters);
+        return ((HasGetStatusValue) context.getSource()).getSourceHistoryItems(historyRequest,
+            request.getFrom(), request.getCount());
+    }
+
     @GetMapping("/frame/{entityID}")
     public String getFrame(@PathVariable("entityID") String entityID) {
-        WidgetFrameEntity widgetFrameEntity = entityContext.getEntity(entityID);
+        WidgetFrameEntity widgetFrameEntity = entityContext.getEntityRequire(entityID);
         return widgetFrameEntity.getFrame();
     }
 
@@ -140,10 +211,11 @@ public class UtilsController {
 
         return new ResponseEntity<>(
             outputStream -> {
-                FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ);
-                long size = inChannel.size();
-                WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
-                inChannel.transferTo(0, size, writableByteChannel);
+                try (FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ)) {
+                    long size = inChannel.size();
+                    WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+                    inChannel.transferTo(0, size, writableByteChannel);
+                }
             },
             headers,
             HttpStatus.OK);
@@ -186,15 +258,10 @@ public class UtilsController {
         return Lang.getLangJson(lang);
     }
 
-    @PostMapping("/notification/{entityID}/action")
-    public ActionResponseModel notificationAction(
-        @PathVariable("entityID") String entityID,
-        @RequestBody HeaderActionRequest actionRequest) {
+    @PostMapping("/notification/action")
+    public ActionResponseModel notificationAction(@RequestBody HeaderActionRequest request) {
         try {
-            return entityContext
-                .ui()
-                .handleNotificationAction(
-                    entityID, actionRequest.entityID, actionRequest.value);
+            return entityContext.ui().handleNotificationAction(request.entityID, request.actionEntityID, request.value);
         } catch (Exception ex) {
             throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
         }
@@ -204,20 +271,13 @@ public class UtilsController {
     @PostMapping("/header/dialog/{entityID}")
     public void acceptDialog(
         @PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
-        entityContext
-            .ui()
-            .handleDialog(
-                entityID,
-                EntityContextUI.DialogResponseType.Accepted,
-                dialogRequest.pressedButton,
-                OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
+        entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
+            OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
     }
 
     @DeleteMapping("/header/dialog/{entityID}")
     public void discardDialog(@PathVariable("entityID") String entityID) {
-        entityContext
-            .ui()
-            .handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
+        entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
     }
 
     @Getter
@@ -233,6 +293,7 @@ public class UtilsController {
     private static class HeaderActionRequest {
 
         private String entityID;
+        private String actionEntityID;
         private String value;
     }
 
@@ -274,9 +335,21 @@ public class UtilsController {
     }
 
     @Getter
-    @AllArgsConstructor
-    private class FrameResponse {
+    @Setter
+    private static class SourceHistoryRequest {
 
-        private String html;
+        private String dataSource;
+        private JSONObject dynamicParameters;
+        private int from;
+        private int count;
+    }
+
+    @Getter
+    @Setter
+    private static class SourceHistoryChartRequest {
+
+        private String dataSource;
+        private JSONObject dynamicParameters;
+        private int splitCount;
     }
 }

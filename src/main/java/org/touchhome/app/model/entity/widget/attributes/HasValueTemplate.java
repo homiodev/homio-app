@@ -127,4 +127,14 @@ public interface HasValueTemplate extends HasJsonData {
     default void setValueSuffixColor(String value) {
         setJsonData("vtsc", value);
     }
+
+    @UIField(order = 500)
+    @UIFieldGroup("Value")
+    default boolean getValueSourceClickHistory() {
+        return getJsonData("vsch", false);
+    }
+
+    default void setValueSourceClickHistory(boolean value) {
+        setJsonData("vsch", value);
+    }
 }

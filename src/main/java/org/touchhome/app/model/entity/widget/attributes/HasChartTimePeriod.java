@@ -3,8 +3,9 @@ package org.touchhome.app.model.entity.widget.attributes;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.touchhome.app.model.entity.widget.UIEditReloadWidget;
@@ -20,7 +21,7 @@ public interface HasChartTimePeriod extends HasJsonData {
 
     @UIField(order = 1)
     @UIFieldTimeSlider
-    @UIFieldGroup(value = "Time period", order = 7, borderColor = "#166F37")
+    @UIFieldGroup(value = "Time period", order = 55, borderColor = "#166F37")
     @UIEditReloadWidget
     @UIFieldReadDefaultValue
     default int getChartMinutesToShow() {
@@ -37,7 +38,7 @@ public interface HasChartTimePeriod extends HasJsonData {
     @UIEditReloadWidget
     @UIFieldReadDefaultValue
     default int getChartPointsPerHour() {
-        return getJsonData("pph", 30);
+        return getJsonData("pph", 60);
     }
 
     default void setChartPointsPerHour(int value) {
@@ -64,40 +65,33 @@ public interface HasChartTimePeriod extends HasJsonData {
             private final int pointsPerHour = getChartPointsPerHour();
 
             @Override
-            public Date getFrom() {
-                return new Date(System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(minutes));
-            }
+            public TimeRange snapshot() {
+                long to = System.currentTimeMillis();
+                long from = to - TimeUnit.MINUTES.toMillis(minutes);
 
-            @Override
-            public List<Date> evaluateDateRange() {
-                long endTime =
-                        Optional.ofNullable(getTo())
-                                .map(Date::getTime)
-                                .orElse(System.currentTimeMillis());
-                long startTime = endTime - TimeUnit.MINUTES.toMillis(minutes);
                 double requiredNumOfPoints = Math.ceil(minutes * pointsPerHour / 60F);
-                double diff = (endTime - startTime) / requiredNumOfPoints;
+                double diff = (to - from) / requiredNumOfPoints;
                 List<Date> dates = new ArrayList<>();
                 for (int i = 0; i < requiredNumOfPoints; i++) {
-                    dates.add(new Date((long) (startTime + i * diff)));
+                    dates.add(new Date((long) (from + i * diff)));
                 }
-                return dates;
+                return new TimeRange(new Date(from), null, dates);
             }
         };
     }
 
     interface TimePeriod {
 
-        // This method is not idempotent. Every call return new value
-        @NotNull
-        Date getFrom();
+        // Create snapshot for to and from and dataRange and make getFrom()/getTo()/evaluateDateRange() idempotent
+        TimeRange snapshot();
+    }
 
-        // This method is not idempotent. Every call return new value
-        @Nullable
-        default Date getTo() {
-            return null;
-        }
+    @Getter
+    @AllArgsConstructor
+    class TimeRange {
 
-        List<Date> evaluateDateRange();
+        private final @NotNull Date from;
+        private final @Nullable Date to;
+        private final @NotNull List<Date> range;
     }
 }

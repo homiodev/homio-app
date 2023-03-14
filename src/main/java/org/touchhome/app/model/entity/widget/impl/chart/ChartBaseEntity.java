@@ -9,6 +9,7 @@ import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
+import org.touchhome.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
 public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
@@ -56,16 +57,6 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
         return getJsonData("am", Boolean.FALSE);
     }
 
-    @UIField(order = 7)
-    @UIFieldGroup("Chart ui")
-    public boolean getShowFullScreenButton() {
-        return getJsonData("sfsb", false);
-    }
-
-    public void setShowFullScreenButton(boolean value) {
-        setJsonData("sfsb", value);
-    }
-
     public T setAnimations(Boolean value) {
         setJsonData("am", value);
         return (T) this;
@@ -73,11 +64,22 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
 
     @UIField(order = 8)
     @UIFieldGroup("Chart ui")
-    public Boolean getShowChartFullScreenButton() {
+    public boolean getShowChartFullScreenButton() {
         return getJsonData("sfsb", Boolean.FALSE);
     }
 
-    public void setShowChartFullScreenButton(Boolean value) {
+    public void setShowChartFullScreenButton(boolean value) {
         setJsonData("sfsb", value);
+    }
+
+    @UIField(order = 10, isRevert = true)
+    @UIFieldSlider(min = 10, max = 600)
+    @UIFieldGroup("Chart ui")
+    public int getFetchDataFromServerInterval() {
+        return getJsonData("fsfsi", 60);
+    }
+
+    public void setFetchDataFromServerInterval(int value) {
+        setJsonData("fsfsi", value);
     }
 }

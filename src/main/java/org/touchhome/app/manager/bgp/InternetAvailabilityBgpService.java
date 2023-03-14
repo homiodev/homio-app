@@ -25,11 +25,6 @@ public class InternetAvailabilityBgpService implements BgpService {
         internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
             if (isInternetUp != isInternetWasUp) {
                 entityContext.event().fireEventIfNotSame("internet-status", isInternetUp ? Status.ONLINE : Status.OFFLINE);
-                if (isInternetUp) {
-                    entityContext.ui().addBellInfoNotification("internet-connection", "Internet Connection", "Internet up");
-                } else {
-                    entityContext.ui().addBellErrorNotification("internet-connection", "Internet Connection", "Internet down");
-                }
             }
             return null;
         });

@@ -6,6 +6,8 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -39,6 +41,8 @@ import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.model.JSON;
+import org.touchhome.bundle.api.storage.SourceHistory;
+import org.touchhome.bundle.api.storage.SourceHistoryItem;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldGroup;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
@@ -270,6 +274,31 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }
 
     @Override
+    public SourceHistory getSourceHistory(GetStatusValueRequest request) {
+        SourceHistory sourceHistory = ((EntityContextVarImpl) request.getEntityContext().var())
+            .getSourceHistory(variableId)
+            .setIcon(icon)
+            .setIconColor(iconColor)
+            .setName(getName())
+            .setDescription(getDescription());
+        sourceHistory.setAttributes(new ArrayList<>(Arrays.asList(
+            "Owner:" + workspaceGroup.getName(),
+            "Backup:" + backup,
+            "Unit:" + unit,
+            "Quota:" + quota,
+            "Type:" + restriction.name().toLowerCase(),
+            "Writable:" + !readOnly)));
+        sourceHistory.getAttributes().addAll(getAttributes());
+
+        return sourceHistory;
+    }
+
+    @Override
+    public List<SourceHistoryItem> getSourceHistoryItems(GetStatusValueRequest request, int from, int count) {
+        return ((EntityContextVarImpl) request.getEntityContext().var()).getSourceHistoryItems(variableId, from, count);
+    }
+
+    @Override
     public void setStatusValue(SetStatusValueRequest request) {
         ((EntityContextVarImpl) request.getEntityContext().var())
             .set(variableId, request.getValue(), ignore -> {}, true);
@@ -289,6 +318,17 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     @Override
     public String toString() {
         return "Variable: " + getTitle();
+    }
+
+    public List<String> getAttributes() {
+        return getJsonDataList("attr");
+    }
+
+    public WorkspaceVariable setAttributes(List<String> attributes) {
+        if (attributes != null && !attributes.isEmpty()) {
+            setJsonData("attr", String.join("~~~", attributes));
+        }
+        return this;
     }
 
     @Override

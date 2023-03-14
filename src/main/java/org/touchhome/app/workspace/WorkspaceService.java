@@ -38,6 +38,7 @@ import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.api.workspace.WorkspaceEventListener;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.cb.Scratch3ComputerBoardFSBlocks;
 import org.touchhome.bundle.hardware.Scratch3HardwareBlocks;
 import org.touchhome.bundle.http.Scratch3NetworkBlocks;
 import org.touchhome.bundle.media.Scratch3AudioBlocks;
@@ -64,11 +65,12 @@ public class WorkspaceService implements ContextRefreshed {
 
     private static final List<Class<?>> inlineScratches =
             Arrays.asList(
-                    Scratch3AudioBlocks.class,
-                    Scratch3NetworkBlocks.class,
-                    Scratch3HardwareBlocks.class,
-                    Scratch3UIBlocks.class,
-                    Scratch3ImageEditBlocks.class);
+                Scratch3AudioBlocks.class,
+                Scratch3NetworkBlocks.class,
+                Scratch3HardwareBlocks.class,
+                Scratch3UIBlocks.class,
+                Scratch3ComputerBoardFSBlocks.class,
+                Scratch3ImageEditBlocks.class);
 
     private final Duration TIME_WAIT_OLD_WORKSPACE = Duration.ofSeconds(3);
     private final Set<String> ONCE_EXECUTION_BLOCKS =

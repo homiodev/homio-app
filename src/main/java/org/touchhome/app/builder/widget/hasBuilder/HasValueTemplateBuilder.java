@@ -6,8 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import org.touchhome.bundle.api.EntityContextWidget.HasValueTemplate;
 import org.touchhome.bundle.api.EntityContextWidget.VerticalAlign;
 
-public interface HasValueTemplateBuilder<T extends org.touchhome.app.model.entity.widget.attributes.HasValueTemplate,
-    R>
+public interface HasValueTemplateBuilder<T extends org.touchhome.app.model.entity.widget.attributes.HasValueTemplate, R>
     extends HasValueTemplate<R> {
 
     T getWidget();
@@ -75,6 +74,12 @@ public interface HasValueTemplateBuilder<T extends org.touchhome.app.model.entit
     @Override
     default R setValueSuffixColor(String value) {
         getWidget().setValueSuffixColor(value);
+        return (R) this;
+    }
+
+    @Override
+    default R setValueSourceClickHistory(boolean value) {
+        getWidget().setValueSourceClickHistory(value);
         return (R) this;
     }
 }

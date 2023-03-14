@@ -45,7 +45,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
   @Override
   @SneakyThrows
   public Collection<HardwarePluginEntity> getValue() {
-    UserEntity user = entityContext.getUser(false);
+    UserEntity user = entityContext.getUserRequire(false);
 
     List<HardwarePluginEntity> list = new ArrayList<>();
 
@@ -71,9 +71,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         this.entityContext.setting().getValue(ConsoleCloudProviderSetting.class).getStatus()));
     list.add(new HardwarePluginEntity("Cloud keystore",
         user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));
-    list.add(new HardwarePluginEntity("Features", getFeatures()));
 
-    list.add(new HardwarePluginEntity("Board type", BoardInfo.boardType));
     list.add(new HardwarePluginEntity("Processor", BoardInfo.processor));
     list.add(new HardwarePluginEntity("BogoMIPS", BoardInfo.bogoMIPS));
     list.add(new HardwarePluginEntity("Processor features", String.join(";", BoardInfo.features)));
@@ -104,11 +102,6 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
 
   private Object onLinux(ThrowingSupplier<Object, Exception> supplier) throws Exception {
     return EntityContextSetting.isLinuxEnvironment() ? supplier.get() : "N/A";
-  }
-
-  private String getFeatures() {
-    return entityContext.getDeviceFeatures().entrySet().stream().map(f -> f.getKey() + ": " + f.getValue())
-        .collect(Collectors.joining("; "));
   }
 
   @Override

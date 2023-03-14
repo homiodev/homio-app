@@ -18,7 +18,7 @@ public class SystemCPUFetchValueIntervalSetting
 
     @Override
     public int defaultValue() {
-        return 4;
+        return 30;
     }
 
     @Override

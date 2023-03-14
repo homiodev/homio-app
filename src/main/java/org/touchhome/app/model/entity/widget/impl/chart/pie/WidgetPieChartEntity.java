@@ -45,7 +45,7 @@ public class WidgetPieChartEntity
     @Override
     @JsonIgnore
     @UIFieldIgnore
-    public boolean getShowFullScreenButton() {
+    public boolean getShowChartFullScreenButton() {
         throw new ProhibitedExecution();
     }
 }

@@ -30,8 +30,8 @@ import org.touchhome.common.util.SpringUtils;
 
 // TODO: Temporary remove scripting engine from app due lack of time to fix everything
 @Entity
-@UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
-               overridePath = "scripts")
+/*@UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
+               overridePath = "scripts")*/
 @Accessors(chain = true)
 public class ScriptEntity extends BaseEntity<ScriptEntity> {
 

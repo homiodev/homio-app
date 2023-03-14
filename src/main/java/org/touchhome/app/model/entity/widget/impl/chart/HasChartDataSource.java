@@ -31,7 +31,7 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 1)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
     @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
-    @UIFieldGroup(value = "Chart", order = 10, borderColor = "#9C27B0")
+    @UIFieldGroup(value = "Chart", order = 60, borderColor = "#9C27B0")
     @UIEditReloadWidget
     default String getChartDataSource() {
         return getJsonData("chartDS");
@@ -46,7 +46,7 @@ public interface HasChartDataSource extends HasJsonData {
     @UIEditReloadWidget
     @UIFieldReadDefaultValue
     default AggregationType getChartAggregationType() {
-        return getJsonDataEnum("chartAggrType", AggregationType.Average);
+        return getJsonDataEnum("chartAggrType", AggregationType.AverageNoZero);
     }
 
     default void setChartAggregationType(AggregationType value) {
@@ -66,7 +66,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 1, isRevert = true)
-    @UIFieldGroup(value = "Chart ui", order = 11, borderColor = "#673AB7")
+    @UIFieldGroup(value = "Chart ui", order = 35, borderColor = "#673AB7")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
     default String getChartColor() {
@@ -87,6 +87,16 @@ public interface HasChartDataSource extends HasJsonData {
 
     default void setChartColorOpacity(int value) {
         setJsonData("chartCO", value);
+    }
+
+    @UIField(order = 4)
+    @UIFieldGroup("Chart ui")
+    default Boolean getFillEmptyValues() {
+        return getJsonData("fev", Boolean.FALSE);
+    }
+
+    default void setFillEmptyValues(Boolean value) {
+        setJsonData("fev", value);
     }
 
     @UIField(order = 5)

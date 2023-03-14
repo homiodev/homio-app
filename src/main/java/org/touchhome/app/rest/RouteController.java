@@ -1,5 +1,7 @@
 package org.touchhome.app.rest;
 
+import static java.lang.String.format;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -45,12 +47,14 @@ public class RouteController {
         this.touchHomeProperties = touchHomeProperties;
     }
 
+    @GetMapping("/version")
+    public String getVersion() {
+        return format("%s-%s-%s", touchHomeProperties.getVersion(), EntityContextImpl.BUNDLE_UPDATE_COUNT, TouchHomeUtils.RUN_COUNT);
+    }
+
     @GetMapping("/bootstrap")
     public BootstrapContext getBootstrap() {
         BootstrapContext context = new BootstrapContext();
-        context.appVersion = touchHomeProperties.getVersion();
-        context.runCount = TouchHomeUtils.RUN_COUNT;
-        context.bundleUpdateCount = EntityContextImpl.BUNDLE_UPDATE_COUNT;
         context.routes = getRoutes();
         context.menu = getMenu();
         context.bundles = bundleController.getBundles();
@@ -108,9 +112,6 @@ public class RouteController {
 
     private static class BootstrapContext {
 
-        public int appVersion;
-        public int runCount;
-        public int bundleUpdateCount;
         public List<RouteDTO> routes;
         public Map<String, List<SidebarMenuItem>> menu;
         public List<BundleController.BundleJson> bundles;

@@ -2,11 +2,8 @@ package org.touchhome.app.model.var;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.springframework.util.ObjectUtils.isEmpty;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -37,7 +34,6 @@ import org.touchhome.bundle.api.entity.HasJsonData;
 import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.JSON;
-import org.touchhome.bundle.api.ui.UI.Color;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldColorPicker;
@@ -238,7 +234,8 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         @UIField(order = 10, type = UIFieldType.HTML)
         @UIFieldColorRef("color")
         @UIFieldTitleRef("nameTitle")
-        private String name;
+        @UIFieldVariable
+        private JSONObject name;
 
         @UIField(order = 20, label = "format", style = "padding-left:5px")
         @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
@@ -269,20 +266,18 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
 
         public WorkspaceVariableEntity(WorkspaceVariable variable, EntityContextImpl entityContext) {
             this.entityID = variable.getEntityID();
-            String description = isEmpty(variable.getDescription()) ? "" : format("<span>%s</span>", variable.getDescription());
-            String preVarNamePart = isEmpty(variable.getColor()) ? "" : format(" style=\"color:%s;\"", variable.getColor());
-            int listenerCount = entityContext.event().getEntityUpdateListeners().getCount(variable.getEntityID());
-            String meta = variable.isReadOnly() ? "" : format("<i class=\"fas fa-%s\"></i>",
-                entityContext.var().isLinked(variable.getVariableId()) ? "link" : "link-slash");
-            if (variable.isBackup()) {
-                int count = entityContext.var().backupCount(variable.getVariableId());
-                String color = count < 10_000 ? "#777777" : count < 100_000 ? Color.WARNING : Color.RED;
-                String countStr = count < 1000 ? String.valueOf(count) : BigDecimal.valueOf(count / 1000D).setScale(2, RoundingMode.DOWN) + "k";
-                meta = format("<i class=\"fas fa-database\" style=\"color:%s\"></i><span>[%s]</span>", color, countStr) + meta;
-            }
 
-            this.name = format("<div class=\"inline-2row_d\"><div%s>%s<div class=\"info\">%s<span>(%s)</span></div></div>%s</div>",
-                preVarNamePart, variable.getName(), meta, listenerCount, description);
+            name = new JSONObject()
+                .put("color", variable.getColor())
+                .put("name", variable.getName())
+                .put("description", variable.getDescription())
+                .put("listeners", entityContext.event().getEntityUpdateListeners().getCount(variable.getEntityID()))
+                .put("linked", entityContext.var().isLinked(variable.getVariableId()))
+                .put("source", entityContext.var().buildDataSource(variable, false))
+                .put("readOnly", variable.isReadOnly());
+            if (variable.isBackup()) {
+                name.put("backupCount", entityContext.var().backupCount(variable.getVariableId()));
+            }
             this.restriction = variable.getRestriction().name().toLowerCase();
             this.quota = variable.getQuota();
             this.usedQuota = variable.getUsedQuota();

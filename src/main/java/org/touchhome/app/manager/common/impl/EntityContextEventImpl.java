@@ -47,11 +47,11 @@ import org.touchhome.bundle.api.EntityContextEvent;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.BaseEntityIdentifier;
 import org.touchhome.bundle.api.entity.PinBaseEntity;
-import org.touchhome.bundle.api.inmemory.InMemoryDB;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.service.EntityService;
 import org.touchhome.bundle.api.service.EntityService.ServiceInstance;
+import org.touchhome.bundle.api.storage.InMemoryDB;
 import org.touchhome.common.util.CommonUtils;
 import org.touchhome.common.util.Lang;
 
@@ -433,6 +433,8 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 InMemoryDB.removeService(entityID);
                 // clear all registered console plugins if any exists
                 context.ui().unRegisterConsolePlugin(entityID);
+                // remove any registered notifications/notification block
+                context.ui().removeNotification(entityID);
                 // destroy any additional services
                 if (entity instanceof EntityService) {
                     try {

@@ -19,6 +19,7 @@ import org.touchhome.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartSe
 import org.touchhome.bundle.api.EntityContextWidget.BarChartType;
 import org.touchhome.bundle.api.EntityContextWidget.BarTimeChartBuilder;
 import org.touchhome.bundle.api.EntityContextWidget.BarTimeChartSeriesBuilder;
+import org.touchhome.bundle.api.EntityContextWidget.DisplayWidgetBuilder;
 
 public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartBuilder, WidgetBarTimeChartEntity>
     implements BarTimeChartBuilder,
@@ -66,6 +67,12 @@ public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartB
     @Override
     public BarTimeChartBuilder setShowChartFullScreenButton(boolean value) {
         widget.setShowChartFullScreenButton(value);
+        return this;
+    }
+
+    @Override
+    public BarTimeChartBuilder setFetchDataFromServerInterval(int value) {
+        widget.setFetchDataFromServerInterval(value);
         return this;
     }
 }

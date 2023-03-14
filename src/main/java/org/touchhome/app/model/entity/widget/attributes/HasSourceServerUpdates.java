@@ -8,7 +8,7 @@ import org.touchhome.bundle.api.ui.field.UIFieldReadDefaultValue;
 public interface HasSourceServerUpdates extends HasJsonData {
 
     @UIField(order = 2)
-    @UIFieldGroup("Update")
+    @UIFieldGroup(value = "Update", order = 1000)
     @UIFieldReadDefaultValue
     default Boolean getListenSourceUpdates() {
         return getJsonData("lsu", Boolean.TRUE);

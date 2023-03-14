@@ -2,8 +2,8 @@ package org.touchhome.app.rest;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.touchhome.app.cb.ComputerBoardEntity.DEFAULT_DEVICE_ENTITY_ID;
 import static org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
-import static org.touchhome.bundle.raspberry.RaspberryDeviceEntity.DEFAULT_DEVICE_ENTITY_ID;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,14 +36,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.touchhome.app.cb.ComputerBoardEntity;
+import org.touchhome.app.cb.fs.ComputerBoardFileSystem;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.bundle.api.entity.TreeConfiguration;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.raspberry.RaspberryDeviceEntity;
-import org.touchhome.bundle.raspberry.fs.RaspberryFileSystem;
 import org.touchhome.common.fs.FileSystemProvider;
 import org.touchhome.common.fs.TreeNode;
 import org.touchhome.common.util.ArchiveUtil;
@@ -57,7 +57,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     // constructor parameters
     private final EntityContextImpl entityContext;
     private List<BaseFileSystemEntity> fileSystems;
-    private RaspberryFileSystem localFileSystem;
+    private ComputerBoardFileSystem localFileSystem;
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) {
@@ -74,9 +74,9 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
                 "fs-create",
                 e -> findAllFileSystems(this.entityContext));
 
-        RaspberryDeviceEntity raspberryDeviceEntity =
+        ComputerBoardEntity ComputerBoardEntity =
             this.entityContext.getEntity(DEFAULT_DEVICE_ENTITY_ID);
-        localFileSystem = raspberryDeviceEntity.getFileSystem(this.entityContext);
+        localFileSystem = ComputerBoardEntity.getFileSystem(this.entityContext);
     }
 
     @Override

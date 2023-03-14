@@ -4,7 +4,6 @@ artifactoryFilesURL: https://touchhome.jfrog.io/artifactory/files-remote
 touchhome:
   version: @project.version@
   internet-test-interval: PT10S
-  git-hub-url: https://api.github.com/repos/touchhome/touchhome-core/releases/latest
   max-java-script-compile-before-interrupt: PT5S
   max-java-script-once-call-before-interrupt: PT60S
   server-site-url: https://touchhome.org
