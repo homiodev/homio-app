@@ -263,28 +263,27 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     @Override
     public void sendDialogRequest(@NotNull DialogModel dialogModel) {
-        dialogRequest.computeIfAbsent(
-            dialogModel.getEntityID(),
-            key -> {
-                if (StringUtils.isNotEmpty(dialogModel.getHeaderButtonAttachTo())) {
-                    HeaderButtonNotification notificationModel = headerButtonNotifications.get(dialogModel.getHeaderButtonAttachTo());
-                    if (notificationModel != null) {
-                        notificationModel.getDialogs().add(dialogModel);
-                    }
+        dialogRequest.computeIfAbsent(dialogModel.getEntityID(), key -> {
+            if (StringUtils.isNotEmpty(dialogModel.getHeaderButtonAttachTo())) {
+                HeaderButtonNotification notificationModel = headerButtonNotifications.get(dialogModel.getHeaderButtonAttachTo());
+                if (notificationModel != null) {
+                    notificationModel.getDialogs().add(dialogModel);
                 }
+            }
 
-                if (dialogModel.getMaxTimeoutInSec() > 0) {
-                    entityContext
-                        .bgp()
-                        .builder(key + "-dialog-timeout")
-                        .delay(Duration.ofSeconds(dialogModel.getMaxTimeoutInSec()))
-                        .execute(() -> handleDialog(key, DialogResponseType.Timeout, null, null));
-                }
+            if (dialogModel.getMaxTimeoutInSec() > 0) {
+                entityContext
+                    .bgp()
+                    .builder(key + "-dialog-timeout")
+                    .delay(Duration.ofSeconds(dialogModel.getMaxTimeoutInSec()))
+                    .execute(() -> handleDialog(key, DialogResponseType.Timeout, null, null));
+            }
 
-                sendGlobal(GlobalSendType.dialog, key, dialogModel, null, null);
+            sendGlobal(GlobalSendType.dialog, key, dialogModel, null, null);
 
-                return dialogModel;
-            });
+            return dialogModel;
+        });
+        sendGlobal(GlobalSendType.dialog, dialogModel.getEntityID(), dialogModel, null, null);
     }
 
     public void addNotificationBlock(@NotNull String entityID, @NotNull String name,
@@ -665,7 +664,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
 
         @Override
-        public NotificationBlockBuilder setVersion(@NotNull String version) {
+        public NotificationBlockBuilder setVersion(@Nullable String version) {
             notificationBlock.setVersion(version);
             return this;
         }
@@ -678,15 +677,15 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
 
         @Override
-        public NotificationBlockBuilder addInfo(String info, String color, String icon, String iconColor) {
-            notificationBlock.addInfo(info, color, icon, iconColor, null, null, null);
+        public NotificationBlockBuilder addInfo(@NotNull String info, @Nullable String color, @Nullable String icon, @Nullable String iconColor) {
+            notificationBlock.addInfo(info, color, icon, iconColor, null, null, null, null);
             return this;
         }
 
         @Override
-        public NotificationBlockBuilder addButtonInfo(String info, String color, String icon, String iconColor, String buttonIcon, String buttonText,
-            UIActionHandler handler) {
-            notificationBlock.addInfo(info, color, icon, iconColor, buttonIcon, buttonText, handler);
+        public NotificationBlockBuilder addButtonInfo(@NotNull String info, @Nullable String color, @Nullable String icon, @Nullable String iconColor,
+            @NotNull String buttonIcon, @Nullable String buttonText, @Nullable String confirmMessage, @NotNull UIActionHandler handler) {
+            notificationBlock.addInfo(info, color, icon, iconColor, buttonIcon, buttonText, confirmMessage, handler);
             return this;
         }
     }

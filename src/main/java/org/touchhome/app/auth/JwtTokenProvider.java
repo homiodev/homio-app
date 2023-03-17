@@ -16,8 +16,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.touchhome.app.manager.common.EntityContextImpl;
-import org.touchhome.app.setting.system.SystemDisableAuthTokenOnRestartSetting;
-import org.touchhome.app.setting.system.SystemJWTTokenValidSetting;
+import org.touchhome.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
+import org.touchhome.app.setting.system.auth.SystemJWTTokenValidSetting;
 import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 

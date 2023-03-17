@@ -64,7 +64,6 @@ import org.touchhome.app.rest.widget.EvaluateDatesAndValues;
 import org.touchhome.app.rest.widget.WidgetChartsController;
 import org.touchhome.app.rest.widget.WidgetChartsController.TimeSeriesChartData;
 import org.touchhome.bundle.api.EntityContextUI;
-import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.PeriodRequest;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
@@ -108,11 +107,7 @@ public class UtilsController {
 
     @GetMapping("/app/config")
     public DeviceConfig getAppConfiguration() {
-        DeviceConfig deviceConfig = new DeviceConfig();
-        UserEntity userEntity = entityContext.getUserRequire(false);
-        deviceConfig.hasKeystore = userEntity.getKeystore() != null;
-        deviceConfig.keystoreDate = userEntity.getKeystoreDate();
-        return deviceConfig;
+        return new DeviceConfig();
     }
 
     @PostMapping("/source/history/info")
@@ -326,12 +321,9 @@ public class UtilsController {
     @Setter
     private static class DeviceConfig {
 
-        public final boolean hasUserPassword = true;
         private final boolean bootOnly = false;
         private final boolean hasApp = true;
         private final boolean hasInitSetup = true;
-        private boolean hasKeystore;
-        private Date keystoreDate;
     }
 
     @Getter

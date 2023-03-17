@@ -57,6 +57,7 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.HasEntityLog;
 import org.touchhome.bundle.api.model.HasEntityLog.EntityLogBuilder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
+import org.touchhome.common.util.CommonUtils;
 
 @Component
 public class LogService
@@ -81,72 +82,43 @@ public class LogService
             for (String appenderName : appenderNames) {
                 Appender appender = configuration.getAppenders().get(appenderName);
                 if (appender instanceof RollingFileAppender) {
-                    var defineAppender =
-                            new DefinedAppenderConsumer(
-                                    fetchAppenderPrefixSet(configuration, appenderName),
-                                    ((RollingFileAppender) appender).getFileName());
+                    var defineAppender = new DefinedAppenderConsumer(fetchAppenderPrefixSet(configuration, appenderName),
+                        ((RollingFileAppender) appender).getFileName());
                     globalAppender.definedAppender.put(appenderName, defineAppender);
                 }
             }
 
-            MessageFactory messageFactory =
-                    AbstractLogger.DEFAULT_MESSAGE_FACTORY_CLASS.newInstance();
+            MessageFactory messageFactory = CommonUtils.newInstance(AbstractLogger.DEFAULT_MESSAGE_FACTORY_CLASS);
             DefaultLogEventFactory log4jLogEventFactory = new DefaultLogEventFactory();
 
             // hack: add global logger for every log since DEBUG level.
-            configuration.addFilter(
-                    new AbstractFilter() {
-                        public void logIfRequire(
-                                Logger logger,
-                                Level level,
-                                Marker marker,
-                                String message,
-                                Throwable t,
-                                Object... params) {
-                            if (level.intLevel() == Level.DEBUG.intLevel()
-                                    && disabledDebugPackage(logger.getName())) {
-                                return;
-                            }
-                            if (level.intLevel() <= Level.DEBUG.intLevel()) {
-                                Message msg = messageFactory.newMessage(message, params);
-                                globalAppender.append(
-                                        log4jLogEventFactory.createEvent(
-                                                logger.getName(),
-                                                marker,
-                                                null,
-                                                level,
-                                                msg,
-                                                null,
-                                                msg.getThrowable()));
-                            }
-                        }
+            configuration.addFilter(new AbstractFilter() {
+                public void logIfRequire(Logger logger, Level level, Marker marker, String message, Throwable t, Object... params) {
+                    if (level.intLevel() == Level.DEBUG.intLevel() && disabledDebugPackage(logger.getName())) {
+                        return;
+                    }
+                    if (level.intLevel() <= Level.DEBUG.intLevel()) {
+                        Message msg = messageFactory.newMessage(message, params);
+                        globalAppender.append(log4jLogEventFactory.createEvent(logger.getName(), marker, null, level, msg, null, msg.getThrowable()));
+                    }
+                }
 
-                        @Override
-                        public Result filter(
-                                Logger logger,
-                                Level level,
-                                Marker marker,
-                                String msg,
-                                Object... params) {
-                            if (msg != null) {
-                                logIfRequire(logger, level, marker, msg, null, params);
-                            }
-                            return super.filter(logger, level, marker, msg, params);
-                        }
+                @Override
+                public Result filter(Logger logger, Level level, Marker marker, String msg, Object... params) {
+                    if (msg != null) {
+                        logIfRequire(logger, level, marker, msg, null, params);
+                    }
+                    return super.filter(logger, level, marker, msg, params);
+                }
 
-                        @Override
-                        public Result filter(
-                                final Logger logger,
-                                final Level level,
-                                final Marker marker,
-                                final Object msg,
-                                final Throwable t) {
-                            if (msg != null) {
-                                logIfRequire(logger, level, marker, String.valueOf(msg), t);
-                            }
-                            return super.filter(logger, level, marker, msg, t);
-                        }
-                    });
+                @Override
+                public Result filter(final Logger logger, final Level level, final Marker marker, final Object msg, final Throwable t) {
+                    if (msg != null) {
+                        logIfRequire(logger, level, marker, String.valueOf(msg), t);
+                    }
+                    return super.filter(logger, level, marker, msg, t);
+                }
+            });
 
             configuration.getRootLogger().addAppender(globalAppender, Level.DEBUG, null);
             loggerContext.updateLoggers();
@@ -168,48 +140,26 @@ public class LogService
                 addLogEntity(entity);
             }
         }
-        entityContext
-                .event()
-                .addEntityUpdateListener(
-                        BaseEntity.class,
-                        "log-entity",
-                        baseEntity -> {
-                            if (baseEntity instanceof HasEntityLog
-                                    && globalAppender.logConsumers.containsKey(
-                                            baseEntity.getEntityID())) {
-                                globalAppender.logConsumers.get(baseEntity.getEntityID()).debug =
-                                        ((HasEntityLog) baseEntity).isDebug();
-                            }
-                        });
-        entityContext
-                .event()
-                .addEntityRemovedListener(
-                        BaseEntity.class,
-                        "log-entity",
-                        baseEntity -> {
-                            if (baseEntity instanceof HasEntityLog) {
-                                globalAppender.logConsumers.remove(baseEntity.getEntityID());
-                            }
-                        });
-        entityContext
-                .event()
-                .addEntityCreateListener(
-                        BaseEntity.class,
-                        "log-entity",
-                        baseEntity -> {
-                            if (baseEntity instanceof HasEntityLog) {
-                                addLogEntity(baseEntity);
-                            }
-                        });
+        entityContext.event().addEntityUpdateListener(BaseEntity.class, "log-entity", baseEntity -> {
+            if (baseEntity instanceof HasEntityLog && globalAppender.logConsumers.containsKey(baseEntity.getEntityID())) {
+                globalAppender.logConsumers.get(baseEntity.getEntityID()).debug = ((HasEntityLog) baseEntity).isDebug();
+            }
+        });
+        entityContext.event().addEntityRemovedListener(BaseEntity.class, "log-entity", baseEntity -> {
+            if (baseEntity instanceof HasEntityLog) {
+                globalAppender.logConsumers.remove(baseEntity.getEntityID());
+            }
+        });
+        entityContext.event().addEntityCreateListener(BaseEntity.class, "log-entity", baseEntity -> {
+            if (baseEntity instanceof HasEntityLog) {
+                addLogEntity(baseEntity);
+            }
+        });
     }
 
     private static void addLogEntity(BaseEntity entity) {
         if (!globalAppender.logConsumers.containsKey(entity.getEntityID())) {
-            LogConsumer logConsumer =
-                    new LogConsumer(
-                            entity.getEntityID(),
-                            entity.getClass(),
-                            ((HasEntityLog) entity).isDebug());
+            LogConsumer logConsumer = new LogConsumer(entity.getEntityID(), entity.getClass(), ((HasEntityLog) entity).isDebug());
             EntityLogBuilderImpl entityLogBuilder = new EntityLogBuilderImpl(entity, logConsumer);
             ((HasEntityLog) entity).logBuilder(entityLogBuilder);
 
@@ -221,10 +171,7 @@ public class LogService
 
     @SneakyThrows
     private static void sendLogEvent(LogEvent event, ThrowingConsumer<String, Exception> consumer) {
-        boolean entityPrefix =
-                Optional.ofNullable(event.getMessage().getFormat())
-                        .map(s -> s.startsWith("[{}]: "))
-                        .orElse(false);
+        boolean entityPrefix = Optional.ofNullable(event.getMessage().getFormat()).map(s -> s.startsWith("[{}]: ")).orElse(false);
         String message = event.getMessage().getFormattedMessage();
         if (entityPrefix) {
             message = message.substring(message.indexOf("]: ") + 3);
@@ -253,8 +200,7 @@ public class LogService
         return text.length() > 25 ? text.substring(text.length() - 25) : text;
     }
 
-    private static Set<String> fetchAppenderPrefixSet(
-            Configuration configuration, String appenderName) {
+    private static Set<String> fetchAppenderPrefixSet(Configuration configuration, String appenderName) {
         Set<String> prefixSet = new HashSet<>();
         for (LoggerConfig config : configuration.getLoggers().values()) {
             if (config.getAppenders().containsKey(appenderName)) {
@@ -310,17 +256,9 @@ public class LogService
             super("Global", null);
         }
 
-        public synchronized void setEntityContext(EntityContextImpl entityContext) {
-            entityContext
-                    .setting()
-                    .listenValueAndGet(
-                            ConsoleDebugLevelSetting.class,
-                            "log-set-level",
-                            logLevel ->
-                                    this.allowDebugLevel =
-                                            entityContext
-                                                    .setting()
-                                                    .getValue(ConsoleDebugLevelSetting.class));
+        public synchronized void setEntityContext(EntityContextImpl entityContext) throws Exception {
+            entityContext.setting().listenValueAndGet(ConsoleDebugLevelSetting.class, "log-set-level", logLevel ->
+                this.allowDebugLevel = entityContext.setting().getValue(ConsoleDebugLevelSetting.class));
             this.logStrategy = event -> sendLogs(entityContext, event);
             flushBufferedLogs();
         }
@@ -328,17 +266,12 @@ public class LogService
         // Scan LogConsumers and send to ui if match
         private void sendLogs(EntityContextImpl entityContext, LogEvent event) {
             if (allowDebugLevel && event.getLevel().intLevel() <= Level.DEBUG.intLevel()
-                    || !allowDebugLevel && event.getLevel().intLevel() <= Level.INFO.intLevel()) {
+                || !allowDebugLevel && event.getLevel().intLevel() <= Level.INFO.intLevel()) {
                 for (Entry<String, DefinedAppenderConsumer> entry : definedAppender.entrySet()) {
                     if (entry.getValue().accept(event.getLoggerName())) {
-                        sendLogEvent(
-                                event,
-                                message -> {
-                                    entityContext
-                                            .ui()
-                                            .sendDynamicUpdate(
-                                                    "appender-log-" + entry.getKey(), message);
-                                });
+                        sendLogEvent(event, message -> {
+                            entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message);
+                        });
                     }
                 }
             }
@@ -347,18 +280,10 @@ public class LogService
                     return;
                 }
                 if (logConsumer.logTopics.stream().anyMatch(l -> l.test(event))) {
-                    sendLogEvent(
-                            event,
-                            message -> {
-                                Files.writeString(
-                                        logConsumer.path,
-                                        message + System.lineSeparator(),
-                                        StandardOpenOption.APPEND);
-                                entityContext
-                                        .ui()
-                                        .sendDynamicUpdate(
-                                                "entity-log-" + logConsumer.entityID, message);
-                            });
+                    sendLogEvent(event, message -> {
+                        Files.writeString(logConsumer.path, message + System.lineSeparator(), StandardOpenOption.APPEND);
+                        entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, message);
+                    });
                 }
             }
         }
@@ -410,15 +335,9 @@ public class LogService
             this.entityID = entityID;
             this.targetClass = targetClass;
             this.className = targetClass.getSimpleName();
-            this.path =
-                    TouchHomeUtils.getOrCreatePath("logs/entities/" + className)
-                            .resolve(entityID + ".log");
+            this.path = TouchHomeUtils.getOrCreatePath("logs/entities/" + className).resolve(entityID + ".log");
             this.debug = debug;
-            Files.write(
-                    path,
-                    new byte[0],
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.TRUNCATE_EXISTING);
+            Files.write(path, new byte[0], StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         }
     }
 
@@ -431,40 +350,22 @@ public class LogService
         @SneakyThrows
         @Override
         public void addTopic(Class<?> topicClass, String filterByField) {
-            String filterValue =
-                    isEmpty(filterByField)
-                            ? null
-                            : String.valueOf(
-                                    MethodUtils.invokeMethod(
-                                            entity, "get" + StringUtils.capitalize(filterByField)));
+            String filterValue = isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity,
+                "get" + StringUtils.capitalize(filterByField)));
             String topic = topicClass.getName();
-            logConsumer.logTopics.add(
-                    filterValue == null
-                            ? logEvent -> logEvent.getLoggerName().startsWith(topic)
-                            : logEvent ->
-                                    logEvent.getLoggerName().startsWith(topic)
-                                            && logEvent.getMessage()
-                                                    .getFormattedMessage()
-                                                    .contains(filterValue));
+            logConsumer.logTopics.add(filterValue == null
+                ? logEvent -> logEvent.getLoggerName().startsWith(topic)
+                : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
         }
 
         @Override
         @SneakyThrows
         public void addTopic(String topic, String filterByField) {
             String filterValue =
-                    isEmpty(filterByField)
-                            ? null
-                            : String.valueOf(
-                                    MethodUtils.invokeMethod(
-                                            entity, "get" + StringUtils.capitalize(filterByField)));
-            logConsumer.logTopics.add(
-                    filterValue == null
-                            ? logEvent -> logEvent.getLoggerName().startsWith(topic)
-                            : logEvent ->
-                                    logEvent.getLoggerName().startsWith(topic)
-                                            && logEvent.getMessage()
-                                                    .getFormattedMessage()
-                                                    .contains(filterValue));
+                isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity, "get" + StringUtils.capitalize(filterByField)));
+            logConsumer.logTopics.add(filterValue == null
+                ? logEvent -> logEvent.getLoggerName().startsWith(topic)
+                : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
         }
     }
 }

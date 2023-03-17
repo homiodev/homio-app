@@ -70,6 +70,15 @@
   </build>
   <dependencies>
     <dependency>
+      <artifactId>maverick-synergy-client</artifactId>
+      <groupId>com.sshtools</groupId>
+      <version>3.0.10</version>
+    </dependency>
+    <dependency>
+      <artifactId>jsch</artifactId>
+      <groupId>com.jcraft</groupId>
+    </dependency>
+    <dependency>
       <groupId>tech.units</groupId>
       <artifactId>indriya</artifactId>
       <scope>compile</scope>
@@ -364,13 +373,6 @@
       <artifactId>commons-net</artifactId>
       <groupId>commons-net</groupId>
       <version>3.6</version>
-    </dependency>
-
-
-    <dependency>
-      <artifactId>touchhome-bundle-cloud</artifactId>
-      <groupId>org.touchhome.bundle</groupId>
-      <version>${touchhome-bundle.version}</version>
     </dependency>
 
     <dependency>

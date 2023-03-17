@@ -1,4 +1,4 @@
-package org.touchhome.app.setting.system;
+package org.touchhome.app.setting.system.auth;
 
 import org.touchhome.app.setting.CoreSettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginBoolean;
@@ -23,6 +23,6 @@ public class SystemDisableAuthTokenOnRestartSetting
 
     @Override
     public int order() {
-        return 400;
+        return 300;
     }
 }

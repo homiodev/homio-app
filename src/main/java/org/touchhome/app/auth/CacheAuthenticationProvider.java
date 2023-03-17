@@ -5,28 +5,19 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.touchhome.app.repository.UserRepository;
-import org.touchhome.bundle.api.entity.UserEntity;
 
-/**
- * Checks with encoded password and raw
- */
-// TODO: need double check this functionality
-public class DoubleCheckPasswordAuthenticationProvider extends DaoAuthenticationProvider {
+public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
 
     private static final int MAX_ATTEMPT = 10;
-    private final UserRepository userRepository;
 
     private final LoadingCache<String, Integer> attemptsCache;
 
-    public DoubleCheckPasswordAuthenticationProvider(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public CacheAuthenticationProvider() {
         this.attemptsCache = CacheBuilder.newBuilder().
                                          expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<String, Integer>() {
                 public Integer load(@SuppressWarnings("NullableProblems") String ignore) {
@@ -49,23 +40,15 @@ public class DoubleCheckPasswordAuthenticationProvider extends DaoAuthentication
             throw new BadCredentialsException("USER.BLOCKED");
         }
 
-        Credentials credentials = (Credentials) authentication.getCredentials();
+        String password = (String) authentication.getCredentials();
 
         try {
-            checkPassword(userDetails, credentials.getPassword());
-        } catch (BadCredentialsException ex) {
-            if (StringUtils.isNotEmpty(credentials.getOp())) {
-                try {
-                    checkPassword(userDetails, credentials.getOp());
-                } catch (BadCredentialsException ex2) {
-                    attemptsCache.put(userDetails.getUsername(), getAttempts(userDetails.getUsername()));
-                    throw ex2;
-                }
-                // time to change password
-                UserEntity user = userRepository.getUser((String) authentication.getPrincipal());
-                userRepository.save(user.setPassword(credentials.getOp(), getPasswordEncoder()));
-            }
+            checkPassword(userDetails, password);
+        } catch (Exception ex) {
+            attemptsCache.put(userDetails.getUsername(), getAttempts(userDetails.getUsername()));
+            throw ex;
         }
+
         attemptsCache.invalidate(userDetails.getUsername());
     }
 

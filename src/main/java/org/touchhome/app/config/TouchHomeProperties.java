@@ -12,13 +12,22 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "touchhome")
 public class TouchHomeProperties {
 
-  private String version;
-  private int httpPort;
-  private String serverSiteURL;
-  private boolean disableSecurity;
-  private Duration internetTestInterval;
-  private Duration checkPortInterval;
-  private Duration minScriptThreadSleep;
-  private Duration maxJavaScriptOnceCallBeforeInterrupt;
-  private Duration maxJavaScriptCompileBeforeInterrupt;
+    private Cloud cloud;
+    private String version;
+    private int httpPort;
+    private String serverSiteURL;
+    private boolean disableSecurity;
+    private Duration internetTestInterval;
+    private Duration checkPortInterval;
+    private Duration minScriptThreadSleep;
+    private Duration maxJavaScriptOnceCallBeforeInterrupt;
+    private Duration maxJavaScriptCompileBeforeInterrupt;
+
+    @Getter
+    @Setter
+    public static class Cloud {
+
+        private String hostname;
+        private String loginUrl;
+    }
 }

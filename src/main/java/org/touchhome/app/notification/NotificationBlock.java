@@ -1,14 +1,11 @@
 package org.touchhome.app.notification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.rabbitmq.client.AMQP.Basic.Consume;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -50,8 +47,9 @@ public class NotificationBlock {
         this.statusColor = status == null ? null : status.getColor();
     }
 
-    public void addInfo(String info, String color, String icon, String iconColor, String buttonIcon, String buttonText, UIActionHandler handler) {
-        Info infoItem = new Info(info, color, icon, iconColor, buttonIcon, buttonText, handler);
+    public void addInfo(String info, String color, String icon, String iconColor, String buttonIcon, String buttonText,
+        String confirmMessage, UIActionHandler handler) {
+        Info infoItem = new Info(info, color, icon, iconColor, buttonIcon, buttonText, confirmMessage, handler);
         if (handler != null) {
             infoItem.actionEntityID = String.valueOf(Objects.hash(info, icon, buttonIcon, buttonText));
         }
@@ -73,6 +71,7 @@ public class NotificationBlock {
         private final String iconColor;
         private final String buttonIcon;
         private final String buttonText;
+        private final String confirmMessage;
         @JsonIgnore
         private final UIActionHandler handler;
         public String actionEntityID;

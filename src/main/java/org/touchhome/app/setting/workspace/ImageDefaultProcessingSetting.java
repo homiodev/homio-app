@@ -5,9 +5,9 @@ import org.touchhome.app.setting.CoreSettingPlugin;
 import org.touchhome.bundle.api.service.ImageProviderService;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsBean;
 
-public class ImageDefaultProcessingSetting
-        implements CoreSettingPlugin<ImageProviderService>,
-                SettingPluginOptionsBean<ImageProviderService> {
+public class ImageDefaultProcessingSetting implements
+    CoreSettingPlugin<ImageProviderService>,
+    SettingPluginOptionsBean<ImageProviderService> {
 
     @Override
     public GroupKey getGroupKey() {

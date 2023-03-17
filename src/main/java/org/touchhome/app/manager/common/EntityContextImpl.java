@@ -52,6 +52,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -90,11 +93,13 @@ import org.touchhome.app.rest.ConsoleController;
 import org.touchhome.app.rest.FileSystemController;
 import org.touchhome.app.rest.ItemController;
 import org.touchhome.app.rest.SettingController;
+import org.touchhome.app.service.cloud.CloudService;
 import org.touchhome.app.setting.ScanMicroControllersSetting;
 import org.touchhome.app.setting.ScanVideoStreamSourcesSetting;
 import org.touchhome.app.setting.system.SystemClearCacheButtonSetting;
 import org.touchhome.app.setting.system.SystemLanguageSetting;
 import org.touchhome.app.setting.system.SystemShowEntityStateSetting;
+import org.touchhome.app.setting.system.auth.SystemUserSetting;
 import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.app.utils.HardwareUtils;
@@ -106,6 +111,7 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
 import org.touchhome.bundle.api.entity.DisableCacheEntity;
+import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
@@ -156,6 +162,7 @@ public class EntityContextImpl implements EntityContext {
         BEAN_CONTEXT_CREATED.add(BundleContextService.class);
         BEAN_CONTEXT_CREATED.add(ScriptService.class);
         BEAN_CONTEXT_CREATED.add(JwtTokenProvider.class);
+        BEAN_CONTEXT_CREATED.add(CloudService.class);
 
         BEAN_CONTEXT_REFRESH.add(FileSystemController.class);
         BEAN_CONTEXT_REFRESH.add(BundleService.class);
@@ -228,7 +235,8 @@ public class EntityContextImpl implements EntityContext {
 
         rebuildAllRepositories(applicationContext, true);
 
-        getBean(UserService.class).ensureUserExists();
+        userConfiguration();
+
         ComputerBoardEntity.ensureDeviceExists(this);
         setting().fetchSettingPlugins(null, classFinder, true);
 
@@ -265,6 +273,29 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextStorage.init();
 
         runUtilBackgroundServices(applicationContext);
+    }
+
+    private void userConfiguration() {
+        getBean(UserService.class).ensureUserExists();
+
+        setting().listenValueInRequest(SystemUserSetting.class, "user", json -> {
+            if (json != null) {
+                UserEntity user = getUserRequire();
+                // authenticate
+                AuthenticationProvider authenticationProvider = getBean(AuthenticationProvider.class);
+                authenticationProvider.authenticate(new UsernamePasswordAuthenticationToken(
+                    user.getUserId(), json.getString("currentPassword")));
+                if (!json.getString("newPassword").equals(json.getString("repeatNewPassword"))) {
+                    throw new IllegalArgumentException("user.password_not_match");
+                }
+
+                PasswordEncoder passwordEncoder = getBean(PasswordEncoder.class);
+                save(user
+                    .setUserId(json.getString("email"))
+                    .setName(json.getString("name"))
+                    .setPassword(json.getString("newPassword"), passwordEncoder));
+            }
+        });
     }
 
     private void updateNotificationBlock() {

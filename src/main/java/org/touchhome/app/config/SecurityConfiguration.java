@@ -15,11 +15,10 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.touchhome.app.auth.DoubleCheckPasswordAuthenticationProvider;
+import org.touchhome.app.auth.CacheAuthenticationProvider;
 import org.touchhome.app.auth.JwtTokenFilterConfigurer;
 import org.touchhome.app.auth.JwtTokenProvider;
 import org.touchhome.app.auth.UserEntityDetailsService;
-import org.touchhome.app.repository.UserRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -70,22 +69,16 @@ public class SecurityConfiguration {
         return http.build();
     }
 
-    /*@Override
-    @Bean(name = "authenticationManager")
-    public AuthenticationManager authenticationManagerBean() throws Exception {
-        return super.authenticationManagerBean();
-    }*/
-
     @Bean
     public AuthenticationManager authManager(HttpSecurity http) throws Exception {
         val authenticationManagerBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
-        authenticationManagerBuilder.authenticationProvider(authenticationProvider(null));
+        authenticationManagerBuilder.authenticationProvider(authenticationProvider());
         return authenticationManagerBuilder.build();
     }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider(UserRepository userRepository) {
-        DoubleCheckPasswordAuthenticationProvider authProvider = new DoubleCheckPasswordAuthenticationProvider(userRepository);
+    public DaoAuthenticationProvider authenticationProvider() {
+        CacheAuthenticationProvider authProvider = new CacheAuthenticationProvider();
         authProvider.setUserDetailsService(userEntityDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;

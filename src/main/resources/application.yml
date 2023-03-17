@@ -2,6 +2,9 @@ rootDir: /opt/touchhome
 artifactoryFilesURL: https://touchhome.jfrog.io/artifactory/files-remote
 
 touchhome:
+  cloud:
+    hostname: touchhome.org
+    login-url: https://touchhome.org/server/auth/sync
   version: @project.version@
   internet-test-interval: PT10S
   max-java-script-compile-before-interrupt: PT5S

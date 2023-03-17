@@ -3,6 +3,7 @@ package org.touchhome.app.manager.common.impl;
 import static org.touchhome.app.manager.common.impl.EntityContextUIImpl.GlobalSendType.setting;
 import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
 
+import com.pivovarit.function.ThrowingConsumer;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -10,7 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -38,8 +39,10 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
     public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
     private static final Map<SettingPlugin, String> settingTransientState = new HashMap<>();
+    private static final Map<String, Function<String, String>> settingValuePostProcessors = new HashMap<>();
     private static final Map<String, SettingPlugin> settingPluginsByPluginClass = new HashMap<>();
-    private final Map<String, Map<String, Consumer<?>>> settingListeners = new HashMap<>();
+    private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> settingListeners = new HashMap<>();
+    private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> httpRequestSettingListeners = new HashMap<>();
     private final EntityContextImpl entityContext;
 
     public static List<SettingPlugin> settingPluginsBy(Predicate<SettingPlugin> predicate) {
@@ -93,6 +96,13 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         }
     }
 
+    /**
+     * This is post processor that convert raw/saved/default values by using string<->string converter
+     */
+    public <T> void setSettingRawConverterValue(Class<? extends SettingPlugin<T>> settingPluginClazz, Function<String, String> handler) {
+        settingValuePostProcessors.put(settingPluginClazz.getName(), handler);
+    }
+
     @Override
     public <T> T getValue(Class<? extends SettingPlugin<T>> settingPluginClazz) {
         SettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
@@ -102,27 +112,35 @@ public class EntityContextSettingImpl implements EntityContextSetting {
 
     @Override
     public <T> String getRawValue(Class<? extends SettingPlugin<T>> settingPluginClazz) {
-        SettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
+        String key = settingPluginClazz.getName();
+        SettingPlugin<T> pluginFor = settingPluginsByPluginClass.get(key);
+        String value;
         if (pluginFor.transientState()) {
-            return settingTransientState.get(pluginFor);
+            value = settingTransientState.get(pluginFor);
         } else {
             SettingEntity settingEntity = entityContext.getEntity(SettingEntity.getKey(pluginFor));
-            return settingEntity == null ? null : settingEntity.getValue();
+            value = settingEntity == null ? null : settingEntity.getValue();
         }
+        if (settingValuePostProcessors.containsKey(key)) {
+            value = settingValuePostProcessors.get(key).apply(value);
+        }
+
+        return value;
     }
 
     @Override
-    public <T> void listenValueAsync(Class<? extends SettingPlugin<T>> settingClass, String key, Consumer<T> listener) {
-        listenValue(settingClass, key, value -> this.entityContext.bgp().builder(key).execute(() -> listener.accept(value)));
+    public <T> void listenValueInRequest(Class<? extends SettingPlugin<T>> settingClass, String key, ThrowingConsumer<T, Exception> listener) {
+        httpRequestSettingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
+        httpRequestSettingListeners.get(settingClass.getName()).put(key, listener);
     }
 
     @Override
-    public <T> void listenValue(Class<? extends SettingPlugin<T>> settingClass, String key, Consumer<T> listener) {
+    public <T> void listenValue(Class<? extends SettingPlugin<T>> settingClass, String key, ThrowingConsumer<T, Exception> listener) {
         settingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
         settingListeners.get(settingClass.getName()).put(key, listener);
     }
 
-    public void listenObjectValue(Class<?> settingClass, String key, Consumer<Object> listener) {
+    public void listenObjectValue(Class<?> settingClass, String key, ThrowingConsumer<Object, Exception> listener) {
         settingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
         settingListeners.get(settingClass.getName()).put(key, listener);
     }
@@ -132,11 +150,8 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         if (settingListeners.containsKey(settingClass.getName())) {
             settingListeners.get(settingClass.getName()).remove(key);
         }
-    }
-
-    public void unListenWithPrefix(String prefix) {
-        for (Map<String, Consumer<?>> entryMap : settingListeners.values()) {
-            entryMap.keySet().removeIf(s -> s.startsWith(prefix));
+        if (httpRequestSettingListeners.containsKey(settingClass.getName())) {
+            httpRequestSettingListeners.get(settingClass.getName()).remove(key);
         }
     }
 
@@ -153,24 +168,20 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         setValueSilenceRaw(settingPluginsByPluginClass.get(settingPluginClazz.getName()), value);
     }
 
-    private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value, SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
-        if (settingListeners.containsKey(settingPluginClazz.getName())) {
-            entityContext.bgp().builder("update-setting-" + settingPluginClazz.getSimpleName()).execute(() -> {
-                for (Consumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {
-                    try {
-                        consumer.accept(value);
-                    } catch (Exception ex) {
-                        entityContext.ui().sendErrorMessage(ex);
-                        log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value, ex);
-                    }
-                }
-            });
-        }
-        entityContext.event().fireEvent(SettingEntity.getKey(settingPluginClazz), StringUtils.defaultIfEmpty(strValue, pluginFor.getDefaultValue()));
-
-        if (fireUpdatesToUI) {
-            entityContext.ui().sendGlobal(setting, SettingEntity.getKey(settingPluginClazz), value, null,
-                OBJECT_MAPPER.createObjectNode().put("subType", "single"));
+    @SneakyThrows
+    public void updatePlugins(Class<? extends SettingPlugin> settingPluginClass, boolean addBundle) {
+        if (Modifier.isPublic(settingPluginClass.getModifiers())) {
+            SettingPlugin settingPlugin = settingPluginClass.newInstance();
+            String key = SettingEntity.getKey(settingPlugin);
+            if (addBundle) {
+                settingPluginsByPluginKey.put(key, settingPlugin);
+                settingPluginsByPluginClass.put(settingPluginClass.getName(), settingPlugin);
+            } else {
+                settingPluginsByPluginKey.remove(key);
+                settingPluginsByPluginClass.remove(settingPluginClass.getName());
+                settingListeners.remove(settingPluginClass.getName());
+                httpRequestSettingListeners.remove(settingPluginClass.getName());
+            }
         }
     }
 
@@ -184,19 +195,37 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         fireNotifyHandlers(settingPluginClazz, value, pluginFor, settingEntity.getValue(), true);
     }
 
-    @SneakyThrows
-    public void updatePlugins(Class<? extends SettingPlugin> settingPluginClass, boolean addBundle) {
-        if (Modifier.isPublic(settingPluginClass.getModifiers())) {
-            SettingPlugin settingPlugin = settingPluginClass.newInstance();
-            String key = SettingEntity.getKey(settingPlugin);
-            if (addBundle) {
-                settingPluginsByPluginKey.put(key, settingPlugin);
-                settingPluginsByPluginClass.put(settingPluginClass.getName(), settingPlugin);
-            } else {
-                settingPluginsByPluginKey.remove(key);
-                settingPluginsByPluginClass.remove(settingPluginClass.getName());
-                settingListeners.remove(settingPluginClass.getName());
+    private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value,
+        SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
+        if (settingListeners.containsKey(settingPluginClazz.getName())) {
+            entityContext.bgp().builder("update-setting-" + settingPluginClazz.getSimpleName()).execute(() -> {
+                for (ThrowingConsumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {
+                    try {
+                        consumer.accept(value);
+                    } catch (Exception ex) {
+                        entityContext.ui().sendErrorMessage(ex);
+                        log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value, ex);
+                    }
+                }
+            });
+        }
+        Map<String, ThrowingConsumer<?, Exception>> requestListeners = httpRequestSettingListeners.get(settingPluginClazz.getName());
+        if (requestListeners != null) {
+            for (ThrowingConsumer consumer : requestListeners.values()) {
+                try {
+                    consumer.accept(value);
+                } catch (Exception ex) {
+                    entityContext.ui().sendErrorMessage(ex);
+                    log.error("Error while fire listener for setting <{}>. Value: <{}>", settingPluginClazz.getSimpleName(), value, ex);
+                }
             }
+        }
+
+        entityContext.event().fireEvent(SettingEntity.getKey(settingPluginClazz), StringUtils.defaultIfEmpty(strValue, pluginFor.getDefaultValue()));
+
+        if (fireUpdatesToUI) {
+            entityContext.ui().sendGlobal(setting, SettingEntity.getKey(settingPluginClazz), value, null,
+                OBJECT_MAPPER.createObjectNode().put("subType", "single"));
         }
     }
 

@@ -8,7 +8,9 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.HashSet;
 import javax.validation.Valid;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -49,7 +51,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public String login(@Valid @RequestBody Credentials credentials) {
+    public String login(@Valid @RequestBody LoginRequest credentials) {
         log.info("Login <{}>", credentials.getEmail());
         try {
             String username = credentials.getEmail();
@@ -62,17 +64,17 @@ public class AuthController {
 
     @Secured(ADMIN_ROLE)
     @PostMapping("/user/guest")
-    public UserEntity createGuestUser(@Valid @RequestBody Credentials credentials) {
+    public UserEntity createGuestUser(@Valid @RequestBody LoginRequest credentials) {
         return createUser(credentials, GUEST_ROLE);
     }
 
     @Secured(ADMIN_ROLE)
     @PostMapping("/user/privileged")
-    public UserEntity createPrivilegedUser(@Valid @RequestBody Credentials credentials) {
+    public UserEntity createPrivilegedUser(@Valid @RequestBody LoginRequest credentials) {
         return createUser(credentials, PRIVILEGED_USER_ROLE, GUEST_ROLE);
     }
 
-    private UserEntity createUser(@Valid @RequestBody Credentials credentials, String... roles) {
+    private UserEntity createUser(@Valid @RequestBody LoginRequest credentials, String... roles) {
         log.info("Create guest user <{}>", credentials.getEmail());
         UserEntity user = userRepository.getUser(credentials.getEmail());
         if (user != null) {
@@ -83,5 +85,13 @@ public class AuthController {
             .setUserId(credentials.getEmail())
             .setPassword(credentials.getPassword(), this.passwordEncoder)
             .setRoles(new HashSet<>(Arrays.asList(roles))));
+    }
+
+    @Getter
+    @Setter
+    public static class LoginRequest {
+
+        private String email;
+        private String password;
     }
 }

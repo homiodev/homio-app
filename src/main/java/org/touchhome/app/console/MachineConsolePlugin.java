@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,13 +18,11 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.console.ConsolePluginTable;
-import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
 import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.util.BoardInfo;
-import org.touchhome.bundle.cloud.setting.ConsoleCloudProviderSetting;
 
 @Component
 @RequiredArgsConstructor
@@ -45,8 +42,6 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
   @Override
   @SneakyThrows
   public Collection<HardwarePluginEntity> getValue() {
-    UserEntity user = entityContext.getUserRequire(false);
-
     List<HardwarePluginEntity> list = new ArrayList<>();
 
     list.add(new HardwarePluginEntity("Cpu load", machineHardwareRepository.getCpuLoad()));
@@ -67,10 +62,6 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     list.add(new HardwarePluginEntity("IP address", networkHardwareRepository.getIPAddress()));
     list.add(new HardwarePluginEntity("Device model",
         EntityContextSetting.isLinuxEnvironment() ? machineHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
-    list.add(new HardwarePluginEntity("Cloud status",
-        this.entityContext.setting().getValue(ConsoleCloudProviderSetting.class).getStatus()));
-    list.add(new HardwarePluginEntity("Cloud keystore",
-        user.getKeystoreDate() == null ? "" : String.valueOf(user.getKeystoreDate().getTime())));
 
     list.add(new HardwarePluginEntity("Processor", BoardInfo.processor));
     list.add(new HardwarePluginEntity("BogoMIPS", BoardInfo.bogoMIPS));

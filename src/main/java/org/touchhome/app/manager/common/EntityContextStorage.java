@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -43,7 +44,7 @@ public class EntityContextStorage {
             }
 
             @Override
-            public Object getValue(HasEntityIdentifier entity, String key, Object defaultValue) {
+            public Object getValue(@NotNull HasEntityIdentifier entity, @NotNull String key, Object defaultValue) {
                 EntityMemoryData data = ENTITY_MEMORY_MAP.computeIfAbsent(entity.getEntityID(), s -> new EntityMemoryData());
                 return data.VALUE_MAP.getOrDefault(key, defaultValue);
             }
@@ -90,6 +91,7 @@ public class EntityContextStorage {
         initSystemCpuListening();
     }
 
+    @SneakyThrows
     private void initSystemCpuListening() {
         entityContext.var().createGroup("hardware", "Hardware", true, "fas fa-microchip",
             "#31BDB6", "sys.hardware");
