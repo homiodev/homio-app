@@ -12,8 +12,8 @@ import lombok.Setter;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.ui.action.UIActionHandler;
+import org.touchhome.bundle.api.ui.field.ProgressBar;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.touchhome.common.model.ProgressBar;
 
 @Getter
 @RequiredArgsConstructor

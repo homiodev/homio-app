@@ -32,8 +32,16 @@ public class SystemUserSetting implements CoreSettingPlugin<JSONObject>, Setting
     }
 
     @Override
+    public String getIconColor() {
+        return "#C8AF20";
+    }
+
+    @Override
     public List<ActionInputParameter> getInputParameters(EntityContext entityContext, String value) {
-        UserEntity user = entityContext.getUserRequire();
+        UserEntity user = entityContext.getUser(false);
+        if (user == null) {
+            return null;
+        }
         return Arrays.asList(
             ActionInputParameter.email("email", user.getUserId()),
             ActionInputParameter.text("name", user.getName(), "pattern:.{3}"),

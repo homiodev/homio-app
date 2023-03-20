@@ -60,6 +60,7 @@ import org.touchhome.app.utils.JavaScriptBuilderImpl;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
+import org.touchhome.bundle.api.fs.FileSystemProvider;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.action.UIActionHandler;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
@@ -68,11 +69,10 @@ import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.video.BaseFFMPEGVideoStreamEntity;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.widget.WidgetJSBaseTemplate;
-import org.touchhome.common.exception.NotFoundException;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.fs.FileSystemProvider;
-import org.touchhome.common.fs.TreeNode;
-import org.touchhome.common.util.Lang;
+import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.fs.TreeNode;
+import org.touchhome.bundle.api.util.Lang;
 
 @Log4j2
 @RestController
@@ -313,7 +313,7 @@ public class WidgetController {
                 jsEntity.setJavaScriptResponse(scriptService.runJavaScript(compileScriptContext).stringValue());
 
             } catch (Exception ex) {
-                jsEntity.setJavaScriptErrorResponse(CommonUtils.getErrorMessage(ex));
+                jsEntity.setJavaScriptErrorResponse(TouchHomeUtils.getErrorMessage(ex));
             }
         }*/
     }

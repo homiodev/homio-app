@@ -55,7 +55,7 @@ import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntities;
 import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.touchhome.bundle.api.ui.field.inline.UIFieldInlineGroup;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Entity
 @Setter
@@ -158,11 +158,11 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
 
     @Override
     protected void beforePersist() {
-        setGroupId(defaultIfEmpty(groupId, CommonUtils.generateUUID()));
+        setGroupId(defaultIfEmpty(groupId, TouchHomeUtils.generateUUID()));
         setEntityID(PREFIX + groupId);
         setIcon(defaultIfEmpty(icon, "fas fa-layer-group"));
         setIconColor(defaultIfEmpty(iconColor, "#28A60C"));
-        setName(defaultIfEmpty(getName(), CommonUtils.generateUUID()));
+        setName(defaultIfEmpty(getName(), TouchHomeUtils.generateUUID()));
     }
 
     @UIField(order = 9999, hideInEdit = true)

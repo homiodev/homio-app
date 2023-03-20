@@ -43,8 +43,7 @@ import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.bundle.api.exception.ServerException;
 
 /**
  * TODO: refactor code
@@ -87,7 +86,7 @@ public class LoggerService implements ContextCreated {
                     try {
                         Files.delete(file);
                     } catch (Exception ex) {
-                        log.error("Can't delete lock file: <{}>", CommonUtils.getErrorMessage(ex), ex);
+                        log.error("Can't delete lock file: <{}>", TouchHomeUtils.getErrorMessage(ex), ex);
                     }
                 }
                 return FileVisitResult.CONTINUE;

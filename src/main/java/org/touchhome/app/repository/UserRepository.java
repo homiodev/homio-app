@@ -1,6 +1,7 @@
 package org.touchhome.app.repository;
 
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.touchhome.bundle.api.entity.UserEntity;
@@ -15,7 +16,8 @@ public class UserRepository extends AbstractRepository<UserEntity> {
     }
 
     @Transactional(readOnly = true)
-    public UserEntity getUser(String email) {
-        return findSingleByField("userId", email);
+    public @Nullable UserEntity getUser(String name) {
+        return em.createQuery("FROM " + getEntityClass().getSimpleName() + " where userId = :value OR name = :value", getEntityClass())
+                 .setParameter("value", name).getResultList().stream().findAny().orElse(null);
     }
 }

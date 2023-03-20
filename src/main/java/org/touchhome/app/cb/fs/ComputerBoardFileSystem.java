@@ -2,7 +2,7 @@ package org.touchhome.app.cb.fs;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
-import static org.touchhome.bundle.api.util.TouchHomeUtils.TIKA;
+import static org.touchhome.app.utils.InternalUtil.TIKA;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -35,10 +35,10 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.touchhome.app.cb.ComputerBoardEntity;
-import org.touchhome.common.fs.FileSystemProvider;
-import org.touchhome.common.fs.TreeNode;
-import org.touchhome.common.util.ArchiveUtil;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.bundle.api.fs.FileSystemProvider;
+import org.touchhome.bundle.api.fs.TreeNode;
+import org.touchhome.bundle.api.fs.archive.ArchiveUtil;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @AllArgsConstructor
 public class ComputerBoardFileSystem implements FileSystemProvider {
@@ -176,7 +176,7 @@ public class ComputerBoardFileSystem implements FileSystemProvider {
         for (String id : ids) {
             Path path = buildPath(id);
             if (Files.isDirectory(path)) {
-                removedFiles.addAll(CommonUtils.removeFileOrDirectory(path));
+                removedFiles.addAll(TouchHomeUtils.removeFileOrDirectory(path));
             } else {
                 if (Files.exists(path)) {
                     removedFiles.add(path);
@@ -322,7 +322,7 @@ public class ComputerBoardFileSystem implements FileSystemProvider {
             return;
         }
 
-        boolean hasFileInPathname = !CommonUtils.getExtension(targetPath.toString()).isEmpty();
+        boolean hasFileInPathname = !TouchHomeUtils.getExtension(targetPath.toString()).isEmpty();
         if (!hasFileInPathname) {
             Files.createDirectories(targetPath);
         } else {

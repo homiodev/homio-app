@@ -5,6 +5,7 @@ import lombok.val;
 import org.apache.catalina.filters.RequestFilter;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
+import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,6 +14,7 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.cache.SpringCacheBasedUserCache;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.touchhome.app.auth.CacheAuthenticationProvider;
@@ -80,6 +82,7 @@ public class SecurityConfiguration {
     public DaoAuthenticationProvider authenticationProvider() {
         CacheAuthenticationProvider authProvider = new CacheAuthenticationProvider();
         authProvider.setUserDetailsService(userEntityDetailsService);
+        authProvider.setUserCache(new SpringCacheBasedUserCache(new ConcurrentMapCache("auth-users")));
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }

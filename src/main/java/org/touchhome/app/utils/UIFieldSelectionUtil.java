@@ -1,11 +1,10 @@
 package org.touchhome.app.utils;
 
-import static java.lang.String.format;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.touchhome.app.utils.UIFieldUtils.fetchRequestWidgetType;
-import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -46,6 +45,7 @@ import org.touchhome.bundle.api.entity.widget.ability.HasAggregateValueFromSerie
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.SelectDataSourceDescription;
+import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.ui.action.DynamicOptionLoader;
@@ -62,9 +62,8 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldStaticSelection;
 import org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
-import org.touchhome.common.exception.NotFoundException;
-import org.touchhome.common.util.CommonUtils;
-import org.touchhome.common.util.Lang;
+import org.touchhome.bundle.api.util.Lang;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Log4j2
 public final class UIFieldSelectionUtil {
@@ -76,7 +75,7 @@ public final class UIFieldSelectionUtil {
     private static List<OptionModel> getOptionsForClassSelection(EntityContext entityContext, UIFieldClassSelection uiFieldClassSelection) {
         ClassFinder classFinder = entityContext.getBean(ClassFinder.class);
         List<Class<?>> list = classFinder.getClassesWithParent((Class<Object>) uiFieldClassSelection.value());
-        Predicate<Class<?>> predicate = CommonUtils.newInstance(uiFieldClassSelection.filter());
+        Predicate<Class<?>> predicate = TouchHomeUtils.newInstance(uiFieldClassSelection.filter());
         return list.stream().filter(predicate).map(c -> OptionModel.of(c.getName(), c.getSimpleName())).collect(Collectors.toList());
     }
 
@@ -206,7 +205,7 @@ public final class UIFieldSelectionUtil {
         UIFieldSelection uiFieldTargetSelection, Map<String, String> deps) {
         DynamicOptionLoader dynamicOptionLoader = null;
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
-            dynamicOptionLoader = (DynamicOptionLoader) CommonUtils.newInstance(targetClass);
+            dynamicOptionLoader = (DynamicOptionLoader) TouchHomeUtils.newInstance(targetClass);
             if (dynamicOptionLoader == null) {
                 throw new RuntimeException(
                     "Unable to instantiate DynamicOptionLoader class: " + targetClass.getName() + ". Does class has public modifier and no args constructor?");
@@ -532,7 +531,7 @@ public final class UIFieldSelectionUtil {
             try {
                 return ((HasGetStatusValue) baseEntity).getStatusValueRepresentation(entityContext);
             } catch (Exception ex) {
-                log.warn("Unable to fetch state value from entity: {}. Msg: {}", baseEntity, CommonUtils.getErrorMessage(ex));
+                log.warn("Unable to fetch state value from entity: {}. Msg: {}", baseEntity, TouchHomeUtils.getErrorMessage(ex));
             }
         }
         return null;

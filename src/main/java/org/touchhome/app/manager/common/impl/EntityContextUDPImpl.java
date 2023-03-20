@@ -12,8 +12,8 @@ import lombok.extern.log4j.Log4j2;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.EntityContextUDP;
-import org.touchhome.common.util.FlowMap;
-import org.touchhome.common.util.Lang;
+import org.touchhome.bundle.api.util.FlowMap;
+import org.touchhome.bundle.api.util.Lang;
 
 @Log4j2
 @RequiredArgsConstructor

@@ -29,7 +29,7 @@ import org.touchhome.app.js.assistant.model.Completion;
 import org.touchhome.app.js.assistant.model.CompletionItemKind;
 import org.touchhome.app.manager.common.ClassFinder;
 import org.touchhome.app.utils.JavaScriptBinder;
-import org.touchhome.common.exception.ServerException;
+import org.touchhome.bundle.api.exception.ServerException;
 
 @Component
 @RequiredArgsConstructor

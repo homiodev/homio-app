@@ -29,10 +29,10 @@ import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.state.RawType;
 import org.touchhome.bundle.api.state.StringType;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.MenuBlock;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.common.util.CommonUtils;
 
 @Getter
 @Component
@@ -162,7 +162,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         HttpMethod method = workspaceBlock.getMenuValue("METHOD", this.methodMenu);
         String url = workspaceBlock.getInputString("URL");
 
-        HttpRequestBase request = CommonUtils.newInstance(method.httpRequestBaseClass);
+        HttpRequestBase request = TouchHomeUtils.newInstance(method.httpRequestBaseClass);
         request.setURI(URI.create(url));
         applyParentBlocks(request, workspaceBlock.getParent());
 
@@ -170,14 +170,9 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
             HttpResponse response = client.execute(request);
 
             if (workspaceBlock.getInputBoolean("RAW")) {
-                workspaceBlock.setValue(
-                        new RawType(IOUtils.toByteArray(response.getEntity().getContent())));
+                workspaceBlock.setValue(new RawType(IOUtils.toByteArray(response.getEntity().getContent())));
             } else {
-                workspaceBlock.setValue(
-                        new StringType(
-                                IOUtils.toString(
-                                        response.getEntity().getContent(),
-                                        StandardCharsets.UTF_8)));
+                workspaceBlock.setValue(new StringType(IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8)));
             }
         }
     }
@@ -197,36 +192,26 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
     @AllArgsConstructor
     private enum HttpApplyHandler {
-        update_payload(
-                (workspaceBlock, request) -> {
-                    if (request instanceof HttpEntityEnclosingRequestBase) {
-                        String payload = workspaceBlock.getInputString("PAYLOAD");
-                        ((HttpEntityEnclosingRequestBase) request)
-                                .setEntity(new StringEntity(payload));
-                    }
-                }),
-        update_bearer_auth(
-                (workspaceBlock, request) -> {
-                    request.setHeader(
-                            AUTHORIZATION, "Basic " + workspaceBlock.getInputString("TOKEN"));
-                }),
-        update_basic_auth(
-                (workspaceBlock, request) -> {
-                    String auth =
-                            workspaceBlock.getInputString("USER")
-                                    + ":"
-                                    + workspaceBlock.getInputString("PWD");
-                    byte[] encodedAuth =
-                            Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
-                    request.setHeader(AUTHORIZATION, "Basic " + new String(encodedAuth));
-                }),
-        update_header(
-                (workspaceBlock, request) -> {
-                    String key = workspaceBlock.getInputString("KEY");
-                    if (StringUtils.isNotEmpty(key)) {
-                        request.setHeader(key, workspaceBlock.getInputString(VALUE));
-                    }
-                });
+        update_payload((workspaceBlock, request) -> {
+            if (request instanceof HttpEntityEnclosingRequestBase) {
+                String payload = workspaceBlock.getInputString("PAYLOAD");
+                ((HttpEntityEnclosingRequestBase) request).setEntity(new StringEntity(payload));
+            }
+        }),
+        update_bearer_auth((workspaceBlock, request) -> {
+            request.setHeader(AUTHORIZATION, "Basic " + workspaceBlock.getInputString("TOKEN"));
+        }),
+        update_basic_auth((workspaceBlock, request) -> {
+            String auth = workspaceBlock.getInputString("USER") + ":" + workspaceBlock.getInputString("PWD");
+            byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
+            request.setHeader(AUTHORIZATION, "Basic " + new String(encodedAuth));
+        }),
+        update_header((workspaceBlock, request) -> {
+            String key = workspaceBlock.getInputString("KEY");
+            if (StringUtils.isNotEmpty(key)) {
+                request.setHeader(key, workspaceBlock.getInputString(VALUE));
+            }
+        });
 
         private final ThrowingBiConsumer<WorkspaceBlock, HttpRequestBase, Exception> applyFn;
     }

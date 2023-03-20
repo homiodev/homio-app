@@ -4,7 +4,7 @@ import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.lang.annotation.Annotation;
@@ -51,6 +51,8 @@ import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.validation.MaxItems;
 import org.touchhome.bundle.api.entity.validation.UIFieldValidationSize;
+import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.UIField;
@@ -109,9 +111,7 @@ import org.touchhome.bundle.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicRequestType;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.touchhome.bundle.api.util.SecureString;
-import org.touchhome.common.exception.NotFoundException;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 public class UIFieldUtils {
 
@@ -162,7 +162,7 @@ public class UIFieldUtils {
         if (entityClassByType == null) {
             return Collections.emptyList();
         }
-        Object instance = CommonUtils.newInstance(entityClassByType);
+        Object instance = TouchHomeUtils.newInstance(entityClassByType);
         if (instance == null) {
             throw new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName());
         }
@@ -195,8 +195,7 @@ public class UIFieldUtils {
             generateUIField(instance, entityUIMetaDataSet, fieldMethodContext, entityContext, fullDisableEdit);
         }
 
-        Set<String> processedMethods =
-            fieldNameToGetters.values().stream().map(UIFieldMethodContext::getMethodName).collect(toSet());
+        Set<String> processedMethods = fieldNameToGetters.values().stream().map(UIFieldMethodContext::getMethodName).collect(toSet());
 
         FieldUtils.getFieldsListWithAnnotation(instance.getClass(), UIField.class).forEach(field -> {
             if (!processedMethods.contains(field.getName())) { // skip if already managed by methods
@@ -757,7 +756,7 @@ public class UIFieldUtils {
             if (inlineType == null) {
                 inlineType = genericType.getActualTypeArguments()[0];
             }
-            Object childClassInstance = CommonUtils.newInstance((Class) inlineType);
+            Object childClassInstance = TouchHomeUtils.newInstance((Class) inlineType);
             boolean fullDisableEdit = fieldContext.getUIField().disableEdit();
             jsonTypeMetadata.set("inlineTypeFields",
                 OBJECT_MAPPER.valueToTree(UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext, fullDisableEdit)));
@@ -995,7 +994,7 @@ public class UIFieldUtils {
                 return methods.get(0).invoke(instance);
             } catch (Exception ex) {
                 throw new RuntimeException("Unable to evaluate default value for method: " + methods.get(0).getName() +
-                    " of instance: " + instance.getClass().getSimpleName() + ". Msg: " + CommonUtils.getErrorMessage(ex));
+                    " of instance: " + instance.getClass().getSimpleName() + ". Msg: " + TouchHomeUtils.getErrorMessage(ex));
             }
         }
 

@@ -5,10 +5,12 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.apache.tika.Tika;
 
 public final class InternalUtil {
 
     public static final double GB_DIVIDER = 1024 * 1024 * 1024;
+    public static final Tika TIKA = new Tika();
 
     public static Method findMethodByName(Class clz, String name) {
         String capitalizeName = StringUtils.capitalize(name);

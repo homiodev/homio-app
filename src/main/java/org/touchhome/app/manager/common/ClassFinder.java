@@ -20,8 +20,8 @@ import org.touchhome.app.extloader.BundleClassLoaderHolder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.repository.AbstractRepository;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -36,7 +36,7 @@ public class ClassFinder {
   public static <T> List<T> createClassesWithParent(Class<T> parentClass, ClassFinder classFinder) {
     List<T> list = new ArrayList<>();
     for (Class<? extends T> clazz : classFinder.getClassesWithParent(parentClass)) {
-      list.add(CommonUtils.newInstance(clazz));
+      list.add(TouchHomeUtils.newInstance(clazz));
     }
     return list;
   }

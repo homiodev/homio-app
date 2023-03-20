@@ -10,8 +10,8 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.setting.CoreSettingPlugin;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.setting.SettingPluginPackageInstall;
-import org.touchhome.common.model.ProgressBar;
-import org.touchhome.common.util.Curl;
+import org.touchhome.bundle.api.ui.field.ProgressBar;
+import org.touchhome.bundle.api.util.Curl;
 
 public class SystemBundleLibraryManagerSetting
         implements SettingPluginPackageInstall, CoreSettingPlugin<JSONObject> {

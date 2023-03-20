@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Component;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Log4j2
 @Component
@@ -19,12 +19,12 @@ public class BundleClassLoaderHolder extends ClassLoader {
   private Map<String, SingleBundleClassLoader> bundleJarClassLoaders = new HashMap<>();
 
   public void setClassLoaders(String bundleId, ClassLoader classLoader) {
-    CommonUtils.addClassLoader(bundleId, classLoader);
+    TouchHomeUtils.addClassLoader(bundleId, classLoader);
     bundleJarClassLoaders.put(bundleId, (SingleBundleClassLoader) classLoader);
   }
 
   void destroy(String bundleName) {
-    CommonUtils.removeClassLoader(bundleName);
+    TouchHomeUtils.removeClassLoader(bundleName);
     bundleJarClassLoaders.remove(bundleName).destroy();
   }
 

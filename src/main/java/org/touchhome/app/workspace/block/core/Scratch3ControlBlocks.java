@@ -22,7 +22,7 @@ import org.touchhome.bundle.api.state.DecimalType;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.common.exception.ServerException;
+import org.touchhome.bundle.api.exception.ServerException;
 
 @Getter
 @Component

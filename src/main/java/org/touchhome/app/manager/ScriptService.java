@@ -38,19 +38,18 @@ import org.touchhome.app.utils.JavaScriptBinder;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.EntityContextBGP.ScheduleBuilder;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.state.State;
 import org.touchhome.bundle.api.state.StringType;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Log4j2
 @Component
 @RequiredArgsConstructor
 public class ScriptService implements ContextCreated {
 
-    private final NashornScriptEngineFactory nashornScriptEngineFactory =
-            new NashornScriptEngineFactory();
+    private final NashornScriptEngineFactory nashornScriptEngineFactory = new NashornScriptEngineFactory();
     private final LoggerService loggerService;
     private final EntityContext entityContext;
     private final BundleClassLoaderHolder bundleClassLoaderHolder;
@@ -72,23 +71,18 @@ public class ScriptService implements ContextCreated {
         for (ScriptEntity scriptEntity : this.entityContext.findAll(ScriptEntity.class)) {
             if (scriptEntity.isAutoStart()) {
                 EntityContextBGP.ThreadContext<Void> threadContext =
-                        this.entityContext
-                                .bgp()
-                                .builder(scriptEntity.getEntityID())
-                                .execute(
-                                        () -> {
-                                            CompileScriptContext compiledScriptContext =
-                                                    createCompiledScript(scriptEntity, null);
-                                            runJavaScript(compiledScriptContext);
-                                        });
-                threadContext.onError(
-                        ex ->
-                                this.entityContext.updateDelayed(
-                                        scriptEntity,
-                                        s ->
-                                                s.setStatus(Status.ERROR)
-                                                        .setError(
-                                                                CommonUtils.getErrorMessage(ex))));
+                    this.entityContext
+                        .bgp()
+                        .builder(scriptEntity.getEntityID())
+                        .execute(
+                            () -> {
+                                CompileScriptContext compiledScriptContext =
+                                    createCompiledScript(scriptEntity, null);
+                                runJavaScript(compiledScriptContext);
+                            });
+                threadContext.onError(ex ->
+                    this.entityContext.updateDelayed(scriptEntity,
+                        s -> s.setStatus(Status.ERROR).setError(TouchHomeUtils.getErrorMessage(ex))));
             }
         }
     }
@@ -167,25 +161,18 @@ public class ScriptService implements ContextCreated {
         if (script.size() == 1) {
             return State.of(script.get(0));
         }
-        return new StringType(
-                String.join(
-                        "", script.stream().map(Object::toString).collect(Collectors.toList())));
+        return new StringType(String.join("", script.stream().map(Object::toString).collect(Collectors.toList())));
     }
 
-    public CompileScriptContext createCompiledScript(
-            ScriptEntity scriptEntity, PrintStream logPrintStream) {
-        ScriptEngine engine =
-                nashornScriptEngineFactory.getScriptEngine(
-                        new String[] {"--global-per-engine"}, bundleClassLoaderHolder);
+    public CompileScriptContext createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream) {
+        ScriptEngine engine = nashornScriptEngineFactory.getScriptEngine(new String[]{"--global-per-engine"}, bundleClassLoaderHolder);
         if (logPrintStream != null) {
             engine.put(JavaScriptBinder.log.name(), loggerService.getLogger(logPrintStream));
         }
         engine.put(JavaScriptBinder.entityContext.name(), entityContext);
         engine.put(JavaScriptBinder.script.name(), scriptEntity);
 
-        JSONObject jsonParams =
-                new JSONObject(
-                        StringUtils.defaultIfEmpty(scriptEntity.getJavaScriptParameters(), "{}"));
+        JSONObject jsonParams = new JSONObject(StringUtils.defaultIfEmpty(scriptEntity.getJavaScriptParameters(), "{}"));
         engine.put(JavaScriptBinder.params.name(), jsonParams);
 
         CompiledScript compiled;
@@ -207,9 +194,9 @@ public class ScriptService implements ContextCreated {
                 createCompiledScriptSingleCallExecutorService.shutdownNow();
                 createCompiledScriptSingleCallExecutorService = Executors.newSingleThreadExecutor();
                 throw new ExecutionException(
-                        "Script evaluation stuck. Got TimeoutException: "
-                                + CommonUtils.getErrorMessage(ex),
-                        ex);
+                    "Script evaluation stuck. Got TimeoutException: "
+                        + TouchHomeUtils.getErrorMessage(ex),
+                    ex);
             }
         } catch (Exception ex) {
             log.error(
@@ -234,7 +221,7 @@ public class ScriptService implements ContextCreated {
         } catch (TimeoutException ex) {
             threadContext.cancel();
             throw new ExecutionException(
-                    "Script stuck. Got TimeoutException: " + CommonUtils.getErrorMessage(ex), ex);
+                "Script stuck. Got TimeoutException: " + TouchHomeUtils.getErrorMessage(ex), ex);
         }
     }
 }

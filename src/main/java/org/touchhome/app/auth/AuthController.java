@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.touchhome.app.repository.UserRepository;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.UserEntity;
-import org.touchhome.common.exception.ServerException;
+import org.touchhome.bundle.api.exception.ServerException;
 
 @Log4j2
 @RestController
@@ -55,8 +55,8 @@ public class AuthController {
         log.info("Login <{}>", credentials.getEmail());
         try {
             String username = credentials.getEmail();
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, credentials));
-            return jwtTokenProvider.createToken(username, userRepository.getUser(username).getRoles());
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, credentials.getPassword()));
+            return jwtTokenProvider.createToken(username, entityContext.getUserRequire().getRoles());
         } catch (AuthenticationException e) {
             throw new BadCredentialsException("Invalid username/password supplied");
         }

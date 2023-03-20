@@ -1,6 +1,8 @@
 package org.touchhome.app.rest;
 
 import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
+import static org.touchhome.app.model.entity.SettingEntity.getKey;
+import static org.touchhome.app.repository.SettingRepository.fulfillEntityFromPlugin;
 import static org.touchhome.bundle.api.util.Constants.ADMIN_ROLE;
 
 import java.util.Collection;
@@ -44,8 +46,8 @@ import org.touchhome.bundle.api.setting.SettingPluginPackageInstall;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.util.Lang;
+import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.util.Lang;
 
 @RestController
 @RequestMapping(value = "/rest/setting", produces = APPLICATION_JSON_VALUE)
@@ -66,17 +68,12 @@ public class SettingController implements ContextRefreshed {
         for (SettingPlugin<?> settingPlugin :
             EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {
-                this.transientSettings.put(
-                    (Class<? extends SettingPlugin<?>>) settingPlugin.getClass(),
-                    SettingRepository.createSettingEntityFromPlugin(
-                        settingPlugin, new SettingEntity(), entityContext));
+                SettingEntity settingEntity = new SettingEntity().setEntityID(getKey(settingPlugin));
+                this.transientSettings.put((Class<? extends SettingPlugin<?>>) settingPlugin.getClass(), settingEntity);
             }
             if (settingPlugin instanceof ConsoleSettingPlugin
                 && !settingPlugin.getClass().getSimpleName().startsWith("Console")) {
-                throw new ServerException(
-                    "Console plugin class <"
-                        + settingPlugin.getClass().getName()
-                        + "> must starts with name 'Console'");
+                throw new ServerException("Console plugin class <" + settingPlugin.getClass().getName() + "> must starts with name 'Console'");
             }
         }
     }
@@ -220,6 +217,9 @@ public class SettingController implements ContextRefreshed {
     public List<SettingEntity> getSettings() {
         List<SettingEntity> settings = entityContext.findAll(SettingEntity.class);
         assembleTransientSettings(settings);
+        for (SettingEntity setting : settings) {
+            fulfillEntityFromPlugin(setting, entityContext, null);
+        }
 
         UserEntity userEntity = entityContext.getUser(true);
 
@@ -265,7 +265,6 @@ public class SettingController implements ContextRefreshed {
             transientSettings.entrySet()) {
             SettingEntity settingEntity = entry.getValue();
             settingEntity.setValue(entityContext.setting().getRawValue((Class) entry.getKey()));
-            SettingRepository.fulfillEntityFromPlugin(settingEntity, entityContext, null);
             if (DynamicConsoleHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
                 settingEntity.setSettingTypeRaw("Container");
                 List<SettingEntity> options =

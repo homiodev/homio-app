@@ -43,11 +43,10 @@ import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.bundle.api.entity.TreeConfiguration;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
+import org.touchhome.bundle.api.fs.FileSystemProvider;
+import org.touchhome.bundle.api.fs.TreeNode;
+import org.touchhome.bundle.api.fs.archive.ArchiveUtil;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.common.fs.FileSystemProvider;
-import org.touchhome.common.fs.TreeNode;
-import org.touchhome.common.util.ArchiveUtil;
-import org.touchhome.common.util.CommonUtils;
 
 @RestController
 @RequestMapping("/rest/fs")
@@ -87,11 +86,10 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     @PostMapping("")
     public List<TreeConfiguration> getFileSystems(@RequestBody GetFSRequest request) {
         List<TreeConfiguration> configurations = new ArrayList<>();
-        String firstAvailableFS =
-            getFS(
-                Optional.ofNullable(request.fileSystemIds)
-                        .map(ids -> ids.isEmpty() ? null : ids.get(0))
-                        .orElse(null));
+        String firstAvailableFS = getFS(
+            Optional.ofNullable(request.fileSystemIds)
+                    .map(ids -> ids.isEmpty() ? null : ids.get(0))
+                    .orElse(null));
         // if not fs - set as local
         for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
             selectedNode.fs = defaultString(selectedNode.fs, firstAvailableFS);
@@ -103,10 +101,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
             for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
                 if (selectedNode.fs.equals(fileSystem.getEntityID())) {
-                    Set<TreeNode> treeNodes =
-                        fileSystem
-                            .getFileSystem(entityContext)
-                            .loadTreeUpToChild(request.getRootPath(), selectedNode.id);
+                    Set<TreeNode> treeNodes = fileSystem.getFileSystem(entityContext).loadTreeUpToChild(request.getRootPath(), selectedNode.id);
                     if (treeNodes != null) {
                         configuration.setChildren(treeNodes);
                     }
@@ -172,12 +167,12 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
         // InputStream stream = sourceFs.getEntryInputStream(request.sourceFileId);
         TreeNode sourceItem = sourceFs.toTreeNode(request.sourceFileId);
 
-        String fileExtension = CommonUtils.getExtension(sourceItem.getName());
+        String fileExtension = TouchHomeUtils.getExtension(sourceItem.getName());
         String fileWithoutExtension =
             sourceItem
                 .getName()
                 .substring(0, sourceItem.getName().length() - fileExtension.length());
-        Path targetPath = CommonUtils.getTmpPath().resolve(fileWithoutExtension);
+        Path targetPath = TouchHomeUtils.getTmpPath().resolve(fileWithoutExtension);
 
         ArchiveUtil.UnzipFileIssueHandler issueHandler =
             ArchiveUtil.UnzipFileIssueHandler.valueOf(request.fileHandler);
@@ -296,44 +291,24 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
         throw new RuntimeException("Unable to find file system with id: " + fs);
     }
 
-    private Path archiveSource(
-        String fs,
-        String format,
-        Set<String> sourceFileIds,
-        String targetName,
-        String level,
-        String password)
-        throws IOException {
+    private Path archiveSource(String fs, String format, Set<String> sourceFileIds, String targetName, String level, String password) throws IOException {
         FileSystemProvider sourceFs = getFileSystem(fs);
 
         Collection<TreeNode> entries = sourceFs.toTreeNodes(sourceFileIds);
-        Path tmpArchiveAssemblerPath =
-            CommonUtils.getTmpPath()
-                       .resolve("tmp_archive_assembler_" + System.currentTimeMillis());
+        Path tmpArchiveAssemblerPath = TouchHomeUtils.getTmpPath().resolve("tmp_archive_assembler_" + System.currentTimeMillis());
 
         try {
             if (!targetName.endsWith("." + format)) {
                 targetName = targetName + "." + format;
             }
-            Path targetPath = CommonUtils.getTmpPath().resolve(targetName);
+            Path targetPath = TouchHomeUtils.getTmpPath().resolve(targetName);
 
             List<Path> result = new ArrayList<>();
-            localFileSystem.copyEntries(
-                entries, tmpArchiveAssemblerPath, new CopyOption[]{REPLACE_EXISTING}, result);
+            localFileSystem.copyEntries(entries, tmpArchiveAssemblerPath, new CopyOption[]{REPLACE_EXISTING}, result);
             List<Path> filesToArchive =
-                Arrays.stream(
-                          Objects.requireNonNull(
-                              tmpArchiveAssemblerPath.toFile().listFiles()))
-                      .map(File::toPath)
-                      .collect(Collectors.toList());
+                Arrays.stream(Objects.requireNonNull(tmpArchiveAssemblerPath.toFile().listFiles())).map(File::toPath).collect(Collectors.toList());
 
-            return ArchiveUtil.zip(
-                filesToArchive,
-                targetPath,
-                ArchiveUtil.ArchiveFormat.getHandlerByExtension(format),
-                level,
-                password,
-                null);
+            return ArchiveUtil.zip(filesToArchive, targetPath, ArchiveUtil.ArchiveFormat.getHandlerByExtension(format), level, password, null);
         } finally {
             FileUtils.deleteDirectory(tmpArchiveAssemblerPath.toFile());
         }
@@ -362,9 +337,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     }
 
     private String getFS(String id) {
-        return LOCAL_FS.equals(id) || id == null
-            ? this.localFileSystem.getEntity().getEntityID()
-            : id;
+        return LOCAL_FS.equals(id) || id == null ? this.localFileSystem.getEntity().getEntityID() : id;
     }
 
     @Getter

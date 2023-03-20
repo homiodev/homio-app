@@ -1,6 +1,6 @@
 package org.touchhome.app.auth;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -9,20 +9,16 @@ import org.touchhome.app.repository.UserRepository;
 import org.touchhome.bundle.api.entity.UserEntity;
 
 @Service
+@RequiredArgsConstructor
 public class UserEntityDetailsService implements UserDetailsService {
 
-    @Autowired
-    private UserRepository userRepository;
-
-    private UserEntity user;
+    private final UserRepository userRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        if (this.user == null) {
-            this.user = userRepository.getUser(email);
-            if (user == null) {
-                throw new UsernameNotFoundException("User with email: " + email + " not found");
-            }
+    public UserDetails loadUserByUsername(String name) throws UsernameNotFoundException {
+        UserEntity user = userRepository.getUser(name);
+        if (user == null) {
+            throw new UsernameNotFoundException("User: " + name + " not found");
         }
         return org.springframework.security.core.userdetails.User
             .withUsername(user.getEntityID())

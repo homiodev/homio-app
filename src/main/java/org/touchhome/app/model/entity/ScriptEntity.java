@@ -26,7 +26,7 @@ import org.touchhome.bundle.api.ui.UISidebarMenu;
 import org.touchhome.bundle.api.ui.field.MonacoLanguage;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldCodeEditor;
-import org.touchhome.common.util.SpringUtils;
+import org.touchhome.bundle.api.util.SpringUtils;
 
 // TODO: Temporary remove scripting engine from app due lack of time to fix everything
 @Entity

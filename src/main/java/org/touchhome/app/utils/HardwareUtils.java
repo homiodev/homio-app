@@ -10,8 +10,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.touchhome.bundle.api.fs.archive.ArchiveUtil;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.common.util.ArchiveUtil;
 
 @Log4j2
 public final class HardwareUtils {
@@ -20,8 +20,7 @@ public final class HardwareUtils {
     public static void copyResources(URL url) {
         if (url != null) {
             Path target = TouchHomeUtils.getFilesPath();
-            InputStream stream =
-                    HardwareUtils.class.getClassLoader().getResourceAsStream(url.toString());
+            InputStream stream = HardwareUtils.class.getClassLoader().getResourceAsStream(url.toString());
             FileSystem fileSystem = null;
             if (stream == null) {
                 fileSystem = FileSystems.newFileSystem(url.toURI(), Collections.emptyMap());
@@ -37,13 +36,7 @@ public final class HardwareUtils {
                     log.info("Copy resource <{}>", url);
                     Files.copy(stream, targetPath, StandardCopyOption.REPLACE_EXISTING);
                     log.info("Unzip resource <{}>", targetPath);
-                    ArchiveUtil.unzip(
-                            targetPath,
-                            targetPath.getParent(),
-                            null,
-                            false,
-                            null,
-                            ArchiveUtil.UnzipFileIssueHandler.replace);
+                    ArchiveUtil.unzip(targetPath, targetPath.getParent(), null, false, null, ArchiveUtil.UnzipFileIssueHandler.replace);
                     // Files.move();
                     log.info("Done copy resource <{}>", url);
                 }

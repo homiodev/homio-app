@@ -1,6 +1,6 @@
 package org.touchhome.app.manager.common.impl;
 
-import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Duration;
@@ -49,10 +49,10 @@ import org.touchhome.bundle.api.ui.dialog.DialogModel;
 import org.touchhome.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
+import org.touchhome.bundle.api.util.FlowMap;
 import org.touchhome.bundle.api.util.NotificationLevel;
-import org.touchhome.common.model.ProgressBar;
-import org.touchhome.common.util.FlowMap;
-import org.touchhome.common.util.Lang;
+import org.touchhome.bundle.api.ui.field.ProgressBar;
+import org.touchhome.bundle.api.util.Lang;
 
 @Log4j2
 @RequiredArgsConstructor

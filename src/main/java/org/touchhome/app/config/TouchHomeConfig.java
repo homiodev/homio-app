@@ -73,10 +73,10 @@ import org.touchhome.app.workspace.block.Scratch3Space;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.entity.DeviceBaseEntity;
-import org.touchhome.bundle.api.hquery.HardwareRepositoryFactoryPostProcessor;
 import org.touchhome.bundle.api.util.ApplicationContextHolder;
 import org.touchhome.bundle.api.util.SecureString;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.touchhome.bundle.hquery.HardwareRepositoryFactoryPostProcessor;
 
 @Log4j2
 @Configuration

@@ -57,7 +57,6 @@ import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.model.HasEntityLog;
 import org.touchhome.bundle.api.model.HasEntityLog.EntityLogBuilder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.common.util.CommonUtils;
 
 @Component
 public class LogService
@@ -88,7 +87,7 @@ public class LogService
                 }
             }
 
-            MessageFactory messageFactory = CommonUtils.newInstance(AbstractLogger.DEFAULT_MESSAGE_FACTORY_CLASS);
+            MessageFactory messageFactory = TouchHomeUtils.newInstance(AbstractLogger.DEFAULT_MESSAGE_FACTORY_CLASS);
             DefaultLogEventFactory log4jLogEventFactory = new DefaultLogEventFactory();
 
             // hack: add global logger for every log since DEBUG level.

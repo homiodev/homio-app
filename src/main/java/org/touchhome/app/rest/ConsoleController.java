@@ -49,8 +49,8 @@ import org.touchhome.bundle.api.service.SshProviderService;
 import org.touchhome.bundle.api.setting.console.header.ConsoleHeaderSettingPlugin;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.touchhome.common.exception.NotFoundException;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.tritonus.share.ArraySet;
 
 @RestController
@@ -76,12 +76,12 @@ public class ConsoleController implements ContextRefreshed {
                 ((UIInputBuilderImpl) uiInputBuilder)
                     .addFireActionBeforeChange(
                         entry.getKey(),
-                        CommonUtils.newInstance(settingClass).fireActionsBeforeChange(),
+                        TouchHomeUtils.newInstance(settingClass).fireActionsBeforeChange(),
                         SettingEntity.getKey(settingClass),
                         0);
 
                 /* TODO: actions.add(new UIActionResponse(entry.getKey())
-                .putOpt("fabc", CommonUtils.newInstance(settingClass).fireActionsBeforeChange())
+                .putOpt("fabc", TouchHomeUtils.newInstance(settingClass).fireActionsBeforeChange())
                 .putOpt("ref", SettingEntity.getKey(settingClass)));*/
             }
         }

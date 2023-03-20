@@ -52,8 +52,8 @@ import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.service.EntityService;
 import org.touchhome.bundle.api.service.EntityService.ServiceInstance;
 import org.touchhome.bundle.api.storage.InMemoryDB;
-import org.touchhome.common.util.CommonUtils;
-import org.touchhome.common.util.Lang;
+import org.touchhome.bundle.api.util.Lang;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Log4j2
 public class EntityContextEventImpl implements EntityContextEvent {
@@ -395,7 +395,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 entityContext.getCacheService().entityUpdated((BaseEntity) entity);
             }
         } catch (Exception ex) {
-            log.error("Unable to update cache entity <{}> for entity: <{}>. Msg: <{}>", type, entity, CommonUtils.getErrorMessage(ex));
+            log.error("Unable to update cache entity <{}> for entity: <{}>. Msg: <{}>", type, entity, TouchHomeUtils.getErrorMessage(ex));
         }
     }
 

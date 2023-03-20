@@ -1,7 +1,7 @@
 package org.touchhome.app.js.assistant.impl;
 
 import java.util.function.Consumer;
-import org.touchhome.common.model.UpdatableValue;
+import org.touchhome.bundle.api.model.UpdatableValue;
 
 public class ParserContext {
 

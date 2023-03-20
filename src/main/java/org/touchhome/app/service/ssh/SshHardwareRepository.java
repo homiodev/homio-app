@@ -1,8 +1,8 @@
 package org.touchhome.app.service.ssh;
 
-import org.touchhome.bundle.api.hquery.api.HQueryParam;
-import org.touchhome.bundle.api.hquery.api.HardwareQuery;
-import org.touchhome.bundle.api.hquery.api.HardwareRepositoryAnnotation;
+import org.touchhome.bundle.hquery.api.HQueryParam;
+import org.touchhome.bundle.hquery.api.HardwareQuery;
+import org.touchhome.bundle.hquery.api.HardwareRepositoryAnnotation;
 
 @HardwareRepositoryAnnotation
 public interface SshHardwareRepository {

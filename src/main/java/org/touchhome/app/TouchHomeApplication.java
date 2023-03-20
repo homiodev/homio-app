@@ -11,7 +11,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.touchhome.app.config.TouchHomeConfig;
 import org.touchhome.app.utils.HardwareUtils;
-import org.touchhome.bundle.api.hquery.EnableHQuery;
+import org.touchhome.bundle.hquery.EnableHQuery;
 
 @Log4j2
 @EnableHQuery(scanBaseClassesPackage = "org.touchhome")

@@ -1,7 +1,9 @@
 package org.touchhome.app.manager.common.impl;
 
 import static org.touchhome.app.manager.common.impl.EntityContextUIImpl.GlobalSendType.setting;
-import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
+import static org.touchhome.app.model.entity.SettingEntity.getKey;
+import static org.touchhome.app.repository.SettingRepository.fulfillEntityFromPlugin;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
 import com.pivovarit.function.ThrowingConsumer;
 import java.lang.reflect.Modifier;
@@ -63,11 +65,22 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         entityContext.ui().sendGlobal(setting, entityID, options, null, OBJECT_MAPPER.createObjectNode().put("subType", "list"));
     }
 
+    private SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin) {
+        SettingEntity settingEntity = new SettingEntity().setEntityID(getKey(settingPlugin));
+        fulfillEntityFromPlugin(settingEntity, entityContext, settingPlugin);
+        return settingEntity;
+    }
+
+    /**
+     * Reload updated settings to UI
+     */
     @Override
     public void reloadSettings(Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass,
         List<? extends DynamicConsoleHeaderSettingPlugin> dynamicSettings) {
-        List<SettingEntity> dynamicEntities = dynamicSettings.stream().map(s -> SettingRepository.createSettingEntityFromPlugin(s, new SettingEntity(), entityContext))
-                                                             .collect(Collectors.toList());
+        List<SettingEntity> dynamicEntities = dynamicSettings
+            .stream()
+            .map(this::createSettingEntityFromPlugin)
+            .collect(Collectors.toList());
         dynamicHeaderSettings.put(dynamicSettingPluginClass, dynamicEntities);
 
         entityContext.ui().sendGlobal(setting, SettingEntity.PREFIX + dynamicSettingPluginClass.getSimpleName(),

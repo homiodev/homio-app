@@ -32,8 +32,8 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.touchhome.bundle.api.BundleConfiguration;
 import org.touchhome.bundle.api.BundleEntrypoint;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.util.SpringUtils;
+import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.util.SpringUtils;
 import sun.reflect.ReflectionFactory;
 
 @Getter

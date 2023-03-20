@@ -10,7 +10,7 @@ import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.BaseEntity;
-import org.touchhome.common.exception.ServerException;
+import org.touchhome.bundle.api.exception.ServerException;
 
 @Getter
 @Setter

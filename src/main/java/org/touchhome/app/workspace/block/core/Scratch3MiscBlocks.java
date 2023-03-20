@@ -1,6 +1,6 @@
 package org.touchhome.app.workspace.block.core;
 
-import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;

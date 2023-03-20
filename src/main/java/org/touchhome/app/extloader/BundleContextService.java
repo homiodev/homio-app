@@ -22,7 +22,7 @@ import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.spring.ContextCreated;
 import org.touchhome.bundle.api.util.Constants;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.common.exception.ServerException;
+import org.touchhome.bundle.api.exception.ServerException;
 
 @Log4j2
 @Service

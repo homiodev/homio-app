@@ -3,7 +3,7 @@ package org.touchhome.app.rest;
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static org.touchhome.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
 import static org.touchhome.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
-import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.ByteArrayOutputStream;
@@ -72,11 +72,11 @@ import org.touchhome.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.touchhome.bundle.api.model.ActionResponseModel;
 import org.touchhome.bundle.api.storage.SourceHistory;
 import org.touchhome.bundle.api.storage.SourceHistoryItem;
-import org.touchhome.common.exception.NotFoundException;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.util.CommonUtils;
-import org.touchhome.common.util.Curl;
-import org.touchhome.common.util.Lang;
+import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.util.Curl;
+import org.touchhome.bundle.api.util.Lang;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @Log4j2
 @RestController
@@ -194,7 +194,7 @@ public class UtilsController {
     @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
     public ResponseEntity<StreamingResponseBody> downloadFile(
         @PathVariable("fileName") String fileName) {
-        Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
+        Path outputPath = TouchHomeUtils.getTmpPath().resolve(fileName);
         if (!Files.exists(outputPath)) {
             throw new NotFoundException("Unable to find file: " + fileName);
         }
@@ -236,10 +236,10 @@ public class UtilsController {
         int size = outputStream.size();
         if (size > 50000) {
             String name = scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___.log";
-            Path tempFile = CommonUtils.getTmpPath().resolve(name);
+            Path tempFile = TouchHomeUtils.getTmpPath().resolve(name);
             Files.copy(tempFile, outputStream);
             runScriptOnceJSON.logUrl =
-                "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
+                "rest/download/tmp/" + TouchHomeUtils.getTmpPath().relativize(tempFile);
         } else {
             runScriptOnceJSON.log = outputStream.toString(StandardCharsets.UTF_8);
         }

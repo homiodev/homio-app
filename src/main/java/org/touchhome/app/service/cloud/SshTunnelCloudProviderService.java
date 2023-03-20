@@ -24,21 +24,18 @@ import org.springframework.web.client.RestTemplate;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.entity.UserEntity;
-import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
+import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.model.Status;
 import org.touchhome.bundle.api.service.CloudProviderService;
 import org.touchhome.bundle.api.ui.UI.Color;
 import org.touchhome.bundle.api.ui.field.action.ActionInputParameter;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.common.exception.NotFoundException;
-import org.touchhome.common.util.CommonUtils;
 
 @Log4j2
 @Component
 @RequiredArgsConstructor
 public class SshTunnelCloudProviderService implements CloudProviderService {
 
-    private final MachineHardwareRepository machineHardwareRepository;
     private final EntityContext entityContext;
     private final TouchHomeProperties properties;
     private Status status = Status.UNKNOWN;
@@ -51,7 +48,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             UserEntity user = entityContext.getUserRequire();
             String passphrase = user.getJsonData().optString("passphrase", null);
             if (passphrase == null) {
-                throw new NotFoundException("Cloud not configured");
+                throw new NotFoundException("Passphrase not configured");
             }
             JSch j = new JSch();
             j.addIdentity(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome").toString(), passphrase.getBytes(StandardCharsets.UTF_8));
@@ -111,10 +108,17 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
                 updateNotificationBlock();
                 ssh.getConnection().getDisconnectFuture().waitForever();
                 updateNotificationBlock();
+
+
+                <dependency>
+                  <artifactId>maverick-synergy-client</artifactId>
+                  <groupId>com.sshtools</groupId>
+                  <version>3.0.10</version>
+                </dependency>
             }*/
         } catch (Exception ex) {
             status = Status.ERROR;
-            statusMessage = CommonUtils.getErrorMessage(ex);
+            statusMessage = TouchHomeUtils.getErrorMessage(ex);
             updateNotificationBlock();
         }
     }
@@ -189,6 +193,9 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     }
 
     private void handleSync(EntityContext entityContext, ObjectNode parameters) {
+        if (parameters == null) {
+            return;
+        }
         RestTemplate restTemplate = new RestTemplate();
         LoginBody loginBody = new LoginBody(
             parameters.get("field.email").asText(),

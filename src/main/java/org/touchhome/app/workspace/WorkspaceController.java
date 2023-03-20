@@ -38,7 +38,7 @@ import org.touchhome.bundle.api.EntityContextVar.VariableType;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
-import org.touchhome.common.exception.NotFoundException;
+import org.touchhome.bundle.api.exception.NotFoundException;
 
 @Log4j2
 @RestController

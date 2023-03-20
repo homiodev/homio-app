@@ -20,8 +20,8 @@ import org.touchhome.bundle.api.entity.zigbee.ZigBeeDeviceBaseEntity;
 import org.touchhome.bundle.api.entity.zigbee.ZigBeeProperty;
 import org.touchhome.bundle.api.exception.ProhibitedExecution;
 import org.touchhome.bundle.api.model.Status;
+import org.touchhome.bundle.api.state.DecimalType;
 import org.touchhome.bundle.api.state.OnOffType;
-import org.touchhome.bundle.api.state.QuantityType;
 import org.touchhome.bundle.api.state.State;
 import org.touchhome.bundle.api.workspace.BroadcastLock;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
@@ -29,7 +29,6 @@ import org.touchhome.bundle.api.workspace.scratch.MenuBlock.ServerMenuBlock;
 import org.touchhome.bundle.api.workspace.scratch.MenuBlock.StaticMenuBlock;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.touchhome.bundle.z2m.Z2MEntrypoint;
-import tech.units.indriya.unit.Units;
 
 @Getter
 @Component
@@ -75,7 +74,7 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
         blockReporter(50, "time_since_last_event", "time since last event [PROPERTY] of [DEVICE]",
             workspaceBlock -> {
                 Duration timeSinceLastEvent = getDeviceProperty(workspaceBlock).getTimeSinceLastEvent();
-                return new QuantityType(timeSinceLastEvent.toSeconds(), Units.SECOND);
+                return new DecimalType(timeSinceLastEvent.toSeconds()).setUnit("sec");
             }, block -> {
                 block.addArgument("PROPERTY", this.propertyMenu);
                 block.addArgument("DEVICE", this.deviceMenu);

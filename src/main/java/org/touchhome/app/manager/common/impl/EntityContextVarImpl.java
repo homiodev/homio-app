@@ -2,7 +2,7 @@ package org.touchhome.app.manager.common.impl;
 
 import static java.lang.String.format;
 
-import java.text.NumberFormat;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,15 +29,13 @@ import org.touchhome.bundle.api.EntityContextVar;
 import org.touchhome.bundle.api.entity.widget.AggregationType;
 import org.touchhome.bundle.api.entity.widget.ability.HasGetStatusValue;
 import org.touchhome.bundle.api.entity.widget.ability.HasSetStatusValue;
+import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.state.DecimalType;
-import org.touchhome.bundle.api.state.QuantityType;
 import org.touchhome.bundle.api.state.State;
 import org.touchhome.bundle.api.storage.DataStorageService;
 import org.touchhome.bundle.api.storage.InMemoryDB;
 import org.touchhome.bundle.api.storage.SourceHistory;
 import org.touchhome.bundle.api.storage.SourceHistoryItem;
-import org.touchhome.common.exception.NotFoundException;
-import tech.units.indriya.internal.function.Calculator;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -160,8 +158,6 @@ public class EntityContextVarImpl implements EntityContextVar {
                 case Float:
                     if (value instanceof DecimalType) {
                         value = convertBigDecimal(((DecimalType) value).getValue());
-                    } else if (value instanceof QuantityType) {
-                        value = convertBigDecimal(((QuantityType) value).getQuantity().getValue());
                     } else {
                         value = ((State) value).floatValue();
                     }
@@ -175,7 +171,7 @@ public class EntityContextVarImpl implements EntityContextVar {
                 return strValue;
             }
             if (StringUtils.isNumeric(strValue)) {
-                value = convertBigDecimal(NumberFormat.getInstance().parse(strValue));
+                value = convertBigDecimal(new BigDecimal(strValue));
             } else if (strValue.equalsIgnoreCase("true") || strValue.equalsIgnoreCase("false")) {
                 value = strValue.equalsIgnoreCase("true");
             } else {
@@ -320,8 +316,8 @@ public class EntityContextVarImpl implements EntityContextVar {
         return getOrCreateContext(getVariableId(getVariableId(variableId))).linkListener != null;
     }
 
-    private Object convertBigDecimal(Number value) {
-        return Calculator.of(value).peek();
+    private Object convertBigDecimal(BigDecimal value) {
+        return value.scale() == 0 ? value.longValue() : value.floatValue();
     }
 
     private String createVariableInternal(

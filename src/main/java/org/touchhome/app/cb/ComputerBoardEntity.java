@@ -12,7 +12,6 @@ import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.ui.field.UIFieldIgnore;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.common.util.CommonUtils;
 
 @Entity
 @Log4j2
@@ -29,7 +28,7 @@ public class ComputerBoardEntity extends MicroControllerBaseEntity<ComputerBoard
 
     @UIField(order = 200)
     public String getFileSystemRoot() {
-        return getJsonData("fs_root", CommonUtils.getRootPath().toString());
+        return getJsonData("fs_root", TouchHomeUtils.getRootPath().toString());
     }
 
     public void setFileSystemRoot(String value) {

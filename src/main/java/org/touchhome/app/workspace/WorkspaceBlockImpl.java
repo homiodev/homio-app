@@ -33,14 +33,14 @@ import org.touchhome.bundle.api.EntityContextBGP;
 import org.touchhome.bundle.api.entity.BaseEntity;
 import org.touchhome.bundle.api.state.RawType;
 import org.touchhome.bundle.api.state.State;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.BroadcastLockManager;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.scratch.BlockType;
 import org.touchhome.bundle.api.workspace.scratch.MenuBlock;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3Block;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.bundle.api.exception.ServerException;
 
 @Setter
 @Log4j2
@@ -268,7 +268,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                 try {
                     scratch3Block.getHandler().handle(this);
                 } catch (Exception ex) {
-                    String err = "Workspace " + scratch3Block.getOpcode() + " scratch error\n" + CommonUtils.getErrorMessage(ex);
+                    String err = "Workspace " + scratch3Block.getOpcode() + " scratch error\n" + TouchHomeUtils.getErrorMessage(ex);
                     getEntityContext().ui().sendErrorMessage(err, ex);
                     log.error(err);
                     return null;
@@ -357,7 +357,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             } else if (item instanceof String) {
                 return new JSONObject((String) item);
             } else {
-                return new JSONObject(CommonUtils.OBJECT_MAPPER.writeValueAsString(item));
+                return new JSONObject(TouchHomeUtils.OBJECT_MAPPER.writeValueAsString(item));
             }
         }
         return defaultValue;

@@ -59,7 +59,6 @@ import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.video.DownloadFile;
 import org.touchhome.bundle.api.video.VideoPlaybackStorage;
 import org.touchhome.bundle.api.video.ffmpeg.FfmpegInputDeviceHardwareRepository;
-import org.touchhome.common.util.CommonUtils;
 
 @Log4j2
 @RestController
@@ -213,7 +212,7 @@ public class MediaController {
                                     "Unable to download playback file: <{}>. <{}>. Msg: <{}>",
                                     entity.getTitle(),
                                     fileId,
-                                    CommonUtils.getErrorMessage(
+                                    TouchHomeUtils.getErrorMessage(
                                         event.getException())))
                         .get(
                             context -> {
@@ -308,7 +307,7 @@ public class MediaController {
         if (Files.exists(path) && Files.size(path) > 0) {
             return path;
         }
-        CommonUtils.createDirectoriesIfNotExists(path.getParent());
+        TouchHomeUtils.createDirectoriesIfNotExists(path.getParent());
         Files.deleteIfExists(path);
 
         URI uri = entity.getPlaybackVideoURL(entityContext, fileId);
@@ -321,7 +320,7 @@ public class MediaController {
                                log.error(
                                    "Unable to get playback img: <{}>. Msg: <{}>",
                                    entity.getTitle(),
-                                   CommonUtils.getErrorMessage(event.getException())))
+                                   TouchHomeUtils.getErrorMessage(event.getException())))
                        .get(
                            context -> {
                                log.info(

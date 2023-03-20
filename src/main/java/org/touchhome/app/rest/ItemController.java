@@ -95,9 +95,9 @@ import org.touchhome.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.touchhome.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.touchhome.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
-import org.touchhome.common.exception.NotFoundException;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.util.CommonUtils;
+import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 @Log4j2
@@ -171,8 +171,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 for (UIActionButton actionButton :
                     field.getDeclaredAnnotationsByType(UIActionButton.class)) {
                     if (actionButton.name().equals(actionRequestModel.name)) {
-                        CommonUtils.newInstance(actionButton.actionHandler())
-                                   .handleAction(entityContext, actionRequestModel.params);
+                        TouchHomeUtils.newInstance(actionButton.actionHandler())
+                                      .handleAction(entityContext, actionRequestModel.params);
                     }
                 }
             }
@@ -331,7 +331,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             actionRequestModel.params.put("files", files);
             return executeAction(actionRequestModel, entity, entity);
         } catch (Exception ex) {
-            log.error("Error while execute action: {}", CommonUtils.getErrorMessage(ex));
+            log.error("Error while execute action: {}", TouchHomeUtils.getErrorMessage(ex));
             return ActionResponseModel.showError(ex);
         }
     }
@@ -350,7 +350,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         if (typeClass == null) {
             throw new IllegalArgumentException("Unable to find base entity with type: " + type);
         }
-        BaseEntity<?> baseEntity = CommonUtils.newInstance(typeClass);
+        BaseEntity<?> baseEntity = TouchHomeUtils.newInstance(typeClass);
         return entityContext.save(baseEntity);
     }
 
@@ -568,7 +568,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             if (aClass == null) {
                 throw new IllegalArgumentException("Unable to find class for entity: " + entityID);
             }
-            classEntity = CommonUtils.newInstance(aClass);
+            classEntity = TouchHomeUtils.newInstance(aClass);
             if (classEntity == null) {
                 throw new IllegalArgumentException("Unable find class: " + entityID);
             }

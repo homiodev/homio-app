@@ -18,11 +18,11 @@ import org.springframework.stereotype.Component;
 import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.EntityContextSetting;
 import org.touchhome.bundle.api.console.ConsolePluginTable;
-import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
-import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.ui.field.UIField;
 import org.touchhome.bundle.api.util.BoardInfo;
+import org.touchhome.bundle.hquery.hardware.network.NetworkHardwareRepository;
+import org.touchhome.bundle.hquery.hardware.other.MachineHardwareRepository;
 
 @Component
 @RequiredArgsConstructor

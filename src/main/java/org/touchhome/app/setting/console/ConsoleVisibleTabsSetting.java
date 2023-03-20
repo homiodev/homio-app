@@ -1,6 +1,6 @@
 package org.touchhome.app.setting.console;
 
-import static org.touchhome.common.util.CommonUtils.OBJECT_MAPPER;
+import static org.touchhome.bundle.api.util.TouchHomeUtils.OBJECT_MAPPER;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -35,30 +35,18 @@ public class ConsoleVisibleTabsSetting
             String parentTab = entry.getValue().getParentTab();
             if (StringUtils.isNotEmpty(parentTab)) {
                 result.putIfAbsent(parentTab, OptionModel.key(parentTab));
-                result.get(parentTab)
-                        .json(
-                                jsonNodes ->
-                                        jsonNodes.putIfAbsent(
-                                                "children", OBJECT_MAPPER.createArrayNode()));
-                result.get(parentTab)
-                        .getJson()
-                        .withArray("children")
-                        .add(
-                                OBJECT_MAPPER
-                                        .createObjectNode()
-                                        .put("subTab", entry.getKey())
-                                        .put("available", entry.getValue().isEnabled()));
+                result.get(parentTab).json(jsonNodes -> jsonNodes.putIfAbsent("children", OBJECT_MAPPER.createArrayNode()));
+                result.get(parentTab).getJson().withArray("children").add(
+                    OBJECT_MAPPER
+                        .createObjectNode()
+                        .put("subTab", entry.getKey())
+                        .put("available", entry.getValue().isEnabled()));
             } else {
-                result.put(
-                        entry.getKey(),
-                        OptionModel.key(entry.getKey())
-                                .json(json -> json.put("available", entry.getValue().isEnabled())));
+                result.put(entry.getKey(), OptionModel.key(entry.getKey()).json(json -> json.put("available", entry.getValue().isEnabled())));
             }
         }
         for (String pluginName : EntityContextUIImpl.customConsolePluginNames) {
-            result.putIfAbsent(
-                    pluginName,
-                    OptionModel.key(pluginName).json(json -> json.put("available", false)));
+            result.putIfAbsent(pluginName, OptionModel.key(pluginName).json(json -> json.put("available", false)));
         }
         return result.values();
     }

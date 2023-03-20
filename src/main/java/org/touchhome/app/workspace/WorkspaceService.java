@@ -33,6 +33,8 @@ import org.touchhome.app.workspace.block.core.Scratch3MutatorBlocks;
 import org.touchhome.app.workspace.block.core.Scratch3OperatorBlocks;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.exception.ServerException;
+import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.workspace.WorkspaceBlock;
 import org.touchhome.bundle.api.workspace.WorkspaceEntity;
 import org.touchhome.bundle.api.workspace.WorkspaceEventListener;
@@ -44,8 +46,6 @@ import org.touchhome.bundle.http.Scratch3NetworkBlocks;
 import org.touchhome.bundle.media.Scratch3AudioBlocks;
 import org.touchhome.bundle.media.Scratch3ImageEditBlocks;
 import org.touchhome.bundle.ui.Scratch3UIBlocks;
-import org.touchhome.common.exception.ServerException;
-import org.touchhome.common.util.CommonUtils;
 
 @Log4j2
 @Component
@@ -88,9 +88,8 @@ public class WorkspaceService implements ContextRefreshed {
 
     @Override
     public void onContextRefresh() {
-        scratch3Blocks =
-                entityContext.getBeansOfType(Scratch3ExtensionBlocks.class).stream()
-                        .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
+        scratch3Blocks = entityContext.getBeansOfType(Scratch3ExtensionBlocks.class).stream()
+                                      .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
         workspaceEventListeners = entityContext.getBeansOfType(WorkspaceEventListener.class);
 
         loadExtensions();
@@ -105,10 +104,7 @@ public class WorkspaceService implements ContextRefreshed {
         if (workspaceTabHolder != null) {
             releaseWorkspaceEntity(workspaceTab, workspaceTabHolder);
             // wait to finish all nested processes if workspace started before
-            log.info(
-                    "Wait workspace {}, {} to able to finish old one",
-                    workspaceTab.getTitle(),
-                    TIME_WAIT_OLD_WORKSPACE);
+            log.info("Wait workspace {}, {} to able to finish old one", workspaceTab.getTitle(), TIME_WAIT_OLD_WORKSPACE);
             Thread.sleep(TIME_WAIT_OLD_WORKSPACE.toMillis());
         }
 
@@ -119,28 +115,23 @@ public class WorkspaceService implements ContextRefreshed {
         if (StringUtils.isNotEmpty(workspaceTab.getContent())) {
             try {
                 parseWorkspace(workspaceTab, workspaceTabHolder);
-                workspaceTabHolder.blocks.values().stream()
-                        .filter(
-                                workspaceBlock ->
-                                        workspaceBlock.isTopLevel() && !workspaceBlock.isShadow())
-                        .forEach(
-                                workspaceBlock -> {
-                                    if (ONCE_EXECUTION_BLOCKS.contains(
-                                            workspaceBlock.getOpcode())) {
-                                        executeOnce(workspaceBlock);
-                                    } else {
-                                        this.entityContext
-                                                .bgp()
-                                                .builder("workspace-" + workspaceBlock.getId())
-                                                .tap(workspaceBlock::setThreadContext)
-                                                .execute(createWorkspaceThread(workspaceBlock));
-                                    }
-                                });
+                workspaceTabHolder.blocks.values()
+                                         .stream()
+                                         .filter(workspaceBlock -> workspaceBlock.isTopLevel() && !workspaceBlock.isShadow())
+                                         .forEach(workspaceBlock -> {
+                                             if (ONCE_EXECUTION_BLOCKS.contains(workspaceBlock.getOpcode())) {
+                                                 executeOnce(workspaceBlock);
+                                             } else {
+                                                 this.entityContext
+                                                     .bgp()
+                                                     .builder("workspace-" + workspaceBlock.getId())
+                                                     .tap(workspaceBlock::setThreadContext)
+                                                     .execute(createWorkspaceThread(workspaceBlock));
+                                             }
+                                         });
             } catch (Exception ex) {
                 log.error("Unable to initialize workspace: " + ex.getMessage(), ex);
-                entityContext
-                        .ui()
-                        .sendErrorMessage("Unable to initialize workspace: " + ex.getMessage(), ex);
+                entityContext.ui().sendErrorMessage("Unable to initialize workspace: " + ex.getMessage(), ex);
             }
         }
     }
@@ -152,11 +143,7 @@ public class WorkspaceService implements ContextRefreshed {
             try {
                 ((WorkspaceBlockImpl) workspaceBlock).handleOrEvaluate();
             } catch (Exception ex) {
-                log.warn(
-                        "Error in workspace thread: <{}>, <{}>",
-                        name,
-                        CommonUtils.getErrorMessage(ex),
-                        ex);
+                log.warn("Error in workspace thread: <{}>, <{}>", name, TouchHomeUtils.getErrorMessage(ex), ex);
                 entityContext.ui().sendErrorMessage("Error in workspace", ex);
             }
             log.info("Workspace thread finished: <{}>", name);

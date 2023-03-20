@@ -5,7 +5,7 @@ import static org.touchhome.bundle.api.util.Constants.DANGER_COLOR;
 import java.util.Set;
 import org.touchhome.app.setting.CoreSettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginTextSet;
-import org.touchhome.common.util.Lang;
+import org.touchhome.bundle.api.util.Lang;
 
 public class SystemPlaceSetting implements CoreSettingPlugin<Set<String>>, SettingPluginTextSet {
 

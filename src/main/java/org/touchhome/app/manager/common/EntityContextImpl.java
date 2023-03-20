@@ -114,10 +114,9 @@ import org.touchhome.bundle.api.entity.DisableCacheEntity;
 import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.touchhome.bundle.api.entity.storage.BaseFileSystemEntity;
-import org.touchhome.bundle.api.hardware.network.NetworkHardwareRepository;
-import org.touchhome.bundle.api.hardware.other.MachineHardwareRepository;
 import org.touchhome.bundle.api.model.HasEntityIdentifier;
 import org.touchhome.bundle.api.model.Status;
+import org.touchhome.bundle.api.model.UpdatableValue;
 import org.touchhome.bundle.api.repository.AbstractRepository;
 import org.touchhome.bundle.api.repository.GitHubProject;
 import org.touchhome.bundle.api.repository.PureRepository;
@@ -125,14 +124,14 @@ import org.touchhome.bundle.api.service.scan.BeansItemsDiscovery;
 import org.touchhome.bundle.api.service.scan.MicroControllerScanner;
 import org.touchhome.bundle.api.service.scan.VideoStreamScanner;
 import org.touchhome.bundle.api.setting.SettingPlugin;
+import org.touchhome.bundle.api.util.Lang;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
 import org.touchhome.bundle.api.util.UpdatableSetting;
 import org.touchhome.bundle.api.widget.WidgetBaseTemplate;
 import org.touchhome.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.touchhome.common.exception.NotFoundException;
-import org.touchhome.common.model.UpdatableValue;
-import org.touchhome.common.util.CommonUtils;
-import org.touchhome.common.util.Lang;
+import org.touchhome.bundle.api.exception.NotFoundException;
+import org.touchhome.bundle.hquery.hardware.network.NetworkHardwareRepository;
+import org.touchhome.bundle.hquery.hardware.other.MachineHardwareRepository;
 
 @Log4j2
 @Component
@@ -798,7 +797,7 @@ public class EntityContextImpl implements EntityContext {
                 Object proxy = this.getTargetObject(bean);
                 for (Field field : FieldUtils.getFieldsWithAnnotation(proxy.getClass(), UpdatableSetting.class)) {
                     Class<?> settingClass = field.getDeclaredAnnotation(UpdatableSetting.class).value();
-                    Class valueType = ((SettingPlugin) CommonUtils.newInstance(settingClass)).getType();
+                    Class valueType = ((SettingPlugin) TouchHomeUtils.newInstance(settingClass)).getType();
                     Object value = entityContextSetting.getObjectValue(settingClass);
                     UpdatableValue<Object> updatableValue = UpdatableValue.ofNullable(value, proxy.getClass().getSimpleName() + "_" + field.getName(),
                         valueType);
@@ -824,7 +823,7 @@ public class EntityContextImpl implements EntityContext {
     private void rebuildRepositoryByPrefixMap() {
         repositoriesByPrefix = new HashMap<>();
         for (Class<? extends BaseEntity> baseEntity : baseEntityNameToClass.values()) {
-            repositoriesByPrefix.put(CommonUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
+            repositoriesByPrefix.put(TouchHomeUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
         }
     }
 

@@ -4,7 +4,7 @@ artifactoryFilesURL: https://touchhome.jfrog.io/artifactory/files-remote
 touchhome:
   cloud:
     hostname: touchhome.org
-    login-url: https://touchhome.org/server/auth/sync
+    login-url: https://touchhome.org/server/auth/connect
   version: @project.version@
   internet-test-interval: PT10S
   max-java-script-compile-before-interrupt: PT5S
@@ -38,3 +38,14 @@ spring:
 
 server:
   port: 9111
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+name: prod-YAML
+touchhome:
+  cloud:
+    hostname: localhost:8084
+    login-url: http://localhost:8084/server/auth/connect

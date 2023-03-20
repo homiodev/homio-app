@@ -19,7 +19,7 @@ import org.touchhome.app.utils.color.MMCQ;
 import org.touchhome.app.utils.color.RGBUtil;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.EntityContext;
-import org.touchhome.common.exception.NotFoundException;
+import org.touchhome.bundle.api.exception.NotFoundException;
 
 @Log4j2
 @Component

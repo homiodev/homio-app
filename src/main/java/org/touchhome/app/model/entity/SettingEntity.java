@@ -15,7 +15,6 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.touchhome.app.manager.common.impl.EntityContextSettingImpl;
 import org.touchhome.app.repository.SettingRepository;
-import org.touchhome.bundle.api.EntityContext;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.converter.JSONConverter;
 import org.touchhome.bundle.api.entity.BaseEntity;
@@ -121,11 +120,6 @@ public class SettingEntity extends BaseEntity<SettingEntity> {
     }
 
     @Override
-    public void afterFetch(EntityContext entityContext) {
-        SettingRepository.fulfillEntityFromPlugin(this, entityContext, null);
-    }
-
-    @Override
     public String getEntityPrefix() {
         return PREFIX;
     }
@@ -138,10 +132,7 @@ public class SettingEntity extends BaseEntity<SettingEntity> {
     @Override
     public String getBundle() {
         // dynamic settings(firmata has no parameters)
-        SettingPlugin plugin =
-            EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
-        return plugin == null
-            ? null
-            : SettingRepository.getSettingBundleName(getEntityContext(), plugin.getClass());
+        SettingPlugin plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
+        return plugin == null ? null : SettingRepository.getSettingBundleName(getEntityContext(), plugin.getClass());
     }
 }
