@@ -19,6 +19,6 @@ public class SystemAddonRepositoriesSetting
 
     @Override
     public String[] defaultValue() {
-        return new String[]{"https://github.com/touchhome/touchhome-bundle-extra"};
+        return new String[]{"https://github.com/touchhome/addon-parent"};
     }
 }

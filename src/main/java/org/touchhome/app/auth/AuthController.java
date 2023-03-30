@@ -16,6 +16,7 @@ import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -55,8 +56,8 @@ public class AuthController {
         log.info("Login <{}>", credentials.getEmail());
         try {
             String username = credentials.getEmail();
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, credentials.getPassword()));
-            return jwtTokenProvider.createToken(username, entityContext.getUserRequire().getRoles());
+            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, credentials.getPassword()));
+            return jwtTokenProvider.createToken(username, authentication.getAuthorities());
         } catch (AuthenticationException e) {
             throw new BadCredentialsException("Invalid username/password supplied");
         }

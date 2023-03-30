@@ -2,6 +2,7 @@ package org.touchhome.app.extloader;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.jar.JarFile;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.xeustechnologies.jcl.JarClassLoader;
 
 public class SingleBundleClassLoader extends JarClassLoader {
@@ -163,24 +165,23 @@ public class SingleBundleClassLoader extends JarClassLoader {
       }
 
       if (url != null) {
+        URLStreamHandler urlHandler = (URLStreamHandler) FieldUtils.readDeclaredField(url, "handler", true);
+        Method jarOpenConnectionMethod = urlHandler.getClass().getDeclaredMethod("openConnection", URL.class);
+        jarOpenConnectionMethod.setAccessible(true);
         FieldUtils.writeField(url, "handler", new URLStreamHandler() {
           @Override
           protected URLConnection openConnection(URL u) throws IOException {
-            URLConnection urlConnection = null; // super.openConnection(u);
-            resourceConnections.putIfAbsent(u, new ArrayList<>());
-            resourceConnections.get(u).add(urlConnection);
-            return urlConnection;
+            try {
+              URLConnection urlConnection = (URLConnection) MethodUtils
+                  .invokeMethod(urlHandler, true, "openConnection", u);
+              resourceConnections.putIfAbsent(u, new ArrayList<>());
+              resourceConnections.get(u).add(urlConnection);
+              return urlConnection;
+            } catch (Exception e) {
+              throw new RuntimeException(e);
+            }
           }
-        });
-                /*FieldUtils.writeField(url, "handler", new sun.net.www.protocol.jar.Handler() {
-                    @Override
-                    protected URLConnection openConnection(URL url) throws IOException {
-                        URLConnection urlConnection = super.openConnection(url);
-                        resourceConnections.putIfAbsent(url, new ArrayList<>());
-                        resourceConnections.get(url).add(urlConnection);
-                        return urlConnection;
-                    }
-                }, true);*/
+        }, true);
       }
       resourceMap.put(name, url);
     }

@@ -1,4 +1,7 @@
 {
+  "cloud": {
+    "unable_connect": "Unable connect to cloud: {{MSG}}"
+  },
   "video": {
     "error": {
       "seriesNotFound": "Unable to find base video for series",

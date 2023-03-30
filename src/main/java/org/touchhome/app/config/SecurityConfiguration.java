@@ -42,7 +42,9 @@ public class SecurityConfiguration {
 
         // Entry points
         if (touchHomeProperties.isDisableSecurity()) {
-            log.warn("!!! TouchHome security disabled !!!");
+            log.warn("\n-----------------------------------"
+                + "\n!!! TouchHome security disabled !!!"
+                + "\n-----------------------------------");
             http.authorizeRequests().antMatchers(WebSocketConfig.ENDPOINT, "/rest/**").permitAll();
         } else {
             http.authorizeRequests()//

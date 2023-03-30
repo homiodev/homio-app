@@ -1,5 +1,4 @@
 rootDir: /opt/touchhome
-artifactoryFilesURL: https://touchhome.jfrog.io/artifactory/files-remote
 
 touchhome:
   cloud:
@@ -44,8 +43,3 @@ spring:
   config:
     activate:
       on-profile: dev
-name: prod-YAML
-touchhome:
-  cloud:
-    hostname: localhost:8084
-    login-url: http://localhost:8084/server/auth/connect

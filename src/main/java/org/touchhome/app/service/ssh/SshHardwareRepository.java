@@ -8,10 +8,10 @@ import org.touchhome.bundle.hquery.api.HardwareRepositoryAnnotation;
 public interface SshHardwareRepository {
 
     @HardwareQuery(
-            name = "Download tmate",
-            printOutput = true,
-            value =
-                    "wget ${artifactoryFilesURL}/tmate-2.4.0-static-linux-:armv.tar.xz -O ${rootDir}/tmate.tar.xz")
+        name = "Download tmate",
+        printOutput = true,
+        value =
+            "wget https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-:armv.tar.xz -O ${rootDir}/tmate.tar.xz")
     @HardwareQuery(
             name = "Unzip tmate",
             printOutput = true,

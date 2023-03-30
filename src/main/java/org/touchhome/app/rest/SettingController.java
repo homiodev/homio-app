@@ -38,15 +38,16 @@ import org.touchhome.app.spring.ContextRefreshed;
 import org.touchhome.bundle.api.BundleEntrypoint;
 import org.touchhome.bundle.api.console.ConsolePlugin;
 import org.touchhome.bundle.api.entity.UserEntity;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.model.OptionModel;
 import org.touchhome.bundle.api.setting.SettingPlugin;
 import org.touchhome.bundle.api.setting.SettingPluginOptions;
 import org.touchhome.bundle.api.setting.SettingPluginOptionsRemovable;
 import org.touchhome.bundle.api.setting.SettingPluginPackageInstall;
+import org.touchhome.bundle.api.setting.SettingPluginPackageInstall.PackageRequest;
 import org.touchhome.bundle.api.setting.console.ConsoleSettingPlugin;
 import org.touchhome.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.touchhome.bundle.api.ui.field.UIFieldType;
-import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.util.Lang;
 
 @RestController
@@ -65,8 +66,7 @@ public class SettingController implements ContextRefreshed {
     @Override
     public void onContextRefresh() {
         this.transientSettings = new HashMap<>();
-        for (SettingPlugin<?> settingPlugin :
-            EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
+        for (SettingPlugin<?> settingPlugin : EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {
                 SettingEntity settingEntity = new SettingEntity().setEntityID(getKey(settingPlugin));
                 this.transientSettings.put((Class<? extends SettingPlugin<?>>) settingPlugin.getClass(), settingEntity);
@@ -79,21 +79,15 @@ public class SettingController implements ContextRefreshed {
     }
 
     @GetMapping("/{entityID}/options")
-    public Collection<OptionModel> loadSettingAvailableValues(
-        @PathVariable("entityID") String entityID,
+    public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID,
         @RequestParam(value = "param0", required = false) String param0) {
-        SettingPluginOptions<?> settingPlugin =
-            (SettingPluginOptions<?>)
-                EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
-        return SettingRepository.getOptions(
-            settingPlugin, entityContext, new JSONObject().put("param0", param0));
+        SettingPluginOptions<?> settingPlugin = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+        return SettingRepository.getOptions(settingPlugin, entityContext, new JSONObject().put("param0", param0));
     }
 
-    @GetMapping("/{entityID}/packages/all")
-    public SettingPluginPackageInstall.PackageContext loadAllPackages(
-        @PathVariable("entityID") String entityID) throws Exception {
-        SettingPlugin<?> settingPlugin =
-            EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+    @GetMapping("/{entityID}/package/all")
+    public SettingPluginPackageInstall.PackageContext loadAllPackages(@PathVariable("entityID") String entityID) throws Exception {
+        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             SettingPluginPackageInstall.PackageContext packageContext =
                 ((SettingPluginPackageInstall) settingPlugin).allPackages(entityContext);
@@ -116,94 +110,62 @@ public class SettingController implements ContextRefreshed {
         return null;
     }
 
-    @GetMapping("/{entityID}/packages")
-    public SettingPluginPackageInstall.PackageContext loadInstalledPackages(
-        @PathVariable("entityID") String entityID) throws Exception {
-        SettingPlugin<?> settingPlugin =
-            EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+    @GetMapping("/{entityID}/package")
+    public SettingPluginPackageInstall.PackageContext loadInstalledPackages(@PathVariable("entityID") String entityID) throws Exception {
+        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             return ((SettingPluginPackageInstall) settingPlugin).installedPackages(entityContext);
         }
         return null;
     }
 
-    @DeleteMapping("/{entityID}/packages")
+    @DeleteMapping("/{entityID}/package")
     @Secured(ADMIN_ROLE)
-    public void unInstallPackage(
-        @PathVariable("entityID") String entityID,
-        @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
-        SettingPlugin<?> settingPlugin =
-            EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+    public void unInstallPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
+        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             if (!packagesInProgress.containsKey(packageRequest.getName())) {
                 packagesInProgress.put(packageRequest.getName(), false);
-                entityContext
-                    .ui()
-                    .runWithProgress(
-                        "Uninstall "
-                            + packageRequest.getName()
-                            + "/"
-                            + packageRequest.getVersion(),
-                        false,
-                        progressBar ->
-                            ((SettingPluginPackageInstall) settingPlugin)
-                                .unInstallPackage(
-                                    entityContext, packageRequest, progressBar),
-                        ex -> packagesInProgress.remove(packageRequest.getName()));
+                entityContext.ui().runWithProgress("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
+                    progressBar ->
+                        ((SettingPluginPackageInstall) settingPlugin).unInstallPackage(entityContext, packageRequest, progressBar),
+                    ex -> packagesInProgress.remove(packageRequest.getName()));
             }
         }
     }
 
-    @PostMapping("/{entityID}/packages")
+    @PostMapping("/{entityID}/package")
     @Secured(ADMIN_ROLE)
-    public void installPackage(
-        @PathVariable("entityID") String entityID,
-        @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
-        SettingPlugin<?> settingPlugin =
-            EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+    public void installPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
+        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             if (!packagesInProgress.containsKey(packageRequest.getName())) {
-                packagesInProgress.put(packageRequest.getName(), true);
-                entityContext
-                    .ui()
-                    .runWithProgress(
-                        "Install "
-                            + packageRequest.getName()
-                            + "/"
-                            + packageRequest.getVersion(),
-                        false,
-                        progressBar ->
-                            ((SettingPluginPackageInstall) settingPlugin)
-                                .installPackage(
-                                    entityContext, packageRequest, progressBar),
-                        ex -> packagesInProgress.remove(packageRequest.getName()));
+                installPackage(packageRequest, (SettingPluginPackageInstall) settingPlugin);
             }
         }
+    }
+
+    private void installPackage(PackageRequest packageRequest, SettingPluginPackageInstall settingPlugin) {
+        packagesInProgress.put(packageRequest.getName(), true);
+        String key = "Install " + packageRequest.getName() + "/" + packageRequest.getVersion();
+        entityContext.ui().runWithProgress(key, false, progressBar ->
+                settingPlugin.installPackage(entityContext, packageRequest, progressBar),
+            ex -> packagesInProgress.remove(packageRequest.getName()));
     }
 
     @Secured(ADMIN_ROLE)
     @PostMapping(value = "/{entityID}", consumes = "text/plain")
-    public <T> void updateSetting(
-        @PathVariable("entityID") String entityID,
-        @RequestBody(required = false) String value) {
-        SettingPlugin<?> settingPlugin =
-            EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+    public <T> void updateSetting(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
+        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin != null) {
-            entityContext
-                .setting()
-                .setValueRaw(
-                    (Class<? extends SettingPlugin<T>>) settingPlugin.getClass(),
-                    value,
-                    false);
+            entityContext.setting().setValueRaw((Class<? extends SettingPlugin<T>>) settingPlugin.getClass(), value, false);
         }
     }
 
     @Secured(ADMIN_ROLE)
     @DeleteMapping(value = "/{entityID}", consumes = "text/plain")
-    public void removeSettingValue(
-        @PathVariable("entityID") String entityID, @RequestBody String value) throws Exception {
-        SettingPlugin<?> settingPlugin =
-            EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
+    public void removeSettingValue(@PathVariable("entityID") String entityID, @RequestBody String value) throws Exception {
+        SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginOptionsRemovable) {
             ((SettingPluginOptionsRemovable<?>) settingPlugin).removeOption(entityContext, value);
         }
@@ -230,9 +192,8 @@ public class SettingController implements ContextRefreshed {
 
         for (Iterator<SettingEntity> iterator = settings.iterator(); iterator.hasNext(); ) {
             SettingEntity settingEntity = iterator.next();
-            SettingPlugin<?> plugin =
-                EntityContextSettingImpl.settingPluginsByPluginKey.get(
-                    settingEntity.getEntityID());
+            SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(
+                settingEntity.getEntityID());
             if (plugin != null) {
 
                 // fulfill pages
@@ -267,8 +228,7 @@ public class SettingController implements ContextRefreshed {
             settingEntity.setValue(entityContext.setting().getRawValue((Class) entry.getKey()));
             if (DynamicConsoleHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
                 settingEntity.setSettingTypeRaw("Container");
-                List<SettingEntity> options =
-                    EntityContextSettingImpl.dynamicHeaderSettings.get(entry.getKey());
+                List<SettingEntity> options = EntityContextSettingImpl.dynamicHeaderSettings.get(entry.getKey());
                 settingEntity.getParameters().put("dynamicOptions", options);
             } else if (SettingPluginPackageInstall.class.isAssignableFrom(entry.getKey())) {
                 settingEntity.setSettingTypeRaw("BundleInstaller");
@@ -284,9 +244,7 @@ public class SettingController implements ContextRefreshed {
     private void updateSettingToPages(List<SettingEntity> settings) {
         // fulfill console pages
         for (SettingEntity settingEntity : settings) {
-            SettingPlugin<?> plugin =
-                EntityContextSettingImpl.settingPluginsByPluginKey.get(
-                    settingEntity.getEntityID());
+            SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
             if (plugin instanceof ConsoleSettingPlugin) {
                 for (Map.Entry<String, ConsolePlugin<?>> entry :
                     EntityContextUIImpl.consolePluginsMap.entrySet()) {
@@ -294,9 +252,7 @@ public class SettingController implements ContextRefreshed {
                         .acceptConsolePluginPage(entry.getValue())) {
                         settingToPages
                             .computeIfAbsent(settingEntity.getEntityID(), s -> new HashSet<>())
-                            .add(
-                                StringUtils.defaultString(
-                                    entry.getValue().getParentTab(), entry.getKey()));
+                            .add(StringUtils.defaultString(entry.getValue().getParentTab(), entry.getKey()));
                     }
                 }
             }
@@ -308,15 +264,10 @@ public class SettingController implements ContextRefreshed {
      */
     private void updateSettingDescription(List<SettingEntity> settings) {
         Set<String> bundleSettings =
-            settings.stream()
-                    .map(
-                        e -> {
-                            SettingPlugin<?> plugin =
-                                EntityContextSettingImpl.settingPluginsByPluginKey.get(
-                                    e.getEntityID());
-                            return SettingRepository.getSettingBundleName(
-                                entityContext, plugin.getClass());
-                        })
+            settings.stream().map(e -> {
+                        SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(e.getEntityID());
+                        return SettingRepository.getSettingBundleName(entityContext, plugin.getClass());
+                    })
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
@@ -326,20 +277,16 @@ public class SettingController implements ContextRefreshed {
                 String descriptionKey = bundleEntrypoint.getBundleId() + ".setting.description";
                 String description = Lang.findPathText(descriptionKey);
                 if (description != null) {
-                    SettingEntity settingEntity =
-                        new SettingEntity() {
-                            @Override
-                            public String getBundle() {
-                                return bundleEntrypoint.getBundleId();
-                            }
-                        };
+                    SettingEntity settingEntity = new SettingEntity() {
+                        @Override
+                        public String getBundle() {
+                            return bundleEntrypoint.getBundleId();
+                        }
+                    };
                     settingEntity
                         .setSettingType(UIFieldType.Description)
                         .setVisible(true)
-                        .setEntityID(
-                            SettingEntity.PREFIX
-                                + bundleEntrypoint.getBundleId()
-                                + "_Description")
+                        .setEntityID(SettingEntity.PREFIX + bundleEntrypoint.getBundleId() + "_Description")
                         .setValue(descriptionKey)
                         .setOrder(1);
                     this.descriptionSettings.add(settingEntity);

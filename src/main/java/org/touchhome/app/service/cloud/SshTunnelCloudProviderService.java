@@ -1,19 +1,23 @@
 package org.touchhome.app.service.cloud;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -23,6 +27,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.touchhome.app.config.TouchHomeProperties;
 import org.touchhome.bundle.api.EntityContext;
+import org.touchhome.bundle.api.EntityContextUI.NotificationBlockBuilder;
 import org.touchhome.bundle.api.entity.UserEntity;
 import org.touchhome.bundle.api.exception.NotFoundException;
 import org.touchhome.bundle.api.model.Status;
@@ -41,11 +46,13 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     private Status status = Status.UNKNOWN;
     private String statusMessage = null;
 
+    private final Consumer<NotificationBlockBuilder> NOT_SYNC_HANDLER = buildNotSyncHandler();
+    private final Consumer<NotificationBlockBuilder> TRY_CONNECT_HANDLER = tryConnectHandler();
+
     @Override
-    public void start() {
-        updateNotificationBlock();
+    public void start() throws Exception {
         try {
-            UserEntity user = entityContext.getUserRequire();
+            UserEntity user = Objects.requireNonNull(entityContext.getEntity(UserEntity.PREFIX + "primary"));
             String passphrase = user.getJsonData().optString("passphrase", null);
             if (passphrase == null) {
                 throw new NotFoundException("Passphrase not configured");
@@ -105,9 +112,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
              * Wait for the connection to be disconnected.
              *//*
                 status = Status.ONLINE;
-                updateNotificationBlock();
                 ssh.getConnection().getDisconnectFuture().waitForever();
-                updateNotificationBlock();
 
 
                 <dependency>
@@ -119,7 +124,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
         } catch (Exception ex) {
             status = Status.ERROR;
             statusMessage = TouchHomeUtils.getErrorMessage(ex);
-            updateNotificationBlock();
+            throw ex;
         }
     }
 
@@ -144,35 +149,39 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
         }
     }*/
 
-    public void updateNotificationBlock() {
+    @Override
+    public void updateNotificationBlock(@Nullable Exception ex) {
         // login if no private key found
         boolean hasPrivateKey = false;
         String name = format("Cloud: ${selection.%s}", getClass().getSimpleName());
         entityContext.ui().addNotificationBlock("cloud", name, "fas fa-cloud", "#5C7DAC", builder -> {
             builder.setStatus(status);
             if (!status.isOnline()) {
-                builder.addInfo(StringUtils.defaultIfEmpty(statusMessage, "Unknown status"),
+                builder.addInfo(defaultIfEmpty(statusMessage, defaultIfEmpty(TouchHomeUtils.getErrorMessage(ex), "Unknown error")),
                     Color.RED, "fas fa-exclamation", null);
             }
 
-            if (!Files.exists(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome"))) {
-                builder.addButtonInfo("cloud.not_sync", Color.RED, null, null,
-                    "fas fa-right-to-bracket", "Sync", null, (entityContext, params) -> {
-                        entityContext.ui().sendDialogRequest("cloud_sync", "cloud.sync_title", (responseType, pressedButton, parameters) ->
-                                handleSync(entityContext, parameters),
-                            dialogModel -> {
-                                dialogModel.disableKeepOnUi();
-                                List<ActionInputParameter> inputs = new ArrayList<>();
-                                inputs.add(ActionInputParameter.text("field.email",
-                                    entityContext.getUserRequire().getName()));
-                                inputs.add(ActionInputParameter.text("field.password", ""));
-                                dialogModel.submitButton("Login", button -> {
-                                }).group("General", inputs);
-                            });
-                        return null;
-                    });
+            Consumer<NotificationBlockBuilder> syncHandler = getSyncHandler(ex);
+            if (syncHandler != null) {
+                syncHandler.accept(builder);
             }
         });
+    }
+
+    private Consumer<NotificationBlockBuilder> getSyncHandler(@Nullable Exception ex) {
+        if (!Files.exists(TouchHomeUtils.getSshPath().resolve("id_rsa_touchhome"))) {
+            return NOT_SYNC_HANDLER;
+        }
+        if (ex != null) {
+            // Uses private key not valid. Need recreate new one
+            if ("Auth fail".equals(ex.getMessage())) {
+                return NOT_SYNC_HANDLER;
+            }
+            if (ex.getCause() instanceof UnknownHostException) {
+                return TRY_CONNECT_HANDLER;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -190,6 +199,50 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     @Override
     public String getStatusMessage() {
         return null;
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    private static class LoginBody {
+
+        private final String user;
+        private final String password;
+        private final String passphrase;
+        private final boolean recreate;
+    }
+
+    @Getter
+    @Setter
+    @RequiredArgsConstructor
+    private static class LoginResponse {
+
+        private byte[] privateKey;
+    }
+
+    private Consumer<NotificationBlockBuilder> buildNotSyncHandler() {
+        return builder -> builder.addButtonInfo("cloud.not_sync", Color.RED, null, null,
+            "fas fa-right-to-bracket", "Sync", null, (entityContext, params) -> {
+                entityContext.ui().sendDialogRequest("cloud_sync", "cloud.sync_title", (responseType, pressedButton, parameters) ->
+                        handleSync(entityContext, parameters),
+                    dialogModel -> {
+                        dialogModel.disableKeepOnUi();
+                        List<ActionInputParameter> inputs = new ArrayList<>();
+                        inputs.add(ActionInputParameter.text("field.email",
+                            entityContext.getUserRequire().getName()));
+                        inputs.add(ActionInputParameter.text("field.password", ""));
+                        dialogModel.submitButton("Login", button -> {
+                        }).group("General", inputs);
+                    });
+                return null;
+            });
+    }
+
+    private Consumer<NotificationBlockBuilder> tryConnectHandler() {
+        return builder -> builder.addButtonInfo("cloud.not_sync", Color.RED, null, null,
+            "fas fa-rss", "Connect", null, (entityContext, params) -> {
+                entityContext.getBean(CloudService.class).restart();
+                return null;
+            });
     }
 
     private void handleSync(EntityContext entityContext, ObjectNode parameters) {
@@ -215,27 +268,9 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             UserEntity user = entityContext.getUserRequire();
             user.getJsonData().put("passphrase", loginBody.passphrase);
             entityContext.save(user);
-            this.start();
+            entityContext.getBean(CloudService.class).restart();
         } else {
             log.error("Wrong status response from cloud server: {}", response.getStatusCode());
         }
-    }
-
-    @Getter
-    @RequiredArgsConstructor
-    private static class LoginBody {
-
-        private final String user;
-        private final String password;
-        private final String passphrase;
-        private final boolean recreate;
-    }
-
-    @Getter
-    @Setter
-    @RequiredArgsConstructor
-    private static class LoginResponse {
-
-        private byte[] privateKey;
     }
 }

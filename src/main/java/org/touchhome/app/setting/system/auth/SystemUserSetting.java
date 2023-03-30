@@ -43,11 +43,11 @@ public class SystemUserSetting implements CoreSettingPlugin<JSONObject>, Setting
             return null;
         }
         return Arrays.asList(
-            ActionInputParameter.email("email", user.getUserId()),
-            ActionInputParameter.text("name", user.getName(), "pattern:.{3}"),
-            ActionInputParameter.password("currentPassword", ""),
-            ActionInputParameter.password("newPassword", ""),
-            ActionInputParameter.password("repeatNewPassword", "")
+            ActionInputParameter.email("field.email", user.getUserId()),
+            ActionInputParameter.text("field.name", user.getName(), "pattern:.{3}"),
+            ActionInputParameter.password("field.currentPassword", ""),
+            ActionInputParameter.password("field.newPassword", ""),
+            ActionInputParameter.password("field.repeatNewPassword", "")
         );
     }
 

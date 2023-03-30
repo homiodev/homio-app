@@ -137,7 +137,7 @@ import org.touchhome.bundle.hquery.hardware.other.MachineHardwareRepository;
 @Component
 public class EntityContextImpl implements EntityContext {
 
-    private final GitHubProject appGitHub = new GitHubProject("touchhome", "touchhome-core");
+    private final GitHubProject appGitHub = GitHubProject.of("touchhome", "touchhome-core");
     public static final String CREATE_TABLE_INDEX =
         "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
@@ -283,16 +283,18 @@ public class EntityContextImpl implements EntityContext {
                 // authenticate
                 AuthenticationProvider authenticationProvider = getBean(AuthenticationProvider.class);
                 authenticationProvider.authenticate(new UsernamePasswordAuthenticationToken(
-                    user.getUserId(), json.getString("currentPassword")));
-                if (!json.getString("newPassword").equals(json.getString("repeatNewPassword"))) {
+                    user.getUserId(), json.getString("field.currentPassword")));
+                if (!json.getString("field.newPassword").equals(json.getString("field.repeatNewPassword"))) {
                     throw new IllegalArgumentException("user.password_not_match");
                 }
 
                 PasswordEncoder passwordEncoder = getBean(PasswordEncoder.class);
                 save(user
-                    .setUserId(json.getString("email"))
-                    .setName(json.getString("name"))
-                    .setPassword(json.getString("newPassword"), passwordEncoder));
+                    .setUserId(json.getString("field.email"))
+                    .setName(json.getString("field.name"))
+                    .setPassword(json.getString("field.newPassword"), passwordEncoder));
+                ui().sendSuccessMessage("user.altered");
+                ui().reloadWindow("user.altered_reload");
             }
         });
     }
@@ -306,7 +308,7 @@ public class EntityContextImpl implements EntityContext {
                 builder.setUpdatable(
                     (progressBar, version) -> appGitHub.updating("touchhome", TouchHomeUtils.getInstallPath().resolve("touchhome"), progressBar,
                         projectUpdate -> {
-                            projectUpdate.download(version);
+                            projectUpdate.downloadSource(version);
                             long pid = ProcessHandle.current().pid();
                             Path updateScript = TouchHomeUtils.getInstallPath().resolve("app-update." + (IS_OS_WINDOWS ? "sh" : "bat"));
                             String jarLocation = EntityContextImpl.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
@@ -316,7 +318,7 @@ public class EntityContextImpl implements EntityContext {
                             TouchHomeUtils.writeToFile(updateScript, content, false);
                             Runtime.getRuntime().exec(updateScript.toString());
                             return null;
-                        }), appGitHub.getTagsSince(installedVersion));
+                        }), appGitHub.getReleasesSince(installedVersion));
             }
             builder.addInfo("Started at " + DateFormat.getDateTimeInstance().format(new Date()), null, "fas fa-clock", null);
         });
@@ -875,7 +877,8 @@ public class EntityContextImpl implements EntityContext {
         } else {
             if (!Files.exists(Paths.get(FFMPEG_LOCATION))) {
                 log.info("Installing ffmpeg");
-                DependencyExecutableInstaller.downloadAndExtract(getEnv("artifactoryFilesURL") + "/ffmpeg.7z", "ffmpeg.7z",
+                String url = "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-essentials_build.7z";
+                DependencyExecutableInstaller.downloadAndExtract(url, "ffmpeg.7z",
                     (progress, message) -> log.info("FFMPEG " + message + ". " + progress + "%"), log);
             }
         }

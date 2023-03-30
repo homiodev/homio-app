@@ -1,5 +1,7 @@
 package org.touchhome.app.extloader;
 
+import static java.lang.String.format;
+
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -20,9 +22,9 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.touchhome.app.manager.common.EntityContextImpl;
 import org.touchhome.app.spring.ContextCreated;
+import org.touchhome.bundle.api.exception.ServerException;
 import org.touchhome.bundle.api.util.Constants;
 import org.touchhome.bundle.api.util.TouchHomeUtils;
-import org.touchhome.bundle.api.exception.ServerException;
 
 @Log4j2
 @Service
@@ -133,7 +135,7 @@ public class BundleContextService implements ContextCreated {
       removeBundle(bundleId);
     }
     Path path = TouchHomeUtils.getBundlePath().resolve(bundleId + ".jar");
-    FileUtils.copyURLToFile(new URL(bundleUrl), path.toFile(), 30000, 30000);
+    FileUtils.copyURLToFile(new URL(format(bundleUrl, version)), path.toFile(), 30000, 30000);
     loadBundlesFromPath(path);
   }
 
