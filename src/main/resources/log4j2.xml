@@ -2,7 +2,7 @@
 
 <Configuration monitorInterval="30" status="warn">
     <Properties>
-        <Property name="logBaseDir">/opt/touchhome/logs</Property>
+        <Property name="logBaseDir">/opt/homio/logs</Property>
         <Property name="pattern">%d{yyyy/MM/dd HH:mm:ss} %-5p [%-25.25t] [%-25.25c{1}] - %m%n</Property>
     </Properties>
 
@@ -13,7 +13,7 @@
 
         <RollingFile name="appLog"
                      fileName="${logBaseDir}/app.log"
-                     filePattern="${logBaseDir}/old/all-%d{yyyy-MM-dd}.log.gz"
+                     filePattern="${logBaseDir}/old/app-%d{yyyy-MM-dd}.log.gz"
                      append="true">
             <PatternLayout pattern="${pattern}"/>
             <Policies>
@@ -81,10 +81,10 @@
 
     </Appenders>
     <Loggers>
-        <Logger name="org.touchhome.bundle.z2m" additivity="false" level="info">
-            <AppenderRef ref="zigBeeLog"/>
-            <AppenderRef ref="appLog"/>
-            <AppenderRef ref="Console"/>
+        <Logger additivity="false" level="info" name="org.homio.bundle.z2m">
+          <AppenderRef ref="zigBeeLog"/>
+          <AppenderRef ref="appLog"/>
+          <AppenderRef ref="Console"/>
         </Logger>
 
         <Logger name="com.zsmartsystems.zigbee" additivity="false" level="info">
@@ -93,17 +93,17 @@
             <AppenderRef ref="Console"/>
         </Logger>
 
-        <Logger name="org.touchhome.app.workspace" additivity="false" level="info">
-            <AppenderRef ref="workspaceLog"/>
-            <AppenderRef ref="appLog"/>
-            <AppenderRef ref="Console"/>
-        </Logger>
+      <Logger additivity="false" level="info" name="org.homio.app.workspace">
+        <AppenderRef ref="workspaceLog"/>
+        <AppenderRef ref="appLog"/>
+        <AppenderRef ref="Console"/>
+      </Logger>
 
-        <Logger name="org.touchhome.bundle.api.workspace" additivity="false" level="info">
-            <AppenderRef ref="workspaceLog"/>
-            <AppenderRef ref="appLog"/>
-            <AppenderRef ref="Console"/>
-        </Logger>
+      <Logger additivity="false" level="info" name="org.homio.bundle.api.workspace">
+        <AppenderRef ref="workspaceLog"/>
+        <AppenderRef ref="appLog"/>
+        <AppenderRef ref="Console"/>
+      </Logger>
 
         <logger name="org.springframework.web.socket.messaging.StompSubProtocolHandler" level="fatal">
             <AppenderRef ref="appLog"/>
@@ -114,10 +114,10 @@
             <AppenderRef ref="appLog"/>
         </logger>
 
-        <logger name="org.touchhome.bundle.camera" level="info">
-            <AppenderRef ref="cameraLog"/>
-            <AppenderRef ref="appLog"/>
-        </logger>
+      <logger level="info" name="org.homio.bundle.camera">
+        <AppenderRef ref="cameraLog"/>
+        <AppenderRef ref="appLog"/>
+      </logger>
 
         <Root level="INFO">
             <AppenderRef ref="appLog"/>

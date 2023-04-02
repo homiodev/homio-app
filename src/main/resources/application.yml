@@ -1,14 +1,14 @@
-rootDir: /opt/touchhome
+rootDir: /opt/homio
 
-touchhome:
+app:
   cloud:
-    hostname: touchhome.org
-    login-url: https://touchhome.org/server/auth/connect
+    hostname: homio.org
+    login-url: https://homio.org/server/auth/connect
   version: @project.version@
   internet-test-interval: PT10S
   max-java-script-compile-before-interrupt: PT5S
   max-java-script-once-call-before-interrupt: PT60S
-  server-site-url: https://touchhome.org
+  server-site-url: https://homio.org
   http-port: 9119
   check-port-interval: PT10S
   disable-security: false

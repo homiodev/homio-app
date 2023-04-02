@@ -2,8 +2,8 @@
 
 docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
 
-docker build -t touchhome/core:$1 .
-docker push touchhome/core:$1
+docker build -t homio/app:$1 .
+docker push homio/app:$1
 
-docker build -t touchhome/core:latest .
-docker push touchhome/core:latest
+docker build -t homio/app:latest .
+docker push homio/app:latest

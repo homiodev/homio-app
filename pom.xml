@@ -1,18 +1,20 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <artifactId>touchhome-core</artifactId>
+  <artifactId>homio-app</artifactId>
   <build>
     <finalName>${project.artifactId}</finalName>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <release>11</release>
         </configuration>
-        <groupId>org.apache.maven.plugins</groupId>
       </plugin>
       <plugin>
+        <groupId>net.ju-n.maven.plugins</groupId>
         <artifactId>checksum-maven-plugin</artifactId>
+        <version>1.2</version>
         <executions>
           <execution>
             <goals>
@@ -20,15 +22,12 @@
             </goals>
           </execution>
         </executions>
-        <groupId>net.ju-n.maven.plugins</groupId>
-        <version>1.2</version>
       </plugin>
       <plugin>
+        <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <fork>true</fork>
           <mainClass>${start-class}</mainClass>
-          <skip>false</skip>
         </configuration>
         <executions>
           <execution>
@@ -37,16 +36,15 @@
             </goals>
           </execution>
         </executions>
-        <groupId>org.springframework.boot</groupId>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <systemPropertyVariables>
             <development>true</development>
           </systemPropertyVariables>
         </configuration>
-        <groupId>org.apache.maven.plugins</groupId>
       </plugin>
     </plugins>
 
@@ -71,49 +69,44 @@
   <dependencies>
     <!--<dependency>
       <artifactId>addon-gdrive</artifactId>
-      <groupId>org.touchhome</groupId>
+      <groupId>org.homio</groupId>
       <classifier>sources</classifier>
       <version>1.0.1-SNAPSHOT</version>
     </dependency>-->
     <dependency>
-      <artifactId>touchhome-bluetooth</artifactId>
-      <groupId>org.touchhome</groupId>
-      <version>1.0</version>
-    </dependency>
-    <dependency>
-      <artifactId>touchhome-hquery</artifactId>
-      <groupId>org.touchhome</groupId>
-      <version>1.0</version>
+      <artifactId>homio-hquery</artifactId>
+      <groupId>org.homio</groupId>
+      <version>1.0.1</version>
     </dependency>
 
     <dependency>
-      <artifactId>touchhome-bundle-camera</artifactId>
-      <groupId>org.touchhome.bundle</groupId>
-      <version>${touchhome-bundle.version}</version>
+      <artifactId>homio-bundle-camera</artifactId>
+      <groupId>org.homio.bundle</groupId>
+      <version>${homio-bundle.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>touchhome-bundle-telegram</artifactId>
-      <groupId>org.touchhome.bundle</groupId>
-      <version>${touchhome-bundle.version}</version>
+      <artifactId>homio-bundle-telegram</artifactId>
+      <groupId>org.homio.bundle</groupId>
+      <version>${homio-bundle.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>touchhome-bundle-mqtt</artifactId>
-      <groupId>org.touchhome.bundle</groupId>
-      <version>${touchhome-bundle.version}</version>
+      <artifactId>homio-bundle-mqtt</artifactId>
+      <groupId>org.homio.bundle</groupId>
+      <version>${homio-bundle.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>touchhome-bundle-z2m</artifactId>
-      <groupId>org.touchhome.bundle</groupId>
-      <version>${touchhome-bundle.version}</version>
+      <artifactId>homio-bundle-z2m</artifactId>
+      <groupId>org.homio.bundle</groupId>
+      <version>${homio-bundle.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>touchhome-bundle-bluetooth</artifactId>
-      <groupId>org.touchhome.bundle</groupId>
-      <version>${touchhome-bundle.version}</version>
+      <artifactId>homio-bundle-bluetooth</artifactId>
+      <groupId>org.homio.bundle</groupId>
+      <version>${homio-bundle.version}</version>
     </dependency>
 
     <dependency>
@@ -205,11 +198,6 @@
       <groupId>org.mongodb</groupId>
     </dependency>
 
-    <dependency>
-      <artifactId>jetcd-core</artifactId>
-      <groupId>io.etcd</groupId>
-      <version>0.7.1</version>
-    </dependency>
     <dependency>
       <artifactId>jmdns</artifactId>
       <groupId>org.jmdns</groupId>
@@ -431,9 +419,9 @@
     </dependency>
 
     <dependency>
-      <artifactId>touchhome-bundle-api</artifactId>
-      <groupId>org.touchhome</groupId>
-      <version>${touchhome-bundle-api.version}</version>
+      <artifactId>homio-bundle-api</artifactId>
+      <groupId>org.homio</groupId>
+      <version>${homio-bundle-api.version}</version>
     </dependency>
 
     <dependency>
@@ -465,44 +453,29 @@
       <artifactId>swagger-annotations</artifactId>
       <groupId>io.swagger</groupId>
     </dependency>
+    <dependency>
+      <artifactId>grpc-all</artifactId>
+      <groupId>io.grpc</groupId>
+      <version>1.54.0</version>
+    </dependency>
+
   </dependencies>
 
   <modelVersion>4.0.0</modelVersion>
   <packaging>jar</packaging>
 
   <parent>
-    <artifactId>touchhome-dependency</artifactId>
-    <groupId>org.touchhome</groupId>
+    <artifactId>homio-dependency</artifactId>
+    <groupId>org.homio</groupId>
     <version>2.4.4</version>
   </parent>
 
-  <profiles>
-    <profile>
-      <dependencies>
-        <dependency>
-          <artifactId>spring-boot-loader</artifactId>
-          <groupId>org.springframework.boot</groupId>
-        </dependency>
-      </dependencies>
-
-      <id>intellij-properties-launcher</id>
-
-    </profile>
-  </profiles>
-
   <properties>
     <os.detected.classifier>linux-armhf</os.detected.classifier>
-    <start-class>org.touchhome.app.TouchHomeApplication</start-class>
-    <touchhome-bundle-api.version>1.2.1</touchhome-bundle-api.version>
-    <touchhome-bundle.version>1.2.1-SNAPSHOT</touchhome-bundle.version>
+    <homio-bundle-api.version>1.2.4-SNAPSHOT</homio-bundle-api.version>
+    <homio-bundle.version>1.2.1-SNAPSHOT</homio-bundle.version>
+    <start-class>org.homio.app.HomioApplication</start-class>
   </properties>
 
-  <distributionManagement>
-    <repository>
-      <id>nexus-site</id>
-      <url>http://central_nexus/server</url>
-    </repository>
-  </distributionManagement>
-
-  <version>1.6-SNAPSHOT</version>
+  <version>1.4.0-SNAPSHOT</version>
 </project>

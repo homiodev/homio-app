@@ -1,7 +1,7 @@
 FROM debian:10.3-slim
 
 LABEL maintainer="Ruslan Masiuk <ruslan.masuk@gmail.com>"
-LABEL image.application.name=touchhome-core
+LABEL image.application.name=homio-app
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -37,8 +37,8 @@ RUN mkdir -p "${JAVA_HOME}" && \
     update-alternatives --install /usr/bin/java java "${JAVA_HOME}/bin/java" 50 && \
     update-alternatives --install /usr/bin/javac javac "${JAVA_HOME}/bin/javac" 50
 
-RUN mkdir /opt/touchhome
-WORKDIR /opt/touchhome
+RUN mkdir /opt/homio
+WORKDIR /opt/homio
 
 # Install pyserial
 RUN pip install pyserial
@@ -52,7 +52,7 @@ RUN cd lol_dht22 && ./configure && make && cd ..
 # Configure postgres
 VOLUME  ["/var/lib/postgresql/data"]
 
-COPY app/target/touchhome.jar touchhome.jar
-ENTRYPOINT ["java", "-jar", "-Ddocker=true", "touchhome.jar"]
+COPY app/target/homio-app.jar homio-app.jar
+ENTRYPOINT ["java", "-jar", "-Ddocker=true", "homio-app.jar"]
 
 EXPOSE 9111

@@ -1,6 +1,6 @@
-rootDir: /opt/touchhome
+rootDir: /opt/homio
 
-touchhome:
+app:
   version: 0
   httpPort: 0
 
