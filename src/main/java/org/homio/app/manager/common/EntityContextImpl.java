@@ -3,14 +3,11 @@ package org.homio.app.manager.common;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
-import static org.homio.bundle.api.util.CommonUtils.FFMPEG_LOCATION;
 import static org.homio.bundle.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -36,7 +33,6 @@ import lombok.extern.log4j.Log4j2;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.hibernate.metamodel.spi.MetamodelImplementor;
@@ -46,8 +42,8 @@ import org.homio.app.audio.AudioService;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.builder.widget.EntityContextWidgetImpl;
 import org.homio.app.cb.ComputerBoardEntity;
-import org.homio.app.config.ExtRequestMappingHandlerMapping;
 import org.homio.app.config.AppProperties;
+import org.homio.app.config.ExtRequestMappingHandlerMapping;
 import org.homio.app.extloader.BundleContext;
 import org.homio.app.extloader.BundleContextService;
 import org.homio.app.manager.BundleService;
@@ -57,11 +53,10 @@ import org.homio.app.manager.PortService;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.manager.UserService;
 import org.homio.app.manager.WidgetService;
-import org.homio.app.manager.bgp.BgpService;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.homio.app.manager.common.impl.EntityContextEventImpl;
+import org.homio.app.manager.common.impl.EntityContextInstallImpl;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
-import org.homio.app.manager.common.impl.EntityContextUDPImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
@@ -92,7 +87,6 @@ import org.homio.bundle.api.entity.BaseEntity;
 import org.homio.bundle.api.entity.DeviceBaseEntity;
 import org.homio.bundle.api.entity.DisableCacheEntity;
 import org.homio.bundle.api.entity.UserEntity;
-import org.homio.bundle.api.entity.dependency.DependencyExecutableInstaller;
 import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.model.HasEntityIdentifier;
@@ -111,7 +105,6 @@ import org.homio.bundle.api.util.UpdatableSetting;
 import org.homio.bundle.api.widget.WidgetBaseTemplate;
 import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.bundle.hquery.hardware.network.NetworkHardwareRepository;
-import org.homio.bundle.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.aop.framework.Advised;
@@ -137,7 +130,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Component
 public class EntityContextImpl implements EntityContext {
 
-    private final GitHubProject appGitHub = GitHubProject.of("homio", "homio-app");
+    private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app");
     public static final String CREATE_TABLE_INDEX =
         "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
@@ -175,7 +168,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private final EntityContextUIImpl entityContextUI;
-    private final EntityContextUDPImpl entityContextUDP;
+    private final EntityContextInstallImpl entityContextInstall;
     private final EntityContextEventImpl entityContextEvent;
     private final EntityContextBGPImpl entityContextBGP;
     private final EntityContextSettingImpl entityContextSetting;
@@ -211,9 +204,9 @@ public class EntityContextImpl implements EntityContext {
         this.appProperties = appProperties;
 
         this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
-        this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler);
-        this.entityContextUDP = new EntityContextUDPImpl(this);
+        this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler, appProperties);
         this.entityContextEvent = new EntityContextEventImpl(this, entityManagerFactory);
+        this.entityContextInstall = new EntityContextInstallImpl(this);
         this.entityContextSetting = new EntityContextSettingImpl(this);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
         this.entityContextStorage = new EntityContextStorage(this);
@@ -258,9 +251,12 @@ public class EntityContextImpl implements EntityContext {
         event().fireEventIfNotSame("app-status", Status.ONLINE);
         event().runOnceOnInternetUp("internal-ctx", () -> {
             MACHINE_IP_ADDRESS = getInternalIpAddress();
-            installFFMPEG();
+
         });
-        setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", cacheService::clearCache);
+        setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", () -> {
+            cacheService.clearCache();
+            ui().sendSuccessMessage("Cache has been cleared successfully");
+        });
         setting().listenValueAndGet(SystemLanguageSetting.class, "listen-lang", lang -> Lang.CURRENT_LANG = lang.name());
         setting().listenValue(ScanMicroControllersSetting.class, "scan-micro-controllers", () -> {
             ui().handleResponse(new BeansItemsDiscovery(MicroControllerScanner.class).handleAction(this, null));
@@ -270,8 +266,6 @@ public class EntityContextImpl implements EntityContext {
         });
 
         this.entityContextStorage.init();
-
-        runUtilBackgroundServices(applicationContext);
     }
 
     private void userConfiguration() {
@@ -299,12 +293,27 @@ public class EntityContextImpl implements EntityContext {
         });
     }
 
+    @Override
+    public EntityContextInstallImpl install() {
+        return this.entityContextInstall;
+    }
+
+    @Override
+    public EntityContextUIImpl ui() {
+        return entityContextUI;
+    }
+
+    @Override
+    public EntityContextEventImpl event() {
+        return this.entityContextEvent;
+    }
+
     private void updateNotificationBlock() {
         ui().addNotificationBlock("app", "App", "fas fa-house", "#E65100", builder -> {
             String installedVersion = appProperties.getVersion();
             builder.setVersion(installedVersion);
             String latestVersion = appGitHub.getLastReleaseVersion();
-            if (!latestVersion.equals(installedVersion)) {
+            if (!installedVersion.equals(latestVersion)) {
                 builder.setUpdatable(
                     (progressBar, version) -> appGitHub.updating("homio", CommonUtils.getInstallPath().resolve("homio"), progressBar,
                         projectUpdate -> {
@@ -322,21 +331,6 @@ public class EntityContextImpl implements EntityContext {
             }
             builder.addInfo("Started at " + DateFormat.getDateTimeInstance().format(new Date()), null, "fas fa-clock", null);
         });
-    }
-
-    @Override
-    public EntityContextUIImpl ui() {
-        return entityContextUI;
-    }
-
-    @Override
-    public EntityContextEventImpl event() {
-        return this.entityContextEvent;
-    }
-
-    @Override
-    public EntityContextUDPImpl udp() {
-        return this.entityContextUDP;
     }
 
     @Override
@@ -644,12 +638,6 @@ public class EntityContextImpl implements EntityContext {
         return environment.getProperty(key, classType, defaultValue);
     }
 
-    private void runUtilBackgroundServices(ApplicationContext applicationContext) {
-        for (BgpService bgpService : applicationContext.getBeansOfType(BgpService.class).values()) {
-            bgpService.startUp();
-        }
-    }
-
     private void initialiseInlineBundles(ApplicationContext applicationContext) {
         log.info("Initialize bundles...");
         ArrayList<BundleEntrypoint> bundleEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
@@ -865,23 +853,6 @@ public class EntityContextImpl implements EntityContext {
     private String getInternalIpAddress() {
         return defaultString(InternalUtil.checkUrlAccessible(),
             applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress());
-    }
-
-    private void installFFMPEG() {
-        if (SystemUtils.IS_OS_LINUX) {
-            MachineHardwareRepository repository = getBean(MachineHardwareRepository.class);
-            if (!repository.isSoftwareInstalled("ffmpeg")) {
-                log.info("Installing ffmpeg");
-                repository.installSoftware("ffmpeg", 600);
-            }
-        } else {
-            if (!Files.exists(Paths.get(FFMPEG_LOCATION))) {
-                log.info("Installing ffmpeg");
-                String url = "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-essentials_build.7z";
-                DependencyExecutableInstaller.downloadAndExtract(url, "ffmpeg.7z",
-                    (progress, message) -> log.info("FFMPEG " + message + ". " + progress + "%"), log);
-            }
-        }
     }
 
     @AllArgsConstructor

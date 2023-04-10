@@ -80,6 +80,12 @@
     </dependency>
 
     <dependency>
+      <artifactId>maverick-synergy-client</artifactId>
+      <groupId>com.sshtools</groupId>
+      <version>3.0.10</version>
+    </dependency>
+
+    <dependency>
       <artifactId>homio-bundle-camera</artifactId>
       <groupId>org.homio.bundle</groupId>
       <version>${homio-bundle.version}</version>
@@ -205,6 +211,7 @@
     <dependency>
       <artifactId>commons-compress</artifactId>
       <groupId>org.apache.commons</groupId>
+      <version>1.23.0</version>
     </dependency>
     <dependency>
       <artifactId>annotations</artifactId>

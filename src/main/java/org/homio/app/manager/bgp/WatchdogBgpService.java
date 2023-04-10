@@ -7,29 +7,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.bundle.api.EntityContext;
+import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.homio.bundle.api.service.EntityService;
 import org.homio.bundle.api.service.EntityService.ServiceInstance;
 import org.homio.bundle.api.service.EntityService.WatchdogService;
-import org.springframework.stereotype.Service;
 
 @Log4j2
-@Service
-@RequiredArgsConstructor
-public class WatchdogBgpService implements BgpService {
+public class WatchdogBgpService {
 
     private final Map<String, WatchdogService> watchdogServiceMap = new HashMap<>();
-    private final EntityContext entityContext;
 
-    @Override
-    public void startUp() {
-        entityContext.bgp().builder("watchdog")
-                     .interval(Duration.ofMinutes(1))
-                     .delay(Duration.ofMinutes(1))
-                     .execute(this::runWatchDogService);
+    public WatchdogBgpService(EntityContextBGPImpl entityContextBGP) {
+        entityContextBGP.builder("watchdog")
+                        .interval(Duration.ofMinutes(1))
+                        .delay(Duration.ofMinutes(1))
+                        .execute(this::runWatchDogService);
     }
 
     @SneakyThrows

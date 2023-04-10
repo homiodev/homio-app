@@ -5,6 +5,7 @@ import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -33,11 +34,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.SystemUtils;
+import org.homio.app.config.AppProperties;
 import org.homio.app.json.BgpProcessResponse;
+import org.homio.app.manager.bgp.InternetAvailabilityBgpService;
+import org.homio.app.manager.bgp.WatchdogBgpService;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextBGP;
 import org.homio.bundle.api.model.HasEntityIdentifier;
+import org.homio.bundle.api.setting.SettingPlugin;
 import org.homio.bundle.api.util.CommonUtils;
+import org.homio.bundle.hquery.LinesReader;
+import org.homio.bundle.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -60,10 +69,16 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     private final Map<String, BatchRunContext<?>> batchRunContextMap = new ConcurrentHashMap<>();
 
+    @Getter
+    private final InternetAvailabilityBgpService internetAvailabilityService;
+    private final WatchdogBgpService watchdogBgpService;
+
     public EntityContextBGPImpl(
-        EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler) {
+        EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler, AppProperties appProperties) {
         this.entityContext = entityContext;
         this.taskScheduler = taskScheduler;
+        this.internetAvailabilityService = new InternetAvailabilityBgpService(entityContext, appProperties, this);
+        this.watchdogBgpService = new WatchdogBgpService(this);
     }
 
     public void onContextCreated() {
@@ -320,6 +335,37 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 return this;
             }
         };
+    }
+
+    @Override
+    public <T> void runService(@NotNull EntityContext entityContext, @NotNull Consumer<Process> processConsumer, @NotNull String name,
+        @NotNull Class<? extends SettingPlugin<T>> settingClass) {
+        MachineHardwareRepository machineHardwareRepository = entityContext.getBean(MachineHardwareRepository.class);
+        if (SystemUtils.IS_OS_LINUX) {
+            machineHardwareRepository.startSystemCtl(name);
+        } else {
+            Path targetPath = Paths.get(entityContext.setting().getRawValue(settingClass));
+            Path logFile = targetPath.getParent().resolve("execution-" + name + ".log");
+            entityContext.bgp().builder(name + "-service").linkLogFile(logFile).hideOnUIAfterCancel(false).execute(() -> {
+                Process process = Runtime.getRuntime().exec(targetPath.toString());
+                entityContext.bgp().executeOnExit(() -> {
+                    if (process != null) {
+                        process.destroyForcibly();
+                    }
+                });
+                processConsumer.accept(process);
+                Thread inputThread = new Thread(new LinesReader(name + "inputReader", process.getInputStream(), null, message ->
+                    log.info("[{}]: {}", name, message)));
+                Thread errorThread = new Thread(new LinesReader(name + "errorReader", process.getErrorStream(), null, message ->
+                    log.error("[{}]: {}", name, message)));
+                inputThread.start();
+                errorThread.start();
+
+                process.waitFor();
+                inputThread.interrupt();
+                errorThread.interrupt();
+            });
+        }
     }
 
     @Override

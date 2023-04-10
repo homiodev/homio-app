@@ -21,6 +21,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.cache.SpringCacheBasedUserCache;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -35,7 +37,8 @@ public class SecurityConfiguration {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-       // http.antMatcher("/rest/frame/**").headers().frameOptions().deny();
+        // http.antMatcher("/rest/frame/**").headers().frameOptions().deny();
+        // http.csrf().csrfTokenRepository(csrfTokenRepository()).;
 
         // No session will be created or used by spring security
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
@@ -72,6 +75,13 @@ public class SecurityConfiguration {
         http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider));
         return http.build();
     }
+
+    /*@Bean
+    public CsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath("/");
+        return repository;
+    }*/
 
     @Bean
     public AuthenticationManager authManager(HttpSecurity http) throws Exception {

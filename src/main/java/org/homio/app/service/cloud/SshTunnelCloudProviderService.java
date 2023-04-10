@@ -2,13 +2,18 @@ package org.homio.app.service.cloud;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
+import com.sshtools.client.SshClient;
+import com.sshtools.common.permissions.UnauthorizedException;
+import java.io.FileNotFoundException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -30,10 +35,12 @@ import org.homio.bundle.api.util.CommonUtils;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 @Log4j2
@@ -52,18 +59,74 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     @Override
     public void start() throws Exception {
         try {
+            Path privateKey = CommonUtils.getSshPath().resolve("rma");
+            if (!Files.isReadable(privateKey)) {
+                throw new FileNotFoundException("Ssh private key not found");
+            }
             UserEntity user = Objects.requireNonNull(entityContext.getEntity(UserEntity.PREFIX + "primary"));
             String passphrase = user.getJsonData().optString("passphrase", null);
             if (passphrase == null) {
                 throw new NotFoundException("Passphrase not configured");
             }
-            JSch j = new JSch();
-            j.addIdentity(CommonUtils.getSshPath().resolve("id_rsa_homio").toString(), passphrase.getBytes(StandardCharsets.UTF_8));
+
+            /*try (SshClient ssh = new SshClient(properties.getCloud().getHostname(), 2222,
+                "Ruslan", 10000, privateKey.toFile(), passphrase)) {
+
+                *//**
+                 * First we must allow forwarding. Without this no forwarding is possible. This
+                 * will allow us to forward from localhost and accept remote forwarding from the
+                 * remote server.
+                 *//*
+                ssh.getContext().getForwardingPolicy().allowForwarding();
+
+                *//**
+                 * A local forward allows the ssh client user to connect to a resource
+                 * on the remote network
+                 *//*
+              //  ssh.startLocalForwarding("127.0.0.1", 8443, "www.jadaptive.com", 443);
+
+                *//**
+                 * A remote forward allows a user to connect from the remote computer to
+                 * a resource on the client's network
+                 *//*
+                ssh.startRemoteForwarding("127.0.0.1", 9111, "service.local", 80);
+
+                *//**
+                 * If we want to allow other local computers to connect to our forwarding we can
+                 * allow gateway forwarding. This allows a local forwarding to be started on a
+                 * wildcard or IP address of the client that can accept connections from external
+                 * computers. With this enabled, we have to start the forwarding so that we are
+                 * listening on a publicly accessible interface of the client.
+                 *//*
+
+              //  ssh.getContext().getForwardingPolicy().allowGatewayForwarding();
+
+                *//**
+                 * We we start a local forwarding that is accessible by any IP on the clients
+                 * network. This is called "Gateway Forwarding"
+                 *//*
+              //  ssh.startLocalForwarding("::", 9443, "www.jadaptive.com", 443);
+
+                *//**
+                 * Wait for the connection to be disconnected.
+                 *//*
+                ssh.getConnection().getDisconnectFuture().waitForever();
+
+            } catch (Exception e) {
+                System.out.println(e);
+            }*/
+
+      /*  } catch (IOException | SshException e) {
+            System.out.println(e);
+        }
+*/
+            /*JSch j = new JSch();
+            j.addIdentity(privateKey.toString(), passphrase.getBytes(StandardCharsets.UTF_8));
             Session session = j.getSession(user.getName(), properties.getCloud().getHostname(), 22);
             java.util.Properties config = new java.util.Properties();
             config.put("StrictHostKeyChecking", "no");
             session.setConfig(config);
-            session.connect();
+            session.connect();*/
 
             /*JSch j = new JSch();
             Session session = null;
@@ -135,10 +198,10 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
 
    /* @Override
     public void assembleBellNotifications(BellNotificationBuilder bellNotificationBuilder) {
-        if (!Files.exists(CommonUtils.getSshPath().resolve("id_rsa_homio"))) {
+        if (!Files.exists(CommonUtils.getSshPath().resolve("id_rsa_cloud"))) {
             bellNotificationBuilder.danger("private-key", "Cloud", "Private Key not found");
         }
-        if (!Files.exists(CommonUtils.getSshPath().resolve("id_rsa_homio.pub"))) {
+        if (!Files.exists(CommonUtils.getSshPath().resolve("id_rsa_cloud.pub"))) {
             bellNotificationBuilder.danger("public-key", "Cloud", "Public Key not found");
         }
         int serviceStatus = machineHardwareRepository.getServiceStatus("homio-tunnel");
@@ -181,7 +244,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     }
 
     private Consumer<NotificationBlockBuilder> getSyncHandler(@Nullable Exception ex) {
-        if (!Files.exists(CommonUtils.getSshPath().resolve("id_rsa_homio"))) {
+        if (!Files.exists(CommonUtils.getSshPath().resolve("id_rsa_cloud"))) {
             return NOT_SYNC_HANDLER;
         }
         if (ex != null) {
@@ -205,7 +268,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     @RequiredArgsConstructor
     private static class LoginBody {
 
-        private final String user;
+        private final String email;
         private final String password;
         private final String passphrase;
         private final boolean recreate;
@@ -255,22 +318,33 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             parameters.get("field.password").asText(),
             parameters.get("field.password").asText(),
             false);
-        String url = properties.getCloud().getLoginUrl();
-        LoginBody body = new LoginBody(loginBody.user, loginBody.password, loginBody.passphrase, false);
+        String url = properties.getCloud().getSyncUrl();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<LoginBody> request = new HttpEntity<>(body, headers);
-        ResponseEntity<LoginResponse> response = restTemplate.postForEntity(url, request, LoginResponse.class);
-        LoginResponse loginResponse = response.getBody();
-        if (response.getStatusCode() == HttpStatus.OK && loginResponse != null) {
-            CommonUtils.writeToFile(CommonUtils.getSshPath().resolve("id_rsa_homio"),
-                loginResponse.getPrivateKey(), false);
-            UserEntity user = entityContext.getUserRequire();
-            user.getJsonData().put("passphrase", loginBody.passphrase);
-            entityContext.save(user);
-            entityContext.getBean(CloudService.class).restart();
-        } else {
-            log.error("Wrong status response from cloud server: {}", response.getStatusCode());
+        HttpEntity<LoginBody> request = new HttpEntity<>(loginBody, headers);
+
+        try {
+            ResponseEntity<LoginResponse> response = restTemplate.exchange(url, HttpMethod.POST, request, LoginResponse.class);
+            LoginResponse loginResponse = response.getBody();
+            if (response.getStatusCode() == HttpStatus.OK && loginResponse != null) {
+                CommonUtils.writeToFile(CommonUtils.getSshPath().resolve("id_rsa_cloud"),
+                    loginResponse.getPrivateKey(), false);
+                UserEntity user = entityContext.getUserRequire();
+                user.getJsonData().put("passphrase", loginBody.passphrase);
+                entityContext.save(user);
+                entityContext.getBean(CloudService.class).restart();
+            } else {
+                log.error("Wrong status response from cloud server: {}", response.getStatusCode());
+            }
+        } catch (RestClientResponseException ce) {
+            log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ce));
+            try {
+                ObjectNode error = OBJECT_MAPPER.readValue(ce.getResponseBodyAsString(), ObjectNode.class);
+                entityContext.ui().sendErrorMessage(error.path("message").asText("error.sync"));
+            } catch (Exception ignore) {}
+        } catch (Exception ex) {
+            log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
+            entityContext.ui().sendErrorMessage("error.sync");
         }
     }
 }

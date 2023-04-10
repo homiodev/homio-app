@@ -5,6 +5,7 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -29,17 +30,19 @@ public class JwtTokenProvider implements ContextCreated {
     private JwtParser jwtParser;
     private boolean regenerateSecurityIdOnRestart;
     private int jwtValidityTimeout;
+    private byte[] securityId;
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        this.regenerateSecurityIdOnRestart = entityContext.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);
-        this.jwtParser = Jwts.parser().setSigningKey(buildSecurityId());
-        this.jwtValidityTimeout = entityContext.setting().getValue(SystemJWTTokenValidSetting.class);
-        entityContext.setting()
-                     .listenValue(SystemJWTTokenValidSetting.class, "jwt-valid", value -> this.jwtValidityTimeout = value);
-        entityContext.setting().listenValue(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
+        entityContext.setting().listenValueAndGet(SystemJWTTokenValidSetting.class, "jwt-valid", value -> {
+            this.jwtValidityTimeout = value;
+            this.securityId = buildSecurityId();
+            this.jwtParser = Jwts.parser().setSigningKey(securityId);
+        });
+        entityContext.setting().listenValueAndGet(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
             this.regenerateSecurityIdOnRestart = value;
-            this.jwtParser = Jwts.parser().setSigningKey(buildSecurityId());
+            this.securityId = buildSecurityId();
+            this.jwtParser = Jwts.parser().setSigningKey(securityId);
         });
     }
 
@@ -50,7 +53,6 @@ public class JwtTokenProvider implements ContextCreated {
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + TimeUnit.MINUTES.toMillis(jwtValidityTimeout));
-        String securityId = buildSecurityId();
 
         return Jwts.builder()
                    .setClaims(claims)
@@ -89,11 +91,11 @@ public class JwtTokenProvider implements ContextCreated {
         return this.jwtParser.parseClaimsJws(token).getBody().getSubject();
     }
 
-    private String buildSecurityId() {
-        String securityId = CommonUtils.APP_UUID;
+    private byte[] buildSecurityId() {
+        String securityId = CommonUtils.APP_UUID + "_" + jwtValidityTimeout;
         if (regenerateSecurityIdOnRestart) {
             securityId += "_" + CommonUtils.RUN_COUNT;
         }
-        return securityId;
+        return Base64.getEncoder().encode(securityId.getBytes());
     }
 }

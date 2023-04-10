@@ -42,85 +42,49 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
     private final MenuBlock.StaticMenuBlock<HttpMethod> methodMenu;
 
-    public Scratch3NetworkBlocks(
-            EntityContext entityContext, AppProperties appProperties)
-            throws SocketException {
+    public Scratch3NetworkBlocks(EntityContext entityContext, AppProperties appProperties)
+        throws SocketException {
         super("#595F4B", entityContext, null, "net");
         this.udpSocket.setBroadcast(true);
 
         // Menu
         this.methodMenu = menuStatic("method", HttpMethod.class, HttpMethod.GET);
 
-        blockCommand(
-                10,
-                "request",
-                "HTTP [METHOD] url [URL] | RAW: [RAW] ",
-                this::httpRequestHandler,
-                block -> {
-                    block.addArgument("METHOD", this.methodMenu);
-                    block.addArgument("URL", appProperties.getServerSiteURL() + "/sample");
-                    block.addArgument("RAW", false);
-                });
+        blockCommand(10, "request", "HTTP [METHOD] url [URL] | RAW: [RAW] ", this::httpRequestHandler, block -> {
+            block.addArgument("METHOD", this.methodMenu);
+            block.addArgument("URL", appProperties.getServerSiteURL() + "/sample");
+            block.addArgument("RAW", false);
+        });
 
-        blockCommand(
-                20,
-                HttpApplyHandler.update_header.name(),
-                "HTTP Header [KEY]/[VALUE]",
-                this::skipCommand,
-                block -> {
-                    block.addArgument("KEY", "key");
-                    block.addArgument(VALUE, "value");
-                });
+        blockCommand(20, HttpApplyHandler.update_header.name(), "HTTP Header [KEY]/[VALUE]", this::skipCommand, block -> {
+            block.addArgument("KEY", "key");
+            block.addArgument(VALUE, "value");
+        });
 
-        blockCommand(
-                30,
-                HttpApplyHandler.update_basic_auth.name(),
-                "HTTP Basic auth [USER]/[PWD]",
-                this::skipCommand,
-                block -> {
-                    block.addArgument("USER", "user");
-                    block.addArgument("PWD", "password");
-                });
+        blockCommand(30, HttpApplyHandler.update_basic_auth.name(), "HTTP Basic auth [USER]/[PWD]", this::skipCommand, block -> {
+            block.addArgument("USER", "user");
+            block.addArgument("PWD", "password");
+        });
 
-        blockCommand(
-                40,
-                HttpApplyHandler.update_bearer_auth.name(),
-                "HTTP Bearer auth [TOKEN]",
-                this::skipCommand,
-                block -> {
-                    block.addArgument("TOKEN", "token");
-                });
+        blockCommand(40, HttpApplyHandler.update_bearer_auth.name(), "HTTP Bearer auth [TOKEN]", this::skipCommand, block -> {
+            block.addArgument("TOKEN", "token");
+        });
 
-        blockCommand(
-                50,
-                HttpApplyHandler.update_payload.name(),
-                "HTTP Body payload [PAYLOAD]",
-                this::skipCommand,
-                block -> {
-                    block.addArgument("PAYLOAD");
-                    block.appendSpace();
-                });
+        blockCommand(50, HttpApplyHandler.update_payload.name(), "HTTP Body payload [PAYLOAD]", this::skipCommand, block -> {
+            block.addArgument("PAYLOAD");
+            block.appendSpace();
+        });
 
-        blockHat(
-                60,
-                "udp_listener",
-                "UDP in [HOST]/[PORT]",
-                this::onUdpEventHandler,
-                block -> {
-                    block.addArgument("HOST", "0.0.0.0");
-                    block.addArgument("PORT", 8888);
-                });
+        blockHat(60, "udp_listener", "UDP in [HOST]/[PORT]", this::onUdpEventHandler, block -> {
+            block.addArgument("HOST", "0.0.0.0");
+            block.addArgument("PORT", 8888);
+        });
 
-        blockCommand(
-                70,
-                "udp_send",
-                "UDP text [VALUE] out [HOST]/[PORT]",
-                this::sendUDPHandler,
-                block -> {
-                    block.addArgument("HOST", "255.255.255.255");
-                    block.addArgument("PORT", 8888);
-                    block.addArgument(VALUE, "payload");
-                });
+        blockCommand(70, "udp_send", "UDP text [VALUE] out [HOST]/[PORT]", this::sendUDPHandler, block -> {
+            block.addArgument("HOST", "255.255.255.255");
+            block.addArgument("PORT", 8888);
+            block.addArgument(VALUE, "payload");
+        });
     }
 
     @SneakyThrows
@@ -129,10 +93,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         if (StringUtils.isNotEmpty(payload)) {
             String host = workspaceBlock.getInputString("HOST");
             Integer port = workspaceBlock.getInputInteger("PORT");
-            InetSocketAddress address =
-                    StringUtils.isEmpty(host)
-                            ? new InetSocketAddress(port)
-                            : new InetSocketAddress(host, port);
+            InetSocketAddress address = StringUtils.isEmpty(host) ? new InetSocketAddress(port) : new InetSocketAddress(host, port);
             byte[] buf = payload.getBytes();
             udpSocket.send(new DatagramPacket(buf, buf.length, address));
         }
@@ -141,19 +102,16 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
     private void onUdpEventHandler(WorkspaceBlock workspaceBlock) {
         WorkspaceBlock substack = workspaceBlock.getNext();
         if (substack != null) {
-            workspaceBlock.handleAndRelease(
-                    () ->
-                            entityContext
-                                    .udp()
-                                    .listenUdp(
-                                            workspaceBlock.getId(),
-                                            workspaceBlock.getInputString("HOST"),
-                                            workspaceBlock.getInputInteger("PORT"),
-                                            (datagramPacket, output) -> {
-                                                workspaceBlock.setValue(new StringType(output));
-                                                substack.getNext().handle();
-                                            }),
-                    () -> entityContext.udp().stopListenUdp(workspaceBlock.getId()));
+            workspaceBlock.handleAndRelease(() ->
+                    entityContext.event().listenUdp(
+                        workspaceBlock.getId(),
+                        workspaceBlock.getInputString("HOST"),
+                        workspaceBlock.getInputInteger("PORT"),
+                        (datagramPacket, output) -> {
+                            workspaceBlock.setValue(new StringType(output));
+                            substack.getNext().handle();
+                        }),
+                () -> entityContext.event().stopListenUdp(workspaceBlock.getId()));
         }
     }
 
