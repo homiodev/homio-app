@@ -2,16 +2,12 @@ package org.homio.app.service.cloud;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.Session;
-import com.sshtools.client.SshClient;
-import com.sshtools.common.permissions.UnauthorizedException;
 import java.io.FileNotFoundException;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -32,6 +28,7 @@ import org.homio.bundle.api.service.CloudProviderService;
 import org.homio.bundle.api.ui.UI.Color;
 import org.homio.bundle.api.ui.field.action.ActionInputParameter;
 import org.homio.bundle.api.util.CommonUtils;
+import org.homio.bundle.hquery.hardware.network.NetworkHardwareRepository;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -59,7 +56,8 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     @Override
     public void start() throws Exception {
         try {
-            Path privateKey = CommonUtils.getSshPath().resolve("rma");
+            status = Status.INITIALIZE;
+            Path privateKey = CommonUtils.getSshPath().resolve("id_rsa_cloud");
             if (!Files.isReadable(privateKey)) {
                 throw new FileNotFoundException("Ssh private key not found");
             }
@@ -271,6 +269,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
         private final String email;
         private final String password;
         private final String passphrase;
+        private final String ipAddress;
         private final boolean recreate;
     }
 
@@ -279,7 +278,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     @RequiredArgsConstructor
     private static class LoginResponse {
 
-        private byte[] privateKey;
+        private String privateKey;
     }
 
     private Consumer<NotificationBlockBuilder> buildNotSyncHandler() {
@@ -290,9 +289,9 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
                     dialogModel -> {
                         dialogModel.disableKeepOnUi();
                         List<ActionInputParameter> inputs = new ArrayList<>();
-                        inputs.add(ActionInputParameter.text("field.email",
-                            entityContext.getUserRequire().getName()));
+                        inputs.add(ActionInputParameter.text("field.email", entityContext.getUserRequire().getName()));
                         inputs.add(ActionInputParameter.text("field.password", ""));
+                        inputs.add(ActionInputParameter.text("field.passphrase", ""));
                         dialogModel.submitButton("Login", button -> {
                         }).group("General", inputs);
                     });
@@ -312,12 +311,14 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
         if (parameters == null) {
             return;
         }
+        NetworkHardwareRepository repository = entityContext.getBean(NetworkHardwareRepository.class);
         RestTemplate restTemplate = new RestTemplate();
         LoginBody loginBody = new LoginBody(
             parameters.get("field.email").asText(),
             parameters.get("field.password").asText(),
-            parameters.get("field.password").asText(),
-            false);
+            parameters.get("field.passphrase").asText(),
+            repository.getIPAddress(),
+            true);
         String url = properties.getCloud().getSyncUrl();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -338,13 +339,19 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             }
         } catch (RestClientResponseException ce) {
             log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ce));
-            try {
-                ObjectNode error = OBJECT_MAPPER.readValue(ce.getResponseBodyAsString(), ObjectNode.class);
-                entityContext.ui().sendErrorMessage(error.path("message").asText("error.sync"));
-            } catch (Exception ignore) {}
+            entityContext.ui().sendErrorMessage(getClientError(ce));
         } catch (Exception ex) {
             log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
             entityContext.ui().sendErrorMessage("error.sync");
         }
+    }
+
+    private String getClientError(RestClientResponseException ce) {
+        String errorMessage = null;
+        try {
+            ObjectNode error = OBJECT_MAPPER.readValue(ce.getResponseBodyAsString(), ObjectNode.class);
+            errorMessage = error.path("message").asText("error.sync");
+        } catch (Exception ignore) {}
+        return defaultString(errorMessage, "error.sync");
     }
 }

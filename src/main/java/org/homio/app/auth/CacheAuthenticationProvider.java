@@ -19,7 +19,7 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
 
     public CacheAuthenticationProvider() {
         this.attemptsCache = CacheBuilder.newBuilder().
-                                         expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<String, Integer>() {
+                                         expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
                 public Integer load(@SuppressWarnings("NullableProblems") String ignore) {
                     return 0;
                 }
@@ -32,12 +32,11 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
         if (authentication.getCredentials() == null) {
             logger.debug("Authentication failed: no credentials provided");
 
-            throw new BadCredentialsException(
-                messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials", "Bad credentials"));
+            throw new BadCredentialsException("error.user_not_exists_or_wrong_password");
         }
 
         if (isBlocked(userDetails.getUsername())) {
-            throw new BadCredentialsException("USER.BLOCKED");
+            throw new BadCredentialsException("error.user_blocked");
         }
 
         String password = (String) authentication.getCredentials();
@@ -57,9 +56,7 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
             || presentedPassword.equals(userDetails.getPassword())) {
             return;
         }
-        throw new BadCredentialsException(messages.getMessage(
-            "AbstractUserDetailsAuthenticationProvider.badCredentials",
-            "Bad credentials"));
+        throw new BadCredentialsException("error.user_not_exists_or_wrong_password");
     }
 
     private boolean isBlocked(String key) {

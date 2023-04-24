@@ -1,6 +1,5 @@
 package org.homio.app.auth;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
@@ -8,6 +7,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -47,16 +47,15 @@ public class JwtTokenProvider implements ContextCreated {
     }
 
     String createToken(String username, Collection<? extends GrantedAuthority> roles) {
-
-        Claims claims = Jwts.claims().setSubject(username);
-        claims.put("auth", roles);
-
         Date now = new Date();
         Date validity = new Date(now.getTime() + TimeUnit.MINUTES.toMillis(jwtValidityTimeout));
 
         return Jwts.builder()
-                   .setClaims(claims)
+                   .setId(UUID.randomUUID().toString())
+                   .setAudience(username)
+                   .claim("auth", roles)
                    .setIssuedAt(now)
+                   .setIssuer("homio_app")
                    .setExpiration(validity)
                    .signWith(SignatureAlgorithm.HS256, securityId)
                    .compact();
@@ -88,7 +87,7 @@ public class JwtTokenProvider implements ContextCreated {
     }
 
     private String getUsername(String token) {
-        return this.jwtParser.parseClaimsJws(token).getBody().getSubject();
+        return this.jwtParser.parseClaimsJws(token).getBody().getAudience();
     }
 
     private byte[] buildSecurityId() {

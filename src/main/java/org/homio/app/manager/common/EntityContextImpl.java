@@ -217,7 +217,7 @@ public class EntityContextImpl implements EntityContext {
     public void afterContextStart(ApplicationContext applicationContext) {
         this.allApplicationContexts.add(applicationContext);
         this.applicationContext = applicationContext;
-        MACHINE_IP_ADDRESS = getInternalIpAddress();
+        MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
 
         this.transactionManager = this.applicationContext.getBean(PlatformTransactionManager.class);
         this.allDeviceRepository = this.applicationContext.getBean(AllDeviceRepository.class);
@@ -249,10 +249,6 @@ public class EntityContextImpl implements EntityContext {
              .execute(this::updateNotificationBlock);
 
         event().fireEventIfNotSame("app-status", Status.ONLINE);
-        event().runOnceOnInternetUp("internal-ctx", () -> {
-            MACHINE_IP_ADDRESS = getInternalIpAddress();
-
-        });
         setting().listenValue(SystemClearCacheButtonSetting.class, "im-clear-cache", () -> {
             cacheService.clearCache();
             ui().sendSuccessMessage("Cache has been cleared successfully");
@@ -848,11 +844,6 @@ public class EntityContextImpl implements EntityContext {
                 }
             }
         });
-    }
-
-    private String getInternalIpAddress() {
-        return defaultString(InternalUtil.checkUrlAccessible(),
-            applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress());
     }
 
     @AllArgsConstructor

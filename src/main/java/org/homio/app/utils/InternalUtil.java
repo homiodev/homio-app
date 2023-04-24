@@ -27,7 +27,7 @@ public final class InternalUtil {
 
     public static String checkUrlAccessible() {
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress("www.google.com", 80));
+            socket.connect(new InetSocketAddress("google.com", 80));
             return socket.getLocalAddress().getHostAddress();
         } catch (Exception ignore) {
         }

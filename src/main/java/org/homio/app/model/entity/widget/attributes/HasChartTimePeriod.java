@@ -23,7 +23,6 @@ public interface HasChartTimePeriod extends HasJsonData {
     @UIFieldTimeSlider
     @UIFieldGroup(value = "Time period", order = 55, borderColor = "#166F37")
     @UIEditReloadWidget
-    @UIFieldReadDefaultValue
     default int getChartMinutesToShow() {
         return getJsonData("mts", 60);
     }

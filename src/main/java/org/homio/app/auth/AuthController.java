@@ -18,7 +18,6 @@ import org.homio.bundle.api.entity.UserEntity;
 import org.homio.bundle.api.exception.ServerException;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -59,7 +58,7 @@ public class AuthController {
             Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, credentials.getPassword()));
             return jwtTokenProvider.createToken(username, authentication.getAuthorities());
         } catch (AuthenticationException e) {
-            throw new BadCredentialsException("Invalid username/password supplied");
+            throw e;
         }
     }
 
