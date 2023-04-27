@@ -23,7 +23,7 @@ public class SystemCPUFetchValueIntervalSetting
 
     @Override
     public Integer getMin() {
-        return 1;
+        return 10;
     }
 
     @Override

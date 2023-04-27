@@ -28,10 +28,7 @@ public class WidgetService implements ContextCreated {
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) {
-        if (this.entityContext.getEntity(GENERAL_WIDGET_TAB_NAME) == null) {
-            this.entityContext.save(
-                    new WidgetTabEntity().setEntityID(GENERAL_WIDGET_TAB_NAME).setName("MainTab"));
-        }
+        WidgetTabEntity.ensureMainTabExists(entityContext);
     }
 
     public List<AvailableWidget> getAvailableWidgets() {

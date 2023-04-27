@@ -1,20 +1,19 @@
 package org.homio.app.auth;
 
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
-import static org.homio.bundle.api.util.Constants.GUEST_ROLE;
-import static org.homio.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 
 import java.security.Principal;
-import java.util.Arrays;
-import java.util.HashSet;
 import javax.validation.Valid;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.homio.app.manager.UserService;
+import org.homio.app.model.entity.UserEntityImpl;
 import org.homio.app.repository.UserRepository;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.UserEntity;
+import org.homio.bundle.api.entity.UserEntity.UserType;
 import org.homio.bundle.api.exception.ServerException;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -37,6 +36,7 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
+    private final UserService userService;
     private final EntityContext entityContext;
     private final PasswordEncoder passwordEncoder;
 
@@ -47,7 +47,7 @@ public class AuthController {
 
     @GetMapping("/user")
     public UserEntity getUser() {
-        return entityContext.getUser(false);
+        return entityContext.getUser();
     }
 
     @PostMapping("/login")
@@ -63,28 +63,15 @@ public class AuthController {
     }
 
     @Secured(ADMIN_ROLE)
-    @PostMapping("/user/guest")
-    public UserEntity createGuestUser(@Valid @RequestBody LoginRequest credentials) {
-        return createUser(credentials, GUEST_ROLE);
-    }
-
-    @Secured(ADMIN_ROLE)
-    @PostMapping("/user/privileged")
-    public UserEntity createPrivilegedUser(@Valid @RequestBody LoginRequest credentials) {
-        return createUser(credentials, PRIVILEGED_USER_ROLE, GUEST_ROLE);
-    }
-
-    private UserEntity createUser(@Valid @RequestBody LoginRequest credentials, String... roles) {
-        log.info("Create guest user <{}>", credentials.getEmail());
-        UserEntity user = userRepository.getUser(credentials.getEmail());
+    @PostMapping("/user")
+    public UserEntityImpl createGuestUser(@Valid @RequestBody UserRequest userRequest) {
+        log.info("Create user <{}>. {}", userRequest.getEmail(), userRequest.getUserType());
+        UserEntityImpl user = userRepository.getUser(userRequest.getEmail());
         if (user != null) {
             throw new ServerException("User already exists");
         }
-        return entityContext.save(new UserEntity()
-            .setEntityID(credentials.getEmail())
-            .setUserId(credentials.getEmail())
-            .setPassword(credentials.getPassword(), this.passwordEncoder)
-            .setRoles(new HashSet<>(Arrays.asList(roles))));
+        return userService.createUser(userRequest.getEmail(), userRequest.getEmail(),
+            userRequest.getName(), userRequest.getPassword(), userRequest.getUserType());
     }
 
     @Getter
@@ -93,5 +80,13 @@ public class AuthController {
 
         private String email;
         private String password;
+    }
+
+    @Getter
+    @Setter
+    public static class UserRequest extends LoginRequest {
+
+        private String name;
+        private UserType userType;
     }
 }

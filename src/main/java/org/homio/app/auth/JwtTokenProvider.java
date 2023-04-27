@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
 import org.homio.app.setting.system.auth.SystemJWTTokenValidSetting;
@@ -21,6 +22,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+@Log4j2
 @Component
 @RequiredArgsConstructor
 public class JwtTokenProvider implements ContextCreated {
@@ -38,11 +40,13 @@ public class JwtTokenProvider implements ContextCreated {
             this.jwtValidityTimeout = value;
             this.securityId = buildSecurityId();
             this.jwtParser = Jwts.parser().setSigningKey(securityId);
+            log.info("Generated securityID: {}. Valid timeout: {}", securityId, value);
         });
         entityContext.setting().listenValueAndGet(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
             this.regenerateSecurityIdOnRestart = value;
             this.securityId = buildSecurityId();
             this.jwtParser = Jwts.parser().setSigningKey(securityId);
+            log.info("Generated securityID: {}. Regenerate security id on restart: {}", securityId, value);
         });
     }
 

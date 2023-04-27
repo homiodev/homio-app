@@ -36,11 +36,8 @@ public class ComputerBoardEntity extends MicroControllerBaseEntity<ComputerBoard
     }
 
     @Override
-    public void beforeDelete(EntityContext entityContext) {
-        if (getEntityID().equals(DEFAULT_DEVICE_ENTITY_ID)) {
-            throw new IllegalStateException("Unable to remove primary ComputerBoard entity");
-        }
-        super.beforeDelete(entityContext);
+    public boolean isDisableEdit() {
+        return getEntityID().equals(DEFAULT_DEVICE_ENTITY_ID);
     }
 
     @Override

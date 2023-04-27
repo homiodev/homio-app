@@ -13,7 +13,7 @@ public interface HasActionOnClick extends HasJsonData {
     @UIField(order = 1, label = "widget.pushValueDataSource")
     @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-    @UIFieldGroup(value = "Action on click", order = 25, borderColor = "#71B12B")
+    @UIFieldGroup(value = "ACTION_ON_CLICK", order = 25, borderColor = "#71B12B")
     default String getSetValueDataSource() {
         return getJsonData("svds");
     }
@@ -23,7 +23,7 @@ public interface HasActionOnClick extends HasJsonData {
     }
 
     @UIField(order = 2)
-    @UIFieldGroup("Action on click")
+    @UIFieldGroup("ACTION_ON_CLICK")
     default String getValueOnClick() {
         return getJsonData("voc");
     }
@@ -33,7 +33,7 @@ public interface HasActionOnClick extends HasJsonData {
     }
 
     @UIField(order = 3)
-    @UIFieldGroup("Action on click")
+    @UIFieldGroup("ACTION_ON_CLICK")
     default String getValueOnDoubleClick() {
         return getJsonData("vodc");
     }
@@ -43,7 +43,7 @@ public interface HasActionOnClick extends HasJsonData {
     }
 
     @UIField(order = 3)
-    @UIFieldGroup("Action on click")
+    @UIFieldGroup("ACTION_ON_CLICK")
     default String getValueOnHoldClick() {
         return getJsonData("vohc");
     }
@@ -53,7 +53,7 @@ public interface HasActionOnClick extends HasJsonData {
     }
 
     @UIField(order = 3)
-    @UIFieldGroup("Action on click")
+    @UIFieldGroup("ACTION_ON_CLICK")
     default String getValueOnHoldReleaseClick() {
         return getJsonData("vohrc");
     }
@@ -63,7 +63,7 @@ public interface HasActionOnClick extends HasJsonData {
     }
 
     @UIField(order = 10)
-    @UIFieldGroup("Action on click")
+    @UIFieldGroup("ACTION_ON_CLICK")
     default String getValueToPushConfirmMessage() {
         return getJsonData("vtpcm");
     }
@@ -74,7 +74,7 @@ public interface HasActionOnClick extends HasJsonData {
 
     @UIField(order = 15)
     @UIFieldSlider(min = 0, max = 1000, step = 50)
-    @UIFieldGroup("Action on click")
+    @UIFieldGroup("ACTION_ON_CLICK")
     default int getSendValueOnHoldInterval() {
         return getJsonData("svohi", 0);
     }

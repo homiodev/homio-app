@@ -17,8 +17,10 @@ import org.homio.app.builder.ui.UICheckboxItemBuilderImpl;
 import org.homio.app.builder.ui.UIDialogInputEntity;
 import org.homio.app.builder.ui.UIInfoItemBuilderImpl;
 import org.homio.app.builder.ui.UIItemType;
+import org.homio.app.builder.ui.UISelectBoxItemBuilderImpl;
 import org.homio.app.builder.ui.UISliderItemBuilderImpl;
 import org.homio.app.builder.ui.UITextInputItemBuilderImpl;
+import org.homio.bundle.api.model.OptionModel;
 import org.homio.bundle.api.ui.field.action.UIActionInput;
 import org.homio.bundle.api.ui.field.action.v1.UIEntityBuilder;
 import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
@@ -49,7 +51,7 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
     public UIDialogLayoutBuilderImpl(String entityID, Integer width) {
         this.entityID = entityID + "_dialog";
-        this.title = entityID;
+        this.title = "CONTEXT.ACTION." + entityID;
         this.width = width;
     }
 
@@ -92,21 +94,15 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
         return this;
     }
 
-    public DialogEntity<UITextInputItemBuilder> addInput(
-            @NotNull String name,
-            String defaultValue,
-            UITextInputItemBuilder.InputType inputType,
-            boolean required) {
-        return addEntity(
-                name,
-                new UITextInputItemBuilderImpl(name, nextOrder(), defaultValue, inputType)
-                        .setRequired(required));
+    public DialogEntity<UITextInputItemBuilder> addInput(@NotNull String name, String defaultValue, UITextInputItemBuilder.InputType inputType,
+        boolean required) {
+        return addEntity(name, new UITextInputItemBuilderImpl(name, nextOrder(), defaultValue, inputType).setRequired(required));
     }
 
     public <T extends UIEntityBuilder> DialogEntity<T> addEntity(String key, T entityBuilder) {
         if (!NAME_PATTERN.matcher(entityBuilder.getEntityID()).matches()) {
             throw new IllegalArgumentException(
-                    "Wrong name pattern for: " + entityBuilder.getEntityID());
+                "Wrong name pattern for: " + entityBuilder.getEntityID());
         }
         inputBuilders.put(key, entityBuilder);
         return new DialogEntity<T>() {
@@ -129,67 +125,35 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
     public void addInput(UIActionInput input) {
         switch (input.type()) {
+            case select:
+                UISelectBoxItemBuilderImpl selectBox = new UISelectBoxItemBuilderImpl(input.name(), nextOrder(), null)
+                    .setOptions(OptionModel.list(input.values()));
+                addEntity(input.name(), selectBox.setValue(input.value()));
+                break;
             case text:
-                addInput(
-                        input.name(),
-                        input.value(),
-                        UITextInputItemBuilder.InputType.Text,
-                        input.required());
+                addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.Text, input.required());
                 break;
             case json:
-                addInput(
-                        input.name(),
-                        input.value(),
-                        UITextInputItemBuilder.InputType.JSON,
-                        input.required());
+                addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.JSON, input.required());
                 break;
             case textarea:
-                addInput(
-                        input.name(),
-                        input.value(),
-                        UITextInputItemBuilder.InputType.TextArea,
-                        input.required());
+                addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.TextArea, input.required());
                 break;
             case password:
-                addInput(
-                        input.name(),
-                        input.value(),
-                        UITextInputItemBuilder.InputType.Password,
-                        input.required());
+                addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.Password, input.required());
                 break;
             case number:
-                addEntity(
-                                input.name(),
-                                new UISliderItemBuilderImpl(
-                                        input.name(),
-                                        nextOrder(),
-                                        null,
-                                        Float.parseFloat(input.value()),
-                                        (float) input.min(),
-                                        (float) input.max()))
-                        .edit(
-                                sliderBuilder ->
-                                        sliderBuilder
-                                                .setSliderType(UISliderItemBuilder.SliderType.Input)
-                                                .setRequired(input.required()));
+                addEntity(input.name(),
+                    new UISliderItemBuilderImpl(input.name(), nextOrder(), null, Float.parseFloat(input.value()), (float) input.min(), (float) input.max()))
+                    .edit(sliderBuilder -> sliderBuilder
+                        .setSliderType(UISliderItemBuilder.SliderType.Input)
+                        .setRequired(input.required()));
                 break;
             case info:
-                addEntity(
-                        input.value(),
-                        new UIInfoItemBuilderImpl(
-                                "txt_" + input.value().hashCode(),
-                                nextOrder(),
-                                input.value(),
-                                InfoType.Text));
+                addEntity(input.value(), new UIInfoItemBuilderImpl("txt_" + input.value().hashCode(), nextOrder(), input.value(), InfoType.Text));
                 break;
             case bool:
-                addEntity(
-                        input.name(),
-                        new UICheckboxItemBuilderImpl(
-                                input.name(),
-                                nextOrder(),
-                                null,
-                                Boolean.parseBoolean(input.value())));
+                addEntity(input.name(), new UICheckboxItemBuilderImpl(input.name(), nextOrder(), null, Boolean.parseBoolean(input.value())));
                 break;
         }
     }

@@ -90,14 +90,14 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
 
     @UIField(order = 25)
     @UIFieldSlider(min = 500, max = 100000, step = 500)
-    @UIFieldGroup(order = 10, value = "Quota")
+    @UIFieldGroup(order = 10, value = "QUOTA")
     @UIFieldInlineEntityWidth(15)
     private int quota = 1000;
     /**
      * Is it possible to write to variable from UI
      */
     @UIField(order = 25, hideInEdit = true)
-    @UIFieldGroup(order = 10, value = "Quota")
+    @UIFieldGroup(order = 10, value = "QUOTA")
     @UIFieldInlineEntityWidth(15)
     private boolean readOnly = false;
 
@@ -151,7 +151,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
 
     @UIField(order = 30, hideInEdit = true, disableEdit = true)
     @UIFieldProgress
-    @UIFieldGroup("Quota")
+    @UIFieldGroup("QUOTA")
     @UIFieldInlineEntityWidth(15)
     public UIFieldProgress.Progress getUsedQuota() {
         int count = 0;

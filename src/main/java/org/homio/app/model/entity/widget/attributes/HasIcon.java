@@ -19,7 +19,7 @@ public interface HasIcon extends HasJsonData {
 
     @UIField(order = 1)
     @UIFieldIconPicker(allowEmptyIcon = true, allowThreshold = true, allowBackground = true)
-    @UIFieldGroup(value = "Icon", order = 20, borderColor = "#009688")
+    @UIFieldGroup(value = "ICON", order = 20, borderColor = "#009688")
     default String getIcon() {
         return getJsonData("icon", "fas fa-adjust");
     }
@@ -30,7 +30,7 @@ public interface HasIcon extends HasJsonData {
 
     @UIField(order = 2, isRevert = true)
     @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldGroup("Icon")
+    @UIFieldGroup("ICON")
     @UIFieldReadDefaultValue
     default String getIconColor() {
         return getJsonData("iconColor", UI.Color.WHITE);

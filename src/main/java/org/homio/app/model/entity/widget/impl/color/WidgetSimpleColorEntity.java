@@ -48,7 +48,7 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
     @UIField(order = 1)
     @UIKeyValueField(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
                      defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
-    @UIFieldGroup(value = "Colors", order = 10)
+    @UIFieldGroup(value = "COLORS", order = 10)
     public String getColors() {
         return getJsonData("colors");
     }
@@ -59,7 +59,7 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
 
     @UIField(order = 4, isRevert = true)
     @UIFieldSlider(min = 0, max = 40)
-    @UIFieldGroup("Colors")
+    @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue
     public int getCircleSpacing() {
         return getJsonData("space", 14);
@@ -71,7 +71,7 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
 
     @UIField(order = 5, isRevert = true)
     @UIFieldSlider(min = 10, max = 40)
-    @UIFieldGroup("Colors")
+    @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue
     public int getCircleSize() {
         return getJsonData("size", 28);

@@ -56,6 +56,7 @@ import org.homio.bundle.api.ui.field.selection.UIFieldDevicePortSelection;
 import org.homio.bundle.api.ui.field.selection.UIFieldEmptySelection;
 import org.homio.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.bundle.api.ui.field.selection.UIFieldSelection;
+import org.homio.bundle.api.ui.field.selection.UIFieldSelectionCondition;
 import org.homio.bundle.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.bundle.api.ui.field.selection.UIFieldStaticSelection;
 import org.homio.bundle.api.ui.field.selection.UIFieldTreeNodeSelection;
@@ -313,8 +314,14 @@ public final class UIFieldSelectionUtil {
         for (UIFieldBeanSelection selection : selections) {
             for (Map.Entry<String, ?> entry :
                 entityContext.getBeansOfTypeWithBeanName(selection.value()).entrySet()) {
-                OptionModel optionModel = OptionModel.of(entry.getKey());
                 Object bean = entry.getValue();
+                // filter if bean is UIFieldBeanAwareCondition and visible is false
+                if (bean instanceof UIFieldSelectionCondition) {
+                    if (!((UIFieldSelectionCondition) bean).isBeanVisibleForSelection()) {
+                        continue;
+                    }
+                }
+                OptionModel optionModel = OptionModel.of(entry.getKey());
                 updateSelectedOptionModel(bean, null, selection.value(), optionModel, SelectHandler.bean.name());
                 selectOptions.add(optionModel);
             }

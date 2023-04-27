@@ -32,6 +32,7 @@ public class EntityContextStorage {
     public static final OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
     public static final Map<String, EntityMemoryData> ENTITY_MEMORY_MAP = new ConcurrentHashMap<>();
     public static final long TOTAL_MEMORY = osBean.getTotalPhysicalMemorySize();
+    public static final double TOTAL_MEMORY_GB = osBean.getTotalPhysicalMemorySize() / GB_DIVIDER;
     // constructor parameters
     private final EntityContextImpl entityContext;
     private EntityContextBGP.ThreadContext<Void> hardwareCpuScheduler;
@@ -101,9 +102,12 @@ public class EntityContextStorage {
         String javaCpuUsageID = entityContext.var().createVariable("hardware", "java_cpu_load", "sys.java_cpu_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.java_cpu_load_description").setReadOnly(true).setUnit("%").setColor("#B03780"));
-        String memID = entityContext.var().createVariable("hardware", "sys_mem", "sys.memory",
+        String memID = entityContext.var().createVariable("hardware", "sys_mem_load", "sys.mem_load",
             VariableType.Float, builder ->
-                builder.setDescription("sys.memory_description").setReadOnly(true).setColor("#939C35"));
+                builder.setDescription("sys.mem_load_description").setReadOnly(true).setColor("#939C35"));
+        entityContext.event().addEvent("sys_cpu_load");
+        entityContext.event().addEvent("java_cpu_load");
+        entityContext.event().addEvent("sys_mem_load");
 
         entityContext.setting().listenValueAndGet(SystemCPUFetchValueIntervalSetting.class,
             "hardware-cpu",
@@ -115,7 +119,8 @@ public class EntityContextStorage {
                     () -> {
                         entityContext.var().set(cpuUsageID, (float) (osBean.getSystemCpuLoad() * 100));
                         entityContext.var().set(javaCpuUsageID, (float) (osBean.getProcessCpuLoad() * 100));
-                        entityContext.var().set(memID, (float) ((TOTAL_MEMORY - osBean.getFreePhysicalMemorySize()) / GB_DIVIDER));
+                        float memPercent = (TOTAL_MEMORY - osBean.getFreePhysicalMemorySize()) / (float) TOTAL_MEMORY * 100F;
+                        entityContext.var().set(memID, memPercent);
                     });
             });
     }

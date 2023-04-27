@@ -31,7 +31,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     }
 
     @UIField(order = 1)
-    @UIFieldGroup("Data labels")
+    @UIFieldGroup("DATA_LABELS")
     public boolean getShowDataLabels() {
         return getJsonData("sdl", false);
     }
@@ -41,7 +41,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     }
 
     @UIField(order = 2, isRevert = true)
-    @UIFieldGroup("Data labels")
+    @UIFieldGroup("DATA_LABELS")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getDataLabelsColor() {
@@ -63,7 +63,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
     }
 
     @UIField(order = 8)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     public boolean getShowChartFullScreenButton() {
         return getJsonData("sfsb", Boolean.FALSE);
     }
@@ -74,7 +74,7 @@ public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S ext
 
     @UIField(order = 10, isRevert = true)
     @UIFieldSlider(min = 10, max = 600)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     public int getFetchDataFromServerInterval() {
         return getJsonData("fsfsi", 60);
     }

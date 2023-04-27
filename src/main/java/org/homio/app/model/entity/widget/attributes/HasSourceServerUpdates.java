@@ -8,7 +8,7 @@ import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
 public interface HasSourceServerUpdates extends HasJsonData {
 
     @UIField(order = 2)
-    @UIFieldGroup(value = "Update", order = 1000)
+    @UIFieldGroup(value = "UPDATE", order = 1000)
     @UIFieldReadDefaultValue
     default Boolean getListenSourceUpdates() {
         return getJsonData("lsu", Boolean.TRUE);
@@ -19,7 +19,7 @@ public interface HasSourceServerUpdates extends HasJsonData {
     }
 
     @UIField(order = 10)
-    @UIFieldGroup("Update")
+    @UIFieldGroup("UPDATE")
     @UIFieldReadDefaultValue
     default Boolean getShowLastUpdateTimer() {
         return getJsonData("slut", Boolean.FALSE);

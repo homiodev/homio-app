@@ -27,7 +27,7 @@ public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> {
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Text", order = 10, borderColor = "#4AB64D")
+    @UIFieldGroup(value = "TEXT", order = 10, borderColor = "#4AB64D")
     @UIFieldCodeEditor(editorTypeRef = "contentType")
     public String getValue() {
         return getJsonData("text", "");
@@ -38,7 +38,7 @@ public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> {
     }
 
     @UIField(order = 3)
-    @UIFieldGroup("Text")
+    @UIFieldGroup("TEXT")
     public ContentType getContentType() {
         return getJsonDataEnum("ct", ContentType.Text);
     }

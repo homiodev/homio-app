@@ -7,7 +7,7 @@ import org.homio.bundle.api.ui.field.UIFieldGroup;
 public interface HasAxis extends HasJsonData {
 
     @UIField(order = 80)
-    @UIFieldGroup("Chart axis")
+    @UIFieldGroup("CHART_AXIS")
     default Boolean getShowAxisX() {
         return getJsonData("showAxisX", Boolean.TRUE);
     }
@@ -17,7 +17,7 @@ public interface HasAxis extends HasJsonData {
     }
 
     @UIField(order = 81)
-    @UIFieldGroup("Chart axis")
+    @UIFieldGroup("CHART_AXIS")
     default Boolean getShowAxisY() {
         return getJsonData("showAxisY", Boolean.TRUE);
     }
@@ -27,7 +27,7 @@ public interface HasAxis extends HasJsonData {
     }
 
     @UIField(order = 84)
-    @UIFieldGroup("Chart axis")
+    @UIFieldGroup("CHART_AXIS")
     default String getAxisLabelX() {
         return getJsonData("axisLabelX");
     }
@@ -37,7 +37,7 @@ public interface HasAxis extends HasJsonData {
     }
 
     @UIField(order = 85)
-    @UIFieldGroup("Chart axis")
+    @UIFieldGroup("CHART_AXIS")
     default String getAxisLabelY() {
         return getJsonData("axisLabelY");
     }
@@ -47,7 +47,7 @@ public interface HasAxis extends HasJsonData {
     }
 
     @UIField(order = 90)
-    @UIFieldGroup("Chart axis")
+    @UIFieldGroup("CHART_AXIS")
     default String getAxisDateFormat() {
         return getJsonData("timeF");
     }

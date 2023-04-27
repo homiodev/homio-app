@@ -19,7 +19,7 @@ public class WidgetBarChartEntity
     public static final String PREFIX = "wgtbc_";
 
     @UIField(order = 10)
-    @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
+    @UIFieldGroup(value = "CHART_UI", order = 2, borderColor = "#673AB7")
     public BarChartType getDisplayType() {
         return getJsonDataEnum("displayType", BarChartType.Vertical);
     }
@@ -30,7 +30,7 @@ public class WidgetBarChartEntity
     }
 
     @UIField(order = 40)
-    @UIFieldGroup("Chart axis")
+    @UIFieldGroup("CHART_AXIS")
     public String getAxisLabel() {
         return getJsonData("al", "");
     }
@@ -41,7 +41,7 @@ public class WidgetBarChartEntity
     }
 
     @UIField(order = 12)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     @UIFieldJSONLine(
         template = "{\"top\": number}, \"left\": number, \"bottom\": number, \"right\": number")
     public String getBarBorderWidth() {

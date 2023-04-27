@@ -2,6 +2,7 @@ package org.homio.app;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
+import com.jcraft.jsch.JSch;
 import com.pivovarit.function.ThrowingConsumer;
 import java.io.File;
 import java.io.PrintWriter;
@@ -26,6 +27,7 @@ import java.util.function.Predicate;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -58,6 +60,7 @@ import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEven
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
+@Log4j2
 @Component
 public class LogService
         implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
@@ -71,6 +74,35 @@ public class LogService
                     "org.mongodb",
                     "com.zaxxer",
                     "org.hibernate");
+
+    static {
+        JSch.setLogger(new com.jcraft.jsch.Logger() {
+            @Override
+            public boolean isEnabled(int level) {
+                return true;
+            }
+
+            @Override
+            public void log(int level, String message) {
+                log.log(getLogLevel(level), "Jsch: " + message);
+            }
+
+            private Level getLogLevel(int level) {
+                switch (level) {
+                    case com.jcraft.jsch.Logger.DEBUG:
+                        return Level.DEBUG;
+                    case com.jcraft.jsch.Logger.WARN:
+                        return Level.WARN;
+                    case com.jcraft.jsch.Logger.ERROR:
+                        return Level.ERROR;
+                    case com.jcraft.jsch.Logger.FATAL:
+                        return Level.FATAL;
+                    default:
+                        return Level.INFO;
+                }
+            }
+        });
+    }
 
     @SneakyThrows
     private static void initLogAppender() {

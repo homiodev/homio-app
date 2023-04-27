@@ -90,7 +90,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     }
 
     @UIField(order = 50, showInContextMenu = true, icon = "fas fa-eye")
-    @UIFieldGroup("fileName")
+    @UIFieldGroup("FILE_NAME")
     public boolean getShowFileName() {
         return getJsonData("sfn", true);
     }
@@ -102,7 +102,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
 
     @UIField(order = 51)
     @UIFieldSlider(min = 0, max = 1, step = 0.1)
-    @UIFieldGroup("fileName")
+    @UIFieldGroup("FILE_NAME")
     public double getFileNameOpacity() {
         return getJsonData("fnop", 0.2);
     }
@@ -114,7 +114,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
 
     @UIField(order = 54, isRevert = true)
     @UIFieldColorPicker
-    @UIFieldGroup("fileName")
+    @UIFieldGroup("FILE_NAME")
     @UIFieldReadDefaultValue
     public String getFileNameColor() {
         return getJsonData("fnc", "#ADB5BD");
@@ -126,7 +126,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     }
 
     @UIField(order = 56, showInContextMenu = true, icon = "fas fa-eye")
-    @UIFieldGroup("fileName")
+    @UIFieldGroup("FILE_NAME")
     public boolean getShowFileCount() {
         return getJsonData("sfc", true);
     }

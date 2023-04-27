@@ -7,7 +7,7 @@ import org.homio.bundle.api.ui.field.UIFieldGroup;
 public interface HasMinMaxChartValue extends HasJsonData {
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Chart axis", order = 100, borderColor = "#0C73A6")
+    @UIFieldGroup(value = "CHART_AXIS", order = 100, borderColor = "#0C73A6")
     default Integer getMin() {
         return getJsonData().has("min") ? getJsonData().getInt("min") : null;
     }
@@ -17,7 +17,7 @@ public interface HasMinMaxChartValue extends HasJsonData {
     }
 
     @UIField(order = 2)
-    @UIFieldGroup("Chart axis")
+    @UIFieldGroup("CHART_AXIS")
     default Integer getMax() {
         return getJsonData().has("max") ? getJsonData().getInt("max") : null;
     }

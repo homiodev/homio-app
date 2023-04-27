@@ -18,7 +18,7 @@ public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDo
     public static final String PREFIX = "wgspcs_";
 
     @UIField(order = 20, isRevert = true)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getChartColor() {
@@ -32,7 +32,7 @@ public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDo
 
     @UIField(order = 21)
     @UIFieldSlider(min = 0, max = 100, step = 5)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     public int getChartColorOpacity() {
         return getJsonData("chartCO", 50);
     }

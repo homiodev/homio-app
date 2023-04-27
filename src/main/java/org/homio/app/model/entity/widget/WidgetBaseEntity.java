@@ -15,7 +15,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.attributes.HasStyle;
@@ -123,11 +122,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     }
 
     public void setBackground(String value) {
-        if (StringUtils.isNotEmpty(value)) {
-            setJsonData("bg", value);
-        } else {
-            getJsonData().remove("bg");
-        }
+        setJsonData("bg", value);
     }
 
     @UIField(order = 25)
@@ -138,11 +133,10 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     }
 
     public void setIndex(Integer value) {
-        if(value == null || value == 20) {
-            getJsonData().remove("zi");
-        } else {
-            setJsonData("zi", value);
+        if (value == null || value == 20) {
+            value = null;
         }
+        setJsonData("zi", value);
     }
 
     public boolean isVisible() {
