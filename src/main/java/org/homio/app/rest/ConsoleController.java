@@ -23,8 +23,9 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
-import org.homio.app.setting.console.ssh.ConsoleSshProviderSetting;
 import org.homio.app.spring.ContextRefreshed;
+import org.homio.app.ssh.SshBaseEntity;
+import org.homio.app.ssh.SshProviderService;
 import org.homio.app.utils.UIFieldSelectionUtil;
 import org.homio.app.utils.UIFieldUtils;
 import org.homio.bundle.api.console.ConsolePlugin;
@@ -32,12 +33,12 @@ import org.homio.bundle.api.console.ConsolePluginCommunicator;
 import org.homio.bundle.api.console.ConsolePluginEditor;
 import org.homio.bundle.api.console.ConsolePluginTable;
 import org.homio.bundle.api.console.dependency.ConsolePluginRequireZipDependency;
+import org.homio.bundle.api.entity.BaseEntity;
 import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.model.ActionResponseModel;
 import org.homio.bundle.api.model.FileModel;
 import org.homio.bundle.api.model.HasEntityIdentifier;
 import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.service.SshProviderService;
 import org.homio.bundle.api.setting.console.header.ConsoleHeaderSettingPlugin;
 import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
@@ -291,28 +292,25 @@ public class ConsoleController implements ContextRefreshed {
 
     @PostMapping("/ssh")
     @Secured(ADMIN_ROLE)
-    public SshProviderService.SshSession openSshSession() {
-        return this.entityContext
-            .setting()
-            .getValue(ConsoleSshProviderSetting.class)
-            .openSshSession();
+    public SshProviderService.SshSession openSshSession(@RequestBody SshRequest request) {
+        BaseEntity entity = entityContext.getEntity(request.getEntityID());
+        if (entity instanceof SshBaseEntity) {
+            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
+            return service.openSshSession((SshBaseEntity) entity);
+        }
+        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
     }
 
-    @DeleteMapping("/ssh/{token}")
+    @DeleteMapping("/ssh")
     @Secured(ADMIN_ROLE)
-    public void closeSshSession(@PathVariable("token") String token) {
-        this.entityContext
-            .setting()
-            .getValue(ConsoleSshProviderSetting.class)
-            .closeSshSession(token);
-    }
-
-    @GetMapping("/ssh/{token}")
-    public SshProviderService.SessionStatusModel getSshStatus(@PathVariable("token") String token) {
-        return this.entityContext
-            .setting()
-            .getValue(ConsoleSshProviderSetting.class)
-            .getSshStatus(token);
+    public void closeSshSession(@RequestBody SshRequest request) {
+        BaseEntity entity = entityContext.getEntity(request.getEntityID());
+        if (entity instanceof SshBaseEntity) {
+            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
+            service.closeSshSession(request.token, (SshBaseEntity) entity);
+            return;
+        }
+        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
     }
 
     @Getter
@@ -347,5 +345,13 @@ public class ConsoleController implements ContextRefreshed {
         Collection<?> list;
         List<EntityUIMetaData> uiFields;
         Collection<UIInputEntity> actions;
+    }
+
+    @Getter
+    @Setter
+    public static class SshRequest {
+
+        private String entityID;
+        private String token;
     }
 }

@@ -45,10 +45,10 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
     @Override
     public void beforeDelete(EntityContext entityContext) {
         if (this.getEntityID().equals(GENERAL_WIDGET_TAB_NAME)) {
-            throw new ServerException("ERROR.REMOVE_MAIN_TAB");
+            throw new ServerException("W.ERROR.REMOVE_MAIN_TAB");
         }
         if (!widgetBaseEntities.isEmpty()) {
-            throw new ServerException("ERROR.REMOVE_NON_EMPTY_TAB");
+            throw new ServerException("W.ERROR.REMOVE_NON_EMPTY_TAB");
         }
     }
 

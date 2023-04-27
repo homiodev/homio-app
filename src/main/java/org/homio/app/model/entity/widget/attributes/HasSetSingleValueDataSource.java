@@ -13,7 +13,7 @@ public interface HasSetSingleValueDataSource extends HasDynamicParameterFields {
     @UIField(order = 12)
     @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-    @UIFieldGroup(value = "Value")
+    @UIFieldGroup(value = "VALUE")
     @UIEditReloadWidget
     default String getSetValueDataSource() {
         return getJsonData("svds");

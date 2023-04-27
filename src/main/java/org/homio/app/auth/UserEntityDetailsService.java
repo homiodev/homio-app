@@ -1,8 +1,8 @@
 package org.homio.app.auth;
 
 import lombok.RequiredArgsConstructor;
+import org.homio.app.model.entity.UserEntityImpl;
 import org.homio.app.repository.UserRepository;
-import org.homio.bundle.api.entity.UserEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -16,7 +16,7 @@ public class UserEntityDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String name) throws UsernameNotFoundException {
-        UserEntity user = userRepository.getUser(name);
+        UserEntityImpl user = userRepository.getUser(name);
         if (user == null) {
             throw new UsernameNotFoundException("User: " + name + " not found");
         }

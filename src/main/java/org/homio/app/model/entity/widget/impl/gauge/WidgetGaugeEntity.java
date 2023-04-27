@@ -111,7 +111,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Text", order = 20, borderColor = "#D4B72B")
+    @UIFieldGroup(value = "TEXT", order = 20, borderColor = "#D4B72B")
     public String getUnit() {
         return getJsonData("unit", "℃");
     }
@@ -130,7 +130,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 2, isRevert = true)
-    @UIFieldGroup("Text")
+    @UIFieldGroup("TEXT")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getUnitColor() {
@@ -142,13 +142,13 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 3, label = "label")
-    @UIFieldGroup("Text")
+    @UIFieldGroup("TEXT")
     public String getName() {
         return super.getName();
     }
 
     @UIField(order = 4, isRevert = true)
-    @UIFieldGroup("Text")
+    @UIFieldGroup("TEXT")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
     public String getTextColor() {
@@ -169,7 +169,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Markers", order = 500, borderColor = "#1F85B8")
+    @UIFieldGroup(value = "MARKERS", order = 500, borderColor = "#1F85B8")
     @UIFieldMarkers(UIFieldMarkers.MarkerOP.label)
     public String getMarkers() {
         return getJsonData("markers", "");
@@ -180,7 +180,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 2)
-    @UIFieldGroup("Markers")
+    @UIFieldGroup("MARKERS")
     public MarkerType getMarkerType() {
         return getJsonDataEnum("mt", MarkerType.line);
     }
@@ -190,7 +190,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 3)
-    @UIFieldGroup("Markers")
+    @UIFieldGroup("MARKERS")
     @UIFieldSlider(min = 8, max = 14)
     public int getMarkerFontSize() {
         return getJsonData("mfs", 12);
@@ -201,7 +201,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 4)
-    @UIFieldGroup("Markers")
+    @UIFieldGroup("MARKERS")
     @UIFieldSlider(min = 2, max = 16)
     public int getMarkerSize() {
         return getJsonData("ms", 8);
@@ -212,7 +212,7 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @UIField(order = 100, label = "duration_aggr")
-    @UIFieldGroup("Value")
+    @UIFieldGroup("VALUE")
     @UIEditReloadWidget
     public int getChartMinutesToShow() {
         return HasChartTimePeriod.super.getChartMinutesToShow();

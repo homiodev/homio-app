@@ -256,10 +256,10 @@ public class WorkspaceController {
             throw new NotFoundException("Unable to find workspace tab with id: " + entityID);
         }
         if (WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(entity.getName())) {
-            throw new IllegalArgumentException("REMOVE_MAIN_TAB");
+            throw new IllegalArgumentException("W.ERROR.REMOVE_MAIN_TAB");
         }
         if (!workspaceService.isEmpty(entity.getContent())) {
-            throw new IllegalArgumentException("REMOVE_NON_EMPTY_TAB");
+            throw new IllegalArgumentException("W.ERROR.REMOVE_NON_EMPTY_TAB");
         }
         entityContext.delete(entityID);
     }

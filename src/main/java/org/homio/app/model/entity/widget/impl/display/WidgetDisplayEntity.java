@@ -41,7 +41,7 @@ public class WidgetDisplayEntity
     public static final String PREFIX = "wgtdp_";
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Name", order = 3)
+    @UIFieldGroup(value = "NAME", order = 3)
     @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
@@ -78,7 +78,7 @@ public class WidgetDisplayEntity
 
     @UIField(order = 4)
     @UIFieldSlider(min = 20, max = 100)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     public int getChartHeight() {
         return getJsonData("ch", 30);
     }
@@ -90,7 +90,7 @@ public class WidgetDisplayEntity
     @UIField(order = 20)
     @UIFieldJSONLine(
         template = "{\"top\": number}, \"right\": number, \"bottom\": number, \"left\": number")
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'bar'")
     public String getBarBorderWidth() {
         return getJsonData("bbw", "{\"top\": 0, \"right\": 0, \"bottom\": 0, \"left\": 0}");
@@ -101,7 +101,7 @@ public class WidgetDisplayEntity
     }
 
     @UIField(order = 7)
-    @UIFieldGroup("Chart")
+    @UIFieldGroup("CHART")
     public ChartType getChartType() {
         return getJsonDataEnum("ct", ChartType.line);
     }
@@ -116,7 +116,7 @@ public class WidgetDisplayEntity
     }
 
     @UIField(order = 8)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     public boolean getShowChartFullScreenButton() {
         return getJsonData("sfsb", Boolean.FALSE);
     }

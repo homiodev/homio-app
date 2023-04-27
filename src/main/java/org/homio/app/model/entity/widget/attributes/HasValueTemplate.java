@@ -15,7 +15,7 @@ import org.homio.bundle.api.ui.field.UIFieldType;
 public interface HasValueTemplate extends HasJsonData {
 
     @UIField(order = 200, type = UIFieldType.StringTemplate)
-    @UIFieldGroup(value = "Value", order = 10)
+    @UIFieldGroup(value = "VALUE", order = 10)
     @UIFieldOptionFontSize("value")
     @UIFieldOptionVerticalAlign("value")
     @UIFieldOptionColor("value")
@@ -29,7 +29,7 @@ public interface HasValueTemplate extends HasJsonData {
 
     @UIField(order = 240, isRevert = true)
     @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldGroup("Value")
+    @UIFieldGroup("VALUE")
     @UIFieldReadDefaultValue
     default String getValueColor() {
         return getJsonData("valC", UI.Color.WHITE);
@@ -40,7 +40,7 @@ public interface HasValueTemplate extends HasJsonData {
     }
 
     @UIField(order = 280)
-    @UIFieldGroup("Value")
+    @UIFieldGroup("VALUE")
     @UIFieldReadDefaultValue
     default String getNoValueText() {
         return getJsonData("noVal", "-");
@@ -129,7 +129,7 @@ public interface HasValueTemplate extends HasJsonData {
     }
 
     @UIField(order = 500)
-    @UIFieldGroup("Value")
+    @UIFieldGroup("VALUE")
     default boolean getValueSourceClickHistory() {
         return getJsonData("vsch", false);
     }

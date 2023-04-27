@@ -33,7 +33,7 @@ public class WidgetSliderSeriesEntity
     public static final String PREFIX = "wgssls_";
 
     @UIField(order = 1, isRevert = true)
-    @UIFieldGroup(value = "Slider", order = 2, borderColor = "#6AA427")
+    @UIFieldGroup(value = "SLIDER", order = 2, borderColor = "#6AA427")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
     public String getSliderColor() {
@@ -45,7 +45,7 @@ public class WidgetSliderSeriesEntity
     }
 
     @UIField(order = 2)
-    @UIFieldGroup("Slider")
+    @UIFieldGroup("SLIDER")
     public Integer getMin() {
         return getJsonData("min", 0);
     }
@@ -57,7 +57,7 @@ public class WidgetSliderSeriesEntity
 
     @UIField(order = 3)
     @UIFieldNumber(min = 0)
-    @UIFieldGroup("Slider")
+    @UIFieldGroup("SLIDER")
     public Integer getMax() {
         return getJsonData("max", 255);
     }
@@ -69,7 +69,7 @@ public class WidgetSliderSeriesEntity
 
     @UIField(order = 4)
     @UIFieldNumber(min = 1)
-    @UIFieldGroup("Slider")
+    @UIFieldGroup("SLIDER")
     public Integer getStep() {
         return getJsonData("step", 1);
     }

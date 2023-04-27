@@ -19,9 +19,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.config.AppProperties;
+import org.homio.app.model.entity.UserEntityImpl;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextUI.NotificationBlockBuilder;
-import org.homio.bundle.api.entity.UserEntity;
 import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.model.Status;
 import org.homio.bundle.api.service.CloudProviderService;
@@ -61,7 +61,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             if (!Files.isReadable(privateKey)) {
                 throw new FileNotFoundException("Ssh private key not found");
             }
-            UserEntity user = Objects.requireNonNull(entityContext.getEntity(UserEntity.PREFIX + "primary"));
+            UserEntityImpl user = Objects.requireNonNull(entityContext.getEntity(UserEntityImpl.PREFIX + "primary"));
             String passphrase = user.getJsonData().optString("passphrase", null);
             if (passphrase == null) {
                 throw new NotFoundException("Passphrase not configured");
@@ -282,14 +282,14 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     }
 
     private Consumer<NotificationBlockBuilder> buildNotSyncHandler() {
-        return builder -> builder.addButtonInfo("cloud.not_sync", Color.RED, null, null,
+        return builder -> builder.addButtonInfo("CLOUD.NOT_SYNC", Color.RED, null, null,
             "fas fa-right-to-bracket", "Sync", null, (entityContext, params) -> {
-                entityContext.ui().sendDialogRequest("cloud_sync", "cloud.sync_title", (responseType, pressedButton, parameters) ->
+                entityContext.ui().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE", (responseType, pressedButton, parameters) ->
                         handleSync(entityContext, parameters),
                     dialogModel -> {
                         dialogModel.disableKeepOnUi();
                         List<ActionInputParameter> inputs = new ArrayList<>();
-                        inputs.add(ActionInputParameter.text("field.email", entityContext.getUserRequire().getName()));
+                        inputs.add(ActionInputParameter.text("field.email", entityContext.getUserRequire().getEmail()));
                         inputs.add(ActionInputParameter.text("field.password", ""));
                         inputs.add(ActionInputParameter.text("field.passphrase", ""));
                         dialogModel.submitButton("Login", button -> {
@@ -300,7 +300,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     }
 
     private Consumer<NotificationBlockBuilder> tryConnectHandler() {
-        return builder -> builder.addButtonInfo("cloud.not_sync", Color.RED, null, null,
+        return builder -> builder.addButtonInfo("CLOUD.NOT_SYNC", Color.RED, null, null,
             "fas fa-rss", "Connect", null, (entityContext, params) -> {
                 entityContext.getBean(CloudService.class).restart();
                 return null;
@@ -330,7 +330,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             if (response.getStatusCode() == HttpStatus.OK && loginResponse != null) {
                 CommonUtils.writeToFile(CommonUtils.getSshPath().resolve("id_rsa_cloud"),
                     loginResponse.getPrivateKey(), false);
-                UserEntity user = entityContext.getUserRequire();
+                UserEntityImpl user = (UserEntityImpl) entityContext.getUserRequire();
                 user.getJsonData().put("passphrase", loginBody.passphrase);
                 entityContext.save(user);
                 entityContext.getBean(CloudService.class).restart();
@@ -342,7 +342,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             entityContext.ui().sendErrorMessage(getClientError(ce));
         } catch (Exception ex) {
             log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
-            entityContext.ui().sendErrorMessage("error.sync");
+            entityContext.ui().sendErrorMessage("W.ERROR.SYNC");
         }
     }
 
@@ -350,8 +350,8 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
         String errorMessage = null;
         try {
             ObjectNode error = OBJECT_MAPPER.readValue(ce.getResponseBodyAsString(), ObjectNode.class);
-            errorMessage = error.path("message").asText("error.sync");
+            errorMessage = error.path("message").asText("W.ERROR.SYNC");
         } catch (Exception ignore) {}
-        return defaultString(errorMessage, "error.sync");
+        return defaultString(errorMessage, "W.ERROR.SYNC");
     }
 }

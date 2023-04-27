@@ -21,7 +21,7 @@ public class WidgetToggleEntity
     public static final String PREFIX = "wgttg_";
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Name", order = 3)
+    @UIFieldGroup(value = "NAME", order = 3)
     @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
@@ -36,7 +36,7 @@ public class WidgetToggleEntity
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Header", order = 5)
+    @UIFieldGroup(value = "HEADER", order = 5)
     public Boolean getShowAllButton() {
         return getJsonData("all", Boolean.FALSE);
     }

@@ -56,11 +56,7 @@ public interface HasPosition<T> extends HasJsonData {
     }
 
     default T setParent(String value) {
-        if (value == null) {
-            getJsonData().remove("parent");
-        } else {
-            setJsonData("parent", value);
-        }
+        setJsonData("parent", value);
         return (T) this;
     }
 }

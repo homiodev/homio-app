@@ -18,14 +18,14 @@ public interface HasSingleValueAggregatedDataSource extends HasSingleValueDataSo
     @UIFieldBeanSelection(value = HasAggregateValueFromSeries.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIFieldEntityByClassSelection(HasAggregateValueFromSeries.class)
-    @UIFieldGroup(value = "Value", order = 10)
+    @UIFieldGroup(value = "VALUE", order = 10)
     @UIEditReloadWidget
     default String getValueDataSource() {
         return getJsonData("vds");
     }
 
     @UIField(order = 20)
-    @UIFieldGroup("Value")
+    @UIFieldGroup("VALUE")
     @UIEditReloadWidget
     @UIFieldReadDefaultValue
     default AggregationType getValueAggregationType() {
@@ -38,7 +38,7 @@ public interface HasSingleValueAggregatedDataSource extends HasSingleValueDataSo
 
     @UIField(order = 30)
     @UIFieldTimeSlider
-    @UIFieldGroup("Value")
+    @UIFieldGroup("VALUE")
     @UIFieldReadDefaultValue
     default int getValueAggregationPeriod() {
         return getJsonData("valAggrPeriod", 60);

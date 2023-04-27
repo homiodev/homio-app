@@ -1,7 +1,6 @@
 package org.homio.app.manager.common;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 import static org.homio.bundle.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
@@ -74,11 +73,9 @@ import org.homio.app.setting.ScanVideoStreamSourcesSetting;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemLanguageSetting;
 import org.homio.app.setting.system.SystemShowEntityStateSetting;
-import org.homio.app.setting.system.auth.SystemUserSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.utils.HardwareUtils;
-import org.homio.app.utils.InternalUtil;
 import org.homio.app.workspace.BroadcastLockManagerImpl;
 import org.homio.app.workspace.WorkspaceService;
 import org.homio.bundle.api.BundleEntrypoint;
@@ -86,7 +83,6 @@ import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.BaseEntity;
 import org.homio.bundle.api.entity.DeviceBaseEntity;
 import org.homio.bundle.api.entity.DisableCacheEntity;
-import org.homio.bundle.api.entity.UserEntity;
 import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.model.HasEntityIdentifier;
@@ -116,9 +112,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -227,9 +220,9 @@ public class EntityContextImpl implements EntityContext {
 
         rebuildAllRepositories(applicationContext, true);
 
-        userConfiguration();
-
+        UserService.ensureUserExists(this);
         ComputerBoardEntity.ensureDeviceExists(this);
+        // TmateSshProvider.ensureEntityExists(this);
         setting().fetchSettingPlugins(null, classFinder, true);
 
         entityContextVar.onContextCreated();
@@ -262,31 +255,6 @@ public class EntityContextImpl implements EntityContext {
         });
 
         this.entityContextStorage.init();
-    }
-
-    private void userConfiguration() {
-        getBean(UserService.class).ensureUserExists();
-
-        setting().listenValueInRequest(SystemUserSetting.class, "user", json -> {
-            if (json != null) {
-                UserEntity user = getUserRequire();
-                // authenticate
-                AuthenticationProvider authenticationProvider = getBean(AuthenticationProvider.class);
-                authenticationProvider.authenticate(new UsernamePasswordAuthenticationToken(
-                    user.getUserId(), json.getString("field.currentPassword")));
-                if (!json.getString("field.newPassword").equals(json.getString("field.repeatNewPassword"))) {
-                    throw new IllegalArgumentException("user.password_not_match");
-                }
-
-                PasswordEncoder passwordEncoder = getBean(PasswordEncoder.class);
-                save(user
-                    .setUserId(json.getString("field.email"))
-                    .setName(json.getString("field.name"))
-                    .setPassword(json.getString("field.newPassword"), passwordEncoder));
-                ui().sendSuccessMessage("user.altered");
-                ui().reloadWindow("user.altered_reload");
-            }
-        });
     }
 
     @Override

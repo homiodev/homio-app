@@ -11,13 +11,13 @@ import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
 public interface HasName extends HasJsonData {
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Name", order = 3)
+    @UIFieldGroup(value = "NAME", order = 3)
     @UIFieldOptionFontSize
     @UIFieldReadDefaultValue
     String getName();
 
     @UIField(order = 2)
-    @UIFieldGroup("Name")
+    @UIFieldGroup("NAME")
     @UIFieldReadDefaultValue
     default Boolean isShowName() {
         return getJsonData("shn", Boolean.TRUE);
@@ -29,7 +29,7 @@ public interface HasName extends HasJsonData {
 
     @UIField(order = 3, isRevert = true)
     @UIFieldColorPicker(allowThreshold = true)
-    @UIFieldGroup("Name")
+    @UIFieldGroup("NAME")
     @UIFieldReadDefaultValue
     default String getNameColor() {
         return getJsonData("nc", UI.Color.WHITE);

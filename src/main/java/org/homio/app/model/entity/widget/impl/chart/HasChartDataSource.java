@@ -31,7 +31,7 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 1)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
     @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
-    @UIFieldGroup(value = "Chart", order = 60, borderColor = "#9C27B0")
+    @UIFieldGroup(value = "CHART", order = 60, borderColor = "#9C27B0")
     @UIEditReloadWidget
     default String getChartDataSource() {
         return getJsonData("chartDS");
@@ -42,7 +42,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 5)
-    @UIFieldGroup("Chart")
+    @UIFieldGroup("CHART")
     @UIEditReloadWidget
     @UIFieldReadDefaultValue
     default AggregationType getChartAggregationType() {
@@ -54,7 +54,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 6)
-    @UIFieldGroup("Chart")
+    @UIFieldGroup("CHART")
     @UIFieldCodeEditor(autoFormat = true, editorType = MonacoLanguage.JavaScript)
     @UIFieldReadDefaultValue
     default String getFinalChartValueConverter() {
@@ -66,7 +66,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 1, isRevert = true)
-    @UIFieldGroup(value = "Chart ui", order = 35, borderColor = "#673AB7")
+    @UIFieldGroup(value = "CHART_UI", order = 35, borderColor = "#673AB7")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
     default String getChartColor() {
@@ -79,7 +79,7 @@ public interface HasChartDataSource extends HasJsonData {
 
     @UIField(order = 2, isRevert = true)
     @UIFieldSlider(min = 25, max = 100, step = 5)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     @UIFieldReadDefaultValue
     default int getChartColorOpacity() {
         return getJsonData("chartCO", 50);
@@ -90,7 +90,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 4)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     default Boolean getFillEmptyValues() {
         return getJsonData("fev", Boolean.FALSE);
     }
@@ -100,7 +100,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 5)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     default String getChartLabel() {
         return getJsonData("clbl", "");
     }
@@ -110,7 +110,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 6)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     default boolean getSmoothing() {
         return getJsonData("sm", true);
     }

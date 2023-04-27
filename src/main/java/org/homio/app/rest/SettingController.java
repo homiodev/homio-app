@@ -183,7 +183,8 @@ public class SettingController implements ContextRefreshed {
             fulfillEntityFromPlugin(setting, entityContext, null);
         }
 
-        UserEntity userEntity = entityContext.getUser(true);
+        UserEntity userEntity = entityContext.getUser();
+        boolean isAdmin = userEntity != null && userEntity.isAdmin();
 
         if (settingToPages == null) {
             settingToPages = new HashMap<>();
@@ -202,7 +203,7 @@ public class SettingController implements ContextRefreshed {
                 }
 
                 // hide secured values if requires
-                if (plugin.isSecuredValue() && !userEntity.isAdmin()) {
+                if (plugin.isSecuredValue() && !isAdmin) {
                     settingEntity.setValue("********");
                 }
                 settingEntity.setVisible(plugin.isVisible(entityContext));
