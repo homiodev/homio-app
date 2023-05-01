@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.app.manager.BundleService;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -28,7 +29,6 @@ import org.homio.app.repository.SettingRepository;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.bundle.api.BundleEntrypoint;
 import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.entity.UserEntity;
 import org.homio.bundle.api.exception.ServerException;
 import org.homio.bundle.api.model.OptionModel;
 import org.homio.bundle.api.setting.SettingPlugin;
@@ -41,7 +41,6 @@ import org.homio.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderC
 import org.homio.bundle.api.ui.field.UIFieldType;
 import org.homio.bundle.api.util.Lang;
 import org.json.JSONObject;
-import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -154,11 +153,12 @@ public class SettingController implements ContextRefreshed {
             ex -> packagesInProgress.remove(packageRequest.getName()));
     }
 
-    @RolesAllowed(ADMIN_ROLE)
+    @SneakyThrows
     @PostMapping(value = "/{entityID}", consumes = "text/plain")
     public <T> void updateSetting(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin != null) {
+            settingPlugin.assertUserAccess(entityContext, entityContext.getUser());
             entityContext.setting().setValueRaw((Class<? extends SettingPlugin<T>>) settingPlugin.getClass(), value, false);
         }
     }
@@ -184,8 +184,7 @@ public class SettingController implements ContextRefreshed {
             fulfillEntityFromPlugin(setting, entityContext, null);
         }
 
-        UserEntity userEntity = entityContext.getUser();
-        boolean isAdmin = userEntity != null && userEntity.isAdmin();
+        boolean isAdmin = entityContext.isAdmin();
 
         if (settingToPages == null) {
             settingToPages = new HashMap<>();

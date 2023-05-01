@@ -1,9 +1,10 @@
 package org.homio.app.console;
 
+import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextSetting;
 import org.homio.bundle.api.console.ConsolePlugin;
 import org.springframework.stereotype.Component;
 
@@ -27,5 +28,10 @@ public class SshConsolePlugin implements ConsolePlugin<Object> {
   @Override
   public String getName() {
     return "ssh";
+  }
+
+  @Override
+  public boolean isEnabled() {
+    return entityContext.accessEnabled(SSH_RESOURCE);
   }
 }

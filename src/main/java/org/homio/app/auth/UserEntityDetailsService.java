@@ -4,6 +4,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.repository.device.AllDeviceRepository;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
@@ -21,14 +22,10 @@ public class UserEntityDetailsService implements UserDetailsService {
             throw new IllegalStateException("W.ERROR.USER_NOT_EXISTS_OR_WRONG_PASSWORD");
         }
         Set<String> roles = user.getRoles();
-        return org.springframework.security.core.userdetails.User
-            .withUsername(user.getEntityID())
+        return User
+            .withUsername(user.getEntityID()) // entity id because it cached and fast to use from entityContext.getEntity(username)
             .password(user.getPassword().asString())
             .authorities(roles.toArray(new String[0]))
-            .accountExpired(false)
-            .accountLocked(false)
-            .credentialsExpired(false)
-            .disabled(false)
             .build();
     }
 }

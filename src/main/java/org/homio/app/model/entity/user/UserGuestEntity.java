@@ -11,7 +11,7 @@ public final class UserGuestEntity extends UserBaseEntity<UserGuestEntity> {
     public static final String PREFIX = "ug_";
 
     @Override
-    public UserType getUserType() {
+    public @NotNull UserType getUserType() {
         return UserType.GUEST;
     }
 

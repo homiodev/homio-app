@@ -5,6 +5,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import org.homio.app.model.entity.user.UserBaseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -31,11 +32,11 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
         throws AuthenticationException {
         if (authentication.getCredentials() == null) {
             logger.debug("Authentication failed: no credentials provided");
-
             throw new BadCredentialsException("W.ERROR.USER_NOT_EXISTS_OR_WRONG_PASSWORD");
         }
 
         if (isBlocked(userDetails.getUsername())) {
+            UserBaseEntity.logInfo(userDetails.getUsername(), "user blocked");
             throw new BadCredentialsException("W.ERROR.USER_BLOCKED");
         }
 
@@ -44,10 +45,12 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
         try {
             checkPassword(userDetails, password);
         } catch (Exception ex) {
+            UserBaseEntity.logInfo(userDetails.getUsername(), "wrong password");
             attemptsCache.put(userDetails.getUsername(), getAttempts(userDetails.getUsername()));
             throw ex;
         }
 
+        UserBaseEntity.logInfo(userDetails.getUsername(), "auth success");
         attemptsCache.invalidate(userDetails.getUsername());
     }
 

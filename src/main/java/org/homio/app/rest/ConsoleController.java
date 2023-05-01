@@ -1,5 +1,7 @@
 package org.homio.app.rest;
 
+import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
+import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE;
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
 
 import java.util.ArrayList;
@@ -9,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import javax.annotation.security.RolesAllowed;
 import lombok.Getter;
@@ -46,7 +49,6 @@ import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.homio.bundle.api.util.CommonUtils;
 import org.json.JSONObject;
-import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -54,7 +56,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.tritonus.share.ArraySet;
 
 @RestController
 @RequestMapping("/rest/console")
@@ -64,20 +65,18 @@ public class ConsoleController implements ContextRefreshed {
     private final LogService logService;
     private final EntityContextImpl entityContext;
     private final ItemController itemController;
-    private final Set<ConsoleTab> tabs = new ArraySet<>();
     private final Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
+    private List<ConsoleTab> logs;
 
     @Override
     public void onContextRefresh() {
         EntityContextUIImpl.consolePluginsMap.clear();
-        this.tabs.clear();
 
-        ConsoleTab log4j2Tab = new ConsoleTab("logs", null, null);
+        logs = new ArrayList<>();
         for (String tab : logService.getTabs()) {
-            log4j2Tab.addChild(new ConsoleTab(tab, ConsolePlugin.RenderType.lines, null));
-            this.logsConsolePluginsMap.put(tab, new LogsConsolePlugin(entityContext, logService, tab));
+            logs.add(new ConsoleTab(tab, ConsolePlugin.RenderType.lines, null));
+            logsConsolePluginsMap.put(tab, new LogsConsolePlugin(entityContext, logService, tab));
         }
-        this.tabs.add(log4j2Tab);
 
         List<ConsolePlugin> consolePlugins = new ArrayList<>(this.entityContext.getBeansOfType(ConsolePlugin.class));
         Collections.sort(consolePlugins);
@@ -188,7 +187,13 @@ public class ConsoleController implements ContextRefreshed {
 
     @GetMapping("/tab")
     public Set<ConsoleTab> getTabs() {
-        Set<ConsoleTab> tabs = new HashSet<>(this.tabs);
+        Set<ConsoleTab> tabs = new HashSet<>();
+        if (entityContext.accessEnabled(LOG_RESOURCE)) {
+            ConsoleTab logsTab = new ConsoleTab("logs", null, null);
+            logs.forEach(logsTab::addChild);
+            tabs.add(logsTab);
+        }
+
         Map<String, ConsoleTab> parens = new HashMap<>();
         for (Map.Entry<String, ConsolePlugin<?>> entry :
             EntityContextUIImpl.consolePluginsMap.entrySet()) {
@@ -196,29 +201,32 @@ public class ConsoleController implements ContextRefreshed {
                 continue;
             }
             ConsolePlugin<?> consolePlugin = entry.getValue();
+            if (!consolePlugin.isEnabled()) {
+                continue;
+            }
             String parentName = consolePlugin.getParentTab();
-            if (consolePlugin.isEnabled()) {
-                ConsoleTab consoleTab = new ConsoleTab(entry.getKey(), consolePlugin.getRenderType(), consolePlugin.getOptions());
+            ConsoleTab consoleTab = new ConsoleTab(entry.getKey(), consolePlugin.getRenderType(), consolePlugin.getOptions());
+            if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
+                consoleTab.getOptions().put("reqDeps",
+                    ((ConsolePluginRequireZipDependency<?>) consolePlugin).requireInstallDependencies());
+            }
 
-                if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
-                    consoleTab.getOptions().put("reqDeps",
-                        ((ConsolePluginRequireZipDependency<?>) consolePlugin).requireInstallDependencies());
-                }
-
-                if (parentName != null) {
-                    parens.putIfAbsent(parentName, new ConsoleTab(parentName, null, consolePlugin.getOptions()));
-                    parens.get(parentName).addChild(consoleTab);
-                } else {
-                    tabs.add(consoleTab);
-                }
+            if (parentName != null) {
+                parens.putIfAbsent(parentName, new ConsoleTab(parentName, null, consolePlugin.getOptions()));
+                parens.get(parentName).addChild(consoleTab);
+            } else {
+                tabs.add(consoleTab);
             }
         }
         tabs.addAll(parens.values());
 
         // register still unavailable console plugins if any
-        for (String pluginName : EntityContextUIImpl.customConsolePluginNames) {
-            if (tabs.stream().noneMatch(t -> t.name.equals(pluginName))) {
-                tabs.add(new ConsoleTab(pluginName, null, null));
+        for (Entry<String, String> entry : EntityContextUIImpl.customConsolePluginNames.entrySet()) {
+            if (entry.getValue().isEmpty() || entityContext.accessEnabled(entry.getValue())) {
+                String pluginName = entry.getKey();
+                if (tabs.stream().noneMatch(t -> t.name.equals(pluginName))) {
+                    tabs.add(new ConsoleTab(pluginName, null, null));
+                }
             }
         }
 
@@ -251,7 +259,7 @@ public class ConsoleController implements ContextRefreshed {
     }
 
     @PostMapping("/ssh")
-    @RolesAllowed(ADMIN_ROLE)
+    @RolesAllowed(SSH_RESOURCE)
     public SshProviderService.SshSession openSshSession(@RequestBody SshRequest request) {
         BaseEntity entity = entityContext.getEntity(request.getEntityID());
         if (entity instanceof SshBaseEntity) {
@@ -262,7 +270,7 @@ public class ConsoleController implements ContextRefreshed {
     }
 
     @DeleteMapping("/ssh")
-    @RolesAllowed(ADMIN_ROLE)
+    @RolesAllowed(SSH_RESOURCE)
     public void closeSshSession(@RequestBody SshRequest request) {
         BaseEntity entity = entityContext.getEntity(request.getEntityID());
         if (entity instanceof SshBaseEntity) {
@@ -276,16 +284,16 @@ public class ConsoleController implements ContextRefreshed {
     @Getter
     @Setter
     @Accessors(chain = true)
+    @RequiredArgsConstructor
     private static class ConsoleTab {
 
         private List<ConsoleTab> children;
-        private String name;
-        private ConsolePlugin.RenderType renderType;
+        private final String name;
+        private final ConsolePlugin.RenderType renderType;
         private JSONObject options;
 
         public ConsoleTab(String name, ConsolePlugin.RenderType renderType, JSONObject options) {
-            this.name = name;
-            this.renderType = renderType;
+            this(name, renderType);
             this.options = options == null ? new JSONObject() : options;
         }
 

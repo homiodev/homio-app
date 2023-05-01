@@ -20,7 +20,7 @@ public final class UserAdminEntity extends UserBaseEntity<UserAdminEntity> {
     }
 
     @Override
-    public UserType getUserType() {
+    public @NotNull UserType getUserType() {
         return UserType.ADMIN;
     }
 

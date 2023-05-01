@@ -154,6 +154,7 @@ public class WidgetController {
     }
 
     @PostMapping("/video/action")
+    @RolesAllowed(ADMIN_ROLE)
     public void fireVideoAction(@RequestBody VideoActionRequest request) {
         WidgetVideoSeriesEntity series = getSeriesEntity(request);
         try {
@@ -183,6 +184,7 @@ public class WidgetController {
     }
 
     @PostMapping("/value/update")
+    @RolesAllowed(ADMIN_ROLE)
     public void updateValue(@RequestBody SingleValueRequest<Object> request) {
         HasSetSingleValueDataSource source = getEntity(request.entityID);
         DataSourceUtil.setValue(entityContext, source.getSetValueDataSource(),
@@ -200,6 +202,7 @@ public class WidgetController {
     }
 
     @PostMapping("/slider/update")
+    @RolesAllowed(ADMIN_ROLE)
     public void handleSlider(@RequestBody SingleValueRequest<Number> request) {
         WidgetSliderSeriesEntity series = getSeriesEntity(request);
         DataSourceUtil.setValue(entityContext, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields(),
@@ -217,6 +220,7 @@ public class WidgetController {
     }
 
     @PostMapping("/display/update")
+    @RolesAllowed(ADMIN_ROLE)
     public void handleButtonClick(@RequestBody SingleValueRequest<String> request) {
         WidgetDisplayEntity entity = getEntity(request.entityID);
         DataSourceUtil.setValue(entityContext, entity.getSetValueDataSource(), entity.getSetValueDynamicParameterFields(),
@@ -246,26 +250,35 @@ public class WidgetController {
     }
 
     @PostMapping("/colors/update")
+    @RolesAllowed(ADMIN_ROLE)
     public void updateColorsValue(@RequestBody ColorValueRequest request) {
-        WidgetColorEntity entity = entityContext.getEntity(request.entityID);
+        WidgetColorEntity entity = entityContext.getEntityRequire(request.entityID);
         switch (request.type) {
             case colorTemp:
-                DataSourceUtil.setValue(entityContext, entity.getColorTemperatureSetValueDataSource(), entity.getDynamicParameterFields("colorTemp"),
-                    request.value);
+                DataSourceUtil.setValue(entityContext,
+                    entity.getColorTemperatureSetValueDataSource(),
+                    entity.getDynamicParameterFields("colorTemp"), request.value);
                 break;
             case color:
-                DataSourceUtil.setValue(entityContext, entity.getColorSetValueDataSource(), entity.getDynamicParameterFields("color"), request.value);
+                DataSourceUtil.setValue(entityContext,
+                    entity.getColorSetValueDataSource(),
+                    entity.getDynamicParameterFields("color"), request.value);
                 break;
             case onOff:
-                DataSourceUtil.setValue(entityContext, entity.getOnOffSetValueDataSource(), entity.getDynamicParameterFields("onOff"), request.value);
+                DataSourceUtil.setValue(entityContext,
+                    entity.getOnOffSetValueDataSource(),
+                    entity.getDynamicParameterFields("onOff"), request.value);
                 break;
             case brightness:
-                DataSourceUtil.setValue(entityContext, entity.getBrightnessSetValueDataSource(), entity.getDynamicParameterFields("brightness"), request.value);
+                DataSourceUtil.setValue(entityContext,
+                    entity.getBrightnessSetValueDataSource(),
+                    entity.getDynamicParameterFields("brightness"), request.value);
                 break;
         }
     }
 
     @PostMapping("/toggle/update")
+    @RolesAllowed(ADMIN_ROLE)
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
         WidgetToggleSeriesEntity series = getSeriesEntity(request);
         DataSourceUtil.setValue(entityContext, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields(),
@@ -317,8 +330,8 @@ public class WidgetController {
         }*/
     }
 
-    @RolesAllowed(ADMIN_ROLE)
     @PostMapping("/create/{tabId}/{type}")
+    @RolesAllowed(ADMIN_ROLE)
     public BaseEntity<?> createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
@@ -385,6 +398,7 @@ public class WidgetController {
 
     @SneakyThrows
     @PostMapping("/tab/{name}")
+    @RolesAllowed(ADMIN_ROLE)
     public OptionModel createWidgetTab(@PathVariable("name") String name) {
         BaseEntity<?> widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {

@@ -68,7 +68,6 @@ import org.json.JSONObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -255,6 +254,7 @@ public class UtilsController {
     }
 
     @PostMapping("/notification/action")
+    @RolesAllowed(ADMIN_ROLE)
     public ActionResponseModel notificationAction(@RequestBody HeaderActionRequest request) {
         try {
             return entityContext.ui().handleNotificationAction(request.entityID, request.actionEntityID, request.value);
@@ -265,13 +265,14 @@ public class UtilsController {
 
     @SneakyThrows
     @PostMapping("/header/dialog/{entityID}")
-    public void acceptDialog(
-        @PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
+    @RolesAllowed(ADMIN_ROLE)
+    public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
         entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
             OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
     }
 
     @DeleteMapping("/header/dialog/{entityID}")
+    @RolesAllowed(ADMIN_ROLE)
     public void discardDialog(@PathVariable("entityID") String entityID) {
         entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
     }

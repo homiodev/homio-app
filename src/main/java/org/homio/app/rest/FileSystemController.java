@@ -3,7 +3,9 @@ package org.homio.app.rest;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.app.cb.ComputerBoardEntity.DEFAULT_DEVICE_ENTITY_ID;
+import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE;
 import static org.homio.bundle.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
+import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.security.RolesAllowed;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -60,21 +63,12 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) {
-        this.entityContext
-            .event()
-            .addEntityRemovedListener(
-                BaseFileSystemEntity.class,
-                "fs-remove",
-                e -> findAllFileSystems(this.entityContext));
-        this.entityContext
-            .event()
-            .addEntityCreateListener(
-                BaseFileSystemEntity.class,
-                "fs-create",
-                e -> findAllFileSystems(this.entityContext));
+        this.entityContext.event().addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove",
+            e -> findAllFileSystems(this.entityContext));
+        this.entityContext.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create",
+            e -> findAllFileSystems(this.entityContext));
 
-        ComputerBoardEntity ComputerBoardEntity =
-            this.entityContext.getEntity(DEFAULT_DEVICE_ENTITY_ID);
+        ComputerBoardEntity ComputerBoardEntity = this.entityContext.getEntity(DEFAULT_DEVICE_ENTITY_ID);
         localFileSystem = ComputerBoardEntity.getFileSystem(this.entityContext);
     }
 
@@ -84,12 +78,10 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("")
+    @RolesAllowed(FILE_MANAGER_RESOURCE)
     public List<TreeConfiguration> getFileSystems(@RequestBody GetFSRequest request) {
         List<TreeConfiguration> configurations = new ArrayList<>();
-        String firstAvailableFS = getFS(
-            Optional.ofNullable(request.fileSystemIds)
-                    .map(ids -> ids.isEmpty() ? null : ids.get(0))
-                    .orElse(null));
+        String firstAvailableFS = getFS(Optional.ofNullable(request.fileSystemIds).map(ids -> ids.isEmpty() ? null : ids.get(0)).orElse(null));
         // if not fs - set as local
         for (GetFSRequest.SelectedNode selectedNode : request.selectedNodes) {
             selectedNode.fs = defaultString(selectedNode.fs, firstAvailableFS);
@@ -113,16 +105,19 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("/list")
+    @RolesAllowed(FILE_MANAGER_RESOURCE)
     public Collection<TreeNode> list(@RequestBody ListRequest request) {
         return getFileSystem(request.sourceFs).getChildren(request.sourceFileId);
     }
 
     @DeleteMapping
+    @RolesAllowed(ADMIN_ROLE)
     public TreeNode remove(@RequestBody RemoveFilesRequest request) {
         return getFileSystem(request.sourceFs).delete(request.sourceFileIds);
     }
 
     @PostMapping("/download")
+    @RolesAllowed(FILE_MANAGER_RESOURCE)
     public ResponseEntity<InputStreamResource> download(@RequestBody DownloadRequest request)
         throws Exception {
         FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
@@ -138,27 +133,21 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
             }
             return CommonUtils.inputStreamToResource(inputStream, mediaType);
         } else {
-            Path zipFile =
-                archiveSource(
-                    request.sourceFs,
-                    "zip",
-                    request.sourceFileIds,
-                    "downloadContent",
-                    null,
-                    null);
+            Path zipFile = archiveSource(request.sourceFs, "zip", request.sourceFileIds, "downloadContent", null, null);
             return CommonUtils.inputStreamToResource(
                 Files.newInputStream(zipFile), new MediaType("application", "zip"));
         }
     }
 
     @PostMapping("/create")
+    @RolesAllowed(ADMIN_ROLE)
     public TreeNode createNode(@RequestBody CreateNodeRequest request) {
         FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
-        return fileSystem.create(
-            request.sourceFileId, request.name, request.dir, getUploadOption(request));
+        return fileSystem.create(request.sourceFileId, request.name, request.dir, getUploadOption(request));
     }
 
     @PostMapping("/unarchive")
+    @RolesAllowed(ADMIN_ROLE)
     public TreeNode unarchive(@RequestBody UnArchiveNodeRequest request) {
         FileSystemProvider sourceFs = getFileSystem(request.sourceFs);
         FileSystemProvider targetFs = getFileSystem(request.targetFs);
@@ -168,26 +157,14 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
         TreeNode sourceItem = sourceFs.toTreeNode(request.sourceFileId);
 
         String fileExtension = CommonUtils.getExtension(sourceItem.getName());
-        String fileWithoutExtension =
-            sourceItem
-                .getName()
-                .substring(0, sourceItem.getName().length() - fileExtension.length());
+        String fileWithoutExtension = sourceItem.getName().substring(0, sourceItem.getName().length() - fileExtension.length());
         Path targetPath = CommonUtils.getTmpPath().resolve(fileWithoutExtension);
 
-        ArchiveUtil.UnzipFileIssueHandler issueHandler =
-            ArchiveUtil.UnzipFileIssueHandler.valueOf(request.fileHandler);
-        ArchiveUtil.ArchiveFormat zipFormat =
-            ArchiveUtil.ArchiveFormat.getHandlerByExtension(fileExtension);
+        ArchiveUtil.UnzipFileIssueHandler issueHandler = ArchiveUtil.UnzipFileIssueHandler.valueOf(request.fileHandler);
+        ArchiveUtil.ArchiveFormat zipFormat = ArchiveUtil.ArchiveFormat.getHandlerByExtension(fileExtension);
         ArchiveUtil.unzip(archive, zipFormat, targetPath, null, null, issueHandler);
-        Set<String> ids =
-            Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles()))
-                  .map(File::toString)
-                  .collect(Collectors.toSet());
-        TreeNode fileSystemItem =
-            targetFs.copy(
-                localFileSystem.toTreeNodes(ids),
-                request.targetDir,
-                FileSystemProvider.UploadOption.Replace);
+        Set<String> ids = Arrays.stream(Objects.requireNonNull(targetPath.toFile().listFiles())).map(File::toString).collect(Collectors.toSet());
+        TreeNode fileSystemItem = targetFs.copy(localFileSystem.toTreeNodes(ids), request.targetDir, FileSystemProvider.UploadOption.Replace);
 
         if (request.removeSource) {
             sourceFs.delete(Collections.singleton(request.sourceFileId));
@@ -196,35 +173,28 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("/archive")
+    @RolesAllowed(ADMIN_ROLE)
     public TreeNode archive(@RequestBody ArchiveNodeRequest request) throws Exception {
         // make archive from requested files/folders
-        Path zipFile =
-            archiveSource(
-                request.sourceFs,
-                request.format,
-                request.sourceFileIds,
-                request.targetName,
-                request.level,
-                request.password);
+        Path zipFile = archiveSource(request.sourceFs, request.format, request.sourceFileIds, request.targetName, request.level, request.password);
 
         try {
             TreeNode zipTreeNode = TreeNode.of(zipFile.toString(), zipFile, localFileSystem);
 
-            return getFileSystem(request.targetFs)
-                .copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
+            return getFileSystem(request.targetFs).copy(zipTreeNode, request.targetDir, FileSystemProvider.UploadOption.Replace);
         } finally {
             Files.deleteIfExists(zipFile);
         }
     }
 
     @PostMapping("/copy")
+    @RolesAllowed(ADMIN_ROLE)
     public TreeNode copyNode(@RequestBody CopyNodeRequest request) {
         FileSystemProvider sourceFs = getFileSystem(request.sourceFs);
         FileSystemProvider targetFs = getFileSystem(request.targetFs);
 
         Set<TreeNode> entries = sourceFs.toTreeNodes(request.getSourceFileIds());
-        TreeNode fileSystemItem =
-            targetFs.copy(entries, request.targetPath, FileSystemProvider.UploadOption.Replace);
+        TreeNode fileSystemItem = targetFs.copy(entries, request.targetPath, FileSystemProvider.UploadOption.Replace);
 
         if (request.removeSource) {
             sourceFs.delete(request.getSourceFileIds());
@@ -233,6 +203,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("/upload")
+    @RolesAllowed(ADMIN_ROLE)
     public TreeNode upload(
         @RequestParam("sourceFs") String sourceFs,
         @RequestParam("sourceFileId") String sourceFileId,
@@ -244,12 +215,13 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("/rename")
+    @RolesAllowed(ADMIN_ROLE)
     public TreeNode rename(@RequestBody RenameNodeRequest request) {
-        return getFileSystem(request.sourceFs)
-            .rename(request.sourceFileId, request.newName, getUploadOption(request));
+        return getFileSystem(request.sourceFs).rename(request.sourceFileId, request.newName, getUploadOption(request));
     }
 
     @GetMapping("/search")
+    @RolesAllowed(FILE_MANAGER_RESOURCE)
     public List<TreeNode> search(@RequestParam("query") String query) {
         //  if (StringUtils.isEmpty(query)) {
         return null;
@@ -315,9 +287,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     }
 
     private FileSystemProvider.UploadOption getUploadOption(BaseNodeRequest request) {
-        return request.replace
-            ? FileSystemProvider.UploadOption.Replace
-            : FileSystemProvider.UploadOption.Error;
+        return request.replace ? FileSystemProvider.UploadOption.Replace : FileSystemProvider.UploadOption.Error;
     }
 
     private void findAllFileSystems(EntityContextImpl entityContext) {
@@ -326,13 +296,9 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
 
     private Collection<BaseFileSystemEntity> getRequestedFileSystems(GetFSRequest request) {
         if (request.fileSystemIds == null || request.fileSystemIds.isEmpty()) {
-            return this.fileSystems.stream()
-                                   .filter(BaseFileSystemEntity::isShowInFileManager)
-                                   .collect(Collectors.toList());
+            return this.fileSystems.stream().filter(BaseFileSystemEntity::isShowInFileManager).collect(Collectors.toList());
         } else {
-            return request.fileSystemIds.stream()
-                                        .map(this::getFileSystemEntity)
-                                        .collect(Collectors.toList());
+            return request.fileSystemIds.stream().map(this::getFileSystemEntity).collect(Collectors.toList());
         }
     }
 

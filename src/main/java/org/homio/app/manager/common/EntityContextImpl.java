@@ -59,6 +59,7 @@ import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.model.entity.user.UserAdminEntity;
+import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableDataRepository;
@@ -529,6 +530,11 @@ public class EntityContextImpl implements EntityContext {
             }
         }
         return res;
+    }
+
+    @Override
+    public void registerResource(String resource) {
+        UserBaseEntity.registerResource(resource);
     }
 
     @Override

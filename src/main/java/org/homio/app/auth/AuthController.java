@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.UserEntity;
 import org.homio.bundle.api.entity.UserEntity.UserType;
@@ -40,10 +41,11 @@ public class AuthController {
 
     @PostMapping("/login")
     public String login(@Valid @RequestBody LoginRequest credentials) {
-            log.info("Login <{}>", credentials.getEmail());
-            String username = credentials.getEmail();
-            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, credentials.getPassword()));
-            return jwtTokenProvider.createToken(username, authentication.getAuthorities());
+        log.info("Login <{}>", credentials.getEmail());
+        String username = credentials.getEmail();
+        val user = new UsernamePasswordAuthenticationToken(username, credentials.getPassword());
+        Authentication authentication = authenticationManager.authenticate(user);
+        return jwtTokenProvider.createToken(username, authentication);
     }
 
     @Getter

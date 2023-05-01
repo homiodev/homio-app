@@ -51,6 +51,8 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Log4j2
 public class EntityContextBGPImpl implements EntityContextBGP {
@@ -278,7 +280,16 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             @Override
             public ThreadContext<Void> execute(@NotNull ThrowingRunnable<Exception> command, boolean start) {
                 context.command = arg -> {
-                    command.run();
+                    if (context.authentication == null) {
+                        command.run();
+                    } else {
+                        try {
+                            SecurityContextHolder.getContext().setAuthentication(context.authentication);
+                            command.run();
+                        } finally {
+                            SecurityContextHolder.getContext().setAuthentication(null);
+                        }
+                    }
                     return null;
                 };
                 return (ThreadContext<Void>) execute(context.command, start);
@@ -307,6 +318,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             @Override
             public ScheduleBuilder<T> delay(@NotNull Duration duration) {
                 context.delay = duration;
+                return this;
+            }
+
+            @Override
+            public ScheduleBuilder<T> auth() {
+                context.authentication = SecurityContextHolder.getContext().getAuthentication();
                 return this;
             }
 
@@ -476,6 +493,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
         private final JSONObject metadata = new JSONObject();
         private final Date creationTime = new Date();
+        private Authentication authentication;
         private Path logFile;
         private Duration delay;
         private String name;

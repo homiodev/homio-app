@@ -137,6 +137,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PostMapping("/{entityID}")
+    @RolesAllowed(ADMIN_ROLE)
     public void saveWorkspace(@PathVariable("entityID") String entityID, @RequestBody String json) {
         WorkspaceEntity workspaceEntity = entityContext.getEntity(entityID);
         if (workspaceEntity == null) {
@@ -147,6 +148,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PostMapping("/variable")
+    @RolesAllowed(ADMIN_ROLE)
     public void saveVariables(@RequestBody String json) {
         /*JSONObject request = new JSONObject(json);
         Map<String, WorkspaceGroup> groups = entityContext.findAll(WorkspaceGroup.class).stream().collect(Collectors.toMap(WorkspaceGroup::getGroupId, g -> g));
@@ -212,6 +214,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PostMapping("/tab/{name}")
+    @RolesAllowed(ADMIN_ROLE)
     public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
         WorkspaceEntity workspaceEntity = entityContext.getEntity(WorkspaceEntity.PREFIX + name);
         if (workspaceEntity == null) {

@@ -75,6 +75,8 @@ public class SettingEntity extends BaseEntity<SettingEntity> {
 
     @Transient private JSONObject parameters;
 
+    @Transient private boolean primary;
+
     @Getter
     @JsonIgnore
     @Column(length = 65535)

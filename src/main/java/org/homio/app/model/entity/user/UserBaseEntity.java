@@ -5,14 +5,19 @@ import static org.homio.bundle.api.util.Constants.GUEST_ROLE;
 import static org.homio.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.HashSet;
 import java.util.Set;
 import javax.persistence.Entity;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.UserEntity;
 import org.homio.bundle.api.entity.types.IdentityEntity;
 import org.homio.bundle.api.exception.ProhibitedExecution;
 import org.homio.bundle.api.model.ActionResponseModel;
+import org.homio.bundle.api.model.HasEntityLog;
 import org.homio.bundle.api.model.Status;
 import org.homio.bundle.api.ui.UI.Color;
 import org.homio.bundle.api.ui.field.UIField;
@@ -20,13 +25,34 @@ import org.homio.bundle.api.ui.field.UIFieldIgnore;
 import org.homio.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.bundle.api.util.SecureString;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Entity
 public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityEntity<T>
-    implements UserEntity,
+    implements UserEntity, HasEntityLog,
     HasDynamicContextMenuActions {
+
+    private static Logger log = LogManager.getLogger(UserBaseEntity.class);
+
+    private static final Set<String> RESOURCES = new HashSet<>();
+
+    public static final String LOG_RESOURCE = "ROLE_LOG";
+    public static final String SSH_RESOURCE = "ROLE_SSH";
+    public static final String MQTT_RESOURCE = "ROLE_MQTT";
+    public static final String FILE_MANAGER_RESOURCE = "ROLE_FILE_MANAGER";
+
+    static {
+        RESOURCES.add(LOG_RESOURCE);
+        RESOURCES.add(SSH_RESOURCE);
+        RESOURCES.add(MQTT_RESOURCE);
+        RESOURCES.add(FILE_MANAGER_RESOURCE);
+    }
+
+    public static void registerResource(String resource) {
+        RESOURCES.add(resource);
+    }
 
     @UIField(order = 5, required = true, inlineEditWhenEmpty = true)
     public String getEmail() {
@@ -54,7 +80,7 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
     }
 
     @UIField(order = 10, inlineEdit = true)
-    public String getLang() {
+    public @NotNull String getLang() {
         return getJsonData("lang", "en");
     }
 
@@ -63,17 +89,32 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
     }
 
     @JsonIgnore
-    public abstract UserType getUserType();
+    public abstract @NotNull UserType getUserType();
 
-    public Set<String> getRoles() {
+    @Override
+    public void log(@NotNull String message, @NotNull Level level) {
+        log.log(level, getEntityID() + ": " + message);
+    }
+
+    @Override
+    public void logBuilder(EntityLogBuilder logBuilder) {
+        logBuilder.addTopicFilterByEntityID("org.homio.app.model.entity.user");
+    }
+
+    public @NotNull Set<String> getRoles() {
+        Set<String> roles = new HashSet<>();
+        roles.add(GUEST_ROLE);
         switch (getUserType()) {
             case ADMIN:
-                return Set.of(ADMIN_ROLE, PRIVILEGED_USER_ROLE, GUEST_ROLE);
+                roles.add(ADMIN_ROLE);
+                roles.add(PRIVILEGED_USER_ROLE);
+                roles.addAll(RESOURCES);
+                break;
             case PRIVILEGED:
-                return Set.of(PRIVILEGED_USER_ROLE, GUEST_ROLE);
-            default:
-                return Set.of(GUEST_ROLE);
+                roles.add(PRIVILEGED_USER_ROLE);
+                break;
         }
+        return roles;
     }
 
     @Override
@@ -139,6 +180,10 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
     @Override
     public String toString() {
         return super.getIeeeAddress();
+    }
+
+    public static void logInfo(String entityID, String message) {
+        log.info(entityID + ": " + message);
     }
 
     private ActionResponseModel changeEmail(EntityContext entityContext, JSONObject json) {
