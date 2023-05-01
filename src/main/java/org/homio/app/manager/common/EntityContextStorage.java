@@ -117,12 +117,16 @@ public class EntityContextStorage {
                 }
                 this.hardwareCpuScheduler = entityContext.bgp().builder("hardware-cpu").interval(Duration.ofSeconds(timeout)).execute(
                     () -> {
-                        entityContext.var().set(cpuUsageID, (float) (osBean.getSystemCpuLoad() * 100));
-                        entityContext.var().set(javaCpuUsageID, (float) (osBean.getProcessCpuLoad() * 100));
+                        entityContext.var().set(cpuUsageID, round100((float) (osBean.getSystemCpuLoad() * 100F)));
+                        entityContext.var().set(javaCpuUsageID, round100((float) (osBean.getProcessCpuLoad() * 100F)));
                         float memPercent = (TOTAL_MEMORY - osBean.getFreePhysicalMemorySize()) / (float) TOTAL_MEMORY * 100F;
-                        entityContext.var().set(memID, memPercent);
+                        entityContext.var().set(memID, round100(memPercent));
                     });
             });
+    }
+
+    private float round100(float input) {
+        return Math.round(input * 100.0) / 100.0F;
     }
 
     public void remove(String entityID) {

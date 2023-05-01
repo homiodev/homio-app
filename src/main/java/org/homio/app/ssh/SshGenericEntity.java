@@ -22,7 +22,6 @@ import java.util.Objects;
 import javax.persistence.Entity;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import org.homio.app.ssh.SshGenericEntity.GenericWebSocketService;
 import org.homio.bundle.api.EntityContext;
@@ -42,8 +41,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
-@Getter
-@Setter
 @Entity
 @SuppressWarnings("unused")
 @UISidebarChildren(icon = "fas fa-terminal", color = "#0088CC")

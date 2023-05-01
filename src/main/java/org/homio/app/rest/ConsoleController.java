@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
+import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.app.LogService;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
@@ -65,39 +66,6 @@ public class ConsoleController implements ContextRefreshed {
     private final Set<ConsoleTab> tabs = new ArraySet<>();
     private final Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
 
-    @SneakyThrows
-    static void fetchUIHeaderActions(
-        ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
-        Map<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> actionMap =
-            consolePlugin.getHeaderActions();
-        if (actionMap != null) {
-            for (Map.Entry<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> entry :
-                actionMap.entrySet()) {
-                Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
-                ((UIInputBuilderImpl) uiInputBuilder)
-                    .addFireActionBeforeChange(
-                        entry.getKey(),
-                        CommonUtils.newInstance(settingClass).fireActionsBeforeChange(),
-                        SettingEntity.getKey(settingClass),
-                        0);
-
-                /* TODO: actions.add(new UIActionResponse(entry.getKey())
-                .putOpt("fabc", CommonUtils.newInstance(settingClass).fireActionsBeforeChange())
-                .putOpt("ref", SettingEntity.getKey(settingClass)));*/
-            }
-        }
-        if (consolePlugin instanceof ConsolePluginEditor) {
-            Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction =
-                ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
-            if (nameHeaderAction != null) {
-                ((UIInputBuilderImpl) uiInputBuilder)
-                    .addReferenceAction("name", SettingEntity.getKey(nameHeaderAction), 1);
-                // TODO: actions.add(new UIActionResponse("name").putOpt("ref",
-                // SettingEntity.getKey(nameHeaderAction)));
-            }
-        }
-    }
-
     @Override
     public void onContextRefresh() {
         EntityContextUIImpl.consolePluginsMap.clear();
@@ -106,28 +74,16 @@ public class ConsoleController implements ContextRefreshed {
         ConsoleTab log4j2Tab = new ConsoleTab("logs", null, null);
         for (String tab : logService.getTabs()) {
             log4j2Tab.addChild(new ConsoleTab(tab, ConsolePlugin.RenderType.lines, null));
-            this.logsConsolePluginsMap.put(
-                tab, new LogsConsolePlugin(entityContext, logService, tab));
+            this.logsConsolePluginsMap.put(tab, new LogsConsolePlugin(entityContext, logService, tab));
         }
         this.tabs.add(log4j2Tab);
 
-        List<ConsolePlugin> consolePlugins =
-            new ArrayList<>(this.entityContext.getBeansOfType(ConsolePlugin.class));
+        List<ConsolePlugin> consolePlugins = new ArrayList<>(this.entityContext.getBeansOfType(ConsolePlugin.class));
         Collections.sort(consolePlugins);
         for (ConsolePlugin<?> consolePlugin : consolePlugins) {
             EntityContextUIImpl.consolePluginsMap.put(consolePlugin.getName(), consolePlugin);
         }
         EntityContextUIImpl.consolePluginsMap.putAll(EntityContextUIImpl.customConsolePlugins);
-    }
-
-    @GetMapping("/tab/{tab}/actions")
-    public Collection<UIInputEntity> getConsoleTabActions(@PathVariable("tab") String tab) {
-        UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
-        ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
-        if (consolePlugin != null) {
-            fetchUIHeaderActions(consolePlugin, uiInputBuilder);
-        }
-        return uiInputBuilder.buildAll();
     }
 
     @GetMapping("/tab/{tab}/content")
@@ -136,8 +92,7 @@ public class ConsoleController implements ContextRefreshed {
         if (consolePlugin == null) {
             consolePlugin = logsConsolePluginsMap.get(tab);
             if (consolePlugin == null) {
-                throw new IllegalArgumentException(
-                    "Unable to find console plugin with name: " + tab);
+                throw new IllegalArgumentException("Unable to find console plugin with name: " + tab);
             }
         }
         if (consolePlugin instanceof ConsolePluginTable) {
@@ -154,6 +109,16 @@ public class ConsoleController implements ContextRefreshed {
         return consolePlugin.getValue();
     }
 
+    @GetMapping("/tab/{tab}/actions")
+    public Collection<UIInputEntity> getConsoleTabActions(@PathVariable("tab") String tab) {
+        UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+        ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
+        if (consolePlugin != null) {
+            fetchUIHeaderActions(consolePlugin, uiInputBuilder);
+        }
+        return uiInputBuilder.buildAll();
+    }
+
     @SneakyThrows
     @PostMapping("/tab/{tab}/action")
     @Secured(ADMIN_ROLE)
@@ -166,15 +131,9 @@ public class ConsoleController implements ContextRefreshed {
             Collection<? extends HasEntityIdentifier> baseEntities =
                 ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier =
-                baseEntities.stream()
-                            .filter(e -> e.getEntityID().equals(entityID))
-                            .findAny()
-                            .orElseThrow(
-                                () ->
-                                    new NotFoundException(
-                                        "Entity <" + entityID + "> not found"));
-            return itemController.executeAction(
-                request, identifier, entityContext.getEntity(identifier.getEntityID()));
+                baseEntities.stream().filter(e -> e.getEntityID().equals(entityID))
+                            .findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
+            return itemController.executeAction(request, identifier, entityContext.getEntity(identifier.getEntityID()));
         } else if (consolePlugin instanceof ConsolePluginCommunicator) {
             return ((ConsolePluginCommunicator) consolePlugin).commandReceived(request.getName());
         } else if (consolePlugin instanceof ConsolePluginEditor) {
@@ -184,16 +143,10 @@ public class ConsoleController implements ContextRefreshed {
             }
             if (StringUtils.isNotEmpty(request.getName()) && request.getMetadata().has("content")) {
                 return ((ConsolePluginEditor) consolePlugin)
-                    .save(
-                        new FileModel(
-                            request.getName(),
-                            request.getMetadata().getString("content"),
-                            null,
-                            false));
+                    .save(new FileModel(request.getName(), request.getMetadata().getString("content"), null, false));
             }
         } else {
-            return consolePlugin.executeAction(
-                entityID, request.getMetadata(), request.getParams());
+            return consolePlugin.executeAction(entityID, request.getMetadata(), request.getParams());
         }
         throw new IllegalArgumentException("Unable to handle action for tab: " + tab);
     }
@@ -205,15 +158,12 @@ public class ConsoleController implements ContextRefreshed {
             ConsolePluginRequireZipDependency dependency =
                 (ConsolePluginRequireZipDependency) consolePlugin;
             if (dependency.requireInstallDependencies()) {
-                entityContext
-                    .bgp()
-                    .runWithProgress(
-                        "install-deps-" + dependency.getClass().getSimpleName(),
-                        false,
-                        progressBar ->
-                            dependency.installDependency(entityContext, progressBar),
-                        null,
-                        () -> new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"));
+                entityContext.bgp().runWithProgress(
+                    "install-deps-" + dependency.getClass().getSimpleName(),
+                    false,
+                    progressBar -> dependency.installDependency(entityContext, progressBar),
+                    null,
+                    () -> new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"));
             }
         }
     }
@@ -225,16 +175,10 @@ public class ConsoleController implements ContextRefreshed {
         @PathVariable("fieldName") String fieldName) {
         ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
-            Collection<? extends HasEntityIdentifier> baseEntities =
-                ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
+            Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier =
-                baseEntities.stream()
-                            .filter(e -> e.getEntityID().equals(entityID))
-                            .findAny()
-                            .orElseThrow(
-                                () ->
-                                    new NotFoundException(
-                                        "Entity <" + entityID + "> not found"));
+                baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(
+                    () -> new NotFoundException("Entity <" + entityID + "> not found"));
             return UIFieldSelectionUtil.loadOptions(
                 identifier, entityContext, fieldName, null, null, null, null);
         }
@@ -253,25 +197,15 @@ public class ConsoleController implements ContextRefreshed {
             ConsolePlugin<?> consolePlugin = entry.getValue();
             String parentName = consolePlugin.getParentTab();
             if (consolePlugin.isEnabled()) {
-                ConsoleTab consoleTab =
-                    new ConsoleTab(
-                        entry.getKey(),
-                        consolePlugin.getRenderType(),
-                        consolePlugin.getOptions());
+                ConsoleTab consoleTab = new ConsoleTab(entry.getKey(), consolePlugin.getRenderType(), consolePlugin.getOptions());
 
                 if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
-                    consoleTab
-                        .getOptions()
-                        .put(
-                            "reqDeps",
-                            ((ConsolePluginRequireZipDependency<?>) consolePlugin)
-                                .requireInstallDependencies());
+                    consoleTab.getOptions().put("reqDeps",
+                        ((ConsolePluginRequireZipDependency<?>) consolePlugin).requireInstallDependencies());
                 }
 
                 if (parentName != null) {
-                    parens.putIfAbsent(
-                        parentName,
-                        new ConsoleTab(parentName, null, consolePlugin.getOptions()));
+                    parens.putIfAbsent(parentName, new ConsoleTab(parentName, null, consolePlugin.getOptions()));
                     parens.get(parentName).addChild(consoleTab);
                 } else {
                     tabs.add(consoleTab);
@@ -288,6 +222,31 @@ public class ConsoleController implements ContextRefreshed {
         }
 
         return tabs;
+    }
+
+    /**
+     * Get header actions for console plugin
+     *
+     * @param consolePlugin  - console plugin
+     * @param uiInputBuilder - builder
+     */
+    @SneakyThrows
+    static void fetchUIHeaderActions(
+        ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
+        val actionMap = consolePlugin.getHeaderActions();
+        if (actionMap != null) {
+            for (val entry : actionMap.entrySet()) {
+                Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
+                ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(entry.getKey(), CommonUtils.newInstance(settingClass).fireActionsBeforeChange(),
+                    SettingEntity.getKey(settingClass), 0);
+            }
+        }
+        if (consolePlugin instanceof ConsolePluginEditor) {
+            Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction = ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
+            if (nameHeaderAction != null) {
+                ((UIInputBuilderImpl) uiInputBuilder).addReferenceAction("name", SettingEntity.getKey(nameHeaderAction), 1);
+            }
+        }
     }
 
     @PostMapping("/ssh")

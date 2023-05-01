@@ -80,8 +80,8 @@ public class WorkspaceController {
     }
 
     @SneakyThrows
-    @GetMapping("/variable2")
-    public List<OptionModel> getWorkspaceVariables2() {
+    @GetMapping("/variable/values")
+    public List<OptionModel> getWorkspaceVariableValues() {
         List<OptionModel> options = new ArrayList<>();
         List<WorkspaceVariable> entities = entityContext.findAll(WorkspaceVariable.class)
                                                         .stream()

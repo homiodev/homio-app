@@ -9,29 +9,31 @@ import javax.persistence.Entity;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.ssh.SshTmateEntity.SshTmateService;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextBGP.ThreadContext;
+import org.homio.bundle.api.EntityContextHardware;
 import org.homio.bundle.api.model.OptionModel;
 import org.homio.bundle.api.service.EntityService;
 import org.homio.bundle.api.ui.UISidebarChildren;
+import org.homio.bundle.api.ui.field.action.HasDynamicContextMenuActions;
+import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.bundle.api.util.Lang;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Getter
-@Setter
 @Entity
-@UISidebarChildren(icon = "fas fa-satellite-dish", color = "#0088CC", allowCreateItem = true)
-public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateService> {
+@UISidebarChildren(icon = "fas fa-satellite-dish", color = "#0088CC", allowCreateItem = false)
+public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateService> implements HasDynamicContextMenuActions {
 
     public static final String PREFIX = "sshtmate_";
     private static final String DEFAULT_TMATE_ENTITY_ID = PREFIX + "primary";
+    private static boolean TMATE_INSTALLED = false;
 
     public static void ensureEntityExists(EntityContextImpl entityContext) {
         if (entityContext.getEntity(DEFAULT_TMATE_ENTITY_ID) == null) {
@@ -75,6 +77,28 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     }
 
     @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+        if (SystemUtils.IS_OS_LINUX) {
+            EntityContextHardware hardware = uiInputBuilder.getEntityContext().hardware();
+            TMATE_INSTALLED = TMATE_INSTALLED || hardware.isSoftwareInstalled("tmate");
+            if (!TMATE_INSTALLED) {
+                addTmateInstallButton(uiInputBuilder, hardware);
+            }
+        }
+    }
+
+    private void addTmateInstallButton(UIInputBuilder uiInputBuilder, EntityContextHardware hardware) {
+        uiInputBuilder.addSelectableButton("install_tmate", "fab fa-instalod", null, (entityContext, params) -> {
+            hardware.installSoftware("tmate", 60);
+            TMATE_INSTALLED = hardware.isSoftwareInstalled("tmate");
+            if (!TMATE_INSTALLED) {
+                throw new IllegalStateException("Something went wrong with installing tmate");
+            }
+            return null;
+        });
+    }
+
+    @Override
     protected void beforePersist() {
         super.beforePersist();
         setJsonData("description", Lang.getServerMessage("TMATE_DESCRIPTION"));
@@ -101,20 +125,24 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
 
         @Override
         public boolean entityUpdated(@NotNull EntityService entity) {
-            SshTmateEntity model = (SshTmateEntity) entity;
-            this.entity = model;
+            this.entity = (SshTmateEntity) entity;
             return false;
         }
 
         @Override
         public boolean testService() {
-
+            if (SystemUtils.IS_OS_WINDOWS) {
+                return false;
+            }
+            if (entityContext.hardware().isSoftwareInstalled("tmate")) {
+                throw new IllegalStateException("Tmate not installed");
+            }
             return true;
         }
 
         @Override
         public void destroy() {
-
+            closeSshSession(null, null);
         }
 
         @Override

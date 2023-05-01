@@ -19,13 +19,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
@@ -136,29 +137,17 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @SneakyThrows
-    public ActionResponseModel executeAction(
-        ActionRequestModel actionRequestModel, Object actionHolder, BaseEntity actionEntity) {
+    public ActionResponseModel executeAction(ActionRequestModel actionRequestModel, Object actionHolder, BaseEntity actionEntity) {
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuAction.class)) {
-            UIContextMenuAction menuAction =
-                method.getDeclaredAnnotation(UIContextMenuAction.class);
+            UIContextMenuAction menuAction = method.getDeclaredAnnotation(UIContextMenuAction.class);
             if (menuAction.value().equals(actionRequestModel.getName())) {
-                return executeMethodAction(
-                    method,
-                    actionHolder,
-                    entityContext,
-                    actionEntity,
-                    actionRequestModel.getParams());
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, actionRequestModel.getParams());
             }
         }
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuUploadAction.class)) {
             UIContextMenuUploadAction menuAction = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
             if (menuAction.value().equals(actionRequestModel.getName())) {
-                return executeMethodAction(
-                    method,
-                    actionHolder,
-                    entityContext,
-                    actionEntity,
-                    actionRequestModel.getParams());
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, actionRequestModel.getParams());
             }
         }
         // in case when action attached to field or method
@@ -168,18 +157,15 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             AccessibleObject field = Optional.ofNullable((AccessibleObject) FieldUtils.getField(actionHolder.getClass(), fieldName, true))
                                              .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
             if (field != null) {
-                for (UIActionButton actionButton :
-                    field.getDeclaredAnnotationsByType(UIActionButton.class)) {
+                for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
                     if (actionButton.name().equals(actionRequestModel.name)) {
-                        CommonUtils.newInstance(actionButton.actionHandler())
-                                   .handleAction(entityContext, actionRequestModel.params);
+                        CommonUtils.newInstance(actionButton.actionHandler()).handleAction(entityContext, actionRequestModel.params);
                     }
                 }
             }
         }
         if (actionHolder instanceof HasDynamicContextMenuActions) {
-            return ((HasDynamicContextMenuActions) actionHolder)
-                .handleAction(entityContext, actionRequestModel.name, actionRequestModel.params);
+            return ((HasDynamicContextMenuActions) actionHolder).handleAction(entityContext, actionRequestModel.name, actionRequestModel.params);
         }
         throw new IllegalArgumentException("Unable to find action: <" + actionRequestModel.getName() + "> for model: " + actionHolder);
     }
@@ -196,16 +182,13 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @Override
     public void onContextRefresh() {
-        List<Class<? extends BaseEntity>> baseEntityClasses =
-            classFinder.getClassesWithParent(BaseEntity.class);
-        this.baseEntitySimpleClasses =
-            baseEntityClasses.stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
+        List<Class<? extends BaseEntity>> baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class);
+        this.baseEntitySimpleClasses = baseEntityClasses.stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
 
         for (Class<? extends BaseEntity> baseEntityClass : baseEntityClasses) {
             Class<?> cursor = baseEntityClass.getSuperclass();
             while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
-                this.baseEntitySimpleClasses.put(
-                    cursor.getSimpleName(), (Class<? extends BaseEntity>) cursor);
+                this.baseEntitySimpleClasses.put(cursor.getSimpleName(), (Class<? extends BaseEntity>) cursor);
                 cursor = cursor.getSuperclass();
             }
         }
@@ -261,7 +244,10 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
         Set<OptionModel> list = entityClassByType == null ? new HashSet<>() : fetchCreateItemTypes(entityClassByType);
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
-            list.add(getUISideBarMenuOption(aClass));
+            OptionModel option = getUISideBarMenuOption(aClass);
+            if (option != null) {
+                list.add(option);
+            }
         }
         return list;
     }
@@ -675,13 +661,17 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     private Set<OptionModel> fetchCreateItemTypes(Class<?> entityClassByType) {
         return classFinder.getClassesWithParent(entityClassByType).stream()
                           .map(this::getUISideBarMenuOption)
+                          .filter(Objects::nonNull)
                           .collect(Collectors.toSet());
     }
 
-    private OptionModel getUISideBarMenuOption(Class<?> aClass) {
+    private @Nullable OptionModel getUISideBarMenuOption(Class<?> aClass) {
         OptionModel optionModel = OptionModel.key(aClass.getSimpleName());
         UISidebarChildren uiSidebarChildren = aClass.getAnnotation(UISidebarChildren.class);
         if (uiSidebarChildren != null) {
+            if (!uiSidebarChildren.allowCreateItem()) {
+                return null;
+            }
             optionModel.json(json ->
                 json.put("icon", uiSidebarChildren.icon())
                     .put("color", uiSidebarChildren.color()));
@@ -702,14 +692,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     private void putTypeToEntityByClass(String type, Class<? extends BaseEntity> baseEntityByName) {
         if (Modifier.isAbstract(baseEntityByName.getModifiers())) {
-            var list = classFinder.getClassesWithParent(baseEntityByName)
-                                  .stream().filter((Predicate<Class>) child -> {
-                    if (child.isAnnotationPresent(UISidebarChildren.class)) {
-                        UISidebarChildren uiSidebarChildren = (UISidebarChildren) child.getDeclaredAnnotation(UISidebarChildren.class);
-                        return uiSidebarChildren.allowCreateItem();
-                    }
-                    return true;
-                }).collect(Collectors.toList());
+            var list = classFinder.getClassesWithParent(baseEntityByName);
             typeToEntityClassNames.get(type).addAll(list);
         } else {
             typeToEntityClassNames.get(type).add(baseEntityByName);

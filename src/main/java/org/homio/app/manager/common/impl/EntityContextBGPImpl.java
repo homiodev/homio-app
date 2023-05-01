@@ -46,7 +46,6 @@ import org.homio.bundle.api.model.HasEntityIdentifier;
 import org.homio.bundle.api.setting.SettingPlugin;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.hquery.LinesReader;
-import org.homio.bundle.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -340,9 +339,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     @Override
     public <T> void runService(@NotNull EntityContext entityContext, @NotNull Consumer<Process> processConsumer, @NotNull String name,
         @NotNull Class<? extends SettingPlugin<T>> settingClass) {
-        MachineHardwareRepository machineHardwareRepository = entityContext.getBean(MachineHardwareRepository.class);
         if (SystemUtils.IS_OS_LINUX) {
-            machineHardwareRepository.startSystemCtl(name);
+            entityContext.hardware().startSystemCtl(name);
         } else {
             Path targetPath = Paths.get(entityContext.setting().getRawValue(settingClass));
             Path logFile = targetPath.getParent().resolve("execution-" + name + ".log");
