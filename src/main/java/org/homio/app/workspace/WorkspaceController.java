@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import javax.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -228,7 +229,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PutMapping("/tab/{entityID}")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void renameWorkspaceTab(@PathVariable("entityID") String entityID, @RequestBody OptionModel option) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
@@ -249,7 +250,7 @@ public class WorkspaceController {
     }
 
     @DeleteMapping("/tab/{entityID}")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void deleteWorkspaceTab(@PathVariable("entityID") String entityID) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {

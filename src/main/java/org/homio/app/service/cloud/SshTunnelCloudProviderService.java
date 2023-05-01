@@ -4,7 +4,6 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.FileNotFoundException;
@@ -37,7 +36,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.annotation.Secured;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
@@ -287,7 +285,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
         return builder -> builder.addButtonInfo("CLOUD.NOT_SYNC", Color.RED, null, null,
             "fas fa-right-to-bracket", "Sync", null, (entityContext, params) -> {
                 entityContext.ui().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE", (responseType, pressedButton, parameters) ->
-                        entityContext.getBean(SshTunnelCloudProviderService.class).handleSync(entityContext, parameters),
+                        handleSync(entityContext, parameters),
                     dialogModel -> {
                         dialogModel.disableKeepOnUi();
                         List<ActionInputParameter> inputs = new ArrayList<>();
@@ -309,8 +307,8 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             });
     }
 
-    @Secured(ADMIN_ROLE)
     private void handleSync(EntityContext entityContext, ObjectNode parameters) {
+        entityContext.assertAdminAccess();
         if (parameters == null) {
             return;
         }

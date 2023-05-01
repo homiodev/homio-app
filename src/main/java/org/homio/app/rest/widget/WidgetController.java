@@ -1,7 +1,6 @@
 package org.homio.app.rest.widget;
 
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
-import static org.homio.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -11,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.security.RolesAllowed;
 import javax.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -63,7 +63,6 @@ import org.homio.bundle.api.video.BaseFFMPEGVideoStreamEntity;
 import org.homio.bundle.api.widget.WidgetBaseTemplate;
 import org.homio.bundle.api.widget.WidgetJSBaseTemplate;
 import org.json.JSONObject;
-import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -318,7 +317,7 @@ public class WidgetController {
         }*/
     }
 
-    @Secured(PRIVILEGED_USER_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     @PostMapping("/create/{tabId}/{type}")
     public BaseEntity<?> createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
@@ -334,7 +333,7 @@ public class WidgetController {
         return entityContext.save(baseEntity);
     }
 
-    @Secured(PRIVILEGED_USER_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     @PostMapping("/create/{tabId}/{type}/{bundle}")
     public BaseEntity<?> createExtraWidget(
         @PathVariable("tabId") String tabId,
@@ -397,7 +396,7 @@ public class WidgetController {
 
     @SneakyThrows
     @PutMapping("/tab/{tabId}/{name}")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void renameWidgetTab(@PathVariable("tabId") String tabId, @PathVariable("name") String name) {
         WidgetTabEntity entity = getWidgetTabEntity(tabId);
         WidgetTabEntity newEntity = entityContext.getEntityByName(name, WidgetTabEntity.class);
@@ -408,7 +407,7 @@ public class WidgetController {
     }
 
     @DeleteMapping("/tab/{tabId}")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void deleteWidgetTab(@PathVariable("tabId") String tabId) {
         if (WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(tabId)) {
             throw new IllegalStateException("Unable to delete main tab");

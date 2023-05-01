@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.security.RolesAllowed;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -121,7 +122,7 @@ public class ConsoleController implements ContextRefreshed {
 
     @SneakyThrows
     @PostMapping("/tab/{tab}/action")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public ActionResponseModel executeAction(
         @PathVariable("tab") String tab,
         @RequestBody ItemController.ActionRequestModel request) {
@@ -250,7 +251,7 @@ public class ConsoleController implements ContextRefreshed {
     }
 
     @PostMapping("/ssh")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public SshProviderService.SshSession openSshSession(@RequestBody SshRequest request) {
         BaseEntity entity = entityContext.getEntity(request.getEntityID());
         if (entity instanceof SshBaseEntity) {
@@ -261,7 +262,7 @@ public class ConsoleController implements ContextRefreshed {
     }
 
     @DeleteMapping("/ssh")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void closeSshSession(@RequestBody SshRequest request) {
         BaseEntity entity = entityContext.getEntity(request.getEntityID());
         if (entity instanceof SshBaseEntity) {

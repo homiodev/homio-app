@@ -2,6 +2,7 @@ package org.homio.app.service.cloud;
 
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
 
+import javax.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -11,7 +12,6 @@ import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.service.CloudProviderService;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.api.util.FlowMap;
-import org.springframework.security.access.annotation.Secured;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -44,7 +44,7 @@ public class CloudService implements ContextCreated {
         });
     }
 
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void restart() {
         try {
             log.warn("Starting cloud connection provider: '{}'", cloudProvider.getName());

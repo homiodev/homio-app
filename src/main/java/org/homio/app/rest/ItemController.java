@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
+import javax.annotation.security.RolesAllowed;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
@@ -346,7 +347,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @DeleteMapping("/{entityID}")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void removeEntity(@PathVariable("entityID") String entityID) {
         entityContext.delete(entityID);
     }
@@ -493,7 +494,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @SneakyThrows
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     @DeleteMapping("/{entityID}/field/{field}/item/{entityToRemove}")
     public BaseEntity<?> removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("field") String field,
         @PathVariable("entityToRemove") String entityToRemove) {
@@ -527,7 +528,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("/{entityID}/uploadImageBase64")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public ImageEntity uploadImageBase64(@PathVariable("entityID") String entityID, @RequestBody BufferedImage bufferedImage) {
         try {
             return imageService.upload(entityID, bufferedImage);

@@ -41,24 +41,25 @@ public class JwtTokenProvider implements ContextCreated {
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
         entityContext.setting().listenValueAndGet(SystemJWTTokenValidSetting.class, "jwt-valid", value -> {
             this.jwtValidityTimeout = value;
-            regenerateSecurityID();
-            log.info("Generated securityID: {}. Valid timeout: {}", securityId, value);
+            regenerateSecurityID(entityContext);
+            log.info("Generated securityID: {} on change timeout: {}", securityId, value);
         });
         entityContext.setting().listenValueAndGet(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
             this.regenerateSecurityIdOnRestart = value;
-            regenerateSecurityID();
-            log.info("Generated securityID: {}. Regenerate security id on restart: {}", securityId, value);
+            regenerateSecurityID(entityContext);
+            log.info("Generated securityID: {} on disable auth on restart: {}", securityId, value);
         });
         entityContext.setting().listenValue(SystemLogoutButtonSetting.class, "logout", () -> {
             LOGOUT_INCREMENTER.incrementAndGet();
-            regenerateSecurityID();
-            log.info("Generated securityID: {}. Regenerate security id on logout: {}", securityId, entityContext.getUser());
+            regenerateSecurityID(entityContext);
+            log.info("Generated securityID: {} on logout: {}", securityId, entityContext.getUser());
         });
     }
 
-    private void regenerateSecurityID() {
+    private void regenerateSecurityID(EntityContextImpl entityContext) {
         this.securityId = buildSecurityId();
         this.jwtParser = Jwts.parser().setSigningKey(securityId);
+        entityContext.ui().reloadWindow("sys.auth_changed");
     }
 
     String createToken(String username, Collection<? extends GrantedAuthority> roles) {
