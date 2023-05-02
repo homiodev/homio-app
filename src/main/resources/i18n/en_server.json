@@ -21,5 +21,6 @@
     "TITLE": "Found device: {{NAME}}",
     "NAME": "Name   '{{NAME}}'",
     "URL": "URL    '{{URL}}'"
-  }
+  },
+  "TMATE_DESCRIPTION": "Tmate is https://tmate.io service that creates web-socket session with unique id to connect to device"
 }

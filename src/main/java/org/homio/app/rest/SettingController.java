@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import javax.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.app.manager.BundleService;
@@ -120,7 +121,7 @@ public class SettingController implements ContextRefreshed {
     }
 
     @DeleteMapping("/{entityID}/package")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void unInstallPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
@@ -135,7 +136,7 @@ public class SettingController implements ContextRefreshed {
     }
 
     @PostMapping("/{entityID}/package")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void installPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
@@ -153,7 +154,7 @@ public class SettingController implements ContextRefreshed {
             ex -> packagesInProgress.remove(packageRequest.getName()));
     }
 
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     @PostMapping(value = "/{entityID}", consumes = "text/plain")
     public <T> void updateSetting(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
@@ -162,7 +163,7 @@ public class SettingController implements ContextRefreshed {
         }
     }
 
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     @DeleteMapping(value = "/{entityID}", consumes = "text/plain")
     public void removeSettingValue(@PathVariable("entityID") String entityID, @RequestBody String value) throws Exception {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);

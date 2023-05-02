@@ -2,6 +2,7 @@ package org.homio.app.model.var;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
@@ -307,7 +308,14 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     @Override
     public String getStatusValueRepresentation(EntityContext entityContext) {
         Object value = entityContext.var().get(variableId);
-        return isEmpty(unit) ? value == null ? null : value.toString() : format("%s <small>%s</small>", value == null ? "-" : value, unit);
+        String str =
+            value == null ? null :
+                value instanceof Double ? format("%.2f", (Double) value) :
+                    value instanceof Float ? format("%.2f", (Float) value) : value.toString();
+        if (isEmpty(unit)) {
+            return str;
+        }
+        return format("%s <small>%s</small>", defaultString(str, "-"), unit);
     }
 
     @Override
