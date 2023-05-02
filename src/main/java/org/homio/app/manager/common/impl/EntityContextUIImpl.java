@@ -1,15 +1,15 @@
 package org.homio.app.manager.common.impl;
 
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -61,7 +61,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     public static final Map<String, ConsolePlugin<?>> customConsolePlugins = new HashMap<>();
     public static final Map<String, ConsolePlugin<?>> consolePluginsMap = new HashMap<>();
 
-    public static final Set<String> customConsolePluginNames = new HashSet<>();
+    public static final Map<String, String> customConsolePluginNames = new HashMap<>();
 
     private final Map<DynamicUpdateRequest, DynamicUpdateContext> dynamicUpdateRegisters = new ConcurrentHashMap<>();
     private final Map<String, DialogModel> dialogRequest = new ConcurrentHashMap<>();
@@ -355,7 +355,7 @@ public class EntityContextUIImpl implements EntityContextUI {
                         "Trying add header button to page without annotation UISidebarMenu");
                 }
                 builder.setPage(
-                    StringUtils.defaultIfEmpty(
+                    defaultIfEmpty(
                         page.getDeclaredAnnotation(UISidebarMenu.class).overridePath(),
                         page.getSimpleName()));
                 return this;
@@ -496,8 +496,8 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public void registerConsolePluginName(@NotNull String name) {
-        customConsolePluginNames.add(name);
+    public void registerConsolePluginName(@NotNull String name, @Nullable String resource) {
+        customConsolePluginNames.put(name, trimToEmpty(resource));
     }
 
     @Override

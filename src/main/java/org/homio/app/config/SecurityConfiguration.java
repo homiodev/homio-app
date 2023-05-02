@@ -9,7 +9,6 @@ import org.homio.app.auth.CacheAuthenticationProvider;
 import org.homio.app.auth.JwtTokenFilterConfigurer;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.auth.UserEntityDetailsService;
-import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,11 +18,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.cache.SpringCacheBasedUserCache;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -96,7 +92,6 @@ public class SecurityConfiguration {
     public DaoAuthenticationProvider authenticationProvider() {
         CacheAuthenticationProvider authProvider = new CacheAuthenticationProvider();
         authProvider.setUserDetailsService(userEntityDetailsService);
-        authProvider.setUserCache(new SpringCacheBasedUserCache(new ConcurrentMapCache("auth-users")));
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }

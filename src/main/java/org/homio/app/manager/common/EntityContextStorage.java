@@ -102,9 +102,9 @@ public class EntityContextStorage {
         String javaCpuUsageID = entityContext.var().createVariable("hardware", "java_cpu_load", "sys.java_cpu_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.java_cpu_load_description").setReadOnly(true).setUnit("%").setColor("#B03780"));
-        String memID = entityContext.var().createVariable("hardware", "sys_mem_load", "sys.memory",
+        String memID = entityContext.var().createVariable("hardware", "sys_mem_load", "sys.mem_load",
             VariableType.Float, builder ->
-                builder.setDescription("sys.memory_description").setReadOnly(true).setColor("#939C35"));
+                builder.setDescription("sys.mem_load_description").setReadOnly(true).setColor("#939C35"));
         entityContext.event().addEvent("sys_cpu_load");
         entityContext.event().addEvent("java_cpu_load");
         entityContext.event().addEvent("sys_mem_load");
@@ -117,12 +117,16 @@ public class EntityContextStorage {
                 }
                 this.hardwareCpuScheduler = entityContext.bgp().builder("hardware-cpu").interval(Duration.ofSeconds(timeout)).execute(
                     () -> {
-                        entityContext.var().set(cpuUsageID, (float) (osBean.getSystemCpuLoad() * 100));
-                        entityContext.var().set(javaCpuUsageID, (float) (osBean.getProcessCpuLoad() * 100));
+                        entityContext.var().set(cpuUsageID, round100((float) (osBean.getSystemCpuLoad() * 100F)));
+                        entityContext.var().set(javaCpuUsageID, round100((float) (osBean.getProcessCpuLoad() * 100F)));
                         float memPercent = (TOTAL_MEMORY - osBean.getFreePhysicalMemorySize()) / (float) TOTAL_MEMORY * 100F;
-                        entityContext.var().set(memID, memPercent);
+                        entityContext.var().set(memID, round100(memPercent));
                     });
             });
+    }
+
+    private float round100(float input) {
+        return Math.round(input * 100.0) / 100.0F;
     }
 
     public void remove(String entityID) {

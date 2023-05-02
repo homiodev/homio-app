@@ -1,5 +1,7 @@
 package org.homio.app.console;
 
+import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
+
 import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +20,18 @@ public class LogsConsolePlugin implements ConsolePluginLines {
 
   @Override
   public List<String> getValue() {
+    entityContext.assertAccess(LOG_RESOURCE);
     return this.logService.getLogs(name);
   }
 
   @Override
   public ConsolePlugin.RenderType getRenderType() {
     return RenderType.lines;
+  }
+
+  @Override
+  public boolean isEnabled() {
+    return entityContext.accessEnabled(LOG_RESOURCE);
   }
 
   @Override

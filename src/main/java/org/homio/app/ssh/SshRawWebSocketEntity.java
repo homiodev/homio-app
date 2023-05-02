@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.persistence.Entity;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.app.ssh.SshRawWebSocketEntity.RawWebSocketService;
@@ -23,12 +22,9 @@ import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Getter
-@Setter
 @Entity
 @UISidebarChildren(icon = "fas fa-draw-polygon", color = "#CC0092")
-public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, RawWebSocketService>
-    implements EntityService<RawWebSocketService, SshRawWebSocketEntity> {
+public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, RawWebSocketService> {
 
     public static final String PREFIX = "sshraw_";
 

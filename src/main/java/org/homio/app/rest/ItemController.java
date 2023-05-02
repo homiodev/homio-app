@@ -1,5 +1,6 @@
 package org.homio.app.rest;
 
+import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -87,7 +88,6 @@ import org.homio.bundle.api.util.CommonUtils;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -127,14 +127,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @PostConstruct
     public void postConstruct() {
-        entityContext
-            .setting()
-            .listenValue(
-                SystemClearCacheButtonSetting.class,
-                "ic-clear-cache",
-                () -> {
-                    typeToEntityClassNames.clear();
-                });
+        entityContext.setting().listenValue(SystemClearCacheButtonSetting.class, "ic-clear-cache",
+            typeToEntityClassNames::clear);
     }
 
     @SneakyThrows
@@ -254,8 +248,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping(value = "/{entityID}/logs/debug/{value}")
-    public void setEntityDebugLogLevel(
-        @PathVariable("entityID") String entityID, @PathVariable("value") boolean debug) {
+    @RolesAllowed(ADMIN_ROLE)
+    public void setEntityDebugLogLevel(@PathVariable("entityID") String entityID, @PathVariable("value") boolean debug) {
         BaseEntity entity = entityContext.getEntity(entityID);
         if (entity instanceof HasEntityLog) {
             HasEntityLog hasEntityLog = (HasEntityLog) entity;
@@ -267,8 +261,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @GetMapping(value = "/{entityID}/logs")
+    @RolesAllowed(LOG_RESOURCE)
     public ResponseEntity<StreamingResponseBody> getLogs(@PathVariable("entityID") String entityID) {
-        Path logPath = logService.getEntityLogsFile(entityContext.getEntity(entityID));
+        Path logPath = logService.getEntityLogsFile(entityContext.getEntityRequire(entityID));
         if (logPath == null) {
             throw new IllegalArgumentException("Unable to find log file path for entity: " + entityID);
         }
@@ -290,6 +285,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping(value = "/{entityID}/action")
+    @RolesAllowed(ADMIN_ROLE)
     public ActionResponseModel callAction(@PathVariable("entityID") String entityID,
         @RequestBody ActionRequestModel requestModel) {
         return callActionWithBinary(entityID, requestModel, null);
@@ -311,10 +307,13 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }*/
 
     @PostMapping(value = "/{entityID}/actionWithBinary")
-    public ActionResponseModel callActionWithBinary(@PathVariable("entityID") String entityID, @RequestPart ActionRequestModel actionRequestModel,
+    @RolesAllowed(ADMIN_ROLE)
+    public ActionResponseModel callActionWithBinary(
+        @PathVariable("entityID") String entityID,
+        @RequestPart ActionRequestModel actionRequestModel,
         @RequestParam("data") MultipartFile[] files) {
         try {
-            BaseEntity<?> entity = entityContext.getEntity(entityID);
+            BaseEntity<?> entity = entityContext.getEntityRequire(entityID);
             actionRequestModel.params.put("files", files);
             return executeAction(actionRequestModel, entity, entity);
         } catch (Exception ex) {
@@ -331,6 +330,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("/{type}")
+    @RolesAllowed(ADMIN_ROLE)
     public BaseEntity<?> create(@PathVariable("type") String type) {
         log.debug("Request creating entity by type: <{}>", type);
         Class<? extends BaseEntity> typeClass = EntityContextImpl.baseEntityNameToClass.get(type);
@@ -342,8 +342,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("/{entityID}/copy")
+    @RolesAllowed(ADMIN_ROLE)
     public BaseEntity<?> copyEntityByID(@PathVariable("entityID") String entityID) {
-        return entityContext.copyEntity(entityContext.getEntity(entityID));
+        return entityContext.copyEntity(entityContext.getEntityRequire(entityID));
     }
 
     @DeleteMapping("/{entityID}")
@@ -353,6 +354,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @GetMapping("/{entityID}/dependencies")
+    @RolesAllowed(ADMIN_ROLE)
     public List<String> canRemove(@PathVariable("entityID") String entityID) {
         BaseEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
@@ -471,13 +473,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @SneakyThrows
     @PutMapping("/{entityID}/mappedBy/{mappedBy}")
+    @RolesAllowed(ADMIN_ROLE)
     public BaseEntity<?> putToItem(@PathVariable("entityID") String entityID, @PathVariable("mappedBy") String mappedBy, @RequestBody String json) {
         // to avoid problem with lost values in case of parallel call of putToItem rest API
         // of course we may use hashtable for locks but this method not fires often at all
         putItemsLock.lock();
         try {
             JSONObject jsonObject = new JSONObject(json);
-            BaseEntity<?> owner = entityContext.getEntity(entityID);
+            BaseEntity<?> owner = entityContext.getEntityRequire(entityID);
 
             for (String type : jsonObject.keySet()) {
                 Class<? extends BaseEntity> className = entityManager.getClassByType(type);
@@ -494,11 +497,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @SneakyThrows
-    @RolesAllowed(ADMIN_ROLE)
     @DeleteMapping("/{entityID}/field/{field}/item/{entityToRemove}")
+    @RolesAllowed(ADMIN_ROLE)
     public BaseEntity<?> removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("field") String field,
         @PathVariable("entityToRemove") String entityToRemove) {
-        BaseEntity<?> entity = entityContext.getEntity(entityID);
+        BaseEntity<?> entity = entityContext.getEntityRequire(entityID);
         entityContext.delete(entityToRemove);
         return entityContext.getEntity(entity);
     }
@@ -509,6 +512,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }*/
 
     @PostMapping("/{entityID}/block")
+    @RolesAllowed(ADMIN_ROLE)
     public void updateBlockPosition(
         @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPosition position) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
@@ -716,63 +720,47 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     private void fillEntityRelationships(Object baseEntity, Map<String, BaseEntity> usages) {
         if (baseEntity != null) {
-            FieldUtils.getAllFieldsList(baseEntity.getClass())
-                      .forEach(
-                          field -> {
-                              try {
-                                  Class<? extends Annotation> aClass =
-                                      field.isAnnotationPresent(OneToOne.class)
-                                          ? OneToOne.class
-                                          : (field.isAnnotationPresent(OneToMany.class)
-                                              ? OneToMany.class
-                                              : null);
-                                  if (aClass != null) {
-                                      Object targetValue =
-                                          FieldUtils.readField(field, baseEntity, true);
-                                      if (targetValue instanceof Collection) {
-                                          if (!((Collection<?>) targetValue).isEmpty()) {
-                                              for (Object o : (Collection<?>) targetValue) {
-                                                  o.toString(); // hibernate initialize
-                                                  BaseEntity entity = (BaseEntity) o;
-                                                  usages.put(entity.getEntityID(), entity);
-                                                  fillEntityRelationships(entity, usages);
-                                              }
-                                          }
-                                      } else if (targetValue != null) {
-                                          BaseEntity entity = (BaseEntity) targetValue;
-                                          usages.put(entity.getEntityID(), entity);
-                                          fillEntityRelationships(entity, usages);
-                                      }
-                                  }
-                              } catch (Exception e) {
-                                  throw new ServerException(e);
-                              }
-                          });
+            FieldUtils.getAllFieldsList(baseEntity.getClass()).forEach(field -> {
+                try {
+                    Class<? extends Annotation> aClass =
+                        field.isAnnotationPresent(OneToOne.class) ? OneToOne.class : (field.isAnnotationPresent(OneToMany.class) ? OneToMany.class : null);
+                    if (aClass != null) {
+                        Object targetValue = FieldUtils.readField(field, baseEntity, true);
+                        if (targetValue instanceof Collection) {
+                            if (!((Collection<?>) targetValue).isEmpty()) {
+                                for (Object o : (Collection<?>) targetValue) {
+                                    o.toString(); // hibernate initialize
+                                    BaseEntity entity = (BaseEntity) o;
+                                    usages.put(entity.getEntityID(), entity);
+                                    fillEntityRelationships(entity, usages);
+                                }
+                            }
+                        } else if (targetValue != null) {
+                            BaseEntity entity = (BaseEntity) targetValue;
+                            usages.put(entity.getEntityID(), entity);
+                            fillEntityRelationships(entity, usages);
+                        }
+                    }
+                } catch (Exception e) {
+                    throw new ServerException(e);
+                }
+            });
         }
     }
 
     private Method findFilterOptionMethod(String fieldName, Object entity) {
         for (Method declaredMethod : entity.getClass().getDeclaredMethods()) {
-            if (declaredMethod.isAnnotationPresent(UIFilterOptions.class)
-                && declaredMethod
-                .getAnnotation(UIFilterOptions.class)
-                .value()
-                .equals(fieldName)) {
+            if (declaredMethod.isAnnotationPresent(UIFilterOptions.class) && declaredMethod.getAnnotation(UIFilterOptions.class).value().equals(fieldName)) {
                 return declaredMethod;
             }
         }
 
         // if Class has only one selection and only one filtered method - use it
-        long count =
-            FieldUtils.getFieldsListWithAnnotation(entity.getClass(), UIField.class).stream()
-                      .map(p -> p.getAnnotation(UIField.class).type())
-                      .filter(f -> f == UIFieldType.SelectBox)
-                      .count();
+        long count = FieldUtils.getFieldsListWithAnnotation(entity.getClass(), UIField.class).stream().map(p -> p.getAnnotation(UIField.class).type())
+                               .filter(f -> f == UIFieldType.SelectBox).count();
         if (count == 1) {
-            List<Method> methodsListWithAnnotation =
-                Stream.of(entity.getClass().getDeclaredMethods())
-                      .filter(m -> m.isAnnotationPresent(UIFilterOptions.class))
-                      .collect(Collectors.toList());
+            List<Method> methodsListWithAnnotation = Stream.of(entity.getClass().getDeclaredMethods()).filter(m -> m.isAnnotationPresent(UIFilterOptions.class))
+                                                           .collect(Collectors.toList());
 
             if (methodsListWithAnnotation.size() == 1) {
                 return methodsListWithAnnotation.get(0);
@@ -794,8 +782,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             classTypes.add(classByType);
         }
         if (classTypes.isEmpty()) {
-            for (Class<? extends DynamicParameterFields> dynamicClassType :
-                classFinder.getClassesWithParent(DynamicParameterFields.class)) {
+            for (Class<? extends DynamicParameterFields> dynamicClassType : classFinder.getClassesWithParent(DynamicParameterFields.class)) {
                 if (dynamicClassType.getSimpleName().equals(type)) {
                     classTypes.add(dynamicClassType);
                 }
@@ -850,16 +837,5 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         private final boolean hasLogs;
         private final List<EntityUIMetaData> fields;
         private final Collection<UIInputEntity> actions;
-    }
-
-    @Getter
-    @Setter
-    private static class SingleInlineItemRequest {
-
-        private String entityID;
-        private String entityFieldName;
-        private String innerFieldName;
-        private String inlineEntityID;
-        private Object innerValue;
     }
 }

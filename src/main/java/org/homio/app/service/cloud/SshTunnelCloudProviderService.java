@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.config.AppProperties;
-import org.homio.app.model.entity.UserEntityImpl;
+import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextUI.NotificationBlockBuilder;
 import org.homio.bundle.api.exception.NotFoundException;
@@ -61,7 +61,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             if (!Files.isReadable(privateKey)) {
                 throw new FileNotFoundException("Ssh private key not found");
             }
-            UserEntityImpl user = Objects.requireNonNull(entityContext.getEntity(UserEntityImpl.PREFIX + "primary"));
+            UserAdminEntity user = Objects.requireNonNull(entityContext.getEntity(UserAdminEntity.ENTITY_ID));
             String passphrase = user.getJsonData().optString("passphrase", null);
             if (passphrase == null) {
                 throw new NotFoundException("Passphrase not configured");
@@ -308,6 +308,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     }
 
     private void handleSync(EntityContext entityContext, ObjectNode parameters) {
+        entityContext.assertAdminAccess();
         if (parameters == null) {
             return;
         }
@@ -330,7 +331,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             if (response.getStatusCode() == HttpStatus.OK && loginResponse != null) {
                 CommonUtils.writeToFile(CommonUtils.getSshPath().resolve("id_rsa_cloud"),
                     loginResponse.getPrivateKey(), false);
-                UserEntityImpl user = (UserEntityImpl) entityContext.getUserRequire();
+                UserAdminEntity user = (UserAdminEntity) entityContext.getUserRequire();
                 user.getJsonData().put("passphrase", loginBody.passphrase);
                 entityContext.save(user);
                 entityContext.getBean(CloudService.class).restart();

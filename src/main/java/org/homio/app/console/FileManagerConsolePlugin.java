@@ -1,5 +1,7 @@
 package org.homio.app.console;
 
+import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.bundle.api.EntityContext;
@@ -25,7 +27,7 @@ public class FileManagerConsolePlugin implements ConsolePlugin<Object> {
 
   @Override
   public boolean isEnabled() {
-    return entityContext.isAdminUserOrNone();
+    return entityContext.accessEnabled(FILE_MANAGER_RESOURCE);
   }
 
   @Override

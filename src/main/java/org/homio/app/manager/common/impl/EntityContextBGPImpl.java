@@ -46,12 +46,13 @@ import org.homio.bundle.api.model.HasEntityIdentifier;
 import org.homio.bundle.api.setting.SettingPlugin;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.hquery.LinesReader;
-import org.homio.bundle.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Log4j2
 public class EntityContextBGPImpl implements EntityContextBGP {
@@ -279,7 +280,16 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             @Override
             public ThreadContext<Void> execute(@NotNull ThrowingRunnable<Exception> command, boolean start) {
                 context.command = arg -> {
-                    command.run();
+                    if (context.authentication == null) {
+                        command.run();
+                    } else {
+                        try {
+                            SecurityContextHolder.getContext().setAuthentication(context.authentication);
+                            command.run();
+                        } finally {
+                            SecurityContextHolder.getContext().setAuthentication(null);
+                        }
+                    }
                     return null;
                 };
                 return (ThreadContext<Void>) execute(context.command, start);
@@ -312,6 +322,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             }
 
             @Override
+            public ScheduleBuilder<T> auth() {
+                context.authentication = SecurityContextHolder.getContext().getAuthentication();
+                return this;
+            }
+
+            @Override
             public ScheduleBuilder<T> hideOnUI(boolean value) {
                 context.showOnUI = !value;
                 return this;
@@ -340,9 +356,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     @Override
     public <T> void runService(@NotNull EntityContext entityContext, @NotNull Consumer<Process> processConsumer, @NotNull String name,
         @NotNull Class<? extends SettingPlugin<T>> settingClass) {
-        MachineHardwareRepository machineHardwareRepository = entityContext.getBean(MachineHardwareRepository.class);
         if (SystemUtils.IS_OS_LINUX) {
-            machineHardwareRepository.startSystemCtl(name);
+            entityContext.hardware().startSystemCtl(name);
         } else {
             Path targetPath = Paths.get(entityContext.setting().getRawValue(settingClass));
             Path logFile = targetPath.getParent().resolve("execution-" + name + ".log");
@@ -478,6 +493,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
         private final JSONObject metadata = new JSONObject();
         private final Date creationTime = new Date();
+        private Authentication authentication;
         private Path logFile;
         private Duration delay;
         private String name;

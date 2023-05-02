@@ -50,14 +50,16 @@ import org.homio.app.manager.CacheService;
 import org.homio.app.manager.LoggerService;
 import org.homio.app.manager.PortService;
 import org.homio.app.manager.ScriptService;
-import org.homio.app.manager.UserService;
 import org.homio.app.manager.WidgetService;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.homio.app.manager.common.impl.EntityContextEventImpl;
+import org.homio.app.manager.common.impl.EntityContextHardwareImpl;
 import org.homio.app.manager.common.impl.EntityContextInstallImpl;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
+import org.homio.app.model.entity.user.UserAdminEntity;
+import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableDataRepository;
@@ -75,11 +77,13 @@ import org.homio.app.setting.system.SystemLanguageSetting;
 import org.homio.app.setting.system.SystemShowEntityStateSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
+import org.homio.app.ssh.SshTmateEntity;
 import org.homio.app.utils.HardwareUtils;
 import org.homio.app.workspace.BroadcastLockManagerImpl;
 import org.homio.app.workspace.WorkspaceService;
 import org.homio.bundle.api.BundleEntrypoint;
 import org.homio.bundle.api.EntityContext;
+import org.homio.bundle.api.EntityContextHardware;
 import org.homio.bundle.api.entity.BaseEntity;
 import org.homio.bundle.api.entity.DeviceBaseEntity;
 import org.homio.bundle.api.entity.DisableCacheEntity;
@@ -101,6 +105,7 @@ import org.homio.bundle.api.util.UpdatableSetting;
 import org.homio.bundle.api.widget.WidgetBaseTemplate;
 import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.bundle.hquery.hardware.network.NetworkHardwareRepository;
+import org.homio.bundle.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.aop.framework.Advised;
@@ -166,6 +171,7 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextBGPImpl entityContextBGP;
     private final EntityContextSettingImpl entityContextSetting;
     private final EntityContextVarImpl entityContextVar;
+    private final EntityContextHardwareImpl entityContextHardware;
     private final EntityContextWidgetImpl entityContextWidget;
     private final Environment environment;
     @Getter private final EntityContextStorage entityContextStorage;
@@ -182,6 +188,7 @@ public class EntityContextImpl implements EntityContext {
     private PlatformTransactionManager transactionManager;
     private WorkspaceService workspaceService;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public EntityContextImpl(
         ClassFinder classFinder,
         CacheService cacheService,
@@ -190,6 +197,7 @@ public class EntityContextImpl implements EntityContext {
         Environment environment,
         EntityManagerFactory entityManagerFactory,
         VariableDataRepository variableDataRepository,
+        MachineHardwareRepository machineHardwareRepository,
         AppProperties appProperties) {
         this.classFinder = classFinder;
         this.environment = environment;
@@ -204,6 +212,7 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextWidget = new EntityContextWidgetImpl(this);
         this.entityContextStorage = new EntityContextStorage(this);
         this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
+        this.entityContextHardware = new EntityContextHardwareImpl(this, machineHardwareRepository);
     }
 
     @SneakyThrows
@@ -220,9 +229,9 @@ public class EntityContextImpl implements EntityContext {
 
         rebuildAllRepositories(applicationContext, true);
 
-        UserService.ensureUserExists(this);
+        UserAdminEntity.ensureUserExists(this);
         ComputerBoardEntity.ensureDeviceExists(this);
-        // TmateSshProvider.ensureEntityExists(this);
+        SshTmateEntity.ensureEntityExists(this);
         setting().fetchSettingPlugins(null, classFinder, true);
 
         entityContextVar.onContextCreated();
@@ -310,6 +319,11 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public EntityContextVarImpl var() {
         return entityContextVar;
+    }
+
+    @Override
+    public @NotNull EntityContextHardware hardware() {
+        return entityContextHardware;
     }
 
     @Override
@@ -516,6 +530,11 @@ public class EntityContextImpl implements EntityContext {
             }
         }
         return res;
+    }
+
+    @Override
+    public void registerResource(String resource) {
+        UserBaseEntity.registerResource(resource);
     }
 
     @Override

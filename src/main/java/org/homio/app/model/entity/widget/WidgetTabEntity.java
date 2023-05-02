@@ -7,6 +7,7 @@ import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import lombok.Getter;
 import lombok.Setter;
+import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.BaseEntity;
 import org.homio.bundle.api.exception.ServerException;
@@ -19,6 +20,12 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
 
     public static final String PREFIX = "wtab_";
     public static final String GENERAL_WIDGET_TAB_NAME = PREFIX + "main";
+
+    public static void ensureMainTabExists(EntityContextImpl entityContext) {
+        if (entityContext.getEntity(GENERAL_WIDGET_TAB_NAME) == null) {
+            entityContext.save(new WidgetTabEntity().setEntityID(GENERAL_WIDGET_TAB_NAME).setName("MainTab"));
+        }
+    }
 
     @Getter
     @JsonIgnore
@@ -43,10 +50,12 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
     }
 
     @Override
+    public boolean isDisableDelete() {
+        return this.getEntityID().equals(GENERAL_WIDGET_TAB_NAME);
+    }
+
+    @Override
     public void beforeDelete(EntityContext entityContext) {
-        if (this.getEntityID().equals(GENERAL_WIDGET_TAB_NAME)) {
-            throw new ServerException("W.ERROR.REMOVE_MAIN_TAB");
-        }
         if (!widgetBaseEntities.isEmpty()) {
             throw new ServerException("W.ERROR.REMOVE_NON_EMPTY_TAB");
         }

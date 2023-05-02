@@ -20,6 +20,7 @@ import org.homio.bundle.api.exception.ServerException;
 import org.homio.bundle.api.model.OptionModel;
 import org.homio.bundle.api.repository.AbstractRepository;
 import org.homio.bundle.api.setting.SettingPlugin;
+import org.homio.bundle.api.setting.SettingPluginButton;
 import org.homio.bundle.api.setting.SettingPluginOptions;
 import org.homio.bundle.api.setting.SettingPluginOptionsRemovable;
 import org.homio.bundle.api.setting.SettingPluginToggle;
@@ -70,6 +71,10 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             entity.setIcon(plugin.getIcon());
             if (plugin instanceof SettingPluginToggle) {
                 entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon());
+            }
+            if (plugin instanceof SettingPluginButton) {
+                entity.setValue(((SettingPluginButton) plugin).getText());
+                entity.setPrimary(((SettingPluginButton) plugin).isPrimary());
             }
             entity.setSettingType(plugin.getSettingType());
             entity.setReverted(plugin.isReverted() ? true : null);
