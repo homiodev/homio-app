@@ -1,15 +1,19 @@
 package org.homio.app.auth;
 
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.homio.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
 import org.homio.app.setting.system.auth.SystemJWTTokenValidSetting;
 import org.homio.app.spring.ContextCreated;
@@ -20,41 +24,54 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+@Log4j2
 @Component
 @RequiredArgsConstructor
 public class JwtTokenProvider implements ContextCreated {
 
     private final UserEntityDetailsService userEntityDetailsService;
+    private final AtomicInteger LOGOUT_INCREMENTER = new AtomicInteger(0);
 
     private JwtParser jwtParser;
     private boolean regenerateSecurityIdOnRestart;
     private int jwtValidityTimeout;
+    private byte[] securityId;
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        this.regenerateSecurityIdOnRestart = entityContext.setting().getValue(SystemDisableAuthTokenOnRestartSetting.class);
-        this.jwtParser = Jwts.parser().setSigningKey(buildSecurityId());
-        this.jwtValidityTimeout = entityContext.setting().getValue(SystemJWTTokenValidSetting.class);
-        entityContext.setting()
-                     .listenValue(SystemJWTTokenValidSetting.class, "jwt-valid", value -> this.jwtValidityTimeout = value);
-        entityContext.setting().listenValue(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
+        entityContext.setting().listenValueAndGet(SystemJWTTokenValidSetting.class, "jwt-valid", value -> {
+            this.jwtValidityTimeout = value;
+            regenerateSecurityID(entityContext);
+            log.info("Generated securityID: {} on change timeout: {}", securityId, value);
+        });
+        entityContext.setting().listenValueAndGet(SystemDisableAuthTokenOnRestartSetting.class, "jwt-req-app", value -> {
             this.regenerateSecurityIdOnRestart = value;
-            this.jwtParser = Jwts.parser().setSigningKey(buildSecurityId());
+            regenerateSecurityID(entityContext);
+            log.info("Generated securityID: {} on disable auth on restart: {}", securityId, value);
+        });
+        entityContext.setting().listenValue(SystemLogoutButtonSetting.class, "logout", () -> {
+            LOGOUT_INCREMENTER.incrementAndGet();
+            regenerateSecurityID(entityContext);
+            log.info("Generated securityID: {} on logout: {}", securityId, entityContext.getUser());
         });
     }
 
+    private void regenerateSecurityID(EntityContextImpl entityContext) {
+        this.securityId = buildSecurityId();
+        this.jwtParser = Jwts.parser().setSigningKey(securityId);
+        entityContext.ui().reloadWindow("sys.auth_changed");
+    }
+
     String createToken(String username, Collection<? extends GrantedAuthority> roles) {
-
-        Claims claims = Jwts.claims().setSubject(username);
-        claims.put("auth", roles);
-
         Date now = new Date();
         Date validity = new Date(now.getTime() + TimeUnit.MINUTES.toMillis(jwtValidityTimeout));
-        String securityId = buildSecurityId();
 
         return Jwts.builder()
-                   .setClaims(claims)
+                   .setId(UUID.randomUUID().toString())
+                   .setAudience(username)
+                   .claim("auth", roles)
                    .setIssuedAt(now)
+                   .setIssuer("homio_app")
                    .setExpiration(validity)
                    .signWith(SignatureAlgorithm.HS256, securityId)
                    .compact();
@@ -86,14 +103,14 @@ public class JwtTokenProvider implements ContextCreated {
     }
 
     private String getUsername(String token) {
-        return this.jwtParser.parseClaimsJws(token).getBody().getSubject();
+        return this.jwtParser.parseClaimsJws(token).getBody().getAudience();
     }
 
-    private String buildSecurityId() {
-        String securityId = CommonUtils.APP_UUID;
+    private byte[] buildSecurityId() {
+        String securityId = CommonUtils.APP_UUID + "_" + jwtValidityTimeout + "_" + LOGOUT_INCREMENTER.get();
         if (regenerateSecurityIdOnRestart) {
             securityId += "_" + CommonUtils.RUN_COUNT;
         }
-        return securityId;
+        return Base64.getEncoder().encode(securityId.getBytes());
     }
 }

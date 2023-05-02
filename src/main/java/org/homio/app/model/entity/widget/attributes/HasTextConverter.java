@@ -10,7 +10,7 @@ import org.homio.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields
 public interface HasTextConverter extends HasDynamicParameterFields {
 
     @UIField(order = 100)
-    @UIFieldGroup("Text")
+    @UIFieldGroup("TEXT")
     @UIFieldCodeEditor(autoFormat = true, editorType = MonacoLanguage.JavaScript)
     @UIFieldReadDefaultValue
     default String getTextConverter() {

@@ -22,7 +22,7 @@ public interface HasLineChartBehaviour extends
     ChartType getChartType();
 
     @UIField(order = 20, isRevert = true)
-    @UIFieldGroup(value = "Chart ui", order = 11, borderColor = "#673AB7")
+    @UIFieldGroup(value = "CHART_UI", order = 11, borderColor = "#673AB7")
     @UIFieldSlider(min = 0, max = 10)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default int getLineBorderWidth() {
@@ -34,7 +34,7 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 40, isRevert = true)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default Fill getLineFill() {
         return getJsonDataEnum("fill", Fill.Origin);
@@ -45,7 +45,7 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 6, isRevert = true)
-    @UIFieldGroup(value = "Chart ui")
+    @UIFieldGroup(value = "CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default Stepped getStepped() {
         return getJsonDataEnum("stpd", Stepped.False);
@@ -57,7 +57,7 @@ public interface HasLineChartBehaviour extends
 
     @UIField(order = 3, isRevert = true)
     @UIFieldSlider(min = 0, max = 10)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default int getTension() {
         return getJsonData("tns", 4);
@@ -69,7 +69,7 @@ public interface HasLineChartBehaviour extends
 
     @UIField(order = 5, isRevert = true)
     @UIFieldSlider(min = 10, max = 600)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     default int getFetchDataFromServerInterval() {
         return getJsonData("fsfsi", 60);
     }
@@ -79,7 +79,7 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 1, isRevert = true)
-    @UIFieldGroup(value = "Chart point", order = 50)
+    @UIFieldGroup(value = "CHART_POINT", order = 50)
     @UIFieldSlider(min = 0, max = 4, step = 0.2)
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default double getPointRadius() {
@@ -91,7 +91,7 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 2, isRevert = true)
-    @UIFieldGroup(value = "Chart point")
+    @UIFieldGroup(value = "CHART_POINT")
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     default PointStyle getPointStyle() {
         return getJsonDataEnum("pstyle", PointStyle.circle);
@@ -102,7 +102,7 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 3, isRevert = true)
-    @UIFieldGroup(value = "Chart point")
+    @UIFieldGroup(value = "CHART_POINT")
     @UIFieldColorPicker
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     @UIFieldReadDefaultValue
@@ -115,7 +115,7 @@ public interface HasLineChartBehaviour extends
     }
 
     @UIField(order = 4, isRevert = true)
-    @UIFieldGroup(value = "Chart point")
+    @UIFieldGroup(value = "CHART_POINT")
     @UIFieldColorPicker
     @UIFieldShowOnCondition("return context.get('chartType') == 'line'")
     @UIFieldReadDefaultValue

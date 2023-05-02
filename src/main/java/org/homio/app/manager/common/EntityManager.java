@@ -69,7 +69,7 @@ public class EntityManager {
                 }
             }
         }
-        // in case if entity has no 1-1 repository then try find base repository if possible
+        // in case if entity has no 1-1 repository then try to find base repository if possible
         for (Map.Entry<String, AbstractRepository> entry :
                 EntityContextImpl.repositoriesByPrefix.entrySet()) {
             if (entityID.startsWith(entry.getKey())) {

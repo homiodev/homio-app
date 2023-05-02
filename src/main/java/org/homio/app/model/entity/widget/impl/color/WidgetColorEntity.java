@@ -43,7 +43,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     public static final String PREFIX = "wgtclr_";
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Name", order = 3)
+    @UIFieldGroup(value = "NAME", order = 3)
     @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
@@ -52,7 +52,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @Override
     @UIField(order = 3, isRevert = true)
     @UIFieldColorPicker // disable thresholding
-    @UIFieldGroup("Name")
+    @UIFieldGroup("NAME")
     @UIFieldReadDefaultValue
     public String getNameColor() {
         return HasName.super.getNameColor();
@@ -91,7 +91,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIField(order = 1)
     @UIKeyValueField(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
                      defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
-    @UIFieldGroup(value = "Colors", order = 10)
+    @UIFieldGroup(value = "COLORS", order = 10)
     public String getColors() {
         return getJsonData("colors");
     }
@@ -103,7 +103,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIField(order = 2)
     @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
-    @UIFieldGroup("Colors")
+    @UIFieldGroup("COLORS")
     @UIEditReloadWidget
     public String getColorValueDataSource() {
         return getJsonData("clrv");
@@ -119,7 +119,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIField(order = 3)
     @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
-    @UIFieldGroup("Colors")
+    @UIFieldGroup("COLORS")
     public String getColorSetValueDataSource() {
         return getJsonData("clrds");
     }
@@ -130,7 +130,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     @UIField(order = 4, isRevert = true)
     @UIFieldSlider(min = 0, max = 40)
-    @UIFieldGroup("Colors")
+    @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue
     public int getCircleSpacing() {
         return getJsonData("space", 14);
@@ -142,7 +142,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     @UIField(order = 5, isRevert = true)
     @UIFieldSlider(min = 10, max = 40)
-    @UIFieldGroup("Colors")
+    @UIFieldGroup("COLORS")
     @UIFieldReadDefaultValue
     public int getCircleSize() {
         return getJsonData("size", 28);
@@ -155,7 +155,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIField(order = 1)
     @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
-    @UIFieldGroup(value = "Brightness", order = 20, borderColor = "#307FCF")
+    @UIFieldGroup(value = "BRIGHTNESS", order = 20, borderColor = "#307FCF")
     @UIEditReloadWidget
     public String getBrightnessValueDataSource() {
         return getJsonData("bvds");
@@ -171,7 +171,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIField(order = 2)
     @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-    @UIFieldGroup("Brightness")
+    @UIFieldGroup("BRIGHTNESS")
     public String getBrightnessSetValueDataSource() {
         return getJsonData("bsvds");
     }
@@ -181,7 +181,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 3)
-    @UIFieldGroup("Brightness")
+    @UIFieldGroup("BRIGHTNESS")
     public int getBrightnessMinValue() {
         return getJsonData("brtmin", 0);
     }
@@ -191,7 +191,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 4)
-    @UIFieldGroup("Brightness")
+    @UIFieldGroup("BRIGHTNESS")
     public int getBrightnessMaxValue() {
         return getJsonData("brtmax", 255);
     }
@@ -201,7 +201,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 5, label = "sliderColor")
-    @UIFieldGroup("Brightness")
+    @UIFieldGroup("BRIGHTNESS")
     @UIFieldColorPicker
     public String getBrightnessSliderColor() {
         return getJsonData("brtslcol");
@@ -214,7 +214,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIField(order = 1)
     @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
-    @UIFieldGroup(value = "ColorTemperature", order = 25, borderColor = "#29B3B1")
+    @UIFieldGroup(value = "COLOR_TEMPERATURE", order = 25, borderColor = "#29B3B1")
     @UIEditReloadWidget
     public String getColorTemperatureValueDataSource() {
         return getJsonData("clrtmp");
@@ -230,7 +230,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIField(order = 2)
     @UIFieldBeanSelection(value = HasSetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasSetStatusValue.class)
-    @UIFieldGroup("ColorTemperature")
+    @UIFieldGroup("COLOR_TEMPERATURE")
     public String getColorTemperatureSetValueDataSource() {
         return getJsonData("clrtmps");
     }
@@ -240,7 +240,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 3)
-    @UIFieldGroup("ColorTemperature")
+    @UIFieldGroup("COLOR_TEMPERATURE")
     public int getColorTemperatureMinValue() {
         return getJsonData("clrtmpmin", 0);
     }
@@ -250,7 +250,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 4)
-    @UIFieldGroup("ColorTemperature")
+    @UIFieldGroup("COLOR_TEMPERATURE")
     public int getColorTemperatureMaxValue() {
         return getJsonData("clrtmpmax", 255);
     }
@@ -260,7 +260,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "OnOff", order = 30, borderColor = "#009688")
+    @UIFieldGroup(value = "ON_OFF", order = 30, borderColor = "#009688")
     @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     @UIEditReloadWidget
@@ -276,7 +276,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 1)
-    @UIFieldGroup("OnOff")
+    @UIFieldGroup("ON_OFF")
     @UIFieldBeanSelection(value = HasGetStatusValue.class, lazyLoading = true)
     @UIFieldEntityByClassSelection(HasGetStatusValue.class)
     public String getOnOffSetValueDataSource() {

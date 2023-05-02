@@ -11,7 +11,7 @@ import org.homio.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields
 public interface HasValueConverter extends HasDynamicParameterFields {
 
     @UIField(order = 100)
-    @UIFieldGroup("Value")
+    @UIFieldGroup("VALUE")
     @UIFieldCodeEditor(autoFormat = true, editorType = MonacoLanguage.JavaScript)
     @UIFieldReadDefaultValue
     default String getValueConverter() {
@@ -24,7 +24,7 @@ public interface HasValueConverter extends HasDynamicParameterFields {
 
     @UIField(order = 250)
     @UIFieldSlider(min = 0, max = 60)
-    @UIFieldGroup("Value")
+    @UIFieldGroup("VALUE")
     @UIFieldReadDefaultValue
     default int getValueConverterInterval() {
         return getJsonData("valConvInt", 0);

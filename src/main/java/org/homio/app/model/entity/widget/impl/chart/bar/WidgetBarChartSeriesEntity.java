@@ -17,7 +17,7 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
     public static final String PREFIX = "wgsbcs_";
 
     @UIField(order = 50, isRevert = true)
-    @UIFieldGroup(value = "Chart ui", order = 2, borderColor = "#673AB7")
+    @UIFieldGroup(value = "CHART_UI", order = 2, borderColor = "#673AB7")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getChartColor() {
@@ -30,7 +30,7 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
 
     @UIField(order = 51)
     @UIFieldSlider(min = 0, max = 100, step = 5)
-    @UIFieldGroup("Chart ui")
+    @UIFieldGroup("CHART_UI")
     public int getChartColorOpacity() {
         return getJsonData("chartCO", 50);
     }

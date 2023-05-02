@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import javax.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -80,8 +81,8 @@ public class WorkspaceController {
     }
 
     @SneakyThrows
-    @GetMapping("/variable2")
-    public List<OptionModel> getWorkspaceVariables2() {
+    @GetMapping("/variable/values")
+    public List<OptionModel> getWorkspaceVariableValues() {
         List<OptionModel> options = new ArrayList<>();
         List<WorkspaceVariable> entities = entityContext.findAll(WorkspaceVariable.class)
                                                         .stream()
@@ -228,7 +229,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PutMapping("/tab/{entityID}")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void renameWorkspaceTab(@PathVariable("entityID") String entityID, @RequestBody OptionModel option) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
@@ -249,17 +250,17 @@ public class WorkspaceController {
     }
 
     @DeleteMapping("/tab/{entityID}")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void deleteWorkspaceTab(@PathVariable("entityID") String entityID) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
             throw new NotFoundException("Unable to find workspace tab with id: " + entityID);
         }
         if (WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(entity.getName())) {
-            throw new IllegalArgumentException("REMOVE_MAIN_TAB");
+            throw new IllegalArgumentException("W.ERROR.REMOVE_MAIN_TAB");
         }
         if (!workspaceService.isEmpty(entity.getContent())) {
-            throw new IllegalArgumentException("REMOVE_NON_EMPTY_TAB");
+            throw new IllegalArgumentException("W.ERROR.REMOVE_NON_EMPTY_TAB");
         }
         entityContext.delete(entityID);
     }

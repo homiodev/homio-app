@@ -2,6 +2,7 @@ package org.homio.app.rest;
 
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
 
+import javax.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.json.BgpProcessResponse;
@@ -22,7 +23,7 @@ public class BackgroundProcessController {
     private final EntityContextImpl entityContext;
 
     @DeleteMapping("/{name}")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void cancelProcess(@PathVariable("name") String name) {
         entityContext.bgp().cancelThread(name);
     }
@@ -33,7 +34,7 @@ public class BackgroundProcessController {
     }
 
     /* @GetMapping("/dynamic/stop/{url}")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void stopScriptByName(@PathVariable String url) {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
         if (scriptEntity != null) {
@@ -43,7 +44,7 @@ public class BackgroundProcessController {
     }*/
 
     /* @GetMapping("/dynamic/{url}")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public void dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws
     Exception {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);

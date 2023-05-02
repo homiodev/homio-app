@@ -10,11 +10,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.security.RolesAllowed;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
+import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.app.LogService;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
@@ -23,8 +25,9 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
-import org.homio.app.setting.console.ssh.ConsoleSshProviderSetting;
 import org.homio.app.spring.ContextRefreshed;
+import org.homio.app.ssh.SshBaseEntity;
+import org.homio.app.ssh.SshProviderService;
 import org.homio.app.utils.UIFieldSelectionUtil;
 import org.homio.app.utils.UIFieldUtils;
 import org.homio.bundle.api.console.ConsolePlugin;
@@ -32,12 +35,12 @@ import org.homio.bundle.api.console.ConsolePluginCommunicator;
 import org.homio.bundle.api.console.ConsolePluginEditor;
 import org.homio.bundle.api.console.ConsolePluginTable;
 import org.homio.bundle.api.console.dependency.ConsolePluginRequireZipDependency;
+import org.homio.bundle.api.entity.BaseEntity;
 import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.model.ActionResponseModel;
 import org.homio.bundle.api.model.FileModel;
 import org.homio.bundle.api.model.HasEntityIdentifier;
 import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.service.SshProviderService;
 import org.homio.bundle.api.setting.console.header.ConsoleHeaderSettingPlugin;
 import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
@@ -64,39 +67,6 @@ public class ConsoleController implements ContextRefreshed {
     private final Set<ConsoleTab> tabs = new ArraySet<>();
     private final Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
 
-    @SneakyThrows
-    static void fetchUIHeaderActions(
-        ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
-        Map<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> actionMap =
-            consolePlugin.getHeaderActions();
-        if (actionMap != null) {
-            for (Map.Entry<String, Class<? extends ConsoleHeaderSettingPlugin<?>>> entry :
-                actionMap.entrySet()) {
-                Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
-                ((UIInputBuilderImpl) uiInputBuilder)
-                    .addFireActionBeforeChange(
-                        entry.getKey(),
-                        CommonUtils.newInstance(settingClass).fireActionsBeforeChange(),
-                        SettingEntity.getKey(settingClass),
-                        0);
-
-                /* TODO: actions.add(new UIActionResponse(entry.getKey())
-                .putOpt("fabc", CommonUtils.newInstance(settingClass).fireActionsBeforeChange())
-                .putOpt("ref", SettingEntity.getKey(settingClass)));*/
-            }
-        }
-        if (consolePlugin instanceof ConsolePluginEditor) {
-            Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction =
-                ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
-            if (nameHeaderAction != null) {
-                ((UIInputBuilderImpl) uiInputBuilder)
-                    .addReferenceAction("name", SettingEntity.getKey(nameHeaderAction), 1);
-                // TODO: actions.add(new UIActionResponse("name").putOpt("ref",
-                // SettingEntity.getKey(nameHeaderAction)));
-            }
-        }
-    }
-
     @Override
     public void onContextRefresh() {
         EntityContextUIImpl.consolePluginsMap.clear();
@@ -105,28 +75,16 @@ public class ConsoleController implements ContextRefreshed {
         ConsoleTab log4j2Tab = new ConsoleTab("logs", null, null);
         for (String tab : logService.getTabs()) {
             log4j2Tab.addChild(new ConsoleTab(tab, ConsolePlugin.RenderType.lines, null));
-            this.logsConsolePluginsMap.put(
-                tab, new LogsConsolePlugin(entityContext, logService, tab));
+            this.logsConsolePluginsMap.put(tab, new LogsConsolePlugin(entityContext, logService, tab));
         }
         this.tabs.add(log4j2Tab);
 
-        List<ConsolePlugin> consolePlugins =
-            new ArrayList<>(this.entityContext.getBeansOfType(ConsolePlugin.class));
+        List<ConsolePlugin> consolePlugins = new ArrayList<>(this.entityContext.getBeansOfType(ConsolePlugin.class));
         Collections.sort(consolePlugins);
         for (ConsolePlugin<?> consolePlugin : consolePlugins) {
             EntityContextUIImpl.consolePluginsMap.put(consolePlugin.getName(), consolePlugin);
         }
         EntityContextUIImpl.consolePluginsMap.putAll(EntityContextUIImpl.customConsolePlugins);
-    }
-
-    @GetMapping("/tab/{tab}/actions")
-    public Collection<UIInputEntity> getConsoleTabActions(@PathVariable("tab") String tab) {
-        UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
-        ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
-        if (consolePlugin != null) {
-            fetchUIHeaderActions(consolePlugin, uiInputBuilder);
-        }
-        return uiInputBuilder.buildAll();
     }
 
     @GetMapping("/tab/{tab}/content")
@@ -135,8 +93,7 @@ public class ConsoleController implements ContextRefreshed {
         if (consolePlugin == null) {
             consolePlugin = logsConsolePluginsMap.get(tab);
             if (consolePlugin == null) {
-                throw new IllegalArgumentException(
-                    "Unable to find console plugin with name: " + tab);
+                throw new IllegalArgumentException("Unable to find console plugin with name: " + tab);
             }
         }
         if (consolePlugin instanceof ConsolePluginTable) {
@@ -153,9 +110,19 @@ public class ConsoleController implements ContextRefreshed {
         return consolePlugin.getValue();
     }
 
+    @GetMapping("/tab/{tab}/actions")
+    public Collection<UIInputEntity> getConsoleTabActions(@PathVariable("tab") String tab) {
+        UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+        ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
+        if (consolePlugin != null) {
+            fetchUIHeaderActions(consolePlugin, uiInputBuilder);
+        }
+        return uiInputBuilder.buildAll();
+    }
+
     @SneakyThrows
     @PostMapping("/tab/{tab}/action")
-    @Secured(ADMIN_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public ActionResponseModel executeAction(
         @PathVariable("tab") String tab,
         @RequestBody ItemController.ActionRequestModel request) {
@@ -165,15 +132,9 @@ public class ConsoleController implements ContextRefreshed {
             Collection<? extends HasEntityIdentifier> baseEntities =
                 ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier =
-                baseEntities.stream()
-                            .filter(e -> e.getEntityID().equals(entityID))
-                            .findAny()
-                            .orElseThrow(
-                                () ->
-                                    new NotFoundException(
-                                        "Entity <" + entityID + "> not found"));
-            return itemController.executeAction(
-                request, identifier, entityContext.getEntity(identifier.getEntityID()));
+                baseEntities.stream().filter(e -> e.getEntityID().equals(entityID))
+                            .findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
+            return itemController.executeAction(request, identifier, entityContext.getEntity(identifier.getEntityID()));
         } else if (consolePlugin instanceof ConsolePluginCommunicator) {
             return ((ConsolePluginCommunicator) consolePlugin).commandReceived(request.getName());
         } else if (consolePlugin instanceof ConsolePluginEditor) {
@@ -183,16 +144,10 @@ public class ConsoleController implements ContextRefreshed {
             }
             if (StringUtils.isNotEmpty(request.getName()) && request.getMetadata().has("content")) {
                 return ((ConsolePluginEditor) consolePlugin)
-                    .save(
-                        new FileModel(
-                            request.getName(),
-                            request.getMetadata().getString("content"),
-                            null,
-                            false));
+                    .save(new FileModel(request.getName(), request.getMetadata().getString("content"), null, false));
             }
         } else {
-            return consolePlugin.executeAction(
-                entityID, request.getMetadata(), request.getParams());
+            return consolePlugin.executeAction(entityID, request.getMetadata(), request.getParams());
         }
         throw new IllegalArgumentException("Unable to handle action for tab: " + tab);
     }
@@ -204,15 +159,12 @@ public class ConsoleController implements ContextRefreshed {
             ConsolePluginRequireZipDependency dependency =
                 (ConsolePluginRequireZipDependency) consolePlugin;
             if (dependency.requireInstallDependencies()) {
-                entityContext
-                    .bgp()
-                    .runWithProgress(
-                        "install-deps-" + dependency.getClass().getSimpleName(),
-                        false,
-                        progressBar ->
-                            dependency.installDependency(entityContext, progressBar),
-                        null,
-                        () -> new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"));
+                entityContext.bgp().runWithProgress(
+                    "install-deps-" + dependency.getClass().getSimpleName(),
+                    false,
+                    progressBar -> dependency.installDependency(entityContext, progressBar),
+                    null,
+                    () -> new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"));
             }
         }
     }
@@ -224,16 +176,10 @@ public class ConsoleController implements ContextRefreshed {
         @PathVariable("fieldName") String fieldName) {
         ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
-            Collection<? extends HasEntityIdentifier> baseEntities =
-                ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
+            Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier =
-                baseEntities.stream()
-                            .filter(e -> e.getEntityID().equals(entityID))
-                            .findAny()
-                            .orElseThrow(
-                                () ->
-                                    new NotFoundException(
-                                        "Entity <" + entityID + "> not found"));
+                baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(
+                    () -> new NotFoundException("Entity <" + entityID + "> not found"));
             return UIFieldSelectionUtil.loadOptions(
                 identifier, entityContext, fieldName, null, null, null, null);
         }
@@ -252,25 +198,15 @@ public class ConsoleController implements ContextRefreshed {
             ConsolePlugin<?> consolePlugin = entry.getValue();
             String parentName = consolePlugin.getParentTab();
             if (consolePlugin.isEnabled()) {
-                ConsoleTab consoleTab =
-                    new ConsoleTab(
-                        entry.getKey(),
-                        consolePlugin.getRenderType(),
-                        consolePlugin.getOptions());
+                ConsoleTab consoleTab = new ConsoleTab(entry.getKey(), consolePlugin.getRenderType(), consolePlugin.getOptions());
 
                 if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
-                    consoleTab
-                        .getOptions()
-                        .put(
-                            "reqDeps",
-                            ((ConsolePluginRequireZipDependency<?>) consolePlugin)
-                                .requireInstallDependencies());
+                    consoleTab.getOptions().put("reqDeps",
+                        ((ConsolePluginRequireZipDependency<?>) consolePlugin).requireInstallDependencies());
                 }
 
                 if (parentName != null) {
-                    parens.putIfAbsent(
-                        parentName,
-                        new ConsoleTab(parentName, null, consolePlugin.getOptions()));
+                    parens.putIfAbsent(parentName, new ConsoleTab(parentName, null, consolePlugin.getOptions()));
                     parens.get(parentName).addChild(consoleTab);
                 } else {
                     tabs.add(consoleTab);
@@ -289,30 +225,52 @@ public class ConsoleController implements ContextRefreshed {
         return tabs;
     }
 
+    /**
+     * Get header actions for console plugin
+     *
+     * @param consolePlugin  - console plugin
+     * @param uiInputBuilder - builder
+     */
+    @SneakyThrows
+    static void fetchUIHeaderActions(
+        ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
+        val actionMap = consolePlugin.getHeaderActions();
+        if (actionMap != null) {
+            for (val entry : actionMap.entrySet()) {
+                Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
+                ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(entry.getKey(), CommonUtils.newInstance(settingClass).fireActionsBeforeChange(),
+                    SettingEntity.getKey(settingClass), 0);
+            }
+        }
+        if (consolePlugin instanceof ConsolePluginEditor) {
+            Class<? extends ConsoleHeaderSettingPlugin<?>> nameHeaderAction = ((ConsolePluginEditor) consolePlugin).getFileNameHeaderAction();
+            if (nameHeaderAction != null) {
+                ((UIInputBuilderImpl) uiInputBuilder).addReferenceAction("name", SettingEntity.getKey(nameHeaderAction), 1);
+            }
+        }
+    }
+
     @PostMapping("/ssh")
-    @Secured(ADMIN_ROLE)
-    public SshProviderService.SshSession openSshSession() {
-        return this.entityContext
-            .setting()
-            .getValue(ConsoleSshProviderSetting.class)
-            .openSshSession();
+    @RolesAllowed(ADMIN_ROLE)
+    public SshProviderService.SshSession openSshSession(@RequestBody SshRequest request) {
+        BaseEntity entity = entityContext.getEntity(request.getEntityID());
+        if (entity instanceof SshBaseEntity) {
+            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
+            return service.openSshSession((SshBaseEntity) entity);
+        }
+        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
     }
 
-    @DeleteMapping("/ssh/{token}")
-    @Secured(ADMIN_ROLE)
-    public void closeSshSession(@PathVariable("token") String token) {
-        this.entityContext
-            .setting()
-            .getValue(ConsoleSshProviderSetting.class)
-            .closeSshSession(token);
-    }
-
-    @GetMapping("/ssh/{token}")
-    public SshProviderService.SessionStatusModel getSshStatus(@PathVariable("token") String token) {
-        return this.entityContext
-            .setting()
-            .getValue(ConsoleSshProviderSetting.class)
-            .getSshStatus(token);
+    @DeleteMapping("/ssh")
+    @RolesAllowed(ADMIN_ROLE)
+    public void closeSshSession(@RequestBody SshRequest request) {
+        BaseEntity entity = entityContext.getEntity(request.getEntityID());
+        if (entity instanceof SshBaseEntity) {
+            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
+            service.closeSshSession(request.token, (SshBaseEntity) entity);
+            return;
+        }
+        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
     }
 
     @Getter
@@ -347,5 +305,13 @@ public class ConsoleController implements ContextRefreshed {
         Collection<?> list;
         List<EntityUIMetaData> uiFields;
         Collection<UIInputEntity> actions;
+    }
+
+    @Getter
+    @Setter
+    public static class SshRequest {
+
+        private String entityID;
+        private String token;
     }
 }

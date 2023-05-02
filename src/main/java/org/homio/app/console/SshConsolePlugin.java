@@ -25,11 +25,6 @@ public class SshConsolePlugin implements ConsolePlugin<Object> {
   }
 
   @Override
-  public boolean isEnabled() {
-    return entityContext.isAdminUserOrNone() && EntityContextSetting.isLinuxEnvironment();
-  }
-
-  @Override
   public String getName() {
     return "ssh";
   }

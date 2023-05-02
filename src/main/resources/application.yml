@@ -1,9 +1,10 @@
 rootDir: /opt/homio
+zigbee2mqtt-version: 1.30.0
 
 app:
   cloud:
     hostname: homio.org
-    login-url: https://homio.org/server/auth/connect
+    sync-url: https://homio.org/server/sync
   version: @project.version@
   internet-test-interval: PT10S
   max-java-script-compile-before-interrupt: PT5S
@@ -13,6 +14,10 @@ app:
   check-port-interval: PT10S
   disable-security: false
   min-script-thread-sleep: PT0.1S
+  source:
+    mosquitto: https://github.com/homiodev/static-files/raw/master/mosquitto.7z
+    ffmpeg: https://github.com/homiodev/static-files/raw/master/ffmpeg.7z
+    node: https://github.com/homiodev/static-files/raw/master/nodejs.7z
 
 spring:
   banner:

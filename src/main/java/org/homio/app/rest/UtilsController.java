@@ -3,7 +3,7 @@ package org.homio.app.rest;
 import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
 import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
-import static org.homio.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
+import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.ByteArrayOutputStream;
@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javax.annotation.security.RolesAllowed;
 import javax.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -193,7 +194,7 @@ public class UtilsController {
 
     @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
     public ResponseEntity<StreamingResponseBody> downloadFile(
-        @PathVariable("fileName") String fileName) {
+        @PathVariable("FILE_NAME") String fileName) {
         Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
         if (!Files.exists(outputPath)) {
             throw new NotFoundException("Unable to find file: " + fileName);
@@ -217,7 +218,7 @@ public class UtilsController {
     }
 
     @PostMapping("/code/run")
-    @Secured(PRIVILEGED_USER_ROLE)
+    @RolesAllowed(ADMIN_ROLE)
     public RunScriptOnceJSON runScriptOnce(@RequestBody ScriptEntity scriptEntity)
         throws IOException {
         RunScriptOnceJSON runScriptOnceJSON = new RunScriptOnceJSON();

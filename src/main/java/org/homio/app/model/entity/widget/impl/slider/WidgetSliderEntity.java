@@ -20,20 +20,20 @@ public class WidgetSliderEntity
     public static final String PREFIX = "wgtsl_";
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "Name", order = 3)
+    @UIFieldGroup(value = "NAME", order = 3)
     @UIFieldOptionFontSize
     public String getName() {
         return super.getName();
     }
 
     @UIField(order = 2)
-    @UIFieldGroup("Slider")
+    @UIFieldGroup("SLIDER")
     public Boolean isVertical() {
         return getJsonData("vt", Boolean.FALSE);
     }
 
     @UIField(order = 3)
-    @UIFieldGroup("Slider")
+    @UIFieldGroup("SLIDER")
     public Boolean getThumbLabel() {
         return getJsonData("tl", Boolean.TRUE);
     }
@@ -43,7 +43,7 @@ public class WidgetSliderEntity
     }
 
     @UIField(order = 6)
-    @UIFieldGroup("Slider")
+    @UIFieldGroup("SLIDER")
     public Boolean isUpdateOnMove() {
         return getJsonData("uom", Boolean.FALSE);
     }

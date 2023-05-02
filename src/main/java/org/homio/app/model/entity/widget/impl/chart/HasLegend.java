@@ -9,7 +9,7 @@ import org.homio.bundle.api.ui.field.UIFieldGroup;
 public interface HasLegend extends HasJsonData {
 
     @UIField(order = 70)
-    @UIFieldGroup(value = "Legend", order = 20, borderColor = "#77AD2F")
+    @UIFieldGroup(value = "LEGEND", order = 20, borderColor = "#77AD2F")
     default Boolean isShowLegend() {
         return getJsonData("ls", Boolean.FALSE);
     }
@@ -19,7 +19,7 @@ public interface HasLegend extends HasJsonData {
     }
 
     @UIField(order = 71)
-    @UIFieldGroup("Legend")
+    @UIFieldGroup("LEGEND")
     default LegendPosition getLegendPosition() {
         return getJsonDataEnum("lp", LegendPosition.top);
     }
@@ -29,7 +29,7 @@ public interface HasLegend extends HasJsonData {
     }
 
     @UIField(order = 72)
-    @UIFieldGroup("Legend")
+    @UIFieldGroup("LEGEND")
     default LegendAlign getLegendAlign() {
         return getJsonDataEnum("la", LegendAlign.center);
     }

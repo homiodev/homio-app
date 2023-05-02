@@ -76,7 +76,12 @@
     <dependency>
       <artifactId>homio-hquery</artifactId>
       <groupId>org.homio</groupId>
-      <version>1.0.1</version>
+      <version>1.0.2-SNAPSHOT</version>
+    </dependency>
+
+    <dependency>
+      <artifactId>maverick-synergy-client</artifactId>
+      <groupId>com.sshtools</groupId>
     </dependency>
 
     <dependency>
@@ -149,6 +154,11 @@
     <dependency>
       <artifactId>commons-io</artifactId>
       <groupId>commons-io</groupId>
+    </dependency>
+    <dependency>
+      <groupId>org.msgpack</groupId>
+      <artifactId>msgpack-core</artifactId>
+      <version>0.9.3</version>
     </dependency>
 
     <dependency>
@@ -223,7 +233,6 @@
     <dependency>
       <artifactId>xz</artifactId>
       <groupId>org.tukaani</groupId>
-      <version>1.9</version>
     </dependency>
 
     <dependency>
@@ -303,7 +312,6 @@
     <dependency>
       <artifactId>maven-model</artifactId>
       <groupId>org.apache.maven</groupId>
-      <version>3.3.9</version>
     </dependency>
 
     <dependency>
@@ -456,7 +464,6 @@
     <dependency>
       <artifactId>grpc-all</artifactId>
       <groupId>io.grpc</groupId>
-      <version>1.54.0</version>
     </dependency>
 
   </dependencies>
@@ -467,7 +474,7 @@
   <parent>
     <artifactId>homio-dependency</artifactId>
     <groupId>org.homio</groupId>
-    <version>2.4.4</version>
+    <version>2.4.5</version>
   </parent>
 
   <properties>

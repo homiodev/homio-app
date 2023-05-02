@@ -35,7 +35,7 @@ public class WidgetDoughnutChartEntity
     }*/
 
     @UIField(order = 4, isRevert = true)
-    @UIFieldGroup("Value")
+    @UIFieldGroup("VALUE")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
     public String getValueColor() {

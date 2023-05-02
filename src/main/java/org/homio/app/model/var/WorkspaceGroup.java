@@ -290,7 +290,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         return "GroupVariable: " + getTitle();
     }
 
-    @UIContextMenuAction(value = "CONTEXT.ACTION.CLEAR_BACKUP", icon = "fas fa-database", inputs = {
+    @UIContextMenuAction(value = "CLEAR_BACKUP", icon = "fas fa-database", inputs = {
         @UIActionInput(name = "keep_days", type = Type.number, value = "-1", min = -1, max = 365),
         @UIActionInput(name = "keep_count", type = Type.number, value = "-1", min = -1, max = 100_000)
     })
@@ -313,7 +313,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         if (deletedCount > 0) {
             return ActionResponseModel.showSuccess("Deleted: " + deletedCount + " variables");
         }
-        return ActionResponseModel.showInfo("error.no_variables_to_delete");
+        return ActionResponseModel.showInfo("W.ERROR.NO_VARIABLES_TO_DELETE");
     }
 
     private int clearAll(VariableDataRepository repository) {

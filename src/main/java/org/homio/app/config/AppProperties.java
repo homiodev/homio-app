@@ -22,12 +22,22 @@ public class AppProperties {
     private Duration minScriptThreadSleep;
     private Duration maxJavaScriptOnceCallBeforeInterrupt;
     private Duration maxJavaScriptCompileBeforeInterrupt;
+    private Source source;
 
     @Getter
     @Setter
     public static class Cloud {
 
         private String hostname;
-        private String loginUrl;
+        private String syncUrl;
+    }
+
+    @Getter
+    @Setter
+    public static class Source {
+
+        private String mosquitto;
+        private String ffmpeg;
+        private String node;
     }
 }

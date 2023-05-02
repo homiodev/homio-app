@@ -4,21 +4,20 @@ import com.pivovarit.function.ThrowingRunnable;
 import java.time.Duration;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.config.AppProperties;
+import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.homio.app.utils.InternalUtil;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextBGP.ScheduleBuilder;
 import org.homio.bundle.api.EntityContextBGP.ThreadContext;
 import org.homio.bundle.api.model.Status;
-import org.springframework.stereotype.Service;
 
 @Log4j2
-@Service
-public class InternetAvailabilityBgpService implements BgpService {
+public class InternetAvailabilityBgpService {
 
-    private static ThreadContext<Boolean> internetThreadContext;
+    private ThreadContext<Boolean> internetThreadContext;
 
-    public InternetAvailabilityBgpService(EntityContext entityContext, AppProperties appProperties) {
-        ScheduleBuilder<Boolean> builder = entityContext.bgp().builder("internet-test");
+    public InternetAvailabilityBgpService(EntityContext entityContext, AppProperties appProperties, EntityContextBGPImpl entityContextBGP) {
+        ScheduleBuilder<Boolean> builder = entityContextBGP.builder("internet-test");
         Duration interval = appProperties.getInternetTestInterval();
         ScheduleBuilder<Boolean> internetAccessBuilder = builder.interval(interval).delay(interval).interval(interval)
                                                                 .tap(context -> internetThreadContext = context);
@@ -32,11 +31,7 @@ public class InternetAvailabilityBgpService implements BgpService {
         internetAccessBuilder.execute(context -> InternalUtil.checkUrlAccessible() != null);
     }
 
-    @Override
-    public void startUp() {
-    }
-
-    public static void addRunOnceOnInternetUpListener(String name, ThrowingRunnable<Exception> command) {
+    public void addRunOnceOnInternetUpListener(String name, ThrowingRunnable<Exception> command) {
         internetThreadContext.addValueListener(name, (isInternetUp, ignore) -> {
             if (isInternetUp) {
                 log.info("Internet up. Run <" + name + "> listener.");
