@@ -39,7 +39,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         if (entityContext.getEntity(DEFAULT_TMATE_ENTITY_ID) == null) {
             SshTmateEntity tmateSshEntity = new SshTmateEntity()
                 .setEntityID(DEFAULT_TMATE_ENTITY_ID)
-                .setName("tmate internal");
+                .setName("Tmate");
             entityContext.save(tmateSshEntity);
         }
     }

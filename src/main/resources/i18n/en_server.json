@@ -1,4 +1,7 @@
 {
+  "ERROR": {
+    "UNKNOWN_HOST": "Unknown host: {{HOST}}"
+  },
   "sys_cpu_load": "System cpu load",
   "java_cpu_load": "Java cpu load",
   "sys_mem_load": "System memory load",
@@ -22,5 +25,5 @@
     "NAME": "Name   '{{NAME}}'",
     "URL": "URL    '{{URL}}'"
   },
-  "TMATE_DESCRIPTION": "Tmate is https://tmate.io service that creates web-socket session with unique id to connect to device"
+  "TMATE_DESCRIPTION": "Tmate is <a href=\"https://tmate.io\" target=\"_blank\"></a> service that creates web-socket session with unique id to connect to device"
 }

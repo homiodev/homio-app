@@ -4,6 +4,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import com.jcraft.jsch.JSch;
 import com.pivovarit.function.ThrowingConsumer;
+import com.sshtools.common.logger.Log;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -76,6 +77,7 @@ public class LogService
                     "org.hibernate");
 
     static {
+        Log.getDefaultContext().enableConsole(Log.Level.TRACE);
         JSch.setLogger(new com.jcraft.jsch.Logger() {
             @Override
             public boolean isEnabled(int level) {
