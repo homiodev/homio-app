@@ -2,9 +2,6 @@ rootDir: /opt/homio
 zigbee2mqtt-version: 1.30.0
 
 app:
-  cloud:
-    hostname: homio.org
-    sync-url: https://homio.org/server/sync
   version: @project.version@
   internet-test-interval: PT10S
   max-java-script-compile-before-interrupt: PT5S

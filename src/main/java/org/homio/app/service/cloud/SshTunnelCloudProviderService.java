@@ -3,32 +3,32 @@ package org.homio.app.service.cloud;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
 import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.io.FileNotFoundException;
+import com.sshtools.client.SshClient;
+import com.sshtools.client.SshClientContext;
 import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.homio.app.config.AppProperties;
-import org.homio.app.model.entity.user.UserAdminEntity;
+import org.apache.commons.lang3.StringUtils;
+import org.homio.app.ssh.SshCloudEntity;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextUI.NotificationBlockBuilder;
-import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.model.Status;
 import org.homio.bundle.api.service.CloudProviderService;
 import org.homio.bundle.api.ui.UI.Color;
 import org.homio.bundle.api.ui.field.action.ActionInputParameter;
 import org.homio.bundle.api.util.CommonUtils;
+import org.homio.bundle.api.util.Lang;
 import org.homio.bundle.hquery.hardware.network.NetworkHardwareRepository;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -43,71 +43,82 @@ import org.springframework.web.client.RestTemplate;
 @Log4j2
 @Component
 @RequiredArgsConstructor
-public class SshTunnelCloudProviderService implements CloudProviderService {
+public class SshTunnelCloudProviderService implements CloudProviderService<SshCloudEntity> {
 
     private final EntityContext entityContext;
-    private final AppProperties properties;
     private Status status = Status.UNKNOWN;
     private String statusMessage = null;
 
     private final Consumer<NotificationBlockBuilder> NOT_SYNC_HANDLER = buildNotSyncHandler();
     private final Consumer<NotificationBlockBuilder> TRY_CONNECT_HANDLER = tryConnectHandler();
+    private SshClientContext sshClientContext;
+    private SshCloudEntity entity;
 
     @Override
     public void start() throws Exception {
         try {
             status = Status.INITIALIZE;
-            Path privateKey = CommonUtils.getSshPath().resolve("id_rsa_cloud");
-            if (!Files.isReadable(privateKey)) {
-                throw new FileNotFoundException("Ssh private key not found");
+            if (sshClientContext == null) {
+                log.info("Creating ssh client context");
+                sshClientContext = new SshClientContext();
+                log.info("Ssh client context created");
             }
-            UserAdminEntity user = Objects.requireNonNull(entityContext.getEntity(UserAdminEntity.ENTITY_ID));
-            String passphrase = user.getJsonData().optString("passphrase", null);
-            if (passphrase == null) {
-                throw new NotFoundException("Passphrase not configured");
+            if (!entity.isHasPrivateKey()) {
+                throw new IllegalArgumentException("W.ERROR.PRIVATE_KEY_NOT_FOUND");
+            }
+            try (SshClient ssh = new SshClient(
+                entity.getHostname(),
+                entity.getPort(),
+                entity.getUser(),
+                sshClientContext,
+                entity.getConnectionTimeout(),
+                buildSshKeyPair(entity))) {
+                ssh.getContext().getForwardingPolicy().allowForwarding();
+                ssh.startRemoteForwarding("127.0.0.1", 9111, "homio.org", 2222);
+                ssh.getConnection().getDisconnectFuture().waitForever();
             }
 
             /*try (SshClient ssh = new SshClient(properties.getCloud().getHostname(), 2222,
                 "Ruslan", 10000, privateKey.toFile(), passphrase)) {
 
                 *//**
-                 * First we must allow forwarding. Without this no forwarding is possible. This
-                 * will allow us to forward from localhost and accept remote forwarding from the
-                 * remote server.
-                 *//*
+             * First we must allow forwarding. Without this no forwarding is possible. This
+             * will allow us to forward from localhost and accept remote forwarding from the
+             * remote server.
+             *//*
                 ssh.getContext().getForwardingPolicy().allowForwarding();
 
                 *//**
-                 * A local forward allows the ssh client user to connect to a resource
-                 * on the remote network
-                 *//*
+             * A local forward allows the ssh client user to connect to a resource
+             * on the remote network
+             *//*
               //  ssh.startLocalForwarding("127.0.0.1", 8443, "www.jadaptive.com", 443);
 
                 *//**
-                 * A remote forward allows a user to connect from the remote computer to
-                 * a resource on the client's network
-                 *//*
+             * A remote forward allows a user to connect from the remote computer to
+             * a resource on the client's network
+             *//*
                 ssh.startRemoteForwarding("127.0.0.1", 9111, "service.local", 80);
 
                 *//**
-                 * If we want to allow other local computers to connect to our forwarding we can
-                 * allow gateway forwarding. This allows a local forwarding to be started on a
-                 * wildcard or IP address of the client that can accept connections from external
-                 * computers. With this enabled, we have to start the forwarding so that we are
-                 * listening on a publicly accessible interface of the client.
-                 *//*
+             * If we want to allow other local computers to connect to our forwarding we can
+             * allow gateway forwarding. This allows a local forwarding to be started on a
+             * wildcard or IP address of the client that can accept connections from external
+             * computers. With this enabled, we have to start the forwarding so that we are
+             * listening on a publicly accessible interface of the client.
+             *//*
 
               //  ssh.getContext().getForwardingPolicy().allowGatewayForwarding();
 
                 *//**
-                 * We we start a local forwarding that is accessible by any IP on the clients
-                 * network. This is called "Gateway Forwarding"
-                 *//*
+             * We we start a local forwarding that is accessible by any IP on the clients
+             * network. This is called "Gateway Forwarding"
+             *//*
               //  ssh.startLocalForwarding("::", 9443, "www.jadaptive.com", 443);
 
                 *//**
-                 * Wait for the connection to be disconnected.
-                 *//*
+             * Wait for the connection to be disconnected.
+             *//*
                 ssh.getConnection().getDisconnectFuture().waitForever();
 
             } catch (Exception e) {
@@ -214,7 +225,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     public void updateNotificationBlock(@Nullable Exception ex) {
         // login if no private key found
         boolean hasPrivateKey = false;
-        String name = format("Cloud: ${selection.%s}", getClass().getSimpleName());
+        String name = format("Cloud: ${selection.%s}", StringUtils.uncapitalize(getClass().getSimpleName()));
         entityContext.ui().addNotificationBlock("cloud", name, "fas fa-cloud", "#5C7DAC", builder -> {
             builder.setStatus(status);
             if (!status.isOnline()) {
@@ -242,7 +253,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     }
 
     private Consumer<NotificationBlockBuilder> getSyncHandler(@Nullable Exception ex) {
-        if (!Files.exists(CommonUtils.getSshPath().resolve("id_rsa_cloud"))) {
+        if (!entity.isHasPrivateKey()) {
             return NOT_SYNC_HANDLER;
         }
         if (ex != null) {
@@ -250,16 +261,18 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             if ("Auth fail".equals(ex.getMessage())) {
                 return NOT_SYNC_HANDLER;
             }
-            if (ex.getCause() instanceof UnknownHostException) {
-                return TRY_CONNECT_HANDLER;
-            }
         }
-        return null;
+        return TRY_CONNECT_HANDLER;
     }
 
     @Override
     public String getStatusMessage() {
         return null;
+    }
+
+    @Override
+    public void setCurrentEntity(@NotNull SshCloudEntity sshEntity) {
+        this.entity = sshEntity;
     }
 
     @Getter
@@ -302,25 +315,25 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
     private Consumer<NotificationBlockBuilder> tryConnectHandler() {
         return builder -> builder.addButtonInfo("CLOUD.NOT_SYNC", Color.RED, null, null,
             "fas fa-rss", "Connect", null, (entityContext, params) -> {
-                entityContext.getBean(CloudService.class).restart();
+                entityContext.getBean(CloudService.class).start();
                 return null;
             });
     }
 
-    private void handleSync(EntityContext entityContext, ObjectNode parameters) {
+    public void handleSync(EntityContext entityContext, ObjectNode params) {
         entityContext.assertAdminAccess();
-        if (parameters == null) {
+        if (params == null) {
             return;
         }
         NetworkHardwareRepository repository = entityContext.getBean(NetworkHardwareRepository.class);
         RestTemplate restTemplate = new RestTemplate();
         LoginBody loginBody = new LoginBody(
-            parameters.get("field.email").asText(),
-            parameters.get("field.password").asText(),
-            parameters.get("field.passphrase").asText(),
+            params.get("field.email").asText(),
+            params.get("field.password").asText(),
+            params.get("field.passphrase").asText(),
             repository.getIPAddress(),
             true);
-        String url = properties.getCloud().getSyncUrl();
+        String url = entity.getSyncUrl();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<LoginBody> request = new HttpEntity<>(loginBody, headers);
@@ -329,12 +342,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             ResponseEntity<LoginResponse> response = restTemplate.exchange(url, HttpMethod.POST, request, LoginResponse.class);
             LoginResponse loginResponse = response.getBody();
             if (response.getStatusCode() == HttpStatus.OK && loginResponse != null) {
-                CommonUtils.writeToFile(CommonUtils.getSshPath().resolve("id_rsa_cloud"),
-                    loginResponse.getPrivateKey(), false);
-                UserAdminEntity user = (UserAdminEntity) entityContext.getUserRequire();
-                user.getJsonData().put("passphrase", loginBody.passphrase);
-                entityContext.save(user);
-                entityContext.getBean(CloudService.class).restart();
+                entity.uploadAndSavePrivateKey(entityContext, loginResponse.getPrivateKey(), loginBody.passphrase);
             } else {
                 log.error("Wrong status response from cloud server: {}", response.getStatusCode());
             }
@@ -343,7 +351,11 @@ public class SshTunnelCloudProviderService implements CloudProviderService {
             entityContext.ui().sendErrorMessage(getClientError(ce));
         } catch (Exception ex) {
             log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
-            entityContext.ui().sendErrorMessage("W.ERROR.SYNC");
+            if (ex.getCause() instanceof UnknownHostException) {
+                entityContext.ui().sendErrorMessage(Lang.getServerMessage("ERROR.UNKNOWN_HOST", "HOST", ex.getCause().getMessage()));
+            } else {
+                entityContext.ui().sendErrorMessage("W.ERROR.SYNC");
+            }
         }
     }
 

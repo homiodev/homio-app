@@ -77,6 +77,7 @@ import org.homio.app.setting.system.SystemLanguageSetting;
 import org.homio.app.setting.system.SystemShowEntityStateSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
+import org.homio.app.ssh.SshCloudEntity;
 import org.homio.app.ssh.SshTmateEntity;
 import org.homio.app.utils.HardwareUtils;
 import org.homio.app.workspace.BroadcastLockManagerImpl;
@@ -232,6 +233,7 @@ public class EntityContextImpl implements EntityContext {
         UserAdminEntity.ensureUserExists(this);
         ComputerBoardEntity.ensureDeviceExists(this);
         SshTmateEntity.ensureEntityExists(this);
+        SshCloudEntity.ensureEntityExists(this);
         setting().fetchSettingPlugins(null, classFinder, true);
 
         entityContextVar.onContextCreated();
