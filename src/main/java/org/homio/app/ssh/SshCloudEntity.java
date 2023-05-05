@@ -19,6 +19,7 @@ import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextSetting;
 import org.homio.bundle.api.entity.types.IdentityEntity;
 import org.homio.bundle.api.model.ActionResponseModel;
+import org.homio.bundle.api.model.HasEntityLog;
 import org.homio.bundle.api.model.Status;
 import org.homio.bundle.api.service.CloudProviderService;
 import org.homio.bundle.api.ui.UI.Color;
@@ -39,7 +40,8 @@ import org.json.JSONObject;
 @Entity
 @UISidebarChildren(icon = "fas fa-cloud", color = "#644DAB")
 public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
-    CloudProviderService.SshCloud<SshCloudEntity>
+    CloudProviderService.SshCloud<SshCloudEntity>,
+    HasEntityLog
     /*, HasDynamicContextMenuActions*/ {
 
     public static final String PREFIX = "sshcloud_";
@@ -229,14 +231,14 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
         /*if (getStatus().isOnline()) {
             return ActionResponseModel.showInfoAlreadyDone();
         }*/
-        entityContext.getBean(CloudService.class).restart();
+        entityContext.getBean(CloudService.class).restart(this);
         return null;
     }
 
     @SneakyThrows
     @UIContextMenuAction(value = "STOP", icon = "fas fa-circle-stop")
     public ActionResponseModel stop(EntityContext entityContext) {
-        entityContext.getBean(CloudService.class).stop();
+        entityContext.getBean(CloudService.class).stop(this);
         return ActionResponseModel.success();
     }
 
@@ -250,6 +252,11 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     @Override
     public long getChangesHashCode() {
         return getEntityID().hashCode() + getJsonDataHashCode("host", "port", "user", "pk_sign", "prv_key", "key_pwd");
+    }
+
+    @Override
+    public void logBuilder(EntityLogBuilder builder) {
+        builder.addTopic("com.ssh.maverick");
     }
 
     /*@UIContextMenuAction(value = "CLOUD_SYNC", icon = "fas fa-right-to-bracket", iconColor = Color.RED, inputs = {

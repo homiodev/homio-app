@@ -15,6 +15,7 @@ import org.homio.bundle.api.service.CloudProviderService;
 import org.homio.bundle.api.service.CloudProviderService.SshCloud;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.api.util.FlowMap;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -43,7 +44,7 @@ public class CloudService implements ContextCreated {
                     if (entityHashCode == updateChangesHashCode) {
                         return;
                     }
-                    this.stop();
+                    this.stop(currentEntity);
                 }
                 entityHashCode = updateChangesHashCode;
                 currentEntity = sshCloudEntity;
@@ -52,35 +53,48 @@ public class CloudService implements ContextCreated {
         });
     }
 
-    public void restart() {
-        stop();
+    public void restart(@NotNull SshCloud entity) {
+        assertPrimaryEntity(entity);
+        stop(currentEntity);
         start();
     }
 
-    public void stop() {
-        try {
-            if (cloudProvider != null) {
+    public void stop(@NotNull SshCloud entity) {
+        assertPrimaryEntity(entity);
+        if (cloudProvider != null) {
+            try {
                 cloudProvider.stop();
+            } catch (Exception ex) {
+                log.error("Error during stop cloud provider: '{}'", currentEntity, ex);
             }
-            if (cloudServiceThread != null) {
-                log.warn("Stopping ssh cloud");
+        }
+        if (cloudServiceThread != null) {
+            log.warn("Stopping ssh cloud");
+            try {
                 cloudServiceThread.cancel();
-                cloudServiceThread = null;
+            } catch (Exception ex) {
+                log.error("Error during cancel cloud provider thread: '{}'", currentEntity, ex);
             }
-        } catch (Exception ex) {
-            log.error("Unable to stop cloud connection provider: '{}'. Try restart device.", currentEntity, ex);
+            cloudServiceThread = null;
+        }
+        if (currentEntity != null) {
+            currentEntity.setStatus(Status.OFFLINE);
         }
     }
 
     @SuppressWarnings("unchecked")
     @RolesAllowed(ADMIN_ROLE)
     public void start() {
+        currentEntity.setStatus(Status.WAITING);
         cloudProvider = currentEntity.getCloudProviderService(entityContext);
+        if (cloudProvider == null) {
+            throw new IllegalArgumentException("SshCloudEntity: " + currentEntity.getTitle() + " returned null provider");
+        }
         cloudProvider.setCurrentEntity(currentEntity);
         cloudServiceThread = entityContext.bgp().builder("cloud-" + currentEntity.getEntityID()).execute(() -> {
             try {
                 log.warn("Starting cloud connection: '{}'", currentEntity);
-                currentEntity.setStatus(Status.ONLINE);
+                currentEntity.setStatus(Status.INITIALIZE);
                 cloudProvider.start();
                 cloudProvider.updateNotificationBlock();
             } catch (Exception ex) {
@@ -91,5 +105,11 @@ public class CloudService implements ContextCreated {
                 entityContext.ui().sendErrorMessage("W.ERROR.UNABLE_CONNECT", FlowMap.of("MSG", message), ex);
             }
         });
+    }
+
+    private void assertPrimaryEntity(@NotNull SshCloud entity) {
+        if (currentEntity == null || !entity.getEntityID().equals(currentEntity.getEntityID())) {
+            throw new IllegalStateException("SshCloudEntity: " + entity.getTitle() + " is not current active cloud ssh entity");
+        }
     }
 }

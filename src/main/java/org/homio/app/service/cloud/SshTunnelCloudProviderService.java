@@ -22,7 +22,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.app.ssh.SshCloudEntity;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextUI.NotificationBlockBuilder;
-import org.homio.bundle.api.model.Status;
 import org.homio.bundle.api.service.CloudProviderService;
 import org.homio.bundle.api.ui.UI.Color;
 import org.homio.bundle.api.ui.field.action.ActionInputParameter;
@@ -58,23 +57,24 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         if (!entity.isHasPrivateKey()) {
             throw new IllegalArgumentException("W.ERROR.PRIVATE_KEY_NOT_FOUND");
         }
-        entity.setStatus(Status.INITIALIZE);
         log.info("SSH cloud: create client context");
         SshClientContext sshClientContext = new SshClientContext();
         log.info("SSH cloud: create client context successfully");
-        log.info("SSH cloud: creating ssh client: {}@{}:{}", entity.getUser(), entity.getHostname(), entity.getPort());
+        log.info("SSH cloud: creating ssh client: {}@{}:{}. Thread: {}", entity.getUser(), entity.getHostname(), entity.getPort(),
+            Thread.currentThread().getName());
         try {
             ssh = new SshClient(
                 entity.getHostname(),
                 entity.getPort(),
                 entity.getUser(),
                 sshClientContext,
-                entity.getConnectionTimeout(),
+                entity.getConnectionTimeout() * 1000L,
                 buildSshKeyPair(entity));
             log.info("SSH cloud: allow forwarding");
             ssh.getContext().getForwardingPolicy().allowForwarding();
             log.info("SSH cloud: start remote forwarding");
-            ssh.startRemoteForwarding("127.0.0.1", 9111, "homio.org", 2222);
+            entity.setStatusOnline();
+            ssh.startRemoteForwarding("homio.org", 80, "127.0.0.1", 9111);
             log.info("SSH cloud: wait for disconnect");
             ssh.getConnection().getDisconnectFuture().waitForever();
             log.warn("Ssh connection finished: {}", entity);
@@ -83,6 +83,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
                 ssh.close();
             }
         }
+        throw new IllegalStateException("SSH closed abnormally");
     }
 
     @Override
