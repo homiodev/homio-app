@@ -7,9 +7,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
+import org.homio.app.model.entity.user.UserBaseEntity;
+import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.UserEntity;
 import org.homio.bundle.api.entity.UserEntity.UserType;
+import org.json.JSONObject;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -41,11 +44,25 @@ public class AuthController {
 
     @PostMapping("/login")
     public String login(@Valid @RequestBody LoginRequest credentials) {
-        log.info("Login <{}>", credentials.getEmail());
-        String username = credentials.getEmail();
-        val user = new UsernamePasswordAuthenticationToken(username, credentials.getPassword());
-        Authentication authentication = authenticationManager.authenticate(user);
-        return jwtTokenProvider.createToken(username, authentication);
+        UserBaseEntity.log.info("Login <{}>", credentials.getEmail());
+        try {
+            String username = credentials.getEmail();
+            val user = new UsernamePasswordAuthenticationToken(username, credentials.getPassword());
+            Authentication authentication = authenticationManager.authenticate(user);
+            UserBaseEntity.log.info("Login success for <{}>", credentials.getEmail());
+            entityContext.ui().addNotificationBlock("user", "user-" + username, "fas fa-user", "#AAAC2C", builder -> {
+                builder.addButtonInfo("Logout", "#FF00FF", "fas fa-right-from-bracket", "#FFFF00",
+                    "fas fa-right-from-bracket", username,
+                    "W.CONFIRM.LOGOUT", (entityContext1, params) -> {
+                        entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
+                        return null;
+                    });
+            });
+            return jwtTokenProvider.createToken(username, authentication);
+        } catch (Exception ex) {
+            UserBaseEntity.log.info("Login failed for <{}>", credentials.getEmail(), ex);
+            throw ex;
+        }
     }
 
     @Getter

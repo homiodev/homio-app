@@ -13,6 +13,7 @@ import org.homio.bundle.api.EntityContextBGP.ThreadContext;
 import org.homio.bundle.api.model.Status;
 import org.homio.bundle.api.service.CloudProviderService;
 import org.homio.bundle.api.service.CloudProviderService.SshCloud;
+import org.homio.bundle.api.service.EntityService.WatchdogService;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.api.util.FlowMap;
 import org.jetbrains.annotations.NotNull;
@@ -32,10 +33,11 @@ public class CloudService implements ContextCreated {
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
         currentEntity = entityContext.findAll(SshCloudEntity.class).stream().filter(SshCloudEntity::isPrimary).findAny().orElse(null);
-        if (currentEntity != null) {
-            entityHashCode = currentEntity.getChangesHashCode();
-            start();
+        if (currentEntity == null) {
+            currentEntity = SshCloudEntity.ensureEntityExists(entityContext);
         }
+        entityHashCode = currentEntity.getChangesHashCode();
+        start();
 
         entityContext.event().addEntityUpdateListener(SshCloudEntity.class, "cloud-service", sshCloudEntity -> {
             if (sshCloudEntity.isPrimary()) {
@@ -49,6 +51,19 @@ public class CloudService implements ContextCreated {
                 entityHashCode = updateChangesHashCode;
                 currentEntity = sshCloudEntity;
                 start();
+            }
+        });
+        entityContext.bgp().addWatchDogService("cloud-service", new WatchdogService() {
+            @Override
+            public void restartService() {
+                restart(currentEntity);
+            }
+
+            @Override
+            public boolean isRequireRestartService() {
+                return currentEntity != null &&
+                    currentEntity.getStatus() == Status.ERROR &&
+                    currentEntity.isRestartOnFailure();
             }
         });
     }
@@ -95,6 +110,7 @@ public class CloudService implements ContextCreated {
             try {
                 log.warn("Starting cloud connection: '{}'", currentEntity);
                 currentEntity.setStatus(Status.INITIALIZE);
+                cloudProvider.updateNotificationBlock();
                 cloudProvider.start();
                 cloudProvider.updateNotificationBlock();
             } catch (Exception ex) {

@@ -43,6 +43,7 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextBGP;
 import org.homio.bundle.api.model.HasEntityIdentifier;
+import org.homio.bundle.api.service.EntityService.WatchdogService;
 import org.homio.bundle.api.setting.SettingPlugin;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.hquery.LinesReader;
@@ -186,6 +187,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             return threadContext != null && !threadContext.stopped;
         }
         return threadContext != null;
+    }
+
+    public void addWatchDogService(String key, WatchdogService watchdogService) {
+        this.watchdogBgpService.addWatchDogService(key, watchdogService);
     }
 
     private <T> EntityContextBGPImpl.BatchRunContext<T> prepareBatchProcessContext(@NotNull String batchName, int threadsCount) {

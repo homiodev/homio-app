@@ -233,7 +233,6 @@ public class EntityContextImpl implements EntityContext {
         UserAdminEntity.ensureUserExists(this);
         ComputerBoardEntity.ensureDeviceExists(this);
         SshTmateEntity.ensureEntityExists(this);
-        SshCloudEntity.ensureEntityExists(this);
         setting().fetchSettingPlugins(null, classFinder, true);
 
         entityContextVar.onContextCreated();

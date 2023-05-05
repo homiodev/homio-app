@@ -47,9 +47,10 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     public static final String PREFIX = "sshcloud_";
     private static final String DEFAULT_CLOUD_ENTITY_ID = PREFIX + "primary";
 
-    public static void ensureEntityExists(EntityContextImpl entityContext) {
-        if (entityContext.getEntity(DEFAULT_CLOUD_ENTITY_ID) == null) {
-            SshCloudEntity entity = new SshCloudEntity()
+    public static SshCloudEntity ensureEntityExists(EntityContextImpl entityContext) {
+        SshCloudEntity entity = entityContext.getEntity(DEFAULT_CLOUD_ENTITY_ID);
+        if (entity == null) {
+            entity = new SshCloudEntity()
                 .setEntityID(DEFAULT_CLOUD_ENTITY_ID)
                 .setName("Homio cloud")
                 .setHostname("homio.org")
@@ -61,6 +62,7 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
             entity.setJsonData("dis_edit", true);
             entityContext.save(entity);
         }
+        return entity;
     }
 
     @Override
@@ -228,9 +230,6 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     @SneakyThrows
     @UIContextMenuAction(value = "CONNECT", icon = "fas fa-rss")
     public ActionResponseModel connect(EntityContext entityContext) {
-        /*if (getStatus().isOnline()) {
-            return ActionResponseModel.showInfoAlreadyDone();
-        }*/
         entityContext.getBean(CloudService.class).restart(this);
         return null;
     }
@@ -252,6 +251,11 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     @Override
     public long getChangesHashCode() {
         return getEntityID().hashCode() + getJsonDataHashCode("host", "port", "user", "pk_sign", "prv_key", "key_pwd");
+    }
+
+    @Override
+    public boolean isRestartOnFailure() {
+        return true;
     }
 
     @Override

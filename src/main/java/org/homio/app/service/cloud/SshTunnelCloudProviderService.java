@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
+import static org.homio.bundle.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -66,7 +67,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
             ssh = new SshClient(
                 entity.getHostname(),
                 entity.getPort(),
-                entity.getUser(),
+                entity.getUser() + "-" + MACHINE_IP_ADDRESS,
                 sshClientContext,
                 entity.getConnectionTimeout() * 1000L,
                 buildSshKeyPair(entity));

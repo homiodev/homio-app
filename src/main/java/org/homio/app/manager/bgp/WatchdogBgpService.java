@@ -26,6 +26,10 @@ public class WatchdogBgpService {
                         .execute(this::runWatchDogService);
     }
 
+    public void addWatchDogService(String key, WatchdogService watchdogService) {
+        watchdogServiceMap.put(key, watchdogService);
+    }
+
     @SneakyThrows
     private void runWatchDogService() {
         assembleWatchdogServices();
