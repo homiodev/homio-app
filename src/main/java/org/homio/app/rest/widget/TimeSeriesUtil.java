@@ -22,7 +22,6 @@ import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod.TimeRange
 import org.homio.app.model.entity.widget.attributes.HasSingleValueAggregatedDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
-import org.homio.app.model.entity.widget.impl.DataSourceUtil;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.homio.bundle.api.entity.widget.AggregationType;
 import org.homio.bundle.api.entity.widget.PeriodRequest;
@@ -34,6 +33,7 @@ import org.homio.bundle.api.entity.widget.ability.HasUpdateValueListener;
 import org.homio.bundle.api.model.HasEntityIdentifier;
 import org.homio.bundle.api.storage.InMemoryDB;
 import org.homio.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
+import org.homio.bundle.api.util.DataSourceUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;

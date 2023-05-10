@@ -105,23 +105,27 @@
         <AppenderRef ref="Console"/>
       </Logger>
 
-        <logger name="org.springframework.web.socket.messaging.StompSubProtocolHandler" level="fatal">
-            <AppenderRef ref="appLog"/>
-            <AppenderRef ref="Console"/>
-        </logger>
+      <logger name="org.springframework.web.socket.messaging.StompSubProtocolHandler" level="fatal">
+        <AppenderRef ref="appLog"/>
+        <AppenderRef ref="Console"/>
+      </logger>
 
-        <logger name="org.freedesktop" level="warn">
-            <AppenderRef ref="appLog"/>
-        </logger>
+      <logger name="org.freedesktop" level="warn">
+        <AppenderRef ref="appLog"/>
+      </logger>
 
       <logger level="info" name="org.homio.bundle.camera">
         <AppenderRef ref="cameraLog"/>
         <AppenderRef ref="appLog"/>
       </logger>
 
-        <Root level="INFO">
-            <AppenderRef ref="appLog"/>
-            <AppenderRef ref="Console"/>
-        </Root>
+      <logger level="info" name="com.ssh">
+        <AppenderRef ref="Console"/>
+      </logger>
+
+      <Root level="info">
+        <AppenderRef ref="appLog"/>
+        <AppenderRef ref="Console"/>
+      </Root>
     </Loggers>
 </Configuration>

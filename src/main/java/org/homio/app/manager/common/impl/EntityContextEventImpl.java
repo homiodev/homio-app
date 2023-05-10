@@ -54,6 +54,7 @@ import org.homio.bundle.api.model.OptionModel;
 import org.homio.bundle.api.service.EntityService;
 import org.homio.bundle.api.service.EntityService.ServiceInstance;
 import org.homio.bundle.api.storage.InMemoryDB;
+import org.homio.bundle.api.ui.UI.Color;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.api.util.FlowMap;
 import org.homio.bundle.api.util.Lang;
@@ -275,8 +276,10 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 });
                 scheduleFuture.setDescription("Listen udp: " + hostPortKey);
             } catch (Exception ex) {
-                entityContext.ui().addBellErrorNotification(hostPortKey, "UDP " + hostPortKey,
-                    Lang.getServerMessage("UDP_ERROR", FlowMap.of("key", hostPortKey, "msg", ex.getMessage())));
+                entityContext.ui().addOrUpdateNotificationBlock("UPD", "UDP", "fas fa-kip-sign", "#482594", blockBuilder -> {
+                    blockBuilder.addInfo(Lang.getServerMessage("UDP_ERROR", FlowMap.of("key", hostPortKey, "msg", ex.getMessage())),
+                        "", "fas fa-triangle-exclamation", Color.RED);
+                });
                 log.error("Unable to listen udp host:port: <{}>", hostPortKey);
                 return;
             }
@@ -505,7 +508,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 // clear all registered console plugins if any exists
                 context.ui().unRegisterConsolePlugin(entityID);
                 // remove any registered notifications/notification block
-                context.ui().removeNotification(entityID);
+                context.ui().removeNotificationBlock(entityID);
                 // destroy any additional services
                 if (entity instanceof EntityService) {
                     try {

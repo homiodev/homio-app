@@ -4,6 +4,8 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import com.jcraft.jsch.JSch;
 import com.pivovarit.function.ThrowingConsumer;
+import com.sshtools.common.logger.DefaultLoggerContext;
+import com.sshtools.common.logger.Log;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -27,7 +29,6 @@ import java.util.function.Predicate;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -48,7 +49,6 @@ import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.spi.AbstractLogger;
 import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.app.setting.console.lines.ConsoleDebugLevelSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.bundle.api.entity.BaseEntity;
 import org.homio.bundle.api.model.HasEntityLog;
@@ -60,10 +60,12 @@ import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEven
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
-@Log4j2
 @Component
 public class LogService
         implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
+
+    private static final org.apache.logging.log4j.Logger maverickLogger = LogManager.getLogger("com.ssh.maverick");
+    private static final org.apache.logging.log4j.Logger jschLogger = LogManager.getLogger("com.ssh.jsch");
 
     private static final GlobalAppender globalAppender = new GlobalAppender();
     private static final Set<String> excludeDebugPackages =
@@ -76,7 +78,35 @@ public class LogService
                     "org.hibernate");
 
     static {
+        Log.setDefaultContext(new DefaultLoggerContext() {
+
+            @Override
+            public synchronized boolean isLogging(Log.Level level) {
+                return true;
+            }
+
+            @Override
+            public synchronized void log(Log.Level level, String msg, Throwable e, Object... args) {
+                maverickLogger.log(getLogLevel(level), DefaultLoggerContext.prepareLog(level, msg, e, args));
+            }
+
+            private Level getLogLevel(Log.Level level) {
+                switch (level) {
+                    case ERROR:
+                        return Level.ERROR;
+                    case WARN:
+                        return Level.WARN;
+                    case DEBUG:
+                        return Level.DEBUG;
+                    case TRACE:
+                        return Level.TRACE;
+                    default:
+                        return Level.INFO;
+                }
+            }
+        });
         JSch.setLogger(new com.jcraft.jsch.Logger() {
+
             @Override
             public boolean isEnabled(int level) {
                 return true;
@@ -84,7 +114,7 @@ public class LogService
 
             @Override
             public void log(int level, String message) {
-                log.log(getLogLevel(level), "Jsch: " + message);
+                jschLogger.log(getLogLevel(level), "Jsch: " + message);
             }
 
             private Level getLogLevel(int level) {
@@ -277,7 +307,7 @@ public class LogService
         private final Map<String, LogConsumer> logConsumers = new ConcurrentHashMap<>();
         private final Map<String, DefinedAppenderConsumer> definedAppender = new HashMap<>();
         // allow debug level for appender
-        private boolean allowDebugLevel;
+        private boolean allowDebugLevel = false;
 
         // keep all logs in memory until we switch strategy via setEntityContext(...) method
         private List<LogEvent> bufferedLogEvents = new CopyOnWriteArrayList<>();
@@ -288,8 +318,6 @@ public class LogService
         }
 
         public synchronized void setEntityContext(EntityContextImpl entityContext) throws Exception {
-            entityContext.setting().listenValueAndGet(ConsoleDebugLevelSetting.class, "log-set-level", logLevel ->
-                this.allowDebugLevel = entityContext.setting().getValue(ConsoleDebugLevelSetting.class));
             this.logStrategy = event -> sendLogs(entityContext, event);
             flushBufferedLogs();
         }

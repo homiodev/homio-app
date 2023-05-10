@@ -3,6 +3,7 @@ package org.homio.app.ssh;
 import static com.sshtools.common.publickey.SshKeyPairGenerator.ECDSA;
 import static com.sshtools.common.publickey.SshKeyPairGenerator.ED25519;
 import static com.sshtools.common.publickey.SshKeyPairGenerator.SSH2_RSA;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.homio.bundle.api.ui.field.action.UIActionInput.Type.select;
 import static org.homio.bundle.api.ui.field.action.UIActionInput.Type.text;
@@ -18,6 +19,7 @@ import com.sshtools.common.publickey.SshPublicKeyFile;
 import com.sshtools.common.publickey.SshPublicKeyFileFactory;
 import com.sshtools.common.ssh.components.SshKeyPair;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import javax.persistence.Entity;
 import lombok.Getter;
@@ -25,6 +27,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.homio.app.ssh.SshGenericEntity.GenericWebSocketService;
 import org.homio.bundle.api.EntityContext;
+import org.homio.bundle.api.entity.BaseEntity;
+import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
+import org.homio.bundle.api.entity.types.IdentityEntity;
 import org.homio.bundle.api.model.ActionResponseModel;
 import org.homio.bundle.api.model.FileContentType;
 import org.homio.bundle.api.model.FileModel;
@@ -34,8 +39,10 @@ import org.homio.bundle.api.ui.UISidebarChildren;
 import org.homio.bundle.api.ui.field.UIField;
 import org.homio.bundle.api.ui.field.UIFieldGroup;
 import org.homio.bundle.api.ui.field.UIFieldSlider;
+import org.homio.bundle.api.ui.field.UIFieldType;
 import org.homio.bundle.api.ui.field.action.UIActionInput;
 import org.homio.bundle.api.ui.field.action.UIContextMenuAction;
+import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.bundle.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -44,7 +51,8 @@ import org.json.JSONObject;
 @Entity
 @SuppressWarnings("unused")
 @UISidebarChildren(icon = "fas fa-terminal", color = "#0088CC")
-public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWebSocketService> {
+public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWebSocketService>
+    implements BaseFileSystemEntity<SshGenericEntity, SshGenericFileSystem> {
 
     public static final String PREFIX = "sshraw_";
 
@@ -152,6 +160,26 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         return getJsonData("pub_cmn");
     }
 
+    @UIField(order = 10)
+    @UIFieldGroup("SECURITY")
+    public boolean isShowHiddenFiles() {
+        return getJsonData("shf", false);
+    }
+
+    public void setShowHiddenFiles(boolean value) {
+        setJsonData("shf", value);
+    }
+
+    @UIField(order = 1)
+    @UIFieldGroup(value = "FS", order = 20, borderColor = "#914991")
+    public String getFileSystemRoot() {
+        return getJsonData("fs_root", "/home");
+    }
+
+    public void setFileSystemRoot(String value) {
+        setJsonData("fs_root", value);
+    }
+
     @JsonIgnore
     public String getPrivateKeyPassphrase() {
         return trimToNull(getJsonData("key_pwd"));
@@ -187,7 +215,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
             progressBar.progress(10, "PROGRESS.GENERATE_SSH");
             SshKeyPair keyPair = SshKeyPairGenerator.generateKeyPair(alg, bits);
             SshPrivateKeyFile kf = SshPrivateKeyFileFactory.create(keyPair, passphrase, params.optString("comment"));
-            updateSSHData(passphrase, kf);
+            updateSSHData(this, passphrase, kf);
 
             entityContext.save(this);
         }, exception -> {
@@ -200,29 +228,19 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         return null;
     }
 
-    @SneakyThrows
     @UIContextMenuAction(value = "UPLOAD_PRIVATE_KEY", icon = "fas fa-upload", inputs = {
         @UIActionInput(name = "privateKey", type = textarea),
         @UIActionInput(name = "passphrase", type = text)
     })
     public ActionResponseModel uploadPrivateKey(EntityContext entityContext, JSONObject params) {
-        if (isHasPrivateKey()) {
-            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_ALREADY_EXISTS");
-        }
-        String privateKey = params.getString("privateKey");
-        String passphrase = trimToNull(params.optString("passphrase"));
-        SshPrivateKeyFile kf = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
-        updateSSHData(passphrase, kf);
-
-        entityContext.save(this);
-        return ActionResponseModel.showSuccess("ACTION.SUCCESS");
+        return execUploadPrivateKey(this, entityContext, params);
     }
 
     @SneakyThrows
     public SshClient createSshClient() {
         int connectionTimeout = getConnectionTimeout() * 1000;
         if (isHasPrivateKey()) {
-            return new SshClient(getHost(), getPort(), getUser(), connectionTimeout, getSshKeyPair());
+            return new SshClient(getHost(), getPort(), getUser(), connectionTimeout, buildSshKeyPair(this));
         } else if (!getPassword().asString().isEmpty()) {
             return new SshClient(getHost(), getPort(), getUser(), connectionTimeout,
                 getPassword().asString().toCharArray());
@@ -232,30 +250,44 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @SneakyThrows
-    private void updateSSHData(String passphrase, SshPrivateKeyFile kf) {
+    public static ActionResponseModel execUploadPrivateKey(IdentityEntity entity, EntityContext entityContext, JSONObject params) {
+        if (entity.getJsonData().has("prv_key")) {
+            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_ALREADY_EXISTS");
+        }
+        String privateKey = params.getString("privateKey");
+        String passphrase = trimToNull(params.optString("passphrase"));
+        SshPrivateKeyFile kf = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
+        updateSSHData(entity, passphrase, kf);
+
+        entityContext.save((BaseEntity) entity);
+        return ActionResponseModel.showSuccess("ACTION.SUCCESS");
+    }
+
+    @SneakyThrows
+    public static void updateSSHData(IdentityEntity entity, String passphrase, SshPrivateKeyFile kf) {
         if (kf.isPassphraseProtected() && passphrase == null) {
             throw new IllegalArgumentException("Key protected with password");
         }
         SshKeyPair keyPair = kf.toKeyPair(passphrase);
 
-        setJsonData("key_pwd", passphrase);
-        setJsonData("prv_key", new String(kf.getFormattedKey()));
+        entity.setJsonData("key_pwd", passphrase);
+        entity.setJsonData("prv_key", new String(kf.getFormattedKey()));
 
         SshPublicKeyFile publicKeyFile = SshPublicKeyFileFactory.create(keyPair.getPublicKey(),
             kf.getComment(), SshPublicKeyFileFactory.OPENSSH_FORMAT);
 
-        setJsonData("pub_key", new String(publicKeyFile.getFormattedKey()));
-        setJsonData("pub_cmn", kf.getComment());
-        setJsonData("fp", keyPair.getPublicKey().getFingerprint());
-        setJsonData("alg", keyPair.getPrivateKey().getAlgorithm());
-        setJsonData("kt", kf.getType());
+        entity.setJsonData("pub_key", new String(publicKeyFile.getFormattedKey()));
+        entity.setJsonData("pub_cmn", kf.getComment());
+        entity.setJsonData("fp", keyPair.getPublicKey().getFingerprint());
+        entity.setJsonData("alg", keyPair.getPrivateKey().getAlgorithm());
+        entity.setJsonData("kt", kf.getType());
     }
 
     @SneakyThrows
     @UIContextMenuAction(value = "DOWNLOAD_PUBLIC_KEY", icon = "fas fa-download")
     public ActionResponseModel downloadPublicKey(EntityContext entityContext, JSONObject params) {
         if (!isHasPrivateKey()) {
-            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_EXISTS");
+            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_FOUND");
         }
         String publicKey = getJsonData("pub_key");
         FileModel publicKeyModel = new FileModel("Public key", publicKey, FileContentType.plaintext, true);
@@ -267,32 +299,35 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         @UIActionInput(name = "passphrase", type = text)
     })
     public ActionResponseModel deletePrivateKey(EntityContext entityContext, JSONObject params) {
-        if (!isHasPrivateKey()) {
-            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_EXISTS");
+        return execDeletePrivateKey(this, entityContext, params);
+    }
+
+    public static ActionResponseModel execDeletePrivateKey(IdentityEntity entity, EntityContext entityContext, JSONObject params) {
+        if (!entity.getJsonData().has("prv_key")) {
+            return ActionResponseModel.showError("W.ERROR.PRIVATE_KEY_NOT_FOUND");
         }
         String passphrase = trimToNull(params.optString("passphrase"));
-        if (!Objects.equals(passphrase, getPrivateKeyPassphrase())) {
+        if (!Objects.equals(passphrase, trimToNull(entity.getJsonData("key_pwd")))) {
             throw new IllegalArgumentException("Provided passphrase not match");
         }
-        setJsonData("key_pwd", null);
-        setJsonData("prv_key", null);
-        setJsonData("pub_key", null);
-        setJsonData("fp", null);
-        setJsonData("alg", null);
-        setJsonData("kt", null);
-        setJsonData("pub_cmn", null);
-        entityContext.save(this);
+        entity.setJsonData("key_pwd", null);
+        entity.setJsonData("prv_key", null);
+        entity.setJsonData("pub_key", null);
+        entity.setJsonData("fp", null);
+        entity.setJsonData("alg", null);
+        entity.setJsonData("kt", null);
+        entity.setJsonData("pub_cmn", null);
+        entityContext.save(entity);
         return ActionResponseModel.showSuccess("ACTION.SUCCESS");
     }
 
     @SneakyThrows
-    @JsonIgnore
-    public SshKeyPair getSshKeyPair() {
-        String passphrase = getPrivateKeyPassphrase();
-        String privateKey = getJsonData("prv_key");
+    public static SshKeyPair buildSshKeyPair(IdentityEntity entity) {
+        String passphrase = trimToNull(entity.getJsonData("key_pwd"));
+        String privateKey = entity.getJsonData("prv_key");
         SshPrivateKeyFile keyFile = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
         SshKeyPair keyPair = keyFile.toKeyPair(passphrase);
-        switch (getPublicKeyAuthSign()) {
+        switch (entity.getJsonDataEnum("pk_sign", PublicKeyAuthSign.SHA256)) {
             case SHA256:
                 return SshKeyUtils.makeRSAWithSHA256Signature(keyPair);
             case SHA512:
@@ -314,6 +349,46 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     @Override
     public @NotNull String getEntityPrefix() {
         return PREFIX;
+    }
+
+    @Override
+    public String getFileSystemAlias() {
+        return "SSH[" + getTitle() + "]";
+    }
+
+    @Override
+    public boolean isShowInFileManager() {
+        return true;
+    }
+
+    @Override
+    public String getFileSystemIcon() {
+        return "fas fa-road-spikes";
+    }
+
+    @Override
+    public String getFileSystemIconColor() {
+        return "#37A987";
+    }
+
+    @Override
+    public boolean requireConfigure() {
+        return isEmpty(getHost());
+    }
+
+    @Override
+    public SshGenericFileSystem buildFileSystem(EntityContext entityContext) {
+        return new SshGenericFileSystem(this, entityContext);
+    }
+
+    @Override
+    public long getConnectionHashCode() {
+        return getDeepHashCode();
+    }
+
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+
     }
 
     private long getDeepHashCode() {
@@ -351,7 +426,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
             return requireTestService;
         }
 
-
         @Override
         public boolean testService() {
             try (SshClient sshClient = entity.createSshClient()) {
@@ -382,7 +456,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         }
     }
 
-    private enum PublicKeyAuthSign {
+    protected enum PublicKeyAuthSign {
         SHA1, SHA256, SHA512
     }
 }

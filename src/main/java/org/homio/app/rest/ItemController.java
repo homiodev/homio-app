@@ -247,7 +247,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         return list;
     }
 
-    @PostMapping(value = "/{entityID}/logs/debug/{value}")
+    /*@PostMapping(value = "/{entityID}/logs/debug/{value}")
     @RolesAllowed(ADMIN_ROLE)
     public void setEntityDebugLogLevel(@PathVariable("entityID") String entityID, @PathVariable("value") boolean debug) {
         BaseEntity entity = entityContext.getEntity(entityID);
@@ -258,7 +258,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 entityContext.save(entity);
             }
         }
-    }
+    }*/
 
     @GetMapping(value = "/{entityID}/logs")
     @RolesAllowed(LOG_RESOURCE)

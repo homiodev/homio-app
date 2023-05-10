@@ -1,9 +1,7 @@
 package org.homio.app;
 
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
-import org.homio.app.setting.console.lines.ConsoleDebugLevelSetting;
 import org.homio.bundle.api.EntityContext;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -22,6 +20,5 @@ public class StartupTest {
     @Test
     public void testStartup() {
         assertNotNull(entityContext);
-        assertTrue(entityContext.setting().getValue(ConsoleDebugLevelSetting.class));
     }
 }

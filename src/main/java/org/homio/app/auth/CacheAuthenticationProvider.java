@@ -50,7 +50,6 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
             throw ex;
         }
 
-        UserBaseEntity.logInfo(userDetails.getUsername(), "auth success");
         attemptsCache.invalidate(userDetails.getUsername());
     }
 

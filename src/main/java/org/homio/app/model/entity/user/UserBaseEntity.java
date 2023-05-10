@@ -34,7 +34,7 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
     implements UserEntity, HasEntityLog,
     HasDynamicContextMenuActions {
 
-    private static Logger log = LogManager.getLogger(UserBaseEntity.class);
+    public static Logger log = LogManager.getLogger(UserBaseEntity.class);
 
     private static final Set<String> RESOURCES = new HashSet<>();
 

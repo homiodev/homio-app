@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app")
 public class AppProperties {
 
-    private Cloud cloud;
     private String version;
     private int httpPort;
     private String serverSiteURL;
@@ -23,14 +22,6 @@ public class AppProperties {
     private Duration maxJavaScriptOnceCallBeforeInterrupt;
     private Duration maxJavaScriptCompileBeforeInterrupt;
     private Source source;
-
-    @Getter
-    @Setter
-    public static class Cloud {
-
-        private String hostname;
-        private String syncUrl;
-    }
 
     @Getter
     @Setter

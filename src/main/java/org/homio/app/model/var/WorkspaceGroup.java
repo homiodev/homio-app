@@ -313,7 +313,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         if (deletedCount > 0) {
             return ActionResponseModel.showSuccess("Deleted: " + deletedCount + " variables");
         }
-        return ActionResponseModel.showInfo("W.ERROR.NO_VARIABLES_TO_DELETE");
+        return ActionResponseModel.showWarn("W.ERROR.NO_VARIABLES_TO_DELETE");
     }
 
     private int clearAll(VariableDataRepository repository) {
