@@ -1,7 +1,5 @@
 package org.homio.app.rest;
 
-import static java.lang.String.format;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,14 +10,11 @@ import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.app.config.AppProperties;
 import org.homio.app.manager.common.ClassFinder;
-import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.ui.UISidebarMenu;
-import org.homio.bundle.api.util.CommonUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,24 +27,16 @@ public class RouteController {
     private final List<Class<?>> uiSidebarMenuClasses;
     private final BundleController bundleController;
     private final SettingController settingController;
-    private final AppProperties appProperties;
 
     public RouteController(
         ClassFinder classFinder,
         BundleController bundleController,
-        AppProperties appProperties,
         SettingController settingController,
         EntityContext entityContext) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
         this.bundleController = bundleController;
         this.settingController = settingController;
         this.entityContext = entityContext;
-        this.appProperties = appProperties;
-    }
-
-    @GetMapping("/version")
-    public String getVersion() {
-        return format("%s-%s-%s", appProperties.getVersion(), EntityContextImpl.BUNDLE_UPDATE_COUNT, CommonUtils.RUN_COUNT);
     }
 
     @GetMapping("/bootstrap")

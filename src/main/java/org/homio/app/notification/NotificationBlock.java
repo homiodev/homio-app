@@ -23,6 +23,8 @@ public class NotificationBlock {
     private final String name;
     private final String icon;
     private final String color;
+    @JsonIgnore
+    private final String email;
 
     @Setter
     private String version;
@@ -59,6 +61,10 @@ public class NotificationBlock {
     public void setUpdatable(BiFunction<ProgressBar, String, ActionResponseModel> updateHandler, List<String> versions) {
         this.versions = versions;
         this.updateHandler = updateHandler;
+    }
+
+    public void remove(String info) {
+        infoItems.removeIf(item -> info.equals(item.getInfo()));
     }
 
     @Getter

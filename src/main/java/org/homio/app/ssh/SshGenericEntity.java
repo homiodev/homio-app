@@ -3,6 +3,7 @@ package org.homio.app.ssh;
 import static com.sshtools.common.publickey.SshKeyPairGenerator.ECDSA;
 import static com.sshtools.common.publickey.SshKeyPairGenerator.ED25519;
 import static com.sshtools.common.publickey.SshKeyPairGenerator.SSH2_RSA;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.homio.bundle.api.ui.field.action.UIActionInput.Type.select;
 import static org.homio.bundle.api.ui.field.action.UIActionInput.Type.text;
@@ -18,6 +19,7 @@ import com.sshtools.common.publickey.SshPublicKeyFile;
 import com.sshtools.common.publickey.SshPublicKeyFileFactory;
 import com.sshtools.common.ssh.components.SshKeyPair;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import javax.persistence.Entity;
 import lombok.Getter;
@@ -26,7 +28,7 @@ import lombok.SneakyThrows;
 import org.homio.app.ssh.SshGenericEntity.GenericWebSocketService;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.HasJsonData;
+import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.homio.bundle.api.entity.types.IdentityEntity;
 import org.homio.bundle.api.model.ActionResponseModel;
 import org.homio.bundle.api.model.FileContentType;
@@ -37,8 +39,10 @@ import org.homio.bundle.api.ui.UISidebarChildren;
 import org.homio.bundle.api.ui.field.UIField;
 import org.homio.bundle.api.ui.field.UIFieldGroup;
 import org.homio.bundle.api.ui.field.UIFieldSlider;
+import org.homio.bundle.api.ui.field.UIFieldType;
 import org.homio.bundle.api.ui.field.action.UIActionInput;
 import org.homio.bundle.api.ui.field.action.UIContextMenuAction;
+import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.bundle.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -47,7 +51,8 @@ import org.json.JSONObject;
 @Entity
 @SuppressWarnings("unused")
 @UISidebarChildren(icon = "fas fa-terminal", color = "#0088CC")
-public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWebSocketService> {
+public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWebSocketService>
+    implements BaseFileSystemEntity<SshGenericEntity, SshGenericFileSystem> {
 
     public static final String PREFIX = "sshraw_";
 
@@ -153,6 +158,26 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     @UIFieldGroup("SECURITY")
     public String getKeyComment() {
         return getJsonData("pub_cmn");
+    }
+
+    @UIField(order = 10)
+    @UIFieldGroup("SECURITY")
+    public boolean isShowHiddenFiles() {
+        return getJsonData("shf", false);
+    }
+
+    public void setShowHiddenFiles(boolean value) {
+        setJsonData("shf", value);
+    }
+
+    @UIField(order = 1)
+    @UIFieldGroup(value = "FS", order = 20, borderColor = "#914991")
+    public String getFileSystemRoot() {
+        return getJsonData("fs_root", "/home");
+    }
+
+    public void setFileSystemRoot(String value) {
+        setJsonData("fs_root", value);
     }
 
     @JsonIgnore
@@ -326,6 +351,46 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         return PREFIX;
     }
 
+    @Override
+    public String getFileSystemAlias() {
+        return "SSH[" + getTitle() + "]";
+    }
+
+    @Override
+    public boolean isShowInFileManager() {
+        return true;
+    }
+
+    @Override
+    public String getFileSystemIcon() {
+        return "fas fa-road-spikes";
+    }
+
+    @Override
+    public String getFileSystemIconColor() {
+        return "#37A987";
+    }
+
+    @Override
+    public boolean requireConfigure() {
+        return isEmpty(getHost());
+    }
+
+    @Override
+    public SshGenericFileSystem buildFileSystem(EntityContext entityContext) {
+        return new SshGenericFileSystem(this, entityContext);
+    }
+
+    @Override
+    public long getConnectionHashCode() {
+        return getDeepHashCode();
+    }
+
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+
+    }
+
     private long getDeepHashCode() {
         return getJsonDataHashCode("host", "port", "user", "pwd", "key_pwd", "prv_key", "ct");
     }
@@ -360,7 +425,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
             this.snapshotCode = code;
             return requireTestService;
         }
-
 
         @Override
         public boolean testService() {

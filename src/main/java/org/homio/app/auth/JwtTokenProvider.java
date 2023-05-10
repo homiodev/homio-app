@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.homio.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
@@ -66,6 +67,7 @@ public class JwtTokenProvider implements ContextCreated {
                 });
                 if (removed) {
                     user.logInfo("logged out");
+                    entityContext.ui().removeNotificationBlock("user-" + user.getEmail());
                     entityContext.ui().reloadWindow("sys.auth_changed");
                 }
             }
@@ -86,8 +88,12 @@ public class JwtTokenProvider implements ContextCreated {
         return userCache.computeIfAbsent(token, key -> {
             removeOutdatedTokens();
 
-            UserDetails userDetails = userEntityDetailsService.loadUserByUsername(getUsername(key));
-            return new UsernamePasswordAuthenticationToken(userDetails, userDetails.getUsername(), userDetails.getAuthorities());
+            String userName = getUsername(key);
+            UserDetails userDetails = userEntityDetailsService.loadUserByUsername(userName);
+            val authentication = new UsernamePasswordAuthenticationToken(userDetails,
+                userDetails.getUsername(), userDetails.getAuthorities());
+            authentication.setDetails(userName);
+            return authentication;
         });
     }
 

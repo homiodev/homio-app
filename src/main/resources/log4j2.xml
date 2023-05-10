@@ -119,7 +119,7 @@
         <AppenderRef ref="appLog"/>
       </logger>
 
-      <logger level="debug" name="com.ssh">
+      <logger level="info" name="com.ssh">
         <AppenderRef ref="Console"/>
       </logger>
 

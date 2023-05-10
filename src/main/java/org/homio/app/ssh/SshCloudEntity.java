@@ -139,6 +139,13 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
         return this;
     }
 
+    @Override
+    @UIField(order = 7)
+    @UIFieldGroup("SSH")
+    public boolean isRestartOnFailure() {
+        return true;
+    }
+
     @UIField(order = 2, required = true, inlineEditWhenEmpty = true)
     @UIFieldGroup(order = 7, value = "SECURITY", borderColor = "#23ADAB")
     public String getUser() {
@@ -210,6 +217,15 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
         return ActionResponseModel.showInfoAlreadyDone();
     }
 
+    @UIContextMenuAction(value = "UNSET_CLOUD_PRIMARY", icon = "fas fa-star-half-stroke")
+    public ActionResponseModel unsetPrimary(EntityContext entityContext) {
+        if (this.isPrimary()) {
+            entityContext.save(setPrimary(false));
+            return ActionResponseModel.success();
+        }
+        return ActionResponseModel.showInfoAlreadyDone();
+    }
+
     @SneakyThrows
     @UIContextMenuAction(value = "UPLOAD_PRIVATE_KEY", icon = "fas fa-upload", inputs = {
         @UIActionInput(name = "privateKey", type = textarea),
@@ -251,11 +267,6 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     @Override
     public long getChangesHashCode() {
         return getEntityID().hashCode() + getJsonDataHashCode("host", "port", "user", "pk_sign", "prv_key", "key_pwd");
-    }
-
-    @Override
-    public boolean isRestartOnFailure() {
-        return true;
     }
 
     @Override

@@ -36,8 +36,10 @@ public class CloudService implements ContextCreated {
         if (currentEntity == null) {
             currentEntity = SshCloudEntity.ensureEntityExists(entityContext);
         }
-        entityHashCode = currentEntity.getChangesHashCode();
-        start();
+        if (currentEntity.isPrimary()) {
+            entityHashCode = currentEntity.getChangesHashCode();
+            start();
+        }
 
         entityContext.event().addEntityUpdateListener(SshCloudEntity.class, "cloud-service", sshCloudEntity -> {
             if (sshCloudEntity.isPrimary()) {
@@ -51,6 +53,8 @@ public class CloudService implements ContextCreated {
                 entityHashCode = updateChangesHashCode;
                 currentEntity = sshCloudEntity;
                 start();
+            } else if (currentEntity != null && sshCloudEntity.getEntityID().equals(currentEntity.getEntityID())) {
+                this.stop(currentEntity);
             }
         });
         entityContext.bgp().addWatchDogService("cloud-service", new WatchdogService() {
@@ -61,21 +65,22 @@ public class CloudService implements ContextCreated {
 
             @Override
             public boolean isRequireRestartService() {
-                return currentEntity != null &&
-                    currentEntity.getStatus() == Status.ERROR &&
-                    currentEntity.isRestartOnFailure();
+                return currentEntity != null
+                    && currentEntity.isPrimary()
+                    && currentEntity.getStatus() == Status.ERROR
+                    && currentEntity.isRestartOnFailure();
             }
         });
     }
 
     public void restart(@NotNull SshCloud entity) {
-        assertPrimaryEntity(entity);
+        assertSameEntity(entity);
         stop(currentEntity);
         start();
     }
 
     public void stop(@NotNull SshCloud entity) {
-        assertPrimaryEntity(entity);
+        assertSameEntity(entity);
         if (cloudProvider != null) {
             try {
                 cloudProvider.stop();
@@ -116,14 +121,14 @@ public class CloudService implements ContextCreated {
             } catch (Exception ex) {
                 String message = CommonUtils.getErrorMessage(ex);
                 currentEntity.setStatusError(ex);
-                log.error("Unable to start cloud connection: '{}'.", currentEntity, ex);
+                log.error("Unable to start cloud connection: '{}'. Msg: {}", currentEntity, CommonUtils.getErrorMessage(ex));
                 cloudProvider.updateNotificationBlock(ex);
                 entityContext.ui().sendErrorMessage("W.ERROR.UNABLE_CONNECT", FlowMap.of("MSG", message), ex);
             }
         });
     }
 
-    private void assertPrimaryEntity(@NotNull SshCloud entity) {
+    private void assertSameEntity(@NotNull SshCloud entity) {
         if (currentEntity == null || !entity.getEntityID().equals(currentEntity.getEntityID())) {
             throw new IllegalStateException("SshCloudEntity: " + entity.getTitle() + " is not current active cloud ssh entity");
         }

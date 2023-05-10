@@ -77,7 +77,6 @@ import org.homio.app.setting.system.SystemLanguageSetting;
 import org.homio.app.setting.system.SystemShowEntityStateSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
-import org.homio.app.ssh.SshCloudEntity;
 import org.homio.app.ssh.SshTmateEntity;
 import org.homio.app.utils.HardwareUtils;
 import org.homio.app.workspace.BroadcastLockManagerImpl;
@@ -100,6 +99,7 @@ import org.homio.bundle.api.service.scan.BeansItemsDiscovery;
 import org.homio.bundle.api.service.scan.MicroControllerScanner;
 import org.homio.bundle.api.service.scan.VideoStreamScanner;
 import org.homio.bundle.api.setting.SettingPlugin;
+import org.homio.bundle.api.ui.UI.Color;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.api.util.Lang;
 import org.homio.bundle.api.util.UpdatableSetting;
@@ -691,11 +691,15 @@ public class EntityContextImpl implements EntityContext {
 
     private void addBundle(BundleContext bundleContext, Map<String, BundleContext> artifactIdToContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
+            ui().addNotificationBlockOptional("bundles", "BUNDLES", "file-zipper", "#FF4400");
             if (!bundleContext.isLoaded()) {
-                ui().addBellErrorNotification("fail-bundle-" + bundleContext.getBundleID(),
-                    bundleContext.getBundleFriendlyName(), "Unable to load bundle");
+                ui().updateNotificationBlock("bundles", blockBuilder ->
+                    blockBuilder.addInfo(bundleContext.getBundleFriendlyName(), "", "fas fa-bug", Color.RED));
                 return;
             }
+            ui().updateNotificationBlock("bundles", blockBuilder ->
+                blockBuilder.addInfo(bundleContext.getBundleFriendlyName(), "", "fas fa-puzzle-piece", Color.GREEN));
+
             allApplicationContexts.add(bundleContext.getApplicationContext());
             bundleContext.setInstalled(true);
             for (String bundleDependency : bundleContext.getDependencies()) {
