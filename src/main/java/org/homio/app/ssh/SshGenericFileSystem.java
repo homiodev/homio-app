@@ -18,7 +18,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -56,6 +55,9 @@ public class SshGenericFileSystem implements FileSystemProvider {
                                      expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
                 public @NotNull List<SftpFile> load(@NotNull String id) throws SftpStatusException, SshException {
                     SftpClientTask client = getSftpClient();
+                    if (client == null) {
+                        throw new SshException("Ssh client is null", -1);
+                    }
                     SftpFile parent = client.openDirectory(id);
                     return client.readDirectory(parent).stream().filter(sftpFile -> {
                         String filename = sftpFile.getFilename();
@@ -101,7 +103,7 @@ public class SshGenericFileSystem implements FileSystemProvider {
     @Override
     @SneakyThrows
     public InputStream getEntryInputStream(@NotNull String id) {
-        try (InputStream stream = getSftpClient().getInputStream(id)) {
+        try (InputStream stream = getSftpClientRequire().getInputStream(id)) {
             return new ByteArrayInputStream(IOUtils.toByteArray(stream));
         }
     }
@@ -129,7 +131,7 @@ public class SshGenericFileSystem implements FileSystemProvider {
             }
             SftpFile sftpFile = getSftpFile(id, true);
             if (sftpFile != null) {
-                getSftpClient().rm(id);
+                getSftpClientRequire().rm(id);
                 this.fileCache.invalidate(fixPath(Paths.get(id).getParent()));
                 files.add(sftpFile);
             }
@@ -152,10 +154,11 @@ public class SshGenericFileSystem implements FileSystemProvider {
                 }
             }
         }
+        SftpClientTask client = getSftpClientRequire();
         if (isDir) {
-            getSftpClient().mkdir(fullPath);
+            client.mkdir(fullPath);
         } else {
-            getSftpClient().put(new ByteArrayInputStream(new byte[0]), fullPath);
+            client.put(new ByteArrayInputStream(new byte[0]), fullPath);
         }
         this.fileCache.invalidate(parentId);
         return buildRoot(Collections.singleton(getSftpFile(fullPath, true)));
@@ -175,9 +178,7 @@ public class SshGenericFileSystem implements FileSystemProvider {
             FieldUtils.writeDeclaredField(file, "filename", newName, true);
 
             if (uploadOption != UploadOption.Replace) {
-                SftpFile existedFile =
-                    Optional.ofNullable(fileCache.get(newName)).map(files1 -> files1.isEmpty() ? null : files1.get(0))
-                            .orElse(null);
+                SftpFile existedFile = getSftpFile(newName, true);
                 if (existedFile != null) {
                     if (uploadOption == UploadOption.SkipExist) {
                         return null;
@@ -187,7 +188,7 @@ public class SshGenericFileSystem implements FileSystemProvider {
                 }
             }
 
-            getSftpClient().rename(file.getFilename(), newName);
+            getSftpClientRequire().rename(file.getFilename(), newName);
             //   this.fileCache.put(file.getId(), Collections.singletonList(file));
 
             return buildRoot(Collections.singleton(file));
@@ -214,45 +215,17 @@ public class SshGenericFileSystem implements FileSystemProvider {
         List<SftpFile> files = fileCache.get(appendRoot(parentId));
         Stream<SftpFile> stream = files.stream();
         if (!entity.isShowHiddenFiles()) {
-            stream = stream.filter(s -> {
-                return !s.getFilename().startsWith(".");
-            });
+            stream = stream.filter(s -> !s.getFilename().startsWith("."));
         }
         return stream.map(this::buildTreeNode).collect(Collectors.toSet());
     }
 
     @Override
     public Set<TreeNode> getChildrenRecursively(@NotNull String parentId) {
-        /*List<SftpFile> files = queryFiles("trashed = false");
-        TreeNode root = new TreeNode();
-        Map<String, Pair<TreeNode, File>> idToObject = new HashMap<>();
-        for (File file : files) {
-            idToObject.put(file.getId(), Pair.of(root.addChild(buildTreeNode(file)), file));
-        }
-        for (Pair<TreeNode, File> pair : idToObject.values()) {
-            File file = pair.getValue();
-            if (file.getParents().isEmpty()) {
-                root.addChild(pair.getKey());
-            } else {
-                for (String parent : file.getParents()) {
-                    Pair<TreeNode, File> parentObject = idToObject.get(parent);
-                    if (parentObject != null) {
-                        parentObject.getKey().addChild(pair.getKey());
-                    }
-                }
-            }
-        }
-        return root.getChildren();*/
         throw new IllegalArgumentException("");
     }
 
     private TreeNode buildRoot(Collection<SftpFile> result) {
-        /*TreeNode rootPath = this.buildTreeNode(ROOT);
-        for (File file : files) {
-            TreeNode child = buildTreeNode(file);
-            buildParents(rootPath, child, file.getParents());
-        }
-        return rootPath;*/
         Path root = Paths.get(entity.getFileSystemRoot());
         TreeNode rootPath = new TreeNode(true, false, "", "", 0L, 0L, null, null);
         // ftpFile.getName() return FQN
@@ -289,7 +262,15 @@ public class SshGenericFileSystem implements FileSystemProvider {
             this, null);
     }
 
-    private SftpClientTask getSftpClient() {
+    private @NotNull SftpClientTask getSftpClientRequire() {
+        SftpClientTask client = getSftpClient();
+        if (client == null) {
+            throw new IllegalStateException("Sftp client is null");
+        }
+        return client;
+    }
+
+    private @Nullable SftpClientTask getSftpClient() {
         if (sftpClient == null || sftpClient.isClosed()) {
             if (sftpClientThread != null) {
                 sftpClientThread.cancel();
@@ -330,12 +311,12 @@ public class SshGenericFileSystem implements FileSystemProvider {
 
     @SneakyThrows
     private void copyEntries(Collection<TreeNode> entries, String targetId, UploadOption uploadOption, List<SftpFile> result) {
-        //entity.execute(ftpClient -> {
+        SftpClientTask client = getSftpClientRequire();
         for (TreeNode entry : entries) {
             String path = Paths.get(targetId).resolve(entry.getName()).toString();
             if (entry.getAttributes().isDir()) {
-                getSftpClient().mkdir(path);
-                result.add(new SftpFile(path, getSftpClient().get(path)));
+                client.mkdir(path);
+                result.add(new SftpFile(path, client.get(path)));
                 copyEntries(entry.getFileSystem().getChildren(entry), path, uploadOption, result);
             } else {
                 try (InputStream stream = entry.getInputStream()) {
@@ -347,15 +328,15 @@ public class SshGenericFileSystem implements FileSystemProvider {
                                 byte[] content = Bytes.concat(prependContent, IOUtils.toByteArray(stream));
                                 ftpClient.appendFile(path, new ByteArrayInputStream(content));
 
-                                getSftpClient().putFiles();*/
+                                client.putFiles();*/
                             throw new IllegalArgumentException("");
                         } else {
-                            getSftpClient().put(stream, path);
+                            client.put(stream, path);
                         }
                     } else {
-                        getSftpClient().put(stream, path);
+                        client.put(stream, path);
                     }
-                    result.add(new SftpFile(path, getSftpClient().get(path)));
+                    result.add(new SftpFile(path, client.get(path)));
                 }
             }
         }
@@ -368,7 +349,7 @@ public class SshGenericFileSystem implements FileSystemProvider {
                 String parentId = fixPath(Paths.get(fullPath).getParent());
                 return fileCache.get(parentId).stream().filter(c -> c.getAbsolutePath().equals(fullPath)).findAny().orElse(null);
             } else {
-                return getSftpClient().openFile(fullPath);
+                return getSftpClientRequire().openFile(fullPath);
             }
         } catch (Exception ignored) {
         }

@@ -20,17 +20,18 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.BaseEntity;
 import org.homio.bundle.api.model.Status;
+import org.homio.bundle.api.ui.UISidebarMenu;
 import org.homio.bundle.api.ui.field.MonacoLanguage;
 import org.homio.bundle.api.ui.field.UIField;
 import org.homio.bundle.api.ui.field.UIFieldCodeEditor;
 import org.homio.bundle.api.util.SpringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.springframework.core.env.Environment;
 
-// TODO: Temporary remove scripting engine from app due lack of time to fix everything
 @Entity
-/*@UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
-               overridePath = "scripts")*/
+@UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
+               overridePath = "scripts")
 @Accessors(chain = true)
 public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
@@ -44,7 +45,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @Getter
     @Setter
     @UIField(order = 13)
-    @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript, autoFormat = true)
+    @UIFieldCodeEditor(editorType = MonacoLanguage.Json, autoFormat = true)
     private String javaScriptParameters = "{}";
 
     @Getter
@@ -60,8 +61,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @UIField(order = 30)
     @Column(length = 1000_000)
     @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript, autoFormat = true)
-    private String javaScript =
-        "function before() { };\nfunction run() { };\nfunction after() { };";
+    private String javaScript = "function before() { };\nfunction run() { };\nfunction after() { };";
 
     @Transient @JsonIgnore private long formattedJavaScriptHash;
 
@@ -77,19 +77,19 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
         int i = javaScript.indexOf("function " + prefix);
         while (i >= 0) {
             int endIndex = i + 1;
-            int countOfBrakets = 0;
+            int countOfBrackets = 0;
             while (javaScript.length() > endIndex) {
                 char at = javaScript.charAt(endIndex);
 
-                if (at == '}' && countOfBrakets == 1) {
+                if (at == '}' && countOfBrackets == 1) {
                     endIndex++;
                     break;
                 }
 
                 if (at == '{') {
-                    countOfBrakets++;
+                    countOfBrackets++;
                 } else if (at == '}') {
-                    countOfBrakets--;
+                    countOfBrackets--;
                 }
                 endIndex++;
             }
@@ -128,7 +128,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
@@ -140,32 +140,23 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @SneakyThrows
     private String detectReplaceableValues(
         JSONObject params, Compilable engine, String formattedJavaScript) {
-        List<String> patternValues =
-            SpringUtils.getPatternValues(SpringUtils.HASH_PATTERN, formattedJavaScript);
+        List<String> patternValues = SpringUtils.getPatternValues(SpringUtils.HASH_PATTERN, formattedJavaScript);
         if (!patternValues.isEmpty()) {
             StringBuilder sb = new StringBuilder(formattedJavaScript);
             for (String patternValue : patternValues) {
                 String fnName = "rpl_" + Math.abs(patternValue.hashCode());
-                sb.append("\nfunction ")
-                  .append(fnName)
-                  .append("() { ")
-                  .append(
-                      patternValue.contains("return ")
-                          ? patternValue
-                          : "return " + patternValue)
+                sb.append("\nfunction ").append(fnName).append("() {")
+                  .append(patternValue.contains("return ") ? patternValue : "return " + patternValue)
                   .append(" }");
             }
 
             // fire rpl functions
             String jsWithRplFunctions = sb.toString();
-            CompiledScript cmpl = engine.compile(new StringReader(jsWithRplFunctions));
-            cmpl.eval();
-            return SpringUtils.replaceHashValues(
-                jsWithRplFunctions,
+            CompiledScript compileScript = engine.compile(new StringReader(jsWithRplFunctions));
+            compileScript.eval();
+            return SpringUtils.replaceHashValues(jsWithRplFunctions,
                 (s, s2, prefix) -> {
-                    Object ret =
-                        ((Invocable) cmpl.getEngine())
-                            .invokeFunction("rpl_" + Math.abs(s.hashCode()), params);
+                    Object ret = ((Invocable) compileScript.getEngine()).invokeFunction("rpl_" + Math.abs(s.hashCode()), params);
                     return ret == null ? "" : ret.toString();
                 });
         }

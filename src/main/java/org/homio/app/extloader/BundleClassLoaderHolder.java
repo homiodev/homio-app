@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class BundleClassLoaderHolder extends ClassLoader {
 
-  private Map<String, SingleBundleClassLoader> bundleJarClassLoaders = new HashMap<>();
+  private final Map<String, SingleBundleClassLoader> bundleJarClassLoaders = new HashMap<>();
 
   public void setClassLoaders(String bundleId, ClassLoader classLoader) {
       CommonUtils.addClassLoader(bundleId, classLoader);

@@ -63,7 +63,13 @@ public class CodeParser {
             completions.addAll(addCompetitionFrom(javaScriptBinder.name(), clazz, line, stack, context));
         }
         if (completions.isEmpty()) {
-            return tryEvaFromFunctionParameter(firstItem, allScript, line);
+            completions.addAll(tryEvaFromFunctionParameter(firstItem, allScript, line));
+        }
+        if(completions.isEmpty()) {
+            for (JavaScriptBinder javaScriptBinder : JavaScriptBinder.values()) {
+                completions.add(new Completion(javaScriptBinder.name(), "",
+                    javaScriptBinder.managerClass, "", CompletionItemKind.Keyword));
+            }
         }
         return completions;
     }

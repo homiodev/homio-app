@@ -448,12 +448,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                             } catch (InterruptedException ignore) {}
                             // threadContext.scheduledFuture = ....
                         }
-                        threadContext.cancelProcessInternal();
+                        threadContext.processFinished();
                     }
                 } catch (Exception ex) {
                     if (ex instanceof CancellationException) {
                         threadContext.state = "FINISHED";
-                        threadContext.cancel();
+                        threadContext.processFinished();
                         return;
                     }
                     threadContext.state = "FINISHED_WITH_ERROR";
@@ -470,7 +470,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     }
 
                     if (threadContext.cancelOnError || threadContext.scheduleType == ScheduleType.SINGLE) {
-                        threadContext.cancel();
+                        threadContext.processFinished();
                     }
                 }
             };
@@ -562,22 +562,26 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             createSchedule(this, this.postponeScheduleHandler);
         }
 
-        private ThreadContextImpl<?> cancelProcessInternal() {
+        private void cancelProcessInternal() {
             if (scheduledFuture != null) {
                 if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
-                    stopped = true;
-                    if (!showOnUI || hideOnUIAfterCancel) {
-                        return EntityContextBGPImpl.this.schedulers.remove(name);
-                    }
+                    processFinished();
                 }
             }
-            return null;
+        }
+
+        private void processFinished() {
+            stopped = true;
+            if (!showOnUI || hideOnUIAfterCancel) {
+                EntityContextBGPImpl.this.schedulers.remove(name);
+            }
         }
 
         @Override
         @SneakyThrows
         public T await(@NotNull Duration timeout) {
-            return scheduledFuture.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            scheduledFuture.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            return getRetValue();
         }
 
         @Override
