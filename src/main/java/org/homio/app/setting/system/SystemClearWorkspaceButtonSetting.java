@@ -25,6 +25,11 @@ public class SystemClearWorkspaceButtonSetting
     }
 
     @Override
+    public String getConfirmMsg() {
+        return "W.CONFIRM.CONFIRM_CLEAR_WORKSPACE";
+    }
+
+    @Override
     public String getIcon() {
         return "fas fa-trash";
     }

@@ -10,6 +10,11 @@ public class SendBroadcastSetting implements SettingPluginButton {
     }
 
     @Override
+    public String getConfirmMsg() {
+        return null;
+    }
+
+    @Override
     public String getIcon() {
         return "fas fa-play";
     }

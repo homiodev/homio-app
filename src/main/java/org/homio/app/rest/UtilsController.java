@@ -229,7 +229,7 @@ public class UtilsController {
                     scriptEntity,
                     scriptEntity.getJavaScriptParameters(),
                     logOutputStream,
-                    false);
+                    false, null).stringValue();
         } catch (Exception ex) {
             runScriptOnceJSON.error = ExceptionUtils.getStackTrace(ex);
         }

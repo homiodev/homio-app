@@ -92,6 +92,11 @@ public class SystemBundleLibraryManagerSetting
         entityContext.getBean(BundleContextService.class).uninstallBundle(packageRequest.getName());
     }
 
+    @Override
+    public String getConfirmMsg() {
+        return null;
+    }
+
     private PackageModel build(BundleContext bundleContext) {
         return new PackageModel()
             .setName(bundleContext.getBundleID())

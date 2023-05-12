@@ -8,6 +8,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.model.entity.ScriptEntity;
+import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.state.RawType;
 import org.homio.bundle.api.state.State;
@@ -45,9 +46,9 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
         if (scriptEntity == null) {
             entityContext.ui().sendErrorMessage("W.ERROR.SCRIPT_NOT_FOUND", scriptEntityId);
         } else {
-            Object result =
-                    scriptService.executeJavaScriptOnce(
-                            scriptEntity, scriptEntity.getJavaScriptParameters(), null, false);
+            State lastValue = ((WorkspaceBlockImpl) workspaceBlock).getLastValue();
+            Object result = scriptService.executeJavaScriptOnce(
+                scriptEntity, scriptEntity.getJavaScriptParameters(), null, false, lastValue);
             return State.of(result);
         }
         return StringType.EMPTY;

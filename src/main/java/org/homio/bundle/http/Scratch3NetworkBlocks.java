@@ -15,6 +15,7 @@ import lombok.SneakyThrows;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
@@ -26,12 +27,15 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.homio.app.config.AppProperties;
 import org.homio.bundle.api.EntityContext;
+import org.homio.bundle.api.state.JsonType;
 import org.homio.bundle.api.state.RawType;
+import org.homio.bundle.api.state.State;
 import org.homio.bundle.api.state.StringType;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.api.workspace.WorkspaceBlock;
 import org.homio.bundle.api.workspace.scratch.MenuBlock;
 import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
 @Getter
@@ -130,9 +134,22 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
             if (workspaceBlock.getInputBoolean("RAW")) {
                 workspaceBlock.setValue(new RawType(IOUtils.toByteArray(response.getEntity().getContent())));
             } else {
-                workspaceBlock.setValue(new StringType(IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8)));
+                workspaceBlock.setValue(convertResult(response));
             }
         }
+    }
+
+    @SneakyThrows
+    private State convertResult(HttpResponse response) {
+        Header contentType = response.getFirstHeader("Content-Type");
+        String rawValue = IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8);
+        if (contentType != null) {
+            switch (contentType.getValue()) {
+                case MediaType.APPLICATION_JSON_VALUE:
+                    return new JsonType(rawValue);
+            }
+        }
+        return new StringType(rawValue);
     }
 
     private void skipCommand(WorkspaceBlock workspaceBlock) {

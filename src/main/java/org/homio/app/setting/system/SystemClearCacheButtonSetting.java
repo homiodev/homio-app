@@ -20,6 +20,11 @@ public class SystemClearCacheButtonSetting
     }
 
     @Override
+    public String getConfirmMsg() {
+        return "W.CONFIRM.CONFIRM_CLEAR_CACHE";
+    }
+
+    @Override
     public String getIcon() {
         return "fas fa-trash";
     }

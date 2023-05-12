@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.model.CompileScriptContext;
 import org.homio.app.model.entity.ScriptEntity;
+import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.state.JsonType;
 import org.homio.bundle.api.state.State;
@@ -52,18 +53,17 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
     private State mapEvaluate(WorkspaceBlock workspaceBlock) {
         String source = workspaceBlock.getInputString("SOURCE");
         String map = workspaceBlock.getInputString("MAP");
+        State lastValue = ((WorkspaceBlockImpl) workspaceBlock).getLastValue();
 
-        CompileScriptContext compileScriptContext =
-                this.compileScriptContextMap.computeIfAbsent(
-                        map.hashCode(),
-                        integer -> {
-                            String code = map;
-                            if (ScriptEntity.getFunctionWithName(code, "run") == null) {
-                                code = "function run() { " + code + " }";
-                            }
-                            ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(code);
-                            return scriptService.createCompiledScript(scriptEntity, null);
-                        });
+        CompileScriptContext compileScriptContext = this.compileScriptContextMap.computeIfAbsent(map.hashCode(),
+            integer -> {
+                String code = map;
+                if (ScriptEntity.getFunctionWithName(code, "run") == null) {
+                    code = "function run() { " + code + " }";
+                }
+                ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(code);
+                return scriptService.createCompiledScript(scriptEntity, null, lastValue);
+            });
         compileScriptContext.getEngine().put("input", source);
         return scriptService.runJavaScript(compileScriptContext);
     }
