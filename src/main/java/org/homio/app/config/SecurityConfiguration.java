@@ -20,6 +20,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
 
 @Configuration
 @EnableWebSecurity
@@ -32,6 +33,11 @@ public class SecurityConfiguration {
     private final JwtTokenProvider jwtTokenProvider;
     private final AppProperties appProperties;
     private final Log log = LogFactory.getLog(RequestFilter.class);
+
+    @Bean
+    public MethodValidationPostProcessor methodValidationPostProcessor() {
+        return new MethodValidationPostProcessor();
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -51,6 +57,7 @@ public class SecurityConfiguration {
             http.authorizeRequests()//
                 .antMatchers(
                     WebSocketConfig.ENDPOINT,
+                    "/rest/test",
                     "/rest/frame/**",
                     "/rest/media/audio/**/play",
                     "/rest/media/video/**/play",

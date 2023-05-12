@@ -48,7 +48,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
         } else {
             State lastValue = ((WorkspaceBlockImpl) workspaceBlock).getLastValue();
             Object result = scriptService.executeJavaScriptOnce(
-                scriptEntity, scriptEntity.getJavaScriptParameters(), null, false, lastValue);
+                scriptEntity, null, false, lastValue);
             return State.of(result);
         }
         return StringType.EMPTY;

@@ -82,12 +82,11 @@ public class ScriptService implements ContextCreated {
     @ApiOperation("Execute java script")
     public @NotNull State executeJavaScriptOnce(
         @ApiParam(name = "scriptEntity") ScriptEntity scriptEntity,
-        @ApiParam(name = "jsonParameters") String jsonParameters,
         @ApiParam(name = "logPrintStream") PrintStream logPrintStream,
         @ApiParam(name = "forceBackground") boolean forceBackground,
         @ApiParam(name = "context") State context)
         throws Exception {
-        return startThread(scriptEntity, jsonParameters, false, logPrintStream, forceBackground, context);
+        return startThread(scriptEntity, false, logPrintStream, forceBackground, context);
     }
 
     public void stopThread(ScriptEntity scriptEntity) {
@@ -98,11 +97,10 @@ public class ScriptService implements ContextCreated {
      * @param forceBackground - if force - execute javascript in background without check if process has period or not
      * @param context
      */
-    public @NotNull State startThread(ScriptEntity scriptEntity, String json, boolean allowRepeat,
+    public @NotNull State startThread(ScriptEntity scriptEntity, boolean allowRepeat,
         PrintStream logPrintStream, boolean forceBackground, State context) throws Exception {
         scriptEntity.setStatus(Status.RUNNING);
         if (forceBackground) {
-            scriptEntity.setJavaScriptParameters(json);
             entityContext.save(scriptEntity);
         } else if (scriptEntity.getRepeatInterval() != 0 && allowRepeat) {
             if (entityContext.bgp().isThreadExists(scriptEntity.getEntityID(), true)) {
@@ -111,7 +109,6 @@ public class ScriptService implements ContextCreated {
             if (scriptEntity.getRepeatInterval() < properties.getMinScriptThreadSleep().toMillis()) {
                 throw new ServerException("Script has bad 'REPEAT_EVERY' value. Must be >= " + properties.getMinScriptThreadSleep());
             }
-            scriptEntity.setJavaScriptParameters(json);
             entityContext.save(scriptEntity);
         } else {
             CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, logPrintStream, context);
@@ -157,7 +154,9 @@ public class ScriptService implements ContextCreated {
             jsonParams = OBJECT_MAPPER.createObjectNode();
         }
         engine.put(JavaScriptBinder.params.name(), jsonParams);
-        engine.put(JavaScriptBinder.context.name(), context.rawValue());
+        if (context != null) {
+            engine.put(JavaScriptBinder.context.name(), context.rawValue());
+        }
 
         CompiledScript compiled;
         String formattedJavaScript;

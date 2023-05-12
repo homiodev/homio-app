@@ -57,6 +57,7 @@ import org.homio.bundle.api.entity.widget.ability.HasTimeValueSeries;
 import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.exception.ServerException;
 import org.homio.bundle.api.model.ActionResponseModel;
+import org.homio.bundle.api.state.State;
 import org.homio.bundle.api.storage.SourceHistory;
 import org.homio.bundle.api.storage.SourceHistoryItem;
 import org.homio.bundle.api.util.CommonUtils;
@@ -68,6 +69,7 @@ import org.json.JSONObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -82,6 +84,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @RestController
 @RequestMapping("/rest")
 @RequiredArgsConstructor
+@Validated
 public class UtilsController {
 
     private final EntityContextImpl entityContext;
@@ -218,33 +221,38 @@ public class UtilsController {
 
     @PostMapping("/code/run")
     @RolesAllowed(ADMIN_ROLE)
-    public RunScriptOnceJSON runScriptOnce(@RequestBody ScriptEntity scriptEntity)
+    public RunScriptResponse runScriptOnce(@RequestBody RunScriptRequest request)
         throws IOException {
-        RunScriptOnceJSON runScriptOnceJSON = new RunScriptOnceJSON();
+        RunScriptResponse runScriptResponse = new RunScriptResponse();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintStream logOutputStream = new PrintStream(outputStream);
+        ScriptEntity scriptEntity = new ScriptEntity()
+            .setEntityID(request.entityID)
+            .setJavaScript(request.javaScript)
+            .setJavaScriptParameters(request.javaScriptParameters);
+
         try {
-            runScriptOnceJSON.result =
+            runScriptResponse.result =
                 scriptService.executeJavaScriptOnce(
                     scriptEntity,
-                    scriptEntity.getJavaScriptParameters(),
                     logOutputStream,
-                    false, null).stringValue();
+                    false,
+                    State.of(request.contextParameters)).stringValue();
         } catch (Exception ex) {
-            runScriptOnceJSON.error = ExceptionUtils.getStackTrace(ex);
+            runScriptResponse.error = ExceptionUtils.getStackTrace(ex);
         }
         int size = outputStream.size();
         if (size > 50000) {
             String name = scriptEntity.getEntityID() + "_size_" + outputStream.size() + "___.log";
             Path tempFile = CommonUtils.getTmpPath().resolve(name);
             Files.copy(tempFile, outputStream);
-            runScriptOnceJSON.logUrl =
+            runScriptResponse.logUrl =
                 "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
         } else {
-            runScriptOnceJSON.log = outputStream.toString(StandardCharsets.UTF_8);
+            runScriptResponse.log = outputStream.toString(StandardCharsets.UTF_8);
         }
 
-        return runScriptOnceJSON;
+        return runScriptResponse;
     }
 
     @GetMapping("/i18n/{lang}.json")
@@ -310,8 +318,17 @@ public class UtilsController {
         private String content;
     }
 
+    @Setter
+    private static class RunScriptRequest {
+
+        private String javaScriptParameters;
+        private String contextParameters;
+        private String entityID;
+        private String javaScript;
+    }
+
     @Getter
-    private static class RunScriptOnceJSON {
+    private static class RunScriptResponse {
 
         private Object result;
         private String log;

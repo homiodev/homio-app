@@ -309,42 +309,13 @@ public class CodeParser {
         return methods;
     }
 
-    private Method getFitStaticMethod(String finalNext, Class clazz) {
-        return getFitMethod(Stream.of(clazz.getMethods()), finalNext, method -> Modifier.isStatic(method.getModifiers()));
-    }
-
-    private Method getFitMethod(Stream<Method> stream, String finalNext, Predicate<Method> testPredicate) {
-        final Method[] fitMethod = {null};
-        final float[] chance = {0};
-
-        stream.filter(testPredicate).forEach(method -> {
-            String methodPrefix = finalNext.indexOf("(") > 0 ? finalNext.substring(0, finalNext.indexOf("(")) : finalNext;
-            if (method.getName().equals(methodPrefix)) {
-                chance[0] = 1f;
-                fitMethod[0] = method;
-            } else if (chance[0] < 1) {
-                chance[0] = 0.5f;
-                fitMethod[0] = method;
-            }
-        });
-        return fitMethod[0];
-    }
-
-    private Method getFitMethod(String finalNext, Class clazz) {
-        Stream<Method> stream = clazz.getSuperclass() != null ?
-            Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
-            Stream.of(clazz.getMethods());
-
-        return getFitMethod(stream, finalNext, method -> true);
-    }
-
     private void addCompetitionFromManager2(int i, List<String> items, Set<Completion> list, Class clazz, Stack<Param> stack,
         ParserContext context) throws NoSuchMethodException {
         if (items.size() == i + 1) {
             addCompletionsAtEndFunc(items.get(i), clazz, list, stack, context);
             addCompletionsAtEndFunc(items.get(i), clazz.getSuperclass(), list, stack, context);
         } else {
-            Method methodOptional = getFitMethod(items.get(i), clazz);
+            Method methodOptional = MethodParser.getFitMethod(items.get(i), clazz);
             if (methodOptional != null) {
                 stack.add(new Param(methodOptional, clazz));
                 if (items.get(i).matches(".*\\(.*\\)")) {
@@ -369,7 +340,7 @@ public class CodeParser {
             addStaticCompletions(items.get(i), clazz, list);
             addStaticCompletions(items.get(i), clazz.getSuperclass(), list);
         } else {
-            Method methodOptional = getFitStaticMethod(items.get(i), clazz);
+            Method methodOptional = MethodParser.getFitStaticMethod(items.get(i), clazz);
             if (methodOptional != null) {
                 stack.add(new Param(methodOptional, clazz));
                 addCompetitionFromStatic(i + 1, items, list, methodOptional.getReturnType(), stack);
