@@ -1,5 +1,6 @@
 package org.homio.app.js.assistant.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import java.lang.annotation.Annotation;
@@ -50,14 +51,14 @@ public class CodeParser {
     public Set<Completion> addCompetitionFromManagerOrClass(String line, Stack<Param> stack, ParserContext context,
         String allScript) throws NoSuchMethodException {
         Set<Completion> completions = new HashSet<>();
-        List<String> items = splitSpecial(line); // list of items splitted by '.'
+        List<String> items = splitSpecial(line); // list of items split by '.'
         String firstItem = items.get(0);
         // check if firstItem is previous evaluated var
         FirsItemType firsItemType = FirsItemType.find(firstItem, line, allScript);
         if (firsItemType != null) {
             return getCompletionsForVarType(firstItem, allScript, line);
         }
-        // try evaluate with
+        // try to evaluate with
         for (JavaScriptBinder javaScriptBinder : JavaScriptBinder.values()) {
             Class clazz = javaScriptBinder.managerClass;
             completions.addAll(addCompetitionFrom(javaScriptBinder.name(), clazz, line, stack, context));
@@ -68,7 +69,7 @@ public class CodeParser {
         if(completions.isEmpty()) {
             for (JavaScriptBinder javaScriptBinder : JavaScriptBinder.values()) {
                 completions.add(new Completion(javaScriptBinder.name(), "",
-                    javaScriptBinder.managerClass, "", CompletionItemKind.Keyword));
+                    javaScriptBinder.managerClass, javaScriptBinder.help, CompletionItemKind.Keyword));
             }
         }
         return completions;

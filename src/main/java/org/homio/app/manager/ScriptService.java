@@ -21,8 +21,8 @@ import javax.script.Compilable;
 import javax.script.CompiledScript;
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
-import jdk.nashorn.api.scripting.NashornScriptEngineFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.config.AppProperties;
@@ -48,14 +48,17 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ScriptService implements ContextCreated {
 
-    private final NashornScriptEngineFactory nashornScriptEngineFactory = new NashornScriptEngineFactory();
+    static {
+        System.setProperty("polyglot.js.nashorn-compat", "true");
+        System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
+    }
+
     private final LoggerService loggerService;
     private final EntityContext entityContext;
     private final BundleClassLoaderHolder bundleClassLoaderHolder;
     private final AppProperties properties;
 
-    private ExecutorService createCompiledScriptSingleCallExecutorService =
-            Executors.newSingleThreadExecutor();
+    private ExecutorService createCompiledScriptSingleCallExecutorService = Executors.newSingleThreadExecutor();
 
     private static void appendFunc(List<Object> script, String funcName, String separator, String javaScript) {
         String result = ScriptEntity.getFunctionWithName(javaScript, funcName);
@@ -68,13 +71,14 @@ public class ScriptService implements ContextCreated {
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
         for (ScriptEntity scriptEntity : this.entityContext.findAll(ScriptEntity.class)) {
             if (scriptEntity.isAutoStart()) {
-                EntityContextBGP.ThreadContext<Void> threadContext =
-                    this.entityContext.bgp().builder(scriptEntity.getEntityID()).execute(() -> {
-                        CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, null, null);
-                        runJavaScript(compiledScriptContext);
-                    });
-                threadContext.onError(ex ->
-                    this.entityContext.updateDelayed(scriptEntity, s -> s.setStatus(Status.ERROR).setError(CommonUtils.getErrorMessage(ex))));
+                this.entityContext.bgp().builder(scriptEntity.getEntityID())
+                                  .onError(ex ->
+                                      this.entityContext.updateDelayed(scriptEntity, s ->
+                                          s.setStatus(Status.ERROR).setError(CommonUtils.getErrorMessage(ex))))
+                                  .execute(() -> {
+                                      CompileScriptContext compiledScriptContext = createCompiledScript(scriptEntity, null, null);
+                                      runJavaScript(compiledScriptContext);
+                                  });
             }
         }
     }
@@ -141,7 +145,7 @@ public class ScriptService implements ContextCreated {
     }
 
     public CompileScriptContext createCompiledScript(ScriptEntity scriptEntity, PrintStream logPrintStream, State context) {
-        ScriptEngine engine = nashornScriptEngineFactory.getScriptEngine(new String[]{"--global-per-engine"}, bundleClassLoaderHolder);
+        ScriptEngine engine = new ScriptEngineManager().getEngineByName("graal.js");
         if (logPrintStream != null) {
             engine.put(JavaScriptBinder.log.name(), loggerService.getLogger(logPrintStream));
         }
@@ -186,13 +190,15 @@ public class ScriptService implements ContextCreated {
     public @NotNull State callJavaScriptOnce(ScriptEntity scriptEntity, CompileScriptContext compiledScriptContext) throws ExecutionException {
         ScheduleBuilder<State> builder = this.entityContext.bgp().builder(scriptEntity.getEntityID());
         EntityContextBGP.ThreadContext<State> threadContext =
-            builder.execute(arg -> runJavaScript(compiledScriptContext));
+            builder
+                .throwOnError(true)
+                .execute(arg -> runJavaScript(compiledScriptContext));
         try {
             State value = threadContext.await(properties.getMaxJavaScriptOnceCallBeforeInterrupt());
             return value == null ? State.of("") : value;
         } catch (Exception ex) {
             threadContext.cancel();
-            throw new ExecutionException("Script stuck. Got Exception: " + CommonUtils.getErrorMessage(ex), ex);
+            throw new ExecutionException("Exception: " + CommonUtils.getErrorMessage(ex), ex);
         }
     }
 }

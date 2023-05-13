@@ -34,6 +34,7 @@ public class CacheService {
         "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
     public static final String ENTITY_IDS_BY_CLASS_NAME = "ENTITY_IDS_BY_CLASS_NAME";
     public static final String REPOSITORY_BY_ENTITY_ID = "REPOSITORY_BY_ENTITY_ID";
+    public static final String JS_COMPLETIONS = "JS_COMPLETIONS";
 
     private final Map<String, UpdateStatement> entityCache = new ConcurrentHashMap<>();
 
@@ -47,7 +48,8 @@ public class CacheService {
             ENTITY_IDS_BY_CLASS_NAME,
             REPOSITORY_BY_CLAZZ,
             CACHE_CLASS_BY_TYPE,
-            REPOSITORY_BY_ENTITY_ID);
+            REPOSITORY_BY_ENTITY_ID,
+            JS_COMPLETIONS);
     }
 
     public void clearCache() {

@@ -77,6 +77,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -90,6 +91,14 @@ public class UtilsController {
     private final EntityContextImpl entityContext;
     private final ScriptService scriptService;
     private final CodeParser codeParser;
+
+    @GetMapping("/test")
+    public String test(
+        @RequireExactOne @RequestParam(name = "user1") String user,
+        @RequireExactOne @RequestParam(name = "company") String company,
+        @RequireExactOne boolean all) {
+        return "!";
+    }
 
     @PutMapping("/multiDynamicUpdates")
     public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {

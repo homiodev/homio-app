@@ -42,6 +42,7 @@ import org.homio.app.manager.bgp.WatchdogBgpService;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextBGP;
+import org.homio.bundle.api.exception.ServerException;
 import org.homio.bundle.api.model.HasEntityIdentifier;
 import org.homio.bundle.api.service.EntityService.WatchdogService;
 import org.homio.bundle.api.setting.SettingPlugin;
@@ -315,6 +316,24 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             }
 
             @Override
+            public ScheduleBuilder<T> throwOnError(boolean value) {
+                context.throwOnError = value;
+                return this;
+            }
+
+            @Override
+            public ScheduleBuilder<T> onError(@NotNull Consumer<Exception> errorListener) {
+                context.errorListener = errorListener;
+                return this;
+            }
+
+            @Override
+            public ScheduleBuilder<T> metadata(@NotNull String key, @NotNull Object value) {
+                context.metadata.put(key, value);
+                return this;
+            }
+
+            @Override
             public ScheduleBuilder<T> tap(Consumer<ThreadContext<T>> handler) {
                 handler.accept(context);
                 return this;
@@ -353,6 +372,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             @Override
             public ScheduleBuilder<T> linkLogFile(Path logFile) {
                 context.logFile = logFile;
+                return this;
+            }
+
+            @Override
+            public ScheduleBuilder<T> valueListener(@NotNull String name, @NotNull ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
+                context.addValueListener(name, valueListener);
                 return this;
             }
         };
@@ -458,6 +483,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     }
                     threadContext.state = "FINISHED_WITH_ERROR";
                     threadContext.error = CommonUtils.getErrorMessage(ex);
+                    if (threadContext.throwOnError) {
+                        throw new ServerException(threadContext.error);
+                    }
 
                     log.error("Exception in thread: <{}>. Message: <{}>", threadContext.name, CommonUtils.getErrorMessage(ex), ex);
                     entityContext.ui().sendErrorMessage(ex);
@@ -498,6 +526,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
         private final JSONObject metadata = new JSONObject();
         private final Date creationTime = new Date();
+        private boolean throwOnError;
         private Authentication authentication;
         private Path logFile;
         private Duration delay;
@@ -547,7 +576,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
 
         @Override
-        public void setMetadata(String key, Object value) {
+        public void setMetadata(@NotNull String key, @NotNull Object value) {
             metadata.put(key, value);
         }
 
@@ -585,20 +614,15 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
 
         @Override
-        public void onError(@NotNull Consumer<Exception> errorListener) {
-            this.errorListener = errorListener;
-        }
-
-        @Override
         public boolean addValueListener(@NotNull String name, @NotNull ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
-            if (this.valueListeners == null) {
-                this.valueListeners = new ConcurrentHashMap<>();
+            if (valueListeners == null) {
+                valueListeners = new ConcurrentHashMap<>();
             }
-            if (this.valueListeners.containsKey(name)) {
+            if (valueListeners.containsKey(name)) {
                 log.warn("Unable to add run/schedule listener with name <{}> Listener already exists", name);
                 return false;
             }
-            this.valueListeners.put(name, valueListener);
+            valueListeners.put(name, valueListener);
             return true;
         }
 

@@ -144,12 +144,12 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         Header contentType = response.getFirstHeader("Content-Type");
         String rawValue = IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8);
         if (contentType != null) {
-            switch (contentType.getValue()) {
-                case MediaType.APPLICATION_JSON_VALUE:
-                    return new JsonType(rawValue);
+            String type = contentType.getValue();
+            if (type.startsWith(MediaType.APPLICATION_JSON_VALUE)) {
+                return new JsonType(rawValue);
             }
         }
-        return new StringType(rawValue);
+        return State.of(rawValue);
     }
 
     private void skipCommand(WorkspaceBlock workspaceBlock) {

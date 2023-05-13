@@ -67,12 +67,35 @@
     </resources>
   </build>
   <dependencies>
-    <!--<dependency>
-      <artifactId>addon-gdrive</artifactId>
-      <groupId>org.homio</groupId>
-      <classifier>sources</classifier>
-      <version>1.0.1-SNAPSHOT</version>
-    </dependency>-->
+    <dependency>
+      <groupId>org.graalvm.sdk</groupId>
+      <artifactId>graal-sdk</artifactId>
+      <version>${graalvm.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.graalvm.js</groupId>
+      <artifactId>js</artifactId>
+      <version>${graalvm.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.graalvm.js</groupId>
+      <artifactId>js-scriptengine</artifactId>
+      <version>${graalvm.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.graalvm.tools</groupId>
+      <artifactId>profiler</artifactId>
+      <version>${graalvm.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.graalvm.tools</groupId>
+      <artifactId>chromeinspector</artifactId>
+      <version>${graalvm.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
     <dependency>
       <artifactId>homio-hquery</artifactId>
       <groupId>org.homio</groupId>
@@ -478,6 +501,7 @@
   </parent>
 
   <properties>
+    <graalvm.version>22.2.0</graalvm.version>
     <os.detected.classifier>linux-armhf</os.detected.classifier>
     <homio-bundle-api.version>1.2.4-SNAPSHOT</homio-bundle-api.version>
     <homio-bundle.version>1.2.1-SNAPSHOT</homio-bundle.version>

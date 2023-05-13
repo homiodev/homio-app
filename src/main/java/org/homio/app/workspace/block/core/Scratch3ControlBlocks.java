@@ -72,8 +72,7 @@ public class Scratch3ControlBlocks extends Scratch3ExtensionBlocks {
                 .execute(
                     () -> {
                         ((WorkspaceBlockImpl) workspaceBlock).setActiveWorkspace();
-                        workspaceBlock.setValue(
-                            "INDEX", new DecimalType(index.getAndIncrement()));
+                        workspaceBlock.setValue("INDEX", new DecimalType(index.getAndIncrement()));
                         child.handle();
                     });
         }

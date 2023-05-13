@@ -19,14 +19,16 @@ public class InternetAvailabilityBgpService {
     public InternetAvailabilityBgpService(EntityContext entityContext, AppProperties appProperties, EntityContextBGPImpl entityContextBGP) {
         ScheduleBuilder<Boolean> builder = entityContextBGP.builder("internet-test");
         Duration interval = appProperties.getInternetTestInterval();
-        ScheduleBuilder<Boolean> internetAccessBuilder = builder.interval(interval).delay(interval).interval(interval)
-                                                                .tap(context -> internetThreadContext = context);
-        internetThreadContext.addValueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
-            if (isInternetUp != isInternetWasUp) {
-                entityContext.event().fireEventIfNotSame("internet-status", isInternetUp ? Status.ONLINE : Status.OFFLINE);
-            }
-            return null;
-        });
+        ScheduleBuilder<Boolean> internetAccessBuilder = builder
+            .interval(interval).delay(interval).interval(interval)
+            .valueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
+                if (isInternetUp != isInternetWasUp) {
+                    entityContext.event().fireEventIfNotSame("internet-status",
+                        isInternetUp ? Status.ONLINE : Status.OFFLINE);
+                }
+                return null;
+            })
+            .tap(context -> internetThreadContext = context);
 
         internetAccessBuilder.execute(context -> InternalUtil.checkUrlAccessible() != null);
     }

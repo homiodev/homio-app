@@ -1,5 +1,7 @@
 package org.homio.app.manager.common;
 
+import static org.homio.app.manager.CacheService.JS_COMPLETIONS;
+
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -101,6 +103,7 @@ public class ClassFinder {
     return getClassesWithParent(parentClass, null);
   }
 
+  @Cacheable(JS_COMPLETIONS)
   public <T> List<Class<? extends T>> getClassesWithParentSpecific(@NotNull Class<T> parentClass, String className, String basePackage) {
     List<Class<? extends T>> foundClasses = new ArrayList<>();
     for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(false)) {

@@ -293,9 +293,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         return this.handleInternal(
             scratch3Block -> {
                 try {
-                    State value = scratch3Block.getEvaluateHandler().handle(this);
-                    this.setValue("value", value);
-                    return value;
+                    return this.setValue(scratch3Block.getEvaluateHandler().handle(this));
                 } catch (Exception ex) {
                     getEntityContext().ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
                     throw new ServerException(ex);
@@ -571,7 +569,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                         }
                     }
                 }
-                this.setValue("value", State.of(value));
+                this.setValue(State.of(value));
             });
     }
 
