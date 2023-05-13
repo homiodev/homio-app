@@ -35,20 +35,18 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void runCodeHandler(WorkspaceBlock workspaceBlock) {
-        runCodeValueEvaluate(workspaceBlock);
+        workspaceBlock.setValue(runCodeValueEvaluate(workspaceBlock));
     }
 
     @SneakyThrows
     private State runCodeValueEvaluate(WorkspaceBlock workspaceBlock) {
-        String scriptEntityId =
-                workspaceBlock.getInputWorkspaceBlock("SCRIPT").getField("SCRIPT_REF");
+        String scriptEntityId = workspaceBlock.getInputWorkspaceBlock("SCRIPT").getField("SCRIPT_REF");
         ScriptEntity scriptEntity = entityContext.getEntity(scriptEntityId);
         if (scriptEntity == null) {
             entityContext.ui().sendErrorMessage("W.ERROR.SCRIPT_NOT_FOUND", scriptEntityId);
         } else {
             State lastValue = ((WorkspaceBlockImpl) workspaceBlock).getLastValue();
-            Object result = scriptService.executeJavaScriptOnce(
-                scriptEntity, null, false, lastValue);
+            Object result = scriptService.executeJavaScriptOnce(scriptEntity, null, false, lastValue);
             return State.of(result);
         }
         return StringType.EMPTY;

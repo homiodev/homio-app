@@ -112,17 +112,14 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
             Environment env = entityContext.getBean(Environment.class);
             JSONObject params = new JSONObject(jsonParams);
-            String envFormattedJavaScript =
-                SpringUtils.replaceEnvValues(
-                    javaScript,
-                    (key, defValue, prefix) -> {
-                        if (params.has(key)) {
-                            return params.get(key).toString();
-                        }
-                        return env.getProperty(key, defValue);
-                    });
-            this.formattedJavaScript =
-                detectReplaceableValues(params, engine, envFormattedJavaScript);
+            String envFormattedJavaScript = SpringUtils.replaceEnvValues(javaScript,
+                (key, defValue, prefix) -> {
+                    if (params.has(key)) {
+                        return params.get(key).toString();
+                    }
+                    return env.getProperty(key, defValue);
+                });
+            this.formattedJavaScript = detectReplaceableValues(params, engine, envFormattedJavaScript);
         }
         return this.formattedJavaScript;
     }

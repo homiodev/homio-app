@@ -124,7 +124,8 @@ public class ScriptService implements ContextCreated {
     public @NotNull State runJavaScript(CompileScriptContext compileScriptContext)
         throws ScriptException, NoSuchMethodException {
         List<Object> script = new ArrayList<>();
-        appendFunc(script, "readyOnClient", "READY_BLOCK", compileScriptContext.getFormattedJavaScript());
+        // TODO: UI scripts should be separated type
+        // appendFunc(script, "readyOnClient", "READY_BLOCK", compileScriptContext.getFormattedJavaScript());
 
         Object value = ((Invocable) compileScriptContext.getCompiledScript().getEngine())
             .invokeFunction("run", compileScriptContext.getJsonParams());
