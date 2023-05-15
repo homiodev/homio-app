@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.bundle.api.entity.BaseEntity;
+import org.homio.bundle.api.entity.EntityFieldMetadata;
 import org.homio.bundle.api.repository.AbstractRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
@@ -41,13 +42,12 @@ public class EntityManager {
     }
 
     @Cacheable(CACHE_CLASS_BY_TYPE)
-    public Class<? extends BaseEntity> getClassByType(String type) {
-        for (Class<? extends BaseEntity> aClass :
-                EntityContextImpl.baseEntityNameToClass.values()) {
+    public Class<? extends EntityFieldMetadata> getUIFieldClassByType(String type) {
+        for (Class<? extends EntityFieldMetadata> aClass : EntityContextImpl.uiFieldClasses.values()) {
             Entity entity = aClass.getDeclaredAnnotation(Entity.class);
             if (entity != null && entity.name().equals(type)
-                    || aClass.getName().equals(type)
-                    || aClass.getSimpleName().equals(type)) {
+                || aClass.getName().equals(type)
+                || aClass.getSimpleName().equals(type)) {
                 return aClass;
             }
         }

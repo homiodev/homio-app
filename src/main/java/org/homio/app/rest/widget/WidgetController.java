@@ -46,6 +46,7 @@ import org.homio.app.model.rest.WidgetDataRequest;
 import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
 import org.homio.app.utils.JavaScriptBuilderImpl;
 import org.homio.bundle.api.entity.BaseEntity;
+import org.homio.bundle.api.entity.EntityFieldMetadata;
 import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.homio.bundle.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.bundle.api.exception.NotFoundException;
@@ -339,7 +340,7 @@ public class WidgetController {
             throw new NotFoundException("Unable to find tab with tabId: " + tabId);
         }
 
-        Class<? extends BaseEntity> typeClass = EntityContextImpl.baseEntityNameToClass.get(type);
+        Class<? extends EntityFieldMetadata> typeClass = EntityContextImpl.uiFieldClasses.get(type);
         WidgetBaseEntity<?> baseEntity = (WidgetBaseEntity<?>) typeClass.getConstructor().newInstance();
 
         baseEntity.setWidgetTabEntity(widgetTabEntity);

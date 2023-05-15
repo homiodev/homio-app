@@ -138,13 +138,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
 
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
-        uiInputBuilder.addTableLayoutButton(
-            "field.layout",
-            8,
-            8,
-            this.getLayout(),
-            null,
-            null,
+        uiInputBuilder.addTableLayoutButton("LAYOUT", 8, 8, getLayout(), null, null,
             (entityContext, params) -> {
                 this.setLayout(params.getString("value"));
                 entityContext.save(this);

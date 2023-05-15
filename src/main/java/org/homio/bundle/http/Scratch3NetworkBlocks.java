@@ -9,17 +9,22 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
@@ -27,14 +32,22 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.homio.app.config.AppProperties;
 import org.homio.bundle.api.EntityContext;
+import org.homio.bundle.api.entity.EntityFieldMetadata;
 import org.homio.bundle.api.state.JsonType;
 import org.homio.bundle.api.state.RawType;
 import org.homio.bundle.api.state.State;
 import org.homio.bundle.api.state.StringType;
+import org.homio.bundle.api.ui.field.UIField;
+import org.homio.bundle.api.ui.field.UIFieldGroup;
+import org.homio.bundle.api.ui.field.UIFieldSlider;
+import org.homio.bundle.api.ui.field.UIFieldType;
+import org.homio.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.bundle.api.util.CommonUtils;
+import org.homio.bundle.api.util.SecureString;
 import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.scratch.MenuBlock;
 import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
@@ -44,20 +57,14 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
     private final DatagramSocket udpSocket = new DatagramSocket();
 
-    private final MenuBlock.StaticMenuBlock<HttpMethod> methodMenu;
-
     public Scratch3NetworkBlocks(EntityContext entityContext, AppProperties appProperties)
         throws SocketException {
         super("#595F4B", entityContext, null, "net");
         this.udpSocket.setBroadcast(true);
 
-        // Menu
-        this.methodMenu = menuStatic("method", HttpMethod.class, HttpMethod.GET);
-
-        blockCommand(10, "request", "HTTP [METHOD] url [URL] | RAW: [RAW] ", this::httpRequestHandler, block -> {
-            block.addArgument("METHOD", this.methodMenu);
+        blockCommand(10, "request", "Http [URL] | [SETTING]", this::httpRequestHandler, block -> {
             block.addArgument("URL", appProperties.getServerSiteURL() + "/sample");
-            block.addArgument("RAW", false);
+            block.addSetting(HttpRequestEntity.class, null);
         });
 
         blockCommand(20, HttpApplyHandler.update_header.name(), "HTTP Header [KEY]/[VALUE]", this::skipCommand, block -> {
@@ -121,14 +128,29 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
     @SneakyThrows
     private void httpRequestHandler(WorkspaceBlock workspaceBlock) {
-        HttpMethod method = workspaceBlock.getMenuValue("METHOD", this.methodMenu);
+        HttpRequestEntity setting = workspaceBlock.getSetting(HttpRequestEntity.class);
         String url = workspaceBlock.getInputString("URL");
 
-        HttpRequestBase request = CommonUtils.newInstance(method.httpRequestBaseClass);
+        RequestConfig config = RequestConfig.custom()
+                                            .setConnectTimeout(setting.connectTimeout * 1000)
+                                            .setSocketTimeout(setting.socketTimeout * 1000).build();
+        HttpRequestBase request = CommonUtils.newInstance(setting.httpMethod.httpRequestBaseClass);
         request.setURI(URI.create(url));
+        switch (setting.auth) {
+            case Basic:
+                String auth = setting.user + ":" + setting.password.asString();
+                byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
+                request.setHeader(AUTHORIZATION, "Basic " + new String(encodedAuth));
+                break;
+            case Digest:
+                throw new IllegalStateException("Not implemented yet");
+            case Bearer:
+                request.setHeader(AUTHORIZATION, "Basic " + setting.token);
+                break;
+        }
         applyParentBlocks(request, workspaceBlock.getParent());
 
-        try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+        try (CloseableHttpClient client = HttpClientBuilder.create().setDefaultRequestConfig(config).build()) {
             HttpResponse response = client.execute(request);
 
             if (workspaceBlock.getInputBoolean("RAW")) {
@@ -191,12 +213,81 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         private final ThrowingBiConsumer<WorkspaceBlock, HttpRequestBase, Exception> applyFn;
     }
 
-    @AllArgsConstructor
-    private enum HttpMethod {
-        GET(HttpGet.class),
-        POST(HttpPost.class),
-        DELETE(HttpDelete.class);
+    @Getter
+    @Setter
+    public static class HttpRequestEntity implements EntityFieldMetadata {
 
-        private final Class<? extends HttpRequestBase> httpRequestBaseClass;
+        @UIField(order = 1, type = UIFieldType.Chips)
+        private HttpMethod httpMethod;
+
+        @UIField(order = 2, type = UIFieldType.Chips)
+        private List<String> httpHeaders;
+
+        @UIField(order = 3, type = UIFieldType.Chips)
+        private List<String> queryParameters;
+
+        @UIField(order = 4)
+        private ResponseType responseType = ResponseType.AutoDetect;
+
+        @UIField(order = 5)
+        @UIFieldShowOnCondition("return context.get('httpMethod') == 'POST'")
+        private String payload;
+
+        @UIField(order = 1)
+        @UIFieldGroup(value = "AUTH", order = 10, borderColor = "#9C1A9C")
+        private HttpAuth auth = HttpAuth.None;
+
+        @UIField(order = 2)
+        @UIFieldGroup(value = "AUTH")
+        @UIFieldShowOnCondition("return context.get('auth') == 'Digest' || context.get('auth') == 'Basic'")
+        private String user;
+
+        @UIField(order = 3)
+        @UIFieldGroup(value = "AUTH")
+        @UIFieldShowOnCondition("return context.get('auth') == 'Digest' || context.get('auth') == 'Basic'")
+        private SecureString password;
+
+        @UIField(order = 4)
+        @UIFieldGroup(value = "AUTH")
+        @UIFieldShowOnCondition("return context.get('auth') == 'Bearer'")
+        private String token;
+
+        @UIField(order = 1)
+        @UIFieldSlider(min = 1, max = 60)
+        @UIFieldGroup(value = "CONNECTION", order = 20, borderColor = "#1A9C8F")
+        private int connectTimeout = 10;
+
+        @UIField(order = 2)
+        @UIFieldSlider(min = 1, max = 60)
+        @UIFieldGroup("CONNECTION")
+        private int socketTimeout = 10;
+
+        @Override
+        public @NotNull String getEntityID() {
+            return "net-http";
+        }
+
+        @Override
+        public @Nullable String getTitle() {
+            return "TITLE.NET_HTTP";
+        }
+
+        @RequiredArgsConstructor
+        public enum HttpMethod {
+            GET(HttpGet.class),
+            POST(HttpPost.class),
+            DELETE(HttpDelete.class),
+            HEAD(HttpHead.class);
+
+            private final Class<? extends HttpRequestBase> httpRequestBaseClass;
+        }
+
+        public enum HttpAuth {
+            None, Basic, Digest, Bearer
+        }
+
+        public enum ResponseType {
+            AutoDetect, String, Binary, Json
+        }
     }
 }

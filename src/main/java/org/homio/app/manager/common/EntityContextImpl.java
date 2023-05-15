@@ -87,6 +87,7 @@ import org.homio.bundle.api.EntityContextHardware;
 import org.homio.bundle.api.entity.BaseEntity;
 import org.homio.bundle.api.entity.DeviceBaseEntity;
 import org.homio.bundle.api.entity.DisableCacheEntity;
+import org.homio.bundle.api.entity.EntityFieldMetadata;
 import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.model.HasEntityIdentifier;
@@ -137,7 +138,7 @@ public class EntityContextImpl implements EntityContext {
     // count how much addBundle/removeBundle invokes
     public static int BUNDLE_UPDATE_COUNT = 0;
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
-    public static Map<String, Class<? extends BaseEntity>> baseEntityNameToClass;
+    public static Map<String, Class<? extends EntityFieldMetadata>> uiFieldClasses;
     public static Map<String, AbstractRepository> repositoriesByPrefix;
     private static final Map<String, PureRepository> pureRepositories = new HashMap<>();
 
@@ -762,7 +763,7 @@ public class EntityContextImpl implements EntityContext {
             pureRepositories.keySet().removeAll(pureRepositoryMap.keySet());
             repositories.keySet().removeAll(context.getBeansOfType(AbstractRepository.class).keySet());
         }
-        baseEntityNameToClass = classFinder.getClassesWithParent(BaseEntity.class).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
+        uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
 
         rebuildRepositoryByPrefixMap();
     }
@@ -800,8 +801,11 @@ public class EntityContextImpl implements EntityContext {
 
     private void rebuildRepositoryByPrefixMap() {
         repositoriesByPrefix = new HashMap<>();
-        for (Class<? extends BaseEntity> baseEntity : baseEntityNameToClass.values()) {
-            repositoriesByPrefix.put(CommonUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
+        for (Class<? extends EntityFieldMetadata> metaEntity : uiFieldClasses.values()) {
+            if (BaseEntity.class.isAssignableFrom(metaEntity)) {
+                Class<? extends BaseEntity> baseEntity = (Class<? extends BaseEntity>) metaEntity;
+                repositoriesByPrefix.put(CommonUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
+            }
         }
     }
 
@@ -812,11 +816,10 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private void createTableIndexes() {
-        List<Class<? extends BaseEntity>> list = classFinder.getClassesWithParent(BaseEntity.class).stream()
-                                                            .filter(
-                                                                l -> !(WidgetBaseEntity.class.isAssignableFrom(l) || DeviceBaseEntity.class.isAssignableFrom(
-                                                                    l)))
-                                                            .collect(Collectors.toList());
+        List<Class<? extends BaseEntity>> list = classFinder
+            .getClassesWithParent(BaseEntity.class).stream().filter(
+                l -> !(WidgetBaseEntity.class.isAssignableFrom(l) || DeviceBaseEntity.class.isAssignableFrom(l)))
+            .collect(Collectors.toList());
         list.add(DeviceBaseEntity.class);
         list.add(WidgetBaseEntity.class);
 

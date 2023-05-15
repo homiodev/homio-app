@@ -64,6 +64,7 @@ import org.homio.app.utils.UIFieldSelectionUtil;
 import org.homio.app.utils.UIFieldUtils;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.BaseEntity;
+import org.homio.bundle.api.entity.EntityFieldMetadata;
 import org.homio.bundle.api.entity.ImageEntity;
 import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.exception.ServerException;
@@ -191,9 +192,10 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @GetMapping("/{type}/context")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public List<ItemContext> getItemsBootstrapContext(@PathVariable("type") String type, @RequestParam(value = "subType", defaultValue = "") String subType) {
+    public List<ItemContext> getItemsBootstrapContext(
+        @PathVariable("type") String type,
+        @RequestParam(value = "subType", defaultValue = "") String subType) {
         String key = type + subType;
-        // itemsBootstrapContextMap.clear(); // TODO: remove this
         itemsBootstrapContextMap.computeIfAbsent(key, s -> {
             List<ItemContext> itemContexts = new ArrayList<>();
 
@@ -230,7 +232,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Set<OptionModel> getImplementationsByBaseType(@PathVariable("type") String type) {
         // type nay be base class also
-        Class<?> entityClassByType = entityManager.getClassByType(type);
+        Class<?> entityClassByType = entityManager.getUIFieldClassByType(type);
         if (entityClassByType == null) {
             putTypeToEntityIfNotExists(type);
             if (!typeToEntityClassNames.containsKey(type)) {
@@ -325,7 +327,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @GetMapping("/{type}/actions")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Collection<UIInputEntity> getItemsActions(@PathVariable("type") String type) {
-        Class<?> entityClassByType = entityManager.getClassByType(type);
+        Class<?> entityClassByType = entityManager.getUIFieldClassByType(type);
         return UIFieldUtils.fetchUIActionsFromClass(entityClassByType, entityContext);
     }
 
@@ -333,11 +335,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @RolesAllowed(ADMIN_ROLE)
     public BaseEntity<?> create(@PathVariable("type") String type) {
         log.debug("Request creating entity by type: <{}>", type);
-        Class<? extends BaseEntity> typeClass = EntityContextImpl.baseEntityNameToClass.get(type);
+        Class<? extends EntityFieldMetadata> typeClass = EntityContextImpl.uiFieldClasses.get(type);
         if (typeClass == null) {
             throw new IllegalArgumentException("Unable to find base entity with type: " + type);
         }
-        BaseEntity<?> baseEntity = CommonUtils.newInstance(typeClass);
+        BaseEntity<?> baseEntity = (BaseEntity<?>) CommonUtils.newInstance(typeClass);
         return entityContext.save(baseEntity);
     }
 
@@ -483,7 +485,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             BaseEntity<?> owner = entityContext.getEntityRequire(entityID);
 
             for (String type : jsonObject.keySet()) {
-                Class<? extends BaseEntity> className = entityManager.getClassByType(type);
+                Class<? extends BaseEntity> className = (Class<? extends BaseEntity>) entityManager.getUIFieldClassByType(type);
                 JSONObject entityFields = jsonObject.getJSONObject(type);
                 BaseEntity<?> newEntity = objectMapper.readValue(entityFields.toString(), className);
                 FieldUtils.writeField(newEntity, mappedBy, owner, true);
@@ -551,7 +553,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         Object classEntity = entityContext.getEntity(entityID);
         if (classEntity == null) {
             // i.e in case we load Widget
-            Class<?> aClass = entityManager.getClassByType(entityID);
+            Class<?> aClass = entityManager.getUIFieldClassByType(entityID);
             if (aClass == null) {
                 List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
                 aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.get(0);
@@ -770,7 +772,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     private List<Class<?>> findAllClassImplementationsByType(String type) {
-        Class<?> classByType = entityManager.getClassByType(type);
+        Class<?> classByType = entityManager.getUIFieldClassByType(type);
         List<Class<?>> classTypes = new ArrayList<>();
         if (classByType == null) {
             putTypeToEntityIfNotExists(type);
