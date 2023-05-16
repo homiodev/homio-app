@@ -1,7 +1,10 @@
 package org.homio.bundle.http;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.pivovarit.function.ThrowingBiConsumer;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -9,7 +12,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +31,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -39,8 +44,9 @@ import org.homio.bundle.api.state.State;
 import org.homio.bundle.api.state.StringType;
 import org.homio.bundle.api.ui.field.UIField;
 import org.homio.bundle.api.ui.field.UIFieldGroup;
+import org.homio.bundle.api.ui.field.UIFieldKeyValue;
+import org.homio.bundle.api.ui.field.UIFieldKeyValue.Option;
 import org.homio.bundle.api.ui.field.UIFieldSlider;
-import org.homio.bundle.api.ui.field.UIFieldType;
 import org.homio.bundle.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.api.util.SecureString;
@@ -62,9 +68,9 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         super("#595F4B", entityContext, null, "net");
         this.udpSocket.setBroadcast(true);
 
-        blockCommand(10, "request", "Http [URL] | [SETTING]", this::httpRequestHandler, block -> {
+        blockCommand(10, "request", "HTTP [URL] | [SETTING]", this::httpRequestHandler, block -> {
             block.addArgument("URL", appProperties.getServerSiteURL() + "/sample");
-            block.addSetting(HttpRequestEntity.class, null);
+            block.addSetting(HttpRequestEntity.class);
         });
 
         blockCommand(20, HttpApplyHandler.update_header.name(), "HTTP Header [KEY]/[VALUE]", this::skipCommand, block -> {
@@ -77,9 +83,8 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
             block.addArgument("PWD", "password");
         });
 
-        blockCommand(40, HttpApplyHandler.update_bearer_auth.name(), "HTTP Bearer auth [TOKEN]", this::skipCommand, block -> {
-            block.addArgument("TOKEN", "token");
-        });
+        blockCommand(40, HttpApplyHandler.update_bearer_auth.name(), "HTTP Bearer auth [TOKEN]", this::skipCommand, block ->
+            block.addArgument("TOKEN", "token"));
 
         blockCommand(50, HttpApplyHandler.update_payload.name(), "HTTP Body payload [PAYLOAD]", this::skipCommand, block -> {
             block.addArgument("PAYLOAD");
@@ -135,7 +140,6 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
                                             .setConnectTimeout(setting.connectTimeout * 1000)
                                             .setSocketTimeout(setting.socketTimeout * 1000).build();
         HttpRequestBase request = CommonUtils.newInstance(setting.httpMethod.httpRequestBaseClass);
-        request.setURI(URI.create(url));
         switch (setting.auth) {
             case Basic:
                 String auth = setting.user + ":" + setting.password.asString();
@@ -148,23 +152,46 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
                 request.setHeader(AUTHORIZATION, "Basic " + setting.token);
                 break;
         }
+
+        // build headers
+        if (setting.httpHeaders != null) {
+            Map<String, String> headers = OBJECT_MAPPER.readValue(setting.httpHeaders, new TypeReference<>() {});
+            for (Entry<String, String> headerEntry : headers.entrySet()) {
+                request.setHeader(headerEntry.getKey(), headerEntry.getValue());
+            }
+        }
+
+        // Build query uri
+        URIBuilder uriBuilder = new URIBuilder(URI.create(url));
+        if (setting.queryParameters != null) {
+            Map<String, String> queries = OBJECT_MAPPER.readValue(setting.queryParameters, new TypeReference<>() {});
+            for (Entry<String, String> queryEntry : queries.entrySet()) {
+                uriBuilder.addParameter(queryEntry.getKey(), queryEntry.getValue());
+            }
+        }
+        request.setURI(uriBuilder.build());
+
+        // override parameters
         applyParentBlocks(request, workspaceBlock.getParent());
 
         try (CloseableHttpClient client = HttpClientBuilder.create().setDefaultRequestConfig(config).build()) {
             HttpResponse response = client.execute(request);
-
-            if (workspaceBlock.getInputBoolean("RAW")) {
-                workspaceBlock.setValue(new RawType(IOUtils.toByteArray(response.getEntity().getContent())));
-            } else {
-                workspaceBlock.setValue(convertResult(response));
-            }
+            workspaceBlock.setValue(convertResult(response, setting));
         }
     }
 
     @SneakyThrows
-    private State convertResult(HttpResponse response) {
+    private State convertResult(HttpResponse response, HttpRequestEntity setting) {
+        switch (setting.responseType) {
+            case String:
+                return new StringType(IOUtils.toString(response.getEntity().getContent(), UTF_8));
+            case Binary:
+                return new RawType(IOUtils.toByteArray(response.getEntity().getContent()));
+            case Json:
+                return new JsonType(IOUtils.toString(response.getEntity().getContent(), UTF_8));
+        }
         Header contentType = response.getFirstHeader("Content-Type");
-        String rawValue = IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8);
+        String rawValue = IOUtils.toString(response.getEntity().getContent(), UTF_8);
         if (contentType != null) {
             String type = contentType.getValue();
             if (type.startsWith(MediaType.APPLICATION_JSON_VALUE)) {
@@ -217,14 +244,27 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
     @Setter
     public static class HttpRequestEntity implements EntityFieldMetadata {
 
-        @UIField(order = 1, type = UIFieldType.Chips)
-        private HttpMethod httpMethod;
+        @UIField(order = 1)
+        private HttpMethod httpMethod = HttpMethod.GET;
 
-        @UIField(order = 2, type = UIFieldType.Chips)
-        private List<String> httpHeaders;
+        @UIField(order = 2, icon = "fa fa-list", fullWidth = true)
+        @UIFieldKeyValue(maxSize = 10, keyPlaceholder = "Header name", valuePlaceholder = "Header value",
+                         options = {
+                             @Option(key = "Accept", values = {"text/plain", "text/html", "application/json", "application/xml"}),
+                             @Option(key = "Accept-Encoding", values = {"gzip", "deflate", "compress", "br"}),
+                             @Option(key = "Authorization", values = {}),
+                             @Option(key = "Content-Type", values = {"text/css", "text/plain", "text/html", "application/json", "application/xml",
+                                 "application/zip"}),
+                             @Option(key = "Cache-Control", values = {"max-age=0", "max-age=86400", "no-cache"}),
+                             @Option(key = "User-Agent", values = {"Mozilla/5.0"}),
+                             @Option(key = "Location", values = {}),
+                             @Option(key = "Host", values = {})
+                         })
+        private String httpHeaders;
 
-        @UIField(order = 3, type = UIFieldType.Chips)
-        private List<String> queryParameters;
+        @UIField(order = 3, icon = "fa fa-cheese", fullWidth = true)
+        @UIFieldKeyValue(maxSize = 10, keyPlaceholder = "Query name", valuePlaceholder = "Query value")
+        private String queryParameters;
 
         @UIField(order = 4)
         private ResponseType responseType = ResponseType.AutoDetect;

@@ -20,13 +20,13 @@ import org.homio.bundle.api.ui.field.UIField;
 import org.homio.bundle.api.ui.field.UIFieldColorPicker;
 import org.homio.bundle.api.ui.field.UIFieldGroup;
 import org.homio.bundle.api.ui.field.UIFieldIgnore;
+import org.homio.bundle.api.ui.field.UIFieldKeyValue;
+import org.homio.bundle.api.ui.field.UIFieldKeyValue.KeyValueType;
 import org.homio.bundle.api.ui.field.UIFieldLayout;
 import org.homio.bundle.api.ui.field.UIFieldLayout.HorizontalAlign;
 import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.bundle.api.ui.field.UIFieldSlider;
 import org.homio.bundle.api.ui.field.UIFieldType;
-import org.homio.bundle.api.ui.field.UIKeyValueField;
-import org.homio.bundle.api.ui.field.UIKeyValueField.KeyValueType;
 import org.homio.bundle.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
@@ -89,7 +89,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 1)
-    @UIKeyValueField(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
+    @UIFieldKeyValue(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
                      defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
     @UIFieldGroup(value = "COLORS", order = 10)
     public String getColors() {

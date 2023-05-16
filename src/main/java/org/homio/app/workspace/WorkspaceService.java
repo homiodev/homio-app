@@ -38,7 +38,7 @@ import org.homio.bundle.api.workspace.WorkspaceEntity;
 import org.homio.bundle.api.workspace.WorkspaceEventListener;
 import org.homio.bundle.api.workspace.scratch.Scratch3Block;
 import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.homio.bundle.cb.Scratch3ComputerBoardFSBlocks;
+import org.homio.bundle.fs.Scratch3FSBlocks;
 import org.homio.bundle.hardware.Scratch3HardwareBlocks;
 import org.homio.bundle.http.Scratch3NetworkBlocks;
 import org.homio.bundle.media.Scratch3AudioBlocks;
@@ -69,7 +69,7 @@ public class WorkspaceService implements ContextRefreshed {
                 Scratch3NetworkBlocks.class,
                 Scratch3HardwareBlocks.class,
                 Scratch3UIBlocks.class,
-                Scratch3ComputerBoardFSBlocks.class,
+                Scratch3FSBlocks.class,
                 Scratch3ImageEditBlocks.class);
 
     private final Duration TIME_WAIT_OLD_WORKSPACE = Duration.ofSeconds(3);
@@ -328,8 +328,7 @@ public class WorkspaceService implements ContextRefreshed {
     }
 
     private void loadExtensions() {
-        for (Scratch3ExtensionBlocks scratch3ExtensionBlock :
-                entityContext.getBeansOfType(Scratch3ExtensionBlocks.class)) {
+        for (Scratch3ExtensionBlocks scratch3ExtensionBlock : entityContext.getBeansOfType(Scratch3ExtensionBlocks.class)) {
             initScratch3ExtensionBlocks(scratch3ExtensionBlock);
         }
     }
@@ -338,10 +337,7 @@ public class WorkspaceService implements ContextRefreshed {
         scratch3ExtensionBlock.init();
 
         if (!ID_PATTERN.matcher(scratch3ExtensionBlock.getId()).matches()) {
-            throw new IllegalArgumentException(
-                    "Wrong Scratch3Extension: <"
-                            + scratch3ExtensionBlock.getId()
-                            + ">. Must contains [a-z] or '-'");
+            throw new IllegalArgumentException("Wrong Scratch3Extension: <" + scratch3ExtensionBlock.getId() + ">. Must contains [a-z] or '-'");
         }
 
         if (!systemScratches.contains(scratch3ExtensionBlock.getClass())) {

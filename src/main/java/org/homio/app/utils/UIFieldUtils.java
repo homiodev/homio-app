@@ -6,6 +6,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -61,6 +62,8 @@ import org.homio.bundle.api.ui.field.UIFieldGroup;
 import org.homio.bundle.api.ui.field.UIFieldIconPicker;
 import org.homio.bundle.api.ui.field.UIFieldIgnore;
 import org.homio.bundle.api.ui.field.UIFieldIgnoreParent;
+import org.homio.bundle.api.ui.field.UIFieldKeyValue;
+import org.homio.bundle.api.ui.field.UIFieldKeyValue.Option;
 import org.homio.bundle.api.ui.field.UIFieldLayout;
 import org.homio.bundle.api.ui.field.UIFieldLinkToEntity;
 import org.homio.bundle.api.ui.field.UIFieldNumber;
@@ -73,7 +76,6 @@ import org.homio.bundle.api.ui.field.UIFieldSlider;
 import org.homio.bundle.api.ui.field.UIFieldTableLayout;
 import org.homio.bundle.api.ui.field.UIFieldTitleRef;
 import org.homio.bundle.api.ui.field.UIFieldType;
-import org.homio.bundle.api.ui.field.UIKeyValueField;
 import org.homio.bundle.api.ui.field.action.ActionInputParameter;
 import org.homio.bundle.api.ui.field.action.UIActionButton;
 import org.homio.bundle.api.ui.field.action.UIActionInput;
@@ -558,17 +560,30 @@ public class UIFieldUtils {
         }
 
         if (String.class.getSimpleName().equals(entityUIMetaData.getType())) {
-            UIKeyValueField uiKeyValueField = fieldContext.getDeclaredAnnotation(UIKeyValueField.class);
+            UIFieldKeyValue uiKeyValueField = fieldContext.getDeclaredAnnotation(UIFieldKeyValue.class);
             if (uiKeyValueField != null) {
                 jsonTypeMetadata.put("maxSize", uiKeyValueField.maxSize());
                 jsonTypeMetadata.set("keyType", OBJECT_MAPPER.valueToTree(uiKeyValueField.keyType()));
                 jsonTypeMetadata.set("valueType", OBJECT_MAPPER.valueToTree(uiKeyValueField.valueType()));
-                jsonTypeMetadata.put("defaultKey", uiKeyValueField.defaultKey());
-                jsonTypeMetadata.put("defaultValue", uiKeyValueField.defaultValue());
+                putIfNonEmpty(jsonTypeMetadata, "defaultKey", uiKeyValueField.defaultKey());
+                putIfNonEmpty(jsonTypeMetadata, "defaultValue", uiKeyValueField.defaultValue());
                 jsonTypeMetadata.put("keyFormat", uiKeyValueField.keyFormat());
                 jsonTypeMetadata.put("valueFormat", uiKeyValueField.valueFormat());
                 jsonTypeMetadata.put("keyValueType", uiKeyValueField.keyValueType().name());
-                jsonTypeMetadata.put("showKey", uiKeyValueField.showKey());
+
+                putIfNonEmpty(jsonTypeMetadata, "keyPlaceholder", uiKeyValueField.keyPlaceholder());
+                putIfNonEmpty(jsonTypeMetadata, "valuePlaceholder", uiKeyValueField.valuePlaceholder());
+
+                putIfTrue(jsonTypeMetadata, "showKey", uiKeyValueField.showKey());
+
+                /*ArrayNode options = OBJECT_MAPPER.createArrayNode();
+                for (Option option : uiKeyValueField.options()) {
+                    options.add(OBJECT_MAPPER.createObjectNode().put("key", option.key()).putPOJO("values", option.values()));
+                }
+                if (!options.isEmpty()) {
+                    jsonTypeMetadata.putPOJO("keyValueOptions", options);
+                }*/
+
                 entityUIMetaData.setType("KeyValue");
             }
         }

@@ -1,5 +1,7 @@
 package org.homio.app.workspace;
 
+import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
+
 import com.pivovarit.function.ThrowingRunnable;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -253,6 +255,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         return this.fields.containsKey(fieldName);
     }
 
+    @SneakyThrows
+    @Override
+    public <T> T getSetting(Class<T> settingClass) {
+        String ref = getInputString("SETTING");
+        String content = workspaceTabHolder.getBlocks().get(ref).getField("TEXT");
+        return OBJECT_MAPPER.readValue(content, settingClass);
+    }
+
     @Override
     public void setValue(String key, State value) {
         if (key == null) {
@@ -355,7 +365,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             } else if (item instanceof String) {
                 return new JSONObject((String) item);
             } else {
-                return new JSONObject(CommonUtils.OBJECT_MAPPER.writeValueAsString(item));
+                return new JSONObject(OBJECT_MAPPER.writeValueAsString(item));
             }
         }
         return defaultValue;
