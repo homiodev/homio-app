@@ -2,7 +2,7 @@ package org.homio.app.model.entity.widget.impl.video;
 
 import java.util.ArrayList;
 import java.util.List;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.bundle.api.model.OptionModel;

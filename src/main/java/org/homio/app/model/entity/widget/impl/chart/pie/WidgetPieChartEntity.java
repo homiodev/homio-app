@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.widget.impl.chart.pie;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.homio.bundle.api.exception.ProhibitedExecution;

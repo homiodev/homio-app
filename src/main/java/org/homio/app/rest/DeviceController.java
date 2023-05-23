@@ -1,12 +1,11 @@
 package org.homio.app.rest;
 
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
-import javax.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import org.homio.bundle.api.model.OptionModel;
 import org.homio.bundle.bluetooth.BluetoothBundleEntrypoint;
-import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -28,7 +27,7 @@ public class DeviceController {
     }
 
     @PutMapping("/characteristic/{uuid}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
         bluetoothBundleEntrypoint.setDeviceCharacteristic(uuid, value);
     }

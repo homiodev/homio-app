@@ -11,19 +11,19 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module;
+import com.fasterxml.jackson.datatype.hibernate5.jakarta.Hibernate5JakartaModule;
 import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import lombok.extern.log4j.Log4j2;
-import net.rossillo.spring.web.mvc.CacheControlHandlerInterceptor;
+import org.homio.app.config.cacheControl.CacheControlHandlerInterceptor;
 import org.homio.app.json.jsog.JSOGGenerator;
 import org.homio.app.json.jsog.JSOGResolver;
 import org.homio.app.manager.CacheService;
@@ -70,9 +70,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
-import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -157,14 +155,6 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
   }
 
   @Bean
-  public CommonsMultipartResolver multipartResolver() {
-    CommonsMultipartResolver resolver = new CommonsMultipartResolver();
-    resolver.setDefaultEncoding("UTF-8");
-    resolver.setMaxUploadSize(20971520);
-    return resolver;
-  }
-
-  @Bean
   public CacheManager cacheManager() {
     return CacheService.createCacheManager();
   }
@@ -176,8 +166,8 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
   @Bean
   public ObjectMapper objectMapper() {
-    Hibernate5Module hibernate5Module = new Hibernate5Module();
-    hibernate5Module.disable(Hibernate5Module.Feature.USE_TRANSIENT_ANNOTATION);
+    Hibernate5JakartaModule hibernate5Module = new Hibernate5JakartaModule();
+    hibernate5Module.disable(Hibernate5JakartaModule.Feature.USE_TRANSIENT_ANNOTATION);
 
     SimpleModule simpleModule = new SimpleModule();
     simpleModule.addSerializer(SecureString.class, new JsonSerializer<>() {
@@ -276,7 +266,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     FilterRegistrationBean<Filter> registrationBean = new FilterRegistrationBean<>();
     registrationBean.setFilter(new OncePerRequestFilter() {
       @Override
-      protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain)
           throws IOException, ServletException {
         applicationContext.getBean(CacheService.class).flushDelayedUpdates();
         filterChain.doFilter(request, response);
@@ -285,11 +275,6 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
     registrationBean.addUrlPatterns("/map", "/dashboard", "/items/*", "/hardware*/", "/one_wire/*", "/admin/*");
 
     return registrationBean;
-  }
-
-  @Override
-  public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-    configurer.favorPathExtension(false);
   }
 
   @Override

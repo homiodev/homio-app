@@ -1,4 +1,5 @@
 {
+  "SERVER_STARTED": "Started: {{VALUE}}. Time: {{TIME}}",
   "ERROR": {
     "PORT_NOT_AVAILABLE": "Port {{PORT}} not available",
     "UNKNOWN_HOST": "Unknown host: {{HOST}}"

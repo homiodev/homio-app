@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.impl.chart.line;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;

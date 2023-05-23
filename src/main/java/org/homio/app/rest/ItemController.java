@@ -1,9 +1,17 @@
 package org.homio.app.rest;
 
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
+import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE_AUTHORIZE;
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.Nullable;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import java.awt.image.BufferedImage;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
@@ -27,12 +35,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
-import javax.annotation.PostConstruct;
-import javax.annotation.security.RolesAllowed;
-import javax.persistence.Entity;
-import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -40,13 +42,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import net.rossillo.spring.web.mvc.CacheControl;
-import net.rossillo.spring.web.mvc.CachePolicy;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.app.LogService;
+import org.homio.app.config.cacheControl.CacheControl;
+import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.ImageService;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -89,6 +91,7 @@ import org.homio.bundle.api.util.CommonUtils;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -250,7 +253,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     /*@PostMapping(value = "/{entityID}/logs/debug/{value}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void setEntityDebugLogLevel(@PathVariable("entityID") String entityID, @PathVariable("value") boolean debug) {
         BaseEntity entity = entityContext.getEntity(entityID);
         if (entity instanceof HasEntityLog) {
@@ -263,7 +266,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }*/
 
     @GetMapping(value = "/{entityID}/logs")
-    @RolesAllowed(LOG_RESOURCE)
+    @PreAuthorize(LOG_RESOURCE_AUTHORIZE)
     public ResponseEntity<StreamingResponseBody> getLogs(@PathVariable("entityID") String entityID) {
         Path logPath = logService.getEntityLogsFile(entityContext.getEntityRequire(entityID));
         if (logPath == null) {
@@ -287,7 +290,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping(value = "/{entityID}/action")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel callAction(@PathVariable("entityID") String entityID,
         @RequestBody ActionRequestModel requestModel) {
         return callActionWithBinary(entityID, requestModel, null);
@@ -309,7 +312,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }*/
 
     @PostMapping(value = "/{entityID}/actionWithBinary")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel callActionWithBinary(
         @PathVariable("entityID") String entityID,
         @RequestPart ActionRequestModel actionRequestModel,
@@ -332,7 +335,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("/{type}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public BaseEntity<?> create(@PathVariable("type") String type) {
         log.debug("Request creating entity by type: <{}>", type);
         Class<? extends EntityFieldMetadata> typeClass = EntityContextImpl.uiFieldClasses.get(type);
@@ -344,19 +347,19 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("/{entityID}/copy")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public BaseEntity<?> copyEntityByID(@PathVariable("entityID") String entityID) {
         return entityContext.copyEntity(entityContext.getEntityRequire(entityID));
     }
 
     @DeleteMapping("/{entityID}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void removeEntity(@PathVariable("entityID") String entityID) {
         entityContext.delete(entityID);
     }
 
     @GetMapping("/{entityID}/dependencies")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public List<String> canRemove(@PathVariable("entityID") String entityID) {
         BaseEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
@@ -475,7 +478,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @SneakyThrows
     @PutMapping("/{entityID}/mappedBy/{mappedBy}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public BaseEntity<?> putToItem(@PathVariable("entityID") String entityID, @PathVariable("mappedBy") String mappedBy, @RequestBody String json) {
         // to avoid problem with lost values in case of parallel call of putToItem rest API
         // of course we may use hashtable for locks but this method not fires often at all
@@ -500,7 +503,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @SneakyThrows
     @DeleteMapping("/{entityID}/field/{field}/item/{entityToRemove}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public BaseEntity<?> removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("field") String field,
         @PathVariable("entityToRemove") String entityToRemove) {
         BaseEntity<?> entity = entityContext.getEntityRequire(entityID);
@@ -514,7 +517,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }*/
 
     @PostMapping("/{entityID}/block")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateBlockPosition(
         @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPosition position) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
@@ -534,7 +537,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @PostMapping("/{entityID}/uploadImageBase64")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ImageEntity uploadImageBase64(@PathVariable("entityID") String entityID, @RequestBody BufferedImage bufferedImage) {
         try {
             return imageService.upload(entityID, bufferedImage);

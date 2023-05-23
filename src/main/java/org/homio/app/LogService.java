@@ -2,7 +2,6 @@ package org.homio.app;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
-import com.jcraft.jsch.JSch;
 import com.pivovarit.function.ThrowingConsumer;
 import com.sshtools.common.logger.DefaultLoggerContext;
 import com.sshtools.common.logger.Log;
@@ -65,7 +64,6 @@ public class LogService
         implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
 
     private static final org.apache.logging.log4j.Logger maverickLogger = LogManager.getLogger("com.ssh.maverick");
-    private static final org.apache.logging.log4j.Logger jschLogger = LogManager.getLogger("com.ssh.jsch");
 
     private static final GlobalAppender globalAppender = new GlobalAppender();
     private static final Set<String> excludeDebugPackages =
@@ -105,33 +103,6 @@ public class LogService
                 }
             }
         });
-        JSch.setLogger(new com.jcraft.jsch.Logger() {
-
-            @Override
-            public boolean isEnabled(int level) {
-                return true;
-            }
-
-            @Override
-            public void log(int level, String message) {
-                jschLogger.log(getLogLevel(level), "Jsch: " + message);
-            }
-
-            private Level getLogLevel(int level) {
-                switch (level) {
-                    case com.jcraft.jsch.Logger.DEBUG:
-                        return Level.DEBUG;
-                    case com.jcraft.jsch.Logger.WARN:
-                        return Level.WARN;
-                    case com.jcraft.jsch.Logger.ERROR:
-                        return Level.ERROR;
-                    case com.jcraft.jsch.Logger.FATAL:
-                        return Level.FATAL;
-                    default:
-                        return Level.INFO;
-                }
-            }
-        });
     }
 
     @SneakyThrows
@@ -154,7 +125,7 @@ public class LogService
 
             // hack: add global logger for every log since DEBUG level.
             configuration.addFilter(new AbstractFilter() {
-                public void logIfRequire(Logger logger, Level level, Marker marker, String message, Throwable t, Object... params) {
+                public void logIfRequire(Logger logger, Level level, Marker marker, String message, Throwable ignored, Object... params) {
                     if (level.intLevel() == Level.DEBUG.intLevel() && disabledDebugPackage(logger.getName())) {
                         return;
                     }

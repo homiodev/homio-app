@@ -8,7 +8,7 @@ import static org.homio.bundle.api.ui.field.action.UIActionInput.Type.textarea;
 
 import com.sshtools.common.publickey.SshPrivateKeyFile;
 import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.manager.common.EntityContextImpl;

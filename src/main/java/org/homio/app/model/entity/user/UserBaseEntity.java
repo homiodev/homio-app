@@ -5,9 +5,9 @@ import static org.homio.bundle.api.util.Constants.GUEST_ROLE;
 import static org.homio.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Entity;
 import java.util.HashSet;
 import java.util.Set;
-import javax.persistence.Entity;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,9 +39,15 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
     private static final Set<String> RESOURCES = new HashSet<>();
 
     public static final String LOG_RESOURCE = "ROLE_LOG";
+    public static final String LOG_RESOURCE_AUTHORIZE = "hasRole('" + LOG_RESOURCE + "')";
+
     public static final String SSH_RESOURCE = "ROLE_SSH";
+    public static final String SSH_RESOURCE_AUTHORIZE = "hasRole('" + SSH_RESOURCE + "')";
+
     public static final String MQTT_RESOURCE = "ROLE_MQTT";
+
     public static final String FILE_MANAGER_RESOURCE = "ROLE_FILE_MANAGER";
+    public static final String FILE_MANAGER_RESOURCE_AUTHORIZE = "hasRole('" + FILE_MANAGER_RESOURCE + "')";
 
     static {
         RESOURCES.add(LOG_RESOURCE);

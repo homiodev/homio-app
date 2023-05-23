@@ -1,6 +1,7 @@
 package org.homio.app.workspace;
 
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -9,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import javax.annotation.security.RolesAllowed;
+import jakarta.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -32,6 +33,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -137,7 +139,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PostMapping("/{entityID}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void saveWorkspace(@PathVariable("entityID") String entityID, @RequestBody String json) {
         WorkspaceEntity workspaceEntity = entityContext.getEntity(entityID);
         if (workspaceEntity == null) {
@@ -148,7 +150,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PostMapping("/variable")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void saveVariables(@RequestBody String json) {
         /*JSONObject request = new JSONObject(json);
         Map<String, WorkspaceGroup> groups = entityContext.findAll(WorkspaceGroup.class).stream().collect(Collectors.toMap(WorkspaceGroup::getGroupId, g -> g));
@@ -214,7 +216,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PostMapping("/tab/{name}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
         WorkspaceEntity workspaceEntity = entityContext.getEntity(WorkspaceEntity.PREFIX + name);
         if (workspaceEntity == null) {
@@ -232,7 +234,7 @@ public class WorkspaceController {
 
     @SneakyThrows
     @PutMapping("/tab/{entityID}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void renameWorkspaceTab(@PathVariable("entityID") String entityID, @RequestBody OptionModel option) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {
@@ -253,7 +255,7 @@ public class WorkspaceController {
     }
 
     @DeleteMapping("/tab/{entityID}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void deleteWorkspaceTab(@PathVariable("entityID") String entityID) {
         WorkspaceEntity entity = entityContext.getEntity(entityID);
         if (entity == null) {

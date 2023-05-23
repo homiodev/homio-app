@@ -1,29 +1,35 @@
-package org.homio.app.cb;
+package org.homio.app.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.Entity;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import jakarta.persistence.Entity;
 import lombok.extern.log4j.Log4j2;
-import org.homio.app.cb.fs.ComputerBoardFileSystem;
+import org.homio.app.service.LocalFileSystemProvider;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
 import org.homio.bundle.api.entity.types.MicroControllerBaseEntity;
+import org.homio.bundle.api.fs.archive.ArchiveUtil;
+import org.homio.bundle.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.bundle.api.model.Status;
 import org.homio.bundle.api.ui.field.UIField;
 import org.homio.bundle.api.ui.field.UIFieldIgnore;
 import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.bundle.api.util.CommonUtils;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 @Log4j2
-public class ComputerBoardEntity extends MicroControllerBaseEntity<ComputerBoardEntity>
-    implements BaseFileSystemEntity<ComputerBoardEntity, ComputerBoardFileSystem> {
+public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity>
+    implements BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
 
     public static final String PREFIX = "cbe_";
     public static final String DEFAULT_DEVICE_ENTITY_ID = PREFIX + CommonUtils.APP_UUID;
 
     @Override
     public String getDefaultName() {
-        return "Computer board";
+        return "Local device";
     }
 
     @UIField(order = 200)
@@ -41,7 +47,7 @@ public class ComputerBoardEntity extends MicroControllerBaseEntity<ComputerBoard
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
@@ -71,13 +77,18 @@ public class ComputerBoardEntity extends MicroControllerBaseEntity<ComputerBoard
     }
 
     @Override
-    public ComputerBoardFileSystem buildFileSystem(EntityContext entityContext) {
-        return new ComputerBoardFileSystem(this);
+    public LocalFileSystemProvider buildFileSystem(EntityContext entityContext) {
+        return new LocalFileSystemProvider(this);
     }
 
     @Override
     public long getConnectionHashCode() {
         return 0;
+    }
+
+    @Override
+    public boolean isShowHiddenFiles() {
+        return true;
     }
 
     @Override
@@ -100,7 +111,12 @@ public class ComputerBoardEntity extends MicroControllerBaseEntity<ComputerBoard
     public static void ensureDeviceExists(EntityContext entityContext) {
         if (entityContext.getEntity(DEFAULT_DEVICE_ENTITY_ID) == null) {
             log.info("Save default compute board device");
-            entityContext.save(new ComputerBoardEntity().setEntityID(DEFAULT_DEVICE_ENTITY_ID));
+            entityContext.save(new LocalBoardEntity().setEntityID(DEFAULT_DEVICE_ENTITY_ID));
         }
+    }
+
+    @Override
+    public Set<String> getSupportArchiveFormats() {
+        return Stream.of(ArchiveUtil.ArchiveFormat.values()).map(ArchiveFormat::getName).collect(Collectors.toSet());
     }
 }

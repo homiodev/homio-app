@@ -3,7 +3,7 @@ package org.homio.app.model.entity.widget.impl.color;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;

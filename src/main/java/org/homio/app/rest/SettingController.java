@@ -3,6 +3,7 @@ package org.homio.app.rest;
 import static org.homio.app.model.entity.SettingEntity.getKey;
 import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
 
 import java.util.Collection;
@@ -16,7 +17,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import javax.annotation.security.RolesAllowed;
+import jakarta.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
@@ -41,6 +42,7 @@ import org.homio.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderC
 import org.homio.bundle.api.ui.field.UIFieldType;
 import org.homio.bundle.api.util.Lang;
 import org.json.JSONObject;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -120,7 +122,7 @@ public class SettingController implements ContextRefreshed {
     }
 
     @DeleteMapping("/{entityID}/package")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void unInstallPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
@@ -135,7 +137,7 @@ public class SettingController implements ContextRefreshed {
     }
 
     @PostMapping("/{entityID}/package")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void installPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
@@ -163,7 +165,7 @@ public class SettingController implements ContextRefreshed {
         }
     }
 
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     @DeleteMapping(value = "/{entityID}", consumes = "text/plain")
     public void removeSettingValue(@PathVariable("entityID") String entityID, @RequestBody String value) throws Exception {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);

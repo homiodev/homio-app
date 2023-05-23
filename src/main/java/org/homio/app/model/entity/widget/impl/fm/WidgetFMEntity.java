@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.impl.fm;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.attributes.HasLayout;

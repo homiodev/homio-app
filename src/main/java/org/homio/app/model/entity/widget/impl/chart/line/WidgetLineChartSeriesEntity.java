@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.impl.chart.line;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.homio.bundle.api.entity.widget.ability.HasTimeValueSeries;

@@ -1,8 +1,11 @@
 package org.homio.app.rest.widget;
 
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -10,16 +13,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.annotation.security.RolesAllowed;
-import javax.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import net.rossillo.spring.web.mvc.CacheControl;
-import net.rossillo.spring.web.mvc.CachePolicy;
+import org.homio.app.config.cacheControl.CacheControl;
+import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.manager.WidgetService;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -64,6 +65,7 @@ import org.homio.bundle.api.video.BaseFFMPEGVideoStreamEntity;
 import org.homio.bundle.api.widget.WidgetBaseTemplate;
 import org.homio.bundle.api.widget.WidgetJSBaseTemplate;
 import org.json.JSONObject;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -155,7 +157,7 @@ public class WidgetController {
     }
 
     @PostMapping("/video/action")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void fireVideoAction(@RequestBody VideoActionRequest request) {
         WidgetVideoSeriesEntity series = getSeriesEntity(request);
         try {
@@ -185,7 +187,7 @@ public class WidgetController {
     }
 
     @PostMapping("/value/update")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateValue(@RequestBody SingleValueRequest<Object> request) {
         HasSetSingleValueDataSource source = getEntity(request.entityID);
         DataSourceUtil.setValue(entityContext, source.getSetValueDataSource(),
@@ -203,7 +205,7 @@ public class WidgetController {
     }
 
     @PostMapping("/slider/update")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void handleSlider(@RequestBody SingleValueRequest<Number> request) {
         WidgetSliderSeriesEntity series = getSeriesEntity(request);
         DataSourceUtil.setValue(entityContext, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields(),
@@ -221,7 +223,7 @@ public class WidgetController {
     }
 
     @PostMapping("/display/update")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void handleButtonClick(@RequestBody SingleValueRequest<String> request) {
         WidgetDisplayEntity entity = getEntity(request.entityID);
         DataSourceUtil.setValue(entityContext, entity.getSetValueDataSource(), entity.getSetValueDynamicParameterFields(),
@@ -251,7 +253,7 @@ public class WidgetController {
     }
 
     @PostMapping("/colors/update")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateColorsValue(@RequestBody ColorValueRequest request) {
         WidgetColorEntity entity = entityContext.getEntityRequire(request.entityID);
         switch (request.type) {
@@ -279,7 +281,7 @@ public class WidgetController {
     }
 
     @PostMapping("/toggle/update")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateToggleValue(@RequestBody SingleValueRequest<Boolean> request) {
         WidgetToggleSeriesEntity series = getSeriesEntity(request);
         DataSourceUtil.setValue(entityContext, series.getSetValueDataSource(), series.getSetValueDynamicParameterFields(),
@@ -332,7 +334,7 @@ public class WidgetController {
     }
 
     @PostMapping("/create/{tabId}/{type}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public BaseEntity<?> createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
@@ -347,26 +349,26 @@ public class WidgetController {
         return entityContext.save(baseEntity);
     }
 
-    @RolesAllowed(ADMIN_ROLE)
-    @PostMapping("/create/{tabId}/{type}/{bundle}")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    @PostMapping("/create/{tabId}/{type}/{addon}")
     public BaseEntity<?> createExtraWidget(
         @PathVariable("tabId") String tabId,
         @PathVariable("type") String type,
-        @PathVariable("bundle") String bundle) {
-        log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, bundle: <{}>", type, tabId, bundle);
+        @PathVariable("addon") String addon) {
+        log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, bundle: <{}>", type, tabId, addon);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
         if (widgetTabEntity == null) {
             throw new NotFoundException("Unable to find tab with tabId: " + tabId);
         }
 
-        Collection<WidgetBaseTemplate> widgets = entityContext.getBeansOfTypeByBundles(WidgetBaseTemplate.class).get(bundle);
+        Collection<WidgetBaseTemplate> widgets = entityContext.getBeansOfTypeByBundles(WidgetBaseTemplate.class).get(addon);
         if (widgets == null) {
             throw new NotFoundException("Unable to find bundle: " + tabId + " or widgets in bundle");
         }
         WidgetBaseTemplate template = widgets.stream()
                                              .filter(w -> w.getClass().getSimpleName().equals(type))
                                              .findAny()
-                                             .orElseThrow(() -> new NotFoundException("Unable to find widget: " + type + " in bundle: " + bundle));
+                                             .orElseThrow(() -> new NotFoundException("Unable to find widget: " + type + " in bundle: " + addon));
 
         String js = template.toJavaScript();
         String params = "";
@@ -399,7 +401,7 @@ public class WidgetController {
 
     @SneakyThrows
     @PostMapping("/tab/{name}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public OptionModel createWidgetTab(@PathVariable("name") String name) {
         BaseEntity<?> widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
@@ -411,7 +413,7 @@ public class WidgetController {
 
     @SneakyThrows
     @PutMapping("/tab/{tabId}/{name}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void renameWidgetTab(@PathVariable("tabId") String tabId, @PathVariable("name") String name) {
         WidgetTabEntity entity = getWidgetTabEntity(tabId);
         WidgetTabEntity newEntity = entityContext.getEntityByName(name, WidgetTabEntity.class);
@@ -422,7 +424,7 @@ public class WidgetController {
     }
 
     @DeleteMapping("/tab/{tabId}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void deleteWidgetTab(@PathVariable("tabId") String tabId) {
         if (WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(tabId)) {
             throw new IllegalStateException("Unable to delete main tab");

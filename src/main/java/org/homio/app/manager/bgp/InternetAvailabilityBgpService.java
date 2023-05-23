@@ -41,6 +41,9 @@ public class InternetAvailabilityBgpService {
                     command.run();
                 } catch (Exception ex) {
                     log.error("Error occurs while run command: " + name, ex);
+                } finally {
+                    // remove listener after fire
+                    internetThreadContext.removeValueListener(name);
                 }
                 return true;
             }

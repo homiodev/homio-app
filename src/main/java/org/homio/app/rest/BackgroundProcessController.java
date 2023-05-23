@@ -1,13 +1,12 @@
 package org.homio.app.rest;
 
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
-import javax.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.json.BgpProcessResponse;
 import org.homio.app.manager.common.EntityContextImpl;
-import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,7 +22,7 @@ public class BackgroundProcessController {
     private final EntityContextImpl entityContext;
 
     @DeleteMapping("/{name}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void cancelProcess(@PathVariable("name") String name) {
         entityContext.bgp().cancelThread(name);
     }
@@ -34,7 +33,7 @@ public class BackgroundProcessController {
     }
 
     /* @GetMapping("/dynamic/stop/{url}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void stopScriptByName(@PathVariable String url) {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);
         if (scriptEntity != null) {
@@ -44,7 +43,7 @@ public class BackgroundProcessController {
     }*/
 
     /* @GetMapping("/dynamic/{url}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void dynamicCall(@PathVariable String url, @RequestParam(value = "json", required = false) String json) throws
     Exception {
         ScriptEntity scriptEntity = scriptRepository.getByURL(url);

@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.impl.display;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.bundle.api.ui.field.UIField;
 import org.homio.bundle.api.ui.field.UIFieldCodeEditor;

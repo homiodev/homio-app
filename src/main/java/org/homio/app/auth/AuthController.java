@@ -2,8 +2,7 @@ package org.homio.app.auth;
 
 import static java.lang.String.format;
 
-import java.security.Principal;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -22,6 +21,7 @@ import org.json.JSONObject;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,12 +40,14 @@ public class AuthController {
     private final AppProperties appProperties;
 
     @GetMapping("/status")
-    public StatusResponse getStatus(Principal user) {
+    public StatusResponse getStatus(UsernamePasswordAuthenticationToken user) {
         if (user == null) {
             return new StatusResponse(401, null);
         }
-        String email = (String) ((UsernamePasswordAuthenticationToken) user).getDetails();
-        addUserNotificationBlock(email, false);
+        User principal = (User) user.getPrincipal();
+        String credentials = principal.getUsername();
+        String[] items = credentials.split("~~~");
+        addUserNotificationBlock(items[0], items[1], false);
         String version = format("%s-%s-%s", appProperties.getVersion(), EntityContextImpl.BUNDLE_UPDATE_COUNT, CommonUtils.RUN_COUNT);
         return new StatusResponse(200, version);
     }
@@ -60,10 +62,12 @@ public class AuthController {
         UserBaseEntity.log.info("Login <{}>", credentials.getEmail());
         try {
             String username = credentials.getEmail();
-            val user = new UsernamePasswordAuthenticationToken(username, credentials.getPassword());
-            Authentication authentication = authenticationManager.authenticate(user);
+            val userToken = new UsernamePasswordAuthenticationToken(username, credentials.getPassword());
+            Authentication authentication = authenticationManager.authenticate(userToken);
             UserBaseEntity.log.info("Login success for <{}>", credentials.getEmail());
-            addUserNotificationBlock(username, true);
+            User user = (User) authentication.getPrincipal();
+            String[] items = user.getUsername().split("~~~");
+            addUserNotificationBlock(items[0], items[1], true);
             return jwtTokenProvider.createToken(username, authentication);
         } catch (Exception ex) {
             UserBaseEntity.log.info("Login failed for <{}>", credentials.getEmail(), ex);
@@ -71,16 +75,18 @@ public class AuthController {
         }
     }
 
-    private void addUserNotificationBlock(String username, boolean replace) {
-        String key = "user-" + username;
+    private void addUserNotificationBlock(String entityID, String email, boolean replace) {
+        String key = "user-" + entityID;
         if (replace || !entityContext.ui().isHasNotificationBlock(key)) {
-            entityContext.ui().addNotificationBlock(key, key, "fas fa-user", "#AAAC2C", builder ->
-                builder.addButtonInfo("", "", "", Color.RED,
-                    "fas fa-right-from-bracket", "W.INFO.LOGOUT",
-                    "W.CONFIRM.LOGOUT", (ignore, params) -> {
-                        entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
-                        return null;
-                    }));
+            entityContext.ui().addNotificationBlock(key, email, "fas fa-user", "#AAAC2C", builder ->
+                builder.visibleForUser(email)
+                       .linkToEntity(entityContext.getEntity(entityID))
+                       .addButtonInfo(key, "", "", "", Color.RED,
+                           "fas fa-right-from-bracket", "W.INFO.LOGOUT",
+                           "W.CONFIRM.LOGOUT", (ignore, params) -> {
+                               entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
+                               return null;
+                           }));
         }
     }
 

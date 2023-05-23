@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.impl.chart.doughnut;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;

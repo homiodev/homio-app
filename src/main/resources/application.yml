@@ -1,6 +1,7 @@
 rootDir: /opt/homio
 zigbee2mqtt-version: 1.30.0
 
+
 app:
   version: @project.version@
   internet-test-interval: PT10S
@@ -17,6 +18,9 @@ app:
     node: https://github.com/homiodev/static-files/raw/master/nodejs.7z
 
 spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   banner:
     location: classpath:/banner.txt
   datasource:

@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.impl.slider;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.attributes.HasLayout;

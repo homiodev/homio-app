@@ -1,6 +1,6 @@
 package org.homio.app.repository.crud.base;
 
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 import org.homio.bundle.api.model.HasEntityIdentifier;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.support.JpaRepositoryFactory;

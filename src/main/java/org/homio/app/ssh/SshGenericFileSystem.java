@@ -1,365 +1,208 @@
 package org.homio.app.ssh;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import com.pivovarit.function.ThrowingRunnable;
 import com.sshtools.client.SshClient;
 import com.sshtools.client.sftp.SftpClientTask;
 import com.sshtools.client.sftp.SftpFile;
 import com.sshtools.common.sftp.SftpStatusException;
 import com.sshtools.common.ssh.SshException;
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.SystemUtils;
-import org.apache.commons.lang3.reflect.FieldUtils;
+import org.homio.app.ssh.SshGenericFileSystem.SshFile;
+import org.homio.app.ssh.SshGenericFileSystem.SshFileService;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextBGP.ThreadContext;
-import org.homio.bundle.api.fs.FileSystemProvider;
-import org.homio.bundle.api.fs.TreeNode;
+import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
+import org.homio.bundle.api.fs.BaseCachedFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class SshGenericFileSystem implements FileSystemProvider {
-
-    private SshGenericEntity entity;
-    private final EntityContext entityContext;
-    private long connectionHashCode;
-    private final LoadingCache<String, List<SftpFile>> fileCache;
-    private final ReentrantLock lock = new ReentrantLock();
-    private final Condition condition;
-    private SftpClientTask sftpClient;
-    private ThreadContext<Void> sftpClientThread;
+public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGenericEntity, SshFile, SshFileService> {
 
     public SshGenericFileSystem(SshGenericEntity entity, EntityContext entityContext) {
+        super(entity, entityContext);
         this.entity = entity;
-        this.entityContext = entityContext;
-        this.condition = lock.newCondition();
+    }
 
-        this.fileCache = CacheBuilder.newBuilder().
-                                     expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
-                public @NotNull List<SftpFile> load(@NotNull String id) throws SftpStatusException, SshException {
-                    SftpClientTask client = getSftpClient();
-                    if (client == null) {
-                        throw new SshException("Ssh client is null", -1);
-                    }
-                    SftpFile parent = client.openDirectory(id);
-                    return client.readDirectory(parent).stream().filter(sftpFile -> {
-                        String filename = sftpFile.getFilename();
-                        return !filename.equals(".") && !filename.equals("..");
-                    }).collect(Collectors.toList());
+    @Override
+    protected @NotNull SshFileService createService() {
+        return new SshFileService();
+    }
+
+    @RequiredArgsConstructor
+    public class SshFile implements FsFileEntity<SshFile> {
+
+        private final SftpFile file;
+
+        @Override
+        public @NotNull String getAbsolutePath() {
+            return file.getAbsolutePath();
+        }
+
+        @Override
+        public boolean isDirectory() throws SftpStatusException, SshException {
+            return file.isDirectory();
+        }
+
+        @Override
+        public Long getSize() throws SftpStatusException, SshException {
+            return isDirectory() ? null : file.getAttributes().getSize().longValue();
+        }
+
+        @Override
+        public Long getModifiedDateTime() throws SftpStatusException, SshException {
+            return file.getAttributes().getModifiedDateTime().getTime();
+        }
+
+        @Override
+        @SneakyThrows
+        public @Nullable SshFile getParent(boolean stub) {
+            if (!stub) {
+                SftpFile parent = file.getParent();
+                return parent == null ? null : new SshFile(parent);
+            }
+            if (file.getAbsolutePath().lastIndexOf('/') == -1) {
+                return null;
+            }
+            Path parentPath = Paths.get(file.getAbsolutePath()).getParent();
+            if (isPathEmpty(parentPath)) {
+                return null;
+            }
+            return new SshFile(new SftpFile(parentPath.toString(), null) {
+                @Override
+                public boolean isDirectory() {
+                    return true;
                 }
-            });
-    }
-
-    @Override
-    public long getTotalSpace() {
-        return 0;
-    }
-
-    @Override
-    public long getUsedSpace() {
-        return 0;
-    }
-
-    @Override
-    public boolean restart(boolean force) {
-        try {
-            if (!force && connectionHashCode == entity.getConnectionHashCode()) {
-                return true;
-            }
-            dispose();
-            getChildren(entity.getFileSystemRoot());
-            entity.setStatusOnline();
-            connectionHashCode = entity.getConnectionHashCode();
-            return true;
-        } catch (Exception ex) {
-            entity.setStatusError(ex);
-            return false;
-        }
-    }
-
-    @Override
-    public void setEntity(Object entity) {
-        this.entity = (SshGenericEntity) entity;
-        restart(false);
-    }
-
-    @Override
-    @SneakyThrows
-    public InputStream getEntryInputStream(@NotNull String id) {
-        try (InputStream stream = getSftpClientRequire().getInputStream(id)) {
-            return new ByteArrayInputStream(IOUtils.toByteArray(stream));
-        }
-    }
-
-    @SneakyThrows
-    @Override
-    public Set<TreeNode> toTreeNodes(@NotNull Set<String> ids) {
-        Set<TreeNode> fmPaths = new HashSet<>();
-        for (String id : ids) {
-            Path parent = Paths.get(id).getParent();
-            fileCache.get(fixPath(parent)).stream()
-                     .filter(f -> f.getAbsolutePath().equals(id)).findAny()
-                     .ifPresent(sftpFile -> fmPaths.add(buildTreeNode(sftpFile)));
-        }
-        return fmPaths;
-    }
-
-    @SneakyThrows
-    @Override
-    public TreeNode delete(@NotNull Set<String> ids) {
-        List<SftpFile> files = new ArrayList<>();
-        for (String id : ids) {
-            if (id.equals("")) {
-                throw new IllegalStateException("Path must be specified");
-            }
-            SftpFile sftpFile = getSftpFile(id, true);
-            if (sftpFile != null) {
-                getSftpClientRequire().rm(id);
-                this.fileCache.invalidate(fixPath(Paths.get(id).getParent()));
-                files.add(sftpFile);
-            }
-        }
-        return buildRoot(files);
-    }
-
-    @Override
-    @SneakyThrows
-    public TreeNode create(@NotNull String parentId, @NotNull String name, boolean isDir, UploadOption uploadOption) {
-        String fullPath = fixPath(Paths.get(parentId).resolve(name));
-        SftpFile existedFile = getSftpFile(fullPath, false);
-
-        if (uploadOption != UploadOption.Replace) {
-            if (existedFile != null) {
-                if (uploadOption == UploadOption.SkipExist) {
+            }) {
+                @Override
+                public Long getModifiedDateTime() {
                     return null;
-                } else if (uploadOption == UploadOption.Error) {
-                    throw new FileAlreadyExistsException("File " + name + " already exists");
                 }
+            };
+        }
+
+        @Override
+        public boolean hasChildren() {
+            return true;
+        }
+
+        @Override
+        public BaseFileSystemEntity getEntity() {
+            return entity;
+        }
+    }
+
+    public class SshFileService implements BaseFSService<SshFile> {
+
+        private ThreadContext<Void> serviceThread;
+        private SftpClientTask sftpService;
+
+        @Override
+        public void close() {
+            if (serviceThread != null && sftpService != null) {
+                serviceThread.cancel();
+                sftpService = null;
+                serviceThread = null;
             }
         }
-        SftpClientTask client = getSftpClientRequire();
-        if (isDir) {
-            client.mkdir(fullPath);
-        } else {
-            client.put(new ByteArrayInputStream(new byte[0]), fullPath);
+
+        @Override
+        public @NotNull InputStream getInputStream(@NotNull String id) throws Exception {
+            return getSftpService().getInputStream(id);
         }
-        this.fileCache.invalidate(parentId);
-        return buildRoot(Collections.singleton(getSftpFile(fullPath, true)));
-    }
 
-    private String fixPath(Path path) {
-        return SystemUtils.IS_OS_WINDOWS ? path.toString().replace("\\", "/") : path.toString();
-    }
+        @Override
+        public void mkdir(@NotNull String id) throws Exception {
+            getSftpService().mkdirs(id);
+        }
 
-    @SneakyThrows
-    @Override
-    public TreeNode rename(@NotNull String id, @NotNull String newName, UploadOption uploadOption) {
-        List<SftpFile> files = fileCache.get(id);
-        if (files.size() == 1) {
-            SftpFile file = files.get(0);
-            clearCache(file);
-            FieldUtils.writeDeclaredField(file, "filename", newName, true);
+        @Override
+        public void put(@NotNull InputStream inputStream, @NotNull String id) throws Exception {
+            getSftpService().put(inputStream, id);
+        }
 
-            if (uploadOption != UploadOption.Replace) {
-                SftpFile existedFile = getSftpFile(newName, true);
-                if (existedFile != null) {
-                    if (uploadOption == UploadOption.SkipExist) {
-                        return null;
-                    } else if (uploadOption == UploadOption.Error) {
-                        throw new FileAlreadyExistsException("File " + newName + " already exists");
-                    }
+        @Override
+        public void rename(@NotNull String oldName, @NotNull String newName) throws Exception {
+            getSftpService().rename(oldName, newName);
+        }
+
+        @Override
+        public SshFile getFile(@NotNull String id) throws Exception {
+            return new SshFile(getSftpService().openFile(id));
+        }
+
+        @Override
+        @SneakyThrows
+        public List<SshFile> readChildren(@NotNull String parentId) {
+            SftpClientTask service = getSftpService();
+            SftpFile parent = service.openDirectory(parentId);
+            return service.readDirectory(parent).stream().filter(sftpFile -> {
+                String filename = sftpFile.getFilename();
+                return !filename.equals(".") && !filename.equals("..");
+            }).map(SshFile::new).collect(Collectors.toList());
+        }
+
+        @Override
+        @SneakyThrows
+        public boolean rm(SshFile sshFile) {
+            getSftpService().rm(sshFile.getId());
+            return true;
+        }
+
+        @Override
+        public void recreate() {
+
+        }
+
+        private @NotNull SftpClientTask getSftpService() {
+            if (sftpService == null || sftpService.isClosed()) {
+                Condition waitCondition = lock.newCondition();
+                inLock(condition::signal);
+                if (serviceThread != null) {
+                    serviceThread.cancel();
                 }
-            }
+                serviceThread = entityContext.bgp().builder("sftp-client").execute(() -> {
+                    try (SshClient sshClient = entity.createSshClient()) {
+                        sshClient.runTask(new SftpClientTask(sshClient) {
 
-            getSftpClientRequire().rename(file.getFilename(), newName);
-            //   this.fileCache.put(file.getId(), Collections.singletonList(file));
-
-            return buildRoot(Collections.singleton(file));
-        }
-        throw new IllegalStateException("File '" + id + "' not found");
-    }
-
-    @Override
-    public TreeNode copy(@NotNull Collection<TreeNode> entries, @NotNull String targetId, UploadOption uploadOption) {
-        List<SftpFile> result = new ArrayList<>();
-        this.fileCache.invalidateAll();
-        copyEntries(entries, targetId, uploadOption, result);
-        return buildRoot(result);
-    }
-
-    @Override
-    public Set<TreeNode> loadTreeUpToChild(@Nullable String parent, @NotNull String id) {
-        return getChildrenRecursively("");
-    }
-
-    @Override
-    @SneakyThrows
-    public @NotNull Set<TreeNode> getChildren(@NotNull String parentId) {
-        List<SftpFile> files = fileCache.get(appendRoot(parentId));
-        Stream<SftpFile> stream = files.stream();
-        if (!entity.isShowHiddenFiles()) {
-            stream = stream.filter(s -> !s.getFilename().startsWith("."));
-        }
-        return stream.map(this::buildTreeNode).collect(Collectors.toSet());
-    }
-
-    @Override
-    public Set<TreeNode> getChildrenRecursively(@NotNull String parentId) {
-        throw new IllegalArgumentException("");
-    }
-
-    private TreeNode buildRoot(Collection<SftpFile> result) {
-        Path root = Paths.get(entity.getFileSystemRoot());
-        TreeNode rootPath = new TreeNode(true, false, "", "", 0L, 0L, null, null);
-        // ftpFile.getName() return FQN
-        for (SftpFile ftpFile : result) {
-            Path pathCursor = root;
-            TreeNode cursor = rootPath;
-
-            //build parent directories
-            for (Path pathItem : root.relativize(Paths.get(ftpFile.getAbsolutePath()).getParent())) {
-                pathCursor = pathCursor.resolve(pathItem);
-                SftpFile folder = getSftpFile(fixPath(pathCursor), true);
-                if (folder == null) {
-                    throw new IllegalStateException("Error in fetching ssh parent dir");
-                }
-                cursor = cursor.addChild(buildTreeNode(folder));
-            }
-            cursor.addChild(buildTreeNode(ftpFile));
-        }
-        return rootPath;
-    }
-
-    @SneakyThrows
-    private TreeNode buildTreeNode(SftpFile file) {
-        boolean isDirectory = file.isDirectory();
-        long fileSize = file.getAttributes().getSize().longValue();
-        boolean hasChildren = fileSize != 6;
-        return new TreeNode(
-            isDirectory,
-            isDirectory && !hasChildren,
-            file.getFilename(),
-            file.getAbsolutePath(),
-            fileSize,
-            file.getAttributes().getModifiedDateTime().getTime(),
-            this, null);
-    }
-
-    private @NotNull SftpClientTask getSftpClientRequire() {
-        SftpClientTask client = getSftpClient();
-        if (client == null) {
-            throw new IllegalStateException("Sftp client is null");
-        }
-        return client;
-    }
-
-    private @Nullable SftpClientTask getSftpClient() {
-        if (sftpClient == null || sftpClient.isClosed()) {
-            if (sftpClientThread != null) {
-                sftpClientThread.cancel();
-            }
-            try {
-                lock.lock();
-                condition.signal();
-            } finally {
-                lock.unlock();
-            }
-            sftpClientThread = entityContext.bgp().builder("sftp-client").execute(() -> {
-                try (SshClient sshClient = entity.createSshClient()) {
-                    sshClient.runTask(new SftpClientTask(sshClient) {
-
-                        protected void doSftp() {
-                            sftpClient = this;
-                            try {
-                                lock.lock();
-                                condition.await();
-                            } catch (InterruptedException ignore) {
-                                sftpClient = null;
-                            } finally {
-                                lock.unlock();
+                            protected void doSftp() {
+                                sftpService = this;
+                                try {
+                                    lock.lock();
+                                    waitCondition.signal();
+                                    condition.await();
+                                } catch (InterruptedException ignore) {
+                                    sftpService = null;
+                                } finally {
+                                    waitCondition.signal();
+                                    lock.unlock();
+                                }
                             }
-                        }
-                    });
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
+                        });
+                    } catch (Exception e) {
+                        inLock(waitCondition::signal);
+                        throw new RuntimeException(e);
+                    }
+                });
+                inLock(waitCondition::await);
+            }
+            return sftpService;
         }
-        return sftpClient;
-    }
-
-    private void clearCache(SftpFile file) {
-        this.fileCache.invalidate(file.getAbsolutePath());
     }
 
     @SneakyThrows
-    private void copyEntries(Collection<TreeNode> entries, String targetId, UploadOption uploadOption, List<SftpFile> result) {
-        SftpClientTask client = getSftpClientRequire();
-        for (TreeNode entry : entries) {
-            String path = Paths.get(targetId).resolve(entry.getName()).toString();
-            if (entry.getAttributes().isDir()) {
-                client.mkdir(path);
-                result.add(new SftpFile(path, client.get(path)));
-                copyEntries(entry.getFileSystem().getChildren(entry), path, uploadOption, result);
-            } else {
-                try (InputStream stream = entry.getInputStream()) {
-                    List<SftpFile> children = fileCache.get(entry.getParent().getName());
-                    SftpFile sftpFile = children.stream().filter(c -> c.getFilename().equals(entry.getName())).findAny().orElse(null);
-                    if (sftpFile != null) {
-                        if (uploadOption == UploadOption.Append) {
-                                /*byte[] prependContent = IOUtils.toByteArray(ftpClient.retrieveFileStream(path));
-                                byte[] content = Bytes.concat(prependContent, IOUtils.toByteArray(stream));
-                                ftpClient.appendFile(path, new ByteArrayInputStream(content));
-
-                                client.putFiles();*/
-                            throw new IllegalArgumentException("");
-                        } else {
-                            client.put(stream, path);
-                        }
-                    } else {
-                        client.put(stream, path);
-                    }
-                    result.add(new SftpFile(path, client.get(path)));
-                }
-            }
-        }
-    }
-
-    @Nullable
-    private SftpFile getSftpFile(String fullPath, boolean fromCache) {
+    private void inLock(ThrowingRunnable<Exception> handler) {
         try {
-            if (fromCache) {
-                String parentId = fixPath(Paths.get(fullPath).getParent());
-                return fileCache.get(parentId).stream().filter(c -> c.getAbsolutePath().equals(fullPath)).findAny().orElse(null);
-            } else {
-                return getSftpClientRequire().openFile(fullPath);
-            }
-        } catch (Exception ignored) {
+            lock.lock();
+            handler.run();
+        } finally {
+            lock.unlock();
         }
-        return null;
-    }
-
-    private String appendRoot(String parentId) {
-        if (!parentId.startsWith(entity.getFileSystemRoot())) {
-            return fixPath(Paths.get(entity.getFileSystemRoot()).resolve(parentId));
-        }
-        return parentId;
     }
 }

@@ -5,7 +5,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;

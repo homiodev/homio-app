@@ -1,10 +1,11 @@
 package org.homio.app.notification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.homio.bundle.api.ui.field.ProgressBar;
 import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
 
 @Getter
+@Setter
 @RequiredArgsConstructor
 public class NotificationBlock {
 
@@ -23,39 +25,47 @@ public class NotificationBlock {
     private final String name;
     private final String icon;
     private final String color;
-    @JsonIgnore
-    private final String email;
 
-    @Setter
     private String version;
 
-    @Setter
     private Collection<UIInputEntity> actions;
-    @Setter
+
     private Collection<UIInputEntity> contextMenuActions;
 
     private Status status;
+
     private String statusColor;
 
-    private final List<Info> infoItems = new ArrayList<>();
-
-    private List<String> versions;
-    private BiFunction<ProgressBar, String, ActionResponseModel> updateHandler;
-    @Setter
     private boolean updating;
 
-    public void setStatus(Status status) {
-        this.status = status;
-        this.statusColor = status == null ? null : status.getColor();
+    private List<String> versions;
+
+    private String link;
+    private String linkType;
+
+    @JsonIgnore
+    private final Map<String, Info> infoItemMap = new ConcurrentHashMap<>();
+
+    @JsonIgnore
+    private BiFunction<ProgressBar, String, ActionResponseModel> updateHandler;
+
+    @JsonIgnore
+    private Runnable fireOnFetchHandler;
+
+    @JsonIgnore
+    private String email;
+
+    public Collection<Info> getInfoItems() {
+        return infoItemMap.values();
     }
 
-    public void addInfo(String info, String color, String icon, String iconColor, String buttonIcon, String buttonText,
+    public void addInfo(String key, String info, String color, String icon, String iconColor, String buttonIcon, String buttonText,
         String confirmMessage, UIActionHandler handler) {
         Info infoItem = new Info(info, color, icon, iconColor, buttonIcon, buttonText, confirmMessage, handler);
         if (handler != null) {
             infoItem.actionEntityID = String.valueOf(Objects.hash(info, icon, buttonIcon, buttonText));
         }
-        infoItems.add(infoItem);
+        infoItemMap.put(key, infoItem);
     }
 
     public void setUpdatable(BiFunction<ProgressBar, String, ActionResponseModel> updateHandler, List<String> versions) {
@@ -63,8 +73,8 @@ public class NotificationBlock {
         this.updateHandler = updateHandler;
     }
 
-    public void remove(String info) {
-        infoItems.removeIf(item -> info.equals(item.getInfo()));
+    public boolean remove(String key) {
+        return infoItemMap.remove(key) != null;
     }
 
     @Getter

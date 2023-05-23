@@ -23,7 +23,7 @@ public class UserEntityDetailsService implements UserDetailsService {
         }
         Set<String> roles = user.getRoles();
         return User
-            .withUsername(user.getEntityID()) // entity id because it cached and fast to use from entityContext.getEntity(username)
+            .withUsername(user.getEntityID() + "~~~" + name)
             .password(user.getPassword().asString())
             .authorities(roles.toArray(new String[0]))
             .build();

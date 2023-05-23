@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.impl;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.setting.dashboard.WidgetBorderColorMenuSetting;

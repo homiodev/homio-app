@@ -1,11 +1,14 @@
 package org.homio.app.rest;
 
-import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
+import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
 import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -22,8 +25,6 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import javax.annotation.security.RolesAllowed;
-import javax.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -31,10 +32,10 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
-import net.rossillo.spring.web.mvc.CacheControl;
-import net.rossillo.spring.web.mvc.CachePolicy;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.homio.app.config.cacheControl.CacheControl;
+import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.js.assistant.impl.CodeParser;
 import org.homio.app.js.assistant.impl.ParserContext;
 import org.homio.app.js.assistant.model.Completion;
@@ -69,6 +70,7 @@ import org.json.JSONObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -77,7 +79,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -91,14 +92,6 @@ public class UtilsController {
     private final EntityContextImpl entityContext;
     private final ScriptService scriptService;
     private final CodeParser codeParser;
-
-    @GetMapping("/test")
-    public String test(
-        @RequireExactOne @RequestParam(name = "user1") String user,
-        @RequireExactOne @RequestParam(name = "company") String company,
-        @RequireExactOne boolean all) {
-        return "!";
-    }
 
     @PutMapping("/multiDynamicUpdates")
     public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {
@@ -229,7 +222,7 @@ public class UtilsController {
     }
 
     @PostMapping("/code/run")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public RunScriptResponse runScriptOnce(@RequestBody RunScriptRequest request)
         throws IOException {
         RunScriptResponse runScriptResponse = new RunScriptResponse();
@@ -271,7 +264,7 @@ public class UtilsController {
     }
 
     @PostMapping("/notification/action")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel notificationAction(@RequestBody HeaderActionRequest request) {
         try {
             return entityContext.ui().handleNotificationAction(request.entityID, request.actionEntityID, request.value);
@@ -282,14 +275,14 @@ public class UtilsController {
 
     @SneakyThrows
     @PostMapping("/header/dialog/{entityID}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
         entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
             OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
     }
 
     @DeleteMapping("/header/dialog/{entityID}")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void discardDialog(@PathVariable("entityID") String entityID) {
         entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
     }

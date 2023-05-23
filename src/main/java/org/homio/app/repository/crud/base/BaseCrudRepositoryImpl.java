@@ -1,10 +1,10 @@
 package org.homio.app.repository.crud.base;
 
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
+import jakarta.persistence.EntityManager;
 import org.homio.bundle.api.model.HasEntityIdentifier;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
+import org.springframework.transaction.annotation.Transactional;
 
 @NoRepositoryBean
 public class BaseCrudRepositoryImpl<T extends HasEntityIdentifier>

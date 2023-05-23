@@ -14,9 +14,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -25,7 +26,6 @@ import org.springframework.validation.beanvalidation.MethodValidationPostProcess
 @Configuration
 @EnableWebSecurity
 @AllArgsConstructor
-@EnableGlobalMethodSecurity(jsr250Enabled = true)
 public class SecurityConfiguration {
 
     private final PasswordEncoder passwordEncoder;
@@ -45,17 +45,19 @@ public class SecurityConfiguration {
         // http.csrf().csrfTokenRepository(csrfTokenRepository()).;
 
         // No session will be created or used by spring security
-        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+        http.sessionManagement(session ->
+            session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         // Entry points
         if (appProperties.isDisableSecurity()) {
             log.warn("\n-----------------------------------"
                 + "\n!!! TouchHome security disabled !!!"
                 + "\n-----------------------------------");
-            http.authorizeRequests().antMatchers(WebSocketConfig.ENDPOINT, "/rest/**").permitAll();
+            http.authorizeHttpRequests(authorize ->
+                authorize.requestMatchers(WebSocketConfig.ENDPOINT, "/rest/**").permitAll());
         } else {
-            http.authorizeRequests()//
-                .antMatchers(
+            http.authorizeHttpRequests(authorize -> {
+                authorize.requestMatchers(
                     WebSocketConfig.ENDPOINT,
                     "/rest/test",
                     "/rest/frame/**",
@@ -66,27 +68,20 @@ public class SecurityConfiguration {
                     "/rest/auth/status",
                     "/rest/auth/login",
                     "/rest/bundle/image/**",
-                    "/rest/device/**").permitAll()
-                .antMatchers("/rest/**").authenticated()
-                .and()
-                .csrf().disable()
-                .headers().frameOptions().disable();
+                    "/rest/device/**").permitAll();
+                authorize.requestMatchers("/rest/**").authenticated();
+            });
+            http.csrf(AbstractHttpConfigurer::disable);
+            http.headers(headers -> headers.frameOptions(FrameOptionsConfig::disable));
         }
 
         // If a user try to access a resource without having enough permissions
-        http.exceptionHandling().accessDeniedPage("/login");
+        http.exceptionHandling(exception -> exception.accessDeniedPage("/login"));
 
         // Apply JWT
         http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider));
         return http.build();
     }
-
-    /*@Bean
-    public CsrfTokenRepository csrfTokenRepository() {
-        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        repository.setCookiePath("/");
-        return repository;
-    }*/
 
     @Bean
     public AuthenticationManager authManager(HttpSecurity http) throws Exception {
@@ -102,40 +97,4 @@ public class SecurityConfiguration {
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
-
-   /* @Override
-    protected void configure(AuthenticationManagerBuilder auth) {
-        auth.authenticationProvider(authenticationProvider(null));
-    }*/
-
-    /*@Bean
-    public FilterRegistrationBean remoteAddressFilter() {
-        FilterRegistrationBean<RequestFilter> filterRegistrationBean = new FilterRegistrationBean<>();
-        RequestFilter filter = new RequestFilter() {
-
-            @Override
-            protected Log getLogger() {
-                return log;
-            }
-
-            @Override
-            public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException,
-            ServletException {
-                if (!"https".equals(request.getScheme())) {
-                    process(request.getRemoteAddr(), request, response, chain);
-                } else {
-                    chain.doFilter(request, response);
-                }
-            }
-        };
-
-        filter.setAllow("0:0:0:0:0:0:0:1");
-        filter.setDenyStatus(HttpStatus.FORBIDDEN.value());
-
-        filterRegistrationBean.setFilter(filter);
-        filterRegistrationBean.addUrlPatterns("/*");
-
-        return filterRegistrationBean;
-
-    }*/
 }

@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.widget.impl;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasActionOnClick;
 import org.homio.app.model.entity.widget.attributes.HasAlign;

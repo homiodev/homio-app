@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.impl.js;
 
-import javax.persistence.Transient;
+import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;

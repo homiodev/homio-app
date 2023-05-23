@@ -2,7 +2,9 @@ package org.homio.app.rest;
 
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
 import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE;
+import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE_AUTHORIZE;
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import javax.annotation.security.RolesAllowed;
+import jakarta.annotation.security.RolesAllowed;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -49,6 +51,7 @@ import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.homio.bundle.api.util.CommonUtils;
 import org.json.JSONObject;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -121,7 +124,7 @@ public class ConsoleController implements ContextRefreshed {
 
     @SneakyThrows
     @PostMapping("/tab/{tab}/action")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel executeAction(
         @PathVariable("tab") String tab,
         @RequestBody ItemController.ActionRequestModel request) {
@@ -259,7 +262,7 @@ public class ConsoleController implements ContextRefreshed {
     }
 
     @PostMapping("/ssh")
-    @RolesAllowed(SSH_RESOURCE)
+    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
     public SshProviderService.SshSession openSshSession(@RequestBody SshRequest request) {
         BaseEntity entity = entityContext.getEntity(request.getEntityID());
         if (entity instanceof SshBaseEntity) {
@@ -270,7 +273,7 @@ public class ConsoleController implements ContextRefreshed {
     }
 
     @DeleteMapping("/ssh")
-    @RolesAllowed(SSH_RESOURCE)
+    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
     public void closeSshSession(@RequestBody SshRequest request) {
         BaseEntity entity = entityContext.getEntity(request.getEntityID());
         if (entity instanceof SshBaseEntity) {

@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.impl.chart.bar;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.UIFieldJSONLine;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;

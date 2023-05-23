@@ -82,7 +82,7 @@ public class BundleContext {
 
   public Set<String> getDependencies() {
     return this.pomFile.getDependencies().stream()
-                       .filter(d -> d.getGroupId().equals("org.homio") && d.getArtifactId().contains("bundle"))
+                       .filter(d -> d.getGroupId().equals("org.homio") && d.getArtifactId().contains("addon"))
                        .map(Dependency::getArtifactId).collect(Collectors.toSet());
   }
 

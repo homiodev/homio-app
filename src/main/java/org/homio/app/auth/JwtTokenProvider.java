@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import lombok.val;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.homio.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
@@ -90,10 +89,8 @@ public class JwtTokenProvider implements ContextCreated {
 
             String userName = getUsername(key);
             UserDetails userDetails = userEntityDetailsService.loadUserByUsername(userName);
-            val authentication = new UsernamePasswordAuthenticationToken(userDetails,
+            return new UsernamePasswordAuthenticationToken(userDetails,
                 userDetails.getUsername(), userDetails.getAuthorities());
-            authentication.setDetails(userName);
-            return authentication;
         });
     }
 

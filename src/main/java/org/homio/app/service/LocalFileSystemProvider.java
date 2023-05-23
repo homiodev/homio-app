@@ -1,8 +1,9 @@
-package org.homio.app.cb.fs;
+package org.homio.app.service;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.homio.app.utils.InternalUtil.TIKA;
+import static org.homio.bundle.api.fs.BaseCachedFileSystemProvider.fixPath;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -26,13 +27,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.homio.app.cb.ComputerBoardEntity;
+import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.bundle.api.fs.FileSystemProvider;
 import org.homio.bundle.api.fs.TreeNode;
 import org.homio.bundle.api.fs.archive.ArchiveUtil;
@@ -41,10 +42,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @AllArgsConstructor
-public class ComputerBoardFileSystem implements FileSystemProvider {
+public class LocalFileSystemProvider implements FileSystemProvider {
 
     @Getter
-    private ComputerBoardEntity entity;
+    private LocalBoardEntity entity;
 
     @Override
     public Path getArchiveAsLocalPath(@NotNull String id) {
@@ -59,22 +60,22 @@ public class ComputerBoardFileSystem implements FileSystemProvider {
     @SneakyThrows
     public @NotNull Set<TreeNode> getChildren(@NotNull String id) {
         Set<TreeNode> fmPaths = new HashSet<>();
-        Path parentPath = buildPath(id);
-        if (Files.exists(parentPath)) {
-            if (ArchiveUtil.isArchive(parentPath)) {
-                List<File> files = ArchiveUtil.getArchiveEntries(parentPath, null);
-                return buildArchiveEntries(parentPath, files, false).getChildren();
+        Path fullPath = buildPath(id);
+        if (Files.exists(fullPath)) {
+            if (ArchiveUtil.isArchive(fullPath)) {
+                List<File> files = ArchiveUtil.getArchiveEntries(fullPath, null);
+                return buildArchiveEntries(fullPath, files, false).getChildren();
             }
         } else {
-            Path archivePath = getArchivePath(parentPath);
+            Path archivePath = getArchivePath(fullPath);
             if (archivePath != null) {
-                List<File> children = ArchiveUtil.getChildren(archivePath, archivePath.relativize(parentPath).toString());
+                List<File> children = ArchiveUtil.getChildren(archivePath, archivePath.relativize(fullPath).toString());
                 return children.stream().map(c -> buildTreeNode(true, c, c.isDirectory(),
                                    archivePath.resolve(c.getPath()).toString(), null))
                                .collect(Collectors.toSet());
             }
         }
-        try (Stream<Path> stream = Files.list(parentPath)) {
+        try (Stream<Path> stream = Files.list(fullPath)) {
             for (Path path : stream.collect(Collectors.toList())) {
                 try {
                     if (!Files.isHidden(path)) {
@@ -164,7 +165,7 @@ public class ComputerBoardFileSystem implements FileSystemProvider {
 
     @Override
     public void setEntity(Object entity) {
-        this.entity = (ComputerBoardEntity) entity;
+        this.entity = (LocalBoardEntity) entity;
 
     }
 
@@ -289,16 +290,16 @@ public class ComputerBoardFileSystem implements FileSystemProvider {
         }
         Set<TreeNode> rootChildren = getChildren(trimToEmpty(rootPath));
         Set<TreeNode> currentChildren = rootChildren;
-        Path pathId = Paths.get(trimToEmpty(rootPath));
-        for (Path pathItem : Paths.get(id)) { // split id by '/'
-            Path pathItemId = pathId.resolve(pathItem);
-            String pathItemIdStr = pathItemId.toString().replaceAll("\\\\", "/");
+        List<Path> items = StreamSupport.stream(Paths.get(id).spliterator(), false)
+                                        .collect(Collectors.toList());
+        for (int i = 0; i < items.size() - 1; i++) {
+            Path pathItemId = items.get(i);
+            String pathItemIdStr = fixPath(pathItemId);
             TreeNode foundedObject =
                 currentChildren.stream().filter(c -> c.getId().equals(pathItemIdStr)).findAny().orElseThrow(() ->
                     new IllegalStateException("Unable find object: " + pathItemIdStr));
             currentChildren = getChildren(pathItemIdStr);
             foundedObject.addChildren(currentChildren);
-            pathId = pathItemId;
         }
         return rootChildren;
     }
@@ -390,10 +391,7 @@ public class ComputerBoardFileSystem implements FileSystemProvider {
 
     @SneakyThrows
     private TreeNode buildTreeNode(Path path, File file) {
-        String fullPath = path.toAbsolutePath().toString().substring(entity.getFileSystemRoot().length());
-        if (!SystemUtils.IS_OS_LINUX) {
-            fullPath = fullPath.replaceAll("\\\\", "/");
-        }
+        String fullPath = fixPath(path.toAbsolutePath()).substring(entity.getFileSystemRoot().length());
         if (fullPath.startsWith("/")) {
             fullPath = fullPath.substring(1);
         }

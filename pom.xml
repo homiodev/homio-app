@@ -5,25 +5,6 @@
     <finalName>${project.artifactId}</finalName>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <release>11</release>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>net.ju-n.maven.plugins</groupId>
-        <artifactId>checksum-maven-plugin</artifactId>
-        <version>1.2</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>artifacts</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
@@ -67,6 +48,13 @@
     </resources>
   </build>
   <dependencies>
+    <!--https://github.com/rubenlagus/TelegramBots 6.5 Caused by: java.lang.ClassNotFoundException: javax.xml.bind.annotation.XmlElement-->
+    <dependency>
+      <groupId>javax.xml.bind</groupId>
+      <artifactId>jaxb-api</artifactId>
+      <version>2.3.1</version>
+    </dependency>
+
     <dependency>
       <groupId>org.graalvm.sdk</groupId>
       <artifactId>graal-sdk</artifactId>
@@ -99,7 +87,7 @@
     <dependency>
       <artifactId>homio-hquery</artifactId>
       <groupId>org.homio</groupId>
-      <version>1.0.2-SNAPSHOT</version>
+      <version>${homio-hquery.version}</version>
     </dependency>
 
     <dependency>
@@ -137,10 +125,6 @@
       <version>${homio-bundle.version}</version>
     </dependency>
 
-    <dependency>
-      <artifactId>jsch</artifactId>
-      <groupId>com.jcraft</groupId>
-    </dependency>
     <dependency>
       <artifactId>spring-boot-configuration-processor</artifactId>
       <groupId>org.springframework.boot</groupId>
@@ -259,19 +243,8 @@
     </dependency>
 
     <dependency>
-      <artifactId>httpclient</artifactId>
-      <groupId>org.apache.httpcomponents</groupId>
-    </dependency>
-
-    <dependency>
       <artifactId>lombok</artifactId>
       <groupId>org.projectlombok</groupId>
-    </dependency>
-
-    <dependency>
-      <artifactId>jersey-apache-client</artifactId>
-      <groupId>com.sun.jersey.contribs</groupId>
-      <version>1.19</version>
     </dependency>
 
     <dependency>
@@ -356,11 +329,6 @@
     </dependency>
 
     <dependency>
-      <artifactId>validation-api</artifactId>
-      <groupId>javax.validation</groupId>
-    </dependency>
-
-    <dependency>
       <artifactId>cglib</artifactId>
       <groupId>cglib</groupId>
       <version>3.2.1</version>
@@ -387,8 +355,8 @@
       <groupId>com.fasterxml.jackson.core</groupId>
     </dependency>
     <dependency>
-      <artifactId>jackson-datatype-hibernate5</artifactId>
       <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-hibernate5-jakarta</artifactId>
     </dependency>
     <dependency>
       <artifactId>jackson-dataformat-xml</artifactId>
@@ -435,12 +403,6 @@
       <artifactId>commons-fileupload</artifactId>
       <groupId>commons-fileupload</groupId>
       <version>1.5</version>
-    </dependency>
-
-    <dependency>
-      <artifactId>spring-mvc-cache-control</artifactId>
-      <groupId>net.rossillo.mvc.cache</groupId>
-      <version>1.1.1-RELEASE</version>
     </dependency>
 
     <dependency>
@@ -497,13 +459,13 @@
   <parent>
     <artifactId>homio-dependency</artifactId>
     <groupId>org.homio</groupId>
-    <version>2.4.5</version>
+    <version>2.4.6</version>
   </parent>
 
   <properties>
-    <graalvm.version>22.2.0</graalvm.version>
-    <os.detected.classifier>linux-armhf</os.detected.classifier>
-    <homio-bundle-api.version>1.2.4-SNAPSHOT</homio-bundle-api.version>
+    <graalvm.version>22.3.1</graalvm.version>
+    <homio-hquery.version>1.0.2</homio-hquery.version>
+    <homio-bundle-api.version>1.2.5-SNAPSHOT</homio-bundle-api.version>
     <homio-bundle.version>1.2.1-SNAPSHOT</homio-bundle.version>
     <start-class>org.homio.app.HomioApplication</start-class>
   </properties>

@@ -51,11 +51,6 @@ public class ConsoleRefreshContentPeriodSetting
     }
 
     @Override
-    public String[] pages() {
-        return new String[0];
-    }
-
-    @Override
     public boolean acceptConsolePluginPage(ConsolePlugin consolePlugin) {
         return consolePlugin.hasRefreshIntervalSetting();
     }

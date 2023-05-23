@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.widget.impl.display;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.UIFieldJSONLine;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;

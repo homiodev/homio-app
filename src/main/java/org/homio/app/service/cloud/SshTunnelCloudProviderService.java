@@ -100,7 +100,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         // login if no private key found
         String name = format("Cloud: ${selection.%s}", StringUtils.uncapitalize(getClass().getSimpleName()));
         entityContext.ui().addNotificationBlock("cloud", name, "fas fa-cloud", "#5C7DAC", builder -> {
-            builder.setStatus(entity.getStatus());
+            builder.setStatus(entity.getStatus()).linkToEntity(entity);
             if (!entity.getStatus().isOnline()) {
                 builder.addInfo(defaultIfEmpty(entity.getStatusMessage(), defaultIfEmpty(CommonUtils.getErrorMessage(ex), "Unknown error")),
                     Color.RED, "fas fa-exclamation", null);
@@ -151,7 +151,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     }
 
     private Consumer<NotificationBlockBuilder> buildNotSyncHandler() {
-        return builder -> builder.addButtonInfo("CLOUD.NOT_SYNC", Color.RED, null, null,
+        return builder -> builder.addButtonInfo("sync", "CLOUD.NOT_SYNC", Color.RED, null, null,
             "fas fa-right-to-bracket", "Sync", null, (entityContext, params) -> {
                 entityContext.ui().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE", (responseType, pressedButton, parameters) ->
                         handleSync(entityContext, parameters),
@@ -169,7 +169,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     }
 
     private Consumer<NotificationBlockBuilder> tryConnectHandler() {
-        return builder -> builder.addButtonInfo("CLOUD.NOT_SYNC", Color.RED, null, null,
+        return builder -> builder.addButtonInfo("sync", "CLOUD.NOT_SYNC", Color.RED, null, null,
             "fas fa-rss", "Connect", null, (entityContext, params) -> {
                 entityContext.getBean(CloudService.class).start();
                 return null;

@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.widget.impl.gauge;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;

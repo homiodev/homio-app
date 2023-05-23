@@ -32,6 +32,7 @@ import org.homio.app.notification.HeaderButtonNotification;
 import org.homio.app.notification.NotificationBlock;
 import org.homio.app.notification.NotificationBlock.Info;
 import org.homio.app.notification.ProgressNotification;
+import org.homio.app.utils.UIFieldUtils;
 import org.homio.bundle.api.EntityContextUI;
 import org.homio.bundle.api.console.ConsolePlugin;
 import org.homio.bundle.api.entity.BaseEntity;
@@ -277,9 +278,9 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public void addNotificationBlock(@Nullable String email, @NotNull String entityID, @NotNull String name,
+    public void addNotificationBlock(@NotNull String entityID, @NotNull String name,
         @Nullable String icon, @Nullable String color, @Nullable Consumer<NotificationBlockBuilder> builder) {
-        val notificationBlock = new NotificationBlock(entityID, name, icon, color, email);
+        val notificationBlock = new NotificationBlock(entityID, name, icon, color);
         if (builder != null) {
             builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
         }
@@ -470,6 +471,11 @@ public class EntityContextUIImpl implements EntityContextUI {
         UserEntity user = entityContext.getUser();
         notificationResponse.notifications = blockNotifications.values();
         if (user != null) {
+            for (NotificationBlock notification : notificationResponse.notifications) {
+                if (notification.getFireOnFetchHandler() != null) {
+                    notification.getFireOnFetchHandler().run();
+                }
+            }
             notificationResponse.notifications = blockNotifications.values().stream().filter(block ->
                 block.getEmail() == null || block.getEmail().equals(user.getEmail())).collect(Collectors.toList());
         }
@@ -621,6 +627,19 @@ public class EntityContextUIImpl implements EntityContextUI {
         private final EntityContextImpl entityContext;
 
         @Override
+        public NotificationBlockBuilder linkToEntity(@NotNull BaseEntity entity) {
+            notificationBlock.setLink(entity.getEntityID());
+            notificationBlock.setLinkType(UIFieldUtils.getClassEntityNavLink(notificationBlock.getName(), entity.getClass()));
+            return this;
+        }
+
+        @Override
+        public NotificationBlockBuilder visibleForUser(@Nullable String email) {
+            notificationBlock.setEmail(email);
+            return this;
+        }
+
+        @Override
         public NotificationBlockBuilder blockActionBuilder(Consumer<UIInputBuilder> builder) {
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             builder.accept(uiInputBuilder);
@@ -639,6 +658,14 @@ public class EntityContextUIImpl implements EntityContextUI {
         @Override
         public NotificationBlockBuilder setStatus(Status status) {
             notificationBlock.setStatus(status);
+            notificationBlock.setStatusColor(status == null ? null : status.getColor());
+            return this;
+        }
+
+        @Override
+        public NotificationBlockBuilder fireOnFetch(Runnable handler) {
+            notificationBlock.setFireOnFetchHandler(handler);
+            handler.run();
             return this;
         }
 
@@ -662,22 +689,23 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
 
         @Override
-        public NotificationBlockBuilder addInfo(@NotNull String info, @Nullable String color, @Nullable String icon, @Nullable String iconColor) {
-            notificationBlock.addInfo(info, color, icon, iconColor, null, null, null, null);
+        public NotificationBlockBuilder addInfo(@NotNull String key, @NotNull String info,
+            @Nullable String color, @Nullable String icon, @Nullable String iconColor) {
+            notificationBlock.addInfo(key, info, color, icon, iconColor, null, null, null, null);
             return this;
         }
 
         @Override
-        public NotificationBlockBuilder addButtonInfo(@NotNull String info, @Nullable String color, @Nullable String icon, @Nullable String iconColor,
+        public NotificationBlockBuilder addButtonInfo(@NotNull String key, @NotNull String info,
+            @Nullable String color, @Nullable String icon, @Nullable String iconColor,
             @NotNull String buttonIcon, @Nullable String buttonText, @Nullable String confirmMessage, @NotNull UIActionHandler handler) {
-            notificationBlock.addInfo(info, color, icon, iconColor, buttonIcon, buttonText, confirmMessage, handler);
+            notificationBlock.addInfo(key, info, color, icon, iconColor, buttonIcon, buttonText, confirmMessage, handler);
             return this;
         }
 
         @Override
-        public NotificationBlockBuilder removeInfo(@NotNull String info) {
-            notificationBlock.remove(info);
-            return this;
+        public boolean removeInfo(@NotNull String key) {
+            return notificationBlock.remove(key);
         }
     }
 }

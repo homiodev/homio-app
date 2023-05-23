@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.user;
 
 import java.util.List;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.bundle.api.ui.UISidebarChildren;
 import org.jetbrains.annotations.NotNull;

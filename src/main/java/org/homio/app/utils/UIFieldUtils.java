@@ -6,8 +6,9 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.persistence.OneToMany;
+import jakarta.validation.constraints.Pattern;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -24,8 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.persistence.OneToMany;
-import javax.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -63,7 +62,6 @@ import org.homio.bundle.api.ui.field.UIFieldIconPicker;
 import org.homio.bundle.api.ui.field.UIFieldIgnore;
 import org.homio.bundle.api.ui.field.UIFieldIgnoreParent;
 import org.homio.bundle.api.ui.field.UIFieldKeyValue;
-import org.homio.bundle.api.ui.field.UIFieldKeyValue.Option;
 import org.homio.bundle.api.ui.field.UIFieldLayout;
 import org.homio.bundle.api.ui.field.UIFieldLinkToEntity;
 import org.homio.bundle.api.ui.field.UIFieldNumber;
@@ -114,6 +112,7 @@ import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.api.util.SecureString;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.core.annotation.AnnotationUtils;
 
 public class UIFieldUtils {
 
@@ -542,7 +541,7 @@ public class UIFieldUtils {
 
         var fieldLink = fieldContext.getDeclaredAnnotation(UIFieldLinkToEntity.class);
         if (fieldLink != null) {
-            entityUIMetaData.setNavLink(getClassEntityNavLink(field, fieldLink.value()));
+            entityUIMetaData.setNavLink(getClassEntityNavLink(field.name(), fieldLink.value()));
         }
 
         var fieldSelectValueOnEmpty = fieldContext.getDeclaredAnnotation(UIFieldSelectValueOnEmpty.class);
@@ -699,7 +698,7 @@ public class UIFieldUtils {
         entityUIMetaData.setRequired(nullIfFalse(field.required()));
 
         if (BaseEntity.class.isAssignableFrom(type) && type.getDeclaredAnnotation(UISidebarMenu.class) != null) {
-            entityUIMetaData.setNavLink(getClassEntityNavLink(field, type));
+            entityUIMetaData.setNavLink(getClassEntityNavLink(field.name(), type));
         }
         if (entityUIMetaData.getType() == null) {
             throw new RuntimeException("Unable to evaluate field '" + sourceName + "' type for class: " + instance.getClass().getSimpleName());
@@ -750,16 +749,12 @@ public class UIFieldUtils {
         }
     }
 
-    private static String getClassEntityNavLink(UIField field, Class<?> entityClass) {
-        UISidebarMenu uiSidebarMenu = entityClass.getDeclaredAnnotation(UISidebarMenu.class);
+    public static String getClassEntityNavLink(String name, Class<?> entityClass) {
+        UISidebarMenu uiSidebarMenu = AnnotationUtils.findAnnotation(entityClass, UISidebarMenu.class);
         if (uiSidebarMenu == null) {
-            throw new IllegalArgumentException(
-                "Unable to create link for field: "
-                    + field.name()
-                    + " and class: "
-                    + entityClass.getSimpleName());
+            throw new IllegalArgumentException("Unable to create link for field: " + name + " and class: " + entityClass.getSimpleName());
         }
-        String href =            StringUtils.defaultIfEmpty(                uiSidebarMenu.overridePath(), entityClass.getSimpleName());
+        String href = StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), entityClass.getSimpleName());
         return uiSidebarMenu.parent().name().toLowerCase() + "/" + href;
     }
 

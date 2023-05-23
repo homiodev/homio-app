@@ -56,6 +56,7 @@ import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+@SuppressWarnings("unchecked")
 @Log4j2
 public class EntityContextBGPImpl implements EntityContextBGP {
 
@@ -163,7 +164,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @SneakyThrows
     @Override
-    public <T> List<T> runInBatchAndGet(
+    public <T> @NotNull List<T> runInBatchAndGet(
         @NotNull String batchName,
         @Nullable Duration maxTerminateTimeout,
         int threadsCount,
@@ -252,7 +253,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         ThreadContextImpl<T> context = new ThreadContextImpl<>();
         context.name = name;
         context.scheduleType = ScheduleType.SINGLE;
-        return new ScheduleBuilder<T>() {
+        return new ScheduleBuilder<>() {
             private Function<Runnable, ScheduledFuture<?>> scheduleHandler;
 
             @Override
@@ -265,9 +266,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                             startDate = new Date(System.currentTimeMillis() + context.delay.toMillis());
                         }
                         if (context.scheduleType == ScheduleType.SINGLE) {
-                            return taskScheduler.schedule(runnable, startDate);
+                            return taskScheduler.schedule(runnable, startDate.toInstant());
                         } else {
-                            return taskScheduler.scheduleWithFixedDelay(runnable, startDate, context.period.toMillis());
+                            return taskScheduler.scheduleWithFixedDelay(runnable, startDate.toInstant(), context.period);
                         }
                     };
                 }
@@ -624,6 +625,14 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             }
             valueListeners.put(name, valueListener);
             return true;
+        }
+
+        @Override
+        public boolean removeValueListener(@NotNull String name) {
+            if (valueListeners != null) {
+                return valueListeners.remove(name) != null;
+            }
+            return false;
         }
 
         public void setRetValue(T value) {

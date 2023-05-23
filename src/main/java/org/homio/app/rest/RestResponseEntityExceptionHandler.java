@@ -9,8 +9,10 @@ import org.homio.bundle.hquery.api.HardwareException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-import org.springframework.web.util.WebUtils;
 
 @Log4j2
 @ControllerAdvice
@@ -45,11 +46,12 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
     }
 
     @Override
-    protected @NotNull ResponseEntity<Object> handleExceptionInternal(
-        @NotNull Exception ex, Object body, @NotNull HttpHeaders headers, @NotNull HttpStatus status, @NotNull WebRequest request) {
-        if (HttpStatus.INTERNAL_SERVER_ERROR.equals(status)) {
-            request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, ex, WebRequest.SCOPE_REQUEST);
-        }
+    protected ResponseEntity<Object> handleExceptionInternal(
+        @NotNull Exception ex,
+        @Nullable Object body,
+        @NotNull HttpHeaders headers,
+        @NotNull HttpStatusCode statusCode,
+        @NotNull WebRequest request) {
         String msg = CommonUtils.getErrorMessage(ex);
         if (ex instanceof NullPointerException) {
             msg += ". src: " + ex.getStackTrace()[0].toString();
@@ -57,7 +59,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         log.error("Error <{}>", msg, ex);
         Objects.requireNonNull(((ServletWebRequest) request).getResponse())
                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-        return new ResponseEntity<>(new ErrorHolderModel("ERROR", msg, ex), headers, status);
+        return new ResponseEntity<>(new ErrorHolderModel("ERROR", msg, ex), headers, statusCode);
     }
 
     @ExceptionHandler({Exception.class})
