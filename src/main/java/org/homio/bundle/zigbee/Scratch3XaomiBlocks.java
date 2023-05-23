@@ -1,4 +1,4 @@
-package org.homio.bundle.zigbee.workspace;
+package org.homio.bundle.zigbee;
 
 import lombok.Getter;
 import org.homio.bundle.api.state.State;
