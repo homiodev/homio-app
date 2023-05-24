@@ -8,6 +8,13 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
+          <arguments>
+            <argument>--add-opens java.base/java.net=ALL-UNNAMED</argument>
+            <argument>--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED</argument>
+          </arguments>
+          <commandlineArguments>
+
+          </commandlineArguments>
           <mainClass>${start-class}</mainClass>
         </configuration>
         <executions>

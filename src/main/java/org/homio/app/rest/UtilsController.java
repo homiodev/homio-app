@@ -263,16 +263,6 @@ public class UtilsController {
         return Lang.getLangJson(lang);
     }
 
-    @PostMapping("/notification/action")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public ActionResponseModel notificationAction(@RequestBody HeaderActionRequest request) {
-        try {
-            return entityContext.ui().handleNotificationAction(request.entityID, request.actionEntityID, request.value);
-        } catch (Exception ex) {
-            throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
-        }
-    }
-
     @SneakyThrows
     @PostMapping("/header/dialog/{entityID}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
@@ -293,15 +283,6 @@ public class UtilsController {
 
         private String eid;
         private String did;
-    }
-
-    @Getter
-    @Setter
-    private static class HeaderActionRequest {
-
-        private String entityID;
-        private String actionEntityID;
-        private String value;
     }
 
     @Getter

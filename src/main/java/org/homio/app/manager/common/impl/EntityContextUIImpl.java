@@ -6,10 +6,12 @@ import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,6 +50,7 @@ import org.homio.bundle.api.ui.field.ProgressBar;
 import org.homio.bundle.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
+import org.homio.bundle.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
 import org.homio.bundle.api.util.FlowMap;
 import org.homio.bundle.api.util.Lang;
 import org.homio.bundle.api.util.NotificationLevel;
@@ -229,8 +232,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public void progress(
-        @NotNull String key, double progress, @Nullable String message, boolean cancellable) {
+    public void progress(@NotNull String key, double progress, @Nullable String message, boolean cancellable) {
         if (progress >= 100) {
             progressMap.remove(key);
         } else {
@@ -529,26 +531,30 @@ public class EntityContextUIImpl implements EntityContextUI {
         return false;
     }
 
-    public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, String value) throws Exception {
+    public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, String value, JSONObject metadata) throws Exception {
         HeaderButtonNotification headerButtonNotification = headerButtonNotifications.get(entityID);
         if (headerButtonNotification != null) {
             return headerButtonNotification.getClickAction().get();
         }
-        return handleNotificationBlockAction(entityID, actionEntityID, value);
+        return handleNotificationBlockAction(entityID, actionEntityID, value, metadata);
     }
 
-    private ActionResponseModel handleNotificationBlockAction(String entityID, String actionEntityID, String value) throws Exception {
+    private ActionResponseModel handleNotificationBlockAction(String entityID, String actionEntityID, String value, JSONObject metadata) throws Exception {
         NotificationBlock notificationBlock = blockNotifications.get(entityID);
         if (notificationBlock != null) {
             if ("UPDATE".equals(actionEntityID)) {
                 notificationBlock.setUpdating(true);
-                entityContext.bgp().runWithProgress("update-" + entityID, false, progressBar ->
-                    handleResponse(notificationBlock.getUpdateHandler().apply(progressBar, value)));
+                entityContext.bgp()
+                             .runWithProgress("update-" + entityID)
+                             .execute(progressBar -> {
+                                 handleResponse(notificationBlock.getUpdateHandler().apply(progressBar, value));
+                             });
                 return null;
             }
-            Info info = notificationBlock.getInfoItems().stream()
-                                         .filter(i -> actionEntityID.equals(i.getActionEntityID()))
-                                         .findAny().orElse(null);
+            Info info = actionEntityID == null ? null :
+                notificationBlock.getInfoItems().stream()
+                                 .filter(i -> Objects.equals(actionEntityID, i.getActionEntityID()))
+                                 .findAny().orElse(null);
             if (info != null) {
                 return info.getHandler().handleAction(entityContext, null);
             }
@@ -560,7 +566,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             if (action instanceof UIInputEntityActionHandler) {
                 UIActionHandler actionHandler = ((UIInputEntityActionHandler) action).getActionHandler();
                 if (actionHandler != null) {
-                    return actionHandler.handleAction(entityContext, new JSONObject().put("value", value));
+                    return actionHandler.handleAction(entityContext, metadata);
                 }
             }
         }
@@ -648,6 +654,17 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
 
         @Override
+        public NotificationBlockBuilder addFlexAction(String name, Consumer<UIFlexLayoutBuilder> builder) {
+            if (notificationBlock.getActions() == null) {
+                notificationBlock.setActions(new ArrayList<>());
+            }
+            UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+            uiInputBuilder.addFlex(name, builder);
+            notificationBlock.getActions().add(uiInputBuilder.buildEntity());
+            return null;
+        }
+
+        @Override
         public NotificationBlockBuilder contextMenuActionBuilder(Consumer<UIInputBuilder> builder) {
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             builder.accept(uiInputBuilder);
@@ -689,9 +706,10 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
 
         @Override
-        public NotificationBlockBuilder addInfo(@NotNull String key, @NotNull String info,
-            @Nullable String color, @Nullable String icon, @Nullable String iconColor) {
-            notificationBlock.addInfo(key, info, color, icon, iconColor, null, null, null, null);
+        public NotificationBlockBuilder addInfo(@NotNull String key, @NotNull String info, @Nullable String color, @Nullable String icon,
+            @Nullable String iconColor, @Nullable String status, @Nullable String statusColor) {
+            notificationBlock.addInfo(key, info, color, icon, iconColor,
+                null, null, null, null, status, statusColor);
             return this;
         }
 
@@ -699,7 +717,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         public NotificationBlockBuilder addButtonInfo(@NotNull String key, @NotNull String info,
             @Nullable String color, @Nullable String icon, @Nullable String iconColor,
             @NotNull String buttonIcon, @Nullable String buttonText, @Nullable String confirmMessage, @NotNull UIActionHandler handler) {
-            notificationBlock.addInfo(key, info, color, icon, iconColor, buttonIcon, buttonText, confirmMessage, handler);
+            notificationBlock.addInfo(key, info, color, icon, iconColor, buttonIcon, buttonText, confirmMessage, handler, null, null);
             return this;
         }
 

@@ -1,14 +1,11 @@
 package org.homio.app.rest;
 
-import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE_AUTHORIZE;
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
@@ -36,7 +33,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -88,6 +84,8 @@ import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
 import org.homio.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.homio.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.homio.bundle.api.util.CommonUtils;
+import org.homio.bundle.api.util.Lang;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -114,7 +112,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames =
         new ConcurrentHashMap<>();
-    private final Map<String, List<ItemContext>> itemsBootstrapContextMap =
+    private final Map<String, List<ItemContextResponse>> itemsBootstrapContextMap =
         new ConcurrentHashMap<>();
 
     private final ObjectMapper objectMapper;
@@ -136,37 +134,37 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @SneakyThrows
-    public ActionResponseModel executeAction(ActionRequestModel actionRequestModel, Object actionHolder, BaseEntity actionEntity) {
+    public ActionResponseModel executeAction(ActionModelRequest actionModelRequest, Object actionHolder, BaseEntity actionEntity) {
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuAction.class)) {
             UIContextMenuAction menuAction = method.getDeclaredAnnotation(UIContextMenuAction.class);
-            if (menuAction.value().equals(actionRequestModel.getName())) {
-                return executeMethodAction(method, actionHolder, entityContext, actionEntity, actionRequestModel.getParams());
+            if (menuAction.value().equals(actionModelRequest.getName())) {
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, actionModelRequest.getParams());
             }
         }
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuUploadAction.class)) {
             UIContextMenuUploadAction menuAction = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
-            if (menuAction.value().equals(actionRequestModel.getName())) {
-                return executeMethodAction(method, actionHolder, entityContext, actionEntity, actionRequestModel.getParams());
+            if (menuAction.value().equals(actionModelRequest.getName())) {
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, actionModelRequest.getParams());
             }
         }
         // in case when action attached to field or method
-        if (actionRequestModel.metadata != null && actionRequestModel.metadata.has("field")) {
-            String fieldName = actionRequestModel.metadata.getString("field");
+        if (actionModelRequest.metadata != null && actionModelRequest.metadata.has("field")) {
+            String fieldName = actionModelRequest.metadata.getString("field");
 
             AccessibleObject field = Optional.ofNullable((AccessibleObject) FieldUtils.getField(actionHolder.getClass(), fieldName, true))
                                              .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
             if (field != null) {
                 for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
-                    if (actionButton.name().equals(actionRequestModel.name)) {
-                        CommonUtils.newInstance(actionButton.actionHandler()).handleAction(entityContext, actionRequestModel.params);
+                    if (actionButton.name().equals(actionModelRequest.name)) {
+                        CommonUtils.newInstance(actionButton.actionHandler()).handleAction(entityContext, actionModelRequest.params);
                     }
                 }
             }
         }
         if (actionHolder instanceof HasDynamicContextMenuActions) {
-            return ((HasDynamicContextMenuActions) actionHolder).handleAction(entityContext, actionRequestModel.name, actionRequestModel.params);
+            return ((HasDynamicContextMenuActions) actionHolder).handleAction(entityContext, actionModelRequest.name, actionModelRequest.params);
         }
-        throw new IllegalArgumentException("Unable to find action: <" + actionRequestModel.getName() + "> for model: " + actionHolder);
+        throw new IllegalArgumentException("Unable to find action: <" + actionModelRequest.getName() + "> for model: " + actionHolder);
     }
 
     @Override
@@ -195,40 +193,44 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @GetMapping("/{type}/context")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public List<ItemContext> getItemsBootstrapContext(
+    public List<ItemContextResponse> getItemsBootstrapContext(
         @PathVariable("type") String type,
         @RequestParam(value = "subType", defaultValue = "") String subType) {
         String key = type + subType;
-        itemsBootstrapContextMap.computeIfAbsent(key, s -> {
-            List<ItemContext> itemContexts = new ArrayList<>();
-
-            for (Class<?> classType : findAllClassImplementationsByType(type)) {
-                List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>(), entityContext);
-                if (subType != null && subType.contains(":")) {
-                    String[] bundleAndClassName = subType.split(":");
-                    Object subClassObject = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]);
-                    List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false);
-                    // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json                    // parameter)
-                    for (EntityUIMetaData data : subTypeFieldMetadata) {
-                        data.setTypeMetaData(new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());
-                    }
-                    entityUIMetaData.addAll(subTypeFieldMetadata);
-                }
-                if (!entityContext.setting().getValue(SystemShowEntityCreateTimeSetting.class)) {
-                    entityUIMetaData.removeIf(field -> field.getEntityName().equals("creationTime"));
-                }
-                if (!entityContext.setting().getValue(SystemShowEntityUpdateTimeSetting.class)) {
-                    entityUIMetaData.removeIf(field -> field.getEntityName().equals("updateTime"));
-                }
-                // fetch type actions
-                Collection<UIInputEntity> actions = UIFieldUtils.fetchUIActionsFromClass(classType, entityContext);
-
-                itemContexts.add(new ItemContext(classType.getSimpleName(), HasEntityLog.class.isAssignableFrom(classType), entityUIMetaData, actions));
-            }
-
-            return itemContexts;
-        });
+        itemsBootstrapContextMap.computeIfAbsent(key, s -> buildImteBootstrap(type, subType));
         return itemsBootstrapContextMap.get(key);
+    }
+
+    @NotNull
+    private List<ItemContextResponse> buildImteBootstrap(String type, String subType) {
+        List<ItemContextResponse> itemContexts = new ArrayList<>();
+
+        for (Class<?> classType : findAllClassImplementationsByType(type)) {
+            List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>(), entityContext);
+            if (subType != null && subType.contains(":")) {
+                String[] bundleAndClassName = subType.split(":");
+                Object subClassObject = entityContext.getEntityContextBundle()
+                                                     .getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]);
+                List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false);
+                // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json                    // parameter)
+                for (EntityUIMetaData data : subTypeFieldMetadata) {
+                    data.setTypeMetaData(new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());
+                }
+                entityUIMetaData.addAll(subTypeFieldMetadata);
+            }
+            if (!entityContext.setting().getValue(SystemShowEntityCreateTimeSetting.class)) {
+                entityUIMetaData.removeIf(field -> field.getEntityName().equals("creationTime"));
+            }
+            if (!entityContext.setting().getValue(SystemShowEntityUpdateTimeSetting.class)) {
+                entityUIMetaData.removeIf(field -> field.getEntityName().equals("updateTime"));
+            }
+            // fetch type actions
+            Collection<UIInputEntity> actions = UIFieldUtils.fetchUIActionsFromClass(classType, entityContext);
+
+            itemContexts.add(new ItemContextResponse(classType.getSimpleName(), HasEntityLog.class.isAssignableFrom(classType), entityUIMetaData, actions));
+        }
+
+        return itemContexts;
     }
 
     @GetMapping("/{type}/types")
@@ -289,11 +291,39 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         return list;
     }
 
-    @PostMapping(value = "/{entityID}/action")
+    @PostMapping(value = "/{entityID}/context/action")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel callAction(@PathVariable("entityID") String entityID,
-        @RequestBody ActionRequestModel requestModel) {
-        return callActionWithBinary(entityID, requestModel, null);
+        @RequestBody ActionModelRequest request) {
+        return callActionWithBinary(entityID, request, null);
+    }
+
+    @PostMapping(value = "/{entityID}/context/actionWithBinary")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public ActionResponseModel callActionWithBinary(
+        @PathVariable("entityID") String entityID,
+        @RequestPart ActionModelRequest request,
+        @RequestParam("data") MultipartFile[] files) {
+        try {
+            BaseEntity<?> entity = entityContext.getEntityRequire(entityID);
+            request.params.put("files", files);
+            return executeAction(request, entity, entity);
+        } catch (Exception ex) {
+            log.error("Error while execute action: {}", CommonUtils.getErrorMessage(ex));
+            return ActionResponseModel.showError(ex);
+        }
+    }
+
+    @PostMapping("/{entityID}/notification/action")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public ActionResponseModel notificationAction(@PathVariable("entityID") String entityID,
+        @RequestBody ActionModelRequest request) {
+        try {
+            return entityContext.ui().handleNotificationAction(
+                entityID, request.name, null, request.metadata);
+        } catch (Exception ex) {
+            throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
+        }
     }
 
     /*TODO: @PostMapping(value = "/{type}/installDep/{dependency}")
@@ -310,22 +340,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
       }
     }*/
-
-    @PostMapping(value = "/{entityID}/actionWithBinary")
-    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public ActionResponseModel callActionWithBinary(
-        @PathVariable("entityID") String entityID,
-        @RequestPart ActionRequestModel actionRequestModel,
-        @RequestParam("data") MultipartFile[] files) {
-        try {
-            BaseEntity<?> entity = entityContext.getEntityRequire(entityID);
-            actionRequestModel.params.put("files", files);
-            return executeAction(actionRequestModel, entity, entity);
-        } catch (Exception ex) {
-            log.error("Error while execute action: {}", CommonUtils.getErrorMessage(ex));
-            return ActionResponseModel.showError(ex);
-        }
-    }
 
     @GetMapping("/{type}/actions")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
@@ -519,7 +533,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PostMapping("/{entityID}/block")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateBlockPosition(
-        @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPosition position) {
+        @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPositionRequest position) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
         if (entity != null) {
             if (entity instanceof HasPosition) {
@@ -572,7 +586,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         Class<?> entityClass = classEntity.getClass();
         if (StringUtils.isNotEmpty(optionsRequest.getFieldFetchType())) {
             String[] bundleAndClassName = optionsRequest.getFieldFetchType().split(":");
-            entityClass = entityContext.getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
+            entityClass = entityContext.getEntityContextBundle()
+                                       .getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
         }
 
         List<OptionModel> options = getEntityOptions(fieldName, classEntity, entityClass);
@@ -814,8 +829,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         private final List<Collection<UIInputEntity>> contextActions;
     }
 
-    @Data
-    private static class UpdateBlockPosition {
+    @Getter
+    @Setter
+    private static class UpdateBlockPositionRequest {
 
         private int xb;
         private int yb;
@@ -825,22 +841,22 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @Getter
-    @Setter
-    public static class ActionRequestModel {
-
-        private String entityID;
-        private String name;
-        private JSONObject metadata;
-        private JSONObject params;
-    }
-
-    @Getter
     @AllArgsConstructor
-    private static class ItemContext {
+    private static class ItemContextResponse {
 
         private final String type;
         private final boolean hasLogs;
         private final List<EntityUIMetaData> fields;
         private final Collection<UIInputEntity> actions;
+    }
+
+    @Getter
+    @Setter
+    public static class ActionModelRequest {
+
+        private String entityID;
+        private String name;
+        private JSONObject metadata;
+        private JSONObject params;
     }
 }

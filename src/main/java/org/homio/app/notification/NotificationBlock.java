@@ -60,8 +60,8 @@ public class NotificationBlock {
     }
 
     public void addInfo(String key, String info, String color, String icon, String iconColor, String buttonIcon, String buttonText,
-        String confirmMessage, UIActionHandler handler) {
-        Info infoItem = new Info(info, color, icon, iconColor, buttonIcon, buttonText, confirmMessage, handler);
+        String confirmMessage, UIActionHandler handler, String status, String statusColor) {
+        Info infoItem = new Info(info, color, icon, iconColor, buttonIcon, buttonText, confirmMessage, handler, status, statusColor);
         if (handler != null) {
             infoItem.actionEntityID = String.valueOf(Objects.hash(info, icon, buttonIcon, buttonText));
         }
@@ -91,5 +91,9 @@ public class NotificationBlock {
         @JsonIgnore
         private final UIActionHandler handler;
         public String actionEntityID;
+
+        // status and status color belong to right side
+        private final String status;
+        private final String statusColor;
     }
 }

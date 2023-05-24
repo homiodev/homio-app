@@ -9,6 +9,7 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.homio.app.config.AppProperties;
+import org.homio.app.manager.common.EntityContextBundleImpl;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
@@ -48,7 +49,7 @@ public class AuthController {
         String credentials = principal.getUsername();
         String[] items = credentials.split("~~~");
         addUserNotificationBlock(items[0], items[1], false);
-        String version = format("%s-%s-%s", appProperties.getVersion(), EntityContextImpl.BUNDLE_UPDATE_COUNT, CommonUtils.RUN_COUNT);
+        String version = format("%s-%s-%s", appProperties.getVersion(), EntityContextBundleImpl.BUNDLE_UPDATE_COUNT, CommonUtils.RUN_COUNT);
         return new StatusResponse(200, version);
     }
 

@@ -18,17 +18,17 @@ public class BundleClassLoaderHolder extends ClassLoader {
 
   private final Map<String, SingleBundleClassLoader> bundleJarClassLoaders = new HashMap<>();
 
-  public void setClassLoaders(String bundleId, ClassLoader classLoader) {
+  public void addClassLoaders(String bundleId, ClassLoader classLoader) {
       CommonUtils.addClassLoader(bundleId, classLoader);
       bundleJarClassLoaders.put(bundleId, (SingleBundleClassLoader) classLoader);
   }
 
-  void destroy(String bundleName) {
+  void removeClassLoader(String bundleName) {
       CommonUtils.removeClassLoader(bundleName);
       bundleJarClassLoaders.remove(bundleName).destroy();
   }
 
-  SingleBundleClassLoader getBundleClassLoader(String bundleName) {
+  public SingleBundleClassLoader getBundleClassLoader(String bundleName) {
     return bundleJarClassLoaders.get(bundleName);
   }
 

@@ -18,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
 public class EntityContextInstallImpl implements EntityContextInstall {
 
     private final EntityContext entityContext;
-    private final Map<Class, InstallContext> cache = new ConcurrentHashMap<>();
+    private final Map<Class<?>, InstallContext> cache = new ConcurrentHashMap<>();
 
     public EntityContextInstallImpl(EntityContext entityContext) {
         this.entityContext = entityContext;
@@ -61,12 +61,17 @@ public class EntityContextInstallImpl implements EntityContextInstall {
                 if (getVersion() == null) {
                     lock.lock();
                     if (getVersion() == null) {
-                        entityContext.bgp().runWithProgress("install-" + installer.getName(), false,
-                            pb -> {
-                                pb.progress(0, "install-" + installer.getName());
-                                installer.installDependency(pb, version);
-                                lock.unlock();
-                            }, exception -> finishHandler.run());
+                        entityContext.bgp().runWithProgress("install-" + installer.getName())
+                                     .onFinally(() -> {
+                                         lock.unlock();
+                                         finishHandler.run();
+                                     })
+                                     .execute(pb -> {
+                                         pb.progress(0, "install-" + installer.getName());
+                                         installer.installDependency(pb, version);
+                                     });
+                    } else {
+                        lock.unlock();
                     }
                 }
             }

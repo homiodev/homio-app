@@ -18,9 +18,10 @@ import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
 import com.sshtools.common.publickey.SshPublicKeyFile;
 import com.sshtools.common.publickey.SshPublicKeyFileFactory;
 import com.sshtools.common.ssh.components.SshKeyPair;
+import jakarta.persistence.Entity;
 import java.util.Collections;
 import java.util.Objects;
-import jakarta.persistence.Entity;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -209,20 +210,22 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         String algorithm = params.optString("algorithm", "SSH2_RSA");
         int bits = params.optInt("bits", 3072);
         String alg = "SSH2_RSA".equals(algorithm) ? SSH2_RSA : "ECDSA".equals(algorithm) ? ECDSA : ED25519;
-        entityContext.bgp().runWithProgress("generate-ssh", false, progressBar -> {
-            progressBar.progress(10, "PROGRESS.GENERATE_SSH");
-            SshKeyPair keyPair = SshKeyPairGenerator.generateKeyPair(alg, bits);
-            SshPrivateKeyFile kf = SshPrivateKeyFileFactory.create(keyPair, passphrase, params.optString("comment"));
-            updateSSHData(this, passphrase, kf);
+        entityContext.bgp().runWithProgress("generate-ssh")
+                     .onFinally(exception -> {
+                         if (exception != null) {
+                             entityContext.ui().sendErrorMessage("ERROR.SSH_GENERATE");
+                         } else {
+                             entityContext.ui().sendSuccessMessage("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
+                         }
+                     })
+                     .execute(progressBar -> {
+                         progressBar.progress(10, "PROGRESS.GENERATE_SSH");
+                         SshKeyPair keyPair = SshKeyPairGenerator.generateKeyPair(alg, bits);
+                         SshPrivateKeyFile kf = SshPrivateKeyFileFactory.create(keyPair, passphrase, params.optString("comment"));
+                         updateSSHData(this, passphrase, kf);
 
-            entityContext.save(this);
-        }, exception -> {
-            if (exception != null) {
-                entityContext.ui().sendErrorMessage("ERROR.SSH_GENERATE");
-            } else {
-                entityContext.ui().sendSuccessMessage("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
-            }
-        });
+                         entityContext.save(this);
+                     });
         return null;
     }
 

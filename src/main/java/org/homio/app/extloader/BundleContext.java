@@ -26,6 +26,7 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.homio.bundle.api.BundleConfiguration;
 import org.homio.bundle.api.BundleEntrypoint;
 import org.homio.bundle.api.exception.ServerException;
+import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.api.util.SpringUtils;
 import org.reflections.Reflections;
 import org.reflections.util.ConfigurationBuilder;
@@ -50,6 +51,7 @@ public class BundleContext {
   private boolean internal;
   private boolean installed;
   private BundleSpringContext config;
+  private String loadError;
 
   @SneakyThrows
   BundleContext(Path bundleContextFile) {
@@ -94,16 +96,19 @@ public class BundleContext {
 
     config = new BundleSpringContext(env);
     bundleID = config.fetchBundleID(reflections, pomFile.getArtifactId());
-    config.configureSpringContext(reflections, parentContext, bundleID, classLoader);
-  }
-
-  void destroy() {
-    config.destroy();
-    getAllBundleClassLoader().destroy(bundleID);
+    BundleClassLoaderHolder classLoaderHolder = parentContext.getBean(BundleClassLoaderHolder.class);
+    try {
+      classLoaderHolder.addClassLoaders(bundleID, classLoader);
+      config.configureSpringContext(reflections, parentContext, bundleID, classLoader);
+    } catch (Exception ex) {
+      classLoaderHolder.removeClassLoader(bundleID);
+      loadError = CommonUtils.getErrorMessage(ex);
+      throw ex;
+    }
   }
 
   public boolean isLoaded() {
-    return config != null;
+    return config != null && loadError == null;
   }
 
   public String getBundleFriendlyName() {
@@ -129,49 +134,37 @@ public class BundleContext {
     return version;
   }
 
-  private BundleClassLoaderHolder getAllBundleClassLoader() {
-    return this.config.bundleClassLoaderHolder;
-  }
-
-  public SingleBundleClassLoader getBundleClassLoader() {
-    return getAllBundleClassLoader().getBundleClassLoader(bundleID);
-  }
-
   @RequiredArgsConstructor
-  private static class BundleSpringContext {
+  public static class BundleSpringContext {
 
     private final Environment env;
     private AnnotationConfigApplicationContext ctx;
     private Class<?> configClass;
-    private BundleClassLoaderHolder bundleClassLoaderHolder;
 
     @SneakyThrows
-    private static <T> T createClassInstance(Class<T> clazz, Class<? super T> parent) {
+    private static <T> T createClassInstance(Class<T> clazz) {
       ReflectionFactory rf = ReflectionFactory.getReflectionFactory();
-      Constructor objDef = parent.getDeclaredConstructor();
-      Constructor intConstr = rf.newConstructorForSerialization(clazz, objDef);
+      Constructor<?> objDef = ((Class<? super T>) Object.class).getDeclaredConstructor();
+      Constructor<?> intConstr = rf.newConstructorForSerialization(clazz, objDef);
       return clazz.cast(intConstr.newInstance());
     }
 
     public String fetchBundleID(Reflections reflections, String artifactId) {
-      Set<Class<? extends BundleEntrypoint>> bundleEntrypoints = reflections.getSubTypesOf(BundleEntrypoint.class);
-      if (bundleEntrypoints.isEmpty()) {
+      Set<Class<? extends BundleEntrypoint>> bundleEntrypointSet = reflections.getSubTypesOf(BundleEntrypoint.class);
+      if (bundleEntrypointSet.isEmpty()) {
         throw new ServerException("Found no BundleEntrypoint in context of bundle: " + artifactId);
       }
-      if (bundleEntrypoints.size() > 1) {
+      if (bundleEntrypointSet.size() > 1) {
         throw new ServerException("Found multiple BundleEntrypoint in context of bundle: " + artifactId);
       }
-      Class<? extends BundleEntrypoint> bundleEntrypointClass = bundleEntrypoints.iterator().next();
+      Class<? extends BundleEntrypoint> bundleEntrypointClass = bundleEntrypointSet.iterator().next();
 
-      BundleEntrypoint bundleEntrypoint = createClassInstance(bundleEntrypointClass, Object.class);
+      BundleEntrypoint bundleEntrypoint = createClassInstance(bundleEntrypointClass);
       return bundleEntrypoint.getBundleId();
     }
 
-    void configureSpringContext(Reflections reflections, ApplicationContext parentContext, String bundleID,
-        ClassLoader classLoader) {
+    void configureSpringContext(Reflections reflections, ApplicationContext parentContext, String bundleID, ClassLoader classLoader) {
       configClass = findBatchConfigurationClass(reflections);
-      bundleClassLoaderHolder = parentContext.getBean(BundleClassLoaderHolder.class);
-      bundleClassLoaderHolder.setClassLoaders(bundleID, classLoader);
       BundleConfiguration bundleConfiguration = configClass.getDeclaredAnnotation(BundleConfiguration.class);
 
       // create spring context

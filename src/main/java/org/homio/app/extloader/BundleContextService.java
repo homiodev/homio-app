@@ -31,15 +31,18 @@ import org.springframework.stereotype.Service;
 public class BundleContextService implements ContextCreated {
 
   private final Environment env;
-  private final EntityContextImpl entityContextImpl;
+  private final EntityContextImpl entityContext;
   private final ApplicationContext parentContext;
+  private final BundleClassLoaderHolder classLoaderHolder;
   private final Map<String, BundleContext> bundleContextMap = new HashMap<>();
   private final Map<String, BundleContext> artifactIdContextMap = new HashMap<>();
 
-  public BundleContextService(Environment env, EntityContextImpl entityContextImpl, ApplicationContext parentContext) {
+  public BundleContextService(Environment env, EntityContextImpl entityContext,
+      ApplicationContext parentContext, BundleClassLoaderHolder classLoaderHolder) {
     this.env = env;
-    this.entityContextImpl = entityContextImpl;
+    this.entityContext = entityContext;
     this.parentContext = parentContext;
+    this.classLoaderHolder = classLoaderHolder;
     for (String systemBundle : Constants.SYSTEM_BUNDLES) {
       BundleContext systemBundleContext = new BundleContext(systemBundle);
       this.bundleContextMap.put(systemBundle, systemBundleContext);
@@ -51,7 +54,7 @@ public class BundleContextService implements ContextCreated {
     BundleContext bundleContext = new BundleContext(bundleContextFile);
     artifactIdContextMap.put(bundleContext.getPomFile().getArtifactId(), bundleContext);
     loadBundle(bundleContext);
-    entityContextImpl.addBundle(artifactIdContextMap);
+    entityContext.getEntityContextBundle().addBundle(artifactIdContextMap);
   }
 
   private void loadBundle(String bundleId, Path bundleContextFile) {
@@ -72,6 +75,7 @@ public class BundleContextService implements ContextCreated {
       try {
         if (loadContext(context)) {
           log.info("bundle context <{}> registered successfully.", context.getPomFile().getArtifactId());
+          bundleContextMap.put(context.getBundleID(), context);
         } else {
           log.info("bundle context <{}> already registered before.", context.getPomFile().getArtifactId());
         }
@@ -79,7 +83,6 @@ public class BundleContextService implements ContextCreated {
         log.error("Unable to load bundle context <{}>.", context.getPomFile().getArtifactId(), ex);
       }
     }
-    bundleContextMap.put(context.getBundleID(), context);
   }
 
   /**
@@ -112,8 +115,9 @@ public class BundleContextService implements ContextCreated {
   private void removeBundle(String bundleId) {
     BundleContext context = this.bundleContextMap.remove(bundleId);
     if (context != null) {
-      entityContextImpl.removeBundle(bundleId);
-      context.destroy();
+      entityContext.getEntityContextBundle().removeBundle(bundleId);
+      classLoaderHolder.removeClassLoader(context.getBundleID());
+      context.getConfig().destroy();
       Files.delete(context.getBundleContextFile());
       log.info("Bundle <{}> has been removed successfully", bundleId);
     } else {
@@ -160,6 +164,6 @@ public class BundleContextService implements ContextCreated {
     for (BundleContext context : artifactIdContextMap.values()) {
       loadBundle(context);
     }
-    entityContextImpl.addBundle(artifactIdContextMap);
+    this.entityContext.getEntityContextBundle().addBundle(artifactIdContextMap);
   }
 }

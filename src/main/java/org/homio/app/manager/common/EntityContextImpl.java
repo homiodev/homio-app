@@ -12,11 +12,9 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -76,10 +74,8 @@ import org.homio.app.setting.system.SystemShowEntityStateSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshTmateEntity;
-import org.homio.app.utils.HardwareUtils;
 import org.homio.app.workspace.BroadcastLockManagerImpl;
 import org.homio.app.workspace.WorkspaceService;
-import org.homio.bundle.api.BundleEntrypoint;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.EntityContextHardware;
 import org.homio.bundle.api.entity.BaseEntity;
@@ -87,7 +83,6 @@ import org.homio.bundle.api.entity.DeviceBaseEntity;
 import org.homio.bundle.api.entity.DisableCacheEntity;
 import org.homio.bundle.api.entity.EntityFieldMetadata;
 import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
-import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.model.HasEntityIdentifier;
 import org.homio.bundle.api.model.Status;
 import org.homio.bundle.api.model.UpdatableValue;
@@ -98,12 +93,10 @@ import org.homio.bundle.api.service.scan.BeansItemsDiscovery;
 import org.homio.bundle.api.service.scan.MicroControllerScanner;
 import org.homio.bundle.api.service.scan.VideoStreamScanner;
 import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.ui.UI.Color;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.api.util.FlowMap;
 import org.homio.bundle.api.util.Lang;
 import org.homio.bundle.api.util.UpdatableSetting;
-import org.homio.bundle.api.widget.WidgetBaseTemplate;
 import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.bundle.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.bundle.hquery.hardware.other.MachineHardwareRepository;
@@ -133,8 +126,7 @@ public class EntityContextImpl implements EntityContext {
         "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";*/
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
     private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
-    // count how much addBundle/removeBundle invokes
-    public static int BUNDLE_UPDATE_COUNT = 0;
+
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
     public static Map<String, Class<? extends EntityFieldMetadata>> uiFieldClasses;
     public static Map<String, AbstractRepository> repositoriesByPrefix;
@@ -174,13 +166,13 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextVarImpl entityContextVar;
     private final EntityContextHardwareImpl entityContextHardware;
     private final EntityContextWidgetImpl entityContextWidget;
+    @Getter private final EntityContextBundleImpl entityContextBundle;
     private final Environment environment;
     @Getter private final EntityContextStorage entityContextStorage;
     private final ClassFinder classFinder;
     @Getter private final CacheService cacheService;
     @Getter private final AppProperties appProperties;
-    @Getter private final Map<String, InternalBundleContext> bundles = new LinkedHashMap<>();
-    private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
+    @Getter private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
     private EntityManager entityManager;
     private TransactionTemplate transactionTemplate;
     private boolean showEntityState;
@@ -213,6 +205,7 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextStorage = new EntityContextStorage(this);
         this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
         this.entityContextHardware = new EntityContextHardwareImpl(this, machineHardwareRepository);
+        this.entityContextBundle = new EntityContextBundleImpl(this, cacheService);
     }
 
     @SneakyThrows
@@ -245,7 +238,7 @@ public class EntityContextImpl implements EntityContext {
 
         setting().listenValueAndGet(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
 
-        initialiseInlineBundles(applicationContext);
+        entityContextBundle.initialiseInlineBundles(applicationContext);
 
         bgp().builder("app-version").interval(Duration.ofDays(1)).delay(Duration.ofSeconds(1))
              .execute(this::updateAppNotificationBlock);
@@ -309,7 +302,7 @@ public class EntityContextImpl implements EntityContext {
                     time = runDuration + "m";
                 }
                 String serverStartMsg = Lang.getServerMessage("SERVER_STARTED", FlowMap.of("VALUE",
-                    new SimpleDateFormat("yyyy/MM/dd HH:mm").format(new Date(START_TIME)),
+                    new SimpleDateFormat("MM/dd HH:mm").format(new Date(START_TIME)),
                     "TIME", time));
                 builder.addInfo("time", serverStartMsg, null, "fas fa-clock", null);
             });
@@ -562,32 +555,6 @@ public class EntityContextImpl implements EntityContext {
         return classFinder.getClassesWithParent(baseClass);
     }
 
-    public void addBundle(Map<String, BundleContext> artifactIdContextMap) {
-        for (String artifactId : artifactIdContextMap.keySet()) {
-            this.addBundle(artifactIdContextMap.get(artifactId), artifactIdContextMap);
-        }
-        BUNDLE_UPDATE_COUNT++;
-    }
-
-    public void removeBundle(String bundleId) {
-        InternalBundleContext internalBundleContext = bundles.remove(bundleId);
-        if (internalBundleContext != null) {
-            this.removeBundle(internalBundleContext.bundleContext);
-        }
-    }
-
-    public Object getBeanOfBundleBySimpleName(String bundle, String className) {
-        InternalBundleContext internalBundleContext = this.bundles.get(bundle);
-        if (internalBundleContext == null) {
-            throw new NotFoundException("Unable to find bundle <" + bundle + ">");
-        }
-        Object o = internalBundleContext.fieldTypes.get(className);
-        if (o == null) {
-            throw new NotFoundException("Unable to find class <" + className + "> in bundle <" + bundle + ">");
-        }
-        return o;
-    }
-
     public void sendEntityUpdateNotification(Object entity, ItemAction type) {
         if (!(entity instanceof BaseEntity)) {
             return;
@@ -628,24 +595,6 @@ public class EntityContextImpl implements EntityContext {
         return environment.getProperty(key, classType, defaultValue);
     }
 
-    private void initialiseInlineBundles(ApplicationContext applicationContext) {
-        log.info("Initialize bundles...");
-        ArrayList<BundleEntrypoint> bundleEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
-        Collections.sort(bundleEntrypoints);
-        for (BundleEntrypoint bundleEntrypoint : bundleEntrypoints) {
-            this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, null));
-            log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
-            try {
-                bundleEntrypoint.init();
-                bundleEntrypoint.onContextRefresh();
-            } catch (Exception ex) {
-                log.fatal("Unable to init bundle: " + bundleEntrypoint.getBundleId(), ex);
-                throw ex;
-            }
-        }
-        log.info("Done initialize bundles");
-    }
-
     private void putToCache(HasEntityIdentifier entity, Map<String, Object[]> changeFields) {
         PureRepository repository;
         if (entity instanceof BaseEntity) {
@@ -681,56 +630,8 @@ public class EntityContextImpl implements EntityContext {
         }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    private void removeBundle(BundleContext bundleContext) {
-        if (!bundleContext.isInternal() && bundleContext.isInstalled()) {
-            ApplicationContext context = bundleContext.getApplicationContext();
-            context.getBean(BundleEntrypoint.class).destroy();
-            this.allApplicationContexts.remove(context);
-
-            this.cacheService.clearCache();
-
-            rebuildAllRepositories(bundleContext.getApplicationContext(), false);
-            updateBeans(bundleContext, bundleContext.getApplicationContext(), false);
-            BUNDLE_UPDATE_COUNT++;
-        }
-    }
-
-    private void addBundle(BundleContext bundleContext, Map<String, BundleContext> artifactIdToContextMap) {
-        if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
-            ui().addNotificationBlockOptional("bundles", "BUNDLES", "file-zipper", "#FF4400");
-            if (!bundleContext.isLoaded()) {
-                ui().updateNotificationBlock("bundles", blockBuilder ->
-                    blockBuilder.addInfo(bundleContext.getBundleFriendlyName(), "", "fas fa-bug", Color.RED));
-                return;
-            }
-            ui().updateNotificationBlock("bundles", blockBuilder ->
-                blockBuilder.addInfo(bundleContext.getBundleFriendlyName(), "", "fas fa-puzzle-piece", Color.GREEN));
-
-            allApplicationContexts.add(bundleContext.getApplicationContext());
-            bundleContext.setInstalled(true);
-            for (String bundleDependency : bundleContext.getDependencies()) {
-                addBundle(artifactIdToContextMap.get(bundleDependency), artifactIdToContextMap);
-            }
-            ApplicationContext context = bundleContext.getApplicationContext();
-
-            this.cacheService.clearCache();
-
-            HardwareUtils.copyResources(bundleContext.getBundleClassLoader().getResource("external_files.7z"));
-
-            rebuildAllRepositories(context, true);
-            updateBeans(bundleContext, context, true);
-
-            for (BundleEntrypoint bundleEntrypoint :
-                context.getBeansOfType(BundleEntrypoint.class).values()) {
-                log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
-                bundleEntrypoint.init();
-                this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, bundleContext));
-            }
-        }
-    }
-
     @SneakyThrows
-    private void updateBeans(
+    void updateBeans(
         BundleContext bundleContext, ApplicationContext context, boolean addBundle) {
         log.info("Starting update all app bundles");
         Lang.clear();
@@ -757,7 +658,7 @@ public class EntityContextImpl implements EntityContext {
         log.info("Finish update all app bundles");
     }
 
-    private void rebuildAllRepositories(ApplicationContext context, boolean addBundle) {
+    void rebuildAllRepositories(ApplicationContext context, boolean addBundle) {
         Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values().stream()
                                                                .collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
 
@@ -853,26 +754,5 @@ public class EntityContextImpl implements EntityContext {
         Remove(context -> context.ui().sendWarningMessage("TOASTR.ENTITY_REMOVED"));
 
         private final Consumer<EntityContextImpl> messageEvent;
-    }
-
-    public static class InternalBundleContext {
-
-        @Getter private final BundleEntrypoint bundleEntrypoint;
-        @Getter private final BundleContext bundleContext;
-        private final Map<String, Object> fieldTypes = new HashMap<>();
-
-        public InternalBundleContext(BundleEntrypoint bundleEntrypoint, BundleContext bundleContext) {
-            this.bundleEntrypoint = bundleEntrypoint;
-            this.bundleContext = bundleContext;
-            if (bundleContext != null) {
-                for (WidgetBaseTemplate widgetBaseTemplate :
-                    bundleContext
-                        .getApplicationContext()
-                        .getBeansOfType(WidgetBaseTemplate.class)
-                        .values()) {
-                    fieldTypes.put(widgetBaseTemplate.getClass().getSimpleName(), widgetBaseTemplate);
-                }
-            }
-        }
     }
 }

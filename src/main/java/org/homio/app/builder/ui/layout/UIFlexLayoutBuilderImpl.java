@@ -9,7 +9,9 @@ import org.homio.app.builder.ui.UIBaseLayoutBuilderImpl;
 import org.homio.app.builder.ui.UIItemType;
 import org.homio.bundle.api.ui.field.action.v1.UIEntityBuilder;
 import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
+import org.homio.bundle.api.ui.field.action.v1.item.UIInfoItemBuilder;
 import org.homio.bundle.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Getter

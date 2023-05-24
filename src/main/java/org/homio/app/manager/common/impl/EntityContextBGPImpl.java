@@ -1,6 +1,7 @@
 package org.homio.app.manager.common.impl;
 
 import com.pivovarit.function.ThrowingBiFunction;
+import com.pivovarit.function.ThrowingConsumer;
 import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
 import java.nio.file.Files;
@@ -33,6 +34,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.app.config.AppProperties;
@@ -46,6 +48,7 @@ import org.homio.bundle.api.exception.ServerException;
 import org.homio.bundle.api.model.HasEntityIdentifier;
 import org.homio.bundle.api.service.EntityService.WatchdogService;
 import org.homio.bundle.api.setting.SettingPlugin;
+import org.homio.bundle.api.ui.field.ProgressBar;
 import org.homio.bundle.api.util.CommonUtils;
 import org.homio.bundle.hquery.LinesReader;
 import org.jetbrains.annotations.NotNull;
@@ -442,6 +445,74 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners.put(key, onUpdateCommand);
         }
         return fileWatchDog;
+    }
+
+    @Override
+    public ProgressBuilder runWithProgress(@NotNull String key) {
+        return new ProgressBuilderImpl(key);
+    }
+
+    @Setter
+    @Accessors(chain = true)
+    @RequiredArgsConstructor
+    private class ProgressBuilderImpl implements ProgressBuilder {
+
+        private @NotNull final String key;
+        private boolean cancellable;
+        private boolean logToConsole;
+        private @Nullable Consumer<Exception> onFinally;
+        private @Nullable Runnable onError;
+        private @Nullable Exception errorIfExists;
+
+        @Override
+        public ProgressBuilder onFinally(@Nullable Consumer<Exception> finallyBlock) {
+            this.onFinally = finallyBlock;
+            return this;
+        }
+
+        @Override
+        public ProgressBuilder onError(@Nullable Runnable errorBlock) {
+            this.onError = errorBlock;
+            return this;
+        }
+
+        @Override
+        public ThreadContext<Void> execute(ThrowingConsumer<ProgressBar, Exception> command) {
+            return null;
+        }
+
+        @Override
+        @SneakyThrows
+        public <R> ThreadContext<R> execute(@NotNull ThrowingFunction<ProgressBar, R, Exception> command) {
+            if (errorIfExists != null && isThreadExists(key, true)) {
+                throw errorIfExists;
+            }
+            ScheduleBuilder<R> builder = builder(key);
+            return builder.execute(arg -> {
+                ProgressBar progressBar = (progress, message) -> {
+                    if (logToConsole) {
+                        log.info(message);
+                    }
+                    getEntityContext().ui().progress(key, progress, message, cancellable);
+                };
+                progressBar.progress(0, key);
+                Exception exception = null;
+                try {
+                    return command.apply(progressBar);
+                } catch (Exception ex) {
+                    exception = ex;
+                    if (onError != null) {
+                        onError.run();
+                    }
+                } finally {
+                    progressBar.done();
+                    if (onFinally != null) {
+                        onFinally.accept(exception);
+                    }
+                }
+                return null;
+            });
+        }
     }
 
     private void checkFileModifiedAndFireHandler(@NotNull Path file, AtomicLong lastModified, ThreadContextImpl context) throws Exception {

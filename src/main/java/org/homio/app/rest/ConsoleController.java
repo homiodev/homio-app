@@ -1,9 +1,7 @@
 package org.homio.app.rest;
 
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
-import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE;
 import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE_AUTHORIZE;
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
 import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import java.util.ArrayList;
@@ -15,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import jakarta.annotation.security.RolesAllowed;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -30,6 +27,7 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
+import org.homio.app.rest.ItemController.ActionModelRequest;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshBaseEntity;
 import org.homio.app.ssh.SshProviderService;
@@ -127,7 +125,7 @@ public class ConsoleController implements ContextRefreshed {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel executeAction(
         @PathVariable("tab") String tab,
-        @RequestBody ItemController.ActionRequestModel request) {
+        @RequestBody ActionModelRequest request) {
         String entityID = request.getEntityID();
         ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
@@ -158,15 +156,14 @@ public class ConsoleController implements ContextRefreshed {
     public void updateDependencies(@PathVariable("tab") String tab) {
         ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
-            ConsolePluginRequireZipDependency dependency =
-                (ConsolePluginRequireZipDependency) consolePlugin;
+            ConsolePluginRequireZipDependency dependency = (ConsolePluginRequireZipDependency) consolePlugin;
             if (dependency.requireInstallDependencies()) {
-                entityContext.bgp().runWithProgress(
-                    "install-deps-" + dependency.getClass().getSimpleName(),
-                    false,
-                    progressBar -> dependency.installDependency(entityContext, progressBar),
-                    null,
-                    () -> new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"));
+                entityContext.bgp()
+                             .runWithProgress("install-deps-" + dependency.getClass().getSimpleName())
+                             .setErrorIfExists(new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"))
+                             .execute(progressBar -> {
+                                 dependency.installDependency(entityContext, progressBar);
+                             });
             }
         }
     }

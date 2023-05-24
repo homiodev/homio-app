@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ForkJoinPool;
@@ -72,6 +73,7 @@ public class SystemBundleLibraryManagerSetting
         return new PackageContext(
             null,
             ((EntityContextImpl) entityContext)
+                .getEntityContextBundle()
                 .getBundles().values().stream()
                 .filter(b -> b.getBundleContext() != null)
                 .map(b -> build(b.getBundleContext()))
@@ -128,7 +130,7 @@ public class SystemBundleLibraryManagerSetting
                 ArchiveUtil.unzip(iconsArchivePath, addonPath, UnzipFileIssueHandler.replace);
             }
 
-            Map<String, Map<String, String>> addons = addonsRepo.getFile("addons.yaml", Map.class);
+            Map<String, Map<String, Object>> addons = addonsRepo.getFile("addons.yml", Map.class);
             ForkJoinPool customThreadPool = new ForkJoinPool(addons.size());
             return customThreadPool.submit(() ->
                 addons.entrySet().parallelStream()
@@ -141,7 +143,7 @@ public class SystemBundleLibraryManagerSetting
         return list;
     }
 
-    private static boolean isRequireDownloadIcons(Path iconsArchivePath, Path iconsPath, String iconsURL) throws IOException {
+    private static boolean isRequireDownloadIcons(Path iconsArchivePath, Path iconsPath, String iconsURL) {
         if (!Files.exists(iconsPath) || !Files.exists(iconsArchivePath)) {return true;}
         try {
             if (Files.size(iconsArchivePath) != Curl.getFileSize(iconsURL)) {return true;}
@@ -149,14 +151,15 @@ public class SystemBundleLibraryManagerSetting
         return false;
     }
 
-    private static PackageModel readAddon(String name, Map<String, String> addonConfig, Path iconsPath) {
-        String repository = addonConfig.get("repository");
+    private static PackageModel readAddon(String name, Map<String, Object> addonConfig, Path iconsPath) {
+        String repository = (String) addonConfig.get("repository");
         try {
             log.info("Read addon: {}", repository);
             GitHubProject addonRepo = GitHubProject.of(repository);
-            String lastReleaseVersion = addonConfig.get("version");
-            if (lastReleaseVersion != null) {
-                String jarFile = addonRepo.getRepo() + ".jar";
+            List<String> versions = (List<String>) addonConfig.get("versions");
+            if (versions != null) {
+                String lastReleaseVersion = versions.get(versions.size() - 1);
+                // String jarFile = addonRepo.getRepo() + ".jar";
                 Model pomModel = addonRepo.getPomModel();
                 PackageModel entity = new PackageModel();
                 entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s.jar", repository, lastReleaseVersion, addonRepo.getRepo()));
@@ -168,6 +171,7 @@ public class SystemBundleLibraryManagerSetting
                 entity.setWebsite("https://github.com/" + repository);
                 entity.setCategory(pomModel.getProperties().getProperty("category"));
                 entity.setVersion(lastReleaseVersion);
+                entity.setVersions(versions);
                 entity.setIcon(Base64.getEncoder().encodeToString(getIcon(iconsPath.resolve(name + ".png"))));
                 entity.setReadme(addonRepo.getFile("README.md", String.class));
                 entity.setRemovable(true);
