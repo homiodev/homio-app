@@ -107,7 +107,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
             String entityID = getText(name);
             stickyDialogBuilder = new UIStickyDialogItemBuilderImpl(entityID + "_dialog");
             buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, iconColor, null, order))
-                .setStickyDialogEntityBuilder(stickyDialogBuilder);
+                .setStickyDialogBuilder(stickyDialogBuilder);
         }
         return new DialogEntity<>() {
             @Override

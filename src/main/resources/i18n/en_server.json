@@ -1,4 +1,5 @@
 {
+  "PACKAGE_UPDATE_QUESTION": "Are you sure update {{NAME}}-{{VERSION}} package?",
   "SERVER_STARTED": "Started: {{VALUE}}. Uptime: {{TIME}}",
   "ERROR": {
     "PORT_NOT_AVAILABLE": "Port {{PORT}} not available",

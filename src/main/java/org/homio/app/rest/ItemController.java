@@ -319,8 +319,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     public ActionResponseModel notificationAction(@PathVariable("entityID") String entityID,
         @RequestBody ActionModelRequest request) {
         try {
-            return entityContext.ui().handleNotificationAction(
-                entityID, request.name, null, request.metadata);
+            return entityContext.ui().handleNotificationAction(entityID, request.name, null, request.params);
         } catch (Exception ex) {
             throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
         }

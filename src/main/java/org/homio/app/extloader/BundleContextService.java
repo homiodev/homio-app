@@ -1,6 +1,7 @@
 package org.homio.app.extloader;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.repeat;
 
 import java.io.IOException;
 import java.net.URL;
@@ -158,8 +159,13 @@ public class BundleContextService implements ContextCreated {
   public void onContextCreated(EntityContextImpl entityContext) throws Exception {
       Path bundlePath = CommonUtils.getBundlePath();
     for (Path bundleContextFile : findBundleContextFilesFromPath(bundlePath)) {
-      BundleContext bundleContext = new BundleContext(bundleContextFile);
-      artifactIdContextMap.put(bundleContext.getPomFile().getArtifactId(), bundleContext);
+      try {
+        BundleContext bundleContext = new BundleContext(bundleContextFile);
+        artifactIdContextMap.put(bundleContext.getPomFile().getArtifactId(), bundleContext);
+      } catch (Exception ex) {
+        log.error("\n#{}\nUnable to parse addon: {}\n#{}",
+            repeat("-", 50), bundleContextFile.getFileName(), repeat("-", 50));
+      }
     }
     for (BundleContext context : artifactIdContextMap.values()) {
       loadBundle(context);

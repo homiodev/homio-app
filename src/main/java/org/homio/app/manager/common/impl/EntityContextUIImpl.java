@@ -431,8 +431,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         sendGlobal(GlobalSendType.headerButton, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "toggle").put("disable", disable));
     }
 
-    private void sendHeaderButtonToUI(
-        HeaderButtonNotification notification, Consumer<ObjectNode> additionalSupplier) {
+    private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<ObjectNode> additionalSupplier) {
         ObjectNode jsonNode = OBJECT_MAPPER.valueToTree(notification);
         if (additionalSupplier != null) {
             additionalSupplier.accept(jsonNode);
@@ -440,12 +439,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         sendGlobal(GlobalSendType.headerButton, notification.getEntityID(), null, notification.getTitle(), jsonNode);
     }
 
-    void sendGlobal(
-        @NotNull GlobalSendType type,
-        @Nullable String entityID,
-        @Nullable Object value,
-        @Nullable String title,
-        @Nullable ObjectNode objectNode) {
+    void sendGlobal(@NotNull GlobalSendType type, @Nullable String entityID, @Nullable Object value, @Nullable String title, @Nullable ObjectNode objectNode) {
         if (objectNode == null) {
             objectNode = OBJECT_MAPPER.createObjectNode();
         }
@@ -510,8 +504,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public <T extends ConsolePlugin> void registerConsolePlugin(
-        @NotNull String name, @NotNull T plugin) {
+    public <T extends ConsolePlugin> void registerConsolePlugin(@NotNull String name, @NotNull T plugin) {
         customConsolePlugins.put(name, plugin);
         consolePluginsMap.put(name, plugin);
     }
@@ -558,19 +551,33 @@ public class EntityContextUIImpl implements EntityContextUI {
             if (info != null) {
                 return info.getHandler().handleAction(entityContext, null);
             }
-            UIInputEntity action = notificationBlock.getContextMenuActions().stream().filter(ca -> ca.getEntityID().equals(actionEntityID)).findAny()
-                                                    .orElse(null);
-            if (action == null && notificationBlock.getActions() != null) {
-                action = notificationBlock.getActions().stream().filter(ca -> ca.getEntityID().equals(actionEntityID)).findAny().orElse(null);
-            }
-            if (action instanceof UIInputEntityActionHandler) {
-                UIActionHandler actionHandler = ((UIInputEntityActionHandler) action).getActionHandler();
-                if (actionHandler != null) {
-                    return actionHandler.handleAction(entityContext, metadata);
-                }
+            UIActionHandler actionHandler = findNotificationAction(actionEntityID, notificationBlock);
+            if (actionHandler != null) {
+                return actionHandler.handleAction(entityContext, metadata);
             }
         }
         throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
+    }
+
+    private UIActionHandler findNotificationAction(String actionEntityID, NotificationBlock notificationBlock) {
+        UIActionHandler action = null;
+        if (notificationBlock.getContextMenuActions() != null) {
+            action = notificationBlock.getContextMenuActions()
+                                      .stream()
+                                      .filter(ca -> ca.getEntityID().equals(actionEntityID) && ca instanceof UIInputEntityActionHandler)
+                                      .findAny()
+                                      .map(f -> ((UIInputEntityActionHandler) f).getActionHandler())
+                                      .orElse(null);
+        }
+        if (action == null && notificationBlock.getActions() != null) {
+            for (UIInputEntity inputEntity : notificationBlock.getActions()) {
+                action = inputEntity.findAction(actionEntityID);
+                if (action != null) {
+                    break;
+                }
+            }
+        }
+        return action;
     }
 
     public void handleResponse(@Nullable ActionResponseModel response) {
@@ -660,7 +667,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             }
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             uiInputBuilder.addFlex(name, builder);
-            notificationBlock.getActions().add(uiInputBuilder.buildEntity());
+            notificationBlock.getActions().addAll(uiInputBuilder.buildAll());
             return null;
         }
 

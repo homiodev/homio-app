@@ -1,9 +1,7 @@
 package org.homio.app.builder.ui;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -21,8 +19,8 @@ import org.homio.bundle.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.homio.bundle.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.Unmodifiable;
 
+@SuppressWarnings("rawtypes")
 @Getter
 @RequiredArgsConstructor
 public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInputBuilder {
@@ -38,9 +36,7 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
 
     public UIButtonItemBuilderImpl addFireActionBeforeChange(
         String name, String[] actions, String reference, int order) {
-        return addEntity(
-            new UIButtonItemBuilderImpl(
-                UIItemType.Button, name, name, null, order, null)
+        return addEntity(            new UIButtonItemBuilderImpl(                UIItemType.Button, name, name, null, order, null)
                 .setActionReference(reference))
             .setFireActionsBeforeChange(actions);
     }
@@ -56,13 +52,11 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     }
 
     @Override
-    public @Unmodifiable Collection<UIInputEntity> buildAll() {
-        List<UIInputEntity> entities =
-            getUiEntityBuilders(false).stream()
-                                      .map(UIEntityBuilder::buildEntity)
-                                      .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
-                                      .collect(Collectors.toList());
-        return Collections.unmodifiableCollection(entities);
+    public @NotNull Collection<UIInputEntity> buildAll() {
+        return getUiEntityBuilders(false).stream()
+                                         .map(UIEntityBuilder::buildEntity)
+                                         .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
+                                         .collect(Collectors.toList());
     }
 
     @Override
@@ -90,7 +84,8 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     }
 
     @Override
-    public UIButtonItemBuilder addSelectableButton(@NotNull String name, String icon, String iconColor, @Nullable UIActionHandler action, int order) {
+    public @NotNull UIButtonItemBuilder addSelectableButton(@NotNull String name, String icon,
+        String iconColor, @Nullable UIActionHandler action, int order) {
         return addEntity(new UIButtonItemBuilderImpl(UIItemType.SelectableButton, name, icon, iconColor, order, action));
     }
 

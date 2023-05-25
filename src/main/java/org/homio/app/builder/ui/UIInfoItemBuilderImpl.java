@@ -9,8 +9,7 @@ public class UIInfoItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UIInfoIte
 
     private final InfoType infoType;
 
-    public UIInfoItemBuilderImpl(
-            String entityID, int order, String value, UIInfoItemBuilder.InfoType infoType) {
+    public UIInfoItemBuilderImpl(            String entityID, int order, String value, UIInfoItemBuilder.InfoType infoType) {
         super(UIItemType.Text, entityID, order, null);
         this.infoType = infoType;
         setValue(value);

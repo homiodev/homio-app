@@ -77,11 +77,10 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
     @Override
     public String getStyle() {
-        return styleMap == null
-                ? null
-                : styleMap.entrySet().stream()
-                        .map(e -> e.getKey() + ":" + e.getValue() + ";")
-                        .collect(Collectors.joining());
+        return styleMap == null ? null :
+            styleMap.entrySet().stream()
+                    .map(e -> e.getKey() + ":" + e.getValue() + ";")
+                    .collect(Collectors.joining());
     }
 
     @Override
@@ -101,8 +100,7 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
     public <T extends UIEntityBuilder> DialogEntity<T> addEntity(String key, T entityBuilder) {
         if (!NAME_PATTERN.matcher(entityBuilder.getEntityID()).matches()) {
-            throw new IllegalArgumentException(
-                "Wrong name pattern for: " + entityBuilder.getEntityID());
+            throw new IllegalArgumentException("Wrong name pattern for: " + entityBuilder.getEntityID());
         }
         inputBuilders.put(key, entityBuilder);
         return new DialogEntity<T>() {
@@ -164,15 +162,6 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
                         .map(UIEntityBuilder::buildEntity)
                         .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
                         .collect(Collectors.toList());
-        return new UIDialogInputEntity(
-                entityID,
-                this.order,
-                UIItemType.Dialog.name(),
-                title,
-                icon,
-                iconColor,
-                getStyle(),
-                width,
-                entities);
+        return new UIDialogInputEntity(entityID, this.order, UIItemType.Dialog.name(), title, icon, iconColor, getStyle(), width, entities);
     }
 }

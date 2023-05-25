@@ -5,13 +5,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.homio.app.builder.ui.UIBaseEntityItemBuilderImpl;
 import org.homio.app.builder.ui.UIBaseLayoutBuilderImpl;
 import org.homio.app.builder.ui.UIItemType;
+import org.homio.bundle.api.ui.action.UIActionHandler;
 import org.homio.bundle.api.ui.field.action.v1.UIEntityBuilder;
 import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.homio.bundle.api.ui.field.action.v1.item.UIInfoItemBuilder;
 import org.homio.bundle.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Getter
@@ -34,9 +34,9 @@ public class UIFlexLayoutBuilderImpl extends UIBaseLayoutBuilderImpl
     // for serialization!
     public List<UIInputEntity> getChildren() {
         return getUiEntityBuilders(false).stream()
-                .map(UIEntityBuilder::buildEntity)
-                .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
-                .collect(Collectors.toList());
+                                         .map(UIEntityBuilder::buildEntity)
+                                         .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
+                                         .collect(Collectors.toList());
     }
 
     @Override
@@ -44,5 +44,16 @@ public class UIFlexLayoutBuilderImpl extends UIBaseLayoutBuilderImpl
         this.title = title;
         this.titleColor = titleColor;
         return this;
+    }
+
+    @Override
+    public UIActionHandler findAction(String key) {
+        for (UIEntityBuilder entityBuilder : getUiEntityBuilders(true)) {
+            if (entityBuilder.getEntityID().equals(key)
+                && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
+                return ((UIBaseEntityItemBuilderImpl<?, ?>) entityBuilder).getActionHandler();
+            }
+        }
+        return null;
     }
 }

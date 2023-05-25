@@ -16,6 +16,8 @@ import org.homio.app.manager.CacheService;
 import org.homio.app.setting.system.SystemBundleLibraryManagerSetting;
 import org.homio.app.utils.HardwareUtils;
 import org.homio.bundle.api.BundleEntrypoint;
+import org.homio.bundle.api.EntityContext;
+import org.homio.bundle.api.EntityContextUI.NotificationBlockBuilder;
 import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.model.ActionResponseModel;
 import org.homio.bundle.api.model.OptionModel;
@@ -23,9 +25,11 @@ import org.homio.bundle.api.repository.GitHubProject;
 import org.homio.bundle.api.setting.SettingPluginPackageInstall.PackageContext;
 import org.homio.bundle.api.setting.SettingPluginPackageInstall.PackageModel;
 import org.homio.bundle.api.ui.UI.Color;
-import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.bundle.api.util.FlowMap;
+import org.homio.bundle.api.util.Lang;
 import org.homio.bundle.api.widget.WidgetBaseTemplate;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 import org.springframework.context.ApplicationContext;
 
 @Log4j2
@@ -38,7 +42,6 @@ public class EntityContextBundleImpl {
     private final CacheService cacheService;
     // count how much addBundle/removeBundle invokes
     public static int BUNDLE_UPDATE_COUNT = 0;
-    private UIInputBuilder addonRowsBuilder;
 
     public void initialiseInlineBundles(ApplicationContext applicationContext) {
         log.info("Initialize bundles...");
@@ -100,31 +103,12 @@ public class EntityContextBundleImpl {
 
     private void addBundle(BundleContext bundleContext, Map<String, BundleContext> artifactIdToContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
-            if (!entityContext.ui().isHasNotificationBlock("addons")) {
-                entityContext.ui().addNotificationBlock("addons", "Addons", "fas fa-file-zipper", "#FF4400", builder -> {
-                    builder.blockActionBuilder(addonRowsBuilder -> {
-                        this.addonRowsBuilder = addonRowsBuilder;
-                    });
-                });
-            }
-            String icon = bundleContext.isLoaded() ? "fas fa-puzzle-piece" : "fas fa-bug";
-            String color = bundleContext.isLoaded() ? Color.GREEN : Color.RED;
-            String info = bundleContext.getBundleFriendlyName();
+            entityContext.ui().addNotificationBlockOptional("addons", "Addons", "fas fa-file-zipper", "#FF4400");
+            String key = bundleContext.getBundleID();
+
             List<String> versions = getAddonReleasesSince(bundleContext.getPomFile().getArtifactId(), bundleContext.getVersion());
             entityContext.ui().updateNotificationBlock("addons",
-                builder -> {
-                    if (versions == null || versions.isEmpty()) {
-                        builder.addInfo("", info, null, icon, color, bundleContext.getVersion(), null);
-                    } else {
-                        builder.addFlexAction(bundleContext.getBundleID(), flex -> {
-                            flex.addInfo(info).setIcon(icon, color);
-                            flex.addSelectBox("versions", (entityContext, params) -> {
-                                System.out.println("BEST");
-                                return ActionResponseModel.success();
-                            }).setOptions(OptionModel.list(versions)).setAsButton(null, null, bundleContext.getVersion());
-                        });
-                    }
-                });
+                builder -> addAddonNotificationRow(bundleContext, key, versions, builder));
 
             if (!bundleContext.isLoaded()) {
                 return;
@@ -139,7 +123,7 @@ public class EntityContextBundleImpl {
 
             this.cacheService.clearCache();
 
-            URL externalFiles = entityContext.getBean(BundleClassLoaderHolder.class).getBundleClassLoader(bundleContext.getBundleID())
+            URL externalFiles = entityContext.getBean(BundleClassLoaderHolder.class).getBundleClassLoader(key)
                                              .getResource("external_files.7z");
             HardwareUtils.copyResources(externalFiles);
 
@@ -153,6 +137,43 @@ public class EntityContextBundleImpl {
                 this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, bundleContext));
             }
         }
+    }
+
+    private void addAddonNotificationRow(BundleContext bundleContext, String key, List<String> versions,
+        NotificationBlockBuilder builder) {
+        String icon = bundleContext.isLoaded() ? "fas fa-puzzle-piece" : "fas fa-bug";
+        String color = bundleContext.isLoaded() ? Color.GREEN : Color.RED;
+        String info = bundleContext.getBundleFriendlyName();
+        if (versions == null || versions.isEmpty()) {
+            builder.addInfo(key, info, null, icon, color, bundleContext.getVersion(), null);
+        } else {
+            builder.addFlexAction(key, flex -> {
+                flex.addInfo(info).setIcon(icon, color);
+                flex.addSelectBox("versions", (entityContext, params) ->
+                        handleUpdateAddon(bundleContext, key, entityContext, params, versions))
+                    .setHighlightSelected(false)
+                    .setOptions(OptionModel.list(versions))
+                    .setAsButton("fas fa-cloud-download-alt", Color.PRIMARY_COLOR, bundleContext.getVersion())
+                    .setHeight(20).setPrimary(true);
+            });
+        }
+    }
+
+    @Nullable
+    private ActionResponseModel handleUpdateAddon(BundleContext bundleContext, String key, EntityContext entityContext, JSONObject params,
+        List<String> versions) {
+        String newVersion = params.getString("value");
+        if (versions.contains(newVersion)) {
+            String question = Lang.getServerMessage("PACKAGE_UPDATE_QUESTION",
+                FlowMap.of("NAME", bundleContext.getPomFile().getName(), "VERSION", newVersion));
+            entityContext.ui().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", new Runnable() {
+                @Override
+                public void run() {
+                    System.out.println("GGGG");
+                }
+            }, Collections.singletonList(question), null);
+        }
+        return null;
     }
 
     private @Nullable List<String> getAddonReleasesSince(String bundleID, String version) {
