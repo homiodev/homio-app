@@ -26,7 +26,6 @@ import javax.script.ScriptException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.config.AppProperties;
-import org.homio.app.extloader.BundleClassLoaderHolder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.CompileScriptContext;
 import org.homio.app.model.entity.ScriptEntity;
@@ -55,7 +54,6 @@ public class ScriptService implements ContextCreated {
 
     private final LoggerService loggerService;
     private final EntityContext entityContext;
-    private final BundleClassLoaderHolder bundleClassLoaderHolder;
     private final AppProperties properties;
 
     private ExecutorService createCompiledScriptSingleCallExecutorService = Executors.newSingleThreadExecutor();

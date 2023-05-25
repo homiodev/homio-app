@@ -7,8 +7,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.extloader.BundleClassLoaderHolder;
 import org.homio.app.extloader.BundleContext;
@@ -30,7 +32,9 @@ import org.homio.bundle.api.util.Lang;
 import org.homio.bundle.api.widget.WidgetBaseTemplate;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+import org.springframework.beans.factory.support.DefaultSingletonBeanRegistry;
 import org.springframework.context.ApplicationContext;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -40,10 +44,12 @@ public class EntityContextBundleImpl {
     private final Map<String, InternalBundleContext> bundles = new LinkedHashMap<>();
     private final EntityContextImpl entityContext;
     private final CacheService cacheService;
+    @Setter
+    private ApplicationContext applicationContext;
     // count how much addBundle/removeBundle invokes
     public static int BUNDLE_UPDATE_COUNT = 0;
 
-    public void initialiseInlineBundles(ApplicationContext applicationContext) {
+    public void initialiseInlineBundles() {
         log.info("Initialize bundles...");
         ArrayList<BundleEntrypoint> bundleEntrypoint = new ArrayList<>(applicationContext.getBeansOfType(BundleEntrypoint.class).values());
         Collections.sort(bundleEntrypoint);
@@ -62,9 +68,50 @@ public class EntityContextBundleImpl {
     }
 
     public void addBundle(Map<String, BundleContext> artifactIdContextMap) {
+        Map<String, ApplicationContext> contexts = new HashMap<>();
         for (String artifactId : artifactIdContextMap.keySet()) {
-            this.addBundle(artifactIdContextMap.get(artifactId), artifactIdContextMap);
+            ApplicationContext context = this.addBundle(artifactIdContextMap.get(artifactId), artifactIdContextMap);
+            if (context != null) {
+                contexts.put(artifactId, context);
+            }
         }
+        if (contexts.isEmpty()) {
+            return;
+        }
+        this.cacheService.clearCache();
+
+        // refresh jpa beans
+       // DefaultSingletonBeanRegistry registry = (DefaultSingletonBeanRegistry) applicationContext.getAutowireCapableBeanFactory();
+     //   registry.destroySingleton("entityManagerFactory");
+
+        // Map<String, Object> vendorProperties = getVendorProperties();
+        // customizeVendorProperties(vendorProperties);
+        LocalContainerEntityManagerFactoryBean entityManagerFactory = applicationContext.getBean(LocalContainerEntityManagerFactoryBean.class);
+        // EntityManagerFactoryBuilder factoryBuilder = applicationContext.getBean(EntityManagerFactoryBuilder.class);
+        entityManagerFactory.afterPropertiesSet();
+        /*factoryBuilder.dataSource(this.dataSource)
+                             .managedTypes(persistenceManagedTypes)
+                             .properties(entityManagerFactory.getJpaPropertyMap())
+                             .mappingResources(getMappingResources())
+                             .jta(isJta())
+                             .build();
+        registry.registerSingleton("entityManagerFactory", new ConfigManager(filePath));*/
+        // end
+
+        for (Entry<String, ApplicationContext> entry : contexts.entrySet()) {
+            ApplicationContext context = entry.getValue();
+            BundleContext bundleContext = artifactIdContextMap.get(entry.getKey());
+
+            entityContext.rebuildAllRepositories(context, true);
+            entityContext.updateBeans(bundleContext, context, true);
+
+            for (BundleEntrypoint bundleEntrypoint : context.getBeansOfType(BundleEntrypoint.class).values()) {
+                log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
+                bundleEntrypoint.init();
+                this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, bundleContext));
+            }
+        }
+
         BUNDLE_UPDATE_COUNT++;
     }
 
@@ -101,7 +148,7 @@ public class EntityContextBundleImpl {
         }
     }
 
-    private void addBundle(BundleContext bundleContext, Map<String, BundleContext> artifactIdToContextMap) {
+    private ApplicationContext addBundle(BundleContext bundleContext, Map<String, BundleContext> artifactIdToContextMap) {
         if (!bundleContext.isInternal() && !bundleContext.isInstalled()) {
             entityContext.ui().addNotificationBlockOptional("addons", "Addons", "fas fa-file-zipper", "#FF4400");
             String key = bundleContext.getBundleID();
@@ -111,32 +158,22 @@ public class EntityContextBundleImpl {
                 builder -> addAddonNotificationRow(bundleContext, key, versions, builder));
 
             if (!bundleContext.isLoaded()) {
-                return;
+                return null;
             }
 
             entityContext.getAllApplicationContexts().add(bundleContext.getApplicationContext());
             bundleContext.setInstalled(true);
-            for (String bundleDependency : bundleContext.getDependencies()) {
+            /*for (String bundleDependency : bundleContext.getDependencies()) {
                 addBundle(artifactIdToContextMap.get(bundleDependency), artifactIdToContextMap);
-            }
+            }*/
             ApplicationContext context = bundleContext.getApplicationContext();
-
-            this.cacheService.clearCache();
 
             URL externalFiles = entityContext.getBean(BundleClassLoaderHolder.class).getBundleClassLoader(key)
                                              .getResource("external_files.7z");
             HardwareUtils.copyResources(externalFiles);
-
-            entityContext.rebuildAllRepositories(context, true);
-            entityContext.updateBeans(bundleContext, context, true);
-
-            for (BundleEntrypoint bundleEntrypoint :
-                context.getBeansOfType(BundleEntrypoint.class).values()) {
-                log.info("Init bundle: <{}>", bundleEntrypoint.getBundleId());
-                bundleEntrypoint.init();
-                this.bundles.put(bundleEntrypoint.getBundleId(), new InternalBundleContext(bundleEntrypoint, bundleContext));
-            }
+            return context;
         }
+        return null;
     }
 
     private void addAddonNotificationRow(BundleContext bundleContext, String key, List<String> versions,

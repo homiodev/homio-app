@@ -65,7 +65,7 @@ public class WorkspaceController {
         BundleEntrypoint bundleEntrypoint = bundleService.getBundle(bundleID);
         InputStream stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream("extensions/" + bundleEntrypoint.getBundleId() + ".png");
         if (stream == null) {
-            stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream(bundleEntrypoint.getBundleImage());
+            stream = bundleEntrypoint.getClass().getClassLoader().getResourceAsStream("images/image.png");
         }
         if (stream == null) {
             throw new NotFoundException("Unable to find workspace extension bundle image for bundle: " + bundleID);

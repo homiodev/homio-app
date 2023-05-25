@@ -52,6 +52,8 @@ import org.homio.app.manager.common.EntityManager;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.rest.EntityUIMetaData;
+import org.homio.app.repository.StorageRepository;
+import org.homio.app.repository.device.AllDeviceRepository;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemShowEntityCreateTimeSetting;
 import org.homio.app.setting.system.SystemShowEntityUpdateTimeSetting;
@@ -62,8 +64,10 @@ import org.homio.app.utils.UIFieldSelectionUtil;
 import org.homio.app.utils.UIFieldUtils;
 import org.homio.bundle.api.EntityContext;
 import org.homio.bundle.api.entity.BaseEntity;
+import org.homio.bundle.api.entity.DeviceBaseEntity;
 import org.homio.bundle.api.entity.EntityFieldMetadata;
 import org.homio.bundle.api.entity.ImageEntity;
+import org.homio.bundle.api.entity.types.StorageEntity;
 import org.homio.bundle.api.exception.NotFoundException;
 import org.homio.bundle.api.exception.ServerException;
 import org.homio.bundle.api.model.ActionResponseModel;
@@ -437,6 +441,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         putTypeToEntityIfNotExists(type);
         List<BaseEntity> items = new ArrayList<>();
 
+        List<StorageEntity> entities = entityContext.getBean(StorageRepository.class).listAll();
+        entityContext.getBean(AllDeviceRepository.class).listAll();
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
             items.addAll(entityContext.findAll(aClass));
         }

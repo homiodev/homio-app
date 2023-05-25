@@ -210,6 +210,7 @@ public class EntityContextImpl implements EntityContext {
 
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
+        this.entityContextBundle.setApplicationContext(applicationContext);
         this.allApplicationContexts.add(applicationContext);
         this.applicationContext = applicationContext;
         MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
@@ -238,7 +239,7 @@ public class EntityContextImpl implements EntityContext {
 
         setting().listenValueAndGet(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
 
-        entityContextBundle.initialiseInlineBundles(applicationContext);
+        entityContextBundle.initialiseInlineBundles();
 
         bgp().builder("app-version").interval(Duration.ofDays(1)).delay(Duration.ofSeconds(1))
              .execute(this::updateAppNotificationBlock);
@@ -631,8 +632,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @SneakyThrows
-    void updateBeans(
-        BundleContext bundleContext, ApplicationContext context, boolean addBundle) {
+    void updateBeans(BundleContext bundleContext, ApplicationContext context, boolean addBundle) {
         log.info("Starting update all app bundles");
         Lang.clear();
         fetchSettingPlugins(bundleContext, addBundle);

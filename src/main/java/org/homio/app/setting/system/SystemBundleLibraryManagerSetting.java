@@ -100,9 +100,10 @@ public class SystemBundleLibraryManagerSetting
     }
 
     private PackageModel build(BundleContext bundleContext) {
-        return new PackageModel()
-            .setName(bundleContext.getBundleID())
-            .setTitle(bundleContext.getPomFile().getName())
+        return new PackageModel(
+            bundleContext.getBundleID(),
+            bundleContext.getPomFile().getName(),
+            bundleContext.getPomFile().getDescription())
             .setVersion(bundleContext.getVersion())
             .setReadme(bundleContext.getPomFile().getDescription());
     }
@@ -161,10 +162,13 @@ public class SystemBundleLibraryManagerSetting
                 String lastReleaseVersion = versions.get(versions.size() - 1);
                 // String jarFile = addonRepo.getRepo() + ".jar";
                 Model pomModel = addonRepo.getPomModel();
-                PackageModel entity = new PackageModel();
+                String key = pomModel.getArtifactId();
+                PackageModel entity = new PackageModel(
+                    key.startsWith("addon-") ? key.substring("addon-".length()) : key,
+                    pomModel.getName(),
+                    pomModel.getDescription()
+                );
                 entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s.jar", repository, lastReleaseVersion, addonRepo.getRepo()));
-                entity.setTitle(pomModel.getDescription());
-                entity.setName(pomModel.getArtifactId());
                 entity.setAuthor(pomModel.getDevelopers().stream()
                                          .map(Contributor::getName)
                                          .collect(Collectors.joining(", ")));

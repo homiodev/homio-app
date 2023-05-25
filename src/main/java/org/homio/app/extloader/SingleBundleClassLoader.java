@@ -32,7 +32,7 @@ public class SingleBundleClassLoader extends JarClassLoader {
   SingleBundleClassLoader(Path jarPath) {
     super.add(jarPath.toString());
     this.jarFile = new JarFile(jarPath.toFile());
-    this.baseUrl = new URL("jar", "", jarPath.toUri().toURL().toString() + "!/");
+    this.baseUrl = new URL("jar", "", jarPath.toUri().toURL() + "!/");
   }
 
   private static String encodePath(String path, boolean flag) {
