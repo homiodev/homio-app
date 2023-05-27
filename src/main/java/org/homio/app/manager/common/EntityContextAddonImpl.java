@@ -12,11 +12,10 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.metamodel.model.domain.internal.MappingMetamodelImpl;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextUI.NotificationBlockBuilder;
+import org.homio.api.entity.types.StorageEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.OptionModel;
@@ -28,17 +27,17 @@ import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.api.widget.WidgetBaseTemplate;
 import org.homio.app.HomioClassLoader;
+import org.homio.app.config.EntityManagerContextImpl;
 import org.homio.app.extloader.AddonContext;
+import org.homio.app.extloader.CustomPersistenceManagedTypes;
 import org.homio.app.manager.CacheService;
 import org.homio.app.setting.system.SystemAddonLibraryManagerSetting;
 import org.homio.app.utils.HardwareUtils;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ApplicationContext;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.persistenceunit.MutablePersistenceUnitInfo;
-import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
-import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypesScanner;
+import org.springframework.context.ConfigurableApplicationContext;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -74,7 +73,7 @@ public class EntityContextAddonImpl {
     public void addAddons(Map<String, AddonContext> artifactIdContextMap) {
         Map<String, ApplicationContext> contexts = new HashMap<>();
         for (String artifactId : artifactIdContextMap.keySet()) {
-            ApplicationContext context = this.addAddons(artifactIdContextMap.get(artifactId), artifactIdContextMap);
+            ApplicationContext context = this.addAddons(artifactIdContextMap.get(artifactId));
             if (context != null) {
                 contexts.put(artifactId, context);
             }
@@ -84,26 +83,11 @@ public class EntityContextAddonImpl {
         }
         this.cacheService.clearCache();
 
-        SessionFactoryImplementor sessionFactory = (SessionFactoryImplementor) applicationContext.getBean("sessionFactory");
-        MappingMetamodelImpl mappingMetamodel = (MappingMetamodelImpl) sessionFactory.getRuntimeMetamodels().getMappingMetamodel();
-
-        PersistenceManagedTypes persistenceManagedTypes = new PersistenceManagedTypesScanner(applicationContext).scan("org.homio");
-        LocalContainerEntityManagerFactoryBean entityManagerFactoryBean = applicationContext.getBean(LocalContainerEntityManagerFactoryBean.class);
-        MutablePersistenceUnitInfo pui = (MutablePersistenceUnitInfo) entityManagerFactoryBean.getPersistenceUnitInfo();
-        for (String managedClassName : persistenceManagedTypes.getManagedClassNames()) {
-            if (!pui.getManagedClassNames().contains(managedClassName)) {
-                log.info("Add addon entity unit: {}", managedClassName);
-                pui.addManagedClassName(managedClassName);
-
-//                mappingMetamodel.entityPersisters().put("", );
-            }
-        }
-
         for (Entry<String, ApplicationContext> entry : contexts.entrySet()) {
             ApplicationContext context = entry.getValue();
             AddonContext addonContext = artifactIdContextMap.get(entry.getKey());
 
-            entityContext.rebuildAllRepositories(context, true);
+            entityContext.rebuildRepositoryByPrefixMap();
             entityContext.updateBeans(addonContext, context, true);
 
             for (AddonEntrypoint addonEntrypoint : context.getBeansOfType(AddonEntrypoint.class).values()) {
@@ -112,6 +96,7 @@ public class EntityContextAddonImpl {
                 this.addons.put(addonEntrypoint.getAddonId(), new InternalAddonContext(addonEntrypoint, addonContext));
             }
         }
+        applicationContext.getBean(EntityManagerContextImpl.class).invalidate();
 
         ADDON_UPDATE_COUNT++;
     }
@@ -143,13 +128,13 @@ public class EntityContextAddonImpl {
 
             this.cacheService.clearCache();
 
-            entityContext.rebuildAllRepositories(addonContext.getApplicationContext(), false);
+            entityContext.rebuildRepositoryByPrefixMap();
             entityContext.updateBeans(addonContext, addonContext.getApplicationContext(), false);
             ADDON_UPDATE_COUNT++;
         }
     }
 
-    private ApplicationContext addAddons(AddonContext addonContext, Map<String, AddonContext> artifactIdToContextMap) {
+    private ApplicationContext addAddons(AddonContext addonContext) {
         if (!addonContext.isInternal() && !addonContext.isInstalled()) {
             entityContext.ui().addNotificationBlockOptional("addons", "Addons", "fas fa-file-zipper", "#FF4400");
             String key = addonContext.getAddonID();

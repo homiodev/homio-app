@@ -221,7 +221,11 @@ public class EntityContextImpl implements EntityContext {
         this.workspaceService = applicationContext.getBean(WorkspaceService.class);
         this.entityManager = applicationContext.getBean(EntityManager.class);
 
-        rebuildAllRepositories(applicationContext, true);
+        pureRepositories.putAll(applicationContext
+            .getBeansOfType(PureRepository.class).values().stream()
+            .collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r)));
+        repositories.putAll(applicationContext.getBeansOfType(AbstractRepository.class));
+        rebuildRepositoryByPrefixMap();
 
         UserAdminEntity.ensureUserExists(this);
         LocalBoardEntity.ensureDeviceExists(this);
@@ -658,24 +662,6 @@ public class EntityContextImpl implements EntityContext {
         log.info("Finish update all app addons");
     }
 
-    void rebuildAllRepositories(ApplicationContext context, boolean addAddon) {
-        Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values().stream()
-                                                               .collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
-
-        if (addAddon) {
-            pureRepositories.putAll(pureRepositoryMap);
-            repositories.putAll(context.getBeansOfType(AbstractRepository.class));
-        } else {
-            pureRepositories.keySet().removeAll(pureRepositoryMap.keySet());
-            repositories.keySet().removeAll(context.getBeansOfType(AbstractRepository.class).keySet());
-        }
-        uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class)
-                                    .stream()
-                                    .collect(Collectors.toMap(Class::getSimpleName, s -> s));
-
-        rebuildRepositoryByPrefixMap();
-    }
-
     private void registerUpdatableSettings(ApplicationContext context)
         throws IllegalAccessException {
         for (String name : context.getBeanDefinitionNames()) {
@@ -707,7 +693,10 @@ public class EntityContextImpl implements EntityContext {
         return proxy;
     }
 
-    private void rebuildRepositoryByPrefixMap() {
+    public void rebuildRepositoryByPrefixMap() {
+        uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class)
+                                    .stream()
+                                    .collect(Collectors.toMap(Class::getSimpleName, s -> s));
         repositoriesByPrefix = new HashMap<>();
         for (Class<? extends EntityFieldMetadata> metaEntity : uiFieldClasses.values()) {
             if (BaseEntity.class.isAssignableFrom(metaEntity)) {

@@ -19,6 +19,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -56,6 +57,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.Ordered;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.http.MediaType;
@@ -63,6 +65,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.jdbc.datasource.lookup.SingleDataSourceLookup;
 import org.springframework.orm.jpa.persistenceunit.DefaultPersistenceUnitManager;
 import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
+import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypesScanner;
 import org.springframework.orm.jpa.persistenceunit.PersistenceUnitManager;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
@@ -306,7 +309,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
                          .build();
   }*/
 
-    @Bean
+    /*@Bean
     public PersistenceUnitManager persistenceUnitManager(PersistenceManagedTypes managedTypes, DataSource dataSource,
         ApplicationContext applicationContext) {
         DefaultPersistenceUnitManager manager = new DefaultPersistenceUnitManager();
@@ -315,7 +318,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
         manager.setDefaultDataSource(dataSource);
         manager.setResourceLoader(applicationContext);
         return manager;
-    }
+    }*/
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
