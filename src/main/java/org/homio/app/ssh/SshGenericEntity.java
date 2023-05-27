@@ -391,10 +391,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     }
 
-    private long getDeepHashCode() {
-        return getJsonDataHashCode("host", "port", "user", "pwd", "key_pwd", "prv_key", "ct");
-    }
-
     @Override
     public @NotNull Class<GenericWebSocketService> getEntityServiceItemClass() {
         return GenericWebSocketService.class;
@@ -405,6 +401,14 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         GenericWebSocketService service = new GenericWebSocketService(entityContext.getBean(SSHServerEndpoint.class));
         service.entityUpdated(this);
         return service;
+    }
+
+    private long getDeepHashCode() {
+        return getJsonDataHashCode("host", "port", "user", "pwd", "key_pwd", "prv_key", "ct");
+    }
+
+    protected enum PublicKeyAuthSign {
+        SHA1, SHA256, SHA512
     }
 
     @RequiredArgsConstructor
@@ -454,9 +458,5 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         public void closeSshSession(String token, SshGenericEntity entity) {
             sshServerEndpoint.closeSession(token);
         }
-    }
-
-    protected enum PublicKeyAuthSign {
-        SHA1, SHA256, SHA512
     }
 }

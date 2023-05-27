@@ -158,10 +158,10 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
     public UIInputEntity buildEntity() {
         List<UIInputEntity> entities =
-                getInputBuilders().values().stream()
-                        .map(UIEntityBuilder::buildEntity)
-                        .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
-                        .collect(Collectors.toList());
+            getInputBuilders().values().stream()
+                              .map(UIEntityBuilder::buildEntity)
+                              .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
+                              .collect(Collectors.toList());
         return new UIDialogInputEntity(entityID, this.order, UIItemType.Dialog.name(), title, icon, iconColor, getStyle(), width, entities);
     }
 }

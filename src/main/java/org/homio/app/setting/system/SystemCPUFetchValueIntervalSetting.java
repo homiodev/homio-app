@@ -4,7 +4,7 @@ import org.homio.api.setting.SettingPluginSlider;
 import org.homio.app.setting.CoreSettingPlugin;
 
 public class SystemCPUFetchValueIntervalSetting
-        implements CoreSettingPlugin<Integer>, SettingPluginSlider {
+    implements CoreSettingPlugin<Integer>, SettingPluginSlider {
 
     @Override
     public GroupKey getGroupKey() {

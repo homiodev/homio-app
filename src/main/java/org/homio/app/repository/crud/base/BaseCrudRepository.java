@@ -7,4 +7,4 @@ import org.springframework.data.repository.NoRepositoryBean;
 
 @NoRepositoryBean
 public interface BaseCrudRepository<T extends HasEntityIdentifier>
-        extends JpaRepository<T, Integer>, PureRepository<T> {}
+    extends JpaRepository<T, Integer>, PureRepository<T> {}

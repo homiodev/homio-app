@@ -26,11 +26,6 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
         return null;
     }
 
-    @Override
-    protected void beforePersist() {
-        HasChartDataSource.randomColor(this);
-    }
-
     @UIField(order = 1, required = true)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
     @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
@@ -38,5 +33,10 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     @UIFieldIgnoreParent
     public String getChartDataSource() {
         return getJsonData("chartDS");
+    }
+
+    @Override
+    protected void beforePersist() {
+        HasChartDataSource.randomColor(this);
     }
 }

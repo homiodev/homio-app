@@ -1,8 +1,7 @@
 package org.homio.app.spring;
 
 /**
- * Interface may be implemented and engine calls onContextUpdate() at startup and every time when
- * new external been added/removed
+ * Interface may be implemented and engine calls onContextUpdate() at startup and every time when new external been added/removed
  */
 public interface ContextRefreshed {
 

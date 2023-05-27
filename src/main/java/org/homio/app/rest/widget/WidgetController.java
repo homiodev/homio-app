@@ -313,24 +313,6 @@ public class WidgetController {
         return result;
     }
 
-    private void updateWidgetBeforeReturnToUI(WidgetBaseEntity<?> widget) {
-        /*TODO: fix:::if (widget instanceof WidgetJsEntity) {
-            WidgetJsEntity jsEntity = (WidgetJsEntity) widget;
-            try {
-                jsEntity.setJavaScriptErrorResponse(null);
-                ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(jsEntity.getJavaScript()).setJavaScriptParameters(jsEntity
-                .getJavaScriptParameters());
-
-                CompileScriptContext compileScriptContext =
-                    scriptService.createCompiledScript(scriptEntity, null);
-                jsEntity.setJavaScriptResponse(scriptService.runJavaScript(compileScriptContext).stringValue());
-
-            } catch (Exception ex) {
-                jsEntity.setJavaScriptErrorResponse(CommonUtils.getErrorMessage(ex));
-            }
-        }*/
-    }
-
     @PostMapping("/create/{tabId}/{type}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public BaseEntity<?> createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
@@ -431,6 +413,24 @@ public class WidgetController {
         }
         WidgetTabEntity widgetTabEntity = getWidgetTabEntity(tabId);
         entityContext.delete(widgetTabEntity);
+    }
+
+    private void updateWidgetBeforeReturnToUI(WidgetBaseEntity<?> widget) {
+        /*TODO: fix:::if (widget instanceof WidgetJsEntity) {
+            WidgetJsEntity jsEntity = (WidgetJsEntity) widget;
+            try {
+                jsEntity.setJavaScriptErrorResponse(null);
+                ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(jsEntity.getJavaScript()).setJavaScriptParameters(jsEntity
+                .getJavaScriptParameters());
+
+                CompileScriptContext compileScriptContext =
+                    scriptService.createCompiledScript(scriptEntity, null);
+                jsEntity.setJavaScriptResponse(scriptService.runJavaScript(compileScriptContext).stringValue());
+
+            } catch (Exception ex) {
+                jsEntity.setJavaScriptErrorResponse(CommonUtils.getErrorMessage(ex));
+            }
+        }*/
     }
 
     private WidgetTabEntity getWidgetTabEntity(String tabId) {

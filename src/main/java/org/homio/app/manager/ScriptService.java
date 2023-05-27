@@ -58,13 +58,6 @@ public class ScriptService implements ContextCreated {
 
     private ExecutorService createCompiledScriptSingleCallExecutorService = Executors.newSingleThreadExecutor();
 
-    private static void appendFunc(List<Object> script, String funcName, String separator, String javaScript) {
-        String result = ScriptEntity.getFunctionWithName(javaScript, funcName);
-        if (result != null) {
-            script.add(separator + "(" + result + ")" + separator);
-        }
-    }
-
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
         for (ScriptEntity scriptEntity : this.entityContext.findAll(ScriptEntity.class)) {
@@ -198,6 +191,13 @@ public class ScriptService implements ContextCreated {
         } catch (Exception ex) {
             threadContext.cancel();
             throw new ExecutionException("Exception: " + CommonUtils.getErrorMessage(ex), ex);
+        }
+    }
+
+    private static void appendFunc(List<Object> script, String funcName, String separator, String javaScript) {
+        String result = ScriptEntity.getFunctionWithName(javaScript, funcName);
+        if (result != null) {
+            script.add(separator + "(" + result + ")" + separator);
         }
     }
 }

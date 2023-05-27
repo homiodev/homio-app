@@ -124,10 +124,6 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
 
-    public int getBackupStorageCount() {
-        return backup ? getEntityContext().getBean(VariableDataRepository.class).count(variableId) : 0;
-    }
-
     public WorkspaceVariable(@NotNull String variableId, @NotNull String variableName, @NotNull WorkspaceGroup workspaceGroup,
         @NotNull VariableType variableType, @Nullable String description, @Nullable String color, boolean readOnly, @Nullable String unit) {
         this.variableId = variableId;
@@ -139,6 +135,10 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
         this.unit = unit;
         this.setName(variableName);
         this.setEntityID(variableId);
+    }
+
+    public int getBackupStorageCount() {
+        return backup ? getEntityContext().getBean(VariableDataRepository.class).count(variableId) : 0;
     }
 
     @Override

@@ -10,20 +10,20 @@ import org.springframework.data.util.Pair;
 
 public final class SeriesBuilder {
 
-    private static <T extends BaseEntity> List<OptionModel> buildOptions(
-            EntityContext entityContext, Class<T> type, String prefix) {
-        return entityContext.findAll(type).stream()
-                .map(e -> OptionModel.of(e.getEntityID(), prefix + e.getTitle()))
-                .collect(Collectors.toList());
-    }
-
     public static ChartOptionsBuilder seriesOptions() {
         return new ChartOptionsBuilder();
     }
 
+    private static <T extends BaseEntity> List<OptionModel> buildOptions(
+        EntityContext entityContext, Class<T> type, String prefix) {
+        return entityContext.findAll(type).stream()
+                            .map(e -> OptionModel.of(e.getEntityID(), prefix + e.getTitle()))
+                            .collect(Collectors.toList());
+    }
+
     public static class ChartOptionsBuilder {
 
-        private List<Pair<Class, String>> options = new ArrayList<>(4);
+        private final List<Pair<Class, String>> options = new ArrayList<>(4);
 
         public ChartOptionsBuilder add(Class<? extends BaseEntity> entityClass, String prefix) {
             options.add(Pair.of(entityClass, prefix));
@@ -39,8 +39,8 @@ public final class SeriesBuilder {
             List<OptionModel> list = new ArrayList<>();
             for (Pair<Class, String> pair : options) {
                 list.addAll(
-                        SeriesBuilder.buildOptions(
-                                entityContext, pair.getFirst(), pair.getSecond()));
+                    SeriesBuilder.buildOptions(
+                        entityContext, pair.getFirst(), pair.getSecond()));
             }
             return list;
         }

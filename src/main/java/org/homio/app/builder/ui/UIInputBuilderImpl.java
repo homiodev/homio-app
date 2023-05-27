@@ -36,8 +36,8 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
 
     public UIButtonItemBuilderImpl addFireActionBeforeChange(
         String name, String[] actions, String reference, int order) {
-        return addEntity(            new UIButtonItemBuilderImpl(                UIItemType.Button, name, name, null, order, null)
-                .setActionReference(reference))
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, name, null, order, null)
+            .setActionReference(reference))
             .setFireActionsBeforeChange(actions);
     }
 

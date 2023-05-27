@@ -98,19 +98,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         }
     }
 
-    private static String valueToStr(Object content, String defaultValue) {
-        if (content != null) {
-            if (content instanceof State) {
-                return ((State) content).stringValue();
-            } else if (content instanceof byte[]) {
-                return new String((byte[]) content);
-            } else {
-                return content.toString();
-            }
-        }
-        return defaultValue;
-    }
-
     @Override
     public void logError(String message, Object... params) {
         log(Level.ERROR, message, params);
@@ -135,15 +122,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public void logInfo(String message, Object... params) {
         log(Level.INFO, message, params);
-    }
-
-    private void log(Level level, String message, Object... params) {
-        log.log(level, "[" + this.extensionId + " -> " + this.opcode + "] - " + message, params);
-    }
-
-    void setOpcode(String opcode) {
-        this.extensionId = opcode.contains("_") ? opcode.substring(0, opcode.indexOf("_")) : "";
-        this.opcode = opcode.contains("_") ? opcode.substring(opcode.indexOf("_") + 1) : opcode;
     }
 
     @Override
@@ -187,27 +165,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             }
         }
         return value;
-    }
-
-    private <P> P getMenuValueInternal(String key, MenuBlock menuBlock, Class<P> type) {
-        String menuId = this.inputs.get(key).getString(1);
-        WorkspaceBlock refWorkspaceBlock = workspaceTabHolder.getBlocks().get(menuId);
-        String fieldValue = refWorkspaceBlock.getField(menuBlock.getName());
-        if (Enum.class.isAssignableFrom(type)) {
-            for (P p : type.getEnumConstants()) {
-                if (((Enum<?>) p).name().equals(fieldValue)) {
-                    return p;
-                }
-            }
-        } else if (String.class.isAssignableFrom(type)) {
-            return (P) fieldValue;
-        } else if (Long.class.isAssignableFrom(type)) {
-            return (P) Long.valueOf(fieldValue);
-        } else if (BaseEntity.class.isAssignableFrom(type)) {
-            return (P) getEntityContext().getEntity(fieldValue);
-        }
-        logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
-        return null; // unreachable block
     }
 
     @Override
@@ -311,22 +268,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             });
     }
 
-    private State handleInternal(Function<Scratch3Block, State> function) {
-        setActiveWorkspace();
-        return function.apply(getScratch3Block());
-    }
-
     public void setActiveWorkspace() {
         getNearestLiveThread().setMetadata("activeWorkspaceId", id);
-    }
-
-    private EntityContextBGP.ThreadContext<?> getNearestLiveThread() {
-        if (this.threadContext != null) {
-            return this.threadContext;
-        } else if (this.parent != null) {
-            return this.parent.getNearestLiveThread();
-        }
-        throw new RuntimeException("Must be never calls");
     }
 
     public Scratch3Block getScratch3Block() {
@@ -411,10 +354,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public WorkspaceBlock getInputWorkspaceBlock(String key) {
         return workspaceTabHolder.getBlocks().get(cast(getInput(key, false)));
-    }
-
-    private String cast(Object object) {
-        return (String) object;
     }
 
     @Override
@@ -525,18 +464,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         this.releaseListeners.add(listener);
     }
 
-    private String sendScratch3ExtensionNotFound(String extensionId) {
-        String msg = "No scratch extension <" + extensionId + "> found";
-        getEntityContext().ui().sendErrorMessage(msg, extensionId);
-        return msg;
-    }
-
-    private String sendScratch3BlockNotFound(String extensionId, String opcode) {
-        String msg = "No scratch block <" + opcode + "> found in extension <" + extensionId + ">";
-        getEntityContext().ui().sendErrorMessage("W.ERROR.SCRATCH_BLOCK_NOT_FOUND", opcode);
-        return msg;
-    }
-
     @Override
     public String toString() {
         return "WorkspaceBlockImpl{"
@@ -591,6 +518,79 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     public EntityContext getEntityContext() {
         return workspaceTabHolder.getEntityContext();
+    }
+
+    void setOpcode(String opcode) {
+        this.extensionId = opcode.contains("_") ? opcode.substring(0, opcode.indexOf("_")) : "";
+        this.opcode = opcode.contains("_") ? opcode.substring(opcode.indexOf("_") + 1) : opcode;
+    }
+
+    private static String valueToStr(Object content, String defaultValue) {
+        if (content != null) {
+            if (content instanceof State) {
+                return ((State) content).stringValue();
+            } else if (content instanceof byte[]) {
+                return new String((byte[]) content);
+            } else {
+                return content.toString();
+            }
+        }
+        return defaultValue;
+    }
+
+    private void log(Level level, String message, Object... params) {
+        log.log(level, "[" + this.extensionId + " -> " + this.opcode + "] - " + message, params);
+    }
+
+    private <P> P getMenuValueInternal(String key, MenuBlock menuBlock, Class<P> type) {
+        String menuId = this.inputs.get(key).getString(1);
+        WorkspaceBlock refWorkspaceBlock = workspaceTabHolder.getBlocks().get(menuId);
+        String fieldValue = refWorkspaceBlock.getField(menuBlock.getName());
+        if (Enum.class.isAssignableFrom(type)) {
+            for (P p : type.getEnumConstants()) {
+                if (((Enum<?>) p).name().equals(fieldValue)) {
+                    return p;
+                }
+            }
+        } else if (String.class.isAssignableFrom(type)) {
+            return (P) fieldValue;
+        } else if (Long.class.isAssignableFrom(type)) {
+            return (P) Long.valueOf(fieldValue);
+        } else if (BaseEntity.class.isAssignableFrom(type)) {
+            return (P) getEntityContext().getEntity(fieldValue);
+        }
+        logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
+        return null; // unreachable block
+    }
+
+    private State handleInternal(Function<Scratch3Block, State> function) {
+        setActiveWorkspace();
+        return function.apply(getScratch3Block());
+    }
+
+    private EntityContextBGP.ThreadContext<?> getNearestLiveThread() {
+        if (this.threadContext != null) {
+            return this.threadContext;
+        } else if (this.parent != null) {
+            return this.parent.getNearestLiveThread();
+        }
+        throw new RuntimeException("Must be never calls");
+    }
+
+    private String cast(Object object) {
+        return (String) object;
+    }
+
+    private String sendScratch3ExtensionNotFound(String extensionId) {
+        String msg = "No scratch extension <" + extensionId + "> found";
+        getEntityContext().ui().sendErrorMessage(msg, extensionId);
+        return msg;
+    }
+
+    private String sendScratch3BlockNotFound(String extensionId, String opcode) {
+        String msg = "No scratch block <" + opcode + "> found in extension <" + extensionId + ">";
+        getEntityContext().ui().sendErrorMessage("W.ERROR.SCRATCH_BLOCK_NOT_FOUND", opcode);
+        return msg;
     }
 
     @AllArgsConstructor

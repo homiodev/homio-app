@@ -22,71 +22,71 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class NetworkInterfaceConsolePlugin implements ConsolePluginTable<NetworkInterfaceConsolePlugin.NetworkInterfaceEntity> {
 
-  @Getter
-  private final EntityContext entityContext;
-
-  @Override
-  public String getParentTab() {
-    return "hardware";
-  }
-
-  @Override
-  @SneakyThrows
-  public Collection<NetworkInterfaceEntity> getValue() {
-    List<NetworkInterfaceEntity> list = new ArrayList<>();
-    for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-      list.add(new NetworkInterfaceEntity(
-          networkInterface.getName(),
-          networkInterface.getDisplayName(),
-          networkInterface.getMTU(),
-          networkInterface.getInterfaceAddresses().stream()
-              .map(ia -> ia.getAddress().toString())
-              .collect(Collectors.joining(" ~~~|~~~ "))));
-    }
-    Collections.sort(list);
-    return list;
-  }
-
-  @Override
-  public int order() {
-    return 1500;
-  }
-
-  @Override
-  public String getName() {
-    return "networkInterface";
-  }
-
-  @Override
-  public Class<NetworkInterfaceEntity> getEntityClass() {
-    return NetworkInterfaceEntity.class;
-  }
-
-  @Getter
-  @NoArgsConstructor
-  @AllArgsConstructor
-  public static class NetworkInterfaceEntity implements HasEntityIdentifier, Comparable<NetworkInterfaceEntity> {
-
-    @UIField(order = 1)
-    private String name;
-
-    @UIField(order = 2, label = "Label")
-    private String displayName;
-
-    @UIField(order = 3, label = "MTU")
-    private int mtu;
-
-    @UIField(order = 4, label = "Addresses")
-    private String addresses;
+    @Getter
+    private final EntityContext entityContext;
 
     @Override
-    public String getEntityID() {
-      return name;
+    public String getParentTab() {
+        return "hardware";
     }
 
     @Override
-    public int compareTo(@NotNull NetworkInterfaceEntity o) {
-      return this.name.compareTo(o.name);
+    @SneakyThrows
+    public Collection<NetworkInterfaceEntity> getValue() {
+        List<NetworkInterfaceEntity> list = new ArrayList<>();
+        for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+            list.add(new NetworkInterfaceEntity(
+                networkInterface.getName(),
+                networkInterface.getDisplayName(),
+                networkInterface.getMTU(),
+                networkInterface.getInterfaceAddresses().stream()
+                                .map(ia -> ia.getAddress().toString())
+                                .collect(Collectors.joining(" ~~~|~~~ "))));
+        }
+        Collections.sort(list);
+        return list;
     }
-  }
+
+    @Override
+    public int order() {
+        return 1500;
+    }
+
+    @Override
+    public String getName() {
+        return "networkInterface";
+    }
+
+    @Override
+    public Class<NetworkInterfaceEntity> getEntityClass() {
+        return NetworkInterfaceEntity.class;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class NetworkInterfaceEntity implements HasEntityIdentifier, Comparable<NetworkInterfaceEntity> {
+
+        @UIField(order = 1)
+        private String name;
+
+        @UIField(order = 2, label = "Label")
+        private String displayName;
+
+        @UIField(order = 3, label = "MTU")
+        private int mtu;
+
+        @UIField(order = 4, label = "Addresses")
+        private String addresses;
+
+        @Override
+        public String getEntityID() {
+            return name;
+        }
+
+        @Override
+        public int compareTo(@NotNull NetworkInterfaceEntity o) {
+            return this.name.compareTo(o.name);
+        }
+    }
 }

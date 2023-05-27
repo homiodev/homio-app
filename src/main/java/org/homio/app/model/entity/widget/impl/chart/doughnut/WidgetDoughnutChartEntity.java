@@ -23,7 +23,7 @@ public class WidgetDoughnutChartEntity
 
     public static final String PREFIX = "wgtpc_";
 
- //   @UIField(order = 3)
+    //   @UIField(order = 3)
 
     // TODO:??????????/
     /*public double getValueFontSize() {

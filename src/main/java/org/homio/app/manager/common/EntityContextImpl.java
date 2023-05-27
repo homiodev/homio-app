@@ -121,17 +121,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Component
 public class EntityContextImpl implements EntityContext {
 
-    private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app");
     /*public static final String CREATE_TABLE_INDEX =
         "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";*/
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
     private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
-
+    private static final Map<String, PureRepository> pureRepositories = new HashMap<>();
+    private static final long START_TIME = System.currentTimeMillis();
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
     public static Map<String, Class<? extends EntityFieldMetadata>> uiFieldClasses;
     public static Map<String, AbstractRepository> repositoriesByPrefix;
-    private static final Map<String, PureRepository> pureRepositories = new HashMap<>();
-    private static final long START_TIME = System.currentTimeMillis();
 
     static {
         BEAN_CONTEXT_CREATED.add(AddonService.class);
@@ -158,6 +156,7 @@ public class EntityContextImpl implements EntityContext {
         BEAN_CONTEXT_REFRESH.add(AudioService.class);
     }
 
+    private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app");
     private final EntityContextUIImpl entityContextUI;
     private final EntityContextInstallImpl entityContextInstall;
     private final EntityContextEventImpl entityContextEvent;
@@ -276,42 +275,6 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public @NotNull EntityContextEventImpl event() {
         return this.entityContextEvent;
-    }
-
-    private void updateAppNotificationBlock() {
-        ui().addNotificationBlock("app", "App", "fas fa-house", "#E65100", builder -> {
-            String installedVersion = appProperties.getVersion();
-            builder.setVersion(installedVersion);
-            String latestVersion = appGitHub.getLastReleaseVersion();
-            if (!installedVersion.equals(latestVersion)) {
-                builder.setUpdatable(
-                    (progressBar, version) -> appGitHub.updating("homio", CommonUtils.getInstallPath().resolve("homio"), progressBar,
-                        projectUpdate -> {
-                            projectUpdate.downloadSource(version);
-                            long pid = ProcessHandle.current().pid();
-                            Path updateScript = CommonUtils.getInstallPath().resolve("app-update." + (IS_OS_WINDOWS ? "sh" : "bat"));
-                            String jarLocation = EntityContextImpl.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
-                            String content = format(IS_OS_WINDOWS ? "@echo off\ntaskkill /F /PID %s\nmove %s %s\nstart javaw -jar \"%s\"\nexit"
-                                    : "#!/bin/bash\nkill -9 %s\nmv %s %s\nnohup sudo java -jar %s &>/dev/null &", pid,
-                                projectUpdate.getProjectPath(), jarLocation, jarLocation);
-                            CommonUtils.writeToFile(updateScript, content, false);
-                            Runtime.getRuntime().exec(updateScript.toString());
-                            return null;
-                        }), appGitHub.getReleasesSince(installedVersion, false));
-            }
-            builder.fireOnFetch(() -> {
-                long runDuration = TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - START_TIME);
-                String time = runDuration + "h";
-                if(runDuration == 0) {
-                    runDuration = TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - START_TIME);
-                    time = runDuration + "m";
-                }
-                String serverStartMsg = Lang.getServerMessage("SERVER_STARTED", FlowMap.of("VALUE",
-                    new SimpleDateFormat("MM/dd HH:mm").format(new Date(START_TIME)),
-                    "TIME", time));
-                builder.addInfo("time", serverStartMsg, null, "fas fa-clock", null);
-            });
-        });
     }
 
     @Override
@@ -600,6 +563,82 @@ public class EntityContextImpl implements EntityContext {
         return environment.getProperty(key, classType, defaultValue);
     }
 
+    public void rebuildRepositoryByPrefixMap() {
+        uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class)
+                                    .stream()
+                                    .collect(Collectors.toMap(Class::getSimpleName, s -> s));
+        repositoriesByPrefix = new HashMap<>();
+        for (Class<? extends EntityFieldMetadata> metaEntity : uiFieldClasses.values()) {
+            if (BaseEntity.class.isAssignableFrom(metaEntity)) {
+                Class<? extends BaseEntity> baseEntity = (Class<? extends BaseEntity>) metaEntity;
+                repositoriesByPrefix.put(CommonUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
+            }
+        }
+    }
+
+    @SneakyThrows
+    void updateBeans(AddonContext addonContext, ApplicationContext context, boolean addAddon) {
+        log.info("Starting update all app addons");
+        Lang.clear();
+        fetchSettingPlugins(addonContext, addAddon);
+
+        for (Class<? extends ContextRefreshed> beanUpdateClass : BEAN_CONTEXT_REFRESH) {
+            applicationContext.getBean(beanUpdateClass).onContextRefresh();
+        }
+
+        if (addonContext != null) {
+            applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addAddon);
+        }
+
+        registerUpdatableSettings(context);
+
+        // fetch entities fires load services if any
+        log.info("Loading entities and initialise all related services");
+        for (BaseEntity baseEntity : findAllBaseEntities()) {
+            if (baseEntity instanceof BaseFileSystemEntity) {
+                ((BaseFileSystemEntity<?, ?>) baseEntity).getFileSystem(this).restart(false);
+            }
+        }
+
+        log.info("Finish update all app addons");
+    }
+
+    private void updateAppNotificationBlock() {
+        ui().addNotificationBlock("app", "App", "fas fa-house", "#E65100", builder -> {
+            String installedVersion = appProperties.getVersion();
+            builder.setVersion(installedVersion);
+            String latestVersion = appGitHub.getLastReleaseVersion();
+            if (!installedVersion.equals(latestVersion)) {
+                builder.setUpdatable(
+                    (progressBar, version) -> appGitHub.updating("homio", CommonUtils.getInstallPath().resolve("homio"), progressBar,
+                        projectUpdate -> {
+                            projectUpdate.downloadSource(version);
+                            long pid = ProcessHandle.current().pid();
+                            Path updateScript = CommonUtils.getInstallPath().resolve("app-update." + (IS_OS_WINDOWS ? "sh" : "bat"));
+                            String jarLocation = EntityContextImpl.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+                            String content = format(IS_OS_WINDOWS ? "@echo off\ntaskkill /F /PID %s\nmove %s %s\nstart javaw -jar \"%s\"\nexit"
+                                    : "#!/bin/bash\nkill -9 %s\nmv %s %s\nnohup sudo java -jar %s &>/dev/null &", pid,
+                                projectUpdate.getProjectPath(), jarLocation, jarLocation);
+                            CommonUtils.writeToFile(updateScript, content, false);
+                            Runtime.getRuntime().exec(updateScript.toString());
+                            return null;
+                        }), appGitHub.getReleasesSince(installedVersion, false));
+            }
+            builder.fireOnFetch(() -> {
+                long runDuration = TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - START_TIME);
+                String time = runDuration + "h";
+                if (runDuration == 0) {
+                    runDuration = TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - START_TIME);
+                    time = runDuration + "m";
+                }
+                String serverStartMsg = Lang.getServerMessage("SERVER_STARTED", FlowMap.of("VALUE",
+                    new SimpleDateFormat("MM/dd HH:mm").format(new Date(START_TIME)),
+                    "TIME", time));
+                builder.addInfo("time", serverStartMsg, null, "fas fa-clock", null);
+            });
+        });
+    }
+
     private void putToCache(HasEntityIdentifier entity, Map<String, Object[]> changeFields) {
         PureRepository repository;
         if (entity instanceof BaseEntity) {
@@ -635,33 +674,6 @@ public class EntityContextImpl implements EntityContext {
         }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    @SneakyThrows
-    void updateBeans(AddonContext addonContext, ApplicationContext context, boolean addAddon) {
-        log.info("Starting update all app addons");
-        Lang.clear();
-        fetchSettingPlugins(addonContext, addAddon);
-
-        for (Class<? extends ContextRefreshed> beanUpdateClass : BEAN_CONTEXT_REFRESH) {
-            applicationContext.getBean(beanUpdateClass).onContextRefresh();
-        }
-
-        if (addonContext != null) {
-            applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addAddon);
-        }
-
-        registerUpdatableSettings(context);
-
-        // fetch entities fires load services if any
-        log.info("Loading entities and initialise all related services");
-        for (BaseEntity baseEntity : findAllBaseEntities()) {
-            if (baseEntity instanceof BaseFileSystemEntity) {
-                ((BaseFileSystemEntity<?, ?>) baseEntity).getFileSystem(this).restart(false);
-            }
-        }
-
-        log.info("Finish update all app addons");
-    }
-
     private void registerUpdatableSettings(ApplicationContext context)
         throws IllegalAccessException {
         for (String name : context.getBeanDefinitionNames()) {
@@ -691,19 +703,6 @@ public class EntityContextImpl implements EntityContext {
             }
         }
         return proxy;
-    }
-
-    public void rebuildRepositoryByPrefixMap() {
-        uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class)
-                                    .stream()
-                                    .collect(Collectors.toMap(Class::getSimpleName, s -> s));
-        repositoriesByPrefix = new HashMap<>();
-        for (Class<? extends EntityFieldMetadata> metaEntity : uiFieldClasses.values()) {
-            if (BaseEntity.class.isAssignableFrom(metaEntity)) {
-                Class<? extends BaseEntity> baseEntity = (Class<? extends BaseEntity>) metaEntity;
-                repositoriesByPrefix.put(CommonUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
-            }
-        }
     }
 
     private void fetchSettingPlugins(AddonContext addonContext, boolean addAddon) {

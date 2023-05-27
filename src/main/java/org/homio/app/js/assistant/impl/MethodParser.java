@@ -1,6 +1,5 @@
 package org.homio.app.js.assistant.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
@@ -17,6 +16,35 @@ final class MethodParser {
 
     public static Method getFitStaticMethod(String finalNext, Class clazz) {
         return getFitMethod(Stream.of(clazz.getMethods()), finalNext, method -> Modifier.isStatic(method.getModifiers()));
+    }
+
+    public static Method getFitMethod(String finalNext, Class clazz) {
+        Stream<Method> stream = clazz.getSuperclass() != null ?
+            Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
+            Stream.of(clazz.getMethods());
+
+        return getFitMethod(stream, finalNext, method -> true);
+    }
+
+    static Set<Method> getFitMethods(String finalNext, Class clazz) {
+        MethodFitParser methodFitParser = MethodFitParser.getMethodFitParser(finalNext);
+        String methodName = methodFitParser.getMethodName(finalNext);
+
+        Set<Method> methods = new HashSet<>();
+        Stream<Method> stream = clazz.getSuperclass() != null ?
+            Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
+            Stream.of(clazz.getMethods());
+
+        stream.forEach(method -> {
+            if (!method.getDeclaringClass().getName().startsWith("org.homio.smart.") &&
+                !method.getDeclaringClass().getName().equals("java.lang.Object")
+                && !method.getDeclaringClass().getName().equals("java.lang.Enum")) {
+                if (methodFitParser.match(method, methodName)) {
+                    methods.add(method);
+                }
+            }
+        });
+        return methods;
     }
 
     private static Method getFitMethod(Stream<Method> stream, String finalNext, Predicate<Method> testPredicate) {
@@ -64,59 +92,6 @@ final class MethodParser {
         return false;
     }
 
-    public static Method getFitMethod(String finalNext, Class clazz) {
-        Stream<Method> stream = clazz.getSuperclass() != null ?
-            Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
-            Stream.of(clazz.getMethods());
-
-        return getFitMethod(stream, finalNext, method -> true);
-    }
-
-    static Set<Method> getFitMethods(String finalNext, Class clazz) {
-        MethodFitParser methodFitParser = MethodFitParser.getMethodFitParser(finalNext);
-        String methodName = methodFitParser.getMethodName(finalNext);
-
-        Set<Method> methods = new HashSet<>();
-        Stream<Method> stream = clazz.getSuperclass() != null ?
-            Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
-            Stream.of(clazz.getMethods());
-
-        stream.forEach(method -> {
-            if (!method.getDeclaringClass().getName().startsWith("org.homio.smart.") &&
-                !method.getDeclaringClass().getName().equals("java.lang.Object")
-                && !method.getDeclaringClass().getName().equals("java.lang.Enum")) {
-                if (methodFitParser.match(method, methodName)) {
-                    methods.add(method);
-                }
-            }
-        });
-        return methods;
-    }
-
-    private enum MethodFitParser {
-        START_WITH {
-            @Override
-            public boolean match(Method method, String methodName) {
-                return method.getName().startsWith(methodName);
-            }
-        }, EQUAL {
-            @Override
-            public boolean match(Method method, String methodName) {
-                return method.getName().equals(methodName);
-            }
-        };
-
-        public static MethodFitParser getMethodFitParser(String finalNext) {
-            return finalNext.indexOf("(") > 0 ? EQUAL : START_WITH;
-        }
-
-        public String getMethodName(String finalNext) {
-            return finalNext.indexOf("(") > 0 ? finalNext.substring(0, finalNext.indexOf("(")) : finalNext;
-        }
-
-        public abstract boolean match(Method method, String methodName);
-    }
-
     private static List<Class<?>> evalMethodParameters(String methodParameters) {
         List<Class<?>> params = new ArrayList<>();
         for (String param : methodParameters.trim().split(",", -1)) {
@@ -148,5 +123,29 @@ final class MethodParser {
             }
         }
         return params;
+    }
+
+    private enum MethodFitParser {
+        START_WITH {
+            @Override
+            public boolean match(Method method, String methodName) {
+                return method.getName().startsWith(methodName);
+            }
+        }, EQUAL {
+            @Override
+            public boolean match(Method method, String methodName) {
+                return method.getName().equals(methodName);
+            }
+        };
+
+        public static MethodFitParser getMethodFitParser(String finalNext) {
+            return finalNext.indexOf("(") > 0 ? EQUAL : START_WITH;
+        }
+
+        public String getMethodName(String finalNext) {
+            return finalNext.indexOf("(") > 0 ? finalNext.substring(0, finalNext.indexOf("(")) : finalNext;
+        }
+
+        public abstract boolean match(Method method, String methodName);
     }
 }

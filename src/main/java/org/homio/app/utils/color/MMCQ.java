@@ -16,30 +16,69 @@ public class MMCQ {
     private static final double FRACT_BY_POPULATION = 0.75;
     private static final int MAX_ITERATIONS = 1000;
     private static final Comparator<VBox> COMPARATOR_COUNT =
-            new Comparator<VBox>() {
-                @Override
-                public int compare(VBox a, VBox b) {
-                    return a.count(false) - b.count(false);
-                }
-            };
+        new Comparator<VBox>() {
+            @Override
+            public int compare(VBox a, VBox b) {
+                return a.count(false) - b.count(false);
+            }
+        };
     private static final Comparator<VBox> COMPARATOR_PRODUCT =
-            new Comparator<VBox>() {
-                @Override
-                public int compare(VBox a, VBox b) {
-                    int aCount = a.count(false);
-                    int bCount = b.count(false);
-                    int aVolume = a.volume(false);
-                    int bVolume = b.volume(false);
+        new Comparator<VBox>() {
+            @Override
+            public int compare(VBox a, VBox b) {
+                int aCount = a.count(false);
+                int bCount = b.count(false);
+                int aVolume = a.volume(false);
+                int bVolume = b.volume(false);
 
-                    // If count is 0 for both (or the same), sort by volume
-                    if (aCount == bCount) {
-                        return aVolume - bVolume;
-                    }
-
-                    // Otherwise sort by products
-                    return Long.compare((long) aCount * aVolume, (long) bCount * bVolume);
+                // If count is 0 for both (or the same), sort by volume
+                if (aCount == bCount) {
+                    return aVolume - bVolume;
                 }
-            };
+
+                // Otherwise sort by products
+                return Long.compare((long) aCount * aVolume, (long) bCount * bVolume);
+            }
+        };
+
+    public static CMap quantize(int[][] pixels, int maxcolors) {
+        // short-circuit
+        if (pixels.length == 0 || maxcolors < 2 || maxcolors > 256) {
+            return null;
+        }
+
+        int[] histo = getHisto(pixels);
+
+        // get the beginning vbox from the colors
+        VBox vbox = vboxFromPixels(pixels, histo);
+        ArrayList<VBox> pq = new ArrayList<>();
+        pq.add(vbox);
+
+        // Round up to have the same behaviour as in JavaScript
+        int target = (int) Math.ceil(FRACT_BY_POPULATION * maxcolors);
+
+        // first set of colors, sorted by population
+        iter(pq, COMPARATOR_COUNT, target, histo);
+
+        // Re-sort by the product of pixel occupancy times the size in color space.
+        Collections.sort(pq, COMPARATOR_PRODUCT);
+
+        // next set - generateBooleanLink the median cuts using the (npix * vol) sorting.
+        if (maxcolors > pq.size()) {
+            iter(pq, COMPARATOR_PRODUCT, maxcolors, histo);
+        }
+
+        // Reverse to put the highest elements first into the color map
+        Collections.reverse(pq);
+
+        // calculate the actual colors
+        CMap cmap = new CMap();
+        for (VBox vb : pq) {
+            cmap.push(vb);
+        }
+
+        return cmap;
+    }
 
     /**
      * Get reduced-space color index for a pixel.
@@ -54,8 +93,7 @@ public class MMCQ {
     }
 
     /**
-     * Histo (1-d array, giving the number of pixels in each quantized region of color space), or
-     * null on error.
+     * Histo (1-d array, giving the number of pixels in each quantized region of color space), or null on error.
      */
     private static int[] getHisto(int[][] pixels) {
         int[] histo = new int[HISTOSIZE];
@@ -117,7 +155,7 @@ public class MMCQ {
 
         // only one pixel, no split
         if (vbox.count(false) == 1) {
-            return new VBox[] {vbox.clone(), null};
+            return new VBox[]{vbox.clone(), null};
         }
 
         int rw = vbox.r2 - vbox.r1 + 1;
@@ -158,7 +196,7 @@ public class MMCQ {
                 partialsum[i] = total;
             }
         } else
-        /* maxw == bw */ {
+            /* maxw == bw */ {
             for (i = vbox.b1; i <= vbox.b2; i++) {
                 sum = 0;
                 for (j = vbox.r1; j <= vbox.r2; j++) {
@@ -180,14 +218,14 @@ public class MMCQ {
 
         // determine the cut planes
         return maxw == rw
-                ? doCut('r', vbox, partialsum, lookaheadsum, total)
-                : maxw == gw
-                        ? doCut('g', vbox, partialsum, lookaheadsum, total)
-                        : doCut('b', vbox, partialsum, lookaheadsum, total);
+            ? doCut('r', vbox, partialsum, lookaheadsum, total)
+            : maxw == gw
+                ? doCut('g', vbox, partialsum, lookaheadsum, total)
+                : doCut('b', vbox, partialsum, lookaheadsum, total);
     }
 
     private static VBox[] doCut(
-            char color, VBox vbox, int[] partialsum, int[] lookaheadsum, int total) {
+        char color, VBox vbox, int[] partialsum, int[] lookaheadsum, int total) {
         int vbox_dim1;
         int vbox_dim2;
 
@@ -198,7 +236,7 @@ public class MMCQ {
             vbox_dim1 = vbox.g1;
             vbox_dim2 = vbox.g2;
         } else
-        /* color == 'b' */ {
+            /* color == 'b' */ {
             vbox_dim1 = vbox.b1;
             vbox_dim2 = vbox.b2;
         }
@@ -239,58 +277,21 @@ public class MMCQ {
                     vbox1.g2 = d2;
                     vbox2.g1 = d2 + 1;
                 } else
-                /* color == 'b' */ {
+                    /* color == 'b' */ {
                     vbox1.b2 = d2;
                     vbox2.b1 = d2 + 1;
                 }
 
-                return new VBox[] {vbox1, vbox2};
+                return new VBox[]{vbox1, vbox2};
             }
         }
 
         throw new RuntimeException("VBox can't be cut");
     }
 
-    public static CMap quantize(int[][] pixels, int maxcolors) {
-        // short-circuit
-        if (pixels.length == 0 || maxcolors < 2 || maxcolors > 256) {
-            return null;
-        }
-
-        int[] histo = getHisto(pixels);
-
-        // get the beginning vbox from the colors
-        VBox vbox = vboxFromPixels(pixels, histo);
-        ArrayList<VBox> pq = new ArrayList<>();
-        pq.add(vbox);
-
-        // Round up to have the same behaviour as in JavaScript
-        int target = (int) Math.ceil(FRACT_BY_POPULATION * maxcolors);
-
-        // first set of colors, sorted by population
-        iter(pq, COMPARATOR_COUNT, target, histo);
-
-        // Re-sort by the product of pixel occupancy times the size in color space.
-        Collections.sort(pq, COMPARATOR_PRODUCT);
-
-        // next set - generateBooleanLink the median cuts using the (npix * vol) sorting.
-        if (maxcolors > pq.size()) {
-            iter(pq, COMPARATOR_PRODUCT, maxcolors, histo);
-        }
-
-        // Reverse to put the highest elements first into the color map
-        Collections.reverse(pq);
-
-        // calculate the actual colors
-        CMap cmap = new CMap();
-        for (VBox vb : pq) {
-            cmap.push(vb);
-        }
-
-        return cmap;
-    }
-
-    /** Inner function to do the iteration. */
+    /**
+     * Inner function to do the iteration.
+     */
     private static void iter(List<VBox> lh, Comparator<VBox> comparator, int target, int[] histo) {
         int niters = 0;
         VBox vbox;
@@ -328,7 +329,9 @@ public class MMCQ {
         }
     }
 
-    /** 3D color space box. */
+    /**
+     * 3D color space box.
+     */
     public static class VBox {
 
         private final int[] histo;
@@ -356,7 +359,7 @@ public class MMCQ {
         @Override
         public String toString() {
             return "r1: " + r1 + " / r2: " + r2 + " / g1: " + g1 + " / g2: " + g2 + " / b1: " + b1
-                    + " / b2: " + b2;
+                + " / b2: " + b2;
         }
 
         public int volume(boolean force) {
@@ -416,14 +419,14 @@ public class MMCQ {
                 }
 
                 if (ntot > 0) {
-                    _avg = new int[] {~~(rsum / ntot), ~~(gsum / ntot), ~~(bsum / ntot)};
+                    _avg = new int[]{~~(rsum / ntot), ~~(gsum / ntot), ~~(bsum / ntot)};
                 } else {
                     _avg =
-                            new int[] {
-                                ~~(MULT * (r1 + r2 + 1) / 2),
-                                ~~(MULT * (g1 + g2 + 1) / 2),
-                                ~~(MULT * (b1 + b2 + 1) / 2)
-                            };
+                        new int[]{
+                            ~~(MULT * (r1 + r2 + 1) / 2),
+                            ~~(MULT * (g1 + g2 + 1) / 2),
+                            ~~(MULT * (b1 + b2 + 1) / 2)
+                        };
                 }
             }
 
@@ -436,15 +439,17 @@ public class MMCQ {
             int bval = pixel[2] >> RSHIFT;
 
             return (rval >= r1
-                    && rval <= r2
-                    && gval >= g1
-                    && gval <= g2
-                    && bval >= b1
-                    && bval <= b2);
+                && rval <= r2
+                && gval >= g1
+                && gval <= g2
+                && bval >= b1
+                && bval <= b2);
         }
     }
 
-    /** Color map. */
+    /**
+     * Color map.
+     */
     public static class CMap {
 
         public final ArrayList<VBox> vboxes = new ArrayList<>();
@@ -486,10 +491,10 @@ public class MMCQ {
             for (int i = 0; i < numVBoxes; i++) {
                 int[] vbColor = vboxes.get(i).avg(false);
                 d2 =
-                        Math.sqrt(
-                                Math.pow(color[0] - vbColor[0], 2)
-                                        + Math.pow(color[1] - vbColor[1], 2)
-                                        + Math.pow(color[2] - vbColor[2], 2));
+                    Math.sqrt(
+                        Math.pow(color[0] - vbColor[0], 2)
+                            + Math.pow(color[1] - vbColor[1], 2)
+                            + Math.pow(color[2] - vbColor[2], 2));
                 if (d2 < d1) {
                     d1 = d2;
                     pColor = vbColor;

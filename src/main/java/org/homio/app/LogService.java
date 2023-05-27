@@ -61,19 +61,19 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class LogService
-        implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
+    implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
 
     private static final org.apache.logging.log4j.Logger maverickLogger = LogManager.getLogger("com.ssh.maverick");
 
     private static final GlobalAppender globalAppender = new GlobalAppender();
     private static final Set<String> excludeDebugPackages =
-            Set.of(
-                    "org.springframework",
-                    "com.mongodb",
-                    "de.bwaldvogel",
-                    "org.mongodb",
-                    "com.zaxxer",
-                    "org.hibernate");
+        Set.of(
+            "org.springframework",
+            "com.mongodb",
+            "de.bwaldvogel",
+            "org.mongodb",
+            "com.zaxxer",
+            "org.hibernate");
 
     static {
         Log.setDefaultContext(new DefaultLoggerContext() {
@@ -103,6 +103,37 @@ public class LogService
                 }
             }
         });
+    }
+
+    public Set<String> getTabs() {
+        return globalAppender.definedAppender.keySet();
+    }
+
+    @SneakyThrows
+    public List<String> getLogs(String tab) {
+        DefinedAppenderConsumer definedAppender = globalAppender.definedAppender.get(tab);
+        if (definedAppender != null) {
+            return FileUtils.readLines(
+                new File(definedAppender.fileName), Charset.defaultCharset());
+        }
+        return null;
+    }
+
+    @Override
+    public void onApplicationEvent(@NotNull ApplicationEnvironmentPreparedEvent ignore) {
+        initLogAppender();
+    }
+
+    @Override
+    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
+        LogService.scanEntityLogs(entityContext);
+        globalAppender.setEntityContext(entityContext);
+    }
+
+    public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
+        return Optional.ofNullable(globalAppender.logConsumers.get(baseEntity.getEntityID()))
+                       .map(c -> c.path)
+                       .orElse(null);
     }
 
     @SneakyThrows
@@ -242,43 +273,12 @@ public class LogService
         return prefixSet;
     }
 
-    public Set<String> getTabs() {
-        return globalAppender.definedAppender.keySet();
-    }
-
-    @SneakyThrows
-    public List<String> getLogs(String tab) {
-        DefinedAppenderConsumer definedAppender = globalAppender.definedAppender.get(tab);
-        if (definedAppender != null) {
-            return FileUtils.readLines(
-                    new File(definedAppender.fileName), Charset.defaultCharset());
-        }
-        return null;
-    }
-
-    @Override
-    public void onApplicationEvent(@NotNull ApplicationEnvironmentPreparedEvent ignore) {
-        initLogAppender();
-    }
-
-    @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        LogService.scanEntityLogs(entityContext);
-        globalAppender.setEntityContext(entityContext);
-    }
-
-    public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
-        return Optional.ofNullable(globalAppender.logConsumers.get(baseEntity.getEntityID()))
-                .map(c -> c.path)
-                .orElse(null);
-    }
-
     public static class GlobalAppender extends CountingNoOpAppender {
 
         private final Map<String, LogConsumer> logConsumers = new ConcurrentHashMap<>();
         private final Map<String, DefinedAppenderConsumer> definedAppender = new HashMap<>();
         // allow debug level for appender
-        private boolean allowDebugLevel = false;
+        private final boolean allowDebugLevel = false;
 
         // keep all logs in memory until we switch strategy via setEntityContext(...) method
         private List<LogEvent> bufferedLogEvents = new CopyOnWriteArrayList<>();
@@ -291,6 +291,20 @@ public class LogService
         public synchronized void setEntityContext(EntityContextImpl entityContext) throws Exception {
             this.logStrategy = event -> sendLogs(entityContext, event);
             flushBufferedLogs();
+        }
+
+        @Override
+        public void append(LogEvent event) {
+            this.logStrategy.accept(event);
+        }
+
+        // flush buffered log events and clean buffer
+        void flushBufferedLogs() {
+            for (LogEvent bufferedLogEvent : bufferedLogEvents) {
+                this.logStrategy.accept(bufferedLogEvent);
+            }
+            bufferedLogEvents.clear();
+            bufferedLogEvents = null;
         }
 
         // Scan LogConsumers and send to ui if match
@@ -316,20 +330,6 @@ public class LogService
                     });
                 }
             }
-        }
-
-        @Override
-        public void append(LogEvent event) {
-            this.logStrategy.accept(event);
-        }
-
-        // flush buffered log events and clean buffer
-        void flushBufferedLogs() {
-            for (LogEvent bufferedLogEvent : bufferedLogEvents) {
-                this.logStrategy.accept(bufferedLogEvent);
-            }
-            bufferedLogEvents.clear();
-            bufferedLogEvents = null;
         }
     }
 

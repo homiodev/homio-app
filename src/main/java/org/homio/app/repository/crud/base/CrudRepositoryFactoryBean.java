@@ -11,8 +11,8 @@ import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
 
 public class CrudRepositoryFactoryBean<
-                R extends JpaRepository<T, Integer>, T extends HasEntityIdentifier>
-        extends JpaRepositoryFactoryBean<R, T, Integer> {
+    R extends JpaRepository<T, Integer>, T extends HasEntityIdentifier>
+    extends JpaRepositoryFactoryBean<R, T, Integer> {
 
     /**
      * Creates a new {@link JpaRepositoryFactoryBean} for the given repository interface.
@@ -28,7 +28,7 @@ public class CrudRepositoryFactoryBean<
     }
 
     private static class MyRepositoryFactory<T extends HasEntityIdentifier>
-            extends JpaRepositoryFactory {
+        extends JpaRepositoryFactory {
 
         MyRepositoryFactory(EntityManager entityManager) {
             super(entityManager);
@@ -36,9 +36,9 @@ public class CrudRepositoryFactoryBean<
 
         @Override
         protected JpaRepositoryImplementation<?, ?> getTargetRepository(
-                RepositoryInformation information, EntityManager entityManager) {
+            RepositoryInformation information, EntityManager entityManager) {
             return new BaseCrudRepositoryImpl<>(
-                    (Class<T>) information.getDomainType(), entityManager);
+                (Class<T>) information.getDomainType(), entityManager);
         }
 
         protected Class<?> getRepositoryBaseClass(RepositoryMetadata metadata) {

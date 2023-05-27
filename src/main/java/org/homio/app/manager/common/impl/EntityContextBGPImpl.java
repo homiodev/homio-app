@@ -198,59 +198,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         this.watchdogBgpService.addWatchDogService(key, watchdogService);
     }
 
-    private <T> EntityContextBGPImpl.BatchRunContext<T> prepareBatchProcessContext(@NotNull String batchName, int threadsCount) {
-        if (batchRunContextMap.containsKey(batchName)) {
-            throw new IllegalStateException("Batch processes with name " + batchName + " already in progress");
-        }
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadsCount);
-        BatchRunContext<T> batchRunContext = new BatchRunContext<>(executor);
-        batchRunContextMap.put(batchName, batchRunContext);
-        return batchRunContext;
-    }
-
-    private <T> List<T> waitBatchToDone(
-        @NotNull String batchName,
-        @Nullable Duration maxTerminateTimeout,
-        @NotNull Consumer<Integer> progressConsumer,
-        @NotNull BatchRunContext<T> batchRunContext)
-        throws InterruptedException, ExecutionException {
-        ThreadPoolExecutor executor = batchRunContext.executor;
-        executor.shutdown();
-        long batchStarted = System.currentTimeMillis();
-        long maxTerminatedMillis = maxTerminateTimeout == null ? 0 : maxTerminateTimeout.toMillis();
-        try {
-            while (!executor.isTerminated()) {
-                try {
-                    executor.awaitTermination(1, TimeUnit.SECONDS);
-                    long completedTaskCount = executor.getCompletedTaskCount();
-                    progressConsumer.accept((int) completedTaskCount);
-
-                    if (maxTerminatedMillis > 0 && System.currentTimeMillis() - batchStarted > maxTerminatedMillis) {
-                        log.warn("Exceeded await limit for batch run <{}> (Max {} sec.)", batchName, maxTerminatedMillis);
-                        executor.shutdownNow();
-                    }
-                } catch (Exception ignore) {
-                    log.error("Error while await termination for batch run: <{}>", batchName);
-                    executor.shutdownNow();
-                }
-            }
-            List<T> list = new ArrayList<>();
-            for (Map.Entry<String, Future<T>> entry : batchRunContext.processes.entrySet()) {
-                try {
-                    if (entry.getValue().isDone()) { // in case of cancellation from UI
-                        list.add(entry.getValue().get());
-                    }
-                } catch (CancellationException ex) {
-                    log.warn("Process <{}> in batch <{}> has been cancelled. Ignore result", entry.getKey(), batchName);
-                }
-            }
-            return list;
-        } finally {
-            batchRunContextMap.remove(batchName);
-            log.info("Finish batch run <{}>", batchName);
-        }
-    }
-
     @Override
     public <T> ScheduleBuilder<T> builder(@NotNull String name) {
         ThreadContextImpl<T> context = new ThreadContextImpl<>();
@@ -452,66 +399,56 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         return new ProgressBuilderImpl(key);
     }
 
-    @Setter
-    @Accessors(chain = true)
-    @RequiredArgsConstructor
-    private class ProgressBuilderImpl implements ProgressBuilder {
-
-        private @NotNull final String key;
-        private boolean cancellable;
-        private boolean logToConsole;
-        private @Nullable Consumer<Exception> onFinally;
-        private @Nullable Runnable onError;
-        private @Nullable Exception errorIfExists;
-
-        @Override
-        public ProgressBuilder onFinally(@Nullable Consumer<Exception> finallyBlock) {
-            this.onFinally = finallyBlock;
-            return this;
+    private <T> EntityContextBGPImpl.BatchRunContext<T> prepareBatchProcessContext(@NotNull String batchName, int threadsCount) {
+        if (batchRunContextMap.containsKey(batchName)) {
+            throw new IllegalStateException("Batch processes with name " + batchName + " already in progress");
         }
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadsCount);
+        BatchRunContext<T> batchRunContext = new BatchRunContext<>(executor);
+        batchRunContextMap.put(batchName, batchRunContext);
+        return batchRunContext;
+    }
 
-        @Override
-        public ProgressBuilder onError(@Nullable Runnable errorBlock) {
-            this.onError = errorBlock;
-            return this;
-        }
-
-        @Override
-        public ThreadContext<Void> execute(ThrowingConsumer<ProgressBar, Exception> command) {
-            return null;
-        }
-
-        @Override
-        @SneakyThrows
-        public <R> ThreadContext<R> execute(@NotNull ThrowingFunction<ProgressBar, R, Exception> command) {
-            if (errorIfExists != null && isThreadExists(key, true)) {
-                throw errorIfExists;
-            }
-            ScheduleBuilder<R> builder = builder(key);
-            return builder.execute(arg -> {
-                ProgressBar progressBar = (progress, message) -> {
-                    if (logToConsole) {
-                        log.info(message);
-                    }
-                    getEntityContext().ui().progress(key, progress, message, cancellable);
-                };
-                progressBar.progress(0, key);
-                Exception exception = null;
+    private <T> List<T> waitBatchToDone(
+        @NotNull String batchName,
+        @Nullable Duration maxTerminateTimeout,
+        @NotNull Consumer<Integer> progressConsumer,
+        @NotNull BatchRunContext<T> batchRunContext)
+        throws InterruptedException, ExecutionException {
+        ThreadPoolExecutor executor = batchRunContext.executor;
+        executor.shutdown();
+        long batchStarted = System.currentTimeMillis();
+        long maxTerminatedMillis = maxTerminateTimeout == null ? 0 : maxTerminateTimeout.toMillis();
+        try {
+            while (!executor.isTerminated()) {
                 try {
-                    return command.apply(progressBar);
-                } catch (Exception ex) {
-                    exception = ex;
-                    if (onError != null) {
-                        onError.run();
+                    executor.awaitTermination(1, TimeUnit.SECONDS);
+                    long completedTaskCount = executor.getCompletedTaskCount();
+                    progressConsumer.accept((int) completedTaskCount);
+
+                    if (maxTerminatedMillis > 0 && System.currentTimeMillis() - batchStarted > maxTerminatedMillis) {
+                        log.warn("Exceeded await limit for batch run <{}> (Max {} sec.)", batchName, maxTerminatedMillis);
+                        executor.shutdownNow();
                     }
-                } finally {
-                    progressBar.done();
-                    if (onFinally != null) {
-                        onFinally.accept(exception);
-                    }
+                } catch (Exception ignore) {
+                    log.error("Error while await termination for batch run: <{}>", batchName);
+                    executor.shutdownNow();
                 }
-                return null;
-            });
+            }
+            List<T> list = new ArrayList<>();
+            for (Map.Entry<String, Future<T>> entry : batchRunContext.processes.entrySet()) {
+                try {
+                    if (entry.getValue().isDone()) { // in case of cancellation from UI
+                        list.add(entry.getValue().get());
+                    }
+                } catch (CancellationException ex) {
+                    log.warn("Process <{}> in batch <{}> has been cancelled. Ignore result", entry.getKey(), batchName);
+                }
+            }
+            return list;
+        } finally {
+            batchRunContextMap.remove(batchName);
+            log.info("Finish batch run <{}>", batchName);
         }
     }
 
@@ -592,12 +529,77 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private final Map<String, Future<T>> processes = new HashMap<>();
     }
 
+    @Setter
+    @Accessors(chain = true)
+    @RequiredArgsConstructor
+    private class ProgressBuilderImpl implements ProgressBuilder {
+
+        private @NotNull final String key;
+        private boolean cancellable;
+        private boolean logToConsole;
+        private @Nullable Consumer<Exception> onFinally;
+        private @Nullable Runnable onError;
+        private @Nullable Exception errorIfExists;
+
+        @Override
+        public ProgressBuilder onFinally(@Nullable Consumer<Exception> finallyBlock) {
+            this.onFinally = finallyBlock;
+            return this;
+        }
+
+        @Override
+        public ProgressBuilder onError(@Nullable Runnable errorBlock) {
+            this.onError = errorBlock;
+            return this;
+        }
+
+        @Override
+        public ThreadContext<Void> execute(ThrowingConsumer<ProgressBar, Exception> command) {
+            return null;
+        }
+
+        @Override
+        @SneakyThrows
+        public <R> ThreadContext<R> execute(@NotNull ThrowingFunction<ProgressBar, R, Exception> command) {
+            if (errorIfExists != null && isThreadExists(key, true)) {
+                throw errorIfExists;
+            }
+            ScheduleBuilder<R> builder = builder(key);
+            return builder.execute(arg -> {
+                ProgressBar progressBar = (progress, message) -> {
+                    if (logToConsole) {
+                        log.info(message);
+                    }
+                    getEntityContext().ui().progress(key, progress, message, cancellable);
+                };
+                progressBar.progress(0, key);
+                Exception exception = null;
+                try {
+                    return command.apply(progressBar);
+                } catch (Exception ex) {
+                    exception = ex;
+                    if (onError != null) {
+                        onError.run();
+                    }
+                } finally {
+                    progressBar.done();
+                    if (onFinally != null) {
+                        onFinally.accept(exception);
+                    }
+                }
+                return null;
+            });
+        }
+    }
+
     @Getter
     @NoArgsConstructor
     public class ThreadContextImpl<T> implements ThreadContext<T> {
 
         private final JSONObject metadata = new JSONObject();
         private final Date creationTime = new Date();
+        // in case if start = false
+        public Function<Runnable, ScheduledFuture<?>> postponeScheduleHandler;
         private boolean throwOnError;
         private Authentication authentication;
         private Path logFile;
@@ -618,10 +620,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         @Setter private boolean cancelOnError = true;
         private Map<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
         private Map<String, ThrowingRunnable<Exception>> simpleWorkUnitListeners;
-
-        // in case if start = false
-        public Function<Runnable, ScheduledFuture<?>> postponeScheduleHandler;
-
         private Consumer<Exception> errorListener;
 
         public ThreadContextImpl(String name, ThrowingFunction<ThreadContext<T>, T, Exception> command, ScheduleType scheduleType, Duration period,
@@ -661,21 +659,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         @Override
         public void reset() {
             createSchedule(this, this.postponeScheduleHandler);
-        }
-
-        private void cancelProcessInternal() {
-            if (scheduledFuture != null) {
-                if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
-                    processFinished();
-                }
-            }
-        }
-
-        private void processFinished() {
-            stopped = true;
-            if (!showOnUI || hideOnUIAfterCancel) {
-                EntityContextBGPImpl.this.schedulers.remove(name);
-            }
         }
 
         @Override
@@ -727,6 +710,21 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 if (this.valueListeners.isEmpty()) {
                     this.valueListeners = null;
                 }
+            }
+        }
+
+        private void cancelProcessInternal() {
+            if (scheduledFuture != null) {
+                if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
+                    processFinished();
+                }
+            }
+        }
+
+        private void processFinished() {
+            stopped = true;
+            if (!showOnUI || hideOnUIAfterCancel) {
+                EntityContextBGPImpl.this.schedulers.remove(name);
             }
         }
     }

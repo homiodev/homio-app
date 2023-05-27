@@ -8,7 +8,7 @@ import org.homio.app.model.entity.widget.WidgetGroup;
 
 @Entity
 public class WidgetVideoEntity
-        extends WidgetBaseEntityAndSeries<WidgetVideoEntity, WidgetVideoSeriesEntity> {
+    extends WidgetBaseEntityAndSeries<WidgetVideoEntity, WidgetVideoSeriesEntity> {
 
     public static final String PREFIX = "wgtvid_";
 
@@ -33,14 +33,14 @@ public class WidgetVideoEntity
     }
 
     @Override
+    public String getEntityPrefix() {
+        return PREFIX;
+    }
+
+    @Override
     protected void beforePersist() {
         setBh(3);
         setBw(3);
         super.beforePersist();
-    }
-
-    @Override
-    public String getEntityPrefix() {
-        return PREFIX;
     }
 }

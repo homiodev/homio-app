@@ -79,19 +79,6 @@ public class EntityContextVarImpl implements EntityContextVar {
         return variableDataRepository.count(getVariableId(variableID));
     }
 
-    private void backupVariables() {
-        for (VariableContext context : globalVarStorageMap.values()) {
-            if (context.groupVariable.isBackup()) {
-                long nextTime = System.currentTimeMillis();
-                List<WorkspaceVariableMessage> values = context.storageService.findAllSince(context.lastBackupTimestamp);
-                if (!values.isEmpty()) {
-                    variableDataRepository.save(context.groupVariable.getVariableId(), values);
-                }
-                context.lastBackupTimestamp = nextTime;
-            }
-        }
-    }
-
     @Override
     public void setLinkListener(@NotNull String variableId, @NotNull Consumer<Object> listener) {
         getOrCreateContext(getVariableId(variableId)).linkListener = listener;
@@ -146,39 +133,6 @@ public class EntityContextVarImpl implements EntityContextVar {
         } else if (logIfNoLinked) {
             log.warn("Updated variable: {} has no linked handler", context.groupVariable.getTitle());
         }
-    }
-
-    @SneakyThrows
-    private Object tryConvertValueToRestrictionTypeFormat(Object value, VariableContext context) {
-        if (value instanceof State) {
-            switch (context.groupVariable.getRestriction()) {
-                case Bool:
-                    value = ((State) value).boolValue();
-                    break;
-                case Float:
-                    if (value instanceof DecimalType) {
-                        value = convertBigDecimal(((DecimalType) value).getValue());
-                    } else {
-                        value = ((State) value).floatValue();
-                    }
-                    break;
-            }
-        }
-
-        if (!(value instanceof Boolean) && !(value instanceof Number)) {
-            String strValue = value instanceof State ? ((State) value).stringValue() : value.toString();
-            if(strValue.isEmpty()) {
-                return strValue;
-            }
-            if (StringUtils.isNumeric(strValue)) {
-                value = convertBigDecimal(new BigDecimal(strValue));
-            } else if (strValue.equalsIgnoreCase("true") || strValue.equalsIgnoreCase("false")) {
-                value = strValue.equalsIgnoreCase("true");
-            } else {
-                value = strValue;
-            }
-        }
-        return value;
     }
 
     @Override
@@ -316,6 +270,52 @@ public class EntityContextVarImpl implements EntityContextVar {
         return getOrCreateContext(getVariableId(getVariableId(variableId))).linkListener != null;
     }
 
+    private void backupVariables() {
+        for (VariableContext context : globalVarStorageMap.values()) {
+            if (context.groupVariable.isBackup()) {
+                long nextTime = System.currentTimeMillis();
+                List<WorkspaceVariableMessage> values = context.storageService.findAllSince(context.lastBackupTimestamp);
+                if (!values.isEmpty()) {
+                    variableDataRepository.save(context.groupVariable.getVariableId(), values);
+                }
+                context.lastBackupTimestamp = nextTime;
+            }
+        }
+    }
+
+    @SneakyThrows
+    private Object tryConvertValueToRestrictionTypeFormat(Object value, VariableContext context) {
+        if (value instanceof State) {
+            switch (context.groupVariable.getRestriction()) {
+                case Bool:
+                    value = ((State) value).boolValue();
+                    break;
+                case Float:
+                    if (value instanceof DecimalType) {
+                        value = convertBigDecimal(((DecimalType) value).getValue());
+                    } else {
+                        value = ((State) value).floatValue();
+                    }
+                    break;
+            }
+        }
+
+        if (!(value instanceof Boolean) && !(value instanceof Number)) {
+            String strValue = value instanceof State ? ((State) value).stringValue() : value.toString();
+            if (strValue.isEmpty()) {
+                return strValue;
+            }
+            if (StringUtils.isNumeric(strValue)) {
+                value = convertBigDecimal(new BigDecimal(strValue));
+            } else if (strValue.equalsIgnoreCase("true") || strValue.equalsIgnoreCase("false")) {
+                value = strValue.equalsIgnoreCase("true");
+            } else {
+                value = strValue;
+            }
+        }
+        return value;
+    }
+
     private Object convertBigDecimal(BigDecimal value) {
         return value.scale() == 0 ? value.longValue() : value.floatValue();
     }
@@ -379,23 +379,23 @@ public class EntityContextVarImpl implements EntityContextVar {
         globalVarStorageMap.put(variableId, context);
 
         // initialise variable to put first value. require to getLatest(), ...
-            switch (variable.getRestriction()) {
-                case Json:
-                    service.save(new WorkspaceVariableMessage("{}"));
-                    break;
-                case Color:
-                    service.save(new WorkspaceVariableMessage("#FFFFFF"));
-                    break;
-                case Bool:
-                    service.save(new WorkspaceVariableMessage(false));
-                    break;
-                case Float:
-                    service.save(new WorkspaceVariableMessage(0));
-                    break;
-                default:
-                    service.save(new WorkspaceVariableMessage(""));
-                    break;
-            }
+        switch (variable.getRestriction()) {
+            case Json:
+                service.save(new WorkspaceVariableMessage("{}"));
+                break;
+            case Color:
+                service.save(new WorkspaceVariableMessage("#FFFFFF"));
+                break;
+            case Bool:
+                service.save(new WorkspaceVariableMessage(false));
+                break;
+            case Float:
+                service.save(new WorkspaceVariableMessage(0));
+                break;
+            default:
+                service.save(new WorkspaceVariableMessage(""));
+                break;
+        }
         if (context.groupVariable.isBackup()) {
             List<VariableBackup> backupData = variableDataRepository.findAll(
                 context.groupVariable.getVariableId(),

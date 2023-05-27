@@ -37,6 +37,33 @@ public class JavaSoundAudioSource implements AudioSource {
     public JavaSoundAudioSource() {
     }
 
+    @Override
+    public synchronized AudioStream getInputStream(AudioFormat expectedFormat) {
+        if (!expectedFormat.isCompatible(audioFormat)) {
+            throw new IllegalStateException("Cannot produce streams in format " + expectedFormat);
+        }
+        TargetDataLine mic = this.microphone;
+        if (mic == null) {
+            mic = initMicrophone(format);
+        }
+        return new JavaSoundInputStream(mic, audioFormat);
+    }
+
+    @Override
+    public String toString() {
+        return "javasound";
+    }
+
+    @Override
+    public String getEntityID() {
+        return "javasound";
+    }
+
+    @Override
+    public Set<AudioFormat> getSupportedFormats() {
+        return Collections.singleton(audioFormat);
+    }
+
     private static AudioFormat convertAudioFormat(javax.sound.sampled.AudioFormat audioFormat) {
         String container = AudioFormat.CONTAINER_WAVE;
 
@@ -70,32 +97,5 @@ public class JavaSoundAudioSource implements AudioSource {
         } catch (Exception e) {
             throw new RuntimeException("Error creating the audio input stream.", e);
         }
-    }
-
-    @Override
-    public synchronized AudioStream getInputStream(AudioFormat expectedFormat) {
-        if (!expectedFormat.isCompatible(audioFormat)) {
-            throw new IllegalStateException("Cannot produce streams in format " + expectedFormat);
-        }
-        TargetDataLine mic = this.microphone;
-        if (mic == null) {
-            mic = initMicrophone(format);
-        }
-        return new JavaSoundInputStream(mic, audioFormat);
-    }
-
-    @Override
-    public String toString() {
-        return "javasound";
-    }
-
-    @Override
-    public String getEntityID() {
-        return "javasound";
-    }
-
-    @Override
-    public Set<AudioFormat> getSupportedFormats() {
-        return Collections.singleton(audioFormat);
     }
 }

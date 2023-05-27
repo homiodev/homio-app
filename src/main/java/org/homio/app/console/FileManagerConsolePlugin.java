@@ -12,26 +12,26 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FileManagerConsolePlugin implements ConsolePlugin<Object> {
 
-  @Getter
-  private final EntityContext entityContext;
+    @Getter
+    private final EntityContext entityContext;
 
-  @Override
-  public Object getValue() {
-    return null;
-  }
+    @Override
+    public Object getValue() {
+        return null;
+    }
 
-  @Override
-  public RenderType getRenderType() {
-    return null;
-  }
+    @Override
+    public RenderType getRenderType() {
+        return null;
+    }
 
-  @Override
-  public boolean isEnabled() {
-    return entityContext.accessEnabled(FILE_MANAGER_RESOURCE);
-  }
+    @Override
+    public boolean isEnabled() {
+        return entityContext.accessEnabled(FILE_MANAGER_RESOURCE);
+    }
 
-  @Override
-  public String getName() {
-    return "fm";
-  }
+    @Override
+    public String getName() {
+        return "fm";
+    }
 }

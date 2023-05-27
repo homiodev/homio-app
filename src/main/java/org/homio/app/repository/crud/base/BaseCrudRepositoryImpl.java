@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @NoRepositoryBean
 public class BaseCrudRepositoryImpl<T extends HasEntityIdentifier>
-        extends SimpleJpaRepository<T, Integer> implements BaseCrudRepository<T> {
+    extends SimpleJpaRepository<T, Integer> implements BaseCrudRepository<T> {
 
     BaseCrudRepositoryImpl(Class<T> domainClass, EntityManager entityManager) {
         super(domainClass, entityManager);

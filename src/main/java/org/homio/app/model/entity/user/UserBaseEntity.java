@@ -34,20 +34,15 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
     implements UserEntity, HasEntityLog,
     HasDynamicContextMenuActions {
 
-    public static Logger log = LogManager.getLogger(UserBaseEntity.class);
-
-    private static final Set<String> RESOURCES = new HashSet<>();
-
     public static final String LOG_RESOURCE = "ROLE_LOG";
     public static final String LOG_RESOURCE_AUTHORIZE = "hasRole('" + LOG_RESOURCE + "')";
-
     public static final String SSH_RESOURCE = "ROLE_SSH";
     public static final String SSH_RESOURCE_AUTHORIZE = "hasRole('" + SSH_RESOURCE + "')";
-
     public static final String MQTT_RESOURCE = "ROLE_MQTT";
-
     public static final String FILE_MANAGER_RESOURCE = "ROLE_FILE_MANAGER";
     public static final String FILE_MANAGER_RESOURCE_AUTHORIZE = "hasRole('" + FILE_MANAGER_RESOURCE + "')";
+    private static final Set<String> RESOURCES = new HashSet<>();
+    public static Logger log = LogManager.getLogger(UserBaseEntity.class);
 
     static {
         RESOURCES.add(LOG_RESOURCE);

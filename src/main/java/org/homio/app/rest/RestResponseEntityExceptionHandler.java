@@ -45,6 +45,11 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
             "Unable remove directory", "Directory " + msg + " not empty", ex);
     }
 
+    @ExceptionHandler({Exception.class})
+    public ResponseEntity<Object> handleUnknownException(Exception ex, WebRequest request) {
+        return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
+    }
+
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(
         @NotNull Exception ex,
@@ -60,10 +65,5 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         Objects.requireNonNull(((ServletWebRequest) request).getResponse())
                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         return new ResponseEntity<>(new ErrorHolderModel("ERROR", msg, ex), headers, statusCode);
-    }
-
-    @ExceptionHandler({Exception.class})
-    public ResponseEntity<Object> handleUnknownException(Exception ex, WebRequest request) {
-        return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
     }
 }

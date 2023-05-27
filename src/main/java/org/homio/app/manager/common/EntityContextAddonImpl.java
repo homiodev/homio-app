@@ -15,7 +15,6 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextUI.NotificationBlockBuilder;
-import org.homio.api.entity.types.StorageEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.OptionModel;
@@ -29,15 +28,12 @@ import org.homio.api.widget.WidgetBaseTemplate;
 import org.homio.app.HomioClassLoader;
 import org.homio.app.config.EntityManagerContextImpl;
 import org.homio.app.extloader.AddonContext;
-import org.homio.app.extloader.CustomPersistenceManagedTypes;
 import org.homio.app.manager.CacheService;
 import org.homio.app.setting.system.SystemAddonLibraryManagerSetting;
 import org.homio.app.utils.HardwareUtils;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
 
 @Log4j2
 @RequiredArgsConstructor

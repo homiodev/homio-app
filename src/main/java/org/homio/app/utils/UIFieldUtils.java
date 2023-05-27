@@ -211,6 +211,15 @@ public class UIFieldUtils {
         return new ArrayList<>(entityUIMetaDataSet);
     }
 
+    public static String getClassEntityNavLink(String name, Class<?> entityClass) {
+        UISidebarMenu uiSidebarMenu = AnnotationUtils.findAnnotation(entityClass, UISidebarMenu.class);
+        if (uiSidebarMenu == null) {
+            throw new IllegalArgumentException("Unable to create link for field: " + name + " and class: " + entityClass.getSimpleName());
+        }
+        String href = StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), entityClass.getSimpleName());
+        return uiSidebarMenu.parent().name().toLowerCase() + "/" + href;
+    }
+
     @SneakyThrows
     private static void generateUIField(Object instance, Set<EntityUIMetaData> entityUIMetaDataList,
         UIFieldContext fieldContext, EntityContext entityContext, boolean fullDisableEdit) {
@@ -747,15 +756,6 @@ public class UIFieldUtils {
                 throw new ServerException("Unable to find field <" + fieldName + ">");
             }
         }
-    }
-
-    public static String getClassEntityNavLink(String name, Class<?> entityClass) {
-        UISidebarMenu uiSidebarMenu = AnnotationUtils.findAnnotation(entityClass, UISidebarMenu.class);
-        if (uiSidebarMenu == null) {
-            throw new IllegalArgumentException("Unable to create link for field: " + name + " and class: " + entityClass.getSimpleName());
-        }
-        String href = StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), entityClass.getSimpleName());
-        return uiSidebarMenu.parent().name().toLowerCase() + "/" + href;
     }
 
     private static void putUIInlineFieldIfRequire(Object instance, UIFieldContext fieldContext, EntityUIMetaData entityUIMetaData,

@@ -27,6 +27,27 @@ public class CacheControlHandlerInterceptor implements HandlerInterceptor {
         super();
     }
 
+    @Override
+    public final boolean preHandle(
+        final HttpServletRequest request,
+        final HttpServletResponse response,
+        final Object handler) throws Exception {
+
+        this.assignCacheControlHeader(request, response, handler);
+
+        return true;
+    }
+
+    /**
+     * True to set an expires header when a {@link CacheControl} annotation is present on a handler; false otherwise.   Defaults to true.
+     *
+     * @param useExpiresHeader <code>true</code> to set an expires header when a
+     *                         <code>CacheControl</code> annotation is present on a handler; <code>false</code> otherwise
+     */
+    public final void setUseExpiresHeader(final boolean useExpiresHeader) {
+        this.useExpiresHeader = useExpiresHeader;
+    }
+
     /**
      * Assigns a <code>CacheControl</code> header to the given <code>response</code>.
      *
@@ -131,26 +152,5 @@ public class CacheControlHandlerInterceptor implements HandlerInterceptor {
         }
 
         return cacheControl;
-    }
-
-    @Override
-    public final boolean preHandle(
-        final HttpServletRequest request,
-        final HttpServletResponse response,
-        final Object handler) throws Exception {
-
-        this.assignCacheControlHeader(request, response, handler);
-
-        return true;
-    }
-
-    /**
-     * True to set an expires header when a {@link CacheControl} annotation is present on a handler; false otherwise.   Defaults to true.
-     *
-     * @param useExpiresHeader <code>true</code> to set an expires header when a
-     *                         <code>CacheControl</code> annotation is present on a handler; <code>false</code> otherwise
-     */
-    public final void setUseExpiresHeader(final boolean useExpiresHeader) {
-        this.useExpiresHeader = useExpiresHeader;
     }
 }

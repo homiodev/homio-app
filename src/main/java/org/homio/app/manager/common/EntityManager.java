@@ -28,17 +28,12 @@ public class EntityManager {
 
     private final ClassFinder classFinder;
 
-    <T extends BaseEntity> T getEntityNoCache(String entityID) {
-        return (T)
-                getRepositoryByEntityID(entityID).map(r -> r.getByEntityID(entityID)).orElse(null);
-    }
-
     @Cacheable(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI)
     public <T extends BaseEntity> T getEntityWithFetchLazy(String entityID) {
         return (T)
-                getRepositoryByEntityID(entityID)
-                        .map(r -> r.getByEntityIDWithFetchLazy(entityID, false))
-                        .orElse(null);
+            getRepositoryByEntityID(entityID)
+                .map(r -> r.getByEntityIDWithFetchLazy(entityID, false))
+                .orElse(null);
     }
 
     @Cacheable(CACHE_CLASS_BY_TYPE)
@@ -56,8 +51,8 @@ public class EntityManager {
 
     public BaseEntity<? extends BaseEntity> delete(String entityID) {
         return getRepositoryByEntityID(entityID)
-                .map(r -> r.deleteByEntityID(entityID))
-                .orElse(null);
+            .map(r -> r.deleteByEntityID(entityID))
+            .orElse(null);
     }
 
     @Cacheable(REPOSITORY_BY_ENTITY_ID)
@@ -71,7 +66,7 @@ public class EntityManager {
         }
         // in case if entity has no 1-1 repository then try to find base repository if possible
         for (Map.Entry<String, AbstractRepository> entry :
-                EntityContextImpl.repositoriesByPrefix.entrySet()) {
+            EntityContextImpl.repositoriesByPrefix.entrySet()) {
             if (entityID.startsWith(entry.getKey())) {
                 return Optional.of(entry.getValue());
             }
@@ -85,7 +80,7 @@ public class EntityManager {
         List<BaseEntity> list;
         Predicate<BaseEntity> filter = baseEntity -> true;
         AbstractRepository<BaseEntity> repositoryByClass =
-                classFinder.getRepositoryByClass(entityClass);
+            classFinder.getRepositoryByClass(entityClass);
 
         // in case we not found repository, but found potential repository - we should filter
         if (!repositoryByClass.getEntityClass().equals(entityClass)) {
@@ -94,8 +89,13 @@ public class EntityManager {
 
         list = repositoryByClass.listAll();
         return list.stream()
-                .filter(filter)
-                .map(BaseEntity::getEntityID)
-                .collect(Collectors.toSet());
+                   .filter(filter)
+                   .map(BaseEntity::getEntityID)
+                   .collect(Collectors.toSet());
+    }
+
+    <T extends BaseEntity> T getEntityNoCache(String entityID) {
+        return (T)
+            getRepositoryByEntityID(entityID).map(r -> r.getByEntityID(entityID)).orElse(null);
     }
 }

@@ -25,53 +25,17 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
     private String rawContent;
 
-    @Getter private JSONObject jsonParams = new JSONObject();
-    private Set<String> css = new HashSet<>();
-    private Map<String, JsMethodImpl> jsMethods = new LinkedHashMap<>();
-    private Class<?> aClass;
+    @Getter private final JSONObject jsonParams = new JSONObject();
+    private final Set<String> css = new HashSet<>();
+    private final Map<String, JsMethodImpl> jsMethods = new LinkedHashMap<>();
+    private final Class<?> aClass;
     private JSContentImpl jsContentImpl;
     private JsMethodImpl beforeFunc;
-    private JsServerVariables jsServerVariables = new JsServerVariables();
+    private final JsServerVariables jsServerVariables = new JsServerVariables();
     @Getter private boolean jsonReadOnly;
 
     public JavaScriptBuilderImpl(Class<?> aClass) {
         this.aClass = aClass;
-    }
-
-    private static String appendPOST(
-            String request, String params, boolean singleLine, String tabs) {
-        return ("$.ajax({type: \"POST\"," + "url: window.location.origin + \"/rest/widget/")
-                + request
-                + "\","
-                + (singleLine ? "\\\n" : "\n")
-                + tabs
-                + "\tdataType: \"json\",async: false,contentType: \"application/json; charset=utf-8\","
-                + (singleLine ? "\\\n" : "\n")
-                + tabs
-                + "\tdata: JSON.stringify("
-                + params
-                + "),"
-                + (singleLine ? "\\\n" : "\n")
-                + tabs
-                + "\tsuccess: function () {},"
-                + (singleLine ? "\\\n" : "\n")
-                + tabs
-                + "\terror: showException"
-                + (singleLine ? "\\\n" : "\n")
-                + tabs
-                + "});";
-    }
-
-    private void addTag(
-            List<JSInput> jsInputs,
-            String tag,
-            int level,
-            JSInputImpl parent,
-            Consumer<JSStyle> jsStyleContext,
-            Consumer<JSInput> jsInputContext) {
-        JSInputImpl jsInputImpl = new JSInputImpl(tag, null, level, parent, jsStyleContext);
-        jsInputs.add(jsInputImpl);
-        jsInputContext.accept(jsInputImpl);
     }
 
     public String build() {
@@ -79,7 +43,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
         if (!css.isEmpty()) {
             ((JsMethodImpl) this.readyOnClient())
-                    .addChild(() -> "this.addGlobalStyle('" + String.join(" ", css) + "')", 1);
+                .addChild(() -> "this.addGlobalStyle('" + String.join(" ", css) + "')", 1);
         }
 
         for (JsMethodImpl jsMethodImpl : jsMethods.values()) {
@@ -88,21 +52,21 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
         if (!jsServerVariables.variables.isEmpty()) {
             JsMethodImpl readVariablesOnServerValues =
-                    new JsMethodImpl("readVariablesOnServerValues", new String[0], false, 0);
+                new JsMethodImpl("readVariablesOnServerValues", new String[0], false, 0);
             readVariablesOnServerValues.raw(
-                    () ->
-                            "return ["
-                                    + String.join(" \", \"", jsServerVariables.variables.values())
-                                    + "];");
+                () ->
+                    "return ["
+                        + String.join(" \", \"", jsServerVariables.variables.values())
+                        + "];");
             builder.append(readVariablesOnServerValues.build());
 
             JsMethodImpl readVariablesOnServerKeys =
-                    new JsMethodImpl("readVariablesOnServerKeys", new String[0], false, 0);
+                new JsMethodImpl("readVariablesOnServerKeys", new String[0], false, 0);
             readVariablesOnServerKeys.raw(
-                    () ->
-                            "return ["
-                                    + String.join(" \", \"", jsServerVariables.variables.keySet())
-                                    + "];");
+                () ->
+                    "return ["
+                        + String.join(" \", \"", jsServerVariables.variables.keySet())
+                        + "];");
             builder.append(readVariablesOnServerKeys.build());
         }
 
@@ -134,6 +98,20 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         this.rawContent = content;
     }
 
+    @Override
+    public JavaScriptBuilderImpl jsonParam(String key, Object value) {
+        // this.jsServerVariables.variables.put(key, "'" + value.toString() + "'");
+        // this.globalParams.add(key + " = params.get(\"" + key + "\");\n");
+        this.jsonParams.put(key, value);
+        return this;
+    }
+
+    @Override
+    public JavaScriptBuilderImpl css(String className, String... values) {
+        this.css.add("." + className + " { " + String.join(";", values) + "}");
+        return this;
+    }
+
     /* @Override
     public FetchEntity fetchEntity(String name, String entityID) {
         FetchEntity fetchEntity = new FetchEntity(name, entityID);
@@ -152,20 +130,6 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
     }*/
 
     @Override
-    public JavaScriptBuilderImpl jsonParam(String key, Object value) {
-        // this.jsServerVariables.variables.put(key, "'" + value.toString() + "'");
-        // this.globalParams.add(key + " = params.get(\"" + key + "\");\n");
-        this.jsonParams.put(key, value);
-        return this;
-    }
-
-    @Override
-    public JavaScriptBuilderImpl css(String className, String... values) {
-        this.css.add("." + className + " { " + String.join(";", values) + "}");
-        return this;
-    }
-
-    @Override
     public void setJsonReadOnly() {
         this.jsonReadOnly = true;
     }
@@ -176,7 +140,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             throw new IllegalArgumentException("MethodName has to have 'js_' prefix");
         }
         this.jsMethods.computeIfAbsent(
-                methodName, s -> new JsMethodImpl(methodName, params, false, 0));
+            methodName, s -> new JsMethodImpl(methodName, params, false, 0));
         return this.jsMethods.get(methodName);
     }
 
@@ -200,13 +164,49 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
     @Override
     public JsMethod readyOnClient() {
         this.jsMethods.computeIfAbsent(
-                "readyOnClient", s -> new JsMethodImpl("readyOnClient", new String[0], false, 0));
+            "readyOnClient", s -> new JsMethodImpl("readyOnClient", new String[0], false, 0));
         return this.jsMethods.get("readyOnClient");
+    }
+
+    private static String appendPOST(
+        String request, String params, boolean singleLine, String tabs) {
+        return ("$.ajax({type: \"POST\"," + "url: window.location.origin + \"/rest/widget/")
+            + request
+            + "\","
+            + (singleLine ? "\\\n" : "\n")
+            + tabs
+            + "\tdataType: \"json\",async: false,contentType: \"application/json; charset=utf-8\","
+            + (singleLine ? "\\\n" : "\n")
+            + tabs
+            + "\tdata: JSON.stringify("
+            + params
+            + "),"
+            + (singleLine ? "\\\n" : "\n")
+            + tabs
+            + "\tsuccess: function () {},"
+            + (singleLine ? "\\\n" : "\n")
+            + tabs
+            + "\terror: showException"
+            + (singleLine ? "\\\n" : "\n")
+            + tabs
+            + "});";
+    }
+
+    private void addTag(
+        List<JSInput> jsInputs,
+        String tag,
+        int level,
+        JSInputImpl parent,
+        Consumer<JSStyle> jsStyleContext,
+        Consumer<JSInput> jsInputContext) {
+        JSInputImpl jsInputImpl = new JSInputImpl(tag, null, level, parent, jsStyleContext);
+        jsInputs.add(jsInputImpl);
+        jsInputContext.accept(jsInputImpl);
     }
 
     public static class JsServerVariables {
 
-        private Map<String, String> variables = new LinkedHashMap<>();
+        private final Map<String, String> variables = new LinkedHashMap<>();
     }
 
     public static class JSONParameterContextImpl implements JSONParameterContext {
@@ -292,10 +292,10 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         private MethodInterceptor createProxyHandler(StringBuilder builder) {
             return (obj, method, args, proxy) -> {
                 builder.append(".")
-                        .append(method.getName())
-                        .append("(")
-                        .append(evalProxyArguments(args))
-                        .append(")");
+                       .append(method.getName())
+                       .append("(")
+                       .append(evalProxyArguments(args))
+                       .append(")");
                 if (method.getReturnType().getSimpleName().equals(Object.class.getSimpleName())) {
                     return null;
                 }
@@ -308,9 +308,9 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             for (Object arg : args) {
                 if (arg instanceof Class) {
                     argBuilder
-                            .append("Java.type('")
-                            .append(((Class) arg).getName())
-                            .append("').class");
+                        .append("Java.type('")
+                        .append(((Class) arg).getName())
+                        .append("').class");
                 } else {
                     argBuilder.append(arg);
                 }
@@ -325,21 +325,21 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             StringBuilder builder = new StringBuilder();
             for (Map.Entry<String, JSONParameter> entry : arrays.entrySet()) {
                 builder.append("window.")
-                        .append(entry.getKey())
-                        .append(" = (window.")
-                        .append(entry.getKey())
-                        .append(" || []).concat(")
-                        .append("\n")
-                        .append(tabs)
-                        .append(entry.getValue().toString(tabs.length() * 4 + 4))
-                        .append(tabs)
-                        .append(");");
+                       .append(entry.getKey())
+                       .append(" = (window.")
+                       .append(entry.getKey())
+                       .append(" || []).concat(")
+                       .append("\n")
+                       .append(tabs)
+                       .append(entry.getValue().toString(tabs.length() * 4 + 4))
+                       .append(tabs)
+                       .append(");");
             }
             for (Map.Entry<String, JSONParameter> entry : parameters.entrySet()) {
                 builder.append("window.")
-                        .append(entry.getKey())
-                        .append(" = ")
-                        .append(entry.getValue().toString());
+                       .append(entry.getKey())
+                       .append(" = ")
+                       .append(entry.getValue().toString());
             }
             return builder.toString();
         }
@@ -465,10 +465,10 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         public JsCond eq(String cond1, String cond2, boolean escapeSecondCondition) {
             this.addChild(() -> "if(");
             this.addChild(
-                    new JsBlockImpl(
-                            cond1
-                                    + " === "
-                                    + (escapeSecondCondition ? "\\'" + cond2 + "\\'" : cond2)));
+                new JsBlockImpl(
+                    cond1
+                        + " === "
+                        + (escapeSecondCondition ? "\\'" + cond2 + "\\'" : cond2)));
             return this;
         }
 
@@ -487,7 +487,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
     public static class SBuilder implements Builder {
 
-        private String value;
+        private final String value;
 
         private SBuilder(String value) {
             this.value = value;
@@ -537,17 +537,17 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
         @Override
         public JSStyle ngStyleIf(String condition, String style, String value, String otherValue) {
             builder.append(" [style]=\"")
-                    .append("{")
-                    .append("\\'")
-                    .append(style)
-                    .append("\\'")
-                    .append(":")
-                    .append(condition)
-                    .append(" ? \\'")
-                    .append(value)
-                    .append("\\' : \\'")
-                    .append(otherValue)
-                    .append("\\'}\"");
+                   .append("{")
+                   .append("\\'")
+                   .append(style)
+                   .append("\\'")
+                   .append(":")
+                   .append(condition)
+                   .append(" ? \\'")
+                   .append(value)
+                   .append("\\' : \\'")
+                   .append(otherValue)
+                   .append("\\'}\"");
             return this;
         }
 
@@ -570,9 +570,9 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             builder.append(" (click)=\"").append(jsMethodImpl.name).append("(");
             if (params.length != jsMethodImpl.params.length) {
                 throw new IllegalArgumentException(
-                        "JsMethod: "
-                                + jsMethod
-                                + "has different parameter count that onClick handling");
+                    "JsMethod: "
+                        + jsMethod
+                        + "has different parameter count that onClick handling");
             }
             for (int i = 0; i < params.length; i++) {
                 String param = params[i];
@@ -595,19 +595,19 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
     public class JSInputImpl implements JSInput {
 
         private final StringBuilder builder = new StringBuilder();
-        private String inputType;
+        private final String inputType;
         private String inputContent;
-        private int level;
-        private List<JSInput> jsInputs = new ArrayList<>();
-        private JSInputImpl parent;
-        private String tabs;
+        private final int level;
+        private final List<JSInput> jsInputs = new ArrayList<>();
+        private final JSInputImpl parent;
+        private final String tabs;
 
         private JSInputImpl(
-                String input,
-                String inputContent,
-                int level,
-                JSInput parent,
-                Consumer<JSStyle> jsStyleContext) {
+            String input,
+            String inputContent,
+            int level,
+            JSInput parent,
+            Consumer<JSStyle> jsStyleContext) {
             this.inputType = input;
             this.inputContent = inputContent;
             this.level = level;
@@ -620,7 +620,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             if (jsStyleContext != null) {
                 jsStyleContext.accept(jsStyleImpl);
             }
-            builder.append(jsStyleImpl.builder.toString());
+            builder.append(jsStyleImpl.builder);
             builder.append(">\\\n").append(tabs);
         }
 
@@ -632,11 +632,11 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
                 builder.append(inputContent);
             }
             builder.append("\\\n")
-                    .append(parent == null ? "" : parent.tabs)
-                    .append("</")
-                    .append(inputType)
-                    .append(">\\\n")
-                    .append(parent == null ? "" : parent.tabs);
+                   .append(parent == null ? "" : parent.tabs)
+                   .append("</")
+                   .append(inputType)
+                   .append(">\\\n")
+                   .append(parent == null ? "" : parent.tabs);
 
             return builder.toString();
         }
@@ -688,7 +688,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
         private final String[] params;
         private final boolean ngFunc;
-        private Map<String, String> additionalParams = new HashMap<>();
+        private final Map<String, String> additionalParams = new HashMap<>();
 
         JSAjaxPostImpl(JsMethodImpl jsMethodImpl, int level) {
             super(level);
@@ -719,8 +719,8 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
     public class JSContentImpl implements JSContent {
 
-        private StringBuilder builder = new StringBuilder();
-        private List<JSInput> jsInputs = new ArrayList<>();
+        private final StringBuilder builder = new StringBuilder();
+        private final List<JSInput> jsInputs = new ArrayList<>();
 
         @Override
         public JSContent add(JSInput jsInput) {
@@ -754,7 +754,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
     public class JsCondBodyImpl extends CommonBuilder implements JsCondBody {
 
-        private boolean isTextContext;
+        private final boolean isTextContext;
 
         JsCondBodyImpl(int level, boolean isTextContext) {
             super(level);
@@ -777,7 +777,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
         private final String[] params;
         public String name;
-        private boolean ngFunc;
+        private final boolean ngFunc;
 
         JsMethodImpl(String methodName, String[] params, boolean ngFunc, int level) {
             super(level, ngFunc);
@@ -786,15 +786,15 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
             this.ngFunc = ngFunc;
             if (ngFunc) {
                 this.addChildNoTab(
-                        new SBuilder(
-                                "this."
-                                        + methodName
-                                        + " = function("
-                                        + String.join(",", params)
-                                        + ") {"));
+                    new SBuilder(
+                        "this."
+                            + methodName
+                            + " = function("
+                            + String.join(",", params)
+                            + ") {"));
             } else {
                 this.addChildNoTab(
-                        () -> "function " + methodName + "(" + String.join(",", params) + ") {");
+                    () -> "function " + methodName + "(" + String.join(",", params) + ") {");
             }
         }
 
@@ -823,7 +823,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
     public class JSCodeContextImpl<T> extends CommonBuilder implements JSCodeContext<T> {
 
-        private boolean isTextContext;
+        private final boolean isTextContext;
 
         public JSCodeContextImpl(int level, boolean isTextContext) {
             super(level + 1);
@@ -838,7 +838,7 @@ public class JavaScriptBuilderImpl implements JavaScriptBuilder {
 
         @Override
         public void cond(
-                Consumer<JsCond> jsCondConsumerContext, Consumer<JsCondBody> methodContext) {
+            Consumer<JsCond> jsCondConsumerContext, Consumer<JsCondBody> methodContext) {
             child(jsCondConsumerContext, new JsCondImpl(level));
             child(methodContext, new JsCondBodyImpl(level, isTextContext));
         }

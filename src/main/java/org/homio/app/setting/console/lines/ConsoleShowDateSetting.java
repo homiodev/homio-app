@@ -18,6 +18,6 @@ public class ConsoleShowDateSetting implements ConsoleSettingPlugin<Boolean>, Se
 
     @Override
     public ConsolePlugin.RenderType[] renderTypes() {
-        return new ConsolePlugin.RenderType[] {ConsolePlugin.RenderType.lines};
+        return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines};
     }
 }

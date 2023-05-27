@@ -60,7 +60,7 @@ public class ImageService {
             String ext = entityID.substring(entityID.length() - 3);
             ImageIO.write(bufferedImage, ext, imagePath.toFile());
             ImageEntity imageEntity =
-                    imageRepository.getByPath(imagePath.toAbsolutePath().toString());
+                imageRepository.getByPath(imagePath.toAbsolutePath().toString());
             if (imageEntity == null) {
                 imageEntity = new ImageEntity();
                 imageEntity.setPath(imagePath.toAbsolutePath().toString());

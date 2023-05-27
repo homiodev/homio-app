@@ -62,23 +62,23 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
     }
 
     @Override
-    protected void beforePersist() {
-        if (!getJsonData().has("bw")) {
-            setBw(2);
-        }
-        if(!getJsonData().has("zi")) {
-            setIndex(15);
-        }
-        super.beforePersist();
-    }
-
-    @Override
     public void afterDelete(EntityContext entityContext) {
         for (WidgetBaseEntity entity : getEntityContext().findAll(WidgetBaseEntity.class)) {
             if (getEntityID().equals(entity.getParent())) {
                 entityContext.delete(entity);
             }
         }
+    }
+
+    @Override
+    protected void beforePersist() {
+        if (!getJsonData().has("bw")) {
+            setBw(2);
+        }
+        if (!getJsonData().has("zi")) {
+            setIndex(15);
+        }
+        super.beforePersist();
     }
 
    /* @Override

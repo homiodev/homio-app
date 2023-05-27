@@ -27,7 +27,7 @@ public class ConsoleSshCursorColorSetting implements ConsoleSettingPlugin<String
 
     @Override
     public String[] pages() {
-        return new String[] {"ssh"};
+        return new String[]{"ssh"};
     }
 
     @Override

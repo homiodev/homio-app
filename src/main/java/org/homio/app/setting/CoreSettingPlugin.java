@@ -14,6 +14,6 @@ public interface CoreSettingPlugin<T> extends SettingPlugin<T> {
         dashboard,
         workspace,
         usb,
-        system;
+        system
     }
 }

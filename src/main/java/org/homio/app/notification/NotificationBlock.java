@@ -25,27 +25,17 @@ public class NotificationBlock {
     private final String name;
     private final String icon;
     private final String color;
-
-    private String version;
-
-    private Collection<UIInputEntity> actions;
-
-    private Collection<UIInputEntity> contextMenuActions;
-
-    private Status status;
-
-    private String statusColor;
-
-    private boolean updating;
-
-    private List<String> versions;
-
-    private String link;
-    private String linkType;
-
     @JsonIgnore
     private final Map<String, Info> infoItemMap = new ConcurrentHashMap<>();
-
+    private String version;
+    private Collection<UIInputEntity> actions;
+    private Collection<UIInputEntity> contextMenuActions;
+    private Status status;
+    private String statusColor;
+    private boolean updating;
+    private List<String> versions;
+    private String link;
+    private String linkType;
     @JsonIgnore
     private BiFunction<ProgressBar, String, ActionResponseModel> updateHandler;
 
@@ -90,10 +80,9 @@ public class NotificationBlock {
         private final String confirmMessage;
         @JsonIgnore
         private final UIActionHandler handler;
-        public String actionEntityID;
-
         // status and status color belong to right side
         private final String status;
         private final String statusColor;
+        public String actionEntityID;
     }
 }

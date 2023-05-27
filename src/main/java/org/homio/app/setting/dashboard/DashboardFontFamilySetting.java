@@ -11,7 +11,7 @@ import org.homio.app.setting.CoreSettingPlugin;
 import org.json.JSONObject;
 
 public class DashboardFontFamilySetting
-        implements CoreSettingPlugin<String>, SettingPluginOptions<String> {
+    implements CoreSettingPlugin<String>, SettingPluginOptions<String> {
 
     @Override
     public GroupKey getGroupKey() {
@@ -41,13 +41,13 @@ public class DashboardFontFamilySetting
     @Override
     public Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
         return new ArrayList<>(
-                Arrays.asList(
-                        OptionModel.of("inherit"),
-                        OptionModel.of("serif"),
-                        OptionModel.of("sans-serif"),
-                        OptionModel.of("monospace"),
-                        OptionModel.of("cursive"),
-                        OptionModel.of("'FontAwesome'")));
+            Arrays.asList(
+                OptionModel.of("inherit"),
+                OptionModel.of("serif"),
+                OptionModel.of("sans-serif"),
+                OptionModel.of("monospace"),
+                OptionModel.of("cursive"),
+                OptionModel.of("'FontAwesome'")));
     }
 
     @Override

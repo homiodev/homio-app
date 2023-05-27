@@ -87,6 +87,17 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         }
     }
 
+    @Override
+    public boolean isDisableDelete() {
+        return true;
+    }
+
+    @Override
+    protected void beforePersist() {
+        super.beforePersist();
+        setJsonData("description", Lang.getServerMessage("TMATE_DESCRIPTION"));
+    }
+
     private void addTmateInstallButton(UIInputBuilder uiInputBuilder, EntityContextHardware hardware) {
         uiInputBuilder.addSelectableButton("install_tmate", "fab fa-instalod", null, (entityContext, params) -> {
             hardware.installSoftware("tmate", 60);
@@ -98,29 +109,15 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         });
     }
 
-    @Override
-    protected void beforePersist() {
-        super.beforePersist();
-        setJsonData("description", Lang.getServerMessage("TMATE_DESCRIPTION"));
-    }
-
-    @Override
-    public boolean isDisableDelete() {
-        return true;
-    }
-
     @Log4j2
     @RequiredArgsConstructor
     public static class SshTmateService implements SshProviderService<SshTmateEntity> {
 
         private final EntityContext entityContext;
-
+        private final SshSession sshSession = new SshSession();
         @Getter
         private SshTmateEntity entity;
-
         private ThreadContext<Void> tmateThread;
-
-        private final SshSession sshSession = new SshSession();
         private Process process;
 
         @Override

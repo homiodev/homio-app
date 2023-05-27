@@ -17,7 +17,7 @@ import org.jetbrains.annotations.Nullable;
 @Getter
 @RequiredArgsConstructor
 public class UIFlexLayoutBuilderImpl extends UIBaseLayoutBuilderImpl
-        implements UIFlexLayoutBuilder, UIInputEntity {
+    implements UIFlexLayoutBuilder, UIInputEntity {
 
     private final String entityID;
     private final String itemType = UIItemType.Flex.name();

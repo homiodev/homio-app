@@ -102,24 +102,21 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
 
     @ManyToOne(fetch = FetchType.EAGER)
     private WorkspaceGroup parent;
+    @Getter
+    @Column(length = 1000)
+    @Convert(converter = JSONConverter.class)
+    private JSON jsonData = new JSON();
+    @Column(unique = true, nullable = false)
+    private String groupId;
+    @Getter
+    @JsonIgnore
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "parent")
+    private Set<WorkspaceGroup> childrenGroups;
 
     @JsonIgnore
     public WorkspaceGroup getParent() {
         return parent;
     }
-
-    @Getter
-    @Column(length = 1000)
-    @Convert(converter = JSONConverter.class)
-    private JSON jsonData = new JSON();
-
-    @Column(unique = true, nullable = false)
-    private String groupId;
-
-    @Getter
-    @JsonIgnore
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "parent")
-    private Set<WorkspaceGroup> childrenGroups;
 
     @Override
     public String getEntityPrefix() {
@@ -154,15 +151,6 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     @UIFieldIgnore
     public Date getUpdateTime() {
         throw new ProhibitedExecution();
-    }
-
-    @Override
-    protected void beforePersist() {
-        setGroupId(defaultIfEmpty(groupId, CommonUtils.generateUUID()));
-        setEntityID(PREFIX + groupId);
-        setIcon(defaultIfEmpty(icon, "fas fa-layer-group"));
-        setIconColor(defaultIfEmpty(iconColor, "#28A60C"));
-        setName(defaultIfEmpty(getName(), CommonUtils.generateUUID()));
     }
 
     @UIField(order = 9999, hideInEdit = true)
@@ -220,33 +208,86 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         return locked || this.groupId.equals("broadcasts");
     }
 
+    @Override
+    public String toString() {
+        return "GroupVariable: " + getTitle();
+    }
+
+    @UIContextMenuAction(value = "CLEAR_BACKUP", icon = "fas fa-database", inputs = {
+        @UIActionInput(name = "keep_days", type = Type.number, value = "-1", min = -1, max = 365),
+        @UIActionInput(name = "keep_count", type = Type.number, value = "-1", min = -1, max = 100_000)
+    })
+    public ActionResponseModel clearBackup(EntityContext entityContext, JSONObject params) {
+        val repository = entityContext.getBean(VariableDataRepository.class);
+        int days = params.optInt("keep_days", -1);
+        int count = params.optInt("keep_count", -1);
+        if (days == 0 || count == 0) {
+            return clearBackupResponse(clearAll(repository));
+        }
+        if (days > 0) {
+            return clearBackupResponse(clearByDays(days, repository));
+        } else if (count > 0) {
+            return clearBackupResponse(clearByCount(count, repository));
+        }
+        return ActionResponseModel.showWarn("WRONG_ARGUMENTS");
+    }
+
+    @Override
+    protected void beforePersist() {
+        setGroupId(defaultIfEmpty(groupId, CommonUtils.generateUUID()));
+        setEntityID(PREFIX + groupId);
+        setIcon(defaultIfEmpty(icon, "fas fa-layer-group"));
+        setIconColor(defaultIfEmpty(iconColor, "#28A60C"));
+        setName(defaultIfEmpty(getName(), CommonUtils.generateUUID()));
+    }
+
+    private ActionResponseModel clearBackupResponse(int deletedCount) {
+        if (deletedCount > 0) {
+            return ActionResponseModel.showSuccess("Deleted: " + deletedCount + " variables");
+        }
+        return ActionResponseModel.showWarn("W.ERROR.NO_VARIABLES_TO_DELETE");
+    }
+
+    private int clearAll(VariableDataRepository repository) {
+        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
+                                 .map(v -> repository.delete(v.getVariableId()))
+                                 .mapToInt(i -> i).sum();
+    }
+
+    private int clearByCount(int count, VariableDataRepository repository) {
+        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
+                                 .map(v -> repository.deleteButKeepCount(v.getVariableId(), count))
+                                 .mapToInt(i -> i).sum();
+    }
+
+    private int clearByDays(int days, VariableDataRepository repository) {
+        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
+                                 .map(v -> repository.deleteButKeepDays(v.getVariableId(), days))
+                                 .mapToInt(i -> i).sum();
+    }
+
     @Getter
     @NoArgsConstructor
     public static class WorkspaceVariableEntity {
-
-        private String entityID;
-
-        @UIField(order = 10, type = UIFieldType.HTML)
-        @UIFieldInlineGroup(value = "return context.get('groupName')", editable = true)
-        @UIFieldColorBgRef("color")
-        private String groupName;
-
-        @UIField(order = 10, type = UIFieldType.HTML)
-        @UIFieldColorRef("color")
-        @UIFieldTitleRef("nameTitle")
-        @UIFieldVariable
-        private JSONObject name;
 
         @UIField(order = 20, label = "format", style = "padding-left:5px")
         @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
         @UIFieldInlineEntityWidth(15)
         public String restriction;
-
         @UIField(order = 30, inlineEdit = true, hideInView = true)
         @UIFieldInlineEntityWidth(12)
         @UIFieldSlider(min = 500, max = 10_000, step = 500)
         public int quota;
-
+        private String entityID;
+        @UIField(order = 10, type = UIFieldType.HTML)
+        @UIFieldInlineGroup(value = "return context.get('groupName')", editable = true)
+        @UIFieldColorBgRef("color")
+        private String groupName;
+        @UIField(order = 10, type = UIFieldType.HTML)
+        @UIFieldColorRef("color")
+        @UIFieldTitleRef("nameTitle")
+        @UIFieldVariable
+        private JSONObject name;
         @UIField(order = 40)
         @UIFieldProgress
         @UIFieldInlineEntityWidth(20)
@@ -283,54 +324,5 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
             this.usedQuota = variable.getUsedQuota();
             this.nameTitle = variable.getName();
         }
-    }
-
-    @Override
-    public String toString() {
-        return "GroupVariable: " + getTitle();
-    }
-
-    @UIContextMenuAction(value = "CLEAR_BACKUP", icon = "fas fa-database", inputs = {
-        @UIActionInput(name = "keep_days", type = Type.number, value = "-1", min = -1, max = 365),
-        @UIActionInput(name = "keep_count", type = Type.number, value = "-1", min = -1, max = 100_000)
-    })
-    public ActionResponseModel clearBackup(EntityContext entityContext, JSONObject params) {
-        val repository = entityContext.getBean(VariableDataRepository.class);
-        int days = params.optInt("keep_days", -1);
-        int count = params.optInt("keep_count", -1);
-        if (days == 0 || count == 0) {
-            return clearBackupResponse(clearAll(repository));
-        }
-        if (days > 0) {
-            return clearBackupResponse(clearByDays(days, repository));
-        } else if (count > 0) {
-            return clearBackupResponse(clearByCount(count, repository));
-        }
-        return ActionResponseModel.showWarn("WRONG_ARGUMENTS");
-    }
-
-    private ActionResponseModel clearBackupResponse(int deletedCount) {
-        if (deletedCount > 0) {
-            return ActionResponseModel.showSuccess("Deleted: " + deletedCount + " variables");
-        }
-        return ActionResponseModel.showWarn("W.ERROR.NO_VARIABLES_TO_DELETE");
-    }
-
-    private int clearAll(VariableDataRepository repository) {
-        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                                 .map(v -> repository.delete(v.getVariableId()))
-                                 .mapToInt(i -> i).sum();
-    }
-
-    private int clearByCount(int count, VariableDataRepository repository) {
-        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                                 .map(v -> repository.deleteButKeepCount(v.getVariableId(), count))
-                                 .mapToInt(i -> i).sum();
-    }
-
-    private int clearByDays(int days, VariableDataRepository repository) {
-        return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                                 .map(v -> repository.deleteButKeepDays(v.getVariableId(), days))
-                                 .mapToInt(i -> i).sum();
     }
 }

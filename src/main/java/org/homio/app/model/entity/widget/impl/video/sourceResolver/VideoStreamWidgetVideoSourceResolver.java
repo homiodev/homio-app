@@ -20,7 +20,7 @@ public class VideoStreamWidgetVideoSourceResolver implements WidgetVideoSourceRe
         BaseVideoStreamEntity baseVideoStreamEntity = entityContext.getEntity(keys[0]);
         if (baseVideoStreamEntity != null) {
             VideoEntityResponse response =
-                    new VideoEntityResponse(ds, baseVideoStreamEntity.getStreamUrl(keys[1]), null);
+                new VideoEntityResponse(ds, baseVideoStreamEntity.getStreamUrl(keys[1]), null);
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             baseVideoStreamEntity.assembleActions(uiInputBuilder);
             response.setActions(uiInputBuilder.buildAll());

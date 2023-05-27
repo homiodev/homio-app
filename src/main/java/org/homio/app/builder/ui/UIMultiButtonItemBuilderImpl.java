@@ -9,8 +9,8 @@ import org.homio.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
 
 @Getter
 public class UIMultiButtonItemBuilderImpl
-        extends UIBaseEntityItemBuilderImpl<UIMultiButtonItemBuilder, String>
-        implements UIMultiButtonItemBuilder {
+    extends UIBaseEntityItemBuilderImpl<UIMultiButtonItemBuilder, String>
+    implements UIMultiButtonItemBuilder {
 
     private final List<ExtraButton> buttons = new ArrayList<>();
 

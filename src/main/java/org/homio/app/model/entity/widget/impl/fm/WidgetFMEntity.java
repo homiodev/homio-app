@@ -41,13 +41,6 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
         return null;
     }
 
-    @Override
-    protected void beforePersist() {
-        setBh(3);
-        setBw(3);
-        super.beforePersist();
-    }
-
     @UIField(order = 24, isRevert = true)
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
@@ -145,5 +138,12 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
                 return ActionResponseModel.showSuccess("SUCCESS");
             },
             0);
+    }
+
+    @Override
+    protected void beforePersist() {
+        setBh(3);
+        setBw(3);
+        super.beforePersist();
     }
 }

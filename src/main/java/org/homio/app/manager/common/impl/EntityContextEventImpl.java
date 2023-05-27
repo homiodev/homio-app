@@ -154,29 +154,6 @@ public class EntityContextEventImpl implements EntityContextEvent {
         return fireEvent(key, value, false);
     }
 
-    @NotNull
-    private EntityContextEventImpl fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
-        // fire by key and key + value type
-        fireEventInternal(key, value, compareValues);
-        if (value != null && !(value instanceof String)) {
-            fireEventInternal(key + "_" + value.getClass().getSimpleName(), value, compareValues);
-        }
-        return this;
-    }
-
-    private void fireEventInternal(@NotNull String key, @Nullable Object value, boolean compareValues) {
-        if (StringUtils.isEmpty(key)) {
-            throw new IllegalArgumentException("Unable to fire event with empty key");
-        }
-        if (value != null) {
-            if (compareValues && Objects.equals(value, lastValues.get(key))) {
-                return;
-            }
-            lastValues.put(key, value);
-        }
-        eventQueue.add(new Event(key, value));
-    }
-
     public void addEvent(String key) {
         OptionModel optionModel = OptionModel.of(key, Lang.getServerMessage(key));
         this.events.add(optionModel);
@@ -294,87 +271,27 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }
     }
 
-    @RequiredArgsConstructor
-    private static class UdpContext {
-
-        private final Map<String, BiConsumer<DatagramPacket, String>> keyToListener = new HashMap<>();
-        private final EntityContextBGP.ThreadContext<Void> scheduleFuture;
-
-        public void handle(DatagramPacket datagramPacket, String text) {
-            for (BiConsumer<DatagramPacket, String> listener : keyToListener.values()) {
-                listener.accept(datagramPacket, text);
-            }
+    @NotNull
+    private EntityContextEventImpl fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
+        // fire by key and key + value type
+        fireEventInternal(key, value, compareValues);
+        if (value != null && !(value instanceof String)) {
+            fireEventInternal(key + "_" + value.getClass().getSimpleName(), value, compareValues);
         }
-
-        public void put(String key, BiConsumer<DatagramPacket, String> listener) {
-            this.keyToListener.put(key, listener);
-        }
-
-        public void cancel(String key) {
-            keyToListener.remove(key);
-            if (keyToListener.isEmpty()) {
-                scheduleFuture.cancel();
-            }
-        }
+        return this;
     }
 
-    @Getter
-    public static class EntityListener {
-
-        private final Map<String, Map<String, EntityUpdateListener>> typeBiListeners = new HashMap<>();
-        private final Map<String, Map<String, Consumer>> typeListeners = new HashMap<>();
-
-        private final Map<String, Map<String, Consumer>> idListeners = new HashMap<>();
-        private final Map<String, Map<String, EntityUpdateListener>> idBiListeners = new HashMap<>();
-
-        public <T extends HasEntityIdentifier> void notify(T saved, T oldEntity) {
-            // notify by entityID
-            String entityId = saved == null ? oldEntity.getEntityID() : saved.getEntityID();
-            for (Consumer listener : idListeners.getOrDefault(entityId, emptyMap()).values()) {
-                listener.accept(saved);
-            }
-            for (EntityUpdateListener listener : idBiListeners.getOrDefault(entityId, emptyMap()).values()) {
-                listener.entityUpdated(saved, oldEntity);
-            }
-
-            // notify by class type
-            Class typeClass = saved == null ? oldEntity.getClass() : saved.getClass();
-
-            for (Class<?> entityClass : ClassUtils.getAllInterfaces(typeClass)) {
-                this.notifyByType(entityClass.getName(), saved, oldEntity);
-            }
-            for (Class<?> entityClass : ClassUtils.getAllSuperclasses(typeClass)) {
-                this.notifyByType(entityClass.getName(), saved, oldEntity);
-            }
-            this.notifyByType(typeClass.getName(), saved, oldEntity);
+    private void fireEventInternal(@NotNull String key, @Nullable Object value, boolean compareValues) {
+        if (StringUtils.isEmpty(key)) {
+            throw new IllegalArgumentException("Unable to fire event with empty key");
         }
-
-        private <T extends HasEntityIdentifier> void notifyByType(String name, T saved, T oldEntity) {
-            for (EntityUpdateListener listener : typeBiListeners.getOrDefault(name, emptyMap()).values()) {
-                listener.entityUpdated(saved, oldEntity);
+        if (value != null) {
+            if (compareValues && Objects.equals(value, lastValues.get(key))) {
+                return;
             }
-            for (Consumer listener : typeListeners.getOrDefault(name, emptyMap()).values()) {
-                listener.accept(saved == null ? oldEntity : saved); // for Delete we have to use oldEntity
-            }
+            lastValues.put(key, value);
         }
-
-        public <T extends BaseEntity> boolean isRequireFetchOldEntity(T entity) {
-            if (!idBiListeners.getOrDefault(entity.getEntityID(), emptyMap()).isEmpty()) {
-                return true;
-            }
-            Class<?> cursor = entity.getClass();
-            while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
-                if (!typeBiListeners.getOrDefault(cursor.getName(), emptyMap()).isEmpty()) {
-                    return true;
-                }
-                cursor = cursor.getSuperclass();
-            }
-            return false;
-        }
-
-        public int getCount(String key) {
-            return 0;
-        }
+        eventQueue.add(new Event(key, value));
     }
 
     private void registerEntityListeners(EntityManagerFactory entityManagerFactory) {
@@ -386,7 +303,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 loadEntityService(entityContext, entity);
             }
         });
-        registry.getEventListenerGroup(EventType.PRE_DELETE).appendListener((PreDeleteEventListener) event -> {
+        registry.getEventListenerGroup(EventType.PRE_DELETE).appendListener(event -> {
             Object entity = event.getEntity();
             if (entity instanceof BaseEntity) {
                 BaseEntity baseEntity = (BaseEntity) entity;
@@ -473,20 +390,6 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }
     }
 
-    @RequiredArgsConstructor
-    private static class Event {
-
-        private final String key;
-        private final Object value;
-    }
-
-    @RequiredArgsConstructor
-    private static class EntityUpdate {
-
-        private final Object entity;
-        private final EntityUpdateAction itemAction;
-    }
-
     @AllArgsConstructor
     public enum EntityUpdateAction {
         Insert((context, entity) -> {
@@ -525,5 +428,102 @@ public class EntityContextEventImpl implements EntityContextEvent {
         });
 
         private final ThrowingBiConsumer<EntityContextImpl, Object, Exception> handler;
+    }
+
+    @RequiredArgsConstructor
+    private static class UdpContext {
+
+        private final Map<String, BiConsumer<DatagramPacket, String>> keyToListener = new HashMap<>();
+        private final EntityContextBGP.ThreadContext<Void> scheduleFuture;
+
+        public void handle(DatagramPacket datagramPacket, String text) {
+            for (BiConsumer<DatagramPacket, String> listener : keyToListener.values()) {
+                listener.accept(datagramPacket, text);
+            }
+        }
+
+        public void put(String key, BiConsumer<DatagramPacket, String> listener) {
+            this.keyToListener.put(key, listener);
+        }
+
+        public void cancel(String key) {
+            keyToListener.remove(key);
+            if (keyToListener.isEmpty()) {
+                scheduleFuture.cancel();
+            }
+        }
+    }
+
+    @Getter
+    public static class EntityListener {
+
+        private final Map<String, Map<String, EntityUpdateListener>> typeBiListeners = new HashMap<>();
+        private final Map<String, Map<String, Consumer>> typeListeners = new HashMap<>();
+
+        private final Map<String, Map<String, Consumer>> idListeners = new HashMap<>();
+        private final Map<String, Map<String, EntityUpdateListener>> idBiListeners = new HashMap<>();
+
+        public <T extends HasEntityIdentifier> void notify(T saved, T oldEntity) {
+            // notify by entityID
+            String entityId = saved == null ? oldEntity.getEntityID() : saved.getEntityID();
+            for (Consumer listener : idListeners.getOrDefault(entityId, emptyMap()).values()) {
+                listener.accept(saved);
+            }
+            for (EntityUpdateListener listener : idBiListeners.getOrDefault(entityId, emptyMap()).values()) {
+                listener.entityUpdated(saved, oldEntity);
+            }
+
+            // notify by class type
+            Class typeClass = saved == null ? oldEntity.getClass() : saved.getClass();
+
+            for (Class<?> entityClass : ClassUtils.getAllInterfaces(typeClass)) {
+                this.notifyByType(entityClass.getName(), saved, oldEntity);
+            }
+            for (Class<?> entityClass : ClassUtils.getAllSuperclasses(typeClass)) {
+                this.notifyByType(entityClass.getName(), saved, oldEntity);
+            }
+            this.notifyByType(typeClass.getName(), saved, oldEntity);
+        }
+
+        public <T extends BaseEntity> boolean isRequireFetchOldEntity(T entity) {
+            if (!idBiListeners.getOrDefault(entity.getEntityID(), emptyMap()).isEmpty()) {
+                return true;
+            }
+            Class<?> cursor = entity.getClass();
+            while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
+                if (!typeBiListeners.getOrDefault(cursor.getName(), emptyMap()).isEmpty()) {
+                    return true;
+                }
+                cursor = cursor.getSuperclass();
+            }
+            return false;
+        }
+
+        public int getCount(String key) {
+            return 0;
+        }
+
+        private <T extends HasEntityIdentifier> void notifyByType(String name, T saved, T oldEntity) {
+            for (EntityUpdateListener listener : typeBiListeners.getOrDefault(name, emptyMap()).values()) {
+                listener.entityUpdated(saved, oldEntity);
+            }
+            for (Consumer listener : typeListeners.getOrDefault(name, emptyMap()).values()) {
+                listener.accept(saved == null ? oldEntity : saved); // for Delete we have to use oldEntity
+            }
+        }
+    }
+
+    @RequiredArgsConstructor
+    private static class Event {
+
+        private final String key;
+        private final Object value;
+    }
+
+    @RequiredArgsConstructor
+    private static class EntityUpdate {
+
+        private final Object entity;
+        private final EntityUpdateAction itemAction;
     }
 }

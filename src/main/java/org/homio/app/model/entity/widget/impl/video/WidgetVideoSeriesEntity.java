@@ -18,7 +18,7 @@ import org.springframework.data.util.Pair;
 
 @Entity
 public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntity>
-        implements HasSingleValueDataSource {
+    implements HasSingleValueDataSource {
 
     public static final String PREFIX = "wgsvids_";
 
@@ -106,8 +106,8 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
     @Override
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
     @UIFieldSelection(
-            value = VideoSeriesDataSourceDynamicOptionLoader.class,
-            allowInputRawText = true)
+        value = VideoSeriesDataSourceDynamicOptionLoader.class,
+        allowInputRawText = true)
     @UIFieldTreeNodeSelection(pattern = ".*(\\.mp4|\\.m3u8)", iconColor = "#14A669")
     @UIFieldIgnoreParent
     public String getValueDataSource() {

@@ -33,13 +33,12 @@ public class JwtTokenProvider implements ContextCreated {
 
     private final UserEntityDetailsService userEntityDetailsService;
     private final Object NULL = new Object();
-
+    private final Map<String, Authentication> userCache = new ConcurrentHashMap<>();
+    private final Map<String, Object> blockedTokens = new ConcurrentHashMap<>();
     private JwtParser jwtParser;
     private boolean regenerateSecurityIdOnRestart;
     private int jwtValidityTimeout;
     private byte[] securityId;
-    private final Map<String, Authentication> userCache = new ConcurrentHashMap<>();
-    private final Map<String, Object> blockedTokens = new ConcurrentHashMap<>();
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
@@ -77,12 +76,6 @@ public class JwtTokenProvider implements ContextCreated {
         userCache.remove(token);
     }
 
-    private void regenerateSecurityID(EntityContextImpl entityContext) {
-        this.securityId = buildSecurityId();
-        this.jwtParser = Jwts.parser().setSigningKey(securityId);
-        entityContext.ui().reloadWindow("sys.auth_changed");
-    }
-
     public Authentication getAuthentication(String token) {
         return userCache.computeIfAbsent(token, key -> {
             removeOutdatedTokens();
@@ -105,6 +98,13 @@ public class JwtTokenProvider implements ContextCreated {
         return isTokenValid(token);
     }
 
+    public String resolveToken(String bearerToken) {
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+
     String createToken(String username, Authentication authentication) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + TimeUnit.MINUTES.toMillis(jwtValidityTimeout));
@@ -123,11 +123,10 @@ public class JwtTokenProvider implements ContextCreated {
         return token;
     }
 
-    public String resolveToken(String bearerToken) {
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
-        }
-        return null;
+    private void regenerateSecurityID(EntityContextImpl entityContext) {
+        this.securityId = buildSecurityId();
+        this.jwtParser = Jwts.parser().setSigningKey(securityId);
+        entityContext.ui().reloadWindow("sys.auth_changed");
     }
 
     private void removeOutdatedTokens() {

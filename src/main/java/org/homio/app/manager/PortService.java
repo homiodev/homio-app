@@ -33,7 +33,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
     private final EntityContextImpl entityContext;
 
     private final Map<Class<? extends SettingPlugin<SerialPort>>, Pair<String, Boolean>>
-            portListeners = new HashMap<>();
+        portListeners = new HashMap<>();
     private Set<String> ports = new HashSet<>();
     private List<SettingPluginOptions<SerialPort>> portSettingPlugins;
 
@@ -47,11 +47,11 @@ public class PortService implements ContextCreated, ContextRefreshed {
         listenPortAvailability();
         Duration checkPortInterval = this.entityContext.getAppProperties().getCheckPortInterval();
         this.entityContext
-                .bgp()
-                .builder("check-port")
-                .cancelOnError(false)
-                .interval(checkPortInterval)
-                .execute(this::checkPortsAvailability);
+            .bgp()
+            .builder("check-port")
+            .cancelOnError(false)
+            .interval(checkPortInterval)
+            .execute(this::checkPortsAvailability);
     }
 
     public void listenPortAvailability() {
@@ -83,9 +83,9 @@ public class PortService implements ContextCreated, ContextRefreshed {
     }
 
     private void addPortToListening(
-            Class<? extends SettingPlugin<SerialPort>> clazz,
-            String portRawValue,
-            SerialPort serialPort) {
+        Class<? extends SettingPlugin<SerialPort>> clazz,
+        String portRawValue,
+        SerialPort serialPort) {
         portListeners.put(clazz, MutablePair.of(portRawValue, serialPort != null));
         if (serialPort == null) {
             addPortNotAvailableNotification(portRawValue);
@@ -109,7 +109,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
             }
         }
         for (Map.Entry<Class<? extends SettingPlugin<SerialPort>>, Pair<String, Boolean>> entry :
-                portListeners.entrySet()) {
+            portListeners.entrySet()) {
             String portName = entry.getValue().getKey();
             if (ports.containsKey(portName)) {
                 // check if we didn't fire event already

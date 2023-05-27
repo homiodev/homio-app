@@ -145,14 +145,6 @@ public class SettingController implements ContextRefreshed {
         }
     }
 
-    private void installPackage(PackageRequest packageRequest, SettingPluginPackageInstall settingPlugin) {
-        packagesInProgress.put(packageRequest.getName(), true);
-        String key = "Install " + packageRequest.getName() + "/" + packageRequest.getVersion();
-        entityContext.ui().runWithProgress(key, false, progressBar ->
-                settingPlugin.installPackage(entityContext, packageRequest, progressBar),
-            ex -> packagesInProgress.remove(packageRequest.getName()));
-    }
-
     @SneakyThrows
     @PostMapping(value = "/{entityID}", consumes = "text/plain")
     public <T> void updateSetting(@PathVariable("entityID") String entityID, @RequestBody(required = false) String value) {
@@ -220,6 +212,14 @@ public class SettingController implements ContextRefreshed {
         settings.addAll(descriptionSettings);
         Collections.sort(settings);
         return settings;
+    }
+
+    private void installPackage(PackageRequest packageRequest, SettingPluginPackageInstall settingPlugin) {
+        packagesInProgress.put(packageRequest.getName(), true);
+        String key = "Install " + packageRequest.getName() + "/" + packageRequest.getVersion();
+        entityContext.ui().runWithProgress(key, false, progressBar ->
+                settingPlugin.installPackage(entityContext, packageRequest, progressBar),
+            ex -> packagesInProgress.remove(packageRequest.getName()));
     }
 
     private void assembleTransientSettings(List<SettingEntity> settings) {

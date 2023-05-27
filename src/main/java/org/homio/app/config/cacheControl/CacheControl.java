@@ -6,15 +6,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Provides an HTTP 1.1 cache control header annotation for
- * Spring MVC controller methods.
- *
+ * Provides an HTTP 1.1 cache control header annotation for Spring MVC controller methods.
+ * <p>
  * See also http://www.mnot.net/cache_docs/
  *
  * @author Scott Rossillo
- *
  */
-@Target({ ElementType.TYPE, ElementType.METHOD })
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface CacheControl {
 
@@ -23,16 +21,15 @@ public @interface CacheControl {
      *
      * @see CachePolicy
      */
-    CachePolicy[] policy() default { CachePolicy.NO_CACHE };
+    CachePolicy[] policy() default {CachePolicy.NO_CACHE};
 
     /**
-     *  The maximum amount of time, in seconds, that this content will be considered fresh.
+     * The maximum amount of time, in seconds, that this content will be considered fresh.
      */
     int maxAge() default 0;
 
     /**
-     * The maximum amount of time, in seconds, that this content will be considered fresh
-     * only for shared caches (e.g., proxy) caches.
+     * The maximum amount of time, in seconds, that this content will be considered fresh only for shared caches (e.g., proxy) caches.
      */
     int sharedMaxAge() default -1;
 }

@@ -65,12 +65,6 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         entityContext.ui().sendGlobal(setting, entityID, options, null, OBJECT_MAPPER.createObjectNode().put("subType", "list"));
     }
 
-    private SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin) {
-        SettingEntity settingEntity = new SettingEntity().setEntityID(getKey(settingPlugin));
-        fulfillEntityFromPlugin(settingEntity, entityContext, settingPlugin);
-        return settingEntity;
-    }
-
     /**
      * Reload updated settings to UI
      */
@@ -97,16 +91,6 @@ public class EntityContextSettingImpl implements EntityContextSetting {
             value = settingEntity == null ? null : settingEntity.getValue();
         }
         return parseSettingValue(pluginFor, value);
-    }
-
-    @Nullable
-    private <T> T parseSettingValue(SettingPlugin<T> pluginFor, String value) {
-        try {
-            return pluginFor.parseValue(entityContext, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
-        } catch (Exception ex) {
-            log.error("Unable to parse value: '{}' to type: '{}'", value, pluginFor.getType());
-            return null;
-        }
     }
 
     /**
@@ -208,6 +192,48 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         fireNotifyHandlers(settingPluginClazz, value, pluginFor, settingEntity.getValue(), true);
     }
 
+    @Override
+    public <T> void setValue(Class<? extends SettingPlugin<T>> settingPluginClazz, T value) {
+        SettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
+        String strValue = setValueSilence(settingPluginClazz, value);
+        fireNotifyHandlers(settingPluginClazz, value, pluginFor, strValue, true);
+    }
+
+    @Override
+    public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value) {
+        setValueRaw(settingPluginClazz, value, true);
+    }
+
+    public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value, boolean fireNotificationOnUI) {
+        SettingPlugin<?> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
+        T parsedValue = (T) pluginFor.parseValue(entityContext, value);
+        String strValue = setValueSilence(pluginFor, parsedValue);
+        fireNotifyHandlers(settingPluginClazz, parsedValue, pluginFor, strValue, fireNotificationOnUI);
+    }
+
+    public void fetchSettingPlugins(String basePackage, ClassFinder classFinder, boolean addAddon) {
+        List<Class<? extends SettingPlugin>> classes = classFinder.getClassesWithParent(SettingPlugin.class, basePackage);
+        for (Class<? extends SettingPlugin> settingPlugin : classes) {
+            updatePlugins(settingPlugin, addAddon);
+        }
+    }
+
+    private SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin) {
+        SettingEntity settingEntity = new SettingEntity().setEntityID(getKey(settingPlugin));
+        fulfillEntityFromPlugin(settingEntity, entityContext, settingPlugin);
+        return settingEntity;
+    }
+
+    @Nullable
+    private <T> T parseSettingValue(SettingPlugin<T> pluginFor, String value) {
+        try {
+            return pluginFor.parseValue(entityContext, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
+        } catch (Exception ex) {
+            log.error("Unable to parse value: '{}' to type: '{}'", value, pluginFor.getType());
+            return null;
+        }
+    }
+
     private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value,
         SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
         if (settingListeners.containsKey(settingPluginClazz.getName())) {
@@ -242,25 +268,6 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         }
     }
 
-    @Override
-    public <T> void setValue(Class<? extends SettingPlugin<T>> settingPluginClazz, T value) {
-        SettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        String strValue = setValueSilence(settingPluginClazz, value);
-        fireNotifyHandlers(settingPluginClazz, value, pluginFor, strValue, true);
-    }
-
-    @Override
-    public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value) {
-        setValueRaw(settingPluginClazz, value, true);
-    }
-
-    public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value, boolean fireNotificationOnUI) {
-        SettingPlugin<?> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        T parsedValue = (T) pluginFor.parseValue(entityContext, value);
-        String strValue = setValueSilence(pluginFor, parsedValue);
-        fireNotifyHandlers(settingPluginClazz, parsedValue, pluginFor, strValue, fireNotificationOnUI);
-    }
-
     private <T> String setValueSilence(SettingPlugin pluginFor, @NotNull T value) {
         String strValue = pluginFor.writeValue(value);
         this.setValueSilenceRaw(pluginFor, strValue);
@@ -284,13 +291,6 @@ public class EntityContextSettingImpl implements EntityContextSetting {
                 }
                 entityContext.save(settingEntity.setValue(value));
             }
-        }
-    }
-
-    public void fetchSettingPlugins(String basePackage, ClassFinder classFinder, boolean addAddon) {
-        List<Class<? extends SettingPlugin>> classes = classFinder.getClassesWithParent(SettingPlugin.class, basePackage);
-        for (Class<? extends SettingPlugin> settingPlugin : classes) {
-            updatePlugins(settingPlugin, addAddon);
         }
     }
 }

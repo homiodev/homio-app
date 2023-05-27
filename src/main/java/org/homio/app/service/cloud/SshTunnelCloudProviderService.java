@@ -47,10 +47,9 @@ import org.springframework.web.client.RestTemplate;
 public class SshTunnelCloudProviderService implements CloudProviderService<SshCloudEntity> {
 
     private final EntityContext entityContext;
-
-    private final Consumer<NotificationBlockBuilder> NOT_SYNC_HANDLER = buildNotSyncHandler();
     private final Consumer<NotificationBlockBuilder> TRY_CONNECT_HANDLER = tryConnectHandler();
     private SshCloudEntity entity;
+    private final Consumer<NotificationBlockBuilder> NOT_SYNC_HANDLER = buildNotSyncHandler();
     private SshClient ssh;
 
     @Override
@@ -113,67 +112,9 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         });
     }
 
-    private Consumer<NotificationBlockBuilder> getSyncHandler(@Nullable Exception ex) {
-        if (!entity.isHasPrivateKey()) {
-            return NOT_SYNC_HANDLER;
-        }
-        if (ex != null) {
-            // Uses private key not valid. Need recreate new one
-            if ("Auth fail".equals(ex.getMessage())) {
-                return NOT_SYNC_HANDLER;
-            }
-        }
-        return TRY_CONNECT_HANDLER;
-    }
-
     @Override
     public void setCurrentEntity(@NotNull SshCloudEntity sshEntity) {
         this.entity = sshEntity;
-    }
-
-    @Getter
-    @RequiredArgsConstructor
-    private static class LoginBody {
-
-        private final String email;
-        private final String password;
-        private final String passphrase;
-        private final String ipAddress;
-        private final boolean recreate;
-    }
-
-    @Getter
-    @Setter
-    @RequiredArgsConstructor
-    private static class LoginResponse {
-
-        private String privateKey;
-    }
-
-    private Consumer<NotificationBlockBuilder> buildNotSyncHandler() {
-        return builder -> builder.addButtonInfo("sync", "CLOUD.NOT_SYNC", Color.RED, null, null,
-            "fas fa-right-to-bracket", "Sync", null, (entityContext, params) -> {
-                entityContext.ui().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE", (responseType, pressedButton, parameters) ->
-                        handleSync(entityContext, parameters),
-                    dialogModel -> {
-                        dialogModel.disableKeepOnUi();
-                        List<ActionInputParameter> inputs = new ArrayList<>();
-                        inputs.add(ActionInputParameter.text("field.email", entityContext.getUserRequire().getEmail()));
-                        inputs.add(ActionInputParameter.text("field.password", ""));
-                        inputs.add(ActionInputParameter.text("field.passphrase", ""));
-                        dialogModel.submitButton("Login", button -> {
-                        }).group("General", inputs);
-                    });
-                return null;
-            });
-    }
-
-    private Consumer<NotificationBlockBuilder> tryConnectHandler() {
-        return builder -> builder.addButtonInfo("sync", "CLOUD.NOT_SYNC", Color.RED, null, null,
-            "fas fa-rss", "Connect", null, (entityContext, params) -> {
-                entityContext.getBean(CloudService.class).start();
-                return null;
-            });
     }
 
     public void handleSync(EntityContext entityContext, ObjectNode params) {
@@ -215,6 +156,45 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         }
     }
 
+    private Consumer<NotificationBlockBuilder> getSyncHandler(@Nullable Exception ex) {
+        if (!entity.isHasPrivateKey()) {
+            return NOT_SYNC_HANDLER;
+        }
+        if (ex != null) {
+            // Uses private key not valid. Need recreate new one
+            if ("Auth fail".equals(ex.getMessage())) {
+                return NOT_SYNC_HANDLER;
+            }
+        }
+        return TRY_CONNECT_HANDLER;
+    }
+
+    private Consumer<NotificationBlockBuilder> buildNotSyncHandler() {
+        return builder -> builder.addButtonInfo("sync", "CLOUD.NOT_SYNC", Color.RED, null, null,
+            "fas fa-right-to-bracket", "Sync", null, (entityContext, params) -> {
+                entityContext.ui().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE", (responseType, pressedButton, parameters) ->
+                        handleSync(entityContext, parameters),
+                    dialogModel -> {
+                        dialogModel.disableKeepOnUi();
+                        List<ActionInputParameter> inputs = new ArrayList<>();
+                        inputs.add(ActionInputParameter.text("field.email", entityContext.getUserRequire().getEmail()));
+                        inputs.add(ActionInputParameter.text("field.password", ""));
+                        inputs.add(ActionInputParameter.text("field.passphrase", ""));
+                        dialogModel.submitButton("Login", button -> {
+                        }).group("General", inputs);
+                    });
+                return null;
+            });
+    }
+
+    private Consumer<NotificationBlockBuilder> tryConnectHandler() {
+        return builder -> builder.addButtonInfo("sync", "CLOUD.NOT_SYNC", Color.RED, null, null,
+            "fas fa-rss", "Connect", null, (entityContext, params) -> {
+                entityContext.getBean(CloudService.class).start();
+                return null;
+            });
+    }
+
     private String getClientError(RestClientResponseException ce) {
         String errorMessage = null;
         try {
@@ -222,5 +202,24 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
             errorMessage = error.path("message").asText("W.ERROR.SYNC");
         } catch (Exception ignore) {}
         return defaultString(errorMessage, "W.ERROR.SYNC");
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    private static class LoginBody {
+
+        private final String email;
+        private final String password;
+        private final String passphrase;
+        private final String ipAddress;
+        private final boolean recreate;
+    }
+
+    @Getter
+    @Setter
+    @RequiredArgsConstructor
+    private static class LoginResponse {
+
+        private String privateKey;
     }
 }

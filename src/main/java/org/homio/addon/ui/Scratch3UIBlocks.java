@@ -27,9 +27,9 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
     private final Scratch3EventsBlocks scratch3EventsBlocks;
 
     public Scratch3UIBlocks(
-            EntityContext entityContext,
-            Scratch3EventsBlocks scratch3EventsBlocks,
-            WorkspaceService workspaceService) {
+        EntityContext entityContext,
+        Scratch3EventsBlocks scratch3EventsBlocks,
+        WorkspaceService workspaceService) {
         super("#7C4B96", entityContext, null, "ui");
         this.scratch3EventsBlocks = scratch3EventsBlocks;
 
@@ -78,32 +78,32 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
 
     private void createHeaderEntity(WorkspaceBlock workspaceBlock, boolean isFetchDuration) {
         workspaceBlock.handleAndRelease(
-                () -> {
-                    String title = workspaceBlock.getInputString("MSG");
-                    String color = workspaceBlock.getInputString("COLOR");
-                    // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
-                    HeaderButtonBuilder headerButtonBuilder =
-                            entityContext
-                                    .ui()
-                                    .headerButtonBuilder(workspaceBlock.getId())
-                                    .title(title)
-                                    .border(3, color)
-                                    .clickAction(SendBroadcastSetting.class);
+            () -> {
+                String title = workspaceBlock.getInputString("MSG");
+                String color = workspaceBlock.getInputString("COLOR");
+                // TODO: ????? String broadcast = workspaceBlock.getInputString("BROADCAST");
+                HeaderButtonBuilder headerButtonBuilder =
+                    entityContext
+                        .ui()
+                        .headerButtonBuilder(workspaceBlock.getId())
+                        .title(title)
+                        .border(3, color)
+                        .clickAction(SendBroadcastSetting.class);
 
-                    if (isFetchDuration) {
-                        headerButtonBuilder.duration(workspaceBlock.getInputInteger("DURATION")).build();
-                    } else {
-                        headerButtonBuilder.icon("fas fa-" + workspaceBlock.getInputString("ICON"), null, false).build();
-                    }
-                },
-                () -> entityContext.ui().removeHeaderButton(workspaceBlock.getId()));
+                if (isFetchDuration) {
+                    headerButtonBuilder.duration(workspaceBlock.getInputInteger("DURATION")).build();
+                } else {
+                    headerButtonBuilder.icon("fas fa-" + workspaceBlock.getInputString("ICON"), null, false).build();
+                }
+            },
+            () -> entityContext.ui().removeHeaderButton(workspaceBlock.getId()));
     }
 
     private void showPopupHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock
-                .getMenuValue("TYPE", this.popupType)
-                .popupHandler
-                .accept(entityContext, workspaceBlock.getInputString("MSG"));
+            .getMenuValue("TYPE", this.popupType)
+            .popupHandler
+            .accept(entityContext, workspaceBlock.getInputString("MSG"));
     }
 
     @RequiredArgsConstructor

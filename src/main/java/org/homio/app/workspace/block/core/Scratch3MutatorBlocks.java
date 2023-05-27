@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 @Getter
 @Component
 public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
-        implements WorkspaceEventListener {
+    implements WorkspaceEventListener {
 
     private final Map<Integer, CompileScriptContext> compileScriptContextMap = new HashMap<>();
     private final ScriptService scriptService;
@@ -76,7 +76,7 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
 
     private State joinStringEvaluate(WorkspaceBlock workspaceBlock) {
         return new StringType(
-                workspaceBlock.getInputString("STRING1")
-                        + workspaceBlock.getInputString("STRING2"));
+            workspaceBlock.getInputString("STRING1")
+                + workspaceBlock.getInputString("STRING2"));
     }
 }

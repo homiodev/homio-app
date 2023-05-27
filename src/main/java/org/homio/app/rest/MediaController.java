@@ -285,9 +285,9 @@ public class MediaController {
                                        + size
                                        + " -q:v 3 "
                                        + path, // q:v - jpg quality
-                                       60);
-                               return path;
-                           });
+                                   60);
+                           return path;
+                       });
     }
 
     private ResourceRegion resourceRegion(Resource video, long contentLength, HttpHeaders headers) {

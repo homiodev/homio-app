@@ -30,6 +30,11 @@ public class FfmpegInstaller extends DependencyExecutableInstaller {
     }
 
     @Override
+    public @Nullable String getExecutablePath(@NotNull String execPath) {
+        return getVersion() == null ? null : FFMPEG_LOCATION;
+    }
+
+    @Override
     protected @Nullable String getInstalledVersion() {
         EntityContextHardware hardware = entityContext.hardware();
         if (IS_OS_WINDOWS) {
@@ -39,11 +44,6 @@ public class FfmpegInstaller extends DependencyExecutableInstaller {
             }
         }
         return hardware.executeNoErrorThrow("ffmpeg -v", 60, null);
-    }
-
-    @Override
-    public @Nullable String getExecutablePath(@NotNull String execPath) {
-        return getVersion() == null ? null : FFMPEG_LOCATION;
     }
 
     @Override

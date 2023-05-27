@@ -90,39 +90,6 @@ public class JavaSoundAudioSink implements AudioSink {
         }
     }
 
-    private void playInThread(AdvancedPlayer player, Integer from, Integer to) {
-        if (player != null) {
-            player.setPlayBackListener(new PlaybackListener() {
-                @Override
-                public void playbackFinished(PlaybackEvent event) {
-                    pausedOnFrame = event.getFrame();
-                }
-            });
-            entityContext.bgp().builder("java_sink-audio").execute(() -> {
-                try {
-                    Integer start = from;
-                    Integer end = to;
-
-                    if (start != null || end != null) {
-                        if (end != null) {
-                            if (start == null) {
-                                start = 0;
-                            }
-                        } else {
-                            end = Integer.MAX_VALUE;
-                        }
-
-                        player.play(start, end);
-                    } else {
-                        player.play();
-                    }
-                } finally {
-                    player.close();
-                }
-            });
-        }
-    }
-
     @Override
     public Set<AudioFormat> getSupportedFormats() {
         return SUPPORTED_AUDIO_FORMATS;
@@ -177,6 +144,39 @@ public class JavaSoundAudioSink implements AudioSink {
             input.setValue(volume / 100f);
             return true;
         });
+    }
+
+    private void playInThread(AdvancedPlayer player, Integer from, Integer to) {
+        if (player != null) {
+            player.setPlayBackListener(new PlaybackListener() {
+                @Override
+                public void playbackFinished(PlaybackEvent event) {
+                    pausedOnFrame = event.getFrame();
+                }
+            });
+            entityContext.bgp().builder("java_sink-audio").execute(() -> {
+                try {
+                    Integer start = from;
+                    Integer end = to;
+
+                    if (start != null || end != null) {
+                        if (end != null) {
+                            if (start == null) {
+                                start = 0;
+                            }
+                        } else {
+                            end = Integer.MAX_VALUE;
+                        }
+
+                        player.play(start, end);
+                    } else {
+                        player.play();
+                    }
+                } finally {
+                    player.close();
+                }
+            });
+        }
     }
 
     private void runVolumeCommand(Function<FloatControl, Boolean> closure) {

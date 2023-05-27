@@ -55,28 +55,6 @@ public class LoggerService implements ContextCreated {
 
     public final EntityContext entityContext;
 
-    private static String escapeName(String name) {
-        return name.replaceAll("[^A-Za-z0-9_]", "");
-    }
-
-    private static int countLines(Path path) throws IOException {
-        try (InputStream is = Files.newInputStream(path)) {
-            byte[] c = new byte[1024];
-            int count = 0;
-            int readChars;
-            boolean empty = true;
-            while ((readChars = is.read(c)) != -1) {
-                empty = false;
-                for (int i = 0; i < readChars; ++i) {
-                    if (c[i] == '\n') {
-                        ++count;
-                    }
-                }
-            }
-            return (count == 0 && !empty) ? 1 : count;
-        }
-    }
-
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
         Files.walkFileTree(CommonUtils.getLogsPath(), new SimpleFileVisitor<>() {
@@ -101,23 +79,6 @@ public class LoggerService implements ContextCreated {
     public Path getOrCreateLogFile(String key, BaseEntity entity, boolean allowCreate) {
         BaseEntity targetEntity = entityContext.getEntity(entity);
         return getOrCreateLogFile(targetEntity.getType(), "log_" + escapeName(key), allowCreate);
-    }
-
-    private Path getOrCreateLogFile(String group, String fileName, boolean allowCreate) {
-        try {
-            Path logGroup = CommonUtils.getLogsPath().resolve(group);
-            if (!Files.exists(logGroup)) {
-                Files.createDirectory(logGroup);
-            }
-            Path resolve = logGroup.resolve(fileName + ".log");
-            if (Files.notExists(resolve)) {
-                return Files.createFile(resolve);
-            }
-            return resolve;
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            throw new ServerException(e);
-        }
     }
 
     public Logger getLogger(String group, String fileName) {
@@ -177,14 +138,53 @@ public class LoggerService implements ContextCreated {
         return result;
     }
 
+    private static String escapeName(String name) {
+        return name.replaceAll("[^A-Za-z0-9_]", "");
+    }
+
+    private static int countLines(Path path) throws IOException {
+        try (InputStream is = Files.newInputStream(path)) {
+            byte[] c = new byte[1024];
+            int count = 0;
+            int readChars;
+            boolean empty = true;
+            while ((readChars = is.read(c)) != -1) {
+                empty = false;
+                for (int i = 0; i < readChars; ++i) {
+                    if (c[i] == '\n') {
+                        ++count;
+                    }
+                }
+            }
+            return (count == 0 && !empty) ? 1 : count;
+        }
+    }
+
+    private Path getOrCreateLogFile(String group, String fileName, boolean allowCreate) {
+        try {
+            Path logGroup = CommonUtils.getLogsPath().resolve(group);
+            if (!Files.exists(logGroup)) {
+                Files.createDirectory(logGroup);
+            }
+            Path resolve = logGroup.resolve(fileName + ".log");
+            if (Files.notExists(resolve)) {
+                return Files.createFile(resolve);
+            }
+            return resolve;
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new ServerException(e);
+        }
+    }
+
     private static class InternalLogger extends SimpleLogger {
 
         private static final char SPACE = ' ';
         private final SimpleDateFormat dateFormatter;
-        private Map<String, Consumer<String>> consumers = new HashMap<>();
+        private final Map<String, Consumer<String>> consumers = new HashMap<>();
         private int counter = 0;
-        private boolean showDateTime;
-        private PrintStream stream;
+        private final boolean showDateTime;
+        private final PrintStream stream;
 
         InternalLogger(boolean showDateTime, PrintStream stream) {
             super("OutputStreamLogger", Level.DEBUG, false, false, showDateTime, false, Strings.EMPTY, ParameterizedNoReferenceMessageFactory.INSTANCE,

@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Getter
 public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
-        implements UIEntityItemBuilder<Owner, Value>, UIInputEntity, UIInputEntityActionHandler {
+    implements UIEntityItemBuilder<Owner, Value>, UIInputEntity, UIInputEntityActionHandler {
 
     private final String itemType;
     private final UIActionHandler actionHandler;
@@ -32,7 +32,7 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     private String separatedText;
 
     public UIBaseEntityItemBuilderImpl(
-            UIItemType uiItemType, String entityID, int order, UIActionHandler actionHandler) {
+        UIItemType uiItemType, String entityID, int order, UIActionHandler actionHandler) {
         this.itemType = uiItemType.name();
         this.entityID = entityID;
         this.actionHandler = actionHandler;
@@ -58,10 +58,10 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     @Override
     public String getStyle() {
         return styleMap == null
-                ? null
-                : styleMap.entrySet().stream()
-                        .map(e -> e.getKey() + ":" + e.getValue() + ";")
-                        .collect(Collectors.joining());
+            ? null
+            : styleMap.entrySet().stream()
+                      .map(e -> e.getKey() + ":" + e.getValue() + ";")
+                      .collect(Collectors.joining());
     }
 
     @Override

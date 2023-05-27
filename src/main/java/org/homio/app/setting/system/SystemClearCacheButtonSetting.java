@@ -7,7 +7,7 @@ import org.homio.app.setting.CoreSettingPlugin;
 import org.json.JSONObject;
 
 public class SystemClearCacheButtonSetting
-        implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
+    implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 
     @Override
     public GroupKey getGroupKey() {

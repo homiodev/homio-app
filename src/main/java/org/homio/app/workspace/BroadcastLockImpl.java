@@ -37,7 +37,7 @@ public class BroadcastLockImpl implements BroadcastLock {
             this.valueCheck = o -> true;
         } else if (this.expectedValue instanceof Pattern) {
             this.valueCheck =
-                    o -> ((Pattern) this.expectedValue).matcher(Objects.toString(value)).matches();
+                o -> ((Pattern) this.expectedValue).matcher(Objects.toString(value)).matches();
         } else {
             this.valueCheck = o -> Objects.equals(o, this.expectedValue);
         }

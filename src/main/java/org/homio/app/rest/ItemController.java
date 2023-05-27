@@ -571,38 +571,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
     }
 
-    @NotNull
-    private List<ItemContextResponse> buildImteBootstrap(String type, String subType) {
-        List<ItemContextResponse> itemContexts = new ArrayList<>();
-
-        for (Class<?> classType : findAllClassImplementationsByType(type)) {
-            List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>(), entityContext);
-            if (subType != null && subType.contains(":")) {
-                String[] addonAndClassName = subType.split(":");
-                Object subClassObject = entityContext.getEntityContextAddon()
-                                                     .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]);
-                List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false);
-                // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json                    // parameter)
-                for (EntityUIMetaData data : subTypeFieldMetadata) {
-                    data.setTypeMetaData(new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());
-                }
-                entityUIMetaData.addAll(subTypeFieldMetadata);
-            }
-            if (!entityContext.setting().getValue(SystemShowEntityCreateTimeSetting.class)) {
-                entityUIMetaData.removeIf(field -> field.getEntityName().equals("creationTime"));
-            }
-            if (!entityContext.setting().getValue(SystemShowEntityUpdateTimeSetting.class)) {
-                entityUIMetaData.removeIf(field -> field.getEntityName().equals("updateTime"));
-            }
-            // fetch type actions
-            Collection<UIInputEntity> actions = UIFieldUtils.fetchUIActionsFromClass(classType, entityContext);
-
-            itemContexts.add(new ItemContextResponse(classType.getSimpleName(), HasEntityLog.class.isAssignableFrom(classType), entityUIMetaData, actions));
-        }
-
-        return itemContexts;
-    }
-
     @GetMapping("/{entityID}/{fieldName}/{selectedEntityID}/dynamicParameterOptions")
     public Collection<OptionModel> getDynamicParameterOptions(
         @PathVariable("entityID") String entityID,
@@ -646,6 +614,38 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
         method.setAccessible(true);
         return (ActionResponseModel) method.invoke(actionHolder, objects.toArray());
+    }
+
+    @NotNull
+    private List<ItemContextResponse> buildImteBootstrap(String type, String subType) {
+        List<ItemContextResponse> itemContexts = new ArrayList<>();
+
+        for (Class<?> classType : findAllClassImplementationsByType(type)) {
+            List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>(), entityContext);
+            if (subType != null && subType.contains(":")) {
+                String[] addonAndClassName = subType.split(":");
+                Object subClassObject = entityContext.getEntityContextAddon()
+                                                     .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]);
+                List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false);
+                // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json                    // parameter)
+                for (EntityUIMetaData data : subTypeFieldMetadata) {
+                    data.setTypeMetaData(new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());
+                }
+                entityUIMetaData.addAll(subTypeFieldMetadata);
+            }
+            if (!entityContext.setting().getValue(SystemShowEntityCreateTimeSetting.class)) {
+                entityUIMetaData.removeIf(field -> field.getEntityName().equals("creationTime"));
+            }
+            if (!entityContext.setting().getValue(SystemShowEntityUpdateTimeSetting.class)) {
+                entityUIMetaData.removeIf(field -> field.getEntityName().equals("updateTime"));
+            }
+            // fetch type actions
+            Collection<UIInputEntity> actions = UIFieldUtils.fetchUIActionsFromClass(classType, entityContext);
+
+            itemContexts.add(new ItemContextResponse(classType.getSimpleName(), HasEntityLog.class.isAssignableFrom(classType), entityUIMetaData, actions));
+        }
+
+        return itemContexts;
     }
 
     @SneakyThrows

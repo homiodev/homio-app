@@ -241,18 +241,18 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @Override
+    @UIFieldIgnore
+    @JsonIgnore
+    public String getValueTemplate() {
+        return HasValueTemplate.super.getValueTemplate();
+    }
+
+    @Override
     protected void beforePersist() {
         if (!getJsonData().has("gfg")) {
             setGaugeForeground(UI.Color.random());
         }
         HasIcon.randomColor(this);
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public String getValueTemplate() {
-        return HasValueTemplate.super.getValueTemplate();
     }
 
     public enum GaugeType {

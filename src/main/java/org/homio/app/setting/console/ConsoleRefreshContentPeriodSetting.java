@@ -12,7 +12,7 @@ import org.homio.api.ui.field.UIFieldType;
 import org.json.JSONObject;
 
 public class ConsoleRefreshContentPeriodSetting
-        implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
+    implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
 
     @Override
     public UIFieldType getSettingType() {
@@ -37,12 +37,12 @@ public class ConsoleRefreshContentPeriodSetting
     @Override
     public Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
         return new ArrayList<>(
-                Arrays.asList(
-                        OptionModel.of("0", "time.NEVER"),
-                        OptionModel.of("5", "time.SEC_5"),
-                        OptionModel.of("10", "time.SEC_10"),
-                        OptionModel.of("30", "time.SEC_30"),
-                        OptionModel.of("60", "time.SEC_60")));
+            Arrays.asList(
+                OptionModel.of("0", "time.NEVER"),
+                OptionModel.of("5", "time.SEC_5"),
+                OptionModel.of("10", "time.SEC_10"),
+                OptionModel.of("30", "time.SEC_30"),
+                OptionModel.of("60", "time.SEC_60")));
     }
 
     @Override

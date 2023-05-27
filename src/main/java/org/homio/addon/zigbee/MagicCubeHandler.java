@@ -59,10 +59,6 @@ final class MagicCubeHandler {
 
         private final int side;
 
-        private static boolean isMoveSide(int value) {
-            return value > 255 && value < 262;
-        }
-
         public static MoveSide getEntity(int side) {
             for (MoveSide moveSide : MoveSide.values()) {
                 if (moveSide.side == side) {
@@ -70,6 +66,10 @@ final class MagicCubeHandler {
                 }
             }
             return null;
+        }
+
+        private static boolean isMoveSide(int value) {
+            return value > 255 && value < 262;
         }
     }
 
@@ -86,10 +86,6 @@ final class MagicCubeHandler {
 
         private final int side;
 
-        private static boolean isTapSide(int value) {
-            return value > 511 && value < 518;
-        }
-
         public static TapSide getEntity(int side) {
             for (TapSide tapSide : TapSide.values()) {
                 if (tapSide.side == side) {
@@ -97,6 +93,10 @@ final class MagicCubeHandler {
                 }
             }
             return null;
+        }
+
+        private static boolean isTapSide(int value) {
+            return value > 511 && value < 518;
         }
     }
 

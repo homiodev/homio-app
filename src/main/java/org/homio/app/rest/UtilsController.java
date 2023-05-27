@@ -147,15 +147,6 @@ public class UtilsController {
         return chartData;
     }
 
-    private Pair<Long, Long> findMinAndMax(List<Object[]> rawValues) {
-        long min = Long.MAX_VALUE, max = Long.MIN_VALUE;
-        for (Object[] chartItem : rawValues) {
-            min = Math.min(min, (long) chartItem[0]);
-            max = Math.max(max, (long) chartItem[0]);
-        }
-        return Pair.of(min, max);
-    }
-
     @PostMapping("/source/history/items")
     public List<SourceHistoryItem> getSourceHistoryItems(@RequestBody SourceHistoryRequest request) {
         DataSourceContext context = DataSourceUtil.getSource(entityContext, request.dataSource);
@@ -272,6 +263,15 @@ public class UtilsController {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void discardDialog(@PathVariable("entityID") String entityID) {
         entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Cancelled, null, null);
+    }
+
+    private Pair<Long, Long> findMinAndMax(List<Object[]> rawValues) {
+        long min = Long.MAX_VALUE, max = Long.MIN_VALUE;
+        for (Object[] chartItem : rawValues) {
+            min = Math.min(min, (long) chartItem[0]);
+            max = Math.max(max, (long) chartItem[0]);
+        }
+        return Pair.of(min, max);
     }
 
     @Getter

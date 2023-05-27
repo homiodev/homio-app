@@ -65,15 +65,15 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
     }
 
     @Override
+    public String getEntityPrefix() {
+        return PREFIX;
+    }
+
+    @Override
     protected void beforePersist() {
         setBh(4);
         setBw(3);
         super.beforePersist();
-    }
-
-    @Override
-    public String getEntityPrefix() {
-        return PREFIX;
     }
 
     public static class VideoTimelineDataSourceDynamicOptionLoader implements DynamicOptionLoader {

@@ -31,62 +31,62 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSocketConfigurer {
 
-  public static final String DESTINATION_PREFIX = "/smart-dest-ws";
-  static final String ENDPOINT = "/smart-websocket";
+    public static final String DESTINATION_PREFIX = "/smart-dest-ws";
+    static final String ENDPOINT = "/smart-websocket";
 
-  @Autowired
-  private SSHServerEndpoint sshServerEndpoint;
-
-  @Override
-  public void configureMessageBroker(MessageBrokerRegistry config) {
-    // These are endpoints the client can subscribe to.
-    config.enableSimpleBroker(DESTINATION_PREFIX, "/webssh");
-  }
-
-  @Override
-  public void registerStompEndpoints(StompEndpointRegistry registry) {
-    registry.setErrorHandler(new StompSubProtocolErrorHandler() {
-      @Override
-      public Message<byte[]> handleClientMessageProcessingError(Message<byte[]> clientMessage, @NotNull Throwable ex) {
-        log.error("WebSocket error: <{}>", ex.getMessage());
-        return null; // WebSocket avoid response error messages to client
-      }
-    });
-
-    registry.addEndpoint(ENDPOINT).setAllowedOrigins("*");
-  }
-
-  public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
-    argumentResolvers.add(new AuthenticationPrincipalArgumentResolver());
-  }
-
-  // Register endpoint for ssh ws sockets
-  @Override
-  public void registerWebSocketHandlers(WebSocketHandlerRegistry webSocketHandlerRegistry) {
-    webSocketHandlerRegistry.addHandler(sshServerEndpoint, "/webssh")
-                            .addInterceptors(new WebSSHSocketInterceptor())
-                            .setAllowedOrigins("*");
-  }
-
-  private class WebSSHSocketInterceptor implements HandshakeInterceptor {
+    @Autowired
+    private SSHServerEndpoint sshServerEndpoint;
 
     @Override
-    public boolean beforeHandshake(@NotNull ServerHttpRequest serverHttpRequest, @NotNull ServerHttpResponse response,
-        @NotNull WebSocketHandler wsHandler, @NotNull Map<String, Object> attributes) {
-      if (serverHttpRequest instanceof ServletServerHttpRequest) {
-        ServletServerHttpRequest request = (ServletServerHttpRequest) serverHttpRequest;
-        String token = request.getServletRequest().getParameter("token");
-        if (!StringUtils.isEmpty(token) && sshServerEndpoint.hasToken(token)) {
-          attributes.put("token", token);
-          return true;
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        // These are endpoints the client can subscribe to.
+        config.enableSimpleBroker(DESTINATION_PREFIX, "/webssh");
+    }
+
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.setErrorHandler(new StompSubProtocolErrorHandler() {
+            @Override
+            public Message<byte[]> handleClientMessageProcessingError(Message<byte[]> clientMessage, @NotNull Throwable ex) {
+                log.error("WebSocket error: <{}>", ex.getMessage());
+                return null; // WebSocket avoid response error messages to client
+            }
+        });
+
+        registry.addEndpoint(ENDPOINT).setAllowedOrigins("*");
+    }
+
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
+        argumentResolvers.add(new AuthenticationPrincipalArgumentResolver());
+    }
+
+    // Register endpoint for ssh ws sockets
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry webSocketHandlerRegistry) {
+        webSocketHandlerRegistry.addHandler(sshServerEndpoint, "/webssh")
+                                .addInterceptors(new WebSSHSocketInterceptor())
+                                .setAllowedOrigins("*");
+    }
+
+    private class WebSSHSocketInterceptor implements HandshakeInterceptor {
+
+        @Override
+        public boolean beforeHandshake(@NotNull ServerHttpRequest serverHttpRequest, @NotNull ServerHttpResponse response,
+            @NotNull WebSocketHandler wsHandler, @NotNull Map<String, Object> attributes) {
+            if (serverHttpRequest instanceof ServletServerHttpRequest) {
+                ServletServerHttpRequest request = (ServletServerHttpRequest) serverHttpRequest;
+                String token = request.getServletRequest().getParameter("token");
+                if (!StringUtils.isEmpty(token) && sshServerEndpoint.hasToken(token)) {
+                    attributes.put("token", token);
+                    return true;
+                }
+            }
+            return false;
         }
-      }
-      return false;
-    }
 
-    @Override
-    public void afterHandshake(@NotNull ServerHttpRequest request, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler,
-        Exception exception) {
+        @Override
+        public void afterHandshake(@NotNull ServerHttpRequest request, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler,
+            Exception exception) {
+        }
     }
-  }
 }

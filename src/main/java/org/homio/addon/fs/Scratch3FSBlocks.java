@@ -247,14 +247,6 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
     }
 
     @RequiredArgsConstructor
-    private static class FileSystemItem {
-
-        private final FileSystemProvider fileSystem;
-        private final BaseFileSystemEntity entity;
-        private final String node;
-    }
-
-    @RequiredArgsConstructor
     private enum Unit {
         B(1), KB(1024), MP(1024 * 1024), GB(1024 * 1024 * 1024);
         private final double divider;
@@ -262,6 +254,18 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
 
     private enum CountNodeEnum {
         Files, Folders, All, FilesWithChildren, AllWithChildren
+    }
+
+    public enum NodeType {
+        File, Folder
+    }
+
+    @RequiredArgsConstructor
+    private static class FileSystemItem {
+
+        private final FileSystemProvider fileSystem;
+        private final BaseFileSystemEntity entity;
+        private final String node;
     }
 
     @Getter
@@ -285,9 +289,5 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
         public enum ModifyOption {
             Overwrite, Append
         }
-    }
-
-    public enum NodeType {
-        File, Folder
     }
 }

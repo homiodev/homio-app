@@ -5,7 +5,7 @@ import org.homio.api.util.Lang;
 import org.homio.app.setting.CoreSettingPlugin;
 
 public class SystemLanguageSetting
-        implements CoreSettingPlugin<Lang>, SettingPluginOptionsEnum<Lang> {
+    implements CoreSettingPlugin<Lang>, SettingPluginOptionsEnum<Lang> {
 
     @Override
     public GroupKey getGroupKey() {

@@ -4,7 +4,7 @@ import org.homio.api.setting.SettingPluginBoolean;
 import org.homio.app.setting.CoreSettingPlugin;
 
 public class SystemDisableAuthTokenOnRestartSetting
-        implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
+    implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
     public GroupKey getGroupKey() {

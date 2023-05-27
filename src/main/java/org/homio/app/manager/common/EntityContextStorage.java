@@ -52,6 +52,14 @@ public class EntityContextStorage {
         });
     }
 
+    public void init() {
+        initSystemCpuListening();
+    }
+
+    public void remove(String entityID) {
+        ENTITY_MEMORY_MAP.remove(entityID);
+    }
+
     private void setMemValue(@NotNull HasEntityIdentifier entity, @NotNull String key, @NotNull String title, @Nullable Object value) {
         EntityMemoryData data = ENTITY_MEMORY_MAP.computeIfAbsent(entity.getEntityID(), s -> new EntityMemoryData());
         boolean sendUpdateToUI = entity instanceof HasStatusAndMsg && key.startsWith("status");
@@ -86,10 +94,6 @@ public class EntityContextStorage {
                           .log(level, "[{}]: Set {} '{}' status: {}. Msg: {}", entity.getEntityID(), entity, title, status, message);
             }
         }
-    }
-
-    public void init() {
-        initSystemCpuListening();
     }
 
     @SneakyThrows
@@ -127,10 +131,6 @@ public class EntityContextStorage {
 
     private float round100(float input) {
         return Math.round(input * 100.0) / 100.0F;
-    }
-
-    public void remove(String entityID) {
-        ENTITY_MEMORY_MAP.remove(entityID);
     }
 
     private static class EntityMemoryData {

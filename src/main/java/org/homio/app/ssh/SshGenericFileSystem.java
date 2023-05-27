@@ -35,6 +35,16 @@ public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGeneri
         return new SshFileService();
     }
 
+    @SneakyThrows
+    private void inLock(ThrowingRunnable<Exception> handler) {
+        try {
+            lock.lock();
+            handler.run();
+        } finally {
+            lock.unlock();
+        }
+    }
+
     @RequiredArgsConstructor
     public class SshFile implements FsFileEntity<SshFile> {
 
@@ -193,16 +203,6 @@ public class SshGenericFileSystem extends BaseCachedFileSystemProvider<SshGeneri
                 inLock(waitCondition::await);
             }
             return sftpService;
-        }
-    }
-
-    @SneakyThrows
-    private void inLock(ThrowingRunnable<Exception> handler) {
-        try {
-            lock.lock();
-            handler.run();
-        } finally {
-            lock.unlock();
         }
     }
 }

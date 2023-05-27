@@ -43,7 +43,7 @@ public class UISelectBoxItemBuilderImpl
     }
 
     @Override
-    public UIButtonItemBuilder setAsButton(        @Nullable String icon, @Nullable String iconColor, @Nullable String text) {
+    public UIButtonItemBuilder setAsButton(@Nullable String icon, @Nullable String iconColor, @Nullable String text) {
         this.setIcon(icon, iconColor);
         this.text = text;
         this.asButton = true;

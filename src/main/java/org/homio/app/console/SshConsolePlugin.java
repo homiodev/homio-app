@@ -12,26 +12,26 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SshConsolePlugin implements ConsolePlugin<Object> {
 
-  @Getter
-  private final EntityContext entityContext;
+    @Getter
+    private final EntityContext entityContext;
 
-  @Override
-  public Object getValue() {
-    return null;
-  }
+    @Override
+    public Object getValue() {
+        return null;
+    }
 
-  @Override
-  public RenderType getRenderType() {
-    return null;
-  }
+    @Override
+    public RenderType getRenderType() {
+        return null;
+    }
 
-  @Override
-  public String getName() {
-    return "ssh";
-  }
+    @Override
+    public String getName() {
+        return "ssh";
+    }
 
-  @Override
-  public boolean isEnabled() {
-    return entityContext.accessEnabled(SSH_RESOURCE);
-  }
+    @Override
+    public boolean isEnabled() {
+        return entityContext.accessEnabled(SSH_RESOURCE);
+    }
 }

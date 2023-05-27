@@ -34,6 +34,9 @@ public class Scratch3XaomiBlocks /*extends Scratch3ExtensionBlocks*/ {
         });
     }*/
 
+    private static final String CUBE_MODE_IDENTIFIER = "lumi.sensor_cube";
+    private static final String CUBE_SENSOR = "CUBE_SENSOR";
+
     private State cubeLastValueEvaluate(WorkspaceBlock workspaceBlock) {
         String ieeeAddress = fetchIEEEAddress(workspaceBlock);
    /* TODO: ScratchDeviceState deviceState = this.zigBeeDeviceUpdateValueListener.getDeviceState(
@@ -81,7 +84,4 @@ public class Scratch3XaomiBlocks /*extends Scratch3ExtensionBlocks*/ {
         return ieeeAddress;*/
         return null;
     }
-
-    private static final String CUBE_MODE_IDENTIFIER = "lumi.sensor_cube";
-    private static final String CUBE_SENSOR = "CUBE_SENSOR";
 }

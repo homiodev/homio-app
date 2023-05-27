@@ -77,11 +77,11 @@ public class AddonContext {
         return config != null && loadError == null;
     }
 
-  public Set<String> getDependencies() {
-    return this.pomFile.getDependencies().stream()
-                       .filter(d -> d.getGroupId().equals("org.homio") && d.getArtifactId().contains("addon"))
-                       .map(Dependency::getArtifactId).collect(Collectors.toSet());
-  }
+    public Set<String> getDependencies() {
+        return this.pomFile.getDependencies().stream()
+                           .filter(d -> d.getGroupId().equals("org.homio") && d.getArtifactId().contains("addon"))
+                           .map(Dependency::getArtifactId).collect(Collectors.toSet());
+    }
 
     public String getAddonFriendlyName() {
         return StringUtils.defaultString(this.pomFile.getName(), addonID);
@@ -96,43 +96,43 @@ public class AddonContext {
     }
 
     public String getVersion() {
-    String version = this.pomFile.getVersion();
-    if (version == null && this.pomFile.getParent() != null) {
-      version = this.pomFile.getParent().getVersion();
+        String version = this.pomFile.getVersion();
+        if (version == null && this.pomFile.getParent() != null) {
+            version = this.pomFile.getParent().getVersion();
+        }
+        if (version == null) {
+            throw new ServerException("Unable to find version for addon: " + addonID);
+        }
+        return version;
     }
-    if (version == null) {
-        throw new ServerException("Unable to find version for addon: " + addonID);
+
+    @SneakyThrows
+    void load(ConfigurationBuilder configurationBuilder, Environment env, ApplicationContext parentContext,
+        ClassLoader classLoader) {
+        URL addonUrl = contextFile.toUri().toURL();
+        Reflections reflections = new Reflections(configurationBuilder.setUrls(addonUrl));
+
+        config = new AddonSpringContext(env);
+        addonID = config.fetchAddonID(reflections, pomFile.getArtifactId());
+        try {
+            HomioClassLoader.addClassLoaders(addonID, classLoader);
+            config.configureSpringContext(reflections, parentContext, addonID, classLoader);
+        } catch (Exception ex) {
+            HomioClassLoader.removeClassLoader(addonID);
+            loadError = CommonUtils.getErrorMessage(ex);
+            throw ex;
+        }
     }
-    return version;
-  }
-
-  @SneakyThrows
-  void load(ConfigurationBuilder configurationBuilder, Environment env, ApplicationContext parentContext,
-      ClassLoader classLoader) {
-      URL addonUrl = contextFile.toUri().toURL();
-      Reflections reflections = new Reflections(configurationBuilder.setUrls(addonUrl));
-
-      config = new AddonSpringContext(env);
-      addonID = config.fetchAddonID(reflections, pomFile.getArtifactId());
-      try {
-          HomioClassLoader.addClassLoaders(addonID, classLoader);
-          config.configureSpringContext(reflections, parentContext, addonID, classLoader);
-      } catch (Exception ex) {
-          HomioClassLoader.removeClassLoader(addonID);
-          loadError = CommonUtils.getErrorMessage(ex);
-          throw ex;
-      }
-  }
 
     private Model readPomFile(ZipFile file) throws IOException, XmlPullParserException {
         String artifactId = this.manifest.getMainAttributes().getValue("artifactId");
         for (ZipEntry e : Collections.list(file.entries())) {
             if (e.getName().endsWith(artifactId + "/pom.xml")) {
                 return pomReader.read(file.getInputStream(e));
-      }
+            }
+        }
+        throw new ServerException("Unable to find pom.xml in jar");
     }
-    throw new ServerException("Unable to find pom.xml in jar");
-  }
 
     @RequiredArgsConstructor
     public static class AddonSpringContext {
@@ -179,11 +179,15 @@ public class AddonContext {
 
             // wake up spring context
             ctx.scan(configClass.getPackage().getName());
-      ctx.register(configClass);
+            ctx.register(configClass);
 
-      ctx.refresh();
-      ctx.start();
-    }
+            ctx.refresh();
+            ctx.start();
+        }
+
+        void destroy() {
+            ctx.close();
+        }
 
         @SneakyThrows
         private static <T> T createClassInstance(Class<T> clazz) {
@@ -196,27 +200,23 @@ public class AddonContext {
         /**
          * Find spring configuration class with annotation @AddonConfiguration and @Configuration
          */
-    private Class<?> findBatchConfigurationClass(Reflections reflections) {
-      // find configuration class
-        Set<Class<?>> springConfigClasses = reflections.getTypesAnnotatedWith(AddonConfiguration.class);
-        if (springConfigClasses.isEmpty()) {
-            throw new ServerException(
-                "Configuration class with annotation @AddonConfiguration not found. Not possible to create spring " +
-                    "context");
+        private Class<?> findBatchConfigurationClass(Reflections reflections) {
+            // find configuration class
+            Set<Class<?>> springConfigClasses = reflections.getTypesAnnotatedWith(AddonConfiguration.class);
+            if (springConfigClasses.isEmpty()) {
+                throw new ServerException(
+                    "Configuration class with annotation @AddonConfiguration not found. Not possible to create spring " +
+                        "context");
+            }
+            if (springConfigClasses.size() > 1) {
+                throw new ServerException("Configuration class with annotation @AddonConfiguration must be unique, but found: " +
+                    StringUtils.join(springConfigClasses, ", "));
+            }
+            Class<?> batchConfigurationClass = springConfigClasses.iterator().next();
+            if (batchConfigurationClass.getDeclaredAnnotation(AddonConfiguration.class) == null) {
+                throw new ServerException("Loaded batch definition has different ws-service-api.jar version and can not be instantiated");
+            }
+            return batchConfigurationClass;
         }
-        if (springConfigClasses.size() > 1) {
-            throw new ServerException("Configuration class with annotation @AddonConfiguration must be unique, but found: " +
-                StringUtils.join(springConfigClasses, ", "));
-        }
-        Class<?> batchConfigurationClass = springConfigClasses.iterator().next();
-        if (batchConfigurationClass.getDeclaredAnnotation(AddonConfiguration.class) == null) {
-            throw new ServerException("Loaded batch definition has different ws-service-api.jar version and can not be instantiated");
-        }
-        return batchConfigurationClass;
     }
-
-    void destroy() {
-      ctx.close();
-    }
-  }
 }

@@ -4,7 +4,7 @@ import org.homio.api.setting.SettingPluginBoolean;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 
 public class ConsoleSshBlinkCursorSetting
-        implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
+    implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
     public int order() {
@@ -13,6 +13,6 @@ public class ConsoleSshBlinkCursorSetting
 
     @Override
     public String[] pages() {
-        return new String[] {"ssh"};
+        return new String[]{"ssh"};
     }
 }

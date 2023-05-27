@@ -27,7 +27,7 @@ public class ConsoleSshBgColorSetting implements ConsoleSettingPlugin<String> {
 
     @Override
     public String[] pages() {
-        return new String[] {"ssh"};
+        return new String[]{"ssh"};
     }
 
     @Override

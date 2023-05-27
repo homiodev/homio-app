@@ -33,9 +33,9 @@ public class AudioService implements ContextRefreshed {
     private final Map<String, MultiTimeStreamContext> multiTimeStreams = new ConcurrentHashMap<>();
     // constructor parameters
     private final EntityContext entityContext;
+    private final String defaultSink = JavaSoundAudioSink.class.getSimpleName();
     private Map<String, AudioSource> audioSources = Collections.emptyMap();
     private Map<String, SelfContainedAudioSourceContainer> selfContainedAudioContainers;
-    private final String defaultSink = JavaSoundAudioSink.class.getSimpleName();
     @Getter
     private Map<String, AudioSink> audioSinks = Collections.emptyMap();
 

@@ -10,7 +10,7 @@ import org.homio.api.ui.field.UIFieldType;
 import org.json.JSONObject;
 
 public class ConsoleLinesTextWrapSetting
-        implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
+    implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
 
     @Override
     public UIFieldType getSettingType() {
@@ -39,6 +39,6 @@ public class ConsoleLinesTextWrapSetting
 
     @Override
     public ConsolePlugin.RenderType[] renderTypes() {
-        return new ConsolePlugin.RenderType[] {ConsolePlugin.RenderType.lines};
+        return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines};
     }
 }

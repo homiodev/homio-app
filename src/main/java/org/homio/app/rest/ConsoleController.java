@@ -233,6 +233,29 @@ public class ConsoleController implements ContextRefreshed {
         return tabs;
     }
 
+    @PostMapping("/ssh")
+    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
+    public SshProviderService.SshSession openSshSession(@RequestBody SshRequest request) {
+        BaseEntity entity = entityContext.getEntity(request.getEntityID());
+        if (entity instanceof SshBaseEntity) {
+            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
+            return service.openSshSession((SshBaseEntity) entity);
+        }
+        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
+    }
+
+    @DeleteMapping("/ssh")
+    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
+    public void closeSshSession(@RequestBody SshRequest request) {
+        BaseEntity entity = entityContext.getEntity(request.getEntityID());
+        if (entity instanceof SshBaseEntity) {
+            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
+            service.closeSshSession(request.token, (SshBaseEntity) entity);
+            return;
+        }
+        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
+    }
+
     /**
      * Get header actions for console plugin
      *
@@ -258,38 +281,15 @@ public class ConsoleController implements ContextRefreshed {
         }
     }
 
-    @PostMapping("/ssh")
-    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
-    public SshProviderService.SshSession openSshSession(@RequestBody SshRequest request) {
-        BaseEntity entity = entityContext.getEntity(request.getEntityID());
-        if (entity instanceof SshBaseEntity) {
-            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
-            return service.openSshSession((SshBaseEntity) entity);
-        }
-        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
-    }
-
-    @DeleteMapping("/ssh")
-    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
-    public void closeSshSession(@RequestBody SshRequest request) {
-        BaseEntity entity = entityContext.getEntity(request.getEntityID());
-        if (entity instanceof SshBaseEntity) {
-            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
-            service.closeSshSession(request.token, (SshBaseEntity) entity);
-            return;
-        }
-        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
-    }
-
     @Getter
     @Setter
     @Accessors(chain = true)
     @RequiredArgsConstructor
     private static class ConsoleTab {
 
-        private List<ConsoleTab> children;
         private final String name;
         private final ConsolePlugin.RenderType renderType;
+        private List<ConsoleTab> children;
         private JSONObject options;
 
         public ConsoleTab(String name, ConsolePlugin.RenderType renderType, JSONObject options) {

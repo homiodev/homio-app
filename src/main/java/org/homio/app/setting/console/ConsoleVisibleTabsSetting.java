@@ -16,7 +16,7 @@ import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.json.JSONObject;
 
 public class ConsoleVisibleTabsSetting
-        implements ConsoleSettingPlugin<String>, SettingPluginText, SettingPluginOptions<String> {
+    implements ConsoleSettingPlugin<String>, SettingPluginText, SettingPluginOptions<String> {
 
     @Override
     public int order() {

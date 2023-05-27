@@ -431,29 +431,6 @@ public class EntityContextUIImpl implements EntityContextUI {
         sendGlobal(GlobalSendType.headerButton, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "toggle").put("disable", disable));
     }
 
-    private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<ObjectNode> additionalSupplier) {
-        ObjectNode jsonNode = OBJECT_MAPPER.valueToTree(notification);
-        if (additionalSupplier != null) {
-            additionalSupplier.accept(jsonNode);
-        }
-        sendGlobal(GlobalSendType.headerButton, notification.getEntityID(), null, notification.getTitle(), jsonNode);
-    }
-
-    void sendGlobal(@NotNull GlobalSendType type, @Nullable String entityID, @Nullable Object value, @Nullable String title, @Nullable ObjectNode objectNode) {
-        if (objectNode == null) {
-            objectNode = OBJECT_MAPPER.createObjectNode();
-        }
-        objectNode.put("entityID", entityID).put("type", type.name());
-        if (value != null) {
-            objectNode.putPOJO("value", value);
-        }
-        if (title != null) {
-            objectNode.put("title", title);
-        }
-
-        sendNotification("-global", objectNode);
-    }
-
     public NotificationResponse getNotifications() {
         long time = System.currentTimeMillis();
         headerButtonNotifications.entrySet().removeIf(
@@ -532,6 +509,49 @@ public class EntityContextUIImpl implements EntityContextUI {
         return handleNotificationBlockAction(entityID, actionEntityID, value, metadata);
     }
 
+    public void handleResponse(@Nullable ActionResponseModel response) {
+        if (response == null) {return;}
+        switch (response.getResponseAction()) {
+            case info:
+                this.sendInfoMessage(String.valueOf(response.getValue()));
+                break;
+            case error:
+                this.sendErrorMessage(String.valueOf(response.getValue()));
+                break;
+            case warning:
+                this.sendWarningMessage(String.valueOf(response.getValue()));
+                break;
+            case success:
+                this.sendSuccessMessage(String.valueOf(response.getValue()));
+                break;
+            case files:
+                throw new ProhibitedExecution(); // not implemented yet
+        }
+    }
+
+    void sendGlobal(@NotNull GlobalSendType type, @Nullable String entityID, @Nullable Object value, @Nullable String title, @Nullable ObjectNode objectNode) {
+        if (objectNode == null) {
+            objectNode = OBJECT_MAPPER.createObjectNode();
+        }
+        objectNode.put("entityID", entityID).put("type", type.name());
+        if (value != null) {
+            objectNode.putPOJO("value", value);
+        }
+        if (title != null) {
+            objectNode.put("title", title);
+        }
+
+        sendNotification("-global", objectNode);
+    }
+
+    private void sendHeaderButtonToUI(HeaderButtonNotification notification, Consumer<ObjectNode> additionalSupplier) {
+        ObjectNode jsonNode = OBJECT_MAPPER.valueToTree(notification);
+        if (additionalSupplier != null) {
+            additionalSupplier.accept(jsonNode);
+        }
+        sendGlobal(GlobalSendType.headerButton, notification.getEntityID(), null, notification.getTitle(), jsonNode);
+    }
+
     private ActionResponseModel handleNotificationBlockAction(String entityID, String actionEntityID, String value, JSONObject metadata) throws Exception {
         NotificationBlock notificationBlock = blockNotifications.get(entityID);
         if (notificationBlock != null) {
@@ -578,26 +598,6 @@ public class EntityContextUIImpl implements EntityContextUI {
             }
         }
         return action;
-    }
-
-    public void handleResponse(@Nullable ActionResponseModel response) {
-        if (response == null) {return;}
-        switch (response.getResponseAction()) {
-            case info:
-                this.sendInfoMessage(String.valueOf(response.getValue()));
-                break;
-            case error:
-                this.sendErrorMessage(String.valueOf(response.getValue()));
-                break;
-            case warning:
-                this.sendWarningMessage(String.valueOf(response.getValue()));
-                break;
-            case success:
-                this.sendSuccessMessage(String.valueOf(response.getValue()));
-                break;
-            case files:
-                throw new ProhibitedExecution(); // not implemented yet
-        }
     }
 
     enum GlobalSendType {

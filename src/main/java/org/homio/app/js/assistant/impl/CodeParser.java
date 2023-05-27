@@ -64,7 +64,7 @@ public class CodeParser {
         if (completions.isEmpty()) {
             completions.addAll(tryEvaFromFunctionParameter(firstItem, allScript, line));
         }
-        if(completions.isEmpty()) {
+        if (completions.isEmpty()) {
             for (JavaScriptBinder javaScriptBinder : JavaScriptBinder.values()) {
                 completions.add(new Completion(javaScriptBinder.name(), "",
                     javaScriptBinder.managerClass, javaScriptBinder.help, CompletionItemKind.Keyword));

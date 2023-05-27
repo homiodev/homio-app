@@ -29,6 +29,6 @@ public class ConsoleFontSizeSetting implements ConsoleSettingPlugin<Integer>, Se
 
     @Override
     public ConsolePlugin.RenderType[] renderTypes() {
-        return new ConsolePlugin.RenderType[] {ConsolePlugin.RenderType.lines, RenderType.comm};
+        return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines, RenderType.comm};
     }
 }

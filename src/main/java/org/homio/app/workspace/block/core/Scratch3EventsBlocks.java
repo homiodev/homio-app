@@ -19,6 +19,10 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
         blockCommand("broadcast", this::broadcastEventHandler);
     }
 
+    public void fireBroadcastEvent(String broadcastRefEntityID) {
+        entityContext.var().set(broadcastRefEntityID, "event");
+    }
+
     private void broadcastEventHandler(WorkspaceBlock workspaceBlock) {
         fireBroadcastEvent(workspaceBlock.getInputString("BROADCAST_INPUT"));
     }
@@ -26,18 +30,14 @@ public class Scratch3EventsBlocks extends Scratch3ExtensionBlocks {
     @SneakyThrows
     private void receiveEventHandler(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleNext(
-                next -> {
-                    String broadcastRefEntityID = workspaceBlock.getFieldId("BROADCAST_OPTION");
-                    BroadcastLock lock =
-                            workspaceBlock
-                                    .getBroadcastLockManager()
-                                    .getOrCreateLock(workspaceBlock, broadcastRefEntityID);
+            next -> {
+                String broadcastRefEntityID = workspaceBlock.getFieldId("BROADCAST_OPTION");
+                BroadcastLock lock =
+                    workspaceBlock
+                        .getBroadcastLockManager()
+                        .getOrCreateLock(workspaceBlock, broadcastRefEntityID);
 
-                    workspaceBlock.subscribeToLock(lock, next::handle);
-                });
-    }
-
-    public void fireBroadcastEvent(String broadcastRefEntityID) {
-        entityContext.var().set(broadcastRefEntityID, "event");
+                workspaceBlock.subscribeToLock(lock, next::handle);
+            });
     }
 }
