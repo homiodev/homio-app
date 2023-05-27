@@ -1,8 +1,8 @@
 package org.homio.app.json.jsog;
 
 import com.fasterxml.jackson.annotation.ObjectIdGenerator;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.exception.ServerException;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.exception.ServerException;
 
 /**
  * Use this as an object id generator and your class will serialize as jsog.

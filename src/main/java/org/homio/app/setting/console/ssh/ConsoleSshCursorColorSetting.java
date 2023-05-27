@@ -1,7 +1,7 @@
 package org.homio.app.setting.console.ssh;
 
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
-import org.homio.bundle.api.ui.field.UIFieldType;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
+import org.homio.api.ui.field.UIFieldType;
 
 public class ConsoleSshCursorColorSetting implements ConsoleSettingPlugin<String> {
 

@@ -1,7 +1,7 @@
 package org.homio.app.setting.system;
 
+import org.homio.api.setting.SettingPluginBoolean;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginBoolean;
 
 /** Show BaseEntity CRUD */
 public class SystemShowEntityStateSetting

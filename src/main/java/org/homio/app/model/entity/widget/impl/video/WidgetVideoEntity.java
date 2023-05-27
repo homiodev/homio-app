@@ -1,10 +1,10 @@
 package org.homio.app.model.entity.widget.impl.video;
 
-import java.util.Set;
 import jakarta.persistence.Entity;
+import java.util.Set;
+import org.homio.api.entity.validation.MaxItems;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
-import org.homio.bundle.api.entity.validation.MaxItems;
 
 @Entity
 public class WidgetVideoEntity

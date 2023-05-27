@@ -1,17 +1,17 @@
 package org.homio.app.model.entity.widget.impl.video;
 
+import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
-import jakarta.persistence.Entity;
+import org.homio.addon.camera.entity.OnvifCameraEntity;
+import org.homio.api.model.OptionModel;
+import org.homio.api.ui.action.DynamicOptionLoader;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldNumber;
+import org.homio.api.ui.field.selection.UIFieldSelection;
+import org.homio.api.video.VideoPlaybackStorage;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.ui.action.DynamicOptionLoader;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldNumber;
-import org.homio.bundle.api.ui.field.selection.UIFieldSelection;
-import org.homio.bundle.api.video.VideoPlaybackStorage;
-import org.homio.bundle.camera.entity.OnvifCameraEntity;
 
 @Entity
 public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimelineEntity> {
@@ -81,8 +81,7 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
-            for (OnvifCameraEntity entity :
-                parameters.getEntityContext().findAll(OnvifCameraEntity.class)) {
+            for (OnvifCameraEntity entity : parameters.getEntityContext().findAll(OnvifCameraEntity.class)) {
                 if (entity.getService().getBrandHandler() instanceof VideoPlaybackStorage) {
                     list.add(OptionModel.of(entity.getEntityID(), entity.getTitle()));
                 }

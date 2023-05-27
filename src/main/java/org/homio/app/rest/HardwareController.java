@@ -2,8 +2,8 @@ package org.homio.app.rest;
 
 import java.util.Collection;
 import lombok.RequiredArgsConstructor;
+import org.homio.api.model.OptionModel;
 import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.bundle.api.model.OptionModel;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

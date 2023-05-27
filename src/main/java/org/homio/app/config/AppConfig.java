@@ -22,7 +22,14 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
+import javax.sql.DataSource;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.util.ApplicationContextHolder;
+import org.homio.api.util.SecureString;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.config.cacheControl.CacheControlHandlerInterceptor;
 import org.homio.app.json.jsog.JSOGGenerator;
 import org.homio.app.json.jsog.JSOGResolver;
@@ -32,13 +39,7 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.repository.crud.base.CrudRepositoryFactoryBean;
 import org.homio.app.workspace.block.Scratch3Space;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.DeviceBaseEntity;
-import org.homio.bundle.api.util.ApplicationContextHolder;
-import org.homio.bundle.api.util.SecureString;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.homio.bundle.hquery.HardwareRepositoryFactoryPostProcessor;
+import org.homio.hquery.HardwareRepositoryFactoryPostProcessor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -59,6 +60,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.jdbc.datasource.lookup.SingleDataSourceLookup;
+import org.springframework.orm.jpa.persistenceunit.DefaultPersistenceUnitManager;
+import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
+import org.springframework.orm.jpa.persistenceunit.PersistenceUnitManager;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -268,22 +273,57 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
       @Override
       protected void doFilterInternal(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain)
           throws IOException, ServletException {
-        applicationContext.getBean(CacheService.class).flushDelayedUpdates();
-        filterChain.doFilter(request, response);
+          applicationContext.getBean(CacheService.class).flushDelayedUpdates();
+          filterChain.doFilter(request, response);
       }
     });
-    registrationBean.addUrlPatterns("/map", "/dashboard", "/items/*", "/hardware*/", "/one_wire/*", "/admin/*");
+      registrationBean.addUrlPatterns("/map", "/dashboard", "/items/*", "/hardware*/", "/one_wire/*", "/admin/*");
 
-    return registrationBean;
+      return registrationBean;
   }
 
-  @Override
-  public void addInterceptors(InterceptorRegistry registry) {
-    registry.addInterceptor(new CacheControlHandlerInterceptor());
-  }
+    // @Bean
+    // @Primary
+  /*public LocalContainerEntityManagerFactoryBean entityManagerFactory(
+      DataSource dataSource,
+      EntityManagerFactoryBuilder factoryBuilder,
+      PersistenceManagedTypes persistenceManagedTypes,
+      ConfigurableListableBeanFactory beanFactory) {
 
-  @JsonIdentityInfo(generator = JSOGGenerator.class, property = "entityID", resolver = JSOGResolver.class)
-  interface Bean2MixIn {
+    Map<String, Object> vendorProperties = new HashMap<>();
+    vendorProperties.put("hibernate.hbm2ddl.auto", "update");
+    vendorProperties.put("hibernate.physical_naming_strategy", new SpringBeanContainer(beanFactory));
+    vendorProperties.put("hibernate.resource.beans.container", "222222222");
+    vendorProperties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
+    vendorProperties.put("hibernate.implicit_naming_strategy", SpringImplicitNamingStrategy.class.getName());
+    vendorProperties.put("hibernate.archive.scanner", DisabledScanner.class.getName());
+    vendorProperties.put("hibernate.jdbc.lob.non_contextual_creation", "true");
+    vendorProperties.put("hibernate.jdbc.batch_size", "10");
 
-  }
+    return factoryBuilder.dataSource(dataSource)
+                         .managedTypes(persistenceManagedTypes)
+                         .properties(vendorProperties)
+                         .build();
+  }*/
+
+    @Bean
+    public PersistenceUnitManager persistenceUnitManager(PersistenceManagedTypes managedTypes, DataSource dataSource,
+        ApplicationContext applicationContext) {
+        DefaultPersistenceUnitManager manager = new DefaultPersistenceUnitManager();
+        manager.setManagedTypes(managedTypes);
+        manager.setDataSourceLookup(new SingleDataSourceLookup(dataSource));
+        manager.setDefaultDataSource(dataSource);
+        manager.setResourceLoader(applicationContext);
+        return manager;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new CacheControlHandlerInterceptor());
+    }
+
+    @JsonIdentityInfo(generator = JSOGGenerator.class, property = "entityID", resolver = JSOGResolver.class)
+    interface Bean2MixIn {
+
+    }
 }

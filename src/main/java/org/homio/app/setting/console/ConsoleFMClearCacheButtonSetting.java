@@ -1,8 +1,7 @@
 package org.homio.app.setting.console;
 
-import org.homio.bundle.api.setting.SettingPluginButton;
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
-import org.homio.bundle.api.ui.UI.Color;
+import org.homio.api.setting.SettingPluginButton;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.json.JSONObject;
 
 public class ConsoleFMClearCacheButtonSetting implements ConsoleSettingPlugin<JSONObject>, SettingPluginButton {

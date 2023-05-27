@@ -6,13 +6,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.model.OptionModel;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.SettingPluginText;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.setting.SettingPluginOptions;
-import org.homio.bundle.api.setting.SettingPluginText;
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
 import org.json.JSONObject;
 
 public class ConsoleVisibleTabsSetting

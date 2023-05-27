@@ -1,14 +1,14 @@
 package org.homio.app.model.entity.widget.impl.chart.bar;
 
 import jakarta.persistence.Entity;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
 public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChartEntity>

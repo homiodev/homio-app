@@ -20,11 +20,11 @@ import javazoom.jl.player.advanced.PlaybackEvent;
 import javazoom.jl.player.advanced.PlaybackListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
+import org.homio.api.audio.AudioFormat;
+import org.homio.api.audio.AudioSink;
+import org.homio.api.audio.AudioStream;
 import org.homio.app.audio.AudioPlayer;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.audio.AudioFormat;
-import org.homio.bundle.api.audio.AudioSink;
-import org.homio.bundle.api.audio.AudioStream;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 

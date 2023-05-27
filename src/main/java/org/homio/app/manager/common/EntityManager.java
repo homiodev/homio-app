@@ -5,19 +5,19 @@ import static org.homio.app.manager.CacheService.ENTITY_IDS_BY_CLASS_NAME;
 import static org.homio.app.manager.CacheService.ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI;
 import static org.homio.app.manager.CacheService.REPOSITORY_BY_ENTITY_ID;
 
+import jakarta.persistence.Entity;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import jakarta.persistence.Entity;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.EntityFieldMetadata;
-import org.homio.bundle.api.repository.AbstractRepository;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.api.repository.AbstractRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 

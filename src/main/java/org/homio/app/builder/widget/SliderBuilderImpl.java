@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.homio.api.EntityContextWidget.SliderWidgetBuilder;
+import org.homio.api.EntityContextWidget.SliderWidgetSeriesBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasIconColorThresholdBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasNameBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
@@ -12,8 +14,6 @@ import org.homio.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
-import org.homio.bundle.api.EntityContextWidget.SliderWidgetBuilder;
-import org.homio.bundle.api.EntityContextWidget.SliderWidgetSeriesBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

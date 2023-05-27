@@ -1,7 +1,7 @@
 package org.homio.app.repository.device;
 
-import org.homio.bundle.api.repository.AbstractRepository;
-import org.homio.bundle.api.workspace.WorkspaceEntity;
+import org.homio.api.repository.AbstractRepository;
+import org.homio.api.workspace.WorkspaceEntity;
 import org.springframework.stereotype.Repository;
 
 @Repository

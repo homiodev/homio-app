@@ -3,12 +3,12 @@ package org.homio.app.setting.console;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.setting.SettingPluginOptions;
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
-import org.homio.bundle.api.ui.field.UIFieldType;
+import org.homio.api.EntityContext;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.model.OptionModel;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
+import org.homio.api.ui.field.UIFieldType;
 import org.json.JSONObject;
 
 public class ConsoleRefreshContentPeriodSetting

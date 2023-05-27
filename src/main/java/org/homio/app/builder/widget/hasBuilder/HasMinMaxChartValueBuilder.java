@@ -1,6 +1,6 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.bundle.api.EntityContextWidget.HasMinMaxChartValue;
+import org.homio.api.EntityContextWidget.HasMinMaxChartValue;
 
 public interface HasMinMaxChartValueBuilder<T extends org.homio.app.model.entity.widget.impl.chart.HasMinMaxChartValue, R>
     extends HasMinMaxChartValue<R> {

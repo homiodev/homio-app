@@ -3,8 +3,8 @@ package org.homio.app.utils;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Logger;
+import org.homio.api.EntityContext;
 import org.homio.app.model.entity.ScriptEntity;
-import org.homio.bundle.api.EntityContext;
 
 @RequiredArgsConstructor
 public enum JavaScriptBinder {

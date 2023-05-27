@@ -1,9 +1,9 @@
 package org.homio.app.setting;
 
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.types.MicroControllerBaseEntity;
-import org.homio.bundle.api.setting.SettingPluginButton;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.types.MicroControllerBaseEntity;
+import org.homio.api.setting.SettingPluginButton;
 
 public class ScanMicroControllersSetting implements SettingPluginButton {
 

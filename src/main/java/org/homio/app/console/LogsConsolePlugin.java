@@ -5,10 +5,10 @@ import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
 import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.homio.api.EntityContext;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.console.ConsolePluginLines;
 import org.homio.app.LogService;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.console.ConsolePluginLines;
 
 @RequiredArgsConstructor
 public class LogsConsolePlugin implements ConsolePluginLines {

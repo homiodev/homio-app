@@ -16,8 +16,8 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.widget.JavaScriptBuilder;
+import org.homio.api.EntityContext;
+import org.homio.api.widget.JavaScriptBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

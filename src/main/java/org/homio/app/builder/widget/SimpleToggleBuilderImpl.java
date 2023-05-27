@@ -1,11 +1,11 @@
 package org.homio.app.builder.widget;
 
+import org.homio.api.EntityContextWidget.SimpleToggleWidgetBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasAlignBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasToggleBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetSimpleToggleEntity;
-import org.homio.bundle.api.EntityContextWidget.SimpleToggleWidgetBuilder;
 import org.jetbrains.annotations.Nullable;
 
 public class SimpleToggleBuilderImpl extends WidgetBaseBuilderImpl<SimpleToggleWidgetBuilder, WidgetSimpleToggleEntity>

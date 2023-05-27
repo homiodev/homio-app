@@ -5,7 +5,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.bundle.api.ui.field.action.v1.item.UITextInputItemBuilder;
+import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder;
 
 @Getter
 @Accessors(chain = true)

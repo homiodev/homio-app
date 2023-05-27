@@ -10,11 +10,12 @@ import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.ui.UISidebarMenu;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.ui.UISidebarMenu;
+import org.homio.app.rest.AddonController.AddonJson;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,16 +26,16 @@ public class RouteController {
 
     private final EntityContext entityContext;
     private final List<Class<?>> uiSidebarMenuClasses;
-    private final BundleController bundleController;
+    private final AddonController addonController;
     private final SettingController settingController;
 
     public RouteController(
         ClassFinder classFinder,
-        BundleController bundleController,
+        AddonController addonController,
         SettingController settingController,
         EntityContext entityContext) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
-        this.bundleController = bundleController;
+        this.addonController = addonController;
         this.settingController = settingController;
         this.entityContext = entityContext;
     }
@@ -44,7 +45,7 @@ public class RouteController {
         BootstrapContext context = new BootstrapContext();
         context.routes = getRoutes();
         context.menu = getMenu();
-        context.bundles = bundleController.getBundles();
+        context.addons = addonController.getAddons();
         context.settings = settingController.getSettings();
         context.notifications = ((EntityContextUIImpl) entityContext.ui()).getNotifications();
 
@@ -101,7 +102,7 @@ public class RouteController {
 
         public List<RouteDTO> routes;
         public Map<String, List<SidebarMenuItem>> menu;
-        public List<BundleController.BundleJson> bundles;
+        public List<AddonJson> addons;
         public List<SettingEntity> settings;
         public EntityContextUIImpl.NotificationResponse notifications;
     }

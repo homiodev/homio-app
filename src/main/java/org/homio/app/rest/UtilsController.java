@@ -1,13 +1,11 @@
 package org.homio.app.rest;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
-import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -34,6 +32,22 @@ import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.EntityContextUI;
+import org.homio.api.entity.widget.AggregationType;
+import org.homio.api.entity.widget.PeriodRequest;
+import org.homio.api.entity.widget.ability.HasGetStatusValue;
+import org.homio.api.entity.widget.ability.HasGetStatusValue.GetStatusValueRequest;
+import org.homio.api.entity.widget.ability.HasTimeValueSeries;
+import org.homio.api.exception.NotFoundException;
+import org.homio.api.exception.ServerException;
+import org.homio.api.state.State;
+import org.homio.api.storage.SourceHistory;
+import org.homio.api.storage.SourceHistoryItem;
+import org.homio.api.util.CommonUtils;
+import org.homio.api.util.Curl;
+import org.homio.api.util.DataSourceUtil;
+import org.homio.api.util.DataSourceUtil.DataSourceContext;
+import org.homio.api.util.Lang;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.js.assistant.impl.CodeParser;
@@ -49,23 +63,6 @@ import org.homio.app.rest.widget.ChartDataset;
 import org.homio.app.rest.widget.EvaluateDatesAndValues;
 import org.homio.app.rest.widget.WidgetChartsController;
 import org.homio.app.rest.widget.WidgetChartsController.TimeSeriesChartData;
-import org.homio.bundle.api.EntityContextUI;
-import org.homio.bundle.api.entity.widget.AggregationType;
-import org.homio.bundle.api.entity.widget.PeriodRequest;
-import org.homio.bundle.api.entity.widget.ability.HasGetStatusValue;
-import org.homio.bundle.api.entity.widget.ability.HasGetStatusValue.GetStatusValueRequest;
-import org.homio.bundle.api.entity.widget.ability.HasTimeValueSeries;
-import org.homio.bundle.api.exception.NotFoundException;
-import org.homio.bundle.api.exception.ServerException;
-import org.homio.bundle.api.model.ActionResponseModel;
-import org.homio.bundle.api.state.State;
-import org.homio.bundle.api.storage.SourceHistory;
-import org.homio.bundle.api.storage.SourceHistoryItem;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.util.Curl;
-import org.homio.bundle.api.util.DataSourceUtil;
-import org.homio.bundle.api.util.DataSourceUtil.DataSourceContext;
-import org.homio.bundle.api.util.Lang;
 import org.json.JSONObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -259,7 +256,7 @@ public class UtilsController {
 
     @GetMapping("/i18n/{lang}.json")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public ObjectNode getI18NFromBundles(@PathVariable("lang") String lang) {
+    public ObjectNode getI18NLangNodes(@PathVariable("lang") String lang) {
         return Lang.getLangJson(lang);
     }
 

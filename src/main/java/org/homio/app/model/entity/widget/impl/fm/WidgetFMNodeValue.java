@@ -23,7 +23,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.codec.binary.Base64OutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.homio.bundle.api.fs.TreeNode;
+import org.homio.api.fs.TreeNode;
 
 @Log4j2
 @Getter

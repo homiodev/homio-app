@@ -1,16 +1,16 @@
 package org.homio.app.model.entity.widget.attributes;
 
+import org.homio.api.EntityContextWidget.VerticalAlign;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.model.entity.widget.UIFieldOptionColor;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.UIFieldOptionVerticalAlign;
-import org.homio.bundle.api.EntityContextWidget.VerticalAlign;
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.UIFieldType;
 
 public interface HasValueTemplate extends HasJsonData {
 

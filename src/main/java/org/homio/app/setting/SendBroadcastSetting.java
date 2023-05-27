@@ -1,6 +1,6 @@
 package org.homio.app.setting;
 
-import org.homio.bundle.api.setting.SettingPluginButton;
+import org.homio.api.setting.SettingPluginButton;
 
 public class SendBroadcastSetting implements SettingPluginButton {
 

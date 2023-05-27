@@ -1,7 +1,7 @@
 package org.homio.app.setting.dashboard;
 
+import org.homio.api.setting.SettingPluginBoolean;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginBoolean;
 
 public class WidgetShowBorderSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 

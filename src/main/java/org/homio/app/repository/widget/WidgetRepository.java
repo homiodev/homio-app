@@ -2,8 +2,8 @@ package org.homio.app.repository.widget;
 
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.repository.AbstractRepository;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.bundle.api.repository.AbstractRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 

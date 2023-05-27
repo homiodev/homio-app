@@ -13,18 +13,17 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
-import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginOptions;
-import org.homio.bundle.api.util.Lang;
 import org.springframework.stereotype.Component;
 
 /**
- * Port manager scan all setting bundles to match type as SerialPort and listen if ports available
- * or not, fire notifications and set header notifications
+ * Port manager scan all setting addons to match type as SerialPort and listen if ports available or not, fire notifications and set header notifications
  */
 @Log4j2
 @Component

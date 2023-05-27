@@ -1,9 +1,8 @@
 package org.homio.app.rest;
 
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.SettingEntity.getKey;
 import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
 
 import java.util.Collection;
@@ -17,30 +16,29 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import jakarta.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.app.manager.BundleService;
+import org.homio.api.AddonEntrypoint;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.exception.ServerException;
+import org.homio.api.model.OptionModel;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.SettingPluginOptionsRemovable;
+import org.homio.api.setting.SettingPluginPackageInstall;
+import org.homio.api.setting.SettingPluginPackageInstall.PackageRequest;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
+import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
+import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.util.Lang;
+import org.homio.app.manager.AddonService;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.spring.ContextRefreshed;
-import org.homio.bundle.api.BundleEntrypoint;
-import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.exception.ServerException;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginOptions;
-import org.homio.bundle.api.setting.SettingPluginOptionsRemovable;
-import org.homio.bundle.api.setting.SettingPluginPackageInstall;
-import org.homio.bundle.api.setting.SettingPluginPackageInstall.PackageRequest;
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
-import org.homio.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
-import org.homio.bundle.api.ui.field.UIFieldType;
-import org.homio.bundle.api.util.Lang;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -57,7 +55,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SettingController implements ContextRefreshed {
 
-    private final BundleService bundleService;
+    private final AddonService addonService;
     private final EntityContextImpl entityContext;
     // true - installing, false removing
     private final Map<String, Boolean> packagesInProgress = new ConcurrentHashMap<>();
@@ -234,7 +232,7 @@ public class SettingController implements ContextRefreshed {
                 List<SettingEntity> options = EntityContextSettingImpl.dynamicHeaderSettings.get(entry.getKey());
                 settingEntity.getParameters().put("dynamicOptions", options);
             } else if (SettingPluginPackageInstall.class.isAssignableFrom(entry.getKey())) {
-                settingEntity.setSettingTypeRaw("BundleInstaller");
+                settingEntity.setSettingTypeRaw("AddonInstaller");
             }
             for (String key : settingEntity.getJsonData().keySet()) {
                 settingEntity.getParameters().put(key, settingEntity.getJsonData().get(key));
@@ -266,30 +264,30 @@ public class SettingController implements ContextRefreshed {
      * add setting descriptions
      */
     private void updateSettingDescription(List<SettingEntity> settings) {
-        Set<String> bundleSettings =
+        Set<String> addonSettings =
             settings.stream().map(e -> {
                         SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(e.getEntityID());
-                        return SettingRepository.getSettingBundleName(entityContext, plugin.getClass());
+                        return SettingRepository.getSettingAddonName(entityContext, plugin.getClass());
                     })
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
-        for (BundleEntrypoint bundleEntrypoint : bundleService.getBundles()) {
-            if (bundleSettings.contains(bundleEntrypoint.getBundleId())) {
+        for (AddonEntrypoint addonEntrypoint : addonService.getAddons()) {
+            if (addonSettings.contains(addonEntrypoint.getAddonId())) {
                 // find if description exists inside lang.json
-                String descriptionKey = bundleEntrypoint.getBundleId() + ".setting.description";
+                String descriptionKey = addonEntrypoint.getAddonId() + ".setting.description";
                 String description = Lang.findPathText(descriptionKey);
                 if (description != null) {
                     SettingEntity settingEntity = new SettingEntity() {
                         @Override
-                        public String getBundle() {
-                            return bundleEntrypoint.getBundleId();
+                        public String getAddon() {
+                            return addonEntrypoint.getAddonId();
                         }
                     };
                     settingEntity
                         .setSettingType(UIFieldType.Description)
                         .setVisible(true)
-                        .setEntityID(SettingEntity.PREFIX + bundleEntrypoint.getBundleId() + "_Description")
+                        .setEntityID(SettingEntity.PREFIX + addonEntrypoint.getAddonId() + "_Description")
                         .setValue(descriptionKey)
                         .setOrder(1);
                     this.descriptionSettings.add(settingEntity);

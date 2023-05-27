@@ -1,8 +1,8 @@
 package org.homio.app.builder.widget;
 
+import org.homio.api.EntityContextWidget.ColorWidgetBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
-import org.homio.bundle.api.EntityContextWidget.ColorWidgetBuilder;
 
 public final class ColorWidgetBuilderImpl extends WidgetBaseBuilderImpl<ColorWidgetBuilder, WidgetColorEntity>
     implements ColorWidgetBuilder {

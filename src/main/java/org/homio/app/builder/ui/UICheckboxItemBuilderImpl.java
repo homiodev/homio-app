@@ -1,9 +1,9 @@
 package org.homio.app.builder.ui;
 
 import lombok.Getter;
-import org.homio.bundle.api.ui.action.UIActionHandler;
-import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.homio.bundle.api.ui.field.action.v1.item.UICheckboxItemBuilder;
+import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.ui.field.action.v1.item.UICheckboxItemBuilder;
 
 @Getter
 public class UICheckboxItemBuilderImpl

@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.attributes;
 
-import org.homio.bundle.api.entity.HasJsonData;
+import org.homio.api.entity.HasJsonData;
 
 /**
  * xb - x block position yb - y block position bw - block width bh - block height

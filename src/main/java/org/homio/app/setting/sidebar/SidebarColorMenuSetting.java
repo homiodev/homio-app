@@ -1,6 +1,6 @@
 package org.homio.app.setting.sidebar;
 
-import org.homio.bundle.api.setting.SettingPluginBoolean;
+import org.homio.api.setting.SettingPluginBoolean;
 
 public class SidebarColorMenuSetting implements SettingPluginBoolean {
 

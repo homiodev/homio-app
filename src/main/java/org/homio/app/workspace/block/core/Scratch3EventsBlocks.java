@@ -2,10 +2,10 @@ package org.homio.app.workspace.block.core;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.workspace.BroadcastLock;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.homio.api.EntityContext;
+import org.homio.api.workspace.BroadcastLock;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
 
 @Getter

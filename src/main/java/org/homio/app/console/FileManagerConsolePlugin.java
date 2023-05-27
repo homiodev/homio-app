@@ -4,8 +4,8 @@ import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOUR
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.console.ConsolePlugin;
+import org.homio.api.EntityContext;
+import org.homio.api.console.ConsolePlugin;
 import org.springframework.stereotype.Component;
 
 @Component

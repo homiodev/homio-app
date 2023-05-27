@@ -3,13 +3,13 @@ package org.homio.app.manager.bgp;
 import com.pivovarit.function.ThrowingRunnable;
 import java.time.Duration;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP.ScheduleBuilder;
+import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.model.Status;
 import org.homio.app.config.AppProperties;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.homio.app.utils.InternalUtil;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextBGP.ScheduleBuilder;
-import org.homio.bundle.api.EntityContextBGP.ThreadContext;
-import org.homio.bundle.api.model.Status;
 
 @Log4j2
 public class InternetAvailabilityBgpService {

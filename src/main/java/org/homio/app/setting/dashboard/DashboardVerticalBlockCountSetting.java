@@ -1,7 +1,7 @@
 package org.homio.app.setting.dashboard;
 
+import org.homio.api.setting.SettingPluginSlider;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginSlider;
 
 public class DashboardVerticalBlockCountSetting
         implements CoreSettingPlugin<Integer>, SettingPluginSlider {

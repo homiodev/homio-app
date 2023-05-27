@@ -1,4 +1,4 @@
-package org.homio.bundle.hardware;
+package org.homio.addon.hardware;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
@@ -6,17 +6,17 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.state.DecimalType;
-import org.homio.bundle.api.state.ObjectType;
-import org.homio.bundle.api.state.State;
-import org.homio.bundle.api.state.StringType;
-import org.homio.bundle.api.workspace.BroadcastLock;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.scratch.MenuBlock;
-import org.homio.bundle.api.workspace.scratch.Scratch3Block;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.homio.bundle.hquery.hardware.network.NetworkHardwareRepository;
+import org.homio.api.EntityContext;
+import org.homio.api.state.DecimalType;
+import org.homio.api.state.ObjectType;
+import org.homio.api.state.State;
+import org.homio.api.state.StringType;
+import org.homio.api.workspace.BroadcastLock;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.MenuBlock;
+import org.homio.api.workspace.scratch.Scratch3Block;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.springframework.stereotype.Component;
 
 @Log4j2

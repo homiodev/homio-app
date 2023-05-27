@@ -1,4 +1,4 @@
-package org.homio.bundle.media;
+package org.homio.addon.media;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -10,14 +10,14 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.model.StylePosition;
+import org.homio.api.state.RawType;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.ArgumentType;
+import org.homio.api.workspace.scratch.MenuBlock;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.setting.workspace.ImageDefaultProcessingSetting;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.model.StylePosition;
-import org.homio.bundle.api.state.RawType;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.scratch.ArgumentType;
-import org.homio.bundle.api.workspace.scratch.MenuBlock;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 

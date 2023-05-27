@@ -1,16 +1,16 @@
 package org.homio.app.model.entity.widget.impl.slider;
 
 import jakarta.persistence.Entity;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldLayout;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasPadding;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldLayout;
 
 @Entity
 public class WidgetSliderEntity

@@ -1,12 +1,12 @@
 package org.homio.app.model.entity.widget.attributes;
 
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldIconPicker;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIconPicker;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
 
 public interface HasIconWithoutThreshold extends HasJsonData {
 

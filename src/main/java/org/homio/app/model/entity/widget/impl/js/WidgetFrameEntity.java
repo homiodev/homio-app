@@ -7,12 +7,12 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.ui.field.MonacoLanguage;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldCodeEditor;
+import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.ui.field.MonacoLanguage;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldCodeEditor;
-import org.homio.bundle.api.ui.field.UIFieldIgnore;
 
 @Entity
 @Getter

@@ -1,9 +1,9 @@
 package org.homio.app.setting;
 
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.setting.SettingPluginButton;
-import org.homio.bundle.api.video.BaseVideoStreamEntity;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.setting.SettingPluginButton;
+import org.homio.api.video.BaseVideoStreamEntity;
 
 public class ScanVideoStreamSourcesSetting implements SettingPluginButton {
 

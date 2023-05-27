@@ -3,9 +3,9 @@ package org.homio.app.model.entity.widget;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.model.OptionModel;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.model.OptionModel;
 import org.springframework.data.util.Pair;
 
 public final class SeriesBuilder {

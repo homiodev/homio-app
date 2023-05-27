@@ -14,8 +14,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import javax.imageio.ImageIO;
 import lombok.SneakyThrows;
-import org.homio.bundle.api.model.StylePosition;
-import org.homio.bundle.api.service.ImageProviderService;
+import org.homio.api.model.StylePosition;
+import org.homio.api.service.ImageProviderService;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 

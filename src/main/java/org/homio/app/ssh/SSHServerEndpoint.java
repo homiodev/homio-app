@@ -1,6 +1,6 @@
 package org.homio.app.ssh;
 
-import static org.homio.bundle.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import com.sshtools.client.SessionChannelNG;
 import com.sshtools.client.SshClient;
@@ -17,11 +17,11 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.map.PassiveExpiringMap;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP.ThreadContext;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermHandler;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermMessageType;
 import org.homio.app.ssh.SshProviderService.SshSession;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextBGP.ThreadContext;
 import org.jetbrains.annotations.NotNull;
 import org.msgpack.core.MessageBufferPacker;
 import org.msgpack.core.MessagePack;

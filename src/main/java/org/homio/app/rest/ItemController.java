@@ -1,7 +1,7 @@
 package org.homio.app.rest;
 
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE_AUTHORIZE;
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nullable;
@@ -42,6 +42,32 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.api.entity.ImageEntity;
+import org.homio.api.entity.types.StorageEntity;
+import org.homio.api.exception.NotFoundException;
+import org.homio.api.exception.ServerException;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.HasEntityLog;
+import org.homio.api.model.OptionModel;
+import org.homio.api.repository.AbstractRepository;
+import org.homio.api.service.EntityService;
+import org.homio.api.ui.UISidebarChildren;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.UIFilterOptions;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
+import org.homio.api.ui.field.action.UIActionButton;
+import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.action.UIContextMenuUploadAction;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.ui.field.selection.dynamic.DynamicParameterFields;
+import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
+import org.homio.api.util.CommonUtils;
+import org.homio.api.util.Lang;
 import org.homio.app.LogService;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
@@ -62,33 +88,6 @@ import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.utils.InternalUtil;
 import org.homio.app.utils.UIFieldSelectionUtil;
 import org.homio.app.utils.UIFieldUtils;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.DeviceBaseEntity;
-import org.homio.bundle.api.entity.EntityFieldMetadata;
-import org.homio.bundle.api.entity.ImageEntity;
-import org.homio.bundle.api.entity.types.StorageEntity;
-import org.homio.bundle.api.exception.NotFoundException;
-import org.homio.bundle.api.exception.ServerException;
-import org.homio.bundle.api.model.ActionResponseModel;
-import org.homio.bundle.api.model.HasEntityLog;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.repository.AbstractRepository;
-import org.homio.bundle.api.service.EntityService;
-import org.homio.bundle.api.ui.UISidebarChildren;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldType;
-import org.homio.bundle.api.ui.field.UIFilterOptions;
-import org.homio.bundle.api.ui.field.action.HasDynamicContextMenuActions;
-import org.homio.bundle.api.ui.field.action.UIActionButton;
-import org.homio.bundle.api.ui.field.action.UIContextMenuAction;
-import org.homio.bundle.api.ui.field.action.UIContextMenuUploadAction;
-import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.homio.bundle.api.ui.field.selection.dynamic.DynamicParameterFields;
-import org.homio.bundle.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.util.Lang;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
@@ -205,36 +204,41 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         return itemsBootstrapContextMap.get(key);
     }
 
-    @NotNull
-    private List<ItemContextResponse> buildImteBootstrap(String type, String subType) {
-        List<ItemContextResponse> itemContexts = new ArrayList<>();
-
-        for (Class<?> classType : findAllClassImplementationsByType(type)) {
-            List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>(), entityContext);
-            if (subType != null && subType.contains(":")) {
-                String[] bundleAndClassName = subType.split(":");
-                Object subClassObject = entityContext.getEntityContextBundle()
-                                                     .getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]);
-                List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false);
-                // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json                    // parameter)
-                for (EntityUIMetaData data : subTypeFieldMetadata) {
-                    data.setTypeMetaData(new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());
-                }
-                entityUIMetaData.addAll(subTypeFieldMetadata);
+    @PostMapping("/{entityID}/{fieldName}/options")
+    public Collection<OptionModel> loadSelectOptions(
+        @PathVariable("entityID") String entityID,
+        @PathVariable("fieldName") String fieldName,
+        @RequestBody GetOptionsRequest optionsRequest) {
+        Object classEntity = entityContext.getEntity(entityID);
+        if (classEntity == null) {
+            // i.e in case we load Widget
+            Class<?> aClass = entityManager.getUIFieldClassByType(entityID);
+            if (aClass == null) {
+                List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
+                aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.get(0);
             }
-            if (!entityContext.setting().getValue(SystemShowEntityCreateTimeSetting.class)) {
-                entityUIMetaData.removeIf(field -> field.getEntityName().equals("creationTime"));
+            if (aClass == null) {
+                throw new IllegalArgumentException("Unable to find class for entity: " + entityID);
             }
-            if (!entityContext.setting().getValue(SystemShowEntityUpdateTimeSetting.class)) {
-                entityUIMetaData.removeIf(field -> field.getEntityName().equals("updateTime"));
+            classEntity = CommonUtils.newInstance(aClass);
+            if (classEntity == null) {
+                throw new IllegalArgumentException("Unable find class: " + entityID);
             }
-            // fetch type actions
-            Collection<UIInputEntity> actions = UIFieldUtils.fetchUIActionsFromClass(classType, entityContext);
-
-            itemContexts.add(new ItemContextResponse(classType.getSimpleName(), HasEntityLog.class.isAssignableFrom(classType), entityUIMetaData, actions));
+        }
+        Class<?> entityClass = classEntity.getClass();
+        if (StringUtils.isNotEmpty(optionsRequest.getFieldFetchType())) {
+            String[] addonAndClassName = optionsRequest.getFieldFetchType().split(":");
+            entityClass = entityContext.getEntityContextAddon()
+                                       .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]).getClass();
         }
 
-        return itemContexts;
+        List<OptionModel> options = getEntityOptions(fieldName, classEntity, entityClass);
+        if (options != null) {
+            return options;
+        }
+
+        return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(), optionsRequest.getDeps(),
+            optionsRequest.getParam0());
     }
 
     @GetMapping("/{type}/types")
@@ -567,41 +571,36 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
     }
 
-    @PostMapping("/{entityID}/{fieldName}/options")
-    public Collection<OptionModel> loadSelectOptions(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("fieldName") String fieldName,
-        @RequestBody GetOptionsRequest optionsRequest) {
-        Object classEntity = entityContext.getEntity(entityID);
-        if (classEntity == null) {
-            // i.e in case we load Widget
-            Class<?> aClass = entityManager.getUIFieldClassByType(entityID);
-            if (aClass == null) {
-                List<Class<?>> classImplementationsByType = findAllClassImplementationsByType(entityID);
-                aClass = classImplementationsByType.isEmpty() ? null : classImplementationsByType.get(0);
+    @NotNull
+    private List<ItemContextResponse> buildImteBootstrap(String type, String subType) {
+        List<ItemContextResponse> itemContexts = new ArrayList<>();
+
+        for (Class<?> classType : findAllClassImplementationsByType(type)) {
+            List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>(), entityContext);
+            if (subType != null && subType.contains(":")) {
+                String[] addonAndClassName = subType.split(":");
+                Object subClassObject = entityContext.getEntityContextAddon()
+                                                     .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]);
+                List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false);
+                // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json                    // parameter)
+                for (EntityUIMetaData data : subTypeFieldMetadata) {
+                    data.setTypeMetaData(new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());
+                }
+                entityUIMetaData.addAll(subTypeFieldMetadata);
             }
-            if (aClass == null) {
-                throw new IllegalArgumentException("Unable to find class for entity: " + entityID);
+            if (!entityContext.setting().getValue(SystemShowEntityCreateTimeSetting.class)) {
+                entityUIMetaData.removeIf(field -> field.getEntityName().equals("creationTime"));
             }
-            classEntity = CommonUtils.newInstance(aClass);
-            if (classEntity == null) {
-                throw new IllegalArgumentException("Unable find class: " + entityID);
+            if (!entityContext.setting().getValue(SystemShowEntityUpdateTimeSetting.class)) {
+                entityUIMetaData.removeIf(field -> field.getEntityName().equals("updateTime"));
             }
-        }
-        Class<?> entityClass = classEntity.getClass();
-        if (StringUtils.isNotEmpty(optionsRequest.getFieldFetchType())) {
-            String[] bundleAndClassName = optionsRequest.getFieldFetchType().split(":");
-            entityClass = entityContext.getEntityContextBundle()
-                                       .getBeanOfBundleBySimpleName(bundleAndClassName[0], bundleAndClassName[1]).getClass();
+            // fetch type actions
+            Collection<UIInputEntity> actions = UIFieldUtils.fetchUIActionsFromClass(classType, entityContext);
+
+            itemContexts.add(new ItemContextResponse(classType.getSimpleName(), HasEntityLog.class.isAssignableFrom(classType), entityUIMetaData, actions));
         }
 
-        List<OptionModel> options = getEntityOptions(fieldName, classEntity, entityClass);
-        if (options != null) {
-            return options;
-        }
-
-        return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(), optionsRequest.getDeps(),
-            optionsRequest.getParam0());
+        return itemContexts;
     }
 
     @GetMapping("/{entityID}/{fieldName}/{selectedEntityID}/dynamicParameterOptions")

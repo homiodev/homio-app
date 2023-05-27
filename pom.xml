@@ -103,33 +103,33 @@
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-camera</artifactId>
-      <groupId>org.homio.bundle</groupId>
-      <version>${homio-bundle.version}</version>
+      <artifactId>homio-addon-camera</artifactId>
+      <groupId>org.homio</groupId>
+      <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-telegram</artifactId>
-      <groupId>org.homio.bundle</groupId>
-      <version>${homio-bundle.version}</version>
+      <artifactId>homio-addon-telegram</artifactId>
+      <groupId>org.homio</groupId>
+      <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-mqtt</artifactId>
-      <groupId>org.homio.bundle</groupId>
-      <version>${homio-bundle.version}</version>
+      <artifactId>homio-addon-mqtt</artifactId>
+      <groupId>org.homio</groupId>
+      <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-z2m</artifactId>
-      <groupId>org.homio.bundle</groupId>
-      <version>${homio-bundle.version}</version>
+      <artifactId>homio-addon-z2m</artifactId>
+      <groupId>org.homio</groupId>
+      <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-bluetooth</artifactId>
-      <groupId>org.homio.bundle</groupId>
-      <version>${homio-bundle.version}</version>
+      <artifactId>homio-addon-bluetooth</artifactId>
+      <groupId>org.homio</groupId>
+      <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
@@ -419,9 +419,9 @@
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-api</artifactId>
+      <artifactId>homio-api</artifactId>
       <groupId>org.homio</groupId>
-      <version>${homio-bundle-api.version}</version>
+      <version>${homio-api.version}</version>
     </dependency>
 
     <dependency>
@@ -471,9 +471,9 @@
 
   <properties>
     <graalvm.version>22.3.1</graalvm.version>
-    <homio-hquery.version>1.0.2</homio-hquery.version>
-    <homio-bundle-api.version>1.2.5-SNAPSHOT</homio-bundle-api.version>
-    <homio-bundle.version>1.2.1-SNAPSHOT</homio-bundle.version>
+    <homio-api.version>1.3.0-SNAPSHOT</homio-api.version>
+    <homio-hquery.version>1.0.3-SNAPSHOT</homio-hquery.version>
+    <homio-primary-addons.version>1.3.0-SNAPSHOT</homio-primary-addons.version>
     <start-class>org.homio.app.HomioApplication</start-class>
   </properties>
 

@@ -9,12 +9,12 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.app.extloader.BundleClassLoaderHolder;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.exception.ServerException;
-import org.homio.bundle.api.repository.AbstractRepository;
-import org.homio.bundle.api.util.CommonUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.exception.ServerException;
+import org.homio.api.repository.AbstractRepository;
+import org.homio.api.util.CommonUtils;
+import org.homio.app.HomioClassLoader;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.cache.annotation.Cacheable;
@@ -31,7 +31,6 @@ public class ClassFinder {
 
   public static final String CLASSES_WITH_PARENT_CLASS = "CLASSES_WITH_PARENT_CLASS";
   public static final String REPOSITORY_BY_CLAZZ = "REPOSITORY_BY_CLAZZ";
-  private final BundleClassLoaderHolder bundleClassLoaderHolder;
   private final ApplicationContext applicationContext;
 
   @SneakyThrows
@@ -77,16 +76,16 @@ public class ClassFinder {
 
   public <T> List<Class<? extends T>> getClassesWithParent(@NotNull Class<T> parentClass, String basePackage) {
     List<Class<? extends T>> foundClasses = new ArrayList<>();
-    for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(false)) {
-      scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
+      for (ClassPathScanningCandidateComponentProvider scanner : HomioClassLoader.getResourceScanners(false)) {
+          scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
 
-      getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.homio"), null, scanner,
-          foundClasses);
+          getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.homio"), null, scanner,
+              foundClasses);
 
-      if (foundClasses.isEmpty() && basePackage == null) {
-        getClassesWithParentFromPackage("com.pi4j", null, scanner, foundClasses);
+          if (foundClasses.isEmpty() && basePackage == null) {
+              getClassesWithParentFromPackage("com.pi4j", null, scanner, foundClasses);
+          }
       }
-    }
 
     return foundClasses;
   }
@@ -106,16 +105,16 @@ public class ClassFinder {
   @Cacheable(JS_COMPLETIONS)
   public <T> List<Class<? extends T>> getClassesWithParentSpecific(@NotNull Class<T> parentClass, String className, String basePackage) {
     List<Class<? extends T>> foundClasses = new ArrayList<>();
-    for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(false)) {
-      scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
+      for (ClassPathScanningCandidateComponentProvider scanner : HomioClassLoader.getResourceScanners(false)) {
+          scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
 
-      getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.homio"), className, scanner,
-          foundClasses);
+          getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.homio"), className, scanner,
+              foundClasses);
 
-      if (foundClasses.isEmpty() && basePackage == null) {
-        getClassesWithParentFromPackage("com.pi4j", className, scanner, foundClasses);
+          if (foundClasses.isEmpty() && basePackage == null) {
+              getClassesWithParentFromPackage("com.pi4j", className, scanner, foundClasses);
+          }
       }
-    }
 
     return foundClasses;
   }
@@ -123,18 +122,16 @@ public class ClassFinder {
   private <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation,
       boolean includeInterfaces) {
     List<Class<? extends T>> foundClasses = new ArrayList<>();
-    for (ClassPathScanningCandidateComponentProvider scanner : bundleClassLoaderHolder.getResourceScanners(
-        includeInterfaces)) {
-      scanner.addIncludeFilter(new AnnotationTypeFilter(annotation));
-      for (BeanDefinition bd : scanner.findCandidateComponents("org.homio")) {
-        try {
-          foundClasses.add(
-              (Class<? extends T>) scanner.getResourceLoader().getClassLoader().loadClass(bd.getBeanClassName()));
-        } catch (ClassNotFoundException e) {
-          throw new ServerException(e);
-        }
+      for (ClassPathScanningCandidateComponentProvider scanner : HomioClassLoader.getResourceScanners(includeInterfaces)) {
+          scanner.addIncludeFilter(new AnnotationTypeFilter(annotation));
+          for (BeanDefinition bd : scanner.findCandidateComponents("org.homio")) {
+              try {
+                  foundClasses.add((Class<? extends T>) scanner.getResourceLoader().getClassLoader().loadClass(bd.getBeanClassName()));
+              } catch (ClassNotFoundException e) {
+                  throw new ServerException(e);
+              }
+          }
       }
-    }
     return foundClasses;
   }
 

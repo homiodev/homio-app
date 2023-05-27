@@ -7,8 +7,7 @@ package org.homio.app.spring;
 public interface ContextRefreshed {
 
     /**
-     * Fires every time when new bundle has been added to context or removed. Also fires at app
-     * startup after postConstruct()
+     * Fires every time when new addon has been added to context or removed. Also fires at app startup after postConstruct()
      */
     void onContextRefresh() throws Exception;
 }

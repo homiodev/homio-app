@@ -4,11 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.bundle.api.EntityContextWidget.AnimateBuilder;
-import org.homio.bundle.api.EntityContextWidget.AnimateColor;
-import org.homio.bundle.api.EntityContextWidget.ThresholdBuilder;
-import org.homio.bundle.api.EntityContextWidget.ValueCompare;
-import org.homio.bundle.api.ui.UI;
+import org.homio.api.EntityContextWidget.AnimateBuilder;
+import org.homio.api.EntityContextWidget.AnimateColor;
+import org.homio.api.EntityContextWidget.ThresholdBuilder;
+import org.homio.api.EntityContextWidget.ValueCompare;
+import org.homio.api.ui.UI;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

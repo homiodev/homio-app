@@ -1,8 +1,8 @@
 package org.homio.app.setting.system;
 
+import org.homio.api.setting.SettingPluginOptionsEnum;
+import org.homio.api.util.Lang;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginOptionsEnum;
-import org.homio.bundle.api.util.Lang;
 
 public class SystemLanguageSetting
         implements CoreSettingPlugin<Lang>, SettingPluginOptionsEnum<Lang> {

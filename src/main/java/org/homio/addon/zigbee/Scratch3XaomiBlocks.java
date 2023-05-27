@@ -1,8 +1,8 @@
-package org.homio.bundle.zigbee;
+package org.homio.addon.zigbee;
 
 import lombok.Getter;
-import org.homio.bundle.api.state.State;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
+import org.homio.api.state.State;
+import org.homio.api.workspace.WorkspaceBlock;
 import org.springframework.stereotype.Component;
 
 @Getter

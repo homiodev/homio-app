@@ -10,11 +10,11 @@ import java.util.function.BiFunction;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.homio.bundle.api.model.ActionResponseModel;
-import org.homio.bundle.api.model.Status;
-import org.homio.bundle.api.ui.action.UIActionHandler;
-import org.homio.bundle.api.ui.field.ProgressBar;
-import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.Status;
+import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.field.ProgressBar;
+import org.homio.api.ui.field.action.v1.UIInputEntity;
 
 @Getter
 @Setter

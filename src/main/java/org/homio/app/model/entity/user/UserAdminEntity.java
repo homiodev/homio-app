@@ -1,9 +1,9 @@
 package org.homio.app.model.entity.user;
 
-import java.util.List;
 import jakarta.persistence.Entity;
+import java.util.List;
+import org.homio.api.ui.UISidebarChildren;
 import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.bundle.api.ui.UISidebarChildren;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 

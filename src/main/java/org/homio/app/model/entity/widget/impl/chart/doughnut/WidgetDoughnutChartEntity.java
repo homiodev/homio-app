@@ -2,19 +2,19 @@ package org.homio.app.model.entity.widget.impl.chart.doughnut;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+import org.homio.api.exception.ProhibitedExecution;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
-import org.homio.bundle.api.exception.ProhibitedExecution;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldIgnore;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
 public class WidgetDoughnutChartEntity

@@ -1,10 +1,8 @@
 package org.homio.app.rest.widget;
 
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,6 +17,24 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.api.entity.storage.BaseFileSystemEntity;
+import org.homio.api.entity.widget.ability.HasSetStatusValue;
+import org.homio.api.exception.NotFoundException;
+import org.homio.api.exception.ServerException;
+import org.homio.api.fs.FileSystemProvider;
+import org.homio.api.fs.TreeNode;
+import org.homio.api.model.OptionModel;
+import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.util.DataSourceUtil;
+import org.homio.api.util.Lang;
+import org.homio.api.video.BaseFFMPEGVideoStreamEntity;
+import org.homio.api.widget.WidgetBaseTemplate;
+import org.homio.api.widget.WidgetJSBaseTemplate;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.ScriptService;
@@ -46,24 +62,6 @@ import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSo
 import org.homio.app.model.rest.WidgetDataRequest;
 import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
 import org.homio.app.utils.JavaScriptBuilderImpl;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.EntityFieldMetadata;
-import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
-import org.homio.bundle.api.entity.widget.ability.HasSetStatusValue;
-import org.homio.bundle.api.exception.NotFoundException;
-import org.homio.bundle.api.exception.ServerException;
-import org.homio.bundle.api.fs.FileSystemProvider;
-import org.homio.bundle.api.fs.TreeNode;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.ui.action.UIActionHandler;
-import org.homio.bundle.api.ui.field.action.HasDynamicContextMenuActions;
-import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.homio.bundle.api.util.DataSourceUtil;
-import org.homio.bundle.api.util.Lang;
-import org.homio.bundle.api.video.BaseFFMPEGVideoStreamEntity;
-import org.homio.bundle.api.widget.WidgetBaseTemplate;
-import org.homio.bundle.api.widget.WidgetJSBaseTemplate;
 import org.json.JSONObject;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -355,20 +353,20 @@ public class WidgetController {
         @PathVariable("tabId") String tabId,
         @PathVariable("type") String type,
         @PathVariable("addon") String addon) {
-        log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, bundle: <{}>", type, tabId, addon);
+        log.debug("Request creating extra widget entity by type: <{}> in tabId <{}>, addon: <{}>", type, tabId, addon);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
         if (widgetTabEntity == null) {
             throw new NotFoundException("Unable to find tab with tabId: " + tabId);
         }
 
-        Collection<WidgetBaseTemplate> widgets = entityContext.getBeansOfTypeByBundles(WidgetBaseTemplate.class).get(addon);
+        Collection<WidgetBaseTemplate> widgets = entityContext.getBeansOfTypeByAddons(WidgetBaseTemplate.class).get(addon);
         if (widgets == null) {
-            throw new NotFoundException("Unable to find bundle: " + tabId + " or widgets in bundle");
+            throw new NotFoundException("Unable to find addon: " + tabId + " or widgets in addon");
         }
         WidgetBaseTemplate template = widgets.stream()
                                              .filter(w -> w.getClass().getSimpleName().equals(type))
                                              .findAny()
-                                             .orElseThrow(() -> new NotFoundException("Unable to find widget: " + type + " in bundle: " + addon));
+                                             .orElseThrow(() -> new NotFoundException("Unable to find widget: " + type + " in addon: " + addon));
 
         String js = template.toJavaScript();
         String params = "";
@@ -384,10 +382,12 @@ public class WidgetController {
             }
         }
 
-        WidgetJavaJsEntity widgetJavaJsEntity = new WidgetJavaJsEntity().setJavaScriptParameters(params).setJavaScriptParametersReadOnly(paramReadOnly)
-                                                                        .setJavaScript(js);
+        WidgetJavaJsEntity widgetJavaJsEntity = new WidgetJavaJsEntity()
+            .setJavaScriptParameters(params)
+            .setJavaScriptParametersReadOnly(paramReadOnly)
+            .setJavaScript(js);
 
-        //TODO: fix:::  widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(bundle + ":" + template.getClass().getSimpleName());
+        //TODO: fix:::  widgetJsEntity.setWidgetTabEntity(widgetTabEntity).setFieldFetchType(addon + ":" + template.getClass().getSimpleName());
 
         return null; // TODO: fix::::entityContext.save(widgetJsEntity);
     }

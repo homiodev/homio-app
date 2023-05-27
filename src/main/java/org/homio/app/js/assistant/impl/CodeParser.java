@@ -1,6 +1,5 @@
 package org.homio.app.js.assistant.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import java.lang.annotation.Annotation;
@@ -18,18 +17,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.exception.ServerException;
 import org.homio.app.js.assistant.model.Completion;
 import org.homio.app.js.assistant.model.CompletionItemKind;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.utils.JavaScriptBinder;
-import org.homio.bundle.api.exception.ServerException;
 import org.springframework.stereotype.Component;
 
 @Component

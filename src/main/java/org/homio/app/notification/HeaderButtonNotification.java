@@ -6,8 +6,8 @@ import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.bundle.api.model.ActionResponseModel;
-import org.homio.bundle.api.ui.dialog.DialogModel;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.ui.dialog.DialogModel;
 
 @Getter
 @Setter

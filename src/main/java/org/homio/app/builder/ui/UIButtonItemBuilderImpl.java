@@ -4,11 +4,11 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.bundle.api.ui.action.UIActionHandler;
-import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.homio.bundle.api.ui.field.action.v1.item.UIButtonItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
-import org.homio.bundle.api.ui.field.action.v1.layout.dialog.UIStickyDialogItemBuilder;
+import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
+import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
+import org.homio.api.ui.field.action.v1.layout.dialog.UIStickyDialogItemBuilder;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 

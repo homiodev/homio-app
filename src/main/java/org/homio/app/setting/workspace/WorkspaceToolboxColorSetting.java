@@ -1,7 +1,7 @@
 package org.homio.app.setting.workspace;
 
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.ui.field.UIFieldType;
 
 public class WorkspaceToolboxColorSetting implements CoreSettingPlugin<String> {
 

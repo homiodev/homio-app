@@ -2,6 +2,7 @@ package org.homio.app.extloader;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
@@ -18,22 +19,24 @@ import lombok.SneakyThrows;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.xeustechnologies.jcl.JarClassLoader;
+import org.xeustechnologies.jcl.ProxyClassLoader;
 
-public class SingleBundleClassLoader extends JarClassLoader {
+public class AddonClassLoader extends JarClassLoader {
 
-  private static final long L_ENCODED = 0xF800802DFFFFFFFFL;
-  private static final long H_ENCODED = 0xB800000178000000L;
-  private final URL baseUrl;
-  private final JarFile jarFile;
-  private final Map<String, URL> resourceMap = new HashMap<>();
-  private final Map<URL, List<URLConnection>> resourceConnections = new HashMap<>();
+    private static final ProxyClassLoader jvmLoader = new JvmLoader();
+    private static final long L_ENCODED = 0xF800802DFFFFFFFFL;
+    private static final long H_ENCODED = 0xB800000178000000L;
+    private final URL baseUrl;
+    private final JarFile jarFile;
+    private final Map<String, URL> resourceMap = new HashMap<>();
+    private final Map<URL, List<URLConnection>> resourceConnections = new HashMap<>();
 
-  @SneakyThrows
-  SingleBundleClassLoader(Path jarPath) {
-    super.add(jarPath.toString());
-    this.jarFile = new JarFile(jarPath.toFile());
-    this.baseUrl = new URL("jar", "", jarPath.toUri().toURL() + "!/");
-  }
+    @SneakyThrows
+    AddonClassLoader(Path jarPath) {
+        super.add(jarPath.toString());
+        this.jarFile = new JarFile(jarPath.toFile());
+        this.baseUrl = new URL("jar", "", jarPath.toUri().toURL() + "!/");
+    }
 
   private static String encodePath(String path, boolean flag) {
     if (flag && File.separatorChar != '/') {
@@ -131,13 +134,18 @@ public class SingleBundleClassLoader extends JarClassLoader {
     return false;
   }
 
-  @Override
-  protected void addDefaultLoader() {
-    synchronized (loaders) {
-      loaders.add(getSystemLoader());
-      Collections.sort(loaders);
+    @SneakyThrows
+    public void destroy() {
+        for (String className : new ArrayList<>(this.classes.keySet())) {
+            this.unloadClass(className);
+        }
+        for (List<URLConnection> urlConnections : resourceConnections.values()) {
+            for (URLConnection urlConnection : urlConnections) {
+                ((java.net.JarURLConnection) urlConnection).getJarFile().close();
+            }
+        }
+        this.jarFile.close();
     }
-  }
 
   @Override
   public Enumeration<URL> getResources(String name) {
@@ -189,16 +197,40 @@ public class SingleBundleClassLoader extends JarClassLoader {
     return resourceMap.get(name);
   }
 
-  @SneakyThrows
-  void destroy() {
-    for (String className : new ArrayList<>(this.classes.keySet())) {
-      this.unloadClass(className);
+    // we need sys loader to avoid issue with no class found Object, etc...
+    @Override
+    protected void addDefaultLoader() {
+        synchronized (loaders) {
+            loaders.add(jvmLoader);
+            Collections.sort(loaders);
+        }
     }
-    for (List<URLConnection> urlConnections : resourceConnections.values()) {
-      for (URLConnection urlConnection : urlConnections) {
-        ((java.net.JarURLConnection) urlConnection).getJarFile().close();
-      }
+
+    private static class JvmLoader extends ProxyClassLoader {
+
+        private final ClassLoader classLoader;
+
+        public JvmLoader() {
+            classLoader = ClassLoader.getSystemClassLoader().getParent();
+        }
+
+        @Override
+        public Class<?> loadClass(String className, boolean resolveIt) {
+            try {
+                return classLoader.loadClass(className);
+            } catch (ClassNotFoundException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public InputStream loadResource(String name) {
+            return classLoader.getResourceAsStream(name);
+        }
+
+        @Override
+        public URL findResource(String name) {
+            return classLoader.getResource(name);
+        }
     }
-    this.jarFile.close();
-  }
 }

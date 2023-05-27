@@ -1,9 +1,9 @@
 package org.homio.app.setting.console;
 
-import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.console.ConsolePlugin.RenderType;
-import org.homio.bundle.api.setting.SettingPluginSlider;
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.console.ConsolePlugin.RenderType;
+import org.homio.api.setting.SettingPluginSlider;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
 
 public class ConsoleFontSizeSetting implements ConsoleSettingPlugin<Integer>, SettingPluginSlider {
 

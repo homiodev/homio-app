@@ -1,6 +1,6 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.bundle.api.EntityContextWidget.HasAxis;
+import org.homio.api.EntityContextWidget.HasAxis;
 
 public interface HasAxisBuilder<T extends org.homio.app.model.entity.widget.impl.chart.HasAxis, R>
     extends HasAxis<R> {

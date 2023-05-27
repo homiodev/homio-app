@@ -1,19 +1,19 @@
-package org.homio.bundle.ui;
+package org.homio.addon.ui;
 
 import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextUI.HeaderButtonBuilder;
+import org.homio.api.util.NotificationLevel;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.ArgumentType;
+import org.homio.api.workspace.scratch.MenuBlock;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.setting.SendBroadcastSetting;
 import org.homio.app.workspace.WorkspaceService;
 import org.homio.app.workspace.block.core.Scratch3EventsBlocks;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextUI.HeaderButtonBuilder;
-import org.homio.bundle.api.util.NotificationLevel;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.scratch.ArgumentType;
-import org.homio.bundle.api.workspace.scratch.MenuBlock;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
 
 @Log4j2

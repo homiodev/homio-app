@@ -1,8 +1,8 @@
 package org.homio.app.setting.workspace;
 
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.UIFieldType;
 
 public class WorkspaceGridColorSetting implements CoreSettingPlugin<String> {
 

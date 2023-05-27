@@ -2,9 +2,9 @@ package org.homio.app.builder.widget;
 
 import static java.lang.String.format;
 
+import org.homio.api.EntityContextWidget.LayoutWidgetBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
-import org.homio.bundle.api.EntityContextWidget.LayoutWidgetBuilder;
 import org.jetbrains.annotations.Nullable;
 
 public class LayoutBuilderImpl extends WidgetBaseBuilderImpl<LayoutWidgetBuilder, WidgetLayoutEntity>

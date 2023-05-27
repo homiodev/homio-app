@@ -1,6 +1,6 @@
 package org.homio.app.setting;
 
-import org.homio.bundle.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingPlugin;
 
 public interface CoreSettingPlugin<T> extends SettingPlugin<T> {
 

@@ -1,7 +1,6 @@
 package org.homio.app.model.entity.widget;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import java.util.Set;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -9,14 +8,15 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.ManyToOne;
+import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.bundle.api.converter.JSONConverter;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.model.JSON;
-import org.homio.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
+import org.homio.api.converter.JSONConverter;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.model.JSON;
+import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 

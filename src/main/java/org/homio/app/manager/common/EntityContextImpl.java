@@ -2,7 +2,7 @@ package org.homio.app.manager.common;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
-import static org.homio.bundle.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import jakarta.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
@@ -33,15 +33,37 @@ import net.sf.cglib.proxy.MethodInterceptor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextHardware;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.entity.DisableCacheEntity;
+import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.api.entity.storage.BaseFileSystemEntity;
+import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Status;
+import org.homio.api.model.UpdatableValue;
+import org.homio.api.repository.AbstractRepository;
+import org.homio.api.repository.GitHubProject;
+import org.homio.api.repository.PureRepository;
+import org.homio.api.service.scan.BeansItemsDiscovery;
+import org.homio.api.service.scan.MicroControllerScanner;
+import org.homio.api.service.scan.VideoStreamScanner;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.util.CommonUtils;
+import org.homio.api.util.FlowMap;
+import org.homio.api.util.Lang;
+import org.homio.api.util.UpdatableSetting;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.LogService;
 import org.homio.app.audio.AudioService;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.builder.widget.EntityContextWidgetImpl;
 import org.homio.app.config.AppProperties;
 import org.homio.app.config.ExtRequestMappingHandlerMapping;
-import org.homio.app.extloader.BundleContext;
-import org.homio.app.extloader.BundleContextService;
-import org.homio.app.manager.BundleService;
+import org.homio.app.extloader.AddonContext;
+import org.homio.app.extloader.AddonContextService;
+import org.homio.app.manager.AddonService;
 import org.homio.app.manager.CacheService;
 import org.homio.app.manager.LoggerService;
 import org.homio.app.manager.PortService;
@@ -76,30 +98,8 @@ import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshTmateEntity;
 import org.homio.app.workspace.BroadcastLockManagerImpl;
 import org.homio.app.workspace.WorkspaceService;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextHardware;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.DeviceBaseEntity;
-import org.homio.bundle.api.entity.DisableCacheEntity;
-import org.homio.bundle.api.entity.EntityFieldMetadata;
-import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
-import org.homio.bundle.api.model.HasEntityIdentifier;
-import org.homio.bundle.api.model.Status;
-import org.homio.bundle.api.model.UpdatableValue;
-import org.homio.bundle.api.repository.AbstractRepository;
-import org.homio.bundle.api.repository.GitHubProject;
-import org.homio.bundle.api.repository.PureRepository;
-import org.homio.bundle.api.service.scan.BeansItemsDiscovery;
-import org.homio.bundle.api.service.scan.MicroControllerScanner;
-import org.homio.bundle.api.service.scan.VideoStreamScanner;
-import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.util.FlowMap;
-import org.homio.bundle.api.util.Lang;
-import org.homio.bundle.api.util.UpdatableSetting;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.homio.bundle.hquery.hardware.network.NetworkHardwareRepository;
-import org.homio.bundle.hquery.hardware.other.MachineHardwareRepository;
+import org.homio.hquery.hardware.network.NetworkHardwareRepository;
+import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.aop.framework.Advised;
@@ -134,7 +134,7 @@ public class EntityContextImpl implements EntityContext {
     private static final long START_TIME = System.currentTimeMillis();
 
     static {
-        BEAN_CONTEXT_CREATED.add(BundleService.class);
+        BEAN_CONTEXT_CREATED.add(AddonService.class);
 
         BEAN_CONTEXT_CREATED.add(LogService.class);
         BEAN_CONTEXT_CREATED.add(FileSystemController.class);
@@ -142,13 +142,13 @@ public class EntityContextImpl implements EntityContext {
         BEAN_CONTEXT_CREATED.add(PortService.class);
         BEAN_CONTEXT_CREATED.add(LoggerService.class);
         BEAN_CONTEXT_CREATED.add(WidgetService.class);
-        BEAN_CONTEXT_CREATED.add(BundleContextService.class);
+        BEAN_CONTEXT_CREATED.add(AddonContextService.class);
         BEAN_CONTEXT_CREATED.add(ScriptService.class);
         BEAN_CONTEXT_CREATED.add(JwtTokenProvider.class);
         BEAN_CONTEXT_CREATED.add(CloudService.class);
 
         BEAN_CONTEXT_REFRESH.add(FileSystemController.class);
-        BEAN_CONTEXT_REFRESH.add(BundleService.class);
+        BEAN_CONTEXT_REFRESH.add(AddonService.class);
         BEAN_CONTEXT_REFRESH.add(ConsoleController.class);
         BEAN_CONTEXT_REFRESH.add(SettingRepository.class);
         BEAN_CONTEXT_REFRESH.add(SettingController.class);
@@ -166,7 +166,7 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextVarImpl entityContextVar;
     private final EntityContextHardwareImpl entityContextHardware;
     private final EntityContextWidgetImpl entityContextWidget;
-    @Getter private final EntityContextBundleImpl entityContextBundle;
+    @Getter private final EntityContextAddonImpl entityContextAddon;
     private final Environment environment;
     @Getter private final EntityContextStorage entityContextStorage;
     private final ClassFinder classFinder;
@@ -205,12 +205,12 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextStorage = new EntityContextStorage(this);
         this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
         this.entityContextHardware = new EntityContextHardwareImpl(this, machineHardwareRepository);
-        this.entityContextBundle = new EntityContextBundleImpl(this, cacheService);
+        this.entityContextAddon = new EntityContextAddonImpl(this, cacheService);
     }
 
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
-        this.entityContextBundle.setApplicationContext(applicationContext);
+        this.entityContextAddon.setApplicationContext(applicationContext);
         this.allApplicationContexts.add(applicationContext);
         this.applicationContext = applicationContext;
         MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
@@ -239,7 +239,7 @@ public class EntityContextImpl implements EntityContext {
 
         setting().listenValueAndGet(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
 
-        entityContextBundle.initialiseInlineBundles();
+        entityContextAddon.initialiseInlineAddons();
 
         bgp().builder("app-version").interval(Duration.ofDays(1)).delay(Duration.ofSeconds(1))
              .execute(this::updateAppNotificationBlock);
@@ -524,7 +524,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public <T> @NotNull Map<String, Collection<T>> getBeansOfTypeByBundles(@NotNull Class<T> clazz) {
+    public <T> @NotNull Map<String, Collection<T>> getBeansOfTypeByAddons(@NotNull Class<T> clazz) {
         Map<String, Collection<T>> res = new HashMap<>();
         for (ApplicationContext context : allApplicationContexts) {
             Collection<T> beans = context.getBeansOfType(clazz).values();
@@ -632,17 +632,17 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @SneakyThrows
-    void updateBeans(BundleContext bundleContext, ApplicationContext context, boolean addBundle) {
-        log.info("Starting update all app bundles");
+    void updateBeans(AddonContext addonContext, ApplicationContext context, boolean addAddon) {
+        log.info("Starting update all app addons");
         Lang.clear();
-        fetchSettingPlugins(bundleContext, addBundle);
+        fetchSettingPlugins(addonContext, addAddon);
 
         for (Class<? extends ContextRefreshed> beanUpdateClass : BEAN_CONTEXT_REFRESH) {
             applicationContext.getBean(beanUpdateClass).onContextRefresh();
         }
 
-        if (bundleContext != null) {
-            applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addBundle);
+        if (addonContext != null) {
+            applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addAddon);
         }
 
         registerUpdatableSettings(context);
@@ -655,21 +655,23 @@ public class EntityContextImpl implements EntityContext {
             }
         }
 
-        log.info("Finish update all app bundles");
+        log.info("Finish update all app addons");
     }
 
-    void rebuildAllRepositories(ApplicationContext context, boolean addBundle) {
+    void rebuildAllRepositories(ApplicationContext context, boolean addAddon) {
         Map<String, PureRepository> pureRepositoryMap = context.getBeansOfType(PureRepository.class).values().stream()
                                                                .collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r));
 
-        if (addBundle) {
+        if (addAddon) {
             pureRepositories.putAll(pureRepositoryMap);
             repositories.putAll(context.getBeansOfType(AbstractRepository.class));
         } else {
             pureRepositories.keySet().removeAll(pureRepositoryMap.keySet());
             repositories.keySet().removeAll(context.getBeansOfType(AbstractRepository.class).keySet());
         }
-        uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class).stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
+        uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class)
+                                    .stream()
+                                    .collect(Collectors.toMap(Class::getSimpleName, s -> s));
 
         rebuildRepositoryByPrefixMap();
     }
@@ -715,9 +717,9 @@ public class EntityContextImpl implements EntityContext {
         }
     }
 
-    private void fetchSettingPlugins(BundleContext bundleContext, boolean addBundle) {
-        if (bundleContext != null) {
-            setting().fetchSettingPlugins(bundleContext.getBasePackage(), classFinder, addBundle);
+    private void fetchSettingPlugins(AddonContext addonContext, boolean addAddon) {
+        if (addonContext != null) {
+            setting().fetchSettingPlugins(addonContext.getBasePackage(), classFinder, addAddon);
         }
     }
 

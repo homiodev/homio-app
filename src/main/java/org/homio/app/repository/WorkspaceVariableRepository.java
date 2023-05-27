@@ -1,7 +1,7 @@
 package org.homio.app.repository;
 
+import org.homio.api.repository.AbstractRepository;
 import org.homio.app.model.var.WorkspaceVariable;
-import org.homio.bundle.api.repository.AbstractRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 

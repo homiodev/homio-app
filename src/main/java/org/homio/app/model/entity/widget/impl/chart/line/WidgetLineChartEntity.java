@@ -3,12 +3,12 @@ package org.homio.app.model.entity.widget.impl.chart.line;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
+import org.homio.api.EntityContextWidget.ChartType;
+import org.homio.api.ui.field.UIField;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasAxis;
 import org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.homio.app.model.entity.widget.impl.chart.HasLineChartBehaviour;
-import org.homio.bundle.api.EntityContextWidget.ChartType;
-import org.homio.bundle.api.ui.field.UIField;
 
 @Getter
 @Setter

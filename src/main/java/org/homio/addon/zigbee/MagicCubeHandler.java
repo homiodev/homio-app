@@ -1,9 +1,9 @@
-package org.homio.bundle.zigbee;
+package org.homio.addon.zigbee;
 
 import java.util.function.BiPredicate;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.homio.bundle.api.state.State;
+import org.homio.api.state.State;
 
 final class MagicCubeHandler {
 

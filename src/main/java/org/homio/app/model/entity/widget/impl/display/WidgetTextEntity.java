@@ -1,10 +1,10 @@
 package org.homio.app.model.entity.widget.impl.display;
 
 import jakarta.persistence.Entity;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldCodeEditor;
+import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldCodeEditor;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
 
 @Entity
 public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> {

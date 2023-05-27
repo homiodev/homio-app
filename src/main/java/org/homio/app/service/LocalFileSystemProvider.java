@@ -2,8 +2,8 @@ package org.homio.app.service;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.homio.api.fs.BaseCachedFileSystemProvider.fixPath;
 import static org.homio.app.utils.InternalUtil.TIKA;
-import static org.homio.bundle.api.fs.BaseCachedFileSystemProvider.fixPath;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -33,11 +33,11 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.fs.FileSystemProvider;
+import org.homio.api.fs.TreeNode;
+import org.homio.api.fs.archive.ArchiveUtil;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.LocalBoardEntity;
-import org.homio.bundle.api.fs.FileSystemProvider;
-import org.homio.bundle.api.fs.TreeNode;
-import org.homio.bundle.api.fs.archive.ArchiveUtil;
-import org.homio.bundle.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

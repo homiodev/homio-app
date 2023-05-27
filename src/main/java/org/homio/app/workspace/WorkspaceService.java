@@ -18,7 +18,22 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.app.manager.BundleService;
+import org.homio.addon.fs.Scratch3FSBlocks;
+import org.homio.addon.hardware.Scratch3HardwareBlocks;
+import org.homio.addon.http.Scratch3NetworkBlocks;
+import org.homio.addon.media.Scratch3AudioBlocks;
+import org.homio.addon.media.Scratch3ImageEditBlocks;
+import org.homio.addon.ui.Scratch3UIBlocks;
+import org.homio.api.AddonEntrypoint;
+import org.homio.api.EntityContext;
+import org.homio.api.exception.ServerException;
+import org.homio.api.util.CommonUtils;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.WorkspaceEntity;
+import org.homio.api.workspace.WorkspaceEventListener;
+import org.homio.api.workspace.scratch.Scratch3Block;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.homio.app.manager.AddonService;
 import org.homio.app.repository.device.WorkspaceRepository;
 import org.homio.app.setting.system.SystemClearWorkspaceButtonSetting;
 import org.homio.app.spring.ContextRefreshed;
@@ -29,21 +44,6 @@ import org.homio.app.workspace.block.core.Scratch3EventsBlocks;
 import org.homio.app.workspace.block.core.Scratch3MiscBlocks;
 import org.homio.app.workspace.block.core.Scratch3MutatorBlocks;
 import org.homio.app.workspace.block.core.Scratch3OperatorBlocks;
-import org.homio.bundle.api.BundleEntrypoint;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.exception.ServerException;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.WorkspaceEntity;
-import org.homio.bundle.api.workspace.WorkspaceEventListener;
-import org.homio.bundle.api.workspace.scratch.Scratch3Block;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.homio.bundle.fs.Scratch3FSBlocks;
-import org.homio.bundle.hardware.Scratch3HardwareBlocks;
-import org.homio.bundle.http.Scratch3NetworkBlocks;
-import org.homio.bundle.media.Scratch3AudioBlocks;
-import org.homio.bundle.media.Scratch3ImageEditBlocks;
-import org.homio.bundle.ui.Scratch3UIBlocks;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 
@@ -84,7 +84,7 @@ public class WorkspaceService implements ContextRefreshed {
 
     // constructor parameters
     private final EntityContext entityContext;
-    private final BundleService bundleService;
+    private final AddonService addonService;
 
     @Override
     public void onContextRefresh() {
@@ -341,24 +341,18 @@ public class WorkspaceService implements ContextRefreshed {
         }
 
         if (!systemScratches.contains(scratch3ExtensionBlock.getClass())) {
-            BundleEntrypoint bundleEntrypoint =
-                    bundleService.findBundle(scratch3ExtensionBlock.getId());
-            if (bundleEntrypoint == null && scratch3ExtensionBlock.getId().contains("-")) {
-                String tryId =
-                        scratch3ExtensionBlock
-                                .getId()
-                                .substring(0, scratch3ExtensionBlock.getId().indexOf("-"));
-                bundleEntrypoint = bundleService.findBundle(tryId);
+            AddonEntrypoint addonEntrypoint = addonService.findAddonEntrypoint(scratch3ExtensionBlock.getId());
+            if (addonEntrypoint == null && scratch3ExtensionBlock.getId().contains("-")) {
+                String tryId = scratch3ExtensionBlock.getId().substring(0, scratch3ExtensionBlock.getId().indexOf("-"));
+                addonEntrypoint = addonService.findAddonEntrypoint(tryId);
             }
             int order = Integer.MAX_VALUE;
-            if (bundleEntrypoint == null) {
+            if (addonEntrypoint == null) {
                 if (!inlineScratches.contains(scratch3ExtensionBlock.getClass())) {
-                    throw new ServerException(
-                            "Unable to find bundle context with id: "
-                                    + scratch3ExtensionBlock.getId());
+                    throw new ServerException("Unable to find addon context with id: " + scratch3ExtensionBlock.getId());
                 }
             } else {
-                order = bundleEntrypoint.order();
+                order = addonEntrypoint.order();
             }
             Scratch3ExtensionImpl scratch3ExtensionImpl =
                     new Scratch3ExtensionImpl(scratch3ExtensionBlock, order);

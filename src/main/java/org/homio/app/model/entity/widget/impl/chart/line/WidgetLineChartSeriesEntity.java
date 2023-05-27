@@ -1,14 +1,14 @@
 package org.homio.app.model.entity.widget.impl.chart.line;
 
 import jakarta.persistence.Entity;
+import org.homio.api.entity.widget.ability.HasTimeValueSeries;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnoreParent;
+import org.homio.api.ui.field.selection.UIFieldBeanSelection;
+import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
-import org.homio.bundle.api.entity.widget.ability.HasTimeValueSeries;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldIgnoreParent;
-import org.homio.bundle.api.ui.field.selection.UIFieldBeanSelection;
-import org.homio.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 @Entity
 public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineChartEntity>

@@ -20,27 +20,28 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.model.Contributor;
 import org.apache.maven.model.Model;
-import org.homio.app.extloader.BundleContext;
-import org.homio.app.extloader.BundleContextService;
+import org.homio.api.EntityContext;
+import org.homio.api.cache.CachedValue;
+import org.homio.api.fs.archive.ArchiveUtil;
+import org.homio.api.fs.archive.ArchiveUtil.UnzipFileIssueHandler;
+import org.homio.api.repository.GitHubProject;
+import org.homio.api.setting.SettingPluginPackageInstall;
+import org.homio.api.ui.field.ProgressBar;
+import org.homio.api.util.CommonUtils;
+import org.homio.api.util.Curl;
+import org.homio.app.extloader.AddonContext;
+import org.homio.app.extloader.AddonContextService;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.cache.CachedValue;
-import org.homio.bundle.api.fs.archive.ArchiveUtil;
-import org.homio.bundle.api.fs.archive.ArchiveUtil.UnzipFileIssueHandler;
-import org.homio.bundle.api.repository.GitHubProject;
-import org.homio.bundle.api.setting.SettingPluginPackageInstall;
-import org.homio.bundle.api.ui.field.ProgressBar;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.util.Curl;
 import org.json.JSONObject;
 
 @Log4j2
-public class SystemBundleLibraryManagerSetting
+public class SystemAddonLibraryManagerSetting
     implements SettingPluginPackageInstall, CoreSettingPlugin<JSONObject> {
 
-    private static final CachedValue<Collection<PackageModel>, EntityContext> addons = new CachedValue<>(Duration.ofHours(24),
-        SystemBundleLibraryManagerSetting::readAddons);
+    private static final CachedValue<Collection<PackageModel>, EntityContext> addons =
+        new CachedValue<>(Duration.ofHours(24),
+            SystemAddonLibraryManagerSetting::readAddons);
 
     @Override
     public int order() {
@@ -73,16 +74,16 @@ public class SystemBundleLibraryManagerSetting
         return new PackageContext(
             null,
             ((EntityContextImpl) entityContext)
-                .getEntityContextBundle()
-                .getBundles().values().stream()
-                .filter(b -> b.getBundleContext() != null)
-                .map(b -> build(b.getBundleContext()))
+                .getEntityContextAddon()
+                .getAddons().values().stream()
+                .filter(b -> b.getAddonContext() != null)
+                .map(b -> build(b.getAddonContext()))
                 .collect(Collectors.toSet()));
     }
 
     @Override
     public void installPackage(EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
-        entityContext.getBean(BundleContextService.class).installBundle(
+        entityContext.getBean(AddonContextService.class).installAddon(
             packageRequest.getName(),
             packageRequest.getUrl(),
             packageRequest.getVersion());
@@ -91,7 +92,7 @@ public class SystemBundleLibraryManagerSetting
     @Override
     public void unInstallPackage(
         EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
-        entityContext.getBean(BundleContextService.class).uninstallBundle(packageRequest.getName());
+        entityContext.getBean(AddonContextService.class).uninstallAddon(packageRequest.getName());
     }
 
     @Override
@@ -99,13 +100,13 @@ public class SystemBundleLibraryManagerSetting
         return null;
     }
 
-    private PackageModel build(BundleContext bundleContext) {
+    private PackageModel build(AddonContext addonContext) {
         return new PackageModel(
-            bundleContext.getBundleID(),
-            bundleContext.getPomFile().getName(),
-            bundleContext.getPomFile().getDescription())
-            .setVersion(bundleContext.getVersion())
-            .setReadme(bundleContext.getPomFile().getDescription());
+            addonContext.getAddonID(),
+            addonContext.getPomFile().getName(),
+            addonContext.getPomFile().getDescription())
+            .setVersion(addonContext.getVersion())
+            .setReadme(addonContext.getPomFile().getDescription());
     }
 
     private static Collection<PackageModel> readAddons(EntityContext entityContext) {
@@ -163,11 +164,7 @@ public class SystemBundleLibraryManagerSetting
                 // String jarFile = addonRepo.getRepo() + ".jar";
                 Model pomModel = addonRepo.getPomModel();
                 String key = pomModel.getArtifactId();
-                PackageModel entity = new PackageModel(
-                    key.startsWith("addon-") ? key.substring("addon-".length()) : key,
-                    pomModel.getName(),
-                    pomModel.getDescription()
-                );
+                PackageModel entity = new PackageModel(key, pomModel.getName(), pomModel.getDescription());
                 entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s.jar", repository, lastReleaseVersion, addonRepo.getRepo()));
                 entity.setAuthor(pomModel.getDevelopers().stream()
                                          .map(Contributor::getName)

@@ -2,18 +2,18 @@ package org.homio.app.manager.install;
 
 import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
-import static org.homio.bundle.api.util.CommonUtils.FFMPEG_LOCATION;
+import static org.homio.api.util.CommonUtils.FFMPEG_LOCATION;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextHardware;
+import org.homio.api.entity.dependency.DependencyExecutableInstaller;
+import org.homio.api.ui.field.ProgressBar;
+import org.homio.api.util.CommonUtils;
+import org.homio.api.util.Curl;
 import org.homio.app.config.AppProperties;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextHardware;
-import org.homio.bundle.api.entity.dependency.DependencyExecutableInstaller;
-import org.homio.bundle.api.ui.field.ProgressBar;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.util.Curl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

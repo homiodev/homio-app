@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContextHardware;
 import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.bundle.api.EntityContextHardware;
-import org.homio.bundle.hquery.hardware.other.MachineHardwareRepository;
+import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

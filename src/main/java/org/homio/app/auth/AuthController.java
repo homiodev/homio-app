@@ -8,16 +8,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.UserEntity;
+import org.homio.api.entity.UserEntity.UserType;
+import org.homio.api.ui.UI.Color;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppProperties;
-import org.homio.app.manager.common.EntityContextBundleImpl;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.EntityContextAddonImpl;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.UserEntity;
-import org.homio.bundle.api.entity.UserEntity.UserType;
-import org.homio.bundle.api.ui.UI.Color;
-import org.homio.bundle.api.util.CommonUtils;
 import org.json.JSONObject;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -49,7 +48,7 @@ public class AuthController {
         String credentials = principal.getUsername();
         String[] items = credentials.split("~~~");
         addUserNotificationBlock(items[0], items[1], false);
-        String version = format("%s-%s-%s", appProperties.getVersion(), EntityContextBundleImpl.BUNDLE_UPDATE_COUNT, CommonUtils.RUN_COUNT);
+        String version = format("%s-%s-%s", appProperties.getVersion(), EntityContextAddonImpl.ADDON_UPDATE_COUNT, CommonUtils.RUN_COUNT);
         return new StatusResponse(200, version);
     }
 

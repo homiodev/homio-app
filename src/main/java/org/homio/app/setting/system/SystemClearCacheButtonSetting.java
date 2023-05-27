@@ -1,9 +1,9 @@
 package org.homio.app.setting.system;
 
-import static org.homio.bundle.api.util.Constants.DANGER_COLOR;
+import static org.homio.api.util.Constants.DANGER_COLOR;
 
+import org.homio.api.setting.SettingPluginButton;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginButton;
 import org.json.JSONObject;
 
 public class SystemClearCacheButtonSetting

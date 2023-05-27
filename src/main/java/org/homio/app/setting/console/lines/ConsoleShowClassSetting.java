@@ -1,8 +1,8 @@
 package org.homio.app.setting.console.lines;
 
-import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.setting.SettingPluginBoolean;
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.setting.SettingPluginBoolean;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
 
 public class ConsoleShowClassSetting
         implements ConsoleSettingPlugin<Boolean>, SettingPluginBoolean {

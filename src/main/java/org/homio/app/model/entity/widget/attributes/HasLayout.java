@@ -1,6 +1,6 @@
 package org.homio.app.model.entity.widget.attributes;
 
-import org.homio.bundle.api.entity.HasJsonData;
+import org.homio.api.entity.HasJsonData;
 
 public interface HasLayout extends HasJsonData {
 

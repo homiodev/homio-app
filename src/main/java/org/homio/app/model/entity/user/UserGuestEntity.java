@@ -1,7 +1,7 @@
 package org.homio.app.model.entity.user;
 
 import jakarta.persistence.Entity;
-import org.homio.bundle.api.ui.UISidebarChildren;
+import org.homio.api.ui.UISidebarChildren;
 import org.jetbrains.annotations.NotNull;
 
 @Entity

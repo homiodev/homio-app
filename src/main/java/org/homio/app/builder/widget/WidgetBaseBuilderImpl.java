@@ -1,11 +1,11 @@
 package org.homio.app.builder.widget;
 
 import lombok.Getter;
+import org.homio.api.EntityContextWidget.WidgetBaseBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
-import org.homio.bundle.api.EntityContextWidget.WidgetBaseBuilder;
 import org.jetbrains.annotations.NotNull;
 
 @Getter

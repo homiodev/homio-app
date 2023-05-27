@@ -1,7 +1,7 @@
 package org.homio.app.repository.crud.base;
 
 import jakarta.persistence.EntityManager;
-import org.homio.bundle.api.model.HasEntityIdentifier;
+import org.homio.api.model.HasEntityIdentifier;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
 import org.springframework.transaction.annotation.Transactional;

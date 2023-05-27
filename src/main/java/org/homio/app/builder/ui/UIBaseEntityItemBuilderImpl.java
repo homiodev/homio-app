@@ -5,9 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Getter;
-import org.homio.bundle.api.ui.action.UIActionHandler;
-import org.homio.bundle.api.ui.field.action.v1.UIEntityItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
+import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.jetbrains.annotations.NotNull;
 
 @Getter

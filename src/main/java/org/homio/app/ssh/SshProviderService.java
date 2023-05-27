@@ -2,7 +2,7 @@ package org.homio.app.ssh;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.homio.bundle.api.service.EntityService;
+import org.homio.api.service.EntityService;
 
 public interface SshProviderService<T extends SshBaseEntity> extends EntityService.ServiceInstance {
 

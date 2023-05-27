@@ -1,4 +1,4 @@
-package org.homio.bundle.zigbee;
+package org.homio.addon.zigbee;
 
 import static java.lang.String.format;
 
@@ -8,24 +8,24 @@ import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.addon.z2m.Z2MEntrypoint;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.entity.types.MicroControllerBaseEntity;
+import org.homio.api.entity.zigbee.ZigBeeBaseCoordinatorEntity;
+import org.homio.api.entity.zigbee.ZigBeeDeviceBaseEntity;
+import org.homio.api.entity.zigbee.ZigBeeProperty;
+import org.homio.api.exception.ProhibitedExecution;
+import org.homio.api.model.Status;
+import org.homio.api.state.DecimalType;
+import org.homio.api.state.OnOffType;
+import org.homio.api.state.State;
+import org.homio.api.workspace.BroadcastLock;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.MenuBlock.ServerMenuBlock;
+import org.homio.api.workspace.scratch.MenuBlock.StaticMenuBlock;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.workspace.WorkspaceBlockImpl;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextBGP.ThreadContext;
-import org.homio.bundle.api.entity.types.MicroControllerBaseEntity;
-import org.homio.bundle.api.entity.zigbee.ZigBeeBaseCoordinatorEntity;
-import org.homio.bundle.api.entity.zigbee.ZigBeeDeviceBaseEntity;
-import org.homio.bundle.api.entity.zigbee.ZigBeeProperty;
-import org.homio.bundle.api.exception.ProhibitedExecution;
-import org.homio.bundle.api.model.Status;
-import org.homio.bundle.api.state.DecimalType;
-import org.homio.bundle.api.state.OnOffType;
-import org.homio.bundle.api.state.State;
-import org.homio.bundle.api.workspace.BroadcastLock;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.scratch.MenuBlock.ServerMenuBlock;
-import org.homio.bundle.api.workspace.scratch.MenuBlock.StaticMenuBlock;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.homio.bundle.z2m.Z2MEntrypoint;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
@@ -102,12 +102,12 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
             });
 
         // command blocks
-        blockCommand(80, "read_property", "Read [PROPERTY] value of [DEVICE]", workspaceBlock -> {
-            getZigBeeProperty(workspaceBlock, deviceReadMenu, readPropertyMenu).readValue();
-        }, block -> {
-            block.addArgument("PROPERTY", readPropertyMenu);
-            block.addArgument("DEVICE", deviceReadMenu);
-        });
+        blockCommand(80, "read_property", "Read [PROPERTY] value of [DEVICE]", workspaceBlock ->
+                getZigBeeProperty(workspaceBlock, deviceReadMenu, readPropertyMenu).readValue(),
+            block -> {
+                block.addArgument("PROPERTY", readPropertyMenu);
+                block.addArgument("DEVICE", deviceReadMenu);
+            });
 
         blockCommand(81, "write_property", "Write [PROPERTY] value [VALUE] of [DEVICE]", workspaceBlock -> {
             Object value = workspaceBlock.getInput(VALUE, true);
@@ -192,9 +192,8 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
                                                            .tap(context -> ((WorkspaceBlockImpl) workspaceBlock).setThreadContext(context))
                                                            .execute(next::handle, false);
             // remove listener from property. ThreadContext will be cancelled automatically
-            workspaceBlock.onRelease(() -> {
-                property.removeChangeListener(workspaceBlock.getId());
-            });
+            workspaceBlock.onRelease(() ->
+                property.removeChangeListener(workspaceBlock.getId()));
             // subscribe to lock that will restart delay thread after event
             workspaceBlock.subscribeToLock(eventOccurredLock, delayThread::reset);
         });
@@ -205,9 +204,7 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
             ZigBeeProperty property = getDeviceProperty(workspaceBlock);
             BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock);
 
-            property.addChangeListener(workspaceBlock.getId(), state -> {
-                lock.signalAll();
-            });
+            property.addChangeListener(workspaceBlock.getId(), state -> lock.signalAll());
             workspaceBlock.onRelease(() -> property.removeChangeListener(workspaceBlock.getId()));
             workspaceBlock.subscribeToLock(lock, next::handle);
         });

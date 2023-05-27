@@ -67,7 +67,7 @@ public class SecurityConfiguration {
                     "/rest/media/video/playback/**/thumbnail/**",
                     "/rest/auth/status",
                     "/rest/auth/login",
-                    "/rest/bundle/image/**",
+                    "/rest/addon/image/**",
                     "/rest/device/**").permitAll();
                 authorize.requestMatchers("/rest/**").authenticated();
             });

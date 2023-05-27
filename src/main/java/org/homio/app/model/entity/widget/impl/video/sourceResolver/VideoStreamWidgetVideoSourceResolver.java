@@ -1,10 +1,10 @@
 package org.homio.app.model.entity.widget.impl.video.sourceResolver;
 
 import lombok.RequiredArgsConstructor;
+import org.homio.api.EntityContext;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.video.BaseVideoStreamEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.bundle.api.video.BaseVideoStreamEntity;
 import org.springframework.stereotype.Component;
 
 @Component

@@ -1,6 +1,6 @@
 package org.homio.app.rest;
 
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;

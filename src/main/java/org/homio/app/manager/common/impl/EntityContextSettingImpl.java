@@ -1,9 +1,9 @@
 package org.homio.app.manager.common.impl;
 
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 import static org.homio.app.manager.common.impl.EntityContextUIImpl.GlobalSendType.setting;
 import static org.homio.app.model.entity.SettingEntity.getKey;
 import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
-import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.pivovarit.function.ThrowingConsumer;
 import java.lang.reflect.Modifier;
@@ -20,17 +20,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContextSetting;
+import org.homio.api.model.OptionModel;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
+import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.setting.system.SystemPlaceSetting;
-import org.homio.bundle.api.EntityContextSetting;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginOptions;
-import org.homio.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
-import org.homio.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -182,11 +182,11 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     @SneakyThrows
-    public void updatePlugins(Class<? extends SettingPlugin> settingPluginClass, boolean addBundle) {
+    public void updatePlugins(Class<? extends SettingPlugin> settingPluginClass, boolean addAddon) {
         if (Modifier.isPublic(settingPluginClass.getModifiers())) {
             SettingPlugin settingPlugin = settingPluginClass.newInstance();
             String key = SettingEntity.getKey(settingPlugin);
-            if (addBundle) {
+            if (addAddon) {
                 settingPluginsByPluginKey.put(key, settingPlugin);
                 settingPluginsByPluginClass.put(settingPluginClass.getName(), settingPlugin);
             } else {
@@ -287,10 +287,10 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         }
     }
 
-    public void fetchSettingPlugins(String basePackage, ClassFinder classFinder, boolean addBundle) {
+    public void fetchSettingPlugins(String basePackage, ClassFinder classFinder, boolean addAddon) {
         List<Class<? extends SettingPlugin>> classes = classFinder.getClassesWithParent(SettingPlugin.class, basePackage);
         for (Class<? extends SettingPlugin> settingPlugin : classes) {
-            updatePlugins(settingPlugin, addBundle);
+            updatePlugins(settingPlugin, addAddon);
         }
     }
 }

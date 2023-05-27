@@ -1,7 +1,7 @@
 package org.homio.app.repository.device;
 
-import org.homio.bundle.api.entity.PinBaseEntity;
-import org.homio.bundle.api.repository.AbstractRepository;
+import org.homio.api.entity.PinBaseEntity;
+import org.homio.api.repository.AbstractRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository

@@ -1,11 +1,11 @@
 package org.homio.app.model.entity.widget.impl.fm;
 
 import jakarta.persistence.Entity;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldIgnoreParent;
+import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldIgnoreParent;
-import org.homio.bundle.api.ui.field.selection.UIFieldTreeNodeSelection;
 
 @Entity
 public class WidgetFMSeriesEntity extends WidgetSeriesEntity<WidgetFMEntity>

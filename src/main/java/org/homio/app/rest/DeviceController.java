@@ -1,10 +1,10 @@
 package org.homio.app.rest;
 
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import lombok.RequiredArgsConstructor;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.bluetooth.BluetoothBundleEntrypoint;
+import org.homio.addon.bluetooth.BluetoothEntrypoint;
+import org.homio.api.model.OptionModel;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,17 +18,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class DeviceController {
 
-    private final BluetoothBundleEntrypoint bluetoothBundleEntrypoint;
+    private final BluetoothEntrypoint bluetoothEntrypoint;
 
     @GetMapping("/characteristic/{uuid}")
     public OptionModel getDeviceCharacteristic(@PathVariable("uuid") String uuid) {
-        String characteristic = bluetoothBundleEntrypoint.getDeviceCharacteristic(uuid);
+        String characteristic = bluetoothEntrypoint.getDeviceCharacteristic(uuid);
         return characteristic == null ? null : OptionModel.key(characteristic);
     }
 
     @PutMapping("/characteristic/{uuid}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void setDeviceCharacteristic(@PathVariable("uuid") String uuid, @RequestBody byte[] value) {
-        bluetoothBundleEntrypoint.setDeviceCharacteristic(uuid, value);
+        bluetoothEntrypoint.setDeviceCharacteristic(uuid, value);
     }
 }

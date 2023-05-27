@@ -1,7 +1,7 @@
 package org.homio.app.repository;
 
-import org.homio.bundle.api.entity.types.MiscEntity;
-import org.homio.bundle.api.repository.AbstractRepository;
+import org.homio.api.entity.types.MiscEntity;
+import org.homio.api.repository.AbstractRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository("miscRepository")

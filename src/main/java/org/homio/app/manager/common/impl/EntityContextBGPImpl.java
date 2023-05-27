@@ -37,20 +37,20 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP;
+import org.homio.api.exception.ServerException;
+import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.service.EntityService.WatchdogService;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.ui.field.ProgressBar;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppProperties;
 import org.homio.app.json.BgpProcessResponse;
 import org.homio.app.manager.bgp.InternetAvailabilityBgpService;
 import org.homio.app.manager.bgp.WatchdogBgpService;
 import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextBGP;
-import org.homio.bundle.api.exception.ServerException;
-import org.homio.bundle.api.model.HasEntityIdentifier;
-import org.homio.bundle.api.service.EntityService.WatchdogService;
-import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.ui.field.ProgressBar;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.hquery.LinesReader;
+import org.homio.hquery.LinesReader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -68,7 +68,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @Getter private final Map<String, ThreadContextImpl<?>> schedulers = new ConcurrentHashMap<>();
 
-    // not all threads may be run inside ThreadContextImpl, so we need bundle able to register
+    // not all threads may be run inside ThreadContextImpl, so we need addon able to register
     // custom
     // threads to show them on ui
     @Getter
