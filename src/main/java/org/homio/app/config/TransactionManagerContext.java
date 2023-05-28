@@ -18,13 +18,14 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Log4j2
-//@Component
-public class TransactionManagerImpl {
+@Component
+public class TransactionManagerContext {
 
     private final ApplicationContext applicationContext;
     private final Map<String, Object> jpaProperties;
@@ -35,14 +36,15 @@ public class TransactionManagerImpl {
     @Getter
     private EntityManager entityManager;
 
-    public TransactionManagerImpl(
+    public TransactionManagerContext(
         ApplicationContext applicationContext,
         EntityManagerFactory entityManagerFactory) {
+
         this.applicationContext = applicationContext;
         this.entityManagerFactory = entityManagerFactory;
 
         this.jpaProperties = applicationContext.getBean(LocalContainerEntityManagerFactoryBean.class).getJpaPropertyMap();
-        this.jpaTransactionManager = (JpaTransactionManager) applicationContext.getBean("transactionManager");
+        this.jpaTransactionManager = (JpaTransactionManager) applicationContext.getBean("transactionManagerContext");
 
         this.transactionTemplate = new TransactionTemplate(jpaTransactionManager);
         this.readOnlyTransactionTemplate = new TransactionTemplate(jpaTransactionManager);
@@ -51,12 +53,15 @@ public class TransactionManagerImpl {
         this.entityManager = entityManagerFactory.createEntityManager();
     }
 
-    /*@Override
     public <T> T executeInTransactionReadOnly(Function<EntityManager, T> handler) {
         return readOnlyTransactionTemplate.execute(status -> {
             return handler.apply(entityManager);
         });
-    }*/
+    }
+
+    public <T> T executeWithoutTransaction(Function<EntityManager, T> handler) {
+        return handler.apply(entityManager);
+    }
 
     public <T> T executeInTransaction(Function<EntityManager, T> handler) {
         return transactionTemplate.execute(status -> handler.apply(entityManager));

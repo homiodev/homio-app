@@ -16,7 +16,6 @@ public class WidgetSeriesRepository extends AbstractRepository<WidgetSeriesEntit
     }
 
     @Override
-    @Transactional(readOnly = true)
     public WidgetSeriesEntity getByEntityID(String entityID) {
         return super.getByEntityID(entityID);
     }

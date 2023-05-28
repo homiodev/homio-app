@@ -59,6 +59,7 @@ import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.builder.widget.EntityContextWidgetImpl;
 import org.homio.app.config.AppProperties;
 import org.homio.app.config.ExtRequestMappingHandlerMapping;
+import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.extloader.AddonContext;
 import org.homio.app.extloader.AddonContextService;
 import org.homio.app.manager.AddonService;
@@ -173,7 +174,7 @@ public class EntityContextImpl implements EntityContext {
     private ApplicationContext applicationContext;
     private AllDeviceRepository allDeviceRepository;
     private WorkspaceService workspaceService;
-    //private TransactionManager transactionManager;
+    private TransactionManagerContext transactionManagerContext;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public EntityContextImpl(
@@ -211,7 +212,7 @@ public class EntityContextImpl implements EntityContext {
         MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
 
         this.allDeviceRepository = this.applicationContext.getBean(AllDeviceRepository.class);
-        // this.transactionManager = applicationContext.getBean(TransactionManager.class);
+        this.transactionManagerContext = applicationContext.getBean(TransactionManagerContext.class);
         this.workspaceService = applicationContext.getBean(WorkspaceService.class);
         this.entityManager = applicationContext.getBean(EntityManager.class);
 
@@ -391,11 +392,11 @@ public class EntityContextImpl implements EntityContext {
         //noinspection ConstantConditions
         T oldEntity = entityID == null ? null : getEntity(entityID, false);
 
-        T updatedEntity = null;/*transactionManager.executeInTransaction(entityManager -> {
+        T updatedEntity = transactionManagerContext.executeInTransaction(entityManager -> {
             T t = (T) repository.save(entity);
             t.afterFetch(this);
             return t;
-        });*/
+        });
 
         if (fireNotifyListeners) {
             if (oldEntity == null) {

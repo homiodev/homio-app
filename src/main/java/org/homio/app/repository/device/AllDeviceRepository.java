@@ -14,7 +14,6 @@ public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public DeviceBaseEntity getByEntityID(String entityID) {
         return super.getByEntityID(entityID);
     }

@@ -1,29 +1,23 @@
 package org.homio.app.repository;
 
-import java.lang.reflect.Modifier;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.TypedQuery;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
+import java.lang.reflect.Modifier;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.Hibernate;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.util.CommonUtils;
-import org.springframework.transaction.annotation.Transactional;
+import org.homio.app.config.TransactionManagerContext;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Log4j2
 public class AbstractRepository<T extends BaseEntity> implements PureRepository<T> {
@@ -31,15 +25,14 @@ public class AbstractRepository<T extends BaseEntity> implements PureRepository<
     private final Class<T> clazz;
     private final String prefix;
 
-    @PersistenceContext
-    protected EntityManager em;
+    @Autowired
+    protected TransactionManagerContext tmc;
 
     public AbstractRepository(Class<T> clazz) {
         this.clazz = clazz;
         this.prefix = Modifier.isAbstract(clazz.getModifiers()) ? null : CommonUtils.newInstance(clazz).getEntityPrefix();
     }
 
-    @Transactional(readOnly = true)
     public T getByName(String name) {
         return findSingleByField("name", name);
     }
@@ -51,60 +44,41 @@ public class AbstractRepository<T extends BaseEntity> implements PureRepository<
      * @return saved entity
      */
     public T save(T entity) {
-        return em.merge(entity);
+        return tmc.executeWithoutTransaction(em -> em.merge(entity));
     }
 
-    @Transactional
     @Override
     public void flushCashedEntity(T entity) {
-        em.merge(entity);
+        tmc.executeInTransaction(em -> {
+            em.merge(entity);
+        });
     }
 
-    @Transactional(readOnly = true)
     public List<T> listAll() {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<T> cq = cb.createQuery(getEntityClass());
-        Root<T> rootEntry = cq.from(getEntityClass());
-        CriteriaQuery<T> all = cq.select(rootEntry);
-        TypedQuery<T> allQuery = em.createQuery(all);
-        return allQuery.getResultList();
+        String sql = "FROM " + getEntityClass().getSimpleName();
+        return tmc.executeInTransactionReadOnly(em ->
+            em.createQuery(sql, getEntityClass()).getResultList());
     }
 
-    @Transactional(readOnly = true)
     public T getByEntityID(String entityID) {
         return findSingleByField("entityID", entityID);
     }
 
-    @Transactional(readOnly = true)
-    public boolean isExistsByEntityID(String entityID) {
-        return findSingleByField("entityID", entityID) != null;
+    protected List<T> findByField(EntityManager entityManager, String fieldName, Object value) {
+        String sql = "FROM " + getEntityClass().getSimpleName() + " where " + fieldName + " = :value";
+        return entityManager.createQuery(sql, getEntityClass()).setParameter("value", value).getResultList();
     }
 
-    protected List<T> findByField(String fieldName, Object value) {
-        return em.createQuery("FROM " + getEntityClass().getSimpleName() + " where " + fieldName + " = :value", getEntityClass())
-                .setParameter("value", value).getResultList();
-    }
-
-    protected List<T> findByFieldRange(String fieldName, Object... values) {
-        String inStatement = Stream.of(values).map(Object::toString).collect(Collectors.joining(",", "'", "'"));
-        TypedQuery<T> query = em.createQuery("FROM " + getEntityClass().getSimpleName() + " where " + fieldName + " in (:value)",
-                        getEntityClass())
-                .setParameter("value", inStatement);
-        return query.getResultList();
-    }
-
-    @Transactional(readOnly = true)
     public Long size() {
-        return em.createQuery("SELECT count(t.id) FROM " + getEntityClass().getSimpleName() + " as t", Long.class)
-                .getSingleResult();
+        String sql = "SELECT count(t.id) FROM " + getEntityClass().getSimpleName() + " as t";
+        return tmc.executeWithoutTransaction(em -> em.createQuery(sql, Long.class).getSingleResult());
     }
 
-    @Transactional(readOnly = true)
     protected T findSingleByField(String fieldName, Object value) {
-        return findByField(fieldName, value).stream().findFirst().orElse(null);
+        return tmc.executeInTransactionReadOnly(entityManager ->
+            findByField(entityManager, fieldName, value).stream().findFirst().orElse(null));
     }
 
-    @Transactional(readOnly = true)
     public T getByEntityIDWithFetchLazy(String entityID, boolean ignoreNotUILazy) {
         T byEntityID = getByEntityID(entityID);
         if (byEntityID != null) {
@@ -137,15 +111,15 @@ public class AbstractRepository<T extends BaseEntity> implements PureRepository<
         });
     }
 
-    @Transactional
     public T deleteByEntityID(String entityID) {
-        T entity = getByEntityID(entityID);
-        if (entity != null) {
-            em.remove(entity);
-            log.warn("Entity <{}> was removed", entity);
-        }
-
-        return entity;
+        return tmc.executeInTransaction(em -> {
+            T entity = findByField(em, "entityID", entityID).stream().findFirst().orElse(null);
+            if (entity != null) {
+                em.remove(entity);
+                log.warn("Entity <{}> was removed", entity);
+            }
+            return entity;
+        });
     }
 
     @Override

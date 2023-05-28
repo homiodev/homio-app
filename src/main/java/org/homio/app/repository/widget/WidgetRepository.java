@@ -16,7 +16,6 @@ public class WidgetRepository extends AbstractRepository<WidgetBaseEntity> {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public WidgetBaseEntity getByEntityID(String entityID) {
         return super.getByEntityID(entityID);
     }
