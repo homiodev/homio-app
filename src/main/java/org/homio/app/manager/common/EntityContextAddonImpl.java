@@ -53,13 +53,13 @@ public class EntityContextAddonImpl {
         ArrayList<AddonEntrypoint> addonEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(AddonEntrypoint.class).values());
         Collections.sort(addonEntrypoints);
         for (AddonEntrypoint entrypoint : addonEntrypoints) {
-            this.addons.put(entrypoint.getAddonId(), new InternalAddonContext(entrypoint, null));
-            log.info("Init addon: <{}>", entrypoint.getAddonId());
+            this.addons.put(entrypoint.getAddonID(), new InternalAddonContext(entrypoint, null));
+            log.info("Init addon: <{}>", entrypoint.getAddonID());
             try {
                 entrypoint.init();
                 entrypoint.onContextRefresh();
             } catch (Exception ex) {
-                log.fatal("Unable to init addon: " + entrypoint.getAddonId(), ex);
+                log.fatal("Unable to init addon: " + entrypoint.getAddonID(), ex);
                 throw ex;
             }
         }
@@ -87,9 +87,9 @@ public class EntityContextAddonImpl {
             entityContext.updateBeans(addonContext, context, true);
 
             for (AddonEntrypoint addonEntrypoint : context.getBeansOfType(AddonEntrypoint.class).values()) {
-                log.info("Init addon: <{}>", addonEntrypoint.getAddonId());
+                log.info("Init addon: <{}>", addonEntrypoint.getAddonID());
                 addonEntrypoint.init();
-                this.addons.put(addonEntrypoint.getAddonId(), new InternalAddonContext(addonEntrypoint, addonContext));
+                this.addons.put(addonEntrypoint.getAddonID(), new InternalAddonContext(addonEntrypoint, addonContext));
             }
         }
         applicationContext.getBean(TransactionManagerImpl.class).invalidate();

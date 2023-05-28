@@ -145,7 +145,7 @@ public class SettingEntity extends BaseEntity<SettingEntity> {
     }
 
     @Override
-    public String getAddon() {
+    public String getAddonID() {
         // dynamic settings(firmata has no parameters)
         SettingPlugin plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
         return plugin == null ? null : SettingRepository.getSettingAddonName(getEntityContext(), plugin.getClass());

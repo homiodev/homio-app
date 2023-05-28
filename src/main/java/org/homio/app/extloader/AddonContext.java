@@ -152,7 +152,7 @@ public class AddonContext {
             Class<? extends AddonEntrypoint> entrypointClass = addonEntrypointSet.iterator().next();
 
             AddonEntrypoint addonEntrypoint = createClassInstance(entrypointClass);
-            return addonEntrypoint.getAddonId();
+            return addonEntrypoint.getAddonID();
         }
 
         void configureSpringContext(Reflections reflections, ApplicationContext parentContext, String addonID, ClassLoader classLoader) {

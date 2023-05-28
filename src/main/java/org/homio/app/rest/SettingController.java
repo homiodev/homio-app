@@ -273,21 +273,21 @@ public class SettingController implements ContextRefreshed {
                     .collect(Collectors.toSet());
 
         for (AddonEntrypoint addonEntrypoint : addonService.getAddons()) {
-            if (addonSettings.contains(addonEntrypoint.getAddonId())) {
+            if (addonSettings.contains(addonEntrypoint.getAddonID())) {
                 // find if description exists inside lang.json
-                String descriptionKey = addonEntrypoint.getAddonId() + ".setting.description";
+                String descriptionKey = addonEntrypoint.getAddonID() + ".setting.description";
                 String description = Lang.findPathText(descriptionKey);
                 if (description != null) {
                     SettingEntity settingEntity = new SettingEntity() {
                         @Override
-                        public String getAddon() {
-                            return addonEntrypoint.getAddonId();
+                        public String getAddonID() {
+                            return addonEntrypoint.getAddonID();
                         }
                     };
                     settingEntity
                         .setSettingType(UIFieldType.Description)
                         .setVisible(true)
-                        .setEntityID(SettingEntity.PREFIX + addonEntrypoint.getAddonId() + "_Description")
+                        .setEntityID(SettingEntity.PREFIX + addonEntrypoint.getAddonID() + "_Description")
                         .setValue(descriptionKey)
                         .setOrder(1);
                     this.descriptionSettings.add(settingEntity);

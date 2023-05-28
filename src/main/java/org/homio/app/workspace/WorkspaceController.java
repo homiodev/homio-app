@@ -60,7 +60,7 @@ public class WorkspaceController {
     @GetMapping("/extension/{addonID}.png")
     public ResponseEntity<InputStreamResource> getExtensionImage(@PathVariable("addonID") String addonID) {
         AddonEntrypoint addonEntrypoint = addonService.getAddon(addonID);
-        InputStream stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("extensions/" + addonEntrypoint.getAddonId() + ".png");
+        InputStream stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("extensions/" + addonEntrypoint.getAddonID() + ".png");
         if (stream == null) {
             stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("images/image.png");
         }

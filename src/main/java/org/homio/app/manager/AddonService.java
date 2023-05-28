@@ -40,7 +40,7 @@ public class AddonService implements ContextCreated, ContextRefreshed {
     @Override
     public void onContextRefresh() throws Exception {
         this.addonEntrypoints = entityContext.getBeansOfType(AddonEntrypoint.class);
-        this.addonMap = addonEntrypoints.stream().collect(Collectors.toMap(AddonEntrypoint::getAddonId, s -> s));
+        this.addonMap = addonEntrypoints.stream().collect(Collectors.toMap(AddonEntrypoint::getAddonID, s -> s));
         this.addonColorMap = new HashMap<>();
 
         for (AddonEntrypoint addonEntrypoint : addonEntrypoints) {
@@ -50,9 +50,9 @@ public class AddonService implements ContextCreated, ContextRefreshed {
                 MMCQ.CMap result = ColorThief.getColorMap(img, 5);
                 MMCQ.VBox dominantColor = result.vboxes.get(addonEntrypoint.getAddonImageColorIndex().ordinal());
                 int[] rgb = dominantColor.avg(false);
-                addonColorMap.put(addonEntrypoint.getAddonId(), RGBUtil.toRGBHexString(rgb));
+                addonColorMap.put(addonEntrypoint.getAddonID(), RGBUtil.toRGBHexString(rgb));
             } catch (Exception ex) {
-                log.error("Unable to start app due error in addon: <{}>", addonEntrypoint.getAddonId(), ex);
+                log.error("Unable to start app due error in addon: <{}>", addonEntrypoint.getAddonID(), ex);
                 throw ex;
             }
         }

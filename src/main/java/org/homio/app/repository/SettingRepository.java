@@ -130,7 +130,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
                 if (addonEntrypoint == null) {
                     throw new ServerException("Unable find addon entry-point for setting: " + key);
                 }
-                return addonEntrypoint.getAddonId();
+                return addonEntrypoint.getAddonID();
             }
             return null;
         });

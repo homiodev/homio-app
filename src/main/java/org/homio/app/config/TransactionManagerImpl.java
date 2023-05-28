@@ -17,6 +17,7 @@ import org.homio.app.extloader.CustomPersistenceManagedTypes;
 import org.homio.app.manager.CacheService;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.ApplicationContext;
+import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
 import org.springframework.stereotype.Component;
@@ -33,19 +34,22 @@ public class TransactionManagerImpl implements TransactionManager {
     private final Map<String, Object> jpaProperties;
     private final TransactionTemplate transactionTemplate;
     private final TransactionTemplate readOnlyTransactionTemplate;
+    private JpaTransactionManager jpaTransactionManager;
     private EntityManagerFactory entityManagerFactory;
     @Getter
     private EntityManager entityManager;
 
     public TransactionManagerImpl(
         ApplicationContext applicationContext,
-        PlatformTransactionManager transactionManager,
+        JpaTransactionManager jpaTransactionManager,
         EntityManagerFactory entityManagerFactory) {
         this.applicationContext = applicationContext;
+        this.jpaTransactionManager = jpaTransactionManager;
         this.entityManagerFactory = entityManagerFactory;
         this.jpaProperties = applicationContext.getBean(LocalContainerEntityManagerFactoryBean.class).getJpaPropertyMap();
-        this.transactionTemplate = new TransactionTemplate(transactionManager);
-        this.readOnlyTransactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate = new TransactionTemplate(jpaTransactionManager);
+
+        this.readOnlyTransactionTemplate = new TransactionTemplate(jpaTransactionManager);
         this.readOnlyTransactionTemplate.setReadOnly(true);
         this.entityManager = entityManagerFactory.createEntityManager();
     }

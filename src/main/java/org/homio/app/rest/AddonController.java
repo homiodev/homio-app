@@ -61,8 +61,8 @@ public class AddonController {
     public List<AddonJson> getAddons() {
         List<AddonJson> addons = new ArrayList<>();
         for (AddonEntrypoint addonEntrypoint : addonService.getAddons()) {
-            addons.add(new AddonJson(addonEntrypoint.getAddonId(),
-                addonService.getAddonColor(addonEntrypoint.getAddonId()), addonEntrypoint.order()));
+            addons.add(new AddonJson(addonEntrypoint.getAddonID(),
+                addonService.getAddonColor(addonEntrypoint.getAddonID()), addonEntrypoint.order()));
         }
         Collections.sort(addons);
         return addons;
