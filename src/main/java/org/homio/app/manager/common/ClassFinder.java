@@ -9,12 +9,11 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
-import org.homio.api.repository.AbstractRepository;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.HomioClassLoader;
+import org.homio.app.repository.AbstractRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.cache.annotation.Cacheable;
@@ -123,7 +122,7 @@ public class ClassFinder {
     public <T extends BaseEntity, R extends AbstractRepository<T>> R getRepositoryByClass(Class<T> clazz) {
         List<R> potentialRepository = new ArrayList<>();
 
-        for (AbstractRepository abstractRepository : applicationContext.getBean(EntityContext.class).getRepositories()) {
+        for (AbstractRepository abstractRepository : EntityContextImpl.repositories.values()) {
             if (abstractRepository.getEntityClass().equals(clazz)) {
                 return (R) abstractRepository;
             }

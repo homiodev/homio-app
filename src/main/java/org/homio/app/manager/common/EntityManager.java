@@ -17,7 +17,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
-import org.homio.api.repository.AbstractRepository;
+import org.homio.app.repository.AbstractRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
@@ -65,8 +65,7 @@ public class EntityManager {
             }
         }
         // in case if entity has no 1-1 repository then try to find base repository if possible
-        for (Map.Entry<String, AbstractRepository> entry :
-            EntityContextImpl.repositoriesByPrefix.entrySet()) {
+        for (Map.Entry<String, AbstractRepository> entry : EntityContextImpl.repositoriesByPrefix.entrySet()) {
             if (entityID.startsWith(entry.getKey())) {
                 return Optional.of(entry.getValue());
             }

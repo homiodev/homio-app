@@ -14,7 +14,6 @@ import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
-import org.homio.api.repository.AbstractRepository;
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.setting.SettingPluginOptions;

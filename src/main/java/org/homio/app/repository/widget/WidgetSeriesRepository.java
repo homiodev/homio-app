@@ -2,9 +2,10 @@ package org.homio.app.repository.widget;
 
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.repository.AbstractRepository;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
+import org.homio.app.repository.AbstractRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Log4j2
 @Repository
@@ -15,6 +16,7 @@ public class WidgetSeriesRepository extends AbstractRepository<WidgetSeriesEntit
     }
 
     @Override
+    @Transactional(readOnly = true)
     public WidgetSeriesEntity getByEntityID(String entityID) {
         return super.getByEntityID(entityID);
     }

@@ -23,12 +23,10 @@ public class HomioClassLoader extends ClassLoader {
     }
 
     public static void addClassLoaders(String addonID, ClassLoader classLoader) {
-        CommonUtils.addClassLoader(addonID, classLoader);
         addonJarClassLoaders.put(addonID, (AddonClassLoader) classLoader);
     }
 
     public static void removeClassLoader(String addonID) {
-        CommonUtils.removeClassLoader(addonID);
         addonJarClassLoaders.remove(addonID).destroy();
     }
 

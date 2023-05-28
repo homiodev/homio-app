@@ -65,6 +65,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -84,6 +85,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @Import(value = {WebSocketConfig.class})
 @EnableJpaRepositories(basePackages = "org.homio.app.repository.crud",
                        repositoryFactoryBeanClass = CrudRepositoryFactoryBean.class)
+@EnableTransactionManagement(proxyTargetClass = true)
 public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
 
     @Autowired
@@ -274,30 +276,6 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
         return registrationBean;
     }
-
-    // @Bean
-    // @Primary
-  /*public LocalContainerEntityManagerFactoryBean entityManagerFactory(
-      DataSource dataSource,
-      EntityManagerFactoryBuilder factoryBuilder,
-      PersistenceManagedTypes persistenceManagedTypes,
-      ConfigurableListableBeanFactory beanFactory) {
-
-    Map<String, Object> vendorProperties = new HashMap<>();
-    vendorProperties.put("hibernate.hbm2ddl.auto", "update");
-    vendorProperties.put("hibernate.physical_naming_strategy", new SpringBeanContainer(beanFactory));
-    vendorProperties.put("hibernate.resource.beans.container", "222222222");
-    vendorProperties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-    vendorProperties.put("hibernate.implicit_naming_strategy", SpringImplicitNamingStrategy.class.getName());
-    vendorProperties.put("hibernate.archive.scanner", DisabledScanner.class.getName());
-    vendorProperties.put("hibernate.jdbc.lob.non_contextual_creation", "true");
-    vendorProperties.put("hibernate.jdbc.batch_size", "10");
-
-    return factoryBuilder.dataSource(dataSource)
-                         .managedTypes(persistenceManagedTypes)
-                         .properties(vendorProperties)
-                         .build();
-  }*/
 
     /*@Bean
     public PersistenceUnitManager persistenceUnitManager(PersistenceManagedTypes managedTypes, DataSource dataSource,

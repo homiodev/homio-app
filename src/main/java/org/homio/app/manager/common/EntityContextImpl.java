@@ -43,10 +43,7 @@ import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Status;
 import org.homio.api.model.UpdatableValue;
-import org.homio.api.repository.AbstractRepository;
 import org.homio.api.repository.GitHubProject;
-import org.homio.api.repository.PureRepository;
-import org.homio.api.repository.TransactionManager;
 import org.homio.api.service.scan.BeansItemsDiscovery;
 import org.homio.api.service.scan.MicroControllerScanner;
 import org.homio.api.service.scan.VideoStreamScanner;
@@ -80,6 +77,8 @@ import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
+import org.homio.app.repository.AbstractRepository;
+import org.homio.app.repository.PureRepository;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableDataRepository;
 import org.homio.app.repository.crud.base.BaseCrudRepository;
@@ -174,7 +173,7 @@ public class EntityContextImpl implements EntityContext {
     private ApplicationContext applicationContext;
     private AllDeviceRepository allDeviceRepository;
     private WorkspaceService workspaceService;
-    private TransactionManager transactionManager;
+    //private TransactionManager transactionManager;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public EntityContextImpl(
@@ -212,7 +211,7 @@ public class EntityContextImpl implements EntityContext {
         MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
 
         this.allDeviceRepository = this.applicationContext.getBean(AllDeviceRepository.class);
-        this.transactionManager = applicationContext.getBean(TransactionManager.class);
+        // this.transactionManager = applicationContext.getBean(TransactionManager.class);
         this.workspaceService = applicationContext.getBean(WorkspaceService.class);
         this.entityManager = applicationContext.getBean(EntityManager.class);
 
@@ -319,12 +318,10 @@ public class EntityContextImpl implements EntityContext {
         return baseEntity;
     }
 
-    @Override
     public Optional<AbstractRepository> getRepository(@NotNull String entityID) {
         return entityManager.getRepositoryByEntityID(entityID);
     }
 
-    @Override
     public @NotNull AbstractRepository getRepository(@NotNull Class<? extends BaseEntity> entityClass) {
         return classFinder.getRepositoryByClass(entityClass);
     }
@@ -394,11 +391,11 @@ public class EntityContextImpl implements EntityContext {
         //noinspection ConstantConditions
         T oldEntity = entityID == null ? null : getEntity(entityID, false);
 
-        T updatedEntity = transactionManager.executeInTransaction(entityManager -> {
+        T updatedEntity = null;/*transactionManager.executeInTransaction(entityManager -> {
             T t = (T) repository.save(entity);
             t.afterFetch(this);
             return t;
-        });
+        });*/
 
         if (fireNotifyListeners) {
             if (oldEntity == null) {
@@ -438,7 +435,6 @@ public class EntityContextImpl implements EntityContext {
         return deletedEntity;
     }
 
-    @Override
     public AbstractRepository<? extends BaseEntity> getRepositoryByPrefix(@NotNull String repositoryPrefix) {
         return repositoriesByPrefix.get(repositoryPrefix);
     }
@@ -486,7 +482,6 @@ public class EntityContextImpl implements EntityContext {
         return values;
     }
 
-    @Override
     public <T> @NotNull Map<String, Collection<T>> getBeansOfTypeByAddons(@NotNull Class<T> clazz) {
         Map<String, Collection<T>> res = new HashMap<>();
         for (ApplicationContext context : allApplicationContexts) {
@@ -503,7 +498,6 @@ public class EntityContextImpl implements EntityContext {
         UserBaseEntity.registerResource(resource);
     }
 
-    @Override
     public @NotNull Collection<AbstractRepository> getRepositories() {
         return repositories.values();
     }

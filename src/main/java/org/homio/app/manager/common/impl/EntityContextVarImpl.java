@@ -18,6 +18,8 @@ import lombok.extern.log4j.Log4j2;
 import org.codehaus.plexus.util.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar;
+import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.entity.types.StorageEntity;
 import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
@@ -50,6 +52,8 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     public void onContextCreated() {
+        List<DeviceBaseEntity> contextAll = entityContext.findAll(DeviceBaseEntity.class);
+        List<StorageEntity> all = entityContext.findAll(StorageEntity.class);
         createBroadcastGroup(entityContext);
 
         for (WorkspaceVariable workspaceVariable : entityContext.findAll(WorkspaceVariable.class)) {

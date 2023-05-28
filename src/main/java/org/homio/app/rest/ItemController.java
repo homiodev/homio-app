@@ -46,13 +46,11 @@ import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.ImageEntity;
-import org.homio.api.entity.types.StorageEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityLog;
 import org.homio.api.model.OptionModel;
-import org.homio.api.repository.AbstractRepository;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
@@ -78,8 +76,7 @@ import org.homio.app.manager.common.EntityManager;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.rest.EntityUIMetaData;
-import org.homio.app.repository.StorageRepository;
-import org.homio.app.repository.device.AllDeviceRepository;
+import org.homio.app.repository.AbstractRepository;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemShowEntityCreateTimeSetting;
 import org.homio.app.setting.system.SystemShowEntityUpdateTimeSetting;
@@ -391,7 +388,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 return Collections.emptyList();
             }
         }
-        Optional<AbstractRepository> repositoryOpt = entityContext.getRepository(entity);
+        Optional<AbstractRepository> repositoryOpt = entityContext.getRepository(entity.getEntityID());
         AbstractRepository repository = repositoryOpt.orElseThrow();
         Collection<BaseEntity> usages = getUsages(entityID, repository);
         return usages.stream().map(Object::toString).collect(Collectors.toList());
@@ -445,8 +442,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         putTypeToEntityIfNotExists(type);
         List<BaseEntity> items = new ArrayList<>();
 
-        List<StorageEntity> entities = entityContext.getBean(StorageRepository.class).listAll();
-        entityContext.getBean(AllDeviceRepository.class).listAll();
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
             items.addAll(entityContext.findAll(aClass));
         }

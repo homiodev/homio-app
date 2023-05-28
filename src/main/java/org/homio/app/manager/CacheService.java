@@ -16,7 +16,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
-import org.homio.api.repository.PureRepository;
+import org.homio.app.repository.PureRepository;
 import org.homio.app.utils.CollectionUtils;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
