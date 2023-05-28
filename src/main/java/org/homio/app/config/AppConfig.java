@@ -65,7 +65,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -85,7 +84,6 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @Import(value = {WebSocketConfig.class})
 @EnableJpaRepositories(basePackages = "org.homio.app.repository.crud",
                        repositoryFactoryBeanClass = CrudRepositoryFactoryBean.class)
-@EnableTransactionManagement(proxyTargetClass = true)
 public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
 
     @Autowired
@@ -131,7 +129,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
     // not too safe for now
     @Bean
-    public FilterRegistrationBean corsFilter() {
+    public FilterRegistrationBean<?> corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(false);

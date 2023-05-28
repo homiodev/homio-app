@@ -4,7 +4,6 @@ import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.repository.AbstractRepository;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {
@@ -14,14 +13,14 @@ public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public DeviceBaseEntity getByEntityID(String entityID) {
         return super.getByEntityID(entityID);
     }
 
-    @Transactional(readOnly = true)
     public <T extends DeviceBaseEntity> @Nullable T getByIeeeAddressOrName(String name) {
-        return (T) em.createQuery("FROM DeviceBaseEntity where ieeeAddress = :value OR name = :value", DeviceBaseEntity.class)
-                     .setParameter("value", name).getResultList().stream().findAny().orElse(null);
+        return emc.executeInTransaction(
+            entityManager ->
+                (T) entityManager.createQuery("FROM DeviceBaseEntity where ieeeAddress = :value OR name = :value", DeviceBaseEntity.class)
+                                 .setParameter("value", name).getResultList().stream().findAny().orElse(null));
     }
 }

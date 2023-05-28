@@ -29,7 +29,6 @@ import org.homio.app.setting.CoreSettingPlugin;
 import org.homio.app.spring.ContextRefreshed;
 import org.json.JSONObject;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class SettingRepository extends AbstractRepository<SettingEntity>
@@ -138,7 +137,6 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
     }
 
     @Override
-    @Transactional
     public void onContextRefresh() {
         for (SettingPlugin settingPlugin : EntityContextSettingImpl.settingPluginsBy(p -> !p.transientState())) {
             SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));

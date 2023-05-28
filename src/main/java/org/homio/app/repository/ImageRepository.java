@@ -12,8 +12,9 @@ public class ImageRepository extends AbstractRepository<ImageEntity> {
         super(ImageEntity.class);
     }
 
-    @Transactional(readOnly = true)
     public ImageEntity getByPath(String path) {
-        return findSingleByField("path", path);
+        return emc.executeInTransaction(entityManager -> {
+            return findSingle("path", path);
+        });
     }
 }
