@@ -18,7 +18,7 @@ public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {
     }
 
     public <T extends DeviceBaseEntity> @Nullable T getByIeeeAddressOrName(String name) {
-        return emc.executeInTransaction(
+        return tm.executeInTransaction(
             entityManager ->
                 (T) entityManager.createQuery("FROM DeviceBaseEntity where ieeeAddress = :value OR name = :value", DeviceBaseEntity.class)
                                  .setParameter("value", name).getResultList().stream().findAny().orElse(null));

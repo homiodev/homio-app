@@ -12,8 +12,8 @@ public class ScriptRepository extends AbstractRepository<ScriptEntity> {
     }
 
     public ScriptEntity getByURL(String url) {
-        return emc.executeInTransaction(entityManager -> {
-            return findSingle("url", url);
+        return tm.executeInTransaction(entityManager -> {
+            return findSingle(entityManager, "url", url);
         });
     }
 }

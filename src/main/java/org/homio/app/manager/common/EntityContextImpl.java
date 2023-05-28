@@ -46,6 +46,7 @@ import org.homio.api.model.UpdatableValue;
 import org.homio.api.repository.AbstractRepository;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.repository.PureRepository;
+import org.homio.api.repository.TransactionManager;
 import org.homio.api.service.scan.BeansItemsDiscovery;
 import org.homio.api.service.scan.MicroControllerScanner;
 import org.homio.api.service.scan.VideoStreamScanner;
@@ -112,17 +113,13 @@ import org.springframework.core.env.Environment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 @SuppressWarnings("rawtypes")
 @Log4j2
 @Component
 public class EntityContextImpl implements EntityContext {
 
-    /*public static final String CREATE_TABLE_INDEX =
-        "CREATE UNIQUE INDEX IF NOT EXISTS %s_entity_id ON %s (entityid)";*/
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
     private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
     private static final Map<String, PureRepository> pureRepositories = new HashMap<>();
@@ -173,11 +170,11 @@ public class EntityContextImpl implements EntityContext {
     @Getter private final AppProperties appProperties;
     @Getter private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
     private EntityManager entityManager;
-    private TransactionTemplate transactionTemplate;
     private boolean showEntityState;
     private ApplicationContext applicationContext;
     private AllDeviceRepository allDeviceRepository;
     private WorkspaceService workspaceService;
+    private TransactionManager transactionManager;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public EntityContextImpl(
@@ -214,9 +211,8 @@ public class EntityContextImpl implements EntityContext {
         this.applicationContext = applicationContext;
         MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
 
-        PlatformTransactionManager transactionManager = this.applicationContext.getBean(PlatformTransactionManager.class);
         this.allDeviceRepository = this.applicationContext.getBean(AllDeviceRepository.class);
-        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionManager = applicationContext.getBean(TransactionManager.class);
         this.workspaceService = applicationContext.getBean(WorkspaceService.class);
         this.entityManager = applicationContext.getBean(EntityManager.class);
 
@@ -398,7 +394,7 @@ public class EntityContextImpl implements EntityContext {
         //noinspection ConstantConditions
         T oldEntity = entityID == null ? null : getEntity(entityID, false);
 
-        T updatedEntity = transactionTemplate.execute(status -> {
+        T updatedEntity = transactionManager.executeInTransaction(entityManager -> {
             T t = (T) repository.save(entity);
             t.afterFetch(this);
             return t;

@@ -34,6 +34,9 @@ spring:
       ddl-auto: update
     properties:
       hibernate:
+        connection:
+          provider_disables_autocommit: true
+          autocommit: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           batch_size: 10
