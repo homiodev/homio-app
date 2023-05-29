@@ -5,7 +5,6 @@ import static org.apache.xmlbeans.XmlBeans.getTitle;
 
 import com.pivovarit.function.ThrowingBiConsumer;
 import com.pivovarit.function.ThrowingRunnable;
-import jakarta.persistence.EntityManagerFactory;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -39,7 +38,6 @@ import org.hibernate.event.spi.EventType;
 import org.hibernate.event.spi.PostDeleteEvent;
 import org.hibernate.event.spi.PostInsertEvent;
 import org.hibernate.event.spi.PostUpdateEvent;
-import org.hibernate.event.spi.PreDeleteEventListener;
 import org.hibernate.internal.SessionFactoryImpl;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextEvent;
@@ -55,6 +53,7 @@ import org.homio.api.ui.UI.Color;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
+import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.EntityContextImpl.ItemAction;
 import org.homio.app.manager.common.EntityContextStorage;
@@ -85,9 +84,8 @@ public class EntityContextEventImpl implements EntityContextEvent {
     private final BlockingQueue<EntityUpdate> entityUpdatesQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<Event> eventQueue = new LinkedBlockingQueue<>();
 
-    public EntityContextEventImpl(EntityContextImpl entityContext, EntityManagerFactory entityManagerFactory) {
+    public EntityContextEventImpl(EntityContextImpl entityContext) {
         this.entityContext = entityContext;
-        registerEntityListeners(entityManagerFactory);
 
         // execute all updates in thread
         new Thread(() -> {
@@ -294,8 +292,12 @@ public class EntityContextEventImpl implements EntityContextEvent {
         eventQueue.add(new Event(key, value));
     }
 
-    private void registerEntityListeners(EntityManagerFactory entityManagerFactory) {
-        SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
+    public void registerEntityListeners() {
+        TransactionManagerContext tmc = entityContext.getBean(TransactionManagerContext.class);
+        tmc.setFactoryListener(em -> registerEntityManagerListeners(em.unwrap(SessionFactoryImpl.class)));
+    }
+
+    private void registerEntityManagerListeners(SessionFactoryImpl sessionFactory) {
         EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
         registry.getEventListenerGroup(EventType.POST_LOAD).appendListener(event -> {
             Object entity = event.getEntity();

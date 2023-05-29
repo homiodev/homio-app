@@ -26,7 +26,6 @@ import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.AudioHeader;
 import org.jaudiotagger.audio.generic.GenericAudioHeader;
 import org.jaudiotagger.audio.mp3.MP3AudioHeader;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -158,17 +157,17 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void stopCommand(WorkspaceBlock workspaceBlock) {
-        Pair<AudioSink, String> pair = getSink(workspaceBlock);
-        if (pair != null) {
-            AudioSink audioSink = pair.getFirst();
+        AudioSinkSource audioSinkSource = getSink(workspaceBlock);
+        if (audioSinkSource != null) {
+            AudioSink audioSink = audioSinkSource.getSink();
             audioSink.pause();
         }
     }
 
     private void resumeCommand(WorkspaceBlock workspaceBlock) {
-        Pair<AudioSink, String> pair = getSink(workspaceBlock);
-        if (pair != null) {
-            pair.getFirst().resume();
+        AudioSinkSource audioSinkSource = getSink(workspaceBlock);
+        if (audioSinkSource != null) {
+            audioSinkSource.getSink().resume();
         }
     }
 
@@ -216,15 +215,15 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         throws Exception {
         FileAudioStream audioStream = new FileAudioStream(file);
         Integer volume = workspaceBlock.getInputInteger("VOLUME", null);
-        Pair<AudioSink, String> pair = getSink(workspaceBlock);
-        if (pair != null) {
-            AudioSink audioSink = pair.getFirst();
+        AudioSinkSource audioSinkSource = getSink(workspaceBlock);
+        if (audioSinkSource != null) {
+            AudioSink audioSink = audioSinkSource.getSink();
             Integer oldVolume = volume == null ? null : getVolume(audioSink);
             if (!Objects.equals(oldVolume, volume)) {
                 setVolume(audioSink, volume);
             }
             try {
-                audioSink.play(audioStream, pair.getSecond(), from, to);
+                audioSink.play(audioStream, audioSinkSource.getSource(), from, to);
             } catch (Exception e) {
                 log.warn("Error playing '{}': {}", audioStream, e.getMessage(), e);
             } finally {
@@ -235,12 +234,12 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         }
     }
 
-    private Pair<AudioSink, String> getSink(WorkspaceBlock workspaceBlock) {
+    private AudioSinkSource getSink(WorkspaceBlock workspaceBlock) {
         String sink = workspaceBlock.getMenuValue("SINK", this.sinkMenu);
         for (AudioSink audioSink : audioService.getAudioSinks().values()) {
             for (Map.Entry<String, String> entry : audioSink.getSources().entrySet()) {
                 if (sink.equals(entry.getKey())) {
-                    return Pair.of(audioSink, entry.getKey());
+                    return new AudioSinkSource(audioSink, entry.getKey());
                 }
             }
         }
@@ -291,5 +290,12 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         Channels(file -> new DecimalType(AudioFileIO.read(file).getAudioHeader().getChannels()));
 
         public final ThrowingFunction<File, State, Exception> handler;
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    public static class AudioSinkSource {
+        private final AudioSink sink;
+        private final String source;
     }
 }

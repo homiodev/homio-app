@@ -20,7 +20,7 @@ import org.homio.app.config.TransactionManagerContext;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Log4j2
-public class AbstractRepository<T extends BaseEntity> implements PureRepository<T> {
+public class AbstractRepository<T extends BaseEntity> {
 
     private final Class<T> clazz;
     private final String prefix;
@@ -47,7 +47,6 @@ public class AbstractRepository<T extends BaseEntity> implements PureRepository<
         return tmc.executeWithoutTransaction(em -> em.merge(entity));
     }
 
-    @Override
     public void flushCashedEntity(T entity) {
         tmc.executeInTransaction(em -> {
             em.merge(entity);
@@ -122,7 +121,6 @@ public class AbstractRepository<T extends BaseEntity> implements PureRepository<
         });
     }
 
-    @Override
     public Class<T> getEntityClass() {
         return clazz;
     }

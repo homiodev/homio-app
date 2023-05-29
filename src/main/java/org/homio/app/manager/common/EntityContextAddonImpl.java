@@ -54,12 +54,13 @@ public class EntityContextAddonImpl {
         Collections.sort(addonEntrypoints);
         for (AddonEntrypoint entrypoint : addonEntrypoints) {
             this.addons.put(entrypoint.getAddonID(), new InternalAddonContext(entrypoint, null));
-            log.info("Init addon: <{}>", entrypoint.getAddonID());
+            log.info("Initialize addon: <{}>", entrypoint.getAddonID());
             try {
                 entrypoint.init();
                 entrypoint.onContextRefresh();
+                log.info("Done initialize addon: <{}>", entrypoint.getAddonID());
             } catch (Exception ex) {
-                log.fatal("Unable to init addon: " + entrypoint.getAddonID(), ex);
+                log.fatal("Unable to initialize addon: " + entrypoint.getAddonID(), ex);
                 throw ex;
             }
         }

@@ -2,8 +2,8 @@ package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.StylePosition;
 import org.homio.api.ui.action.DynamicOptionLoader;
@@ -14,7 +14,6 @@ import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.api.video.BaseVideoStreamEntity;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
-import org.springframework.data.util.Pair;
 
 @Entity
 public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntity>
@@ -139,13 +138,11 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
             for (BaseVideoStreamEntity entity : parameters.getEntityContext().findAll(BaseVideoStreamEntity.class)) {
-                OptionModel model = OptionModel.of(entity.getEntityID(), entity.getTitle());
 
-                Collection<Pair<String, String>> sources = entity.getVideoSources();
+                Set<String> sources = entity.getVideoSources();
                 if (!sources.isEmpty()) {
-                    for (Pair<String, String> source : sources) {
-                        model.addChild(OptionModel.of(source.getFirst(), source.getSecond()));
-                    }
+                    OptionModel model = OptionModel.of(entity.getEntityID(), entity.getTitle());
+                    model.setChildren(OptionModel.list(sources));
                     list.add(model);
                 }
             }

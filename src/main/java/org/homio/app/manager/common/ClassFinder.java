@@ -21,7 +21,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.AssignableTypeFilter;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -30,7 +29,6 @@ public class ClassFinder {
 
     public static final String CLASSES_WITH_PARENT_CLASS = "CLASSES_WITH_PARENT_CLASS";
     public static final String REPOSITORY_BY_CLAZZ = "REPOSITORY_BY_CLAZZ";
-    private final ApplicationContext applicationContext;
 
     @SneakyThrows
     public static <T> List<T> createClassesWithParent(Class<T> parentClass, ClassFinder classFinder) {
@@ -54,7 +52,7 @@ public class ClassFinder {
         return result;
     }
 
-    public static <T extends Annotation> List<Pair<Class, List<T>>> findAllAnnotationsToParentAnnotation(Class typeClass,
+    /*public static <T extends Annotation> List<Pair<Class, List<T>>> findAllAnnotationsToParentAnnotation(Class typeClass,
         Class<T> aAnnotation,
         Class<? extends Annotation> bAnnotation) {
         Class cursor = typeClass;
@@ -71,7 +69,7 @@ public class ClassFinder {
             cursor = cursor.getSuperclass();
         }
         return typeToAnnotations;
-    }
+    }*/
 
     public <T> List<Class<? extends T>> getClassesWithParent(@NotNull Class<T> parentClass, String basePackage) {
         List<Class<? extends T>> foundClasses = new ArrayList<>();

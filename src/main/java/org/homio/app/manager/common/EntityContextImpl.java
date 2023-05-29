@@ -4,7 +4,6 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
-import jakarta.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
@@ -79,10 +78,8 @@ import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.repository.AbstractRepository;
-import org.homio.app.repository.PureRepository;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableDataRepository;
-import org.homio.app.repository.crud.base.BaseCrudRepository;
 import org.homio.app.repository.device.AllDeviceRepository;
 import org.homio.app.rest.ConsoleController;
 import org.homio.app.rest.FileSystemController;
@@ -122,7 +119,6 @@ public class EntityContextImpl implements EntityContext {
 
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
     private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
-    private static final Map<String, PureRepository> pureRepositories = new HashMap<>();
     private static final long START_TIME = System.currentTimeMillis();
     public static Map<String, AbstractRepository> repositories = new HashMap<>();
     public static Map<String, Class<? extends EntityFieldMetadata>> uiFieldClasses;
@@ -183,7 +179,6 @@ public class EntityContextImpl implements EntityContext {
         ThreadPoolTaskScheduler taskScheduler,
         SimpMessagingTemplate messagingTemplate,
         Environment environment,
-        EntityManagerFactory entityManagerFactory,
         VariableDataRepository variableDataRepository,
         MachineHardwareRepository machineHardwareRepository,
         AppProperties appProperties) {
@@ -194,7 +189,7 @@ public class EntityContextImpl implements EntityContext {
 
         this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
         this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler, appProperties);
-        this.entityContextEvent = new EntityContextEventImpl(this, entityManagerFactory);
+        this.entityContextEvent = new EntityContextEventImpl(this);
         this.entityContextInstall = new EntityContextInstallImpl(this);
         this.entityContextSetting = new EntityContextSettingImpl(this);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
@@ -206,6 +201,7 @@ public class EntityContextImpl implements EntityContext {
 
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
+        this.entityContextEvent.registerEntityListeners();
         this.entityContextAddon.setApplicationContext(applicationContext);
         this.allApplicationContexts.add(applicationContext);
         this.applicationContext = applicationContext;
@@ -216,9 +212,6 @@ public class EntityContextImpl implements EntityContext {
         this.workspaceService = applicationContext.getBean(WorkspaceService.class);
         this.entityManager = applicationContext.getBean(EntityManager.class);
 
-        pureRepositories.putAll(applicationContext
-            .getBeansOfType(PureRepository.class).values().stream()
-            .collect(Collectors.toMap(r -> r.getEntityClass().getSimpleName(), r -> r)));
         repositories.putAll(applicationContext.getBeansOfType(AbstractRepository.class));
         rebuildRepositoryByPrefixMap();
 
@@ -328,12 +321,12 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public <T extends HasEntityIdentifier> void createDelayed(@NotNull T entity) {
+    public <T extends BaseEntity> void createDelayed(@NotNull T entity) {
         putToCache(entity, null);
     }
 
     @Override
-    public <T extends HasEntityIdentifier> void updateDelayed(T entity, Consumer<T> consumer) {
+    public <T extends BaseEntity> void updateDelayed(T entity, Consumer<T> consumer) {
         Map<String, Object[]> changeFields = new HashMap<>();
         MethodInterceptor handler = (obj, method, args, proxy) -> {
             String setName = method.getName();
@@ -373,12 +366,6 @@ public class EntityContextImpl implements EntityContext {
         }
         // fire change event manually
         sendEntityUpdateNotification(entity, ItemAction.Update);
-    }
-
-    @Override
-    public <T extends HasEntityIdentifier> void save(T entity) {
-        BaseCrudRepository pureRepository = (BaseCrudRepository) pureRepositories.get(entity.getClass().getSimpleName());
-        pureRepository.save(entity);
     }
 
     @Override
@@ -630,13 +617,9 @@ public class EntityContextImpl implements EntityContext {
         });
     }
 
-    private void putToCache(HasEntityIdentifier entity, Map<String, Object[]> changeFields) {
-        PureRepository repository;
-        if (entity instanceof BaseEntity) {
-            repository = classFinder.getRepositoryByClass(((BaseEntity) entity).getClass());
-        } else {
-            repository = pureRepositories.get(entity.getClass().getSimpleName());
-        }
+    private void putToCache(BaseEntity entity, Map<String, Object[]> changeFields) {
+        AbstractRepository repository;
+        repository = classFinder.getRepositoryByClass(entity.getClass());
         cacheService.putToCache(repository, entity, changeFields);
     }
 

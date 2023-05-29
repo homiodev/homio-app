@@ -47,6 +47,24 @@ public class AddonContextService implements ContextCreated {
             this.addonContextMap.put(systemAddon, systemAddonContext);
             this.artifactIdContextMap.put(systemAddon, systemAddonContext);
         }
+        entityContext.bgp().runDirectoryWatchdog(CommonUtils.getAddonPath(), watchEvent -> {
+            String eventType = watchEvent.kind().name();
+            Path path = CommonUtils.getAddonPath().resolve(watchEvent.context());
+            log.info("Detect addon directory changes: {}/{}", watchEvent.kind(), path);
+            switch (eventType) {
+                case "ENTRY_CREATE":
+                    loadAddonFromPath(path);
+                    break;
+                case "ENTRY_DELETE":
+                    removeAddonFromPath(path);
+                    break;
+                case "ENTRY_MODIFY":
+                    reloadAddonFromPath(path);
+                    break;
+                default:
+                    throw new IllegalStateException("Unexpected value: " + watchEvent.kind());
+            }
+        });
     }
 
     @SneakyThrows
@@ -94,6 +112,10 @@ public class AddonContextService implements ContextCreated {
 
     private void loadAddonFromPath(Path addonContextFile) {
         AddonContext addonContext = new AddonContext(addonContextFile);
+        addAddonFromPath(addonContext);
+    }
+
+    private void addAddonFromPath(AddonContext addonContext) {
         artifactIdContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);
         loadAddon(addonContext);
         entityContext.getEntityContextAddon().addAddons(artifactIdContextMap);
@@ -110,6 +132,7 @@ public class AddonContextService implements ContextCreated {
                     log.info("Addon context <{}> already registered before.", context.getPomFile().getArtifactId());
                 }
             } catch (Exception ex) {
+                addonContextMap.remove(context.getAddonID());
                 log.error("Unable to load addon context <{}>.", context.getPomFile().getArtifactId(), ex);
             }
         }
@@ -157,5 +180,30 @@ public class AddonContextService implements ContextCreated {
 
     private List<Path> findAddonContextFilesFromPath(Path basePath) throws IOException {
         return Files.list(basePath).filter(path -> path.getFileName().toString().endsWith(".jar")).collect(Collectors.toList());
+    }
+
+    private void reloadAddonFromPath(Path path) {
+        try {
+            AddonContext addonContext = new AddonContext(path);
+            AddonContext existedAddonContext = artifactIdContextMap.get(addonContext.getAddonID());
+            if (addonContext.equals(existedAddonContext)) {
+                removeAddon(addonContext.getAddonID());
+                addAddonFromPath(addonContext);
+            }
+        } catch (Exception ex) {
+            log.error("Unable to reload addon: {}", path.getFileName());
+        }
+    }
+
+    private void removeAddonFromPath(Path path) {
+        try {
+            AddonContext addonContext = new AddonContext(path);
+            if (artifactIdContextMap.containsKey(addonContext.getAddonID())) {
+                removeAddon(addonContext.getAddonID());
+                loadAddonFromPath(path);
+            }
+        } catch (Exception ex) {
+            log.error("Unable to remove addon: {}", path.getFileName());
+        }
     }
 }

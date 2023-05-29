@@ -18,10 +18,10 @@ public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {
     }
 
     public <T extends DeviceBaseEntity> @Nullable T getByIeeeAddressOrName(String name) {
-        return null;
-        /*return utotm.executeInTransaction(
-            entityManager ->
-                (T) entityManager.createQuery("FROM DeviceBaseEntity where ieeeAddress = :value OR name = :value", DeviceBaseEntity.class)
-                                 .setParameter("value", name).getResultList().stream().findAny().orElse(null));*/
+        String sql = "FROM DeviceBaseEntity where ieeeAddress = :value OR name = :value";
+        return tmc.executeInTransactionReadOnly(em -> (T)
+            em.createQuery(sql, DeviceBaseEntity.class)
+              .setParameter("value", name)
+              .getResultList().stream().findAny().orElse(null));
     }
 }

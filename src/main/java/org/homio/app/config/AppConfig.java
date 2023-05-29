@@ -36,13 +36,17 @@ import org.homio.app.manager.CacheService;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.app.repository.crud.base.CrudRepositoryFactoryBean;
 import org.homio.app.workspace.block.Scratch3Space;
 import org.homio.hquery.HardwareRepositoryFactoryPostProcessor;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.autoconfigure.orm.jpa.EntityManagerFactoryBuilderCustomizer;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateProperties;
+import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -55,10 +59,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.Ordered;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.orm.jpa.persistenceunit.PersistenceUnitManager;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -79,17 +84,27 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @Configuration
 @EnableCaching
 @EnableScheduling
-@EntityScan(basePackages = {"org.homio"})
 @ComponentScan({"org.homio"})
 @Import(value = {WebSocketConfig.class})
-@EnableJpaRepositories(basePackages = "org.homio.app.repository.crud",
-                       repositoryFactoryBeanClass = CrudRepositoryFactoryBean.class)
+@EnableConfigurationProperties({JpaProperties.class, HibernateProperties.class})
 public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, ApplicationListener {
 
     @Autowired
     private ApplicationContext applicationContext;
 
     private boolean applicationReady;
+
+    @Bean
+    public EntityManagerFactoryBuilder entityManagerFactoryBuilder(
+        JpaProperties jpaProperties,
+        ObjectProvider<PersistenceUnitManager> persistenceUnitManager,
+        ObjectProvider<EntityManagerFactoryBuilderCustomizer> customizers) {
+        HibernateJpaVendorAdapter jpaVendorAdapter = new HibernateJpaVendorAdapter();
+        EntityManagerFactoryBuilder builder = new EntityManagerFactoryBuilder(jpaVendorAdapter,
+            jpaProperties.getProperties(), persistenceUnitManager.getIfAvailable());
+        customizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
+        return builder;
+    }
 
     @Bean
     public ThreadPoolTaskScheduler threadPoolTaskScheduler() {

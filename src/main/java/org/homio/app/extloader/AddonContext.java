@@ -54,6 +54,36 @@ public class AddonContext {
     private AddonSpringContext config;
     private String loadError;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {return true;}
+        if (o == null || getClass() != o.getClass()) {return false;}
+
+        AddonContext that = (AddonContext) o;
+
+        if (!addonID.equals(that.addonID)) {
+            return false;
+        }
+
+        if ((contextFile != null && that.contextFile == null) || (contextFile == null && that.contextFile != null)) {
+            return false;
+        }
+        if ((pomFile != null && that.pomFile == null) || (pomFile == null && that.pomFile != null)) {
+            return false;
+        }
+
+        if (contextFile != null && !contextFile.equals(that.contextFile)) {return false;}
+        return pomFile == null || pomFile.getVersion().equals(that.pomFile.getVersion());
+    }
+
+    @Override
+    public int hashCode() {
+        int result = contextFile != null ? contextFile.hashCode() : 0;
+        result = 31 * result + (pomFile != null ? pomFile.getVersion().hashCode() : 0);
+        result = 31 * result + addonID.hashCode();
+        return result;
+    }
+
     @SneakyThrows
     AddonContext(Path contextFile) {
         this.contextFile = contextFile;

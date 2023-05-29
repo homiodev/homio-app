@@ -1,12 +1,21 @@
 package org.homio.app.manager.common.impl;
 
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+
 import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingConsumer;
 import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchEvent.Kind;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -362,6 +371,36 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 errorThread.interrupt();
             });
         }
+    }
+
+    @Override
+    @SneakyThrows
+    public ThreadContext<Void> runDirectoryWatchdog(@NotNull Path dir, @NotNull ThrowingConsumer<WatchEvent<Path>, Exception> onUpdateCommand,
+        Kind<?>... eventsToListen) {
+        String threadKey = "dir-watchdog-" + dir.getFileName().toString();
+        if (isThreadExists(threadKey, true)) {
+            throw new RuntimeException("Directory already watching");
+        }
+        if (!Files.isDirectory(dir)) {
+            throw new IllegalArgumentException("Path: " + dir + " is not a directory");
+        }
+        if (eventsToListen.length == 0) {
+            eventsToListen = new Kind<?>[]{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY};
+        }
+        WatchService watchService = FileSystems.getDefault().newWatchService();
+        dir.register(watchService, eventsToListen);
+
+        return builder(threadKey)
+            .interval(Duration.ofSeconds(1))
+            .execute(() -> {
+                WatchKey key;
+                while ((key = watchService.take()) != null) {
+                    for (WatchEvent<?> event : key.pollEvents()) {
+                        onUpdateCommand.accept((WatchEvent<Path>) event);
+                    }
+                    key.reset();
+                }
+            });
     }
 
     @Override

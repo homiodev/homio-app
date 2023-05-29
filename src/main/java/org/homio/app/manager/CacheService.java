@@ -16,7 +16,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
-import org.homio.app.repository.PureRepository;
+import org.homio.app.repository.AbstractRepository;
 import org.homio.app.utils.CollectionUtils;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
@@ -73,10 +73,7 @@ public class CacheService {
         Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME)).clear();
     }
 
-    public void putToCache(
-        PureRepository repository,
-        HasEntityIdentifier entity,
-        Map<String, Object[]> changeFields) {
+    public void putToCache(AbstractRepository repository, HasEntityIdentifier entity, Map<String, Object[]> changeFields) {
         String identifier = entity.getIdentifier();
         if (identifier == null) {
             throw new ServerException("Unable update state without id" + entity);
@@ -86,8 +83,7 @@ public class CacheService {
                 // override changed fields
                 entityCache.get(identifier).changeFields.putAll(changeFields);
             } else {
-                entityCache.put(
-                    identifier, new UpdateStatement(identifier, repository, changeFields));
+                entityCache.put(identifier, new UpdateStatement(identifier, repository, changeFields));
             }
         }
     }
@@ -114,12 +110,9 @@ public class CacheService {
                 for (UpdateStatement updateStatement : entityCache.values()) {
                     try {
                         if (updateStatement.changeFields != null) {
-                            HasEntityIdentifier baseEntity =
-                                entityContext.getEntity(updateStatement.entityID, false);
-                            for (Map.Entry<String, Object[]> entry :
-                                updateStatement.changeFields.entrySet()) {
-                                MethodUtils.invokeMethod(
-                                    baseEntity, entry.getKey(), entry.getValue());
+                            BaseEntity baseEntity = entityContext.getEntity(updateStatement.entityID, false);
+                            for (Map.Entry<String, Object[]> entry : updateStatement.changeFields.entrySet()) {
+                                MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
                             }
                             updateStatement.repository.flushCashedEntity(baseEntity);
 
@@ -149,7 +142,7 @@ public class CacheService {
     private static class UpdateStatement {
 
         String entityID;
-        PureRepository repository;
+        AbstractRepository repository;
         Map<String, Object[]> changeFields;
     }
 }
