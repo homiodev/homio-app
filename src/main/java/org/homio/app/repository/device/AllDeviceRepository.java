@@ -4,7 +4,6 @@ import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {

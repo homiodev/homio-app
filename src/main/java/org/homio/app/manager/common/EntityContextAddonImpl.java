@@ -26,7 +26,7 @@ import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.api.widget.WidgetBaseTemplate;
 import org.homio.app.HomioClassLoader;
-import org.homio.app.config.TransactionManagerImpl;
+import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.CacheService;
 import org.homio.app.setting.system.SystemAddonLibraryManagerSetting;
@@ -92,7 +92,7 @@ public class EntityContextAddonImpl {
                 this.addons.put(addonEntrypoint.getAddonID(), new InternalAddonContext(addonEntrypoint, addonContext));
             }
         }
-        applicationContext.getBean(TransactionManagerImpl.class).invalidate();
+        applicationContext.getBean(TransactionManagerContext.class).invalidate();
 
         ADDON_UPDATE_COUNT++;
     }

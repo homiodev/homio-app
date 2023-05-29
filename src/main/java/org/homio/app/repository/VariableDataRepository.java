@@ -1,66 +1,66 @@
 package org.homio.app.repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.model.var.VariableBackup;
 import org.homio.app.model.var.WorkspaceVariableMessage;
 import org.springframework.stereotype.Repository;
 
 @Repository
+@RequiredArgsConstructor
 public class VariableDataRepository {
 
-   // private final TransactionManager tm;
+    private final TransactionManagerContext tmc;
 
     public List<VariableBackup> findAll(String variableId, int limit) {
-        /*String jql = "select vd from VariableBackup as vd where vd.vid = :vid order by vd.created desc";
-        return (List<VariableBackup>) tm.getEntityManager()
-                                        .createQuery(jql).setMaxResults(limit)
-                                        .setParameter("vid", variableId)
-                                        .getResultList();*/
-        return null;
+        String jql = "select vd from VariableBackup as vd where vd.vid = :vid order by vd.created desc";
+        return tmc.executeInTransactionReadOnly(em ->
+            em.createQuery(jql).setMaxResults(limit)
+              .setParameter("vid", variableId)
+              .getResultList());
     }
 
     public int count(String variableId) {
-       /* String jql = "SELECT COUNT(vd) FROM VariableBackup vd where vd.vid = :vid";
-        Object result = tm.getEntityManager().createQuery(jql).setParameter("vid", variableId).getSingleResult();
-        return ((Number) result).intValue();*/
-        return 0;
+        String jql = "SELECT COUNT(vd) FROM VariableBackup vd where vd.vid = :vid";
+        return tmc.executeWithoutTransaction(em -> {
+            Object result = em.createQuery(jql).setParameter("vid", variableId).getSingleResult();
+            return ((Number) result).intValue();
+        });
     }
 
     public void save(String variableId, List<WorkspaceVariableMessage> values) {
-        /*tm.executeInTransaction(entityManager -> {
+        tmc.executeInTransaction(em -> {
             for (WorkspaceVariableMessage message : values) {
-                entityManager.persist(new VariableBackup(variableId, message));
+                em.persist(new VariableBackup(variableId, message));
             }
-        });*/
+        });
     }
 
     public int delete(String variableId) {
-        /*String jql = "delete from VariableBackup where vid = :vid";
-        return tm.executeInTransaction(entityManager -> {
-            return entityManager.createQuery(jql).setParameter("vid", variableId).executeUpdate();
-        });*/
-        return 0;
+        String jql = "delete from VariableBackup where vid = :vid";
+        return tmc.executeInTransaction(em -> {
+            return em.createQuery(jql).setParameter("vid", variableId).executeUpdate();
+        });
     }
 
     public int deleteButKeepCount(String variableId, int countToKeep) {
-        /*String jql = "delete from variable_backup where vid = :vid and id not in (select id from variable_backup order by created desc limit :limit)";
-        return tm.executeInTransaction(entityManager -> {
-            return entityManager.createNativeQuery(jql)
-                                .setParameter("vid", variableId)
-                                .setParameter("limit", countToKeep).executeUpdate();
-        });*/
-        return 0;
+        String jql = "delete from variable_backup where vid = :vid and id not in (select id from variable_backup order by created desc limit :limit)";
+        return tmc.executeInTransaction(em -> {
+            return em.createNativeQuery(jql)
+                     .setParameter("vid", variableId)
+                     .setParameter("limit", countToKeep).executeUpdate();
+        });
     }
 
     public int deleteButKeepDays(String variableId, int days) {
-        /*LocalDate date = LocalDate.now().minusDays(days);
+        LocalDate date = LocalDate.now().minusDays(days);
         String jql = "delete from VariableBackup where vid = :vid and created < :date";
-        return tm.executeInTransaction(entityManager -> {
-            return entityManager.createQuery(jql)
-                                .setParameter("vid", variableId)
-                                .setParameter("date", date.toEpochDay()).executeUpdate();
-        });*/
-        return 0;
+        return tmc.executeInTransaction(em -> {
+            return em.createQuery(jql)
+                     .setParameter("vid", variableId)
+                     .setParameter("date", date.toEpochDay()).executeUpdate();
+        });
     }
 }

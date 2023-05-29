@@ -8,8 +8,8 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.sql.DataSource;
-import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import org.hibernate.Session;
 import org.homio.api.EntityContext;
 import org.homio.app.extloader.CustomPersistenceManagedTypes;
 import org.homio.app.manager.CacheService;
@@ -32,25 +32,24 @@ public class TransactionManagerContext {
     private final TransactionTemplate transactionTemplate;
     private final TransactionTemplate readOnlyTransactionTemplate;
     private final JpaTransactionManager jpaTransactionManager;
+
     private EntityManagerFactory entityManagerFactory;
-    @Getter
     private EntityManager entityManager;
 
-    public TransactionManagerContext(
-        ApplicationContext applicationContext,
-        EntityManagerFactory entityManagerFactory) {
+    public TransactionManagerContext(ApplicationContext applicationContext) {
 
         this.applicationContext = applicationContext;
-        this.entityManagerFactory = entityManagerFactory;
+        this.entityManagerFactory = applicationContext.getBean(EntityManagerFactory.class);
 
         this.jpaProperties = applicationContext.getBean(LocalContainerEntityManagerFactoryBean.class).getJpaPropertyMap();
-        this.jpaTransactionManager = (JpaTransactionManager) applicationContext.getBean("transactionManagerContext");
+        this.jpaTransactionManager = (JpaTransactionManager) applicationContext.getBean("transactionManager");
+
+        this.entityManager = entityManagerFactory.createEntityManager();
 
         this.transactionTemplate = new TransactionTemplate(jpaTransactionManager);
         this.readOnlyTransactionTemplate = new TransactionTemplate(jpaTransactionManager);
         this.readOnlyTransactionTemplate.setReadOnly(true);
 
-        this.entityManager = entityManagerFactory.createEntityManager();
     }
 
     public <T> T executeInTransactionReadOnly(Function<EntityManager, T> handler) {

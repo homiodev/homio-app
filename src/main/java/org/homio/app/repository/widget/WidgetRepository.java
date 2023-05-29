@@ -5,7 +5,6 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Log4j2
 @Repository
