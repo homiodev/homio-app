@@ -201,7 +201,6 @@ public class EntityContextImpl implements EntityContext {
 
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
-        this.entityContextEvent.registerEntityListeners();
         this.entityContextAddon.setApplicationContext(applicationContext);
         this.allApplicationContexts.add(applicationContext);
         this.applicationContext = applicationContext;
@@ -214,6 +213,9 @@ public class EntityContextImpl implements EntityContext {
 
         repositories.putAll(applicationContext.getBeansOfType(AbstractRepository.class));
         rebuildRepositoryByPrefixMap();
+
+        // Register
+        entityContextEvent.onContextCreated();
 
         UserAdminEntity.ensureUserExists(this);
         LocalBoardEntity.ensureDeviceExists(this);

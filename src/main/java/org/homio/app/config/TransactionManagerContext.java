@@ -66,7 +66,7 @@ public class TransactionManagerContext {
         this.persistenceManagedTypes = persistenceManagedTypes;
         this.entityManagerFactoryBuilder = entityManagerFactoryBuilder;
 
-        log.info("Creating EntityManagerFactory");
+        log.info("Creating EntityManagerFactory...");
         this.entityManagerFactory = createEntityManagerFactory("update");
         this.entityManager = entityManagerFactory.createEntityManager();
         log.info("EntityManagerFactory creation has been completed");

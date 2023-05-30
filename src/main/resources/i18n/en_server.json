@@ -3,7 +3,7 @@
   "SERVER_STARTED": "Started: {{VALUE}}. Uptime: {{TIME}}",
   "ERROR": {
     "PORT_NOT_AVAILABLE": "Port {{PORT}} not available",
-    "UNKNOWN_HOST": "Unknown host: {{HOST}}"
+    "UNKNOWN_HOST": "Unknown host: {{VALUE}}"
   },
   "sys_cpu_load": "System cpu load",
   "java_cpu_load": "Java cpu load",
@@ -17,16 +17,16 @@
       "actionNotFound": "No video action found"
     }
   },
-  "ENTITY_CREATED": "Entity created: {{NAME}}",
-  "ENTITY_DELETED": "Entity deleted: {{NAME}}",
+  "ENTITY_CREATED": "Entity created: {{VALUE}}",
+  "ENTITY_DELETED": "Entity deleted: {{VALUE}}",
   "DEFAULT_PLACES": "Kitchen;Bath;Сorridor;Bedroom;Hall;Boiler room;Playroom;Garage;Basement;Entrance;",
   "USED_QUOTA": "Used {{PC}}% quota {{VAL}}/{{MAX}}",
   "UDP_ERROR": "Unable to listen udp: {{key}}. Error: {{msg}}",
   "NEW_DEVICE": {
-    "GENERAL_QUESTION": "Do you want create {{NAME}} device?",
-    "TITLE": "Found device: {{NAME}}",
-    "NAME": "Name   '{{NAME}}'",
-    "URL": "URL    '{{URL}}'"
+    "GENERAL_QUESTION": "Do you want create {{VALUE}} device?",
+    "TITLE": "Found device: {{VALUE}}",
+    "NAME": "Name   '{{VALUE}}'",
+    "URL": "URL    '{{VALUE}}'"
   },
   "TMATE_DESCRIPTION": "Tmate is <a href=\"https://tmate.io\" target=\"_blank\"></a> service that creates web-socket session with unique id to connect to device"
 }

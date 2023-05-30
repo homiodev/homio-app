@@ -103,32 +103,32 @@
     </dependency>
 
     <dependency>
-      <artifactId>homio-addon-camera</artifactId>
-      <groupId>org.homio</groupId>
+      <artifactId>addon-camera</artifactId>
+      <groupId>org.homio.addon</groupId>
       <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-addon-telegram</artifactId>
-      <groupId>org.homio</groupId>
+      <artifactId>addon-telegram</artifactId>
+      <groupId>org.homio.addon</groupId>
       <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-addon-mqtt</artifactId>
-      <groupId>org.homio</groupId>
+      <artifactId>addon-mqtt</artifactId>
+      <groupId>org.homio.addon</groupId>
       <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-addon-z2m</artifactId>
-      <groupId>org.homio</groupId>
+      <artifactId>addon-z2m</artifactId>
+      <groupId>org.homio.addon</groupId>
       <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-addon-bluetooth</artifactId>
-      <groupId>org.homio</groupId>
+      <artifactId>addon-bluetooth</artifactId>
+      <groupId>org.homio.addon</groupId>
       <version>${homio-primary-addons.version}</version>
     </dependency>
 
@@ -270,6 +270,10 @@
       <groupId>org.springframework.boot</groupId>
     </dependency>
 
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-orm</artifactId>

@@ -328,11 +328,8 @@ public class WorkspaceService implements ContextRefreshed {
                 if (!inlineScratches.contains(scratch3ExtensionBlock.getClass())) {
                     throw new ServerException("Unable to find addon context with id: " + scratch3ExtensionBlock.getId());
                 }
-            } else {
-                order = addonEntrypoint.order();
             }
-            Scratch3ExtensionImpl scratch3ExtensionImpl =
-                new Scratch3ExtensionImpl(scratch3ExtensionBlock, order);
+            Scratch3ExtensionImpl scratch3ExtensionImpl = new Scratch3ExtensionImpl(scratch3ExtensionBlock, order);
 
             if (!extensions.contains(scratch3ExtensionImpl)) {
                 insertScratch3Spaces(scratch3ExtensionBlock);

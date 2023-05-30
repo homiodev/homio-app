@@ -17,6 +17,7 @@ import org.apache.commons.io.FileUtils;
 import org.homio.api.exception.ServerException;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Constants;
+import org.homio.api.util.Lang;
 import org.homio.app.HomioClassLoader;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.spring.ContextCreated;
@@ -84,7 +85,7 @@ public class AddonContextService implements ContextCreated {
     public void uninstallAddon(String name) {
         AddonContext context = this.addonContextMap.get(name);
         if (context == null) {
-            throw new ServerException("Addon <{}> not exists");
+            throw new ServerException(Lang.getServerMessage("ADDON_NOT_EXISTS", name));
         }
         removeAddon(name);
     }

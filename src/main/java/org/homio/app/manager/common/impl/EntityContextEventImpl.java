@@ -57,6 +57,7 @@ import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.EntityContextImpl.ItemAction;
 import org.homio.app.manager.common.EntityContextStorage;
+import org.homio.app.spring.ContextCreated;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -86,35 +87,6 @@ public class EntityContextEventImpl implements EntityContextEvent {
 
     public EntityContextEventImpl(EntityContextImpl entityContext) {
         this.entityContext = entityContext;
-
-        // execute all updates in thread
-        new Thread(() -> {
-            while (true) {
-                try {
-                    EntityUpdate entityUpdate = entityUpdatesQueue.take();
-                    entityUpdate.itemAction.handler.accept(entityContext, entityUpdate.entity);
-                } catch (Exception ex) {
-                    log.error("Error while execute postUpdate action", ex);
-                }
-            }
-        }).start();
-        // event handler
-        new Thread(() -> {
-            while (true) {
-                try {
-                    Event event = eventQueue.take();
-                    for (Map<String, Consumer<Object>> eventListenerMap : eventListeners.values()) {
-                        if (eventListenerMap.containsKey(event.key)) {
-                            eventListenerMap.get(event.key).accept(event.value);
-                        }
-                    }
-                    globalEvenListeners.forEach(l -> l.accept(event.key, event.value));
-                    entityContext.fireAllBroadcastLock(broadcastLockManager -> broadcastLockManager.signalAll(event.key, event.value));
-                } catch (Exception ex) {
-                    log.error("Error while execute event handler", ex);
-                }
-            }
-        }).start();
     }
 
     @Override
@@ -269,6 +241,38 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }
     }
 
+    public void onContextCreated() throws Exception {
+        this.registerEntityListeners();
+        // execute all updates in thread
+        new Thread(() -> {
+            while (true) {
+                try {
+                    EntityUpdate entityUpdate = entityUpdatesQueue.take();
+                    entityUpdate.itemAction.handler.accept(entityContext, entityUpdate.entity);
+                } catch (Exception ex) {
+                    log.error("Error while execute postUpdate action", ex);
+                }
+            }
+        }).start();
+        // event handler
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Event event = eventQueue.take();
+                    for (Map<String, Consumer<Object>> eventListenerMap : eventListeners.values()) {
+                        if (eventListenerMap.containsKey(event.key)) {
+                            eventListenerMap.get(event.key).accept(event.value);
+                        }
+                    }
+                    globalEvenListeners.forEach(l -> l.accept(event.key, event.value));
+                    entityContext.fireAllBroadcastLock(broadcastLockManager -> broadcastLockManager.signalAll(event.key, event.value));
+                } catch (Exception ex) {
+                    log.error("Error while execute event handler", ex);
+                }
+            }
+        }).start();
+    }
+
     @NotNull
     private EntityContextEventImpl fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
         // fire by key and key + value type
@@ -292,7 +296,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
         eventQueue.add(new Event(key, value));
     }
 
-    public void registerEntityListeners() {
+    private void registerEntityListeners() {
         TransactionManagerContext tmc = entityContext.getBean(TransactionManagerContext.class);
         tmc.setFactoryListener(em -> registerEntityManagerListeners(em.unwrap(SessionFactoryImpl.class)));
     }
@@ -397,7 +401,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
         Insert((context, entity) -> {
             postInsertUpdate(context, entity, true);
             if (entity instanceof BaseEntity && !(entity instanceof PinBaseEntity)) {
-                context.ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", "NAME", ((BaseEntity<?>) entity).getEntityID()));
+                context.ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", ((BaseEntity<?>) entity).getEntityID()));
             }
         }),
         Update((context, entity) -> {

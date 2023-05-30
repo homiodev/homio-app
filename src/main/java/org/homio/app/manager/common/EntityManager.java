@@ -78,8 +78,7 @@ public class EntityManager {
     public Set<String> getEntityIDsByEntityClassFullName(Class<BaseEntity> entityClass) {
         List<BaseEntity> list;
         Predicate<BaseEntity> filter = baseEntity -> true;
-        AbstractRepository<BaseEntity> repositoryByClass =
-            classFinder.getRepositoryByClass(entityClass);
+        AbstractRepository<BaseEntity> repositoryByClass = classFinder.getRepositoryByClass(entityClass);
 
         // in case we not found repository, but found potential repository - we should filter
         if (!repositoryByClass.getEntityClass().equals(entityClass)) {

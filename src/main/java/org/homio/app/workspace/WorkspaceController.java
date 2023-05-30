@@ -145,7 +145,6 @@ public class WorkspaceController {
         entityContext.save(workspaceEntity.setContent(json));
     }
 
-    @SneakyThrows
     @PostMapping("/variable")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void saveVariables(@RequestBody String json) {

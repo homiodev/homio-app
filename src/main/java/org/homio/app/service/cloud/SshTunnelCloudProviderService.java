@@ -149,7 +149,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         } catch (Exception ex) {
             log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
             if (ex.getCause() instanceof UnknownHostException) {
-                entityContext.ui().sendErrorMessage(Lang.getServerMessage("ERROR.UNKNOWN_HOST", "HOST", ex.getCause().getMessage()));
+                entityContext.ui().sendErrorMessage(Lang.getServerMessage("ERROR.UNKNOWN_HOST", ex.getCause().getMessage()));
             } else {
                 entityContext.ui().sendErrorMessage("W.ERROR.SYNC");
             }

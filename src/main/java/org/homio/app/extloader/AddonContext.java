@@ -2,7 +2,6 @@ package org.homio.app.extloader;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -24,7 +23,6 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.homio.api.AddonConfiguration;
-import org.homio.api.AddonEntrypoint;
 import org.homio.api.exception.ServerException;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SpringUtils;
@@ -36,7 +34,6 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import sun.reflect.ReflectionFactory;
 
 @Getter
 @Setter
@@ -143,7 +140,7 @@ public class AddonContext {
         Reflections reflections = new Reflections(configurationBuilder.setUrls(addonUrl));
 
         config = new AddonSpringContext(env);
-        addonID = config.fetchAddonID(reflections, pomFile.getArtifactId());
+        addonID = pomFile.getArtifactId();
         try {
             HomioClassLoader.addClassLoaders(addonID, classLoader);
             config.configureSpringContext(reflections, parentContext, addonID, classLoader);
@@ -170,20 +167,6 @@ public class AddonContext {
         private final Environment env;
         private AnnotationConfigApplicationContext ctx;
         private Class<?> configClass;
-
-        public String fetchAddonID(Reflections reflections, String artifactId) {
-            Set<Class<? extends AddonEntrypoint>> addonEntrypointSet = reflections.getSubTypesOf(AddonEntrypoint.class);
-            if (addonEntrypointSet.isEmpty()) {
-                throw new ServerException("Found no AddonEntrypoint in context of addon: " + artifactId);
-            }
-            if (addonEntrypointSet.size() > 1) {
-                throw new ServerException("Found multiple AddonEntrypoint in context of addon: " + artifactId);
-            }
-            Class<? extends AddonEntrypoint> entrypointClass = addonEntrypointSet.iterator().next();
-
-            AddonEntrypoint addonEntrypoint = createClassInstance(entrypointClass);
-            return addonEntrypoint.getAddonID();
-        }
 
         void configureSpringContext(Reflections reflections, ApplicationContext parentContext, String addonID, ClassLoader classLoader) {
             configClass = findBatchConfigurationClass(reflections);
@@ -217,14 +200,6 @@ public class AddonContext {
 
         void destroy() {
             ctx.close();
-        }
-
-        @SneakyThrows
-        private static <T> T createClassInstance(Class<T> clazz) {
-            ReflectionFactory rf = ReflectionFactory.getReflectionFactory();
-            Constructor<?> objDef = ((Class<? super T>) Object.class).getDeclaredConstructor();
-            Constructor<?> intConstr = rf.newConstructorForSerialization(clazz, objDef);
-            return clazz.cast(intConstr.newInstance());
         }
 
         /**
