@@ -160,11 +160,9 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextHardwareImpl entityContextHardware;
     private final EntityContextWidgetImpl entityContextWidget;
     @Getter private final EntityContextAddonImpl entityContextAddon;
-    private final Environment environment;
     @Getter private final EntityContextStorage entityContextStorage;
     private final ClassFinder classFinder;
     @Getter private final CacheService cacheService;
-    @Getter private final AppProperties appProperties;
     @Getter private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
     private EntityManager entityManager;
     private boolean showEntityState;
@@ -185,15 +183,13 @@ public class EntityContextImpl implements EntityContext {
         MachineHardwareRepository machineHardwareRepository,
         AppProperties appProperties) {
         this.classFinder = classFinder;
-        this.environment = environment;
         this.cacheService = cacheService;
-        this.appProperties = appProperties;
 
         this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
         this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler, appProperties);
         this.entityContextEvent = new EntityContextEventImpl(this, entityManagerFactory);
         this.entityContextInstall = new EntityContextInstallImpl(this);
-        this.entityContextSetting = new EntityContextSettingImpl(this);
+        this.entityContextSetting = new EntityContextSettingImpl(this, environment, appProperties);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
         this.entityContextStorage = new EntityContextStorage(this);
         this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
@@ -252,16 +248,6 @@ public class EntityContextImpl implements EntityContext {
             ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
 
         this.entityContextStorage.init();
-
-        /*TODO: bgp().builder("f").delay(Duration.ofSeconds(10))
-                          .execute(new ThrowingRunnable<Exception>() {
-                              @Override
-                              public void run() throws Exception {
-                                  transactionManagerContext.invalidate();
-                                  List<DeviceBaseEntity> all = findAll(DeviceBaseEntity.class);
-                                  System.out.println(all.size());
-                              }
-                          });*/
     }
 
     @Override
@@ -499,10 +485,6 @@ public class EntityContextImpl implements EntityContext {
         UserBaseEntity.registerResource(resource);
     }
 
-    public @NotNull Collection<AbstractRepository> getRepositories() {
-        return repositories.values();
-    }
-
     @Override
     public <T> @NotNull List<Class<? extends T>> getClassesWithAnnotation(
         @NotNull Class<? extends Annotation> annotation) {
@@ -550,10 +532,6 @@ public class EntityContextImpl implements EntityContext {
         this.workspaceService.fireAllBroadcastLock(handler);
     }
 
-    public <T> T getEnv(@NotNull String key, @NotNull Class<T> classType, T defaultValue) {
-        return environment.getProperty(key, classType, defaultValue);
-    }
-
     public void rebuildRepositoryByPrefixMap() {
         uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class)
                                     .stream()
@@ -596,7 +574,7 @@ public class EntityContextImpl implements EntityContext {
 
     private void updateAppNotificationBlock() {
         ui().addNotificationBlock("app", "App", "fas fa-house", "#E65100", builder -> {
-            String installedVersion = appProperties.getVersion();
+            String installedVersion = setting().getApplicationVersion();
             builder.setVersion(installedVersion);
             String latestVersion = appGitHub.getLastReleaseVersion();
             if (!installedVersion.equals(latestVersion)) {

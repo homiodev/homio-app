@@ -59,11 +59,28 @@ public class SystemAddonLibraryManagerSetting
     public PackageContext allPackages(EntityContext entityContext) {
         PackageContext packageContext = new PackageContext();
         try {
-            packageContext.setPackages(addons.getValue(entityContext));
+            Collection<PackageModel> allPackageModels = addons.getValue(entityContext);
+            filterMatchPackages(entityContext, allPackageModels);
+            packageContext.setPackages(allPackageModels);
         } catch (Exception ex) {
             packageContext.setError(ex.getMessage());
         }
         return packageContext;
+    }
+
+    /**
+     * Remove packages if no versions available. Also remove versions that not match app major version
+     */
+    private void filterMatchPackages(EntityContext entityContext, Collection<PackageModel> allPackageModels) {
+        allPackageModels.removeIf(packageModel -> {
+            if (packageModel.getVersions() == null) {
+                return true;
+            } else {
+                packageModel.getVersions().removeIf(packageVersion ->
+                    !AddonContext.validVersion(packageVersion, entityContext.setting().getApplicationMajorVersion()));
+                return packageModel.getVersions().isEmpty();
+            }
+        });
     }
 
     @Override
@@ -113,7 +130,7 @@ public class SystemAddonLibraryManagerSetting
 
     @SneakyThrows
     private static Collection<PackageModel> getAddons(String repoURL) {
-        log.info("Try fetch addons for repo: {}", repoURL);
+        log.info("Fetch addons for repo: {}", repoURL);
         Collection<PackageModel> list = new ArrayList<>();
         try {
             GitHubProject addonsRepo = GitHubProject.of(repoURL);

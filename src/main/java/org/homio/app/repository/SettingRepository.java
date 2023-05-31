@@ -119,9 +119,6 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
     public static String getSettingAddonName(EntityContext entityContext, Class<? extends SettingPlugin> settingPluginClass) {
         String name = settingPluginClass.getName();
         return settingToAddonMap.computeIfAbsent(name, key -> {
-            /*TODO: if (name.startsWith(ADDON_PREFIX + "api.")) {
-                return "api";
-            }*/
             if (name.startsWith(ADDON_PREFIX)) {
                 String pathName = name.substring(0, ADDON_PREFIX.length() + name.substring(ADDON_PREFIX.length()).indexOf('.'));
                 AddonEntrypoint addonEntrypoint = entityContext.getBeansOfType(AddonEntrypoint.class).stream()

@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -26,6 +27,7 @@ import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
+import org.homio.app.config.AppProperties;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.SettingEntity;
@@ -33,6 +35,7 @@ import org.homio.app.repository.SettingRepository;
 import org.homio.app.setting.system.SystemPlaceSetting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.core.env.Environment;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -46,6 +49,9 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> settingListeners = new HashMap<>();
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> httpRequestSettingListeners = new HashMap<>();
     private final EntityContextImpl entityContext;
+    private final Environment environment;
+    @Getter
+    private final AppProperties appProperties;
 
     public static List<SettingPlugin> settingPluginsBy(Predicate<SettingPlugin> predicate) {
         return settingPluginsByPluginKey.values().stream().filter(predicate).collect(Collectors.toList());
@@ -163,6 +169,15 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     @Override
     public <T> void setValueSilenceRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value) {
         setValueSilenceRaw(settingPluginsByPluginClass.get(settingPluginClazz.getName()), value);
+    }
+
+    public <T> T getEnv(@NotNull String key, @NotNull Class<T> classType, T defaultValue) {
+        return environment.getProperty(key, classType, defaultValue);
+    }
+
+    @Override
+    public @NotNull String getApplicationVersion() {
+        return appProperties.getVersion();
     }
 
     @SneakyThrows

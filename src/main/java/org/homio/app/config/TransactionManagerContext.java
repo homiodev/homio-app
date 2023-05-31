@@ -41,6 +41,7 @@ public class TransactionManagerContext {
     private final @NotNull EntityManagerFactory entityManagerFactory;
     private final @NotNull EntityManager entityManager;
 
+    private EntityManagerFactory updatedEntityManagerFactory;
     private final AtomicInteger currentActiveQueries = new AtomicInteger(0);
     private volatile CountDownLatch blocker;
 
@@ -103,6 +104,10 @@ public class TransactionManagerContext {
             log.info("Wait all db session to finish");
             Thread.sleep(100);
         }
+        if (updatedEntityManagerFactory != null) {
+            updatedEntityManagerFactory.close();
+        }
+        this.updatedEntityManagerFactory = newEntityManagerFactory;
 
         try {
             FieldUtils.writeDeclaredField(sessionFactory, "eventEngine", newSessionFactory.getEventEngine(), true);
@@ -113,7 +118,6 @@ public class TransactionManagerContext {
             FieldUtils.writeDeclaredField(sessionFactory, "wrapperOptions", newSessionFactory.getWrapperOptions(), true);
 
             this.cacheService.clearCache();
-            newEntityManagerFactory.close();
             log.info("EntityManagerFactory updated");
         } catch (Exception ex) {
             log.error("Unable to update EntityManager factory", ex);

@@ -93,7 +93,11 @@ public class AddonContextService implements ContextCreated {
         for (Path contextFile : findAddonContextFilesFromPath(addonPath)) {
             try {
                 AddonContext addonContext = new AddonContext(contextFile);
-                artifactIdContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);
+                if (!AddonContext.validVersion(addonContext.getVersion(), entityContext.setting().getApplicationMajorVersion())) {
+                    log.error("Unable to launch addon {}. Incompatible version", addonContext.getVersion());
+                } else {
+                    artifactIdContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);
+                }
             } catch (Exception ex) {
                 log.error("\n#{}\nUnable to parse addon: {}\n#{}",
                     repeat("-", 50), contextFile.getFileName(), repeat("-", 50));
@@ -115,7 +119,7 @@ public class AddonContextService implements ContextCreated {
         entityContext.getEntityContextAddon().addAddons(artifactIdContextMap);
     }
 
-    private void loadAddon(AddonContext context) throws Exception {
+    private void loadAddon(AddonContext context) {
         if (!context.isLoaded() && !context.isInternal()) {
             log.info("Try load addon context <{}>.", context.getPomFile().getArtifactId());
             try {

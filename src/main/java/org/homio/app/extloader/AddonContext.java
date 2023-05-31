@@ -133,6 +133,15 @@ public class AddonContext {
         return version;
     }
 
+    public static boolean validVersion(String addonVersion, int appVersion) {
+        try {
+            int addonMajor = Integer.parseInt(addonVersion.split("\\.")[0]);
+            return addonMajor == appVersion;
+        } catch (Exception ignore) {
+        }
+        return false;
+    }
+
     @SneakyThrows
     void load(ConfigurationBuilder configurationBuilder, Environment env, ApplicationContext parentContext,
         ClassLoader classLoader) {

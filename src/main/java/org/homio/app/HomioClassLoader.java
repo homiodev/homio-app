@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.homio.api.util.CommonUtils;
 import org.homio.app.extloader.AddonClassLoader;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
@@ -34,14 +33,8 @@ public class HomioClassLoader extends ClassLoader {
         return addonJarClassLoaders.get(addonID);
     }
 
-    public static List<ClassPathScanningCandidateComponentProvider> getResourceScanners(boolean includeInterfaces) {
-        List<ClassPathScanningCandidateComponentProvider> scanners = new ArrayList<>();
-        scanners.add(createClassPathScanningCandidateComponentProvider(includeInterfaces, null));
-
-        /*TODO: for (AddonClassLoader jarLoader : buuundleJarClassLoaders.values()) {
-            scanners.add(createClassPathScanningCandidateComponentProvider(includeInterfaces, jarLoader));
-        }*/
-        return scanners;
+    public static ClassPathScanningCandidateComponentProvider getResourceScanner(boolean includeInterfaces) {
+        return createClassPathScanningCandidateComponentProvider(includeInterfaces, null);
     }
 
     @Override

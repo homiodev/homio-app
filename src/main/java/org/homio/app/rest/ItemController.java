@@ -330,21 +330,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
     }
 
-    /*TODO: @PostMapping(value = "/{type}/installDep/{dependency}")
-    public void installDep(@PathVariable("type") String type, @PathVariable("dependency") String dependency) {
-      if (typeToRequireDependencies.containsKey(type)) {
-        List<DependencyExecutableInstaller> installers = typeToRequireDependencies.get(type).installers;
-        DependencyExecutableInstaller installer =
-            installers.stream().filter(c -> c.getName().equals(dependency)).findAny().orElse(null);
-        if (installer != null && installer.isRequireInstallDependencies(entityContext, false)) {
-          entityContext.bgp().runWithProgress("install-deps-" + dependency, false, progressBar -> {
-            installer.installDependency(entityContext, progressBar);
-            reloadItems(Collections.singletonList(type));
-          }, null, () -> new RuntimeException("INSTALL_DEPENDENCY_IN_PROGRESS"));
-        }
-      }
-    }*/
-
     @GetMapping("/{type}/actions")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public Collection<UIInputEntity> getItemsActions(@PathVariable("type") String type) {
