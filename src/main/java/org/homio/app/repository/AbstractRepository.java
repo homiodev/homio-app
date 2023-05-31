@@ -17,6 +17,7 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.TransactionManagerContext;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Log4j2
@@ -79,11 +80,13 @@ public class AbstractRepository<T extends BaseEntity> {
     }
 
     public T getByEntityIDWithFetchLazy(String entityID, boolean ignoreNotUILazy) {
-        T byEntityID = getByEntityID(entityID);
-        if (byEntityID != null) {
-            fetchLazy(byEntityID, new HashSet<>(), ignoreNotUILazy);
-        }
-        return byEntityID;
+        return tmc.executeInTransactionReadOnly(em -> {
+            T entity = getEntity(entityID, em);
+            if (entity != null) {
+                fetchLazy(entity, new HashSet<>(), ignoreNotUILazy);
+            }
+            return entity;
+        });
     }
 
     private void fetchLazy(Object entity, Set<Object> visitedEntities, boolean ignoreNotUI) {
@@ -112,13 +115,18 @@ public class AbstractRepository<T extends BaseEntity> {
 
     public T deleteByEntityID(String entityID) {
         return tmc.executeInTransaction(em -> {
-            T entity = findByField(em, "entityID", entityID).stream().findFirst().orElse(null);
+            T entity = getEntity(entityID, em);
             if (entity != null) {
                 em.remove(entity);
                 log.warn("Entity <{}> was removed", entity);
             }
             return entity;
         });
+    }
+
+    @Nullable
+    private T getEntity(String entityID, EntityManager em) {
+        return findByField(em, "entityID", entityID).stream().findFirst().orElse(null);
     }
 
     public Class<T> getEntityClass() {
