@@ -36,9 +36,12 @@ public class CustomPersistenceManagedTypes implements PersistenceManagedTypes {
         this.managedPackages = persistenceManagedTypes.getManagedPackages();
         this.persistenceUnitRootUrl = persistenceManagedTypes.getPersistenceUnitRootUrl();
         List<String> scannedManagedClassNames = persistenceManagedTypes.getManagedClassNames();
-        boolean hasChanges = managedClassNames == null || this.managedClassNames.size() != scannedManagedClassNames.size() || new HashSet<>(
-            this.managedClassNames).containsAll(scannedManagedClassNames);
-        this.managedClassNames = scannedManagedClassNames;
-        return hasChanges;
+        if (managedClassNames == null
+            || this.managedClassNames.size() != scannedManagedClassNames.size()
+            || !new HashSet<>(this.managedClassNames).containsAll(scannedManagedClassNames)) {
+            this.managedClassNames = scannedManagedClassNames;
+            return true;
+        }
+        return false;
     }
 }

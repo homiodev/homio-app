@@ -216,16 +216,14 @@ public class WorkspaceService implements ContextRefreshed {
             }
 
             if (!workspaceTabHolder.blocks.containsKey(blockId)) {
-                workspaceTabHolder.blocks.put(
-                    blockId, new WorkspaceBlockImpl(blockId, workspaceTabHolder));
+                workspaceTabHolder.blocks.put(blockId, new WorkspaceBlockImpl(blockId, workspaceTabHolder));
             }
 
             WorkspaceBlockImpl workspaceBlock = workspaceTabHolder.blocks.get(blockId);
             workspaceBlock.setShadow(block.optBoolean("shadow"));
             workspaceBlock.setTopLevel(block.getBoolean("topLevel"));
             workspaceBlock.setOpcode(block.getString("opcode"));
-            workspaceBlock.setParent(
-                getOrCreateWorkspaceBlock(workspaceTabHolder, block, "parent"));
+            workspaceBlock.setParent(getOrCreateWorkspaceBlock(workspaceTabHolder, block, "parent"));
             workspaceBlock.setNext(getOrCreateWorkspaceBlock(workspaceTabHolder, block, "next"));
 
             JSONObject fields = block.optJSONObject("fields");
@@ -246,9 +244,7 @@ public class WorkspaceService implements ContextRefreshed {
     private WorkspaceBlockImpl getOrCreateWorkspaceBlock(
         WorkspaceTabHolder workspaceTabHolder, JSONObject block, String key) {
         if (block.has(key) && !block.isNull(key)) {
-            workspaceTabHolder.blocks.putIfAbsent(
-                block.getString(key),
-                new WorkspaceBlockImpl(block.getString(key), workspaceTabHolder));
+            workspaceTabHolder.blocks.putIfAbsent(block.getString(key), new WorkspaceBlockImpl(block.getString(key), workspaceTabHolder));
             return workspaceTabHolder.blocks.get(block.getString(key));
         }
         return null;
@@ -260,42 +256,23 @@ public class WorkspaceService implements ContextRefreshed {
         } catch (Exception ex) {
             log.error("Unable to load workspace. Looks like workspace has incorrect value", ex);
         }
-        entityContext
-            .event()
-            .addEntityUpdateListener(
-                WorkspaceEntity.class, "workspace-change-listener", this::reloadWorkspace);
-        entityContext
-            .event()
-            .addEntityRemovedListener(
-                WorkspaceEntity.class,
-                "workspace-remove-listener",
-                entity -> tabs.remove(entity.getEntityID()));
+        entityContext.event().addEntityUpdateListener(
+            WorkspaceEntity.class, "workspace-change-listener", this::reloadWorkspace);
+        entityContext.event().addEntityRemovedListener(WorkspaceEntity.class, "workspace-remove-listener",
+            entity -> tabs.remove(entity.getEntityID()));
 
         // listen for clear workspace
-        entityContext
-            .setting()
-            .listenValue(
-                SystemClearWorkspaceButtonSetting.class,
-                "wm-clear-workspace",
-                () ->
-                    entityContext
-                        .findAll(WorkspaceEntity.class)
-                        .forEach(
-                            entity ->
-                                entityContext.save(entity.setContent(""))));
+        entityContext.setting().listenValue(SystemClearWorkspaceButtonSetting.class, "wm-clear-workspace",
+            () -> entityContext.findAll(WorkspaceEntity.class)
+                               .forEach(entity -> entityContext.save(entity.setContent(""))));
     }
 
     private void reloadWorkspaces() {
         List<WorkspaceEntity> workspaceTabs = entityContext.findAll(WorkspaceEntity.class);
         if (workspaceTabs.isEmpty()) {
-            WorkspaceEntity mainWorkspace =
-                entityContext.getEntity(
-                    WorkspaceEntity.PREFIX
-                        + WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME);
+            WorkspaceEntity mainWorkspace = entityContext.getEntity(WorkspaceEntity.PREFIX + WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME);
             if (mainWorkspace == null) {
-                entityContext.save(
-                    new WorkspaceEntity()
-                        .setEntityID(WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME));
+                entityContext.save(new WorkspaceEntity().setName("main").setEntityID(WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME));
             }
         } else {
             for (WorkspaceEntity workspaceTab : workspaceTabs) {
