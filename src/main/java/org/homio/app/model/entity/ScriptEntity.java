@@ -45,6 +45,7 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @Getter
     @Setter
     @UIField(order = 13)
+    @Column(length = 65_535)
     @UIFieldCodeEditor(editorType = MonacoLanguage.Json, autoFormat = true)
     private String javaScriptParameters = "{}";
 
@@ -53,13 +54,13 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @UIField(order = 16, inlineEdit = true)
     private boolean autoStart = false;
 
+    @Column(length = 1_000)
     @Getter @Setter private String error;
 
-    @Lob
     @Getter
     @Setter
     @UIField(order = 30)
-    @Column(length = 1000_000)
+    @Column(length = 65_535)
     @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript, autoFormat = true)
     private String javaScript = "function before() { };\nfunction run() { };\nfunction after() { };";
 

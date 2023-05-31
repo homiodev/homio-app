@@ -1,6 +1,5 @@
 package org.homio.app.repository;
-
-import org.homio.api.entity.ImageEntity;
+import org.homio.app.model.entity.ImageEntity;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -11,9 +10,6 @@ public class ImageRepository extends AbstractRepository<ImageEntity> {
     }
 
     public ImageEntity getByPath(String path) {
-        /*return tm.executeInTransaction(entityManager -> {
-            return findSingle(entityManager, "path", path);
-        });*/
-        return null;
+        return findSingleByField("path", path);
     }
 }

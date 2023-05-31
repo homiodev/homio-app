@@ -22,7 +22,7 @@ import org.springframework.boot.autoconfigure.orm.jpa.HibernateSettings;
 import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.ApplicationContext;
-import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
 import org.springframework.stereotype.Component;
@@ -39,7 +39,7 @@ public class TransactionManagerContext {
     private final @NotNull HibernateProperties hibernateProperties;
     private final @NotNull TransactionTemplate transactionTemplate;
     private final @NotNull TransactionTemplate readOnlyTransactionTemplate;
-    private final @NotNull JpaTransactionManager transactionManager;
+    private final @NotNull DataSourceTransactionManager transactionManager;
     private final @NotNull PersistenceManagedTypes persistenceManagedTypes;
     private final @NotNull EntityManagerFactoryBuilder entityManagerFactoryBuilder;
     private final @NotNull DataSource dataSource;
@@ -70,8 +70,7 @@ public class TransactionManagerContext {
         this.entityManagerFactory = createEntityManagerFactory("update");
         this.entityManager = entityManagerFactory.createEntityManager();
         log.info("EntityManagerFactory creation has been completed");
-
-        this.transactionManager = new JpaTransactionManager(entityManagerFactory);
+        this.transactionManager = new DataSourceTransactionManager(dataSource);
 
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.readOnlyTransactionTemplate = new TransactionTemplate(transactionManager);
@@ -109,7 +108,6 @@ public class TransactionManagerContext {
 
         this.entityManagerFactory = createEntityManagerFactory("none");
         this.entityManager = entityManagerFactory.createEntityManager();
-        this.transactionManager.setEntityManagerFactory(entityManagerFactory);
         this.factoryListener.accept(entityManagerFactory);
         this.cacheService.clearCache();
     }

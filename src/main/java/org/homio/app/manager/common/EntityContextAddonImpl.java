@@ -133,7 +133,6 @@ public class EntityContextAddonImpl {
 
     private ApplicationContext addAddons(AddonContext addonContext) {
         if (!addonContext.isInternal() && !addonContext.isInstalled()) {
-            entityContext.ui().addNotificationBlockOptional("addons", "Addons", "fas fa-file-zipper", "#FF4400");
             String key = addonContext.getAddonID();
 
             List<String> versions = getAddonReleasesSince(addonContext.getPomFile().getArtifactId(), addonContext.getVersion());

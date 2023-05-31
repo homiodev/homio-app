@@ -32,7 +32,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.SelfContainedAudioSourceContainer;
-import org.homio.api.entity.ImageEntity;
 import org.homio.api.model.OptionModel;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.video.DownloadFile;
@@ -40,6 +39,7 @@ import org.homio.api.video.VideoPlaybackStorage;
 import org.homio.api.video.ffmpeg.FfmpegInputDeviceHardwareRepository;
 import org.homio.app.audio.AudioService;
 import org.homio.app.manager.ImageService;
+import org.homio.app.model.entity.ImageEntity;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -117,7 +117,7 @@ public class MediaController {
         @PathVariable(value = "from") @DateTimeFormat(pattern = "yyyyMMdd") Date from,
         @PathVariable(value = "to") @DateTimeFormat(pattern = "yyyyMMdd") Date to)
         throws Exception {
-        VideoPlaybackStorage entity = entityContext.getEntity(entityID);
+        VideoPlaybackStorage entity = entityContext.getEntityRequire(entityID);
         return entity.getAvailableDaysPlaybacks(entityContext, "main", from, to);
     }
 
@@ -126,7 +126,7 @@ public class MediaController {
         @PathVariable("entityID") String entityID,
         @PathVariable(value = "date") @DateTimeFormat(pattern = "yyyyMMdd") Date date)
         throws Exception {
-        VideoPlaybackStorage entity = entityContext.getEntity(entityID);
+        VideoPlaybackStorage entity = entityContext.getEntityRequire(entityID);
         return entity.getPlaybackFiles(entityContext, "main", date, new Date(date.getTime() + TimeUnit.DAYS.toMillis(1) - 1));
     }
 
@@ -257,7 +257,7 @@ public class MediaController {
 
     @SneakyThrows
     private Path getPlaybackThumbnailPath(String entityID, String fileId, String size) {
-        VideoPlaybackStorage entity = entityContext.getEntity(entityID);
+        VideoPlaybackStorage entity = entityContext.getEntityRequire(entityID);
         Path path = CommonUtils.getMediaPath().resolve("camera").resolve(entityID).resolve("playback")
                                .resolve(fileId + "_" + size.replaceAll(":", "x") + ".jpg");
         if (Files.exists(path) && Files.size(path) > 0) {

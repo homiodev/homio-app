@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,23 +50,10 @@ public class AddonContextService implements ContextCreated {
             this.artifactIdContextMap.put(systemAddon, systemAddonContext);
         }
         entityContext.bgp().runDirectoryWatchdog(CommonUtils.getAddonPath(), watchEvent -> {
-            String eventType = watchEvent.kind().name();
             Path path = CommonUtils.getAddonPath().resolve(watchEvent.context());
             log.info("Detect addon directory changes: {}/{}", watchEvent.kind(), path);
-            switch (eventType) {
-                case "ENTRY_CREATE":
-                    loadAddonFromPath(path);
-                    break;
-                case "ENTRY_DELETE":
-                    removeAddonFromPath(path);
-                    break;
-                case "ENTRY_MODIFY":
-                    reloadAddonFromPath(path);
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected value: " + watchEvent.kind());
-            }
-        });
+            loadAddonFromPath(path);
+        }, StandardWatchEventKinds.ENTRY_CREATE);
     }
 
     @SneakyThrows
@@ -79,7 +67,12 @@ public class AddonContextService implements ContextCreated {
         }
         Path path = CommonUtils.getAddonPath().resolve(addonID + ".jar");
         FileUtils.copyURLToFile(new URL(format(addonUrl, version)), path.toFile(), 30000, 30000);
-        loadAddonFromPath(path);
+        try {
+            loadAddonFromPath(path);
+        } catch (Exception ex) {
+            Files.deleteIfExists(path);
+            throw ex;
+        }
     }
 
     public void uninstallAddon(String name) {
@@ -95,6 +88,7 @@ public class AddonContextService implements ContextCreated {
      */
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
+        entityContext.ui().addNotificationBlockOptional("addons", "Addons", "fas fa-file-zipper", "#FF4400");
         Path addonPath = CommonUtils.getAddonPath();
         for (Path contextFile : findAddonContextFilesFromPath(addonPath)) {
             try {
@@ -111,18 +105,17 @@ public class AddonContextService implements ContextCreated {
         this.entityContext.getEntityContextAddon().addAddons(artifactIdContextMap);
     }
 
-    private void loadAddonFromPath(Path addonContextFile) {
-        AddonContext addonContext = new AddonContext(addonContextFile);
-        addAddonFromPath(addonContext);
+    private void loadAddonFromPath(Path addonContextFile) throws Exception {
+        addAddonFromPath(new AddonContext(addonContextFile));
     }
 
-    private void addAddonFromPath(AddonContext addonContext) {
+    private void addAddonFromPath(AddonContext addonContext) throws Exception {
         artifactIdContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);
         loadAddon(addonContext);
         entityContext.getEntityContextAddon().addAddons(artifactIdContextMap);
     }
 
-    private void loadAddon(AddonContext context) {
+    private void loadAddon(AddonContext context) throws Exception {
         if (!context.isLoaded() && !context.isInternal()) {
             log.info("Try load addon context <{}>.", context.getPomFile().getArtifactId());
             try {
@@ -135,6 +128,7 @@ public class AddonContextService implements ContextCreated {
             } catch (Exception ex) {
                 addonContextMap.remove(context.getAddonID());
                 log.error("Unable to load addon context <{}>.", context.getPomFile().getArtifactId(), ex);
+                throw ex;
             }
         }
     }

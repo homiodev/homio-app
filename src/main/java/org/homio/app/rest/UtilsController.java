@@ -6,6 +6,9 @@ import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import jakarta.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -21,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.AllArgsConstructor;
@@ -63,6 +67,7 @@ import org.homio.app.rest.widget.ChartDataset;
 import org.homio.app.rest.widget.EvaluateDatesAndValues;
 import org.homio.app.rest.widget.WidgetChartsController;
 import org.homio.app.rest.widget.WidgetChartsController.TimeSeriesChartData;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -89,6 +94,13 @@ public class UtilsController {
     private final EntityContextImpl entityContext;
     private final ScriptService scriptService;
     private final CodeParser codeParser;
+
+    private static final LoadingCache<String, GitHubReadme> readmeCache =
+        CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
+            public @NotNull GitHubReadme load(String url) {
+                return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
+            }
+        });
 
     @PutMapping("/multiDynamicUpdates")
     public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {
@@ -164,10 +176,7 @@ public class UtilsController {
     @PostMapping("/github/readme")
     public GitHubReadme getUrlContent(@RequestBody String url) {
         try {
-            if (url.endsWith("/wiki")) {
-                url = url.substring(0, url.length() - 5);
-            }
-            return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
+            return readmeCache.get(url.endsWith("/wiki") ? url.substring(0, url.length() - "/wiki".length()) : url);
         } catch (Exception ex) {
             throw new ServerException("No readme found");
         }

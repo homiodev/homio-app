@@ -6,6 +6,7 @@ import com.google.common.cache.LoadingCache;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.homio.app.model.entity.user.UserBaseEntity;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -21,7 +22,7 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
     public CacheAuthenticationProvider() {
         this.attemptsCache = CacheBuilder.newBuilder().
                                          expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
-                public Integer load(@SuppressWarnings("NullableProblems") String ignore) {
+                public @NotNull Integer load(String ignore) {
                     return 0;
                 }
             });

@@ -1,7 +1,9 @@
 package org.homio.app.notification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -15,35 +17,49 @@ import org.homio.api.model.Status;
 import org.homio.api.ui.action.UIActionHandler;
 import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Getter
 @Setter
 @RequiredArgsConstructor
 public class NotificationBlock {
 
-    private final String entityID;
+    private final @NotNull String entityID;
     private final String name;
     private final String icon;
     private final String color;
     @JsonIgnore
-    private final Map<String, Info> infoItemMap = new ConcurrentHashMap<>();
+    private final @NotNull Map<String, Info> infoItemMap = new ConcurrentHashMap<>();
     private String version;
-    private Collection<UIInputEntity> actions;
-    private Collection<UIInputEntity> contextMenuActions;
-    private Status status;
-    private String statusColor;
-    private boolean updating;
-    private List<String> versions;
-    private String link;
-    private String linkType;
     @JsonIgnore
-    private BiFunction<ProgressBar, String, ActionResponseModel> updateHandler;
+    private @NotNull Map<String, Collection<UIInputEntity>> keyValueActions = new HashMap<>();
+    private @Nullable Collection<UIInputEntity> contextMenuActions;
+    private @Nullable Status status;
+    private @Nullable String statusColor;
+    private boolean updating;
+    private @Nullable List<String> versions;
+    private @Nullable String link;
+    private @Nullable String linkType;
+    @JsonIgnore
+    private @Nullable BiFunction<ProgressBar, String, ActionResponseModel> updateHandler;
 
     @JsonIgnore
     private Runnable fireOnFetchHandler;
 
     @JsonIgnore
     private String email;
+
+    public Collection<UIInputEntity> getActions() {
+        if (keyValueActions.isEmpty()) {
+            return null;
+        }
+        Collection<UIInputEntity> actions = new ArrayList<>();
+        for (Collection<UIInputEntity> item : keyValueActions.values()) {
+            actions.addAll(item);
+        }
+        return actions;
+    }
 
     public Collection<Info> getInfoItems() {
         return infoItemMap.values();

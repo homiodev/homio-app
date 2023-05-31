@@ -9,9 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.ImageEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.model.entity.ImageEntity;
 import org.homio.app.repository.ImageRepository;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
@@ -59,8 +59,7 @@ public class ImageService {
             Path imagePath = CommonUtils.getImagePath().resolve(entityID);
             String ext = entityID.substring(entityID.length() - 3);
             ImageIO.write(bufferedImage, ext, imagePath.toFile());
-            ImageEntity imageEntity =
-                imageRepository.getByPath(imagePath.toAbsolutePath().toString());
+            ImageEntity imageEntity = imageRepository.getByPath(imagePath.toAbsolutePath().toString());
             if (imageEntity == null) {
                 imageEntity = new ImageEntity();
                 imageEntity.setPath(imagePath.toAbsolutePath().toString());

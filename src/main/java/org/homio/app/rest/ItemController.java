@@ -45,7 +45,6 @@ import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
-import org.homio.api.entity.ImageEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
@@ -74,6 +73,7 @@ import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.EntityManager;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
+import org.homio.app.model.entity.ImageEntity;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.repository.AbstractRepository;
@@ -744,26 +744,30 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                     Class<? extends Annotation> aClass =
                         field.isAnnotationPresent(OneToOne.class) ? OneToOne.class : (field.isAnnotationPresent(OneToMany.class) ? OneToMany.class : null);
                     if (aClass != null) {
-                        Object targetValue = FieldUtils.readField(field, baseEntity, true);
-                        if (targetValue instanceof Collection) {
-                            if (!((Collection<?>) targetValue).isEmpty()) {
-                                for (Object o : (Collection<?>) targetValue) {
-                                    o.toString(); // hibernate initialize
-                                    BaseEntity entity = (BaseEntity) o;
-                                    usages.put(entity.getEntityID(), entity);
-                                    fillEntityRelationships(entity, usages);
-                                }
-                            }
-                        } else if (targetValue != null) {
-                            BaseEntity entity = (BaseEntity) targetValue;
-                            usages.put(entity.getEntityID(), entity);
-                            fillEntityRelationships(entity, usages);
-                        }
+                        fillEntityRelationships(baseEntity, usages, field);
                     }
                 } catch (Exception e) {
                     throw new ServerException(e);
                 }
             });
+        }
+    }
+
+    private void fillEntityRelationships(Object baseEntity, Map<String, BaseEntity> usages, Field field) throws IllegalAccessException {
+        Object targetValue = FieldUtils.readField(field, baseEntity, true);
+        if (targetValue instanceof Collection) {
+            if (!((Collection<?>) targetValue).isEmpty()) {
+                for (Object o : (Collection<?>) targetValue) {
+                    o.toString(); // hibernate initialize
+                    BaseEntity entity = (BaseEntity) o;
+                    usages.put(entity.getEntityID(), entity);
+                    fillEntityRelationships(entity, usages);
+                }
+            }
+        } else if (targetValue != null) {
+            BaseEntity entity = (BaseEntity) targetValue;
+            usages.put(entity.getEntityID(), entity);
+            fillEntityRelationships(entity, usages);
         }
     }
 

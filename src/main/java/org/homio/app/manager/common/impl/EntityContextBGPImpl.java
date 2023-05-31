@@ -396,7 +396,11 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 WatchKey key;
                 while ((key = watchService.take()) != null) {
                     for (WatchEvent<?> event : key.pollEvents()) {
-                        onUpdateCommand.accept((WatchEvent<Path>) event);
+                        try {
+                            onUpdateCommand.accept((WatchEvent<Path>) event);
+                        } catch (Exception ex) {
+                            log.error("Error during handle on watch directory {}/{}", event.kind(), event.context());
+                        }
                     }
                     key.reset();
                 }

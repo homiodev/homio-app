@@ -13,13 +13,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
-import org.apache.maven.model.Contributor;
-import org.apache.maven.model.Model;
 import org.homio.api.EntityContext;
 import org.homio.api.cache.CachedValue;
 import org.homio.api.fs.archive.ArchiveUtil;
@@ -82,11 +79,8 @@ public class SystemAddonLibraryManagerSetting
     }
 
     @Override
-    public void installPackage(EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
-        entityContext.getBean(AddonContextService.class).installAddon(
-            packageRequest.getName(),
-            packageRequest.getUrl(),
-            packageRequest.getVersion());
+    public void installPackage(EntityContext entityContext, PackageRequest request, ProgressBar progressBar) {
+        entityContext.getBean(AddonContextService.class).installAddon(request.getName(), request.getUrl(), request.getVersion());
     }
 
     @Override
@@ -132,13 +126,11 @@ public class SystemAddonLibraryManagerSetting
                 ArchiveUtil.unzip(iconsArchivePath, addonPath, UnzipFileIssueHandler.replace);
             }
 
-            Map<String, Map<String, Object>> addons = addonsRepo.getFile("addons.yml", Map.class);
-            ForkJoinPool customThreadPool = new ForkJoinPool(addons.size());
-            return customThreadPool.submit(() ->
-                addons.entrySet().parallelStream()
-                      .map(entry -> readAddon(entry.getKey(), entry.getValue(), iconsPath))
-                      .filter(Objects::nonNull)
-                      .collect(Collectors.toList())).get();
+            Map<String, Map<String, Object>> addons = Objects.requireNonNull(addonsRepo.getFile("addons.yml", Map.class));
+            return addons.entrySet().stream()
+                         .map(entry -> readAddon(entry.getKey(), entry.getValue(), iconsPath))
+                         .filter(Objects::nonNull)
+                         .collect(Collectors.toList());
         } catch (Exception ex) {
             log.error("Unable to fetch addons for repo: {}", repoURL, ex);
         }
@@ -162,19 +154,20 @@ public class SystemAddonLibraryManagerSetting
             if (versions != null) {
                 String lastReleaseVersion = versions.get(versions.size() - 1);
                 // String jarFile = addonRepo.getRepo() + ".jar";
-                Model pomModel = addonRepo.getPomModel();
-                String key = pomModel.getArtifactId();
-                PackageModel entity = new PackageModel(key, pomModel.getName(), pomModel.getDescription());
-                entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s.jar", repository, lastReleaseVersion, addonRepo.getRepo()));
-                entity.setAuthor(pomModel.getDevelopers().stream()
+                // Model pomModel = addonRepo.getPomModel();
+                String key = "addon-" + name;
+                PackageModel entity = new PackageModel(key, (String) addonConfig.get("name"), (String) addonConfig.get("description"));
+                entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s.jar", repository, "%s", addonRepo.getRepo()));
+                /*entity.setAuthor(pomModel.getDevelopers().stream()
                                          .map(Contributor::getName)
-                                         .collect(Collectors.joining(", ")));
+                                         .collect(Collectors.joining(", ")));*/
                 entity.setWebsite("https://github.com/" + repository);
-                entity.setCategory(pomModel.getProperties().getProperty("category"));
+                entity.setCategory((String) addonConfig.get("category"));
                 entity.setVersion(lastReleaseVersion);
                 entity.setVersions(versions);
                 entity.setIcon(Base64.getEncoder().encodeToString(getIcon(iconsPath.resolve(name + ".png"))));
-                entity.setReadme(addonRepo.getFile("README.md", String.class));
+                entity.setReadmeLazyLoading(true);
+                // entity.setReadme(addonRepo.getFile("README.md", String.class));
                 entity.setRemovable(true);
                 return entity;
             }
