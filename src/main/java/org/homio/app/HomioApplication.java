@@ -9,10 +9,7 @@ import org.homio.app.config.AppConfig;
 import org.homio.app.utils.HardwareUtils;
 import org.homio.hquery.EnableHQuery;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
-import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -20,9 +17,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Log4j2
 @EnableHQuery(scanBaseClassesPackage = "org.homio")
 @SpringBootApplication(exclude = {
-    DataSourceTransactionManagerAutoConfiguration.class,
-    TransactionAutoConfiguration.class,
-    HibernateJpaAutoConfiguration.class,
     ErrorMvcAutoConfiguration.class,
     MongoAutoConfiguration.class
 })

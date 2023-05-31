@@ -5,6 +5,7 @@ import static org.apache.xmlbeans.XmlBeans.getTitle;
 
 import com.pivovarit.function.ThrowingBiConsumer;
 import com.pivovarit.function.ThrowingRunnable;
+import jakarta.persistence.EntityManagerFactory;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -85,8 +86,9 @@ public class EntityContextEventImpl implements EntityContextEvent {
     private final BlockingQueue<EntityUpdate> entityUpdatesQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<Event> eventQueue = new LinkedBlockingQueue<>();
 
-    public EntityContextEventImpl(EntityContextImpl entityContext) {
+    public EntityContextEventImpl(EntityContextImpl entityContext, EntityManagerFactory entityManagerFactory) {
         this.entityContext = entityContext;
+        registerEntityListeners(entityManagerFactory);
     }
 
     @Override
@@ -242,7 +244,6 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     public void onContextCreated() throws Exception {
-        this.registerEntityListeners();
         // execute all updates in thread
         new Thread(() -> {
             while (true) {
@@ -296,12 +297,8 @@ public class EntityContextEventImpl implements EntityContextEvent {
         eventQueue.add(new Event(key, value));
     }
 
-    private void registerEntityListeners() {
-        TransactionManagerContext tmc = entityContext.getBean(TransactionManagerContext.class);
-        tmc.setFactoryListener(em -> registerEntityManagerListeners(em.unwrap(SessionFactoryImpl.class)));
-    }
-
-    private void registerEntityManagerListeners(SessionFactoryImpl sessionFactory) {
+    private void registerEntityListeners(EntityManagerFactory entityManagerFactory) {
+        SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
         EventListenerRegistry registry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
         registry.getEventListenerGroup(EventType.POST_LOAD).appendListener(event -> {
             Object entity = event.getEntity();

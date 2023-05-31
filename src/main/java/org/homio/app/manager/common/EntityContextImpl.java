@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
+import jakarta.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
@@ -180,6 +181,7 @@ public class EntityContextImpl implements EntityContext {
         SimpMessagingTemplate messagingTemplate,
         Environment environment,
         VariableDataRepository variableDataRepository,
+        EntityManagerFactory entityManagerFactory,
         MachineHardwareRepository machineHardwareRepository,
         AppProperties appProperties) {
         this.classFinder = classFinder;
@@ -189,7 +191,7 @@ public class EntityContextImpl implements EntityContext {
 
         this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
         this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler, appProperties);
-        this.entityContextEvent = new EntityContextEventImpl(this);
+        this.entityContextEvent = new EntityContextEventImpl(this, entityManagerFactory);
         this.entityContextInstall = new EntityContextInstallImpl(this);
         this.entityContextSetting = new EntityContextSettingImpl(this);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
@@ -214,7 +216,6 @@ public class EntityContextImpl implements EntityContext {
         repositories.putAll(applicationContext.getBeansOfType(AbstractRepository.class));
         rebuildRepositoryByPrefixMap();
 
-        // Register
         entityContextEvent.onContextCreated();
 
         UserAdminEntity.ensureUserExists(this);
@@ -251,6 +252,16 @@ public class EntityContextImpl implements EntityContext {
             ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
 
         this.entityContextStorage.init();
+
+        /*TODO: bgp().builder("f").delay(Duration.ofSeconds(10))
+                          .execute(new ThrowingRunnable<Exception>() {
+                              @Override
+                              public void run() throws Exception {
+                                  transactionManagerContext.invalidate();
+                                  List<DeviceBaseEntity> all = findAll(DeviceBaseEntity.class);
+                                  System.out.println(all.size());
+                              }
+                          });*/
     }
 
     @Override

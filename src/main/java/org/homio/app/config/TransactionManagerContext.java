@@ -2,18 +2,19 @@ package org.homio.app.config;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
-import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import javax.sql.DataSource;
-import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.hibernate.cfg.AvailableSettings;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.internal.SessionFactoryImpl;
-import org.homio.api.EntityContext;
 import org.homio.app.extloader.CustomPersistenceManagedTypes;
 import org.homio.app.manager.CacheService;
 import org.jetbrains.annotations.NotNull;
@@ -22,10 +23,9 @@ import org.springframework.boot.autoconfigure.orm.jpa.HibernateSettings;
 import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.ApplicationContext;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -34,43 +34,28 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Component
 public class TransactionManagerContext {
 
-    private final @NotNull ApplicationContext applicationContext;
-    private final @NotNull JpaProperties jpaProperties;
-    private final @NotNull HibernateProperties hibernateProperties;
+    private final @NotNull ApplicationContext context;
     private final @NotNull TransactionTemplate transactionTemplate;
     private final @NotNull TransactionTemplate readOnlyTransactionTemplate;
-    private final @NotNull DataSourceTransactionManager transactionManager;
-    private final @NotNull PersistenceManagedTypes persistenceManagedTypes;
-    private final @NotNull EntityManagerFactoryBuilder entityManagerFactoryBuilder;
-    private final @NotNull DataSource dataSource;
     private final @NotNull CacheService cacheService;
+    private final @NotNull EntityManagerFactory entityManagerFactory;
+    private final @NotNull EntityManager entityManager;
 
-    @Getter
-    private EntityManagerFactory entityManagerFactory;
-    private EntityManager entityManager;
-    private Consumer<EntityManagerFactory> factoryListener;
+    private final AtomicInteger currentActiveQueries = new AtomicInteger(0);
+    private volatile CountDownLatch blocker;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public TransactionManagerContext(
-        ApplicationContext applicationContext,
-        JpaProperties properties,
+        ApplicationContext context,
         CacheService cacheService,
-        DataSource dataSource,
-        EntityManagerFactoryBuilder entityManagerFactoryBuilder,
-        PersistenceManagedTypes persistenceManagedTypes,
-        HibernateProperties hibernateProperties) {
-        this.applicationContext = applicationContext;
-        this.jpaProperties = properties;
-        this.dataSource = dataSource;
+        PlatformTransactionManager transactionManager,
+        EntityManagerFactory entityManagerFactory,
+        EntityManager entityManager) {
+        this.context = context;
         this.cacheService = cacheService;
-        this.hibernateProperties = hibernateProperties;
-        this.persistenceManagedTypes = persistenceManagedTypes;
-        this.entityManagerFactoryBuilder = entityManagerFactoryBuilder;
 
-        log.info("Creating EntityManagerFactory...");
-        this.entityManagerFactory = createEntityManagerFactory("update");
-        this.entityManager = entityManagerFactory.createEntityManager();
-        log.info("EntityManagerFactory creation has been completed");
-        this.transactionManager = new DataSourceTransactionManager(dataSource);
+        this.entityManagerFactory = entityManagerFactory;
+        this.entityManager = entityManager;
 
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.readOnlyTransactionTemplate = new TransactionTemplate(transactionManager);
@@ -78,74 +63,95 @@ public class TransactionManagerContext {
     }
 
     public <T> T executeInTransactionReadOnly(Function<EntityManager, T> handler) {
-        return readOnlyTransactionTemplate.execute(status -> {
-            return handler.apply(entityManager);
-        });
+        return executeQuery(() -> readOnlyTransactionTemplate.execute(status -> handler.apply(entityManager)));
     }
 
     public <T> T executeWithoutTransaction(Function<EntityManager, T> handler) {
-        return handler.apply(entityManager);
+        return executeQuery(() -> handler.apply(entityManager));
     }
 
     public <T> T executeInTransaction(Function<EntityManager, T> handler) {
-        return transactionTemplate.execute(status -> handler.apply(entityManager));
+        return executeQuery(() -> transactionTemplate.execute(status -> handler.apply(entityManager)));
     }
 
     public void executeInTransaction(Consumer<EntityManager> handler) {
-        transactionTemplate.execute(new TransactionCallbackWithoutResult() {
-            @Override
-            protected void doInTransactionWithoutResult(@NotNull TransactionStatus status) {
-                handler.accept(entityManager);
-            }
+        executeQuery(() -> {
+            transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+                @Override
+                protected void doInTransactionWithoutResult(@NotNull TransactionStatus status) {
+                    handler.accept(entityManager);
+                }
+            });
+            return null;
         });
     }
 
+    @SneakyThrows
     public synchronized void invalidate() {
-        if (!applicationContext.getBean(CustomPersistenceManagedTypes.class).scan()) {
+        if (!context.getBean(CustomPersistenceManagedTypes.class).scan()) {
             return;
         }
-        delayCloseOldEntities(entityManagerFactory, entityManager);
 
-        this.entityManagerFactory = createEntityManagerFactory("none");
-        this.entityManager = entityManagerFactory.createEntityManager();
-        this.factoryListener.accept(entityManagerFactory);
-        this.cacheService.clearCache();
-    }
-
-    public void setFactoryListener(Consumer<EntityManagerFactory> factoryListener) {
-        this.factoryListener = factoryListener;
-        this.factoryListener.accept(entityManagerFactory);
-    }
-
-    private EntityManagerFactory createEntityManagerFactory(String ddl) {
-        Map<String, Object> vendorProperties = getVendorProperties(ddl);
-        vendorProperties.put(AvailableSettings.CONNECTION_PROVIDER_DISABLES_AUTOCOMMIT, "true");
-        LocalContainerEntityManagerFactoryBean entityManagerFactoryBean =
-            entityManagerFactoryBuilder
-                .dataSource(dataSource)
-                .managedTypes(persistenceManagedTypes)
-                .properties(vendorProperties)
-                .build();
-        entityManagerFactoryBean.afterPropertiesSet();
-        EntityManagerFactory entityManagerFactory = Objects.requireNonNull(entityManagerFactoryBean.getObject());
+        log.info("Updating EntityManagerFactory...");
         SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
 
-        return entityManagerFactory;
+        EntityManagerFactory newEntityManagerFactory = createEntityManagerFactory();
+        SessionFactoryImpl newSessionFactory = newEntityManagerFactory.unwrap(SessionFactoryImpl.class);
+
+        blocker = new CountDownLatch(1);
+        while (currentActiveQueries.get() != 0) {
+            log.info("Wait all db session to finish");
+            Thread.sleep(100);
+        }
+
+        try {
+            FieldUtils.writeDeclaredField(sessionFactory, "eventEngine", newSessionFactory.getEventEngine(), true);
+            FieldUtils.writeDeclaredField(sessionFactory, "queryEngine", newSessionFactory.getQueryEngine(), true);
+            FieldUtils.writeDeclaredField(sessionFactory, "cacheAccess", newSessionFactory.getCache(), true);
+            FieldUtils.writeDeclaredField(sessionFactory, "runtimeMetamodels", newSessionFactory.getRuntimeMetamodels(), true);
+            FieldUtils.writeDeclaredField(sessionFactory, "fastSessionServices", newSessionFactory.getFastSessionServices(), true);
+            FieldUtils.writeDeclaredField(sessionFactory, "wrapperOptions", newSessionFactory.getWrapperOptions(), true);
+
+            this.cacheService.clearCache();
+            newEntityManagerFactory.close();
+            log.info("EntityManagerFactory updated");
+        } catch (Exception ex) {
+            log.error("Unable to update EntityManager factory", ex);
+            throw new RuntimeException(ex);
+        } finally {
+            blocker.countDown();
+            blocker = null;
+        }
     }
 
-    private Map<String, Object> getVendorProperties(String ddl) {
-        return new LinkedHashMap<>(this.hibernateProperties.determineHibernateProperties(
-            jpaProperties.getProperties(), new HibernateSettings().ddlAuto(() -> ddl)));
+    private EntityManagerFactory createEntityManagerFactory() {
+        Map<String, Object> properties = context
+            .getBean(HibernateProperties.class)
+            .determineHibernateProperties(
+                context.getBean(JpaProperties.class)
+                       .getProperties(),
+                new HibernateSettings().ddlAuto(() -> "none"));
+        Map<String, Object> vendorProperties = new LinkedHashMap<>(properties);
+        LocalContainerEntityManagerFactoryBean entityManagerFactoryBean =
+            context.getBean(EntityManagerFactoryBuilder.class)
+                   .dataSource(context.getBean(DataSource.class))
+                   .managedTypes(context.getBean(CustomPersistenceManagedTypes.class))
+                   .properties(vendorProperties)
+                   .build();
+        entityManagerFactoryBean.afterPropertiesSet();
+        return Objects.requireNonNull(entityManagerFactoryBean.getObject());
     }
 
-    private void delayCloseOldEntities(EntityManagerFactory emf, EntityManager em) {
-        applicationContext.getBean(EntityContext.class).bgp()
-                          .builder("destroy-old-entity-manager")
-                          .delay(Duration.ofSeconds(10))
-                          .execute(() -> {
-                              log.info("Close old EntityManagerFactory");
-                              em.close(); // maybe redundant
-                              emf.close();
-                          });
+    @SneakyThrows
+    private <T> T executeQuery(Supplier<T> handler) {
+        try {
+            if (blocker != null) {
+                blocker.await();
+            }
+            currentActiveQueries.incrementAndGet();
+            return handler.get();
+        } finally {
+            currentActiveQueries.decrementAndGet();
+        }
     }
 }
