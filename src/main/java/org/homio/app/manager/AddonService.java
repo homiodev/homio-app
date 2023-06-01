@@ -6,13 +6,17 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.exception.NotFoundException;
+import org.homio.api.setting.SettingPluginPackageInstall;
+import org.homio.api.setting.SettingPluginPackageInstall.PackageRequest;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
@@ -31,6 +35,10 @@ public class AddonService implements ContextCreated, ContextRefreshed {
     private Map<String, String> addonColorMap;
     private Map<String, AddonEntrypoint> addonMap;
     private Collection<AddonEntrypoint> addonEntrypoints;
+
+    // true - installing, false removing
+    @Getter
+    private final Map<String, Boolean> packagesInProgress = new ConcurrentHashMap<>();
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
@@ -76,5 +84,26 @@ public class AddonService implements ContextCreated, ContextRefreshed {
 
     public Collection<AddonEntrypoint> getAddons() {
         return addonEntrypoints;
+    }
+
+    public void installPackage(SettingPluginPackageInstall settingPlugin, PackageRequest packageRequest) {
+        if (!packagesInProgress.containsKey(packageRequest.getName())) {
+            packagesInProgress.put(packageRequest.getName(), true);
+            String key = "Install " + packageRequest.getName() + "/" + packageRequest.getVersion();
+            entityContext.ui().runWithProgress(key, false, progressBar ->
+                    settingPlugin.installPackage(entityContext, packageRequest, progressBar),
+                ex -> packagesInProgress.remove(packageRequest.getName()));
+        } else {
+            entityContext.ui().sendErrorMessage("ERROR.UPDATE_IN_PROGRESS");
+        }
+    }
+
+    public void unInstallPackage(SettingPluginPackageInstall settingPlugin, PackageRequest packageRequest) {
+        if (!packagesInProgress.containsKey(packageRequest.getName())) {
+            packagesInProgress.put(packageRequest.getName(), false);
+            entityContext.ui().runWithProgress("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
+                progressBar -> settingPlugin.unInstallPackage(entityContext, packageRequest, progressBar),
+                ex -> packagesInProgress.remove(packageRequest.getName()));
+        }
     }
 }

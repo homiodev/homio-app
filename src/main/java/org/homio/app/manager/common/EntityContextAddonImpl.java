@@ -21,6 +21,7 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.setting.SettingPluginPackageInstall.PackageContext;
 import org.homio.api.setting.SettingPluginPackageInstall.PackageModel;
+import org.homio.api.setting.SettingPluginPackageInstall.PackageRequest;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
@@ -28,9 +29,11 @@ import org.homio.api.widget.WidgetBaseTemplate;
 import org.homio.app.HomioClassLoader;
 import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.extloader.AddonContext;
+import org.homio.app.manager.AddonService;
 import org.homio.app.manager.CacheService;
 import org.homio.app.setting.system.SystemAddonLibraryManagerSetting;
 import org.homio.app.utils.HardwareUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.context.ApplicationContext;
@@ -131,13 +134,15 @@ public class EntityContextAddonImpl {
         }
     }
 
-    private ApplicationContext addAddons(AddonContext addonContext) {
+    private @Nullable ApplicationContext addAddons(AddonContext addonContext) {
         if (!addonContext.isInternal() && !addonContext.isInstalled()) {
             String key = addonContext.getAddonID();
 
-            List<String> versions = getAddonReleasesSince(addonContext.getPomFile().getArtifactId(), addonContext.getVersion());
-            entityContext.ui().updateNotificationBlock("addons",
-                builder -> addAddonNotificationRow(addonContext, key, versions, builder));
+            PackageModel packageModel = getPackageModel(addonContext.getPomFile().getArtifactId());
+            if (packageModel != null) {
+                entityContext.ui().updateNotificationBlock("addons",
+                    builder -> addAddonNotificationRow(addonContext, key, packageModel, builder));
+            }
 
             if (!addonContext.isLoaded()) {
                 return null;
@@ -154,18 +159,19 @@ public class EntityContextAddonImpl {
         return null;
     }
 
-    private void addAddonNotificationRow(AddonContext addonContext, String key, List<String> versions,
-        NotificationBlockBuilder builder) {
+    private void addAddonNotificationRow(@NotNull AddonContext addonContext, @NotNull String key,
+        @NotNull PackageModel packageModel, @NotNull NotificationBlockBuilder builder) {
         String icon = addonContext.isLoaded() ? "fas fa-puzzle-piece" : "fas fa-bug";
         String color = addonContext.isLoaded() ? Color.GREEN : Color.RED;
         String info = addonContext.getAddonFriendlyName();
-        if (versions == null || versions.isEmpty()) {
+        List<String> versions = GitHubProject.getReleasesSince(addonContext.getVersion(), packageModel.getVersions(), false);
+        if (versions.isEmpty()) {
             builder.addInfo(key, info, null, icon, color, addonContext.getVersion(), null);
         } else {
             builder.addFlexAction(key, flex -> {
                 flex.addInfo(info).setIcon(icon, color);
                 flex.addSelectBox("versions", (entityContext, params) ->
-                        handleUpdateAddon(addonContext, key, entityContext, params, versions))
+                        handleUpdateAddon(addonContext, key, entityContext, params, versions, packageModel))
                     .setHighlightSelected(false)
                     .setOptions(OptionModel.list(versions))
                     .setAsButton("fas fa-cloud-download-alt", Color.PRIMARY_COLOR, addonContext.getVersion())
@@ -175,30 +181,32 @@ public class EntityContextAddonImpl {
     }
 
     @Nullable
-    private ActionResponseModel handleUpdateAddon(AddonContext addonContext, String key, EntityContext entityContext, JSONObject params,
-        List<String> versions) {
+    private ActionResponseModel handleUpdateAddon(@NotNull AddonContext addonContext, @NotNull String key,
+        @NotNull EntityContext entityContext, @NotNull JSONObject params, @NotNull List<String> versions,
+        @NotNull PackageModel packageModel) {
         String newVersion = params.getString("value");
         if (versions.contains(newVersion)) {
             String question = Lang.getServerMessage("PACKAGE_UPDATE_QUESTION",
                 FlowMap.of("NAME", addonContext.getPomFile().getName(), "VERSION", newVersion));
-            entityContext.ui().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", new Runnable() {
-                @Override
-                public void run() {
-                    System.out.println("GGGG");
-                }
-            }, Collections.singletonList(question), null);
+            entityContext.ui().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", () ->
+                entityContext.getBean(AddonService.class).installPackage(
+                    new SystemAddonLibraryManagerSetting(),
+                    new PackageRequest().setName(packageModel.getName())
+                                        .setVersion(newVersion)
+                                        .setUrl(packageModel.getJarUrl())), Collections.singletonList(question), null);
+            return null;
         }
-        return null;
+        return ActionResponseModel.showError("Unable to find package or version");
     }
 
-    private @Nullable List<String> getAddonReleasesSince(String addonID, String version) {
+    private @Nullable PackageModel getPackageModel(String addonID) {
         var addonManager = new SystemAddonLibraryManagerSetting();
         PackageContext allPackages = addonManager.allPackages(entityContext);
         PackageModel packageModel = allPackages.getPackages().stream().filter(p -> p.getName().equals(addonID)).findAny().orElse(null);
         if (packageModel == null) {
             log.error("Unable to find addon '{}' in repositories", addonID);
         } else {
-            return GitHubProject.getReleasesSince(version, packageModel.getVersions(), false);
+            return packageModel;
         }
         return null;
     }

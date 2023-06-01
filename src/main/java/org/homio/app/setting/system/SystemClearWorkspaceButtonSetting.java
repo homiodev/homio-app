@@ -26,7 +26,7 @@ public class SystemClearWorkspaceButtonSetting
 
     @Override
     public String getConfirmMsg() {
-        return "W.CONFIRM.CONFIRM_CLEAR_WORKSPACE";
+        return "W.CONFIRM.CLEAR_WORKSPACE";
     }
 
     @Override

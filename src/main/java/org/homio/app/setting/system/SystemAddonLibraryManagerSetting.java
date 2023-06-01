@@ -30,6 +30,7 @@ import org.homio.app.extloader.AddonContext;
 import org.homio.app.extloader.AddonContextService;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 @Log4j2
@@ -59,7 +60,7 @@ public class SystemAddonLibraryManagerSetting
     public PackageContext allPackages(EntityContext entityContext) {
         PackageContext packageContext = new PackageContext();
         try {
-            Collection<PackageModel> allPackageModels = addons.getValue(entityContext);
+            Collection<PackageModel> allPackageModels = new ArrayList<>(addons.getValue(entityContext));
             filterMatchPackages(entityContext, allPackageModels);
             packageContext.setPackages(allPackageModels);
         } catch (Exception ex) {

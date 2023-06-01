@@ -21,7 +21,7 @@ public class SystemClearCacheButtonSetting
 
     @Override
     public String getConfirmMsg() {
-        return "W.CONFIRM.CONFIRM_CLEAR_CACHE";
+        return "W.CONFIRM.CLEAR_CACHE";
     }
 
     @Override

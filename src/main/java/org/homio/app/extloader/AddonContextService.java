@@ -59,14 +59,16 @@ public class AddonContextService implements ContextCreated {
     @SneakyThrows
     public void installAddon(String addonID, String addonUrl, String version) {
         AddonContext context = this.addonContextMap.get(addonID);
-        if (context != null) {
-            if (context.getVersion().equals(version)) {
-                throw new ServerException("Addon <{}> already up to date");
-            }
-            removeAddon(addonID);
+        if (context != null && context.getVersion().equals(version)) {
+            throw new ServerException("Addon <{}> already up to date");
         }
+        // copy addon jar before delete it from system
         Path path = CommonUtils.getAddonPath().resolve(addonID + ".jar");
         FileUtils.copyURLToFile(new URL(format(addonUrl, version)), path.toFile(), 30000, 30000);
+        if (context != null) {
+            removeAddon(addonID);
+        }
+
         try {
             loadAddonFromPath(path);
         } catch (Exception ex) {
@@ -167,6 +169,7 @@ public class AddonContextService implements ContextCreated {
     private void removeAddon(String addonID) {
         AddonContext context = this.addonContextMap.remove(addonID);
         if (context != null) {
+            log.warn("Remove addon: {}", addonID);
             entityContext.getEntityContextAddon().removeAddon(addonID);
             HomioClassLoader.removeClassLoader(context.getAddonID());
             context.getConfig().destroy();

@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -27,7 +26,6 @@ import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.SettingPluginOptionsRemovable;
 import org.homio.api.setting.SettingPluginPackageInstall;
-import org.homio.api.setting.SettingPluginPackageInstall.PackageRequest;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.homio.api.ui.field.UIFieldType;
@@ -57,8 +55,6 @@ public class SettingController implements ContextRefreshed {
 
     private final AddonService addonService;
     private final EntityContextImpl entityContext;
-    // true - installing, false removing
-    private final Map<String, Boolean> packagesInProgress = new ConcurrentHashMap<>();
     private Map<String, Set<String>> settingToPages;
     private Set<SettingEntity> descriptionSettings;
     private Map<Class<? extends SettingPlugin<?>>, SettingEntity> transientSettings;
@@ -91,7 +87,7 @@ public class SettingController implements ContextRefreshed {
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             SettingPluginPackageInstall.PackageContext packageContext =
                 ((SettingPluginPackageInstall) settingPlugin).allPackages(entityContext);
-            for (Map.Entry<String, Boolean> entry : packagesInProgress.entrySet()) {
+            for (Map.Entry<String, Boolean> entry : addonService.getPackagesInProgress().entrySet()) {
                 SettingPluginPackageInstall.PackageModel singlePackage =
                     packageContext.getPackages().stream()
                                   .filter(p -> p.getName().equals(entry.getKey()))
@@ -124,13 +120,7 @@ public class SettingController implements ContextRefreshed {
     public void unInstallPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
-            if (!packagesInProgress.containsKey(packageRequest.getName())) {
-                packagesInProgress.put(packageRequest.getName(), false);
-                entityContext.ui().runWithProgress("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
-                    progressBar ->
-                        ((SettingPluginPackageInstall) settingPlugin).unInstallPackage(entityContext, packageRequest, progressBar),
-                    ex -> packagesInProgress.remove(packageRequest.getName()));
-            }
+            addonService.unInstallPackage((SettingPluginPackageInstall) settingPlugin, packageRequest);
         }
     }
 
@@ -139,9 +129,7 @@ public class SettingController implements ContextRefreshed {
     public void installPackage(@PathVariable("entityID") String entityID, @RequestBody SettingPluginPackageInstall.PackageRequest packageRequest) {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
-            if (!packagesInProgress.containsKey(packageRequest.getName())) {
-                installPackage(packageRequest, (SettingPluginPackageInstall) settingPlugin);
-            }
+            addonService.installPackage((SettingPluginPackageInstall) settingPlugin, packageRequest);
         }
     }
 
@@ -212,14 +200,6 @@ public class SettingController implements ContextRefreshed {
         settings.addAll(descriptionSettings);
         Collections.sort(settings);
         return settings;
-    }
-
-    private void installPackage(PackageRequest packageRequest, SettingPluginPackageInstall settingPlugin) {
-        packagesInProgress.put(packageRequest.getName(), true);
-        String key = "Install " + packageRequest.getName() + "/" + packageRequest.getVersion();
-        entityContext.ui().runWithProgress(key, false, progressBar ->
-                settingPlugin.installPackage(entityContext, packageRequest, progressBar),
-            ex -> packagesInProgress.remove(packageRequest.getName()));
     }
 
     private void assembleTransientSettings(List<SettingEntity> settings) {
