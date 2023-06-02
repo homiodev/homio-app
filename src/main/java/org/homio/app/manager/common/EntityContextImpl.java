@@ -231,7 +231,7 @@ public class EntityContextImpl implements EntityContext {
 
         setting().listenValueAndGet(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
 
-        entityContextAddon.initialiseInlineAddons();
+        entityContextAddon.initializeInlineAddons();
 
         bgp().builder("app-version").interval(Duration.ofDays(1)).delay(Duration.ofSeconds(1))
              .execute(this::updateAppNotificationBlock);
@@ -538,13 +538,14 @@ public class EntityContextImpl implements EntityContext {
         uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class)
                                     .stream()
                                     .collect(Collectors.toMap(Class::getSimpleName, s -> s));
-        repositoriesByPrefix = new HashMap<>();
+        Map<String, AbstractRepository> localRepositoriesByPrefix = new HashMap<>();
         for (Class<? extends EntityFieldMetadata> metaEntity : uiFieldClasses.values()) {
             if (BaseEntity.class.isAssignableFrom(metaEntity)) {
                 Class<? extends BaseEntity> baseEntity = (Class<? extends BaseEntity>) metaEntity;
-                repositoriesByPrefix.put(CommonUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
+                localRepositoriesByPrefix.put(CommonUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
             }
         }
+        repositoriesByPrefix = localRepositoriesByPrefix;
     }
 
     @SneakyThrows
@@ -564,7 +565,7 @@ public class EntityContextImpl implements EntityContext {
         registerUpdatableSettings(context);
 
         // fetch entities fires load services if any
-        log.info("Loading entities and initialise all related services");
+        log.info("Loading entities and initialize all related services");
         for (BaseEntity baseEntity : findAllBaseEntities()) {
             if (baseEntity instanceof BaseFileSystemEntity) {
                 ((BaseFileSystemEntity<?, ?>) baseEntity).getFileSystem(this).restart(false);

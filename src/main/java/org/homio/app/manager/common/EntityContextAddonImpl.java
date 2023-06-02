@@ -51,12 +51,12 @@ public class EntityContextAddonImpl {
     @Setter
     private ApplicationContext applicationContext;
 
-    public void initialiseInlineAddons() {
+    public void initializeInlineAddons() {
         log.info("Initialize addons...");
         ArrayList<AddonEntrypoint> addonEntrypoints = new ArrayList<>(applicationContext.getBeansOfType(AddonEntrypoint.class).values());
         Collections.sort(addonEntrypoints);
         for (AddonEntrypoint entrypoint : addonEntrypoints) {
-            this.addons.put(entrypoint.getAddonID(), new InternalAddonContext(entrypoint, null));
+            this.addons.put("addon-" + entrypoint.getAddonID(), new InternalAddonContext(entrypoint, null));
             log.info("Initialize addon: <{}>", entrypoint.getAddonID());
             try {
                 entrypoint.init();
@@ -93,7 +93,7 @@ public class EntityContextAddonImpl {
             for (AddonEntrypoint addonEntrypoint : context.getBeansOfType(AddonEntrypoint.class).values()) {
                 log.info("Init addon: <{}>", addonEntrypoint.getAddonID());
                 addonEntrypoint.init();
-                this.addons.put(addonEntrypoint.getAddonID(), new InternalAddonContext(addonEntrypoint, addonContext));
+                this.addons.put("addon-" + addonEntrypoint.getAddonID(), new InternalAddonContext(addonEntrypoint, addonContext));
             }
         }
         applicationContext.getBean(TransactionManagerContext.class).invalidate();
@@ -103,35 +103,33 @@ public class EntityContextAddonImpl {
 
     public void removeAddon(String addonID) {
         InternalAddonContext internalAddonContext = addons.remove(addonID);
-        if (internalAddonContext != null) {
-            this.removeAddon(internalAddonContext.addonContext);
-        }
+        AddonContext addonContext = internalAddonContext.addonContext;
+        ApplicationContext context = addonContext.getApplicationContext();
+        // refresh collections to remove beans from removing addon
+        entityContext.updateBeans(addonContext, addonContext.getApplicationContext(), false);
+        context.getBean(AddonEntrypoint.class).destroy();
+
+        addonContext.getConfig().destroy();
+        entityContext.getAllApplicationContexts().remove(context);
+        HomioClassLoader.removeClassLoader(addonID);
+
+        cacheService.clearCache();
+        entityContext.rebuildRepositoryByPrefixMap();
+        entityContext.ui().updateNotificationBlock("addons", builder -> builder.removeInfo(addonID));
+
+        ADDON_UPDATE_COUNT++;
     }
 
-    public Object getBeanOfAddonsBySimpleName(String addon, String className) {
-        InternalAddonContext internalAddonContext = this.addons.get(addon);
+    public Object getBeanOfAddonsBySimpleName(String addonID, String className) {
+        InternalAddonContext internalAddonContext = this.addons.get("addon-" + addonID);
         if (internalAddonContext == null) {
-            throw new NotFoundException("Unable to find addon <" + addon + ">");
+            throw new NotFoundException("Unable to find addon <" + addonID + ">");
         }
         Object o = internalAddonContext.fieldTypes.get(className);
         if (o == null) {
-            throw new NotFoundException("Unable to find class <" + className + "> in addon <" + addon + ">");
+            throw new NotFoundException("Unable to find class <" + className + "> in addon <" + addonID + ">");
         }
         return o;
-    }
-
-    private void removeAddon(AddonContext addonContext) {
-        if (!addonContext.isInternal() && addonContext.isInstalled()) {
-            ApplicationContext context = addonContext.getApplicationContext();
-            context.getBean(AddonEntrypoint.class).destroy();
-            entityContext.getAllApplicationContexts().remove(context);
-
-            this.cacheService.clearCache();
-
-            entityContext.rebuildRepositoryByPrefixMap();
-            entityContext.updateBeans(addonContext, addonContext.getApplicationContext(), false);
-            ADDON_UPDATE_COUNT++;
-        }
     }
 
     private @Nullable ApplicationContext addAddons(AddonContext addonContext) {

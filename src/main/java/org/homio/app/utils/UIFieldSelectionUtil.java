@@ -114,7 +114,7 @@ public final class UIFieldSelectionUtil {
     public static List<OptionModel> filterOptions(List<OptionModel> options) {
         if (!options.isEmpty()) {
             OptionModel parent = OptionModel.of("");
-            parent.addChild(OptionModel.of("empty")); // need to initialise children
+            parent.addChild(OptionModel.of("empty")); // need to initialize children
             filterResultOptions(parent, options);
             options = parent.getChildren();
         }

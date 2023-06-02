@@ -11,7 +11,7 @@ import org.homio.api.service.CloudProviderService;
 import org.homio.api.service.CloudProviderService.SshCloud;
 import org.homio.api.service.EntityService.WatchdogService;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.FlowMap;
+import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.ssh.SshCloudEntity;
@@ -123,7 +123,7 @@ public class CloudService implements ContextCreated {
                 currentEntity.setStatusError(ex);
                 log.error("Unable to start cloud connection: '{}'. Msg: {}", currentEntity, CommonUtils.getErrorMessage(ex));
                 cloudProvider.updateNotificationBlock(ex);
-                entityContext.ui().sendErrorMessage("W.ERROR.UNABLE_CONNECT", FlowMap.of("MSG", message), ex);
+                entityContext.ui().sendErrorMessage(Lang.getServerMessage("ERROR.UNABLE_CONNECT", message), ex);
             }
         });
     }

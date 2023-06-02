@@ -136,6 +136,6 @@ public class PortService implements ContextCreated, ContextRefreshed {
         log.warn("Port became not available: <{}>", portName);
         entityContext.ui().addOrUpdateNotificationBlock("PORTS", "PORTS", "", "", blockBuilder ->
             blockBuilder.addInfo("port-" + portName,
-                Lang.getServerMessage("ERROR.PORT_NOT_AVAILABLE", "PORT", portName), "", "fas fa-usb", "#9C8033"));
+                Lang.getServerMessage("ERROR.PORT_NOT_AVAILABLE", portName), "", "fas fa-usb", "#9C8033"));
     }
 }

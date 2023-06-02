@@ -378,7 +378,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         context.groupVariable = variable;
         globalVarStorageMap.put(variableId, context);
 
-        // initialise variable to put first value. require to getLatest(), ...
+        // initialize variable to put first value. require to getLatest(), ...
         switch (variable.getRestriction()) {
             case Json:
                 service.save(new WorkspaceVariableMessage("{}"));

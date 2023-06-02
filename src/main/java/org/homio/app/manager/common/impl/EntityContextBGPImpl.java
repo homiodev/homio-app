@@ -190,8 +190,13 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public void executeOnExit(Runnable runnable) {
-        Runtime.getRuntime().addShutdownHook(new Thread(runnable));
+    public void executeOnExit(ThrowingRunnable runnable) {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                runnable.run();
+            } catch (Exception ignore) {
+            }
+        }));
     }
 
     @Override

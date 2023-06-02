@@ -30,7 +30,6 @@ import org.homio.app.extloader.AddonContext;
 import org.homio.app.extloader.AddonContextService;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 @Log4j2
@@ -98,7 +97,8 @@ public class SystemAddonLibraryManagerSetting
 
     @Override
     public void installPackage(EntityContext entityContext, PackageRequest request, ProgressBar progressBar) {
-        entityContext.getBean(AddonContextService.class).installAddon(request.getName(), request.getUrl(), request.getVersion());
+        entityContext.getBean(AddonContextService.class).installAddon(request.getName(), request.getUrl(),
+            request.getVersion(), progressBar);
     }
 
     @Override
@@ -168,12 +168,13 @@ public class SystemAddonLibraryManagerSetting
         try {
             log.info("Read addon: {}", repository);
             GitHubProject addonRepo = GitHubProject.of(repository);
-            List<String> versions = (List<String>) addonConfig.get("versions");
+            List<Object> versions = (List<Object>) addonConfig.get("versions");
             if (versions != null) {
-                String lastReleaseVersion = versions.get(versions.size() - 1);
+                List<String> strVersions = versions.stream().map(v -> v.toString()).collect(Collectors.toList());
+                String lastReleaseVersion = strVersions.get(strVersions.size() - 1);
                 // String jarFile = addonRepo.getRepo() + ".jar";
                 // Model pomModel = addonRepo.getPomModel();
-                String key = "addon-" + name;
+                String key = name.startsWith("addon-") ? name : "addon-" + name;
                 PackageModel entity = new PackageModel(key, (String) addonConfig.get("name"), (String) addonConfig.get("description"));
                 entity.setJarUrl(format("https://github.com/%s/releases/download/%s/%s.jar", repository, "%s", addonRepo.getRepo()));
                 /*entity.setAuthor(pomModel.getDevelopers().stream()
@@ -182,7 +183,7 @@ public class SystemAddonLibraryManagerSetting
                 entity.setWebsite("https://github.com/" + repository);
                 entity.setCategory((String) addonConfig.get("category"));
                 entity.setVersion(lastReleaseVersion);
-                entity.setVersions(versions);
+                entity.setVersions(strVersions);
                 entity.setIcon(Base64.getEncoder().encodeToString(getIcon(iconsPath.resolve(name + ".png"))));
                 entity.setReadmeLazyLoading(true);
                 // entity.setReadme(addonRepo.getFile("README.md", String.class));

@@ -207,7 +207,7 @@ public class AddonContext {
             ctx.start();
         }
 
-        void destroy() {
+        public void destroy() {
             ctx.close();
         }
 

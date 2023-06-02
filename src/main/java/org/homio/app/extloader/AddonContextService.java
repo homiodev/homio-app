@@ -4,7 +4,6 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.repeat;
 
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
@@ -14,17 +13,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.io.FileUtils;
 import org.homio.api.exception.ServerException;
+import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Constants;
+import org.homio.api.util.Curl;
 import org.homio.api.util.Lang;
-import org.homio.app.HomioClassLoader;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.spring.ContextCreated;
-import org.reflections.scanners.ResourcesScanner;
-import org.reflections.scanners.SubTypesScanner;
-import org.reflections.scanners.TypeAnnotationsScanner;
+import org.jetbrains.annotations.NotNull;
+import org.reflections.scanners.Scanners;
 import org.reflections.util.ConfigurationBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
@@ -57,32 +55,36 @@ public class AddonContextService implements ContextCreated {
     }
 
     @SneakyThrows
-    public void installAddon(String addonID, String addonUrl, String version) {
+    public void installAddon(String addonID, String addonUrl, String version, ProgressBar progressBar) {
         AddonContext context = this.addonContextMap.get(addonID);
         if (context != null && context.getVersion().equals(version)) {
-            throw new ServerException("Addon <{}> already up to date");
+            throw new ServerException(Lang.getServerMessage("ERROR.ADDON_INSTALLED", addonID));
         }
         // copy addon jar before delete it from system
-        Path path = CommonUtils.getAddonPath().resolve(addonID + ".jar");
-        FileUtils.copyURLToFile(new URL(format(addonUrl, version)), path.toFile(), 30000, 30000);
+        Path downloadPath = CommonUtils.getAddonPath().resolve(addonID + ".jar_original");
+        Curl.downloadWithProgress(format(addonUrl, version), downloadPath, progressBar);
+        progressBar.progress(50, "Installing addon...");
         if (context != null) {
-            removeAddon(addonID);
+            removeAddon(context);
         }
+        Path addonPath = CommonUtils.getAddonPath().resolve(addonID + ".jar");
+        Thread.sleep(500); // wait to make sure downloadPath closed all handlers
+        Files.move(downloadPath, addonPath);
 
         try {
-            loadAddonFromPath(path);
+            loadAddonFromPath(addonPath);
         } catch (Exception ex) {
-            Files.deleteIfExists(path);
+            deleteAddonFileWithRetry(addonPath);
             throw ex;
         }
     }
 
     public void uninstallAddon(String name) {
         AddonContext context = this.addonContextMap.get(name);
-        if (context == null) {
+        if (context == null || context.isInternal() || !context.isLoaded()) {
             throw new ServerException(Lang.getServerMessage("ADDON_NOT_EXISTS", name));
         }
-        removeAddon(name);
+        removeAddon(context);
     }
 
     /**
@@ -115,7 +117,7 @@ public class AddonContextService implements ContextCreated {
         addAddonFromPath(new AddonContext(addonContextFile));
     }
 
-    private void addAddonFromPath(AddonContext addonContext) throws Exception {
+    private void addAddonFromPath(AddonContext addonContext) {
         artifactIdContextMap.put(addonContext.getPomFile().getArtifactId(), addonContext);
         loadAddon(addonContext);
         entityContext.getEntityContextAddon().addAddons(artifactIdContextMap);
@@ -157,8 +159,8 @@ public class AddonContextService implements ContextCreated {
 
         // creates configuration builder to find all jar files
         ConfigurationBuilder configurationBuilder = new ConfigurationBuilder()
-            .setScanners(new SubTypesScanner(false), new TypeAnnotationsScanner(), new ResourcesScanner())
-            .addClassLoader(classLoader);
+            .setScanners(Scanners.SubTypes.filterResultsBy(s -> true), Scanners.TypesAnnotated, Scanners.Resources)
+            .setClassLoaders(new ClassLoader[]{classLoader});
 
         context.load(configurationBuilder, env, parentContext, classLoader);
 
@@ -166,46 +168,31 @@ public class AddonContextService implements ContextCreated {
     }
 
     @SneakyThrows
-    private void removeAddon(String addonID) {
-        AddonContext context = this.addonContextMap.remove(addonID);
-        if (context != null) {
-            log.warn("Remove addon: {}", addonID);
-            entityContext.getEntityContextAddon().removeAddon(addonID);
-            HomioClassLoader.removeClassLoader(context.getAddonID());
-            context.getConfig().destroy();
-            Files.delete(context.getContextFile());
-            log.info("Addon <{}> has been removed successfully", addonID);
-        } else {
-            log.warn("Unable to find addon <{}>", addonID);
+    private void removeAddon(@NotNull AddonContext context) {
+        String addonID = context.getAddonID();
+        log.warn("Remove addon: {}", addonID);
+        entityContext.getEntityContextAddon().removeAddon(addonID);
+
+        deleteAddonFileWithRetry(context.getContextFile());
+        if (Files.exists(context.getContextFile())) {
+            log.error("Addon <{}> has been stopped but unable to delete file. File will be removed on restart", addonID);
+            entityContext.bgp().executeOnExit(() -> Files.deleteIfExists(context.getContextFile()));
         }
+        log.info("Addon <{}> has been removed successfully", addonID);
     }
 
     private List<Path> findAddonContextFilesFromPath(Path basePath) throws IOException {
         return Files.list(basePath).filter(path -> path.getFileName().toString().endsWith(".jar")).collect(Collectors.toList());
     }
 
-    private void reloadAddonFromPath(Path path) {
-        try {
-            AddonContext addonContext = new AddonContext(path);
-            AddonContext existedAddonContext = artifactIdContextMap.get(addonContext.getAddonID());
-            if (addonContext.equals(existedAddonContext)) {
-                removeAddon(addonContext.getAddonID());
-                addAddonFromPath(addonContext);
-            }
-        } catch (Exception ex) {
-            log.error("Unable to reload addon: {}", path.getFileName());
-        }
-    }
-
-    private void removeAddonFromPath(Path path) {
-        try {
-            AddonContext addonContext = new AddonContext(path);
-            if (artifactIdContextMap.containsKey(addonContext.getAddonID())) {
-                removeAddon(addonContext.getAddonID());
-                loadAddonFromPath(path);
-            }
-        } catch (Exception ex) {
-            log.error("Unable to remove addon: {}", path.getFileName());
+    private void deleteAddonFileWithRetry(Path path) throws InterruptedException {
+        int i = 10;
+        while (i-- > 0) {
+            try {
+                Files.deleteIfExists(path);
+                break;
+            } catch (Exception ignore) {}
+            Thread.sleep(500);
         }
     }
 }
