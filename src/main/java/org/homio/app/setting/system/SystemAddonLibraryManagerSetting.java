@@ -27,7 +27,6 @@ import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Curl;
 import org.homio.app.extloader.AddonContext;
-import org.homio.app.extloader.AddonContextService;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.json.JSONObject;
@@ -87,24 +86,22 @@ public class SystemAddonLibraryManagerSetting
     public PackageContext installedPackages(EntityContext entityContext) {
         return new PackageContext(
             null,
-            ((EntityContextImpl) entityContext)
-                .getEntityContextAddon()
-                .getAddons().values().stream()
-                .filter(b -> b.getAddonContext() != null)
-                .map(b -> build(b.getAddonContext()))
-                .collect(Collectors.toSet()));
+            ((EntityContextImpl) entityContext).getAddon().getInstalledAddons()
+                                               .stream()
+                                               .map(this::build)
+                                               .collect(Collectors.toSet()));
     }
 
     @Override
     public void installPackage(EntityContext entityContext, PackageRequest request, ProgressBar progressBar) {
-        entityContext.getBean(AddonContextService.class).installAddon(request.getName(), request.getUrl(),
+        ((EntityContextImpl) entityContext).getAddon().installAddon(request.getName(), request.getUrl(),
             request.getVersion(), progressBar);
     }
 
     @Override
     public void unInstallPackage(
         EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
-        entityContext.getBean(AddonContextService.class).uninstallAddon(packageRequest.getName());
+        ((EntityContextImpl) entityContext).getAddon().uninstallAddon(packageRequest.getName());
     }
 
     @Override
@@ -166,7 +163,7 @@ public class SystemAddonLibraryManagerSetting
     private static PackageModel readAddon(String name, Map<String, Object> addonConfig, Path iconsPath) {
         String repository = (String) addonConfig.get("repository");
         try {
-            log.info("Read addon: {}", repository);
+            log.debug("Read addon: {}", repository);
             GitHubProject addonRepo = GitHubProject.of(repository);
             List<Object> versions = (List<Object>) addonConfig.get("versions");
             if (versions != null) {

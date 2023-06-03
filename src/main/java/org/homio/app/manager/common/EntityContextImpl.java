@@ -6,7 +6,6 @@ import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import jakarta.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -31,7 +30,6 @@ import lombok.extern.log4j.Log4j2;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
@@ -42,26 +40,20 @@ import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Status;
-import org.homio.api.model.UpdatableValue;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.service.scan.BeansItemsDiscovery;
 import org.homio.api.service.scan.MicroControllerScanner;
 import org.homio.api.service.scan.VideoStreamScanner;
-import org.homio.api.setting.SettingPlugin;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
-import org.homio.api.util.UpdatableSetting;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.LogService;
 import org.homio.app.audio.AudioService;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.builder.widget.EntityContextWidgetImpl;
 import org.homio.app.config.AppProperties;
-import org.homio.app.config.ExtRequestMappingHandlerMapping;
 import org.homio.app.config.TransactionManagerContext;
-import org.homio.app.extloader.AddonContext;
-import org.homio.app.extloader.AddonContextService;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.CacheService;
 import org.homio.app.manager.LoggerService;
@@ -135,7 +127,6 @@ public class EntityContextImpl implements EntityContext {
         BEAN_CONTEXT_CREATED.add(PortService.class);
         BEAN_CONTEXT_CREATED.add(LoggerService.class);
         BEAN_CONTEXT_CREATED.add(WidgetService.class);
-        BEAN_CONTEXT_CREATED.add(AddonContextService.class);
         BEAN_CONTEXT_CREATED.add(ScriptService.class);
         BEAN_CONTEXT_CREATED.add(JwtTokenProvider.class);
         BEAN_CONTEXT_CREATED.add(CloudService.class);
@@ -160,7 +151,7 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextVarImpl entityContextVar;
     private final EntityContextHardwareImpl entityContextHardware;
     private final EntityContextWidgetImpl entityContextWidget;
-    @Getter private final EntityContextAddonImpl entityContextAddon;
+    @Getter private final EntityContextAddonImpl addon;
     @Getter private final EntityContextStorage entityContextStorage;
     private final ClassFinder classFinder;
     @Getter private final CacheService cacheService;
@@ -190,17 +181,17 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler, appProperties);
         this.entityContextEvent = new EntityContextEventImpl(this, entityManagerFactory);
         this.entityContextInstall = new EntityContextInstallImpl(this);
-        this.entityContextSetting = new EntityContextSettingImpl(this, environment, appProperties);
+        this.entityContextSetting = new EntityContextSettingImpl(this, environment, classFinder, appProperties);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
         this.entityContextStorage = new EntityContextStorage(this);
         this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
         this.entityContextHardware = new EntityContextHardwareImpl(this, machineHardwareRepository);
-        this.entityContextAddon = new EntityContextAddonImpl(this, cacheService);
+        this.addon = new EntityContextAddonImpl(this, cacheService);
     }
 
     @SneakyThrows
     public void afterContextStart(ApplicationContext applicationContext) {
-        this.entityContextAddon.setApplicationContext(applicationContext);
+        this.addon.setApplicationContext(applicationContext);
         this.allApplicationContexts.add(applicationContext);
         this.applicationContext = applicationContext;
         MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
@@ -218,20 +209,24 @@ public class EntityContextImpl implements EntityContext {
         UserAdminEntity.ensureUserExists(this);
         LocalBoardEntity.ensureDeviceExists(this);
         SshTmateEntity.ensureEntityExists(this);
-        setting().fetchSettingPlugins(null, classFinder, true);
 
+        entityContextSetting.onContextCreated();
         entityContextVar.onContextCreated();
         entityContextUI.onContextCreated();
         entityContextBGP.onContextCreated();
+        // initialize all addons
+        addon.onContextCreated();
 
         for (Class<? extends ContextCreated> beanUpdateClass : BEAN_CONTEXT_CREATED) {
             applicationContext.getBean(beanUpdateClass).onContextCreated(this);
         }
-        updateBeans(null, applicationContext, true);
+
+        fireRefreshBeans();
+        restartEntityServices();
 
         setting().listenValueAndGet(SystemShowEntityStateSetting.class, "im-show-entity-states", value -> this.showEntityState = value);
 
-        entityContextAddon.initializeInlineAddons();
+        addon.initializeInlineAddons();
 
         bgp().builder("app-version").interval(Duration.ofDays(1)).delay(Duration.ofSeconds(1))
              .execute(this::updateAppNotificationBlock);
@@ -549,30 +544,19 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @SneakyThrows
-    void updateBeans(AddonContext addonContext, ApplicationContext context, boolean addAddon) {
-        log.info("Starting update all app addons");
-        Lang.clear();
-        fetchSettingPlugins(addonContext, addAddon);
-
+    public void fireRefreshBeans() {
         for (Class<? extends ContextRefreshed> beanUpdateClass : BEAN_CONTEXT_REFRESH) {
             applicationContext.getBean(beanUpdateClass).onContextRefresh();
         }
+    }
 
-        if (addonContext != null) {
-            applicationContext.getBean(ExtRequestMappingHandlerMapping.class).updateContextRestControllers(context, addAddon);
-        }
-
-        registerUpdatableSettings(context);
-
-        // fetch entities fires load services if any
+    private void restartEntityServices() {
         log.info("Loading entities and initialize all related services");
         for (BaseEntity baseEntity : findAllBaseEntities()) {
             if (baseEntity instanceof BaseFileSystemEntity) {
                 ((BaseFileSystemEntity<?, ?>) baseEntity).getFileSystem(this).restart(false);
             }
         }
-
-        log.info("Finish update all app addons");
     }
 
     private void updateAppNotificationBlock() {
@@ -642,26 +626,6 @@ public class EntityContextImpl implements EntityContext {
         }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    private void registerUpdatableSettings(ApplicationContext context)
-        throws IllegalAccessException {
-        for (String name : context.getBeanDefinitionNames()) {
-            if (!name.contains(".")) {
-                Object bean = context.getBean(name);
-                Object proxy = this.getTargetObject(bean);
-                for (Field field : FieldUtils.getFieldsWithAnnotation(proxy.getClass(), UpdatableSetting.class)) {
-                    Class<?> settingClass = field.getDeclaredAnnotation(UpdatableSetting.class).value();
-                    Class valueType = ((SettingPlugin) CommonUtils.newInstance(settingClass)).getType();
-                    Object value = entityContextSetting.getObjectValue(settingClass);
-                    UpdatableValue<Object> updatableValue = UpdatableValue.ofNullable(value, proxy.getClass().getSimpleName() + "_" + field.getName(),
-                        valueType);
-                    entityContextSetting.listenObjectValue(settingClass, updatableValue.getName(), updatableValue::update);
-
-                    FieldUtils.writeField(field, proxy, updatableValue, true);
-                }
-            }
-        }
-    }
-
     private Object getTargetObject(Object proxy) throws BeansException {
         if (AopUtils.isJdkDynamicProxy(proxy)) {
             try {
@@ -672,38 +636,6 @@ public class EntityContextImpl implements EntityContext {
         }
         return proxy;
     }
-
-    private void fetchSettingPlugins(AddonContext addonContext, boolean addAddon) {
-        if (addonContext != null) {
-            setting().fetchSettingPlugins(addonContext.getBasePackage(), classFinder, addAddon);
-        }
-    }
-
-    /*private void createTableIndexes() {
-        List<Class<? extends BaseEntity>> list = classFinder
-            .getClassesWithParent(BaseEntity.class).stream().filter(
-                l -> !(WidgetBaseEntity.class.isAssignableFrom(l) || DeviceBaseEntity.class.isAssignableFrom(l)))
-            .collect(Collectors.toList());
-        list.add(DeviceBaseEntity.class);
-        list.add(WidgetBaseEntity.class);
-
-        jakarta.persistence.EntityManager em = applicationContext.getBean(jakarta.persistence.EntityManager.class);
-        MetamodelImplementor meta = (MetamodelImplementor) em.getMetamodel();
-        new TransactionTemplate(transactionManager).execute(new TransactionCallbackWithoutResult() {
-            @Override
-            protected void doInTransactionWithoutResult(
-                TransactionStatus transactionStatus) {
-                for (Class<? extends BaseEntity> aClass : list) {
-                    String tableName = ((Joinable) meta.entityPersister(aClass)).getTableName();
-                    try {
-                        em.createNativeQuery(String.format(CREATE_TABLE_INDEX, aClass.getSimpleName(), tableName)).executeUpdate();
-                    } catch (Exception ex) {
-                        log.error("Error while creating index for table: <{}>", tableName, ex);
-                    }
-                }
-            }
-        });
-    }*/
 
     @AllArgsConstructor
     public enum ItemAction {

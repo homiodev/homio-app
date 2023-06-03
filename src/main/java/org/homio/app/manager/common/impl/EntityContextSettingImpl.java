@@ -27,7 +27,9 @@ import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppProperties;
+import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.SettingEntity;
@@ -50,6 +52,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> httpRequestSettingListeners = new HashMap<>();
     private final EntityContextImpl entityContext;
     private final Environment environment;
+    private final ClassFinder classFinder;
     @Getter
     private final AppProperties appProperties;
 
@@ -143,11 +146,6 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         settingListeners.get(settingClass.getName()).put(key, listener);
     }
 
-    public void listenObjectValue(Class<?> settingClass, String key, ThrowingConsumer<Object, Exception> listener) {
-        settingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
-        settingListeners.get(settingClass.getName()).put(key, listener);
-    }
-
     @Override
     public <T> void unListenValue(Class<? extends SettingPlugin<T>> settingClass, String key) {
         if (settingListeners.containsKey(settingClass.getName())) {
@@ -226,10 +224,35 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         fireNotifyHandlers(settingPluginClazz, parsedValue, pluginFor, strValue, fireNotificationOnUI);
     }
 
-    public void fetchSettingPlugins(String basePackage, ClassFinder classFinder, boolean addAddon) {
-        List<Class<? extends SettingPlugin>> classes = classFinder.getClassesWithParent(SettingPlugin.class, basePackage);
-        for (Class<? extends SettingPlugin> settingPlugin : classes) {
-            updatePlugins(settingPlugin, addAddon);
+    @SneakyThrows
+    public void onContextCreated() {
+        List<Class<? extends SettingPlugin>> settingClasses = classFinder.getClassesWithParent(SettingPlugin.class);
+        addSettingsFromSystem(settingClasses);
+    }
+
+    public void addSettingsFromClassLoader(AddonContext addonContext) {
+        List<Class<? extends SettingPlugin>> settingClasses = classFinder.getClassesWithParent(SettingPlugin.class, null, addonContext.getClassLoader());
+        addSettingsFromSystem(settingClasses);
+        addonContext.onDestroy(() -> {
+            for (Class<? extends SettingPlugin> settingPluginClass : settingClasses) {
+                SettingPlugin settingPlugin = CommonUtils.newInstance(settingPluginClass);
+                String key = SettingEntity.getKey(settingPlugin);
+                settingPluginsByPluginKey.remove(key);
+                settingPluginsByPluginClass.remove(settingPluginClass.getName());
+                settingListeners.remove(settingPluginClass.getName());
+                httpRequestSettingListeners.remove(settingPluginClass.getName());
+            }
+        });
+    }
+
+    private void addSettingsFromSystem(List<Class<? extends SettingPlugin>> settingClasses) {
+        for (Class<? extends SettingPlugin> settingPluginClass : settingClasses) {
+            if (Modifier.isPublic(settingPluginClass.getModifiers())) {
+                SettingPlugin settingPlugin = CommonUtils.newInstance(settingPluginClass);
+                String key = SettingEntity.getKey(settingPlugin);
+                settingPluginsByPluginKey.put(key, settingPlugin);
+                settingPluginsByPluginClass.put(settingPluginClass.getName(), settingPlugin);
+            }
         }
     }
 

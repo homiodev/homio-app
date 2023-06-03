@@ -45,7 +45,7 @@ public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSer
     @Override
     protected void validate() {
         if (getWidgetTabEntity() == null) {
-            throw new ServerException("Unable to save widget without attach to tab");
+            throw new ServerException("ERROR.WIDGET_NO_TAB");
         }
     }
 }

@@ -49,7 +49,7 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
     @Override
     public void beforeDelete(EntityContext entityContext) {
         if (!widgetBaseEntities.isEmpty()) {
-            throw new ServerException("W.ERROR.REMOVE_NON_EMPTY_TAB");
+            throw new ServerException("ERROR.REMOVE_NON_EMPTY_TAB");
         }
     }
 
@@ -61,7 +61,7 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
     @Override
     protected void validate() {
         if (getName() == null || getName().length() < 2 || getName().length() > 10) {
-            throw new ServerException("Widget tab name must be between 2..10 characters");
+            throw new ServerException("ERROR.WRONG_TAB_NAME");
         }
     }
 }

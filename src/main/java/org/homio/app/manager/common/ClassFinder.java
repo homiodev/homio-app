@@ -14,6 +14,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.HomioClassLoader;
 import org.homio.app.repository.AbstractRepository;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
@@ -69,9 +70,13 @@ public class ClassFinder {
         return typeToAnnotations;
     }*/
 
-    public <T> List<Class<? extends T>> getClassesWithParent(@NotNull Class<T> parentClass, String basePackage) {
+    public <T> List<Class<? extends T>> getClassesWithParent(
+        @NotNull Class<T> parentClass,
+        @Nullable String basePackage,
+        @Nullable ClassLoader classLoader) {
+
         List<Class<? extends T>> foundClasses = new ArrayList<>();
-        ClassPathScanningCandidateComponentProvider scanner = HomioClassLoader.getResourceScanner(false);
+        ClassPathScanningCandidateComponentProvider scanner = HomioClassLoader.getResourceScanner(false, classLoader);
         scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
 
         getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.homio"), null, scanner,
@@ -89,7 +94,7 @@ public class ClassFinder {
      */
     @Cacheable(CLASSES_WITH_PARENT_CLASS)
     public <T> List<Class<? extends T>> getClassesWithParent(Class<T> parentClass) {
-        return getClassesWithParent(parentClass, null);
+        return getClassesWithParent(parentClass, null, null);
     }
 
     @Cacheable(JS_COMPLETIONS)

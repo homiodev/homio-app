@@ -32,7 +32,7 @@ public class AddonClassLoader extends JarClassLoader {
     private final Map<URL, List<URLConnection>> resourceConnections = new HashMap<>();
 
     @SneakyThrows
-    AddonClassLoader(Path jarPath) {
+    public AddonClassLoader(Path jarPath) {
         super.add(jarPath.toString());
         this.jarFile = new JarFile(jarPath.toFile());
         this.baseUrl = new URL("jar", "", jarPath.toUri().toURL() + "!/");

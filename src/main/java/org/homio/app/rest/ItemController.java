@@ -197,7 +197,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         @PathVariable("type") String type,
         @RequestParam(value = "subType", defaultValue = "") String subType) {
         String key = type + subType;
-        itemsBootstrapContextMap.computeIfAbsent(key, s -> buildImteBootstrap(type, subType));
+        itemsBootstrapContextMap.computeIfAbsent(key, s -> buildItemBootstrap(type, subType));
         return itemsBootstrapContextMap.get(key);
     }
 
@@ -225,7 +225,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         Class<?> entityClass = classEntity.getClass();
         if (StringUtils.isNotEmpty(optionsRequest.getFieldFetchType())) {
             String[] addonAndClassName = optionsRequest.getFieldFetchType().split(":");
-            entityClass = entityContext.getEntityContextAddon()
+            entityClass = entityContext.getAddon()
                                        .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]).getClass();
         }
 
@@ -597,14 +597,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @NotNull
-    private List<ItemContextResponse> buildImteBootstrap(String type, String subType) {
+    private List<ItemContextResponse> buildItemBootstrap(String type, String subType) {
         List<ItemContextResponse> itemContexts = new ArrayList<>();
 
         for (Class<?> classType : findAllClassImplementationsByType(type)) {
             List<EntityUIMetaData> entityUIMetaData = UIFieldUtils.fillEntityUIMetadataList(classType, new HashSet<>(), entityContext);
             if (subType != null && subType.contains(":")) {
                 String[] addonAndClassName = subType.split(":");
-                Object subClassObject = entityContext.getEntityContextAddon()
+                Object subClassObject = entityContext.getAddon()
                                                      .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]);
                 List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false);
                 // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json                    // parameter)

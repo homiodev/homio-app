@@ -1,10 +1,13 @@
 package org.homio.app.extloader;
 
+import com.pivovarit.function.ThrowingRunnable;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarInputStream;
@@ -17,6 +20,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
@@ -35,10 +39,12 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
+@Log4j2
 @Getter
 @Setter
 public class AddonContext {
 
+    private final List<ThrowingRunnable<Exception>> destryListeners = new ArrayList<>();
     private static MavenXpp3Reader pomReader = new MavenXpp3Reader();
 
     private final Path contextFile; // batch context file associated with this context
@@ -47,7 +53,7 @@ public class AddonContext {
     private String addonID;
 
     private boolean internal;
-    private boolean installed;
+    private boolean initialized;
     private AddonSpringContext config;
     private String loadError;
 
@@ -82,7 +88,7 @@ public class AddonContext {
     }
 
     @SneakyThrows
-    AddonContext(Path contextFile) {
+    public AddonContext(Path contextFile) {
         this.contextFile = contextFile;
         ZipFile zipFile = new ZipFile(contextFile.toString());
         JarInputStream jarStream = new JarInputStream(new FileInputStream(contextFile.toString()));
@@ -92,7 +98,7 @@ public class AddonContext {
         zipFile.close();
     }
 
-    AddonContext(String addonID) {
+    public AddonContext(String addonID) {
         this.addonID = addonID;
         this.contextFile = null;
         this.pomFile = null;
@@ -114,7 +120,7 @@ public class AddonContext {
         return StringUtils.defaultString(this.pomFile.getName(), addonID);
     }
 
-    public ApplicationContext getApplicationContext() {
+    public AnnotationConfigApplicationContext getApplicationContext() {
         return config.ctx;
     }
 
@@ -128,7 +134,7 @@ public class AddonContext {
             version = this.pomFile.getParent().getVersion();
         }
         if (version == null) {
-            throw new ServerException("Unable to find version for addon: " + addonID);
+            throw new ServerException("ERROR.ADDON_NO_VERSION" + addonID);
         }
         return version;
     }
@@ -142,8 +148,16 @@ public class AddonContext {
         return false;
     }
 
+    public ClassLoader getClassLoader() {
+        return HomioClassLoader.getAddonClassLoader(getAddonID());
+    }
+
+    public void onDestroy(ThrowingRunnable<Exception> destroyListener) {
+        destryListeners.add(destroyListener);
+    }
+
     @SneakyThrows
-    void load(ConfigurationBuilder configurationBuilder, Environment env, ApplicationContext parentContext,
+    public void load(ConfigurationBuilder configurationBuilder, Environment env, ApplicationContext parentContext,
         ClassLoader classLoader) {
         URL addonUrl = contextFile.toUri().toURL();
         Reflections reflections = new Reflections(configurationBuilder.setUrls(addonUrl));
@@ -157,6 +171,16 @@ public class AddonContext {
             HomioClassLoader.removeClassLoader(addonID);
             loadError = CommonUtils.getErrorMessage(ex);
             throw ex;
+        }
+    }
+
+    public void fireCloseListeners() {
+        for (ThrowingRunnable<Exception> listener : destryListeners) {
+            try {
+                listener.run();
+            } catch (Exception e) {
+                log.error("Error during fire addon {} destroy listener", addonID);
+            }
         }
     }
 
@@ -207,10 +231,6 @@ public class AddonContext {
             ctx.start();
         }
 
-        public void destroy() {
-            ctx.close();
-        }
-
         /**
          * Find spring configuration class with annotation @AddonConfiguration and @Configuration
          */
@@ -218,17 +238,14 @@ public class AddonContext {
             // find configuration class
             Set<Class<?>> springConfigClasses = reflections.getTypesAnnotatedWith(AddonConfiguration.class);
             if (springConfigClasses.isEmpty()) {
-                throw new ServerException(
-                    "Configuration class with annotation @AddonConfiguration not found. Not possible to create spring " +
-                        "context");
+                throw new ServerException("ERROR.ADDON_NO_CONFIG");
             }
             if (springConfigClasses.size() > 1) {
-                throw new ServerException("Configuration class with annotation @AddonConfiguration must be unique, but found: " +
-                    StringUtils.join(springConfigClasses, ", "));
+                throw new ServerException("ERROR.ADDON_MANY_CONFIG", StringUtils.join(springConfigClasses, ", "));
             }
             Class<?> batchConfigurationClass = springConfigClasses.iterator().next();
             if (batchConfigurationClass.getDeclaredAnnotation(AddonConfiguration.class) == null) {
-                throw new ServerException("Loaded batch definition has different ws-service-api.jar version and can not be instantiated");
+                throw new ServerException("ERROR.ADDON_UNABLE_LOAD_CONFIG");
             }
             return batchConfigurationClass;
         }

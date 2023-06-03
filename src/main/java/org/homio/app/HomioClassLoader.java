@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.homio.app.extloader.AddonClassLoader;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -29,12 +30,8 @@ public class HomioClassLoader extends ClassLoader {
         addonJarClassLoaders.remove(addonID).destroy();
     }
 
-    public static AddonClassLoader getJarClassLoader(String addonID) {
+    public static AddonClassLoader getAddonClassLoader(String addonID) {
         return addonJarClassLoaders.get(addonID);
-    }
-
-    public static ClassPathScanningCandidateComponentProvider getResourceScanner(boolean includeInterfaces) {
-        return createClassPathScanningCandidateComponentProvider(includeInterfaces, null);
     }
 
     @Override
@@ -71,8 +68,12 @@ public class HomioClassLoader extends ClassLoader {
         return null;
     }
 
-    private static ClassPathScanningCandidateComponentProvider createClassPathScanningCandidateComponentProvider(
-        boolean includeInterfaces, AddonClassLoader jarLoader) {
+    public static ClassPathScanningCandidateComponentProvider getResourceScanner(boolean includeInterfaces) {
+        return getResourceScanner(includeInterfaces, null);
+    }
+
+    public static ClassPathScanningCandidateComponentProvider getResourceScanner(
+        boolean includeInterfaces, @Nullable ClassLoader classLoader) {
         ClassPathScanningCandidateComponentProvider provider =
             !includeInterfaces ? new ClassPathScanningCandidateComponentProvider(false) :
                 new ClassPathScanningCandidateComponentProvider(false) {
@@ -81,8 +82,8 @@ public class HomioClassLoader extends ClassLoader {
                         return true;
                     }
                 };
-        if (jarLoader != null) {
-            provider.setResourceLoader(new PathMatchingResourcePatternResolver(jarLoader));
+        if (classLoader != null) {
+            provider.setResourceLoader(new PathMatchingResourcePatternResolver(classLoader));
         }
         return provider;
     }
