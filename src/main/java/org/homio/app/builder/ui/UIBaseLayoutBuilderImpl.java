@@ -1,7 +1,5 @@
 package org.homio.app.builder.ui;
 
-import static org.apache.commons.lang3.StringUtils.defaultString;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,6 +9,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import org.homio.api.model.Icon;
 import org.homio.api.ui.action.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIEntityBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
@@ -96,7 +95,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public DialogEntity<UIStickyDialogItemBuilder> addStickyDialogButton(@NotNull String name, String icon, String iconColor, int order) {
+    public DialogEntity<UIStickyDialogItemBuilder> addStickyDialogButton(@NotNull String name, Icon icon, int order) {
         UIStickyDialogItemBuilderImpl stickyDialogBuilder;
         UIButtonItemBuilderImpl buttonItemBuilder;
         if (inputBuilders.containsKey(name)) {
@@ -105,7 +104,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
         } else {
             String entityID = getText(name);
             stickyDialogBuilder = new UIStickyDialogItemBuilderImpl(entityID + "_dialog");
-            buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, iconColor, null, order))
+            buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, null, order))
                 .setStickyDialogBuilder(stickyDialogBuilder);
         }
         return new DialogEntity<>() {
@@ -123,10 +122,10 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public DialogEntity<UIDialogLayoutBuilder> addOpenDialogActionButton(@NotNull String name, String icon, String iconColor, Integer width, int order) {
+    public DialogEntity<UIDialogLayoutBuilder> addOpenDialogActionButton(@NotNull String name, Icon icon, Integer width, int order) {
         String entityID = getText(name);
         UIDialogLayoutBuilderImpl dialogEntityBuilder = new UIDialogLayoutBuilderImpl(entityID, width);
-        UIButtonItemBuilderImpl buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, iconColor, null, order))
+        UIButtonItemBuilderImpl buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, null, order))
             .setDialogEntityBuilder(dialogEntityBuilder);
         return new DialogEntity<>() {
             @Override
@@ -182,21 +181,21 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public UIButtonItemBuilder addButton(@NotNull String name, String icon, String iconColor, UIActionHandler action, int order) {
-        return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, icon, iconColor, order, action));
+    public UIButtonItemBuilder addButton(@NotNull String name, Icon icon, UIActionHandler action, int order) {
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, icon, order, action));
     }
 
     @Override
-    public UIButtonItemBuilder addTableLayoutButton(@NotNull String name, int maxRows, int maxColumns, String value, @Nullable String icon,
-        @Nullable String iconColor, UIActionHandler action, int order) {
-        return addEntity(new UIButtonItemBuilderImpl(UIItemType.TableLayout, name, defaultString(icon, "fas fa-table"), iconColor, order, action)
+    public UIButtonItemBuilder addTableLayoutButton(@NotNull String name, int maxRows, int maxColumns, String value, @Nullable Icon icon,
+        UIActionHandler action, int order) {
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.TableLayout, name, icon == null ? new Icon("fas fa-table") : icon, order, action)
             .setMetadata(new JSONObject().put("maxRows", maxRows).put("maxColumns", maxColumns).put("value", value)));
     }
 
     @Override
-    public UIButtonItemBuilder addSimpleUploadButton(@NotNull String name, @Nullable String icon, @Nullable String iconColor, String[] supportedFormats,
+    public UIButtonItemBuilder addSimpleUploadButton(@NotNull String name, @Nullable Icon icon, String[] supportedFormats,
         UIActionHandler action, int order) {
-        return addEntity(new UIButtonItemBuilderImpl(UIItemType.SimpleUploadButton, name, icon, iconColor, order, action)
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.SimpleUploadButton, name, icon, order, action)
             .setMetadata(new JSONObject().put("supportedFormats", supportedFormats)));
     }
 

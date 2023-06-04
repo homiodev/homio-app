@@ -1,9 +1,9 @@
 package org.homio.app.setting.system;
 
-import static org.homio.api.util.Constants.DANGER_COLOR;
-
+import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class SystemClearWorkspaceButtonSetting
@@ -20,18 +20,13 @@ public class SystemClearWorkspaceButtonSetting
     }
 
     @Override
-    public String getIconColor() {
-        return DANGER_COLOR;
+    public @NotNull Icon getIcon() {
+        return new Icon("fas fa-trash");
     }
 
     @Override
     public String getConfirmMsg() {
         return "W.CONFIRM.CLEAR_WORKSPACE";
-    }
-
-    @Override
-    public String getIcon() {
-        return "fas fa-trash";
     }
 
     @Override

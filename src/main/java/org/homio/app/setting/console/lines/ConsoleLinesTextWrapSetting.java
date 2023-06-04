@@ -3,6 +3,7 @@ package org.homio.app.setting.console.lines;
 import java.util.Collection;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
@@ -23,8 +24,8 @@ public class ConsoleLinesTextWrapSetting
     }
 
     @Override
-    public String getIcon() {
-        return "fas fa-text-width";
+    public Icon getIcon() {
+        return new Icon("fas fa-text-width");
     }
 
     @Override

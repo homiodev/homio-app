@@ -101,7 +101,7 @@ public class SystemAddonLibraryManagerSetting
     @Override
     public void unInstallPackage(
         EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
-        ((EntityContextImpl) entityContext).getAddon().uninstallAddon(packageRequest.getName());
+        ((EntityContextImpl) entityContext).getAddon().uninstallAddon(packageRequest.getName(), true);
     }
 
     @Override

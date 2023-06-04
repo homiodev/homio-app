@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextUI.HeaderButtonBuilder;
+import org.homio.api.model.Icon;
 import org.homio.api.util.NotificationLevel;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.ArgumentType;
@@ -93,7 +94,7 @@ public class Scratch3UIBlocks extends Scratch3ExtensionBlocks {
                 if (isFetchDuration) {
                     headerButtonBuilder.duration(workspaceBlock.getInputInteger("DURATION")).build();
                 } else {
-                    headerButtonBuilder.icon("fas fa-" + workspaceBlock.getInputString("ICON"), null, false).build();
+                    headerButtonBuilder.icon(new Icon("fas fa-" + workspaceBlock.getInputString("ICON"))).build();
                 }
             },
             () -> entityContext.ui().removeHeaderButton(workspaceBlock.getId()));

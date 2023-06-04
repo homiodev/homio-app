@@ -128,14 +128,11 @@ public final class UIFieldSelectionUtil {
             String title = baseEntity.getTitle();
             OptionModel optionModel = OptionModel.of(baseEntity.getEntityID(), title);
             if (currentValue != null) {
-                optionModel.json(jsonNodes -> {
-                    jsonNodes.put("cv", currentValue);
-                });
+                optionModel.json(jsonNodes -> jsonNodes.put("cv", currentValue));
             }
-            if (baseEntity instanceof UIFieldSelection.SelectionConfiguration) {
-                var conf = ((UIFieldSelection.SelectionConfiguration) baseEntity);
-                optionModel.setIcon(conf.selectionIcon());
-                optionModel.setColor(conf.selectionIconColor());
+            if (baseEntity instanceof UIFieldSelection.SelectionConfiguration conf) {
+                optionModel.setIcon(conf.selectionIcon().getIcon());
+                optionModel.setColor(conf.selectionIcon().getColor());
             }
 
             updateSelectedOptionModel(baseEntity, classEntityForDynamicOptionLoader, sourceClassType, optionModel, "entityByClass");
@@ -375,9 +372,8 @@ public final class UIFieldSelectionUtil {
 
     private static void updateSelectedOptionModel(Object target, Object requestedEntity, Class<?> sourceClassType, OptionModel optionModel,
         String selectHandler) {
-        optionModel.json(jsonObject -> {
-            jsonObject.put("REQ_TARGET", sourceClassType.getSimpleName() + "~~~" + selectHandler);
-        });
+        optionModel.json(jsonObject ->
+            jsonObject.put("REQ_TARGET", sourceClassType.getSimpleName() + "~~~" + selectHandler));
         setDescription(target, sourceClassType, optionModel);
 
         SelectionParent item = new SelectionParent();
@@ -390,8 +386,7 @@ public final class UIFieldSelectionUtil {
             item.description = selectionParent.description();
         }
 
-        if (target instanceof UIFieldSelectionParent.SelectionParent) {
-            UIFieldSelectionParent.SelectionParent parent = (UIFieldSelectionParent.SelectionParent) target;
+        if (target instanceof UIFieldSelectionParent.SelectionParent parent) {
             item.mergeFrom(parent);
 
             UIFieldSelectionParent.SelectionParent superParent = parent.getSuperParent();
@@ -458,7 +453,7 @@ public final class UIFieldSelectionUtil {
             }
         }
         parent.getChildren().clear();
-        parent.getChildren().addAll(groupByKeyModels.values().stream().flatMap(Collection::stream).collect(Collectors.toList()));
+        parent.getChildren().addAll(groupByKeyModels.values().stream().flatMap(Collection::stream).toList());
     }
 
     private static Method findMethodByName(Class<?> clz, String name, List<? extends Class<? extends Annotation>> annotationClasses) {

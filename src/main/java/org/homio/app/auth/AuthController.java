@@ -11,7 +11,7 @@ import lombok.val;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.UserEntity.UserType;
-import org.homio.api.ui.UI.Color;
+import org.homio.api.model.Icon;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppProperties;
 import org.homio.app.manager.common.EntityContextAddonImpl;
@@ -78,15 +78,14 @@ public class AuthController {
     private void addUserNotificationBlock(String entityID, String email, boolean replace) {
         String key = "user-" + entityID;
         if (replace || !entityContext.ui().isHasNotificationBlock(key)) {
-            entityContext.ui().addNotificationBlock(key, email, "fas fa-user", "#AAAC2C", builder ->
+            entityContext.ui().addNotificationBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
                 builder.visibleForUser(email)
-                       .linkToEntity(entityContext.getEntity(entityID))
-                       .addButtonInfo(key, "", "", "", Color.RED,
-                           "fas fa-right-from-bracket", "W.INFO.LOGOUT",
-                           "W.CONFIRM.LOGOUT", (ignore, params) -> {
-                               entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
-                               return null;
-                           }));
+                       .linkToEntity(entityContext.getEntityRequire(entityID))
+                       .addInfo(key, null, "")
+                       .setRightButton(new Icon("fas fa-right-from-bracket"), "W.INFO.LOGOUT", "W.CONFIRM.LOGOUT", (ignore, params) -> {
+                           entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
+                           return null;
+                       }));
         }
     }
 
@@ -106,11 +105,7 @@ public class AuthController {
         private UserType userType;
     }
 
-    @Getter
-    @RequiredArgsConstructor
-    public static class StatusResponse {
+    public record StatusResponse(int status, String version) {
 
-        private final int status;
-        private final String version;
     }
 }

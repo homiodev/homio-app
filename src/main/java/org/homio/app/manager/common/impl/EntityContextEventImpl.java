@@ -46,19 +46,17 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.BaseEntityIdentifier;
 import org.homio.api.entity.PinBaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.api.storage.InMemoryDB;
-import org.homio.api.ui.UI.Color;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
-import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.EntityContextImpl.ItemAction;
 import org.homio.app.manager.common.EntityContextStorage;
-import org.homio.app.spring.ContextCreated;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -225,9 +223,9 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 });
                 scheduleFuture.setDescription("Listen udp: " + hostPortKey);
             } catch (Exception ex) {
-                entityContext.ui().addOrUpdateNotificationBlock("UPD", "UDP", "fas fa-kip-sign", "#482594", blockBuilder -> {
-                    blockBuilder.addInfo(Lang.getServerMessage("UDP_ERROR", FlowMap.of("key", hostPortKey, "msg", ex.getMessage())),
-                        "", "fas fa-triangle-exclamation", Color.RED);
+                entityContext.ui().addOrUpdateNotificationBlock("UPD", "UDP", new Icon("fas fa-kip-sign", "#482594"), blockBuilder -> {
+                    String info = Lang.getServerMessage("UDP_ERROR", FlowMap.of("key", hostPortKey, "msg", ex.getMessage()));
+                    blockBuilder.addInfo(info, new Icon("fas fa-triangle-exclamation"));
                 });
                 log.error("Unable to listen udp host:port: <{}>", hostPortKey);
                 return;
@@ -308,8 +306,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
         });
         registry.getEventListenerGroup(EventType.PRE_DELETE).appendListener(event -> {
             Object entity = event.getEntity();
-            if (entity instanceof BaseEntity) {
-                BaseEntity baseEntity = (BaseEntity) entity;
+            if (entity instanceof BaseEntity baseEntity) {
                 if (baseEntity.isDisableDelete()) {
                     throw new IllegalStateException("Unable to remove entity");
                 }

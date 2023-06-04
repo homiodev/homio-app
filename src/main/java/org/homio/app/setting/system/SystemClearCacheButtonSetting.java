@@ -1,7 +1,6 @@
 package org.homio.app.setting.system;
 
-import static org.homio.api.util.Constants.DANGER_COLOR;
-
+import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.json.JSONObject;
@@ -15,18 +14,13 @@ public class SystemClearCacheButtonSetting
     }
 
     @Override
-    public String getIconColor() {
-        return DANGER_COLOR;
-    }
-
-    @Override
     public String getConfirmMsg() {
         return "W.CONFIRM.CLEAR_CACHE";
     }
 
     @Override
-    public String getIcon() {
-        return "fas fa-trash";
+    public Icon getIcon() {
+        return new Icon("fas fa-trash");
     }
 
     @Override

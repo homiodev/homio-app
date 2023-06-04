@@ -1,5 +1,7 @@
 package org.homio.app.config;
 
+import static org.apache.commons.lang3.StringUtils.repeat;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.LinkedHashMap;
@@ -93,7 +95,8 @@ public class TransactionManagerContext {
             return;
         }
 
-        log.info("Updating EntityManagerFactory...");
+        String delimiter = repeat("-", 50);
+        log.info("\n#{}\nUpdating EntityManagerFactory...\n#{}", delimiter, delimiter);
         SessionFactoryImpl sessionFactory = entityManagerFactory.unwrap(SessionFactoryImpl.class);
 
         EntityManagerFactory newEntityManagerFactory = createEntityManagerFactory();
@@ -118,9 +121,9 @@ public class TransactionManagerContext {
             FieldUtils.writeDeclaredField(sessionFactory, "wrapperOptions", newSessionFactory.getWrapperOptions(), true);
 
             this.cacheService.clearCache();
-            log.info("EntityManagerFactory updated");
+            log.info("\n#{}\nEntityManagerFactory updated\n#{}", delimiter, delimiter);
         } catch (Exception ex) {
-            log.error("Unable to update EntityManager factory", ex);
+            log.error("\n#{}\nEntityManagerFactory failed to update\n#{}", delimiter, delimiter, ex);
             throw new RuntimeException(ex);
         } finally {
             blocker.countDown();

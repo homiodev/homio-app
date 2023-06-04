@@ -4,11 +4,13 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.model.Icon;
 import org.homio.api.ui.action.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIStickyDialogItemBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
@@ -29,13 +31,13 @@ public class UIButtonItemBuilderImpl
     private boolean primary = true;
     private int height = 32;
 
-    public UIButtonItemBuilderImpl(UIItemType uiItemType, String entityID, String icon, String iconColor, int order, UIActionHandler actionHandler) {
+    public UIButtonItemBuilderImpl(@NotNull UIItemType uiItemType, @NotNull String entityID, @Nullable Icon icon, int order, @Nullable UIActionHandler actionHandler) {
         super(uiItemType, entityID, order, actionHandler);
-        if (StringUtils.isEmpty(icon)) {
+        if (icon == null || StringUtils.isEmpty(icon.getIcon())) {
             setValue(entityID);
         }
         setText("CONTEXT.ACTION." + entityID);
-        setIcon(icon, iconColor);
+        setIcon(icon);
     }
 
     public UIButtonItemBuilderImpl setText(@Nullable String text) {

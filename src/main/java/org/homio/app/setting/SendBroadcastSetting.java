@@ -1,6 +1,8 @@
 package org.homio.app.setting;
 
+import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
+import org.jetbrains.annotations.NotNull;
 
 public class SendBroadcastSetting implements SettingPluginButton {
 
@@ -15,7 +17,7 @@ public class SendBroadcastSetting implements SettingPluginButton {
     }
 
     @Override
-    public String getIcon() {
-        return "fas fa-play";
+    public @NotNull Icon getIcon() {
+        return new Icon("fas fa-play");
     }
 }

@@ -5,10 +5,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import org.homio.api.model.Icon;
 import org.homio.api.ui.action.UIActionHandler;
 import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Getter
 public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
@@ -110,9 +112,11 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     }
 
     @Override
-    public Owner setIcon(String icon, String iconColor) {
-        this.icon = icon;
-        this.iconColor = iconColor;
+    public Owner setIcon(@Nullable Icon icon) {
+        if(icon != null) {
+            this.icon = icon.getIcon();
+            this.iconColor = icon.getColor();
+        }
         return (Owner) this;
     }
 

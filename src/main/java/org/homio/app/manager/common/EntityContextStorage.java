@@ -20,6 +20,7 @@ import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.app.setting.system.SystemCPUFetchValueIntervalSetting;
 import org.jetbrains.annotations.NotNull;
@@ -31,8 +32,8 @@ public class EntityContextStorage {
 
     public static final OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
     public static final Map<String, EntityMemoryData> ENTITY_MEMORY_MAP = new ConcurrentHashMap<>();
-    public static final long TOTAL_MEMORY = osBean.getTotalPhysicalMemorySize();
-    public static final double TOTAL_MEMORY_GB = osBean.getTotalPhysicalMemorySize() / GB_DIVIDER;
+    public static final long TOTAL_MEMORY = osBean.getTotalMemorySize();
+    public static final double TOTAL_MEMORY_GB = osBean.getTotalMemorySize() / GB_DIVIDER;
     // constructor parameters
     private final EntityContextImpl entityContext;
     private EntityContextBGP.ThreadContext<Void> hardwareCpuScheduler;
@@ -83,8 +84,7 @@ public class EntityContextStorage {
 
     private void logUpdatedValue(@NotNull HasEntityIdentifier entity, @NotNull String key, @NotNull String title, @NotNull Object value,
         EntityMemoryData data) {
-        if (value instanceof Status) {
-            Status status = (Status) value;
+        if (value instanceof Status status) {
             Level level = status == Status.ERROR ? Level.ERROR : Level.DEBUG;
             Object message = data.VALUE_MAP.get(key + "Message");
             if (message == null) {
@@ -98,8 +98,8 @@ public class EntityContextStorage {
 
     @SneakyThrows
     private void initSystemCpuListening() {
-        entityContext.var().createGroup("hardware", "Hardware", true, "fas fa-microchip",
-            "#31BDB6", "sys.hardware");
+        entityContext.var().createGroup("hardware", "Hardware", true, new Icon("fas fa-microchip",
+            "#31BDB6"), "sys.hardware");
         String cpuUsageID = entityContext.var().createVariable("hardware", "sys_cpu_load", "sys.cpu_load",
             VariableType.Float, builder ->
                 builder.setDescription("sys.cpu_load_description").setReadOnly(true).setUnit("%").setColor("#7B37B0"));
@@ -121,9 +121,9 @@ public class EntityContextStorage {
                 }
                 this.hardwareCpuScheduler = entityContext.bgp().builder("hardware-cpu").interval(Duration.ofSeconds(timeout)).execute(
                     () -> {
-                        entityContext.var().set(cpuUsageID, round100((float) (osBean.getSystemCpuLoad() * 100F)));
+                        entityContext.var().set(cpuUsageID, round100((float) (osBean.getCpuLoad() * 100F)));
                         entityContext.var().set(javaCpuUsageID, round100((float) (osBean.getProcessCpuLoad() * 100F)));
-                        float memPercent = (TOTAL_MEMORY - osBean.getFreePhysicalMemorySize()) / (float) TOTAL_MEMORY * 100F;
+                        float memPercent = (TOTAL_MEMORY - osBean.getFreeMemorySize()) / (float) TOTAL_MEMORY * 100F;
                         entityContext.var().set(memID, round100(memPercent));
                     });
             });

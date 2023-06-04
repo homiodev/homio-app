@@ -2,9 +2,12 @@ package org.homio.app.rest;
 
 import java.nio.file.DirectoryNotEmptyException;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
 import org.homio.api.model.ErrorHolderModel;
 import org.homio.api.util.CommonUtils;
+import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.hquery.api.HardwareException;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpHeaders;
@@ -24,7 +27,16 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @Log4j2
 @ControllerAdvice
 @RestController
+@RequiredArgsConstructor
 public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
+
+    private final EntityContextImpl entityContext;
+
+    @ExceptionHandler({LinkageError.class})
+    public ErrorHolderModel handleLinkageError(LinkageError ex) {
+        log.error("Error <{}>", CommonUtils.getErrorMessage(ex));
+        return new ErrorHolderModel("Linkage error", ex.getMessage(), ex);
+    }
 
     @ExceptionHandler({HardwareException.class})
     public ErrorHolderModel handleHardwareException(HardwareException ex) {
@@ -58,6 +70,11 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         @NotNull HttpStatusCode statusCode,
         @NotNull WebRequest request) {
         String msg = CommonUtils.getErrorMessage(ex);
+        // addon linkage error
+        if (ex.getCause() instanceof AbstractMethodError && msg.contains("org.homio.addon")) {
+            int start = msg.indexOf("org.homio.addon") + "org.homio.addon".length() + 1;
+            entityContext.getAddon().disableAddon(msg.substring(start, msg.indexOf(".", start)));
+        }
         if (ex instanceof NullPointerException) {
             msg += ". src: " + ex.getStackTrace()[0].toString();
         }

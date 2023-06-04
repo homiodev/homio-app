@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
@@ -30,8 +31,8 @@ public class ConsoleRefreshContentPeriodSetting
     }
 
     @Override
-    public String getIcon() {
-        return "far fa-clock";
+    public Icon getIcon() {
+        return new Icon("fas fa-clock");
     }
 
     @Override

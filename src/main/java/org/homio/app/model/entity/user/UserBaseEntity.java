@@ -18,6 +18,7 @@ import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.HasEntityLog;
+import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.field.UIField;
@@ -151,8 +152,8 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
     public void assembleActions(UIInputBuilder uiInputBuilder) {
         UserEntity user = uiInputBuilder.getEntityContext().getUser();
         if (user != null && user.isAdmin()) {
-            uiInputBuilder.addOpenDialogSelectableButton("CHANGE_PASSWORD", "fas fa-unlock-keyhole",
-                              Color.RED, null, this::changePassword)
+            uiInputBuilder.addOpenDialogSelectableButton("CHANGE_PASSWORD", new Icon("fas fa-unlock-keyhole",
+                              Color.RED), null, this::changePassword)
                           .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
                               if (this.getUserType() == UserType.ADMIN) {
                                   flex.addTextInput("field.currentPassword", "", true);
@@ -160,8 +161,8 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
                               flex.addTextInput("field.newPassword", "", true);
                               flex.addTextInput("field.repeatNewPassword", "", true);
                           }));
-            uiInputBuilder.addOpenDialogSelectableButton("CHANGE_EMAIL", "fas fa-at",
-                              Color.PRIMARY_COLOR, null, this::changeEmail)
+            uiInputBuilder.addOpenDialogSelectableButton("CHANGE_EMAIL", new Icon("fas fa-at",
+                              Color.PRIMARY_COLOR), null, this::changeEmail)
                           .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
                               if (this.getUserType() == UserType.ADMIN) {
                                   flex.addTextInput("field.currentPassword", "", true);

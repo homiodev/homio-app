@@ -31,6 +31,7 @@ import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
@@ -170,7 +171,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     @UIField(order = 1)
     @UIFieldGroup(value = "FS", order = 20, borderColor = "#914991")
-    public String getFileSystemRoot() {
+    public @NotNull String getFileSystemRoot() {
         return getJsonData("fs_root", "/home");
     }
 
@@ -327,13 +328,11 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         String privateKey = entity.getJsonData("prv_key");
         SshPrivateKeyFile keyFile = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
         SshKeyPair keyPair = keyFile.toKeyPair(passphrase);
-        switch (entity.getJsonDataEnum("pk_sign", PublicKeyAuthSign.SHA256)) {
-            case SHA256:
-                return SshKeyUtils.makeRSAWithSHA256Signature(keyPair);
-            case SHA512:
-                return SshKeyUtils.makeRSAWithSHA512Signature(keyPair);
-        }
-        return keyPair;
+        return switch (entity.getJsonDataEnum("pk_sign", PublicKeyAuthSign.SHA256)) {
+            case SHA256 -> SshKeyUtils.makeRSAWithSHA256Signature(keyPair);
+            case SHA512 -> SshKeyUtils.makeRSAWithSHA512Signature(keyPair);
+            default -> keyPair;
+        };
     }
 
     @Override
@@ -352,7 +351,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public String getFileSystemAlias() {
+    public @NotNull String getFileSystemAlias() {
         return "SSH[" + getTitle() + "]";
     }
 
@@ -362,13 +361,8 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public String getFileSystemIcon() {
-        return "fas fa-road-spikes";
-    }
-
-    @Override
-    public String getFileSystemIconColor() {
-        return "#37A987";
+    public @NotNull Icon getFileSystemIcon() {
+        return new Icon("fas fa-road-spikes", "#37A987");
     }
 
     @Override
@@ -377,7 +371,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public SshGenericFileSystem buildFileSystem(EntityContext entityContext) {
+    public @NotNull SshGenericFileSystem buildFileSystem(@NotNull EntityContext entityContext) {
         return new SshGenericFileSystem(this, entityContext);
     }
 

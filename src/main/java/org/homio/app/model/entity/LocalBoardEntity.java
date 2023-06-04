@@ -11,6 +11,7 @@ import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
+import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnore;
@@ -33,7 +34,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     }
 
     @UIField(order = 200)
-    public String getFileSystemRoot() {
+    public @NotNull String getFileSystemRoot() {
         return getJsonData("fs_root", CommonUtils.getRootPath().toString());
     }
 
@@ -52,7 +53,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     }
 
     @Override
-    public String getFileSystemAlias() {
+    public @NotNull String getFileSystemAlias() {
         return "PRIMARY";
     }
 
@@ -62,13 +63,8 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     }
 
     @Override
-    public String getFileSystemIcon() {
-        return "fas fa-computer";
-    }
-
-    @Override
-    public String getFileSystemIconColor() {
-        return "#23819E";
+    public @NotNull Icon getFileSystemIcon() {
+        return new Icon("fas fa-computer", "#23819E");
     }
 
     @Override
@@ -77,7 +73,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     }
 
     @Override
-    public LocalFileSystemProvider buildFileSystem(EntityContext entityContext) {
+    public @NotNull LocalFileSystemProvider buildFileSystem(@NotNull EntityContext entityContext) {
         return new LocalFileSystemProvider(this);
     }
 
@@ -116,7 +112,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     }
 
     @Override
-    public Set<String> getSupportArchiveFormats() {
+    public @NotNull Set<String> getSupportArchiveFormats() {
         return Stream.of(ArchiveUtil.ArchiveFormat.values()).map(ArchiveFormat::getName).collect(Collectors.toSet());
     }
 }

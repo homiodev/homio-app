@@ -22,6 +22,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextUI.NotificationBlockBuilder;
+import org.homio.api.model.Icon;
 import org.homio.api.service.CloudProviderService;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.field.action.ActionInputParameter;
@@ -98,11 +99,11 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     public void updateNotificationBlock(@Nullable Exception ex) {
         // login if no private key found
         String name = format("Cloud: ${selection.%s}", StringUtils.uncapitalize(getClass().getSimpleName()));
-        entityContext.ui().addNotificationBlock("cloud", name, "fas fa-cloud", "#5C7DAC", builder -> {
+        entityContext.ui().addNotificationBlock("cloud", name, new Icon("fas fa-cloud", "#5C7DAC"), builder -> {
             builder.setStatus(entity.getStatus()).linkToEntity(entity);
             if (!entity.getStatus().isOnline()) {
-                builder.addInfo(defaultIfEmpty(entity.getStatusMessage(), defaultIfEmpty(CommonUtils.getErrorMessage(ex), "Unknown error")),
-                    Color.RED, "fas fa-exclamation", null);
+                String info = defaultIfEmpty(entity.getStatusMessage(), defaultIfEmpty(CommonUtils.getErrorMessage(ex), "Unknown error"));
+                builder.addInfo(info, new Icon("fas fa-exclamation")).setTextColor(Color.RED);
             }
 
             Consumer<NotificationBlockBuilder> syncHandler = getSyncHandler(ex);
@@ -170,29 +171,34 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     }
 
     private Consumer<NotificationBlockBuilder> buildNotSyncHandler() {
-        return builder -> builder.addButtonInfo("sync", "CLOUD.NOT_SYNC", Color.RED, null, null,
-            "fas fa-right-to-bracket", "Sync", null, (entityContext, params) -> {
-                entityContext.ui().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE", (responseType, pressedButton, parameters) ->
-                        handleSync(entityContext, parameters),
-                    dialogModel -> {
-                        dialogModel.disableKeepOnUi();
-                        List<ActionInputParameter> inputs = new ArrayList<>();
-                        inputs.add(ActionInputParameter.text("field.email", entityContext.getUserRequire().getEmail()));
-                        inputs.add(ActionInputParameter.text("field.password", ""));
-                        inputs.add(ActionInputParameter.text("field.passphrase", ""));
-                        dialogModel.submitButton("Login", button -> {
-                        }).group("General", inputs);
-                    });
-                return null;
-            });
+        return builder ->
+            builder.addInfo("sync", null, "CLOUD.NOT_SYNC").setTextColor(Color.RED)
+                   .setRightButton(new Icon("fas fa-right-to-bracket"), "Sync", null,
+                       (entityContext, params) -> {
+                           entityContext.ui().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE",
+                               (responseType, pressedButton, parameters) ->
+                                   handleSync(entityContext, parameters),
+                               dialogModel -> {
+                                   dialogModel.disableKeepOnUi();
+                                   List<ActionInputParameter> inputs = new ArrayList<>();
+                                   inputs.add(ActionInputParameter.text("field.email", entityContext.getUserRequire().getEmail()));
+                                   inputs.add(ActionInputParameter.text("field.password", ""));
+                                   inputs.add(ActionInputParameter.text("field.passphrase", ""));
+                                   dialogModel.submitButton("Login", button -> {
+                                   }).group("General", inputs);
+                               });
+                           return null;
+                       });
     }
 
     private Consumer<NotificationBlockBuilder> tryConnectHandler() {
-        return builder -> builder.addButtonInfo("sync", "CLOUD.NOT_SYNC", Color.RED, null, null,
-            "fas fa-rss", "Connect", null, (entityContext, params) -> {
-                entityContext.getBean(CloudService.class).start();
-                return null;
-            });
+        return builder -> builder.addInfo("sync", null, "CLOUD.NOT_SYNC")
+                                 .setTextColor(Color.RED)
+                                 .setRightButton(new Icon("fas fa-rss"), "Connect", null,
+                                     (entityContext, params) -> {
+                                         entityContext.getBean(CloudService.class).start();
+                                         return null;
+                                     });
     }
 
     private String getClientError(RestClientResponseException ce) {
@@ -204,15 +210,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         return defaultString(errorMessage, "W.ERROR.SYNC");
     }
 
-    @Getter
-    @RequiredArgsConstructor
-    private static class LoginBody {
-
-        private final String email;
-        private final String password;
-        private final String passphrase;
-        private final String ipAddress;
-        private final boolean recreate;
+    private record LoginBody(String email, String password, String passphrase, String ipAddress, boolean recreate) {
     }
 
     @Getter

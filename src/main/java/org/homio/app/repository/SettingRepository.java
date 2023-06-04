@@ -65,10 +65,10 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             entity.setOrder(plugin.order());
             entity.setAdvanced(plugin.isAdvanced());
             entity.setStorable(plugin.isStorable());
-            entity.setColor(plugin.getIconColor());
-            entity.setIcon(plugin.getIcon());
+            entity.setColor(plugin.getIcon().getColor());
+            entity.setIcon(plugin.getIcon().getIcon());
             if (plugin instanceof SettingPluginToggle) {
-                entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon());
+                entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon().getIcon());
             }
             if (plugin instanceof SettingPluginButton) {
                 entity.setValue(((SettingPluginButton) plugin).getText());
@@ -89,8 +89,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
                 }
             }
 
-            if (plugin instanceof CoreSettingPlugin) {
-                CoreSettingPlugin<?> settingPlugin = (CoreSettingPlugin<?>) plugin;
+            if (plugin instanceof CoreSettingPlugin<?> settingPlugin) {
                 entity.setGroupKey(settingPlugin.getGroupKey().name());
                 entity.setSubGroupKey(settingPlugin.getSubGroupKey());
             }

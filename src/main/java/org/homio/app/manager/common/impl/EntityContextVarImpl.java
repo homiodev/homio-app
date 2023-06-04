@@ -22,6 +22,7 @@ import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.exception.NotFoundException;
+import org.homio.api.model.Icon;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.State;
 import org.homio.api.storage.DataStorageService;
@@ -46,7 +47,7 @@ public class EntityContextVarImpl implements EntityContextVar {
     private final VariableDataRepository variableDataRepository;
 
     public static void createBroadcastGroup(EntityContext entityContext) {
-        entityContext.var().createGroup("broadcasts", "Broadcasts", true, "fas fa-tower-broadcast", "#A32677");
+        entityContext.var().createGroup("broadcasts", "Broadcasts", true, new Icon("fas fa-tower-broadcast", "#A32677"));
     }
 
     public void onContextCreated() {
@@ -181,12 +182,12 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @Override
-    public boolean setVariableIcon(@NotNull String variableId, @NotNull String icon, @Nullable String iconColor) {
+    public boolean setVariableIcon(@NotNull String variableId, @NotNull Icon icon) {
         WorkspaceVariable workspaceVariable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
         if (workspaceVariable != null
-            && (!Objects.equals(workspaceVariable.getIcon(), icon)
-            || !Objects.equals(workspaceVariable.getIconColor(), iconColor))) {
-            entityContext.save(workspaceVariable.setIcon(icon).setIconColor(iconColor));
+            && (!Objects.equals(workspaceVariable.getIcon(), icon.getIcon())
+            || !Objects.equals(workspaceVariable.getIconColor(), icon.getColor()))) {
+            entityContext.save(workspaceVariable.setIcon(icon.getIcon()).setIconColor(icon.getColor()));
             return true;
         }
         return false;
@@ -206,9 +207,9 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @Override
-    public boolean createGroup(@NotNull String groupId, @NotNull String groupName, boolean locked, @NotNull String icon, @NotNull String iconColor,
+    public boolean createGroup(@NotNull String groupId, @NotNull String groupName, boolean locked, @NotNull Icon icon,
         String description) {
-        return saveOrUpdateGroup(groupId, groupName, locked, icon, iconColor, description, wg -> {});
+        return saveOrUpdateGroup(groupId, groupName, locked, icon, description, wg -> {});
     }
 
     @Override
@@ -217,14 +218,13 @@ public class EntityContextVarImpl implements EntityContextVar {
         @NotNull String groupId,
         @NotNull String groupName,
         boolean locked,
-        @NotNull String icon,
-        @NotNull String iconColor,
+        @NotNull Icon icon,
         @Nullable String description) {
         WorkspaceGroup parentGroup = entityContext.getEntity(WorkspaceGroup.PREFIX + parentGroupId);
         if (parentGroup == null) {
             throw new IllegalArgumentException("Parent group '" + parentGroupId + "' not exists");
         }
-        return saveOrUpdateGroup(groupId, groupName, locked, icon, iconColor, description, wg -> wg.setHidden(true).setParent(parentGroup));
+        return saveOrUpdateGroup(groupId, groupName, locked, icon, description, wg -> wg.setHidden(true).setParent(parentGroup));
     }
 
     @Override
@@ -339,7 +339,7 @@ public class EntityContextVarImpl implements EntityContextVar {
             if (groupEntity == null) {
                 throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
             }
-            String varId = StringUtils.defaultString(variableId, String.valueOf(System.currentTimeMillis()));
+            String varId = Objects.toString(variableId, String.valueOf(System.currentTimeMillis()));
             entity = new WorkspaceVariable(varId, variableName, groupEntity, variableType, metaBuilder.description, metaBuilder.color,
                 metaBuilder.readOnly, metaBuilder.unit);
             entity.setAttributes(metaBuilder.attributes);
@@ -380,21 +380,11 @@ public class EntityContextVarImpl implements EntityContextVar {
 
         // initialize variable to put first value. require to getLatest(), ...
         switch (variable.getRestriction()) {
-            case Json:
-                service.save(new WorkspaceVariableMessage("{}"));
-                break;
-            case Color:
-                service.save(new WorkspaceVariableMessage("#FFFFFF"));
-                break;
-            case Bool:
-                service.save(new WorkspaceVariableMessage(false));
-                break;
-            case Float:
-                service.save(new WorkspaceVariableMessage(0));
-                break;
-            default:
-                service.save(new WorkspaceVariableMessage(""));
-                break;
+            case Json -> service.save(new WorkspaceVariableMessage("{}"));
+            case Color -> service.save(new WorkspaceVariableMessage("#FFFFFF"));
+            case Bool -> service.save(new WorkspaceVariableMessage(false));
+            case Float -> service.save(new WorkspaceVariableMessage(0));
+            default -> service.save(new WorkspaceVariableMessage(""));
         }
         if (context.groupVariable.isBackup()) {
             List<VariableBackup> backupData = variableDataRepository.findAll(
@@ -417,22 +407,23 @@ public class EntityContextVarImpl implements EntityContextVar {
         return variableId;
     }
 
-    private boolean saveOrUpdateGroup(@NotNull String groupId, @NotNull String groupName, boolean locked, @NotNull String icon, @NotNull String iconColor,
+    private boolean saveOrUpdateGroup(@NotNull String groupId, @NotNull String groupName, boolean locked, @NotNull Icon icon,
         String description,
         @NotNull Consumer<WorkspaceGroup> additionalHandler) {
         WorkspaceGroup entity = entityContext.getEntity(WorkspaceGroup.PREFIX + groupId);
         if (entity == null) {
             WorkspaceGroup workspaceGroup = new WorkspaceGroup().setGroupId(groupId).setLocked(locked).setName(groupName)
-                                                                .setIcon(icon).setIconColor(iconColor).setDescription(description);
+                                                                .setIcon(icon.getIcon()).setIconColor(icon.getColor()).setDescription(description);
             additionalHandler.accept(workspaceGroup);
             entityContext.save(workspaceGroup);
             return true;
         } else if (!Objects.equals(entity.getName(), groupName)
             || !Objects.equals(entity.getDescription(), description)
-            || !Objects.equals(entity.getIconColor(), iconColor)
-            || !Objects.equals(entity.getIcon(), icon)
+            || !Objects.equals(entity.getIconColor(), icon.getColor())
+            || !Objects.equals(entity.getIcon(), icon.getIcon())
             || entity.isLocked() != locked) {
-            entityContext.save(entity.setName(groupName).setDescription(description).setIconColor(iconColor).setIcon(icon).setLocked(locked));
+            entityContext.save(entity.setName(groupName).setDescription(description)
+                                     .setIconColor(icon.getColor()).setIcon(icon.getIcon()).setLocked(locked));
         }
         return false;
     }

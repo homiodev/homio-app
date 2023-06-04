@@ -89,18 +89,12 @@ public class LogService
             }
 
             private Level getLogLevel(Log.Level level) {
-                switch (level) {
-                    case ERROR:
-                        return Level.ERROR;
-                    case WARN:
-                        return Level.WARN;
-                    case DEBUG:
-                        return Level.DEBUG;
-                    case TRACE:
-                        return Level.TRACE;
-                    default:
-                        return Level.INFO;
-                }
+                return switch (level) {
+                    case ERROR -> Level.ERROR;
+                    case WARN -> Level.WARN;
+                    case TRACE -> Level.TRACE;
+                    default -> Level.DEBUG;
+                };
             }
         });
     }

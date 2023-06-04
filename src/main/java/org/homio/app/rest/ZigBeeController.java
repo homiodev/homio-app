@@ -16,6 +16,7 @@ import org.homio.api.entity.zigbee.ZigBeeBaseCoordinatorEntity;
 import org.homio.api.entity.zigbee.ZigBeeDeviceBaseEntity;
 import org.homio.api.entity.zigbee.ZigBeeProperty;
 import org.homio.api.entity.zigbee.ZigBeeProperty.PropertyType;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -67,51 +68,39 @@ public class ZigBeeController {
     }
 
     private @NotNull Predicate<? super ZigBeeProperty> buildPropertyAccessFilter(String access) {
-        switch (access) {
-            case "read":
-                return ZigBeeProperty::isReadable;
-            case "write":
-                return ZigBeeProperty::isWritable;
-        }
-        return zigBeeProperty -> true;
+        return switch (access) {
+            case "read" -> ZigBeeProperty::isReadable;
+            case "write" -> ZigBeeProperty::isWritable;
+            default -> zigBeeProperty -> true;
+        };
     }
 
     private Predicate<? super ZigBeeProperty> buildFilterByType(String type) {
-        return (Predicate<ZigBeeProperty>) zigBeeProperty -> {
-            switch (type) {
-                case "bool":
-                    return zigBeeProperty.getPropertyType() == PropertyType.bool;
-                case "number":
-                    return zigBeeProperty.getPropertyType() == PropertyType.number;
-                case "string":
-                    return zigBeeProperty.getPropertyType() == PropertyType.string;
-            }
-            return true;
+        return (Predicate<ZigBeeProperty>) zigBeeProperty -> switch (type) {
+            case "bool" -> zigBeeProperty.getPropertyType() == PropertyType.bool;
+            case "number" -> zigBeeProperty.getPropertyType() == PropertyType.number;
+            case "string" -> zigBeeProperty.getPropertyType() == PropertyType.string;
+            default -> true;
         };
     }
 
     private @NotNull Predicate<ZigBeeDeviceBaseEntity> buildDeviceAccessFilter(String access, String type) {
-        switch (access) {
-            case "read":
-                return device -> device.getProperties().values().stream()
-                                       .anyMatch(p -> ((ZigBeeProperty) p).isReadable() && filterByType((ZigBeeProperty) p, type));
-            case "write":
-                return device -> device.getProperties().values().stream()
-                                       .anyMatch(p -> ((ZigBeeProperty) p).isWritable() && filterByType((ZigBeeProperty) p, type));
-        }
-        return device -> true;
+        return switch (access) {
+            case "read" -> device -> device.getProperties().values().stream()
+                                           .anyMatch(p -> ((ZigBeeProperty) p).isReadable() && filterByType((ZigBeeProperty) p, type));
+            case "write" -> device -> device.getProperties().values().stream()
+                                            .anyMatch(p -> ((ZigBeeProperty) p).isWritable() && filterByType((ZigBeeProperty) p, type));
+            default -> device -> true;
+        };
     }
 
     private boolean filterByType(ZigBeeProperty zigBeeProperty, String type) {
-        switch (type) {
-            case "bool":
-                return zigBeeProperty.getPropertyType() == PropertyType.bool;
-            case "number":
-                return zigBeeProperty.getPropertyType() == PropertyType.number;
-            case "string":
-                return zigBeeProperty.getPropertyType() == PropertyType.string;
-        }
-        return true;
+        return switch (type) {
+            case "bool" -> zigBeeProperty.getPropertyType() == PropertyType.bool;
+            case "number" -> zigBeeProperty.getPropertyType() == PropertyType.number;
+            case "string" -> zigBeeProperty.getPropertyType() == PropertyType.string;
+            default -> true;
+        };
     }
 
     private @NotNull Collection<OptionModel> getDevices(Predicate<ZigBeeDeviceBaseEntity> deviceFilter) {
@@ -120,10 +109,11 @@ public class ZigBeeController {
             Collection<ZigBeeDeviceBaseEntity> devices = coordinator.getZigBeeDevices();
             for (ZigBeeDeviceBaseEntity zigBeeDevice : devices) {
                 if (deviceFilter.test(zigBeeDevice)) {
+                    Icon icon = Objects.requireNonNull(zigBeeDevice.getEntityIcon());
                     list.add(OptionModel.of(zigBeeDevice.getIeeeAddress(), zigBeeDevice.getDeviceFullName())
                                         .setDescription(zigBeeDevice.getDescription())
-                                        .setIcon(zigBeeDevice.getIcon())
-                                        .setColor(zigBeeDevice.getIconColor()));
+                                        .setIcon(icon.getIcon())
+                                        .setColor(icon.getColor()));
                 }
             }
         }
@@ -138,7 +128,9 @@ public class ZigBeeController {
     }
 
     private @NotNull OptionModel createOptionModel(ZigBeeProperty property) {
-        return OptionModel.of(property.getKey(), property.getName(false)).setDescription(property.getDescription())
-                          .setIcon(property.getIcon()).setColor(property.getIconColor());
+        return OptionModel.of(property.getKey(), property.getName(false))
+                          .setDescription(property.getDescription())
+                          .setIcon(property.getIcon().getIcon())
+                          .setColor(property.getIcon().getColor());
     }
 }

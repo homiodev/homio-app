@@ -16,6 +16,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP.ThreadContext;
 import org.homio.api.EntityContextHardware;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
@@ -99,7 +100,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     }
 
     private void addTmateInstallButton(UIInputBuilder uiInputBuilder, EntityContextHardware hardware) {
-        uiInputBuilder.addSelectableButton("install_tmate", "fab fa-instalod", null, (entityContext, params) -> {
+        uiInputBuilder.addSelectableButton("install_tmate", new Icon("fab fa-instalod"), (entityContext, params) -> {
             hardware.installSoftware("tmate", 60);
             TMATE_INSTALLED = hardware.isSoftwareInstalled("tmate");
             if (!TMATE_INSTALLED) {

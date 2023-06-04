@@ -31,13 +31,13 @@ public final class ColorWidgetBuilderImpl extends WidgetBaseBuilderImpl<ColorWid
 
     @Override
     public ColorWidgetBuilderImpl setIcon(String value) {
-        widget.setIcon(value);
+        widget.setWidgetIcon(value);
         return this;
     }
 
     @Override
     public ColorWidgetBuilderImpl setIconColor(String value) {
-        widget.setIconColor(value);
+        widget.setWidgetIconColor(value);
         return this;
     }
 

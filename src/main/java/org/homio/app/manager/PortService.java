@@ -13,8 +13,10 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.ui.UI.Color;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
@@ -129,13 +131,13 @@ public class PortService implements ContextCreated, ContextRefreshed {
     private void portAvailable(String portName) {
         log.info("Port became available: <{}>", portName);
         entityContext.ui().updateNotificationBlock("PORTS", blockBuilder ->
-            blockBuilder.removeInfo("port-" + portName));
+            blockBuilder.removeInfo(portName));
     }
 
     private void addPortNotAvailableNotification(String portName) {
         log.warn("Port became not available: <{}>", portName);
-        entityContext.ui().addOrUpdateNotificationBlock("PORTS", "PORTS", "", "", blockBuilder ->
-            blockBuilder.addInfo("port-" + portName,
-                Lang.getServerMessage("ERROR.PORT_NOT_AVAILABLE", portName), "", "fas fa-usb", "#9C8033"));
+        entityContext.ui().addOrUpdateNotificationBlock("PORTS", "PORTS", new Icon("fab fa-usb", "#A18123"), blockBuilder ->
+            blockBuilder.addInfo(portName, new Icon("fas fa-square", Color.RED),
+                Lang.getServerMessage("ERROR.PORT_NOT_AVAILABLE", portName)));
     }
 }

@@ -2,6 +2,8 @@ package org.homio.app.manager.common.impl;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.homio.api.model.Icon.colorOrDefault;
+import static org.homio.api.model.Icon.iconOrDefault;
 import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -26,9 +28,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContextUI;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.UserEntity;
+import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.HasFirmwareVersion;
+import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.ui.UISidebarMenu;
@@ -280,8 +286,8 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     @Override
     public void addNotificationBlock(@NotNull String entityID, @NotNull String name,
-        @Nullable String icon, @Nullable String color, @Nullable Consumer<NotificationBlockBuilder> builder) {
-        val notificationBlock = new NotificationBlock(entityID, name, icon, color);
+        @Nullable Icon icon, @Nullable Consumer<NotificationBlockBuilder> builder) {
+        val notificationBlock = new NotificationBlock(entityID, name, iconOrDefault(icon, null), colorOrDefault(icon, null));
         if (builder != null) {
             builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
         }
@@ -322,33 +328,32 @@ public class EntityContextUIImpl implements EntityContextUI {
             private final HeaderButtonNotification builder = new HeaderButtonNotification(entityID);
 
             @Override
-            public HeaderButtonBuilder title(@Nullable String title) {
+            public @NotNull HeaderButtonBuilder title(@Nullable String title) {
                 builder.setTitle(title);
                 return this;
             }
 
             @Override
-            public HeaderButtonBuilder icon(
-                @Nullable String icon, @Nullable String iconColor, boolean rotate) {
-                builder.setIcon(icon).setIconRotate(rotate).setIconColor(iconColor);
+            public @NotNull HeaderButtonBuilder icon(@NotNull Icon icon) {
+                builder.setIcon(icon.getIcon()).setIconRotate(icon.isRotate()).setIconColor(icon.getColor());
                 return this;
             }
 
             @Override
-            public HeaderButtonBuilder border(int width, String color) {
+            public @NotNull HeaderButtonBuilder border(int width, String color) {
                 builder.setBorderWidth(width);
                 builder.setBorderColor(color);
                 return this;
             }
 
             @Override
-            public HeaderButtonBuilder duration(int duration) {
+            public @NotNull HeaderButtonBuilder duration(int duration) {
                 builder.setDuration(duration);
                 return this;
             }
 
             @Override
-            public HeaderButtonBuilder availableForPage(@NotNull Class<? extends BaseEntity> page) {
+            public @NotNull HeaderButtonBuilder availableForPage(@NotNull Class<? extends BaseEntity> page) {
                 if (!page.isAnnotationPresent(UISidebarMenu.class)) {
                     throw new IllegalArgumentException(
                         "Trying add header button to page without annotation UISidebarMenu");
@@ -361,8 +366,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             }
 
             @Override
-            public HeaderButtonBuilder clickAction(
-                @NotNull Class<? extends SettingPluginButton> clickAction) {
+            public @NotNull HeaderButtonBuilder clickAction(@NotNull Class<? extends SettingPluginButton> clickAction) {
                 builder.setClickAction(
                     () -> {
                         entityContext.setting().setValue(clickAction, null);
@@ -372,8 +376,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             }
 
             @Override
-            public HeaderButtonBuilder clickAction(
-                @NotNull Supplier<ActionResponseModel> clickAction) {
+            public @NotNull HeaderButtonBuilder clickAction(@NotNull Supplier<ActionResponseModel> clickAction) {
                 builder.setClickAction(clickAction);
                 return this;
             }
@@ -511,20 +514,11 @@ public class EntityContextUIImpl implements EntityContextUI {
     public void handleResponse(@Nullable ActionResponseModel response) {
         if (response == null) {return;}
         switch (response.getResponseAction()) {
-            case info:
-                this.sendInfoMessage(String.valueOf(response.getValue()));
-                break;
-            case error:
-                this.sendErrorMessage(String.valueOf(response.getValue()));
-                break;
-            case warning:
-                this.sendWarningMessage(String.valueOf(response.getValue()));
-                break;
-            case success:
-                this.sendSuccessMessage(String.valueOf(response.getValue()));
-                break;
-            case files:
-                throw new ProhibitedExecution(); // not implemented yet
+            case info -> this.sendInfoMessage(String.valueOf(response.getValue()));
+            case error -> this.sendErrorMessage(String.valueOf(response.getValue()));
+            case warning -> this.sendWarningMessage(String.valueOf(response.getValue()));
+            case success -> this.sendSuccessMessage(String.valueOf(response.getValue()));
+            case files -> throw new ProhibitedExecution(); // not implemented yet
         }
     }
 
@@ -639,20 +633,20 @@ public class EntityContextUIImpl implements EntityContextUI {
         private final EntityContextImpl entityContext;
 
         @Override
-        public NotificationBlockBuilder linkToEntity(@NotNull BaseEntity entity) {
+        public @NotNull NotificationBlockBuilder linkToEntity(@NotNull BaseEntity entity) {
             notificationBlock.setLink(entity.getEntityID());
             notificationBlock.setLinkType(UIFieldUtils.getClassEntityNavLink(notificationBlock.getName(), entity.getClass()));
             return this;
         }
 
         @Override
-        public NotificationBlockBuilder visibleForUser(@Nullable String email) {
+        public @NotNull NotificationBlockBuilder visibleForUser(@Nullable String email) {
             notificationBlock.setEmail(email);
             return this;
         }
 
         @Override
-        public NotificationBlockBuilder blockActionBuilder(Consumer<UIInputBuilder> builder) {
+        public @NotNull NotificationBlockBuilder blockActionBuilder(Consumer<UIInputBuilder> builder) {
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             builder.accept(uiInputBuilder);
             notificationBlock.getKeyValueActions().put("general", uiInputBuilder.buildAll());
@@ -660,15 +654,15 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
 
         @Override
-        public NotificationBlockBuilder addFlexAction(String name, Consumer<UIFlexLayoutBuilder> builder) {
+        public @NotNull NotificationBlockBuilder addFlexAction(@NotNull String name, @NotNull Consumer<UIFlexLayoutBuilder> builder) {
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             uiInputBuilder.addFlex(name, builder);
             notificationBlock.getKeyValueActions().put(name, uiInputBuilder.buildAll());
-            return null;
+            return this;
         }
 
         @Override
-        public NotificationBlockBuilder contextMenuActionBuilder(Consumer<UIInputBuilder> builder) {
+        public @NotNull NotificationBlockBuilder contextMenuActionBuilder(Consumer<UIInputBuilder> builder) {
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             builder.accept(uiInputBuilder);
             notificationBlock.setContextMenuActions(uiInputBuilder.buildAll());
@@ -676,57 +670,75 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
 
         @Override
-        public NotificationBlockBuilder setStatus(Status status) {
+        public @NotNull NotificationBlockBuilder setStatus(Status status) {
             notificationBlock.setStatus(status);
             notificationBlock.setStatusColor(status == null ? null : status.getColor());
             return this;
         }
 
         @Override
-        public NotificationBlockBuilder fireOnFetch(Runnable handler) {
+        public @NotNull NotificationBlockBuilder fireOnFetch(@NotNull Runnable handler) {
             notificationBlock.setFireOnFetchHandler(handler);
             handler.run();
             return this;
         }
 
         @Override
-        public NotificationBlockBuilder setUpdating(boolean value) {
+        public @NotNull NotificationBlockBuilder setUpdating(boolean value) {
             notificationBlock.setUpdating(value);
             return this;
         }
 
         @Override
-        public NotificationBlockBuilder setVersion(@Nullable String version) {
+        public @NotNull NotificationBlockBuilder setVersion(@Nullable String version) {
             notificationBlock.setVersion(version);
             return this;
         }
 
         @Override
-        public NotificationBlockBuilder setUpdatable(@NotNull BiFunction<ProgressBar, String, ActionResponseModel> updateHandler,
+        public @NotNull NotificationBlockBuilder setUpdatable(@NotNull BiFunction<ProgressBar, String, ActionResponseModel> updateHandler,
             @NotNull List<String> versions) {
             notificationBlock.setUpdatable(updateHandler, versions);
             return this;
         }
 
         @Override
-        public NotificationBlockBuilder addInfo(@NotNull String key, @NotNull String info, @Nullable String color, @Nullable String icon,
-            @Nullable String iconColor, @Nullable String status, @Nullable String statusColor) {
-            notificationBlock.addInfo(key, info, color, icon, iconColor,
-                null, null, null, null, status, statusColor);
-            return this;
+        public @NotNull NotificationInfoLineBuilder addInfo(@NotNull String key, @Nullable Icon icon, @NotNull String info) {
+            return notificationBlock.addInfoLine(key, info, icon);
         }
 
         @Override
-        public NotificationBlockBuilder addButtonInfo(@NotNull String key, @NotNull String info,
-            @Nullable String color, @Nullable String icon, @Nullable String iconColor,
-            @NotNull String buttonIcon, @Nullable String buttonText, @Nullable String confirmMessage, @NotNull UIActionHandler handler) {
-            notificationBlock.addInfo(key, info, color, icon, iconColor, buttonIcon, buttonText, confirmMessage, handler, null, null);
+        public @NotNull NotificationBlockBuilder addEntityInfo(@NotNull BaseEntity entity) {
+            Icon icon = entity.getEntityIcon();
+            if (icon == null && entity instanceof BaseFileSystemEntity fs) {
+                icon = fs.getFileSystemIcon();
+            }
+            Info info = notificationBlock.addInfoLine(entity.getEntityID(), entity.getTitle(), icon);
+            info.setAsLink(entity);
+
+            if (entity instanceof HasStatusAndMsg<?> sm) {
+                info.setRightText(sm.getStatus());
+            }
+            if (entity instanceof HasFirmwareVersion ve) {
+                if (info.getStatus() == null) {
+                    info.setRightText(ve.getFirmwareVersion(), null, null);
+                } else {
+                    info.updateTextInfo(entity.getTitle() + "[" + ve.getFirmwareVersion() + "]");
+                }
+            }
             return this;
         }
 
         @Override
         public boolean removeInfo(@NotNull String key) {
-            return notificationBlock.remove(key);
+            boolean removed = notificationBlock.remove(key);
+            if (!removed) {
+                removed = notificationBlock.getKeyValueActions().remove(key) != null;
+            }
+            if (!removed) {
+                removed = notificationBlock.getInfoItems().removeIf(info -> info.getInfo().equals(key));
+            }
+            return removed;
         }
     }
 }

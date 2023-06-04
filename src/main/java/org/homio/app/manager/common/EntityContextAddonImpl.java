@@ -21,6 +21,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextUI.NotificationBlockBuilder;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.setting.SettingPluginPackageInstall.PackageContext;
@@ -87,14 +88,20 @@ public class EntityContextAddonImpl {
         return addonContextMap.values().stream().filter(AddonContext::isInitialized).collect(Collectors.toList());
     }
 
+    public void disableAddon(String addonShortName) {
+        try {
+            uninstallAddon("addon-" + addonShortName, false);
+        } catch (Exception ex) {
+            log.error("Error during disable addon: 'addon-{}'. Msg: {}", addonShortName, ex.getMessage());
+        }
+    }
+
     private void fireAddonEntrypoint(AddonEntrypoint entrypoint) {
-        log.info("Initialize addon: <{}>", entrypoint.getAddonID());
         try {
             entrypoint.init();
             entrypoint.onContextRefresh();
-            log.info("Done initialize addon: <{}>", entrypoint.getAddonID());
         } catch (Exception ex) {
-            log.fatal("Unable to initialize addon: " + entrypoint.getAddonID(), ex);
+            log.error("Unable to call addon init(...): {}", entrypoint.getAddonID(), ex);
             throw ex;
         }
     }
@@ -121,36 +128,44 @@ public class EntityContextAddonImpl {
             }
         }
         entityContext.rebuildRepositoryByPrefixMap();
+        applicationContext.getBean(TransactionManagerContext.class).invalidate();
         entityContext.fireRefreshBeans();
         // we need rebuild Hibernate entityManagerFactory to fetch new models
-        applicationContext.getBean(TransactionManagerContext.class).invalidate();
         cacheService.clearCache();
         Lang.clear();
 
         ADDON_UPDATE_COUNT++;
     }
 
-    private void destroyAddonContext(@NotNull AddonContext addonContext) {
+    private void destroyAddonContext(@NotNull AddonContext addonContext, boolean deleteFile) {
         AnnotationConfigApplicationContext context = addonContext.getApplicationContext();
         context.getBean(AddonEntrypoint.class).destroy();
         addonContext.fireCloseListeners();
         entityContext.getAllApplicationContexts().remove(context);
         context.close(); // destroy spring context
         HomioClassLoader.removeClassLoader(addonContext.getAddonID());
+        applicationContext.getBean(TransactionManagerContext.class).invalidate();
         Lang.clear();
-        cacheService.clearCache();
+
 
         entityContext.fireRefreshBeans();
         entityContext.rebuildRepositoryByPrefixMap();
 
-        entityContext.ui().updateNotificationBlock("addons", builder -> builder.removeInfo(addonContext.getAddonID()));
+        if (deleteFile) {
+            entityContext.ui().updateNotificationBlock("addons", builder -> builder.removeInfo(addonContext.getAddonID()));
+        } else {
+            entityContext.ui().updateNotificationBlock("addons", builder -> {
+                builder.removeInfo(addonContext.getAddonID());
+                addAddonNotificationRow(addonContext, builder, true);
+            });
+        }
         addonContextMap.remove(addonContext.getAddonID());
 
         ADDON_UPDATE_COUNT++;
     }
 
     @SneakyThrows
-    public void installAddon(String addonID, String addonUrl, String version, ProgressBar progressBar) {
+    public synchronized void installAddon(String addonID, String addonUrl, String version, ProgressBar progressBar) {
         AddonContext context = this.addonContextMap.get(addonID);
         if (context != null && context.getVersion().equals(version)) {
             throw new ServerException("ERROR.ADDON_INSTALLED", addonID);
@@ -160,7 +175,7 @@ public class EntityContextAddonImpl {
         if (context != null) { // update/downgrade addon
             Path downloadPath = CommonUtils.getAddonPath().resolve(addonID + ".jar_original");
             Curl.downloadWithProgress(format(addonUrl, version), downloadPath, progressBar);
-            removeAddon(context);
+            removeAddon(context, true);
             addonPath = CommonUtils.getAddonPath().resolve(addonID + ".jar");
             Thread.sleep(500); // wait to make sure downloadPath close all connections
             Files.move(downloadPath, addonPath);
@@ -173,24 +188,24 @@ public class EntityContextAddonImpl {
         try {
             addAddonFromPath(new AddonContext(addonPath));
         } catch (Exception ex) {
-            deleteAddonFileWithRetry(addonPath);
+            deleteFileWithRetry(addonPath);
             throw ex;
         }
     }
 
-    public void uninstallAddon(String name) {
+    public synchronized void uninstallAddon(String name, boolean deleteFile) {
         AddonContext context = this.addonContextMap.get(name);
         if (context == null || context.isInternal() || !context.isLoaded()) {
             throw new ServerException("ADDON_NOT_EXISTS", name);
         }
-        removeAddon(context);
+        removeAddon(context, deleteFile);
     }
 
     /**
      * Load context from specific file 'contextFile' and wraps logging info
      */
     public void onContextCreated() throws Exception {
-        entityContext.ui().addNotificationBlockOptional("addons", "Addons", "fas fa-file-zipper", "#FF4400");
+        entityContext.ui().addNotificationBlockOptional("addons", "Addons", new Icon("fas fa-file-zipper", "#FF4400"));
         Path addonPath = CommonUtils.getAddonPath();
         for (Path contextFile : findAddonContextFilesFromPath(addonPath)) {
             try {
@@ -233,13 +248,8 @@ public class EntityContextAddonImpl {
                     // copy resource only if size not match or if not exists
                     HardwareUtils.copyResources(externalFiles);
 
-                    PackageModel packageModel = getPackageModel(context.getAddonID());
-                    if (packageModel != null) {
-                        entityContext.ui().updateNotificationBlock("addons",
-                            builder -> addAddonNotificationRow(context, packageModel, builder));
-                    } else {
-                        log.error("Unable to find local addon {} on server", context.getAddonID());
-                    }
+                    entityContext.ui().updateNotificationBlock("addons",
+                        builder -> addAddonNotificationRow(context, builder, false));
 
                     log.info("Addon context <{}> registered successfully.", context.getPomFile().getArtifactId());
                     addonContextMap.put(context.getAddonID(), context);
@@ -247,6 +257,8 @@ public class EntityContextAddonImpl {
                     log.info("Addon context <{}> already registered before.", context.getPomFile().getArtifactId());
                 }
             } catch (Exception ex) {
+                entityContext.ui().updateNotificationBlock("addons",
+                    builder -> addAddonNotificationRow(context, builder, true));
                 addonContextMap.remove(context.getAddonID());
                 log.error("Unable to load addon context <{}>.", context.getPomFile().getArtifactId(), ex);
                 throw ex;
@@ -281,24 +293,28 @@ public class EntityContextAddonImpl {
     }
 
     @SneakyThrows
-    private void removeAddon(@NotNull AddonContext context) {
+    private void removeAddon(@NotNull AddonContext context, boolean deleteFile) {
         String addonID = context.getAddonID();
         log.warn("Remove addon: {}", addonID);
-        destroyAddonContext(context);
+        destroyAddonContext(context, deleteFile);
 
-        deleteAddonFileWithRetry(context.getContextFile());
-        if (Files.exists(context.getContextFile())) {
-            log.error("Addon <{}> has been stopped but unable to delete file. File will be removed on restart", addonID);
-            entityContext.bgp().executeOnExit(() -> Files.deleteIfExists(context.getContextFile()));
+        if (deleteFile) {
+            deleteFileWithRetry(context.getContextFile());
+            if (Files.exists(context.getContextFile())) {
+                log.error("Addon <{}> has been stopped but unable to delete file. File will be removed on restart", addonID);
+                entityContext.bgp().executeOnExit(() -> Files.deleteIfExists(context.getContextFile()));
+            }
+            log.info("Addon <{}> has been removed successfully", addonID);
+        } else {
+            log.info("Addon <{}> has been disabled successfully", addonID);
         }
-        log.info("Addon <{}> has been removed successfully", addonID);
     }
 
     private List<Path> findAddonContextFilesFromPath(Path basePath) throws IOException {
         return Files.list(basePath).filter(path -> path.getFileName().toString().endsWith(".jar")).collect(Collectors.toList());
     }
 
-    private void deleteAddonFileWithRetry(Path path) throws InterruptedException {
+    private void deleteFileWithRetry(Path path) throws InterruptedException {
         int i = 10;
         while (i-- > 0) {
             try {
@@ -322,23 +338,24 @@ public class EntityContextAddonImpl {
         throw new IllegalStateException("Removed because need docs what is for");
     }
 
-    private void addAddonNotificationRow(@NotNull AddonContext addonContext,
-        @NotNull PackageModel packageModel, @NotNull NotificationBlockBuilder builder) {
+    private void addAddonNotificationRow(@NotNull AddonContext addonContext, @NotNull NotificationBlockBuilder builder, boolean disabledAddon) {
         String key = addonContext.getAddonID();
-        String icon = addonContext.isLoaded() ? "fas fa-puzzle-piece" : "fas fa-bug";
-        String color = addonContext.isLoaded() ? Color.GREEN : Color.RED;
-        String info = addonContext.getAddonFriendlyName();
-        List<String> versions = GitHubProject.getReleasesSince(addonContext.getVersion(), packageModel.getVersions(), false);
+        Icon icon = new Icon(addonContext.isLoaded() ? "fas fa-puzzle-piece" : "fas fa-bug", addonContext.isLoaded() ? Color.GREEN : Color.RED);
+        String info = addonContext.getAddonFriendlyName() + (disabledAddon ? "(Disabled)" : "");
+        PackageModel packageModel = getPackageModel(key);
+        List<String> versions = packageModel == null ? Collections.emptyList() :
+            GitHubProject.getReleasesSince(addonContext.getVersion(), packageModel.getVersions(), false);
+
         if (versions.isEmpty()) {
-            builder.addInfo(key, info, null, icon, color, addonContext.getVersion(), null);
+            builder.addInfo(key, icon, info).setRightText(addonContext.getVersion());
         } else {
             builder.addFlexAction(key, flex -> {
-                flex.addInfo(info).setIcon(icon, color);
+                flex.addInfo(info).setIcon(icon);
                 flex.addSelectBox("versions", (entityContext, params) ->
                         handleUpdateAddon(addonContext, key, entityContext, params, versions, packageModel))
                     .setHighlightSelected(false)
                     .setOptions(OptionModel.list(versions))
-                    .setAsButton("fas fa-cloud-download-alt", Color.PRIMARY_COLOR, addonContext.getVersion())
+                    .setAsButton(new Icon("fas fa-cloud-download-alt", Color.PRIMARY_COLOR), addonContext.getVersion())
                     .setHeight(20).setPrimary(true);
             });
         }
@@ -374,21 +391,4 @@ public class EntityContextAddonImpl {
         }
         return null;
     }
-
-    /*private static class InternalAddonContext {
-
-        private final AddonEntrypoint addonEntrypoint;
-        private final AddonContext addonContext;
-        private final Map<String, Object> fieldTypes = new HashMap<>();
-
-        public InternalAddonContext(AddonEntrypoint addonEntrypoint, AddonContext addonContext) {
-            this.addonEntrypoint = addonEntrypoint;
-            this.addonContext = addonContext;
-            if (addonContext != null) {
-                for (WidgetBaseTemplate widgetBaseTemplate : addonContext.getApplicationContext().getBeansOfType(WidgetBaseTemplate.class).values()) {
-                    fieldTypes.put(widgetBaseTemplate.getClass().getSimpleName(), widgetBaseTemplate);
-                }
-            }
-        }
-    }*/
 }

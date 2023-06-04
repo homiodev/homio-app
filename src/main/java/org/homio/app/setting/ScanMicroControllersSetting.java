@@ -3,6 +3,7 @@ package org.homio.app.setting;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
+import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 
 public class ScanMicroControllersSetting implements SettingPluginButton {
@@ -13,13 +14,8 @@ public class ScanMicroControllersSetting implements SettingPluginButton {
     }
 
     @Override
-    public String getIcon() {
-        return "fas fa-qrcode";
-    }
-
-    @Override
-    public String getIconColor() {
-        return "#7482D0";
+    public Icon getIcon() {
+        return new Icon("fas fa-qrcode", "#7482D0");
     }
 
     @Override

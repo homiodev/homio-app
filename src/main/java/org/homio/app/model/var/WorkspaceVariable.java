@@ -36,6 +36,7 @@ import org.homio.api.entity.widget.ability.HasAggregateValueFromSeries;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.entity.widget.ability.HasTimeValueSeries;
+import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
@@ -163,12 +164,12 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
     @Override
-    public String getTitle() {
+    public @NotNull String getTitle() {
         String title = super.getTitle();
         if (isNotEmpty(unit)) {
             return format("%s %s", title, unit);
@@ -179,14 +180,14 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     @Override
     @UIFieldIgnore
     @JsonIgnore
-    public Date getCreationTime() {
+    public @NotNull Date getCreationTime() {
         return super.getCreationTime();
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
-    public Date getUpdateTime() {
+    public @NotNull Date getUpdateTime() {
         return super.getUpdateTime();
     }
 
@@ -278,8 +279,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     public SourceHistory getSourceHistory(GetStatusValueRequest request) {
         SourceHistory sourceHistory = ((EntityContextVarImpl) request.getEntityContext().var())
             .getSourceHistory(variableId)
-            .setIcon(icon)
-            .setIconColor(iconColor)
+            .setIcon(new Icon(icon, iconColor))
             .setName(getName())
             .setDescription(getDescription());
         sourceHistory.setAttributes(new ArrayList<>(Arrays.asList(

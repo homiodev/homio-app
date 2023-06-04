@@ -39,6 +39,7 @@ import org.homio.api.entity.DisableCacheEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.service.scan.BeansItemsDiscovery;
@@ -560,7 +561,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private void updateAppNotificationBlock() {
-        ui().addNotificationBlock("app", "App", "fas fa-house", "#E65100", builder -> {
+        ui().addNotificationBlock("app", "App", new Icon("fas fa-house", "#E65100"), builder -> {
             String installedVersion = setting().getApplicationVersion();
             builder.setVersion(installedVersion);
             String latestVersion = appGitHub.getLastReleaseVersion();
@@ -590,7 +591,7 @@ public class EntityContextImpl implements EntityContext {
                 String serverStartMsg = Lang.getServerMessage("SERVER_STARTED", FlowMap.of("VALUE",
                     new SimpleDateFormat("MM/dd HH:mm").format(new Date(START_TIME)),
                     "TIME", time));
-                builder.addInfo("time", serverStartMsg, null, "fas fa-clock", null);
+                builder.addInfo(serverStartMsg, new Icon("fas fa-clock"));
             });
         });
     }

@@ -21,11 +21,11 @@ public interface HasIconWithoutThreshold extends HasJsonData {
     @UIFieldIconPicker(allowEmptyIcon = true)
     @UIFieldGroup(value = "ICON", order = 20, borderColor = "#009688")
     @UIFieldReadDefaultValue
-    default String getIcon() {
+    default String getWidgetIcon() {
         return getJsonData("icon", "fas fa-adjust");
     }
 
-    default void setIcon(String value) {
+    default void setWidgetIcon(String value) {
         setJsonData("icon", value);
     }
 
@@ -33,11 +33,11 @@ public interface HasIconWithoutThreshold extends HasJsonData {
     @UIFieldColorPicker
     @UIFieldGroup("ICON")
     @UIFieldReadDefaultValue
-    default String getIconColor() {
+    default String getWidgetIconColor() {
         return getJsonData("iconColor", UI.Color.WHITE);
     }
 
-    default void setIconColor(String value) {
+    default void setWidgetIconColor(String value) {
         setJsonData("iconColor", value);
     }
 }

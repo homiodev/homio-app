@@ -6,10 +6,12 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.action.UIActionHandler;
 import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
 import org.homio.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Getter
@@ -35,7 +37,7 @@ public class UISelectBoxItemBuilderImpl
     }
 
     @Override
-    public UISelectBoxItemBuilderImpl setSelectReplacer(int min, int max, String selectReplacer) {
+    public @NotNull UISelectBoxItemBuilderImpl setSelectReplacer(int min, int max, String selectReplacer) {
         if (StringUtils.isNotEmpty(selectReplacer)) {
             this.selectReplacer = min + "~~~" + max + "~~~" + selectReplacer;
         }
@@ -43,11 +45,11 @@ public class UISelectBoxItemBuilderImpl
     }
 
     @Override
-    public UIButtonItemBuilder setAsButton(@Nullable String icon, @Nullable String iconColor, @Nullable String text) {
-        this.setIcon(icon, iconColor);
+    public @NotNull UIButtonItemBuilder setAsButton(@Nullable Icon icon, @Nullable String text) {
+        this.setIcon(icon);
         this.text = text;
         this.asButton = true;
-        return new UIButtonItemBuilderImpl(UIItemType.Button, null, null, null, 0, null) {
+        return new UIButtonItemBuilderImpl(UIItemType.Button, "", null, 0, null) {
             @Override
             public UIButtonItemBuilderImpl setPrimary(boolean value) {
                 primary = value;
@@ -63,7 +65,7 @@ public class UISelectBoxItemBuilderImpl
     }
 
     @Override
-    public UISelectBoxItemBuilderImpl addOption(OptionModel option) {
+    public @NotNull UISelectBoxItemBuilderImpl addOption(@NotNull OptionModel option) {
         if (options == null) {
             options = new ArrayList<>();
         }

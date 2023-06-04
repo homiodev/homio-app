@@ -1,5 +1,6 @@
 package org.homio.app.setting.console;
 
+import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.json.JSONObject;
@@ -7,8 +8,8 @@ import org.json.JSONObject;
 public class ConsoleFMClearCacheButtonSetting implements ConsoleSettingPlugin<JSONObject>, SettingPluginButton {
 
     @Override
-    public String getIcon() {
-        return "fas fa-brush";
+    public Icon getIcon() {
+        return new Icon("fas fa-brush");
     }
 
     @Override

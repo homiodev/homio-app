@@ -38,6 +38,7 @@ import org.homio.api.entity.validation.MaxItems;
 import org.homio.api.entity.validation.UIFieldValidationSize;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
+import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
@@ -130,21 +131,23 @@ public class UIFieldUtils {
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuAction.class)) {
                 UIContextMenuAction action = method.getDeclaredAnnotation(UIContextMenuAction.class);
+                Icon icon = new Icon(action.icon(), action.iconColor());
                 if (action.inputs().length > 0) {
-                    ((UIInputBuilderImpl) uiInputBuilder).addOpenDialogSelectableButtonInternal(action.value(), action.icon(),
-                        action.iconColor(), null, null).editDialog(dialogLayoutBuilder -> {
-                        for (UIActionInput actionInput : action.inputs()) {
-                            ((UIDialogLayoutBuilderImpl) dialogLayoutBuilder).addInput(actionInput);
-                        }
-                    });
+                    ((UIInputBuilderImpl) uiInputBuilder)
+                        .addOpenDialogSelectableButtonInternal(action.value(), icon, null, null)
+                        .editDialog(dialogLayoutBuilder -> {
+                            for (UIActionInput actionInput : action.inputs()) {
+                                ((UIDialogLayoutBuilderImpl) dialogLayoutBuilder).addInput(actionInput);
+                            }
+                        });
                 } else {
-                    uiInputBuilder.addSelectableButton(action.value(), action.icon(), action.iconColor(), null).setText(action.value());
+                    uiInputBuilder.addSelectableButton(action.value(), icon, null).setText(action.value());
                 }
             }
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuUploadAction.class)) {
                 UIContextMenuUploadAction action = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
-                uiInputBuilder.addSimpleUploadButton(action.value(), action.icon(), action.iconColor(), action.supportedFormats(),
-                    null, 0);
+                Icon icon = new Icon(action.icon(), action.iconColor());
+                uiInputBuilder.addSimpleUploadButton(action.value(), icon, action.supportedFormats(), null, 0);
             }
             return uiInputBuilder.buildAll();
         }

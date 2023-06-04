@@ -14,7 +14,9 @@ import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
+import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("unused")
 @Entity
 public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, WidgetFMSeriesEntity>
     implements HasDynamicContextMenuActions, HasLayout, HasSourceServerUpdates {
@@ -32,7 +34,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
@@ -131,7 +133,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
 
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
-        uiInputBuilder.addTableLayoutButton("LAYOUT", 8, 8, getLayout(), null, null,
+        uiInputBuilder.addTableLayoutButton("LAYOUT", 8, 8, getLayout(), null,
             (entityContext, params) -> {
                 this.setLayout(params.getString("value"));
                 entityContext.save(this);
