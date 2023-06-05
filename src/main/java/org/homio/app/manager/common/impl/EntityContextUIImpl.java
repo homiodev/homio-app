@@ -287,7 +287,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     @Override
     public void addNotificationBlock(@NotNull String entityID, @NotNull String name,
         @Nullable Icon icon, @Nullable Consumer<NotificationBlockBuilder> builder) {
-        val notificationBlock = new NotificationBlock(entityID, name, iconOrDefault(icon, null), colorOrDefault(icon, null));
+        val notificationBlock = new NotificationBlock(entityID, name, icon);
         if (builder != null) {
             builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
         }
@@ -429,7 +429,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         sendGlobal(GlobalSendType.popup, null, message, title, param);
     }
 
-    public void disableHeaderButton(String entityID, boolean disable) {
+    public void wdisableHeaderButton(String entityID, boolean disable) {
         sendGlobal(GlobalSendType.headerButton, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "toggle").put("disable", disable));
     }
 
@@ -559,7 +559,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             }
             Info info = actionEntityID == null ? null :
                 notificationBlock.getInfoItems().stream()
-                                 .filter(i -> Objects.equals(actionEntityID, i.getActionEntityID()))
+                                 .filter(i -> Objects.equals(actionEntityID, i.getKey()))
                                  .findAny().orElse(null);
             if (info != null) {
                 return info.getHandler().handleAction(entityContext, null);
@@ -670,6 +670,12 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
 
         @Override
+        public @NotNull NotificationBlockBuilder setNameColor(@Nullable String color) {
+            notificationBlock.setNameColor(color);
+            return this;
+        }
+
+        @Override
         public @NotNull NotificationBlockBuilder setStatus(Status status) {
             notificationBlock.setStatus(status);
             notificationBlock.setStatusColor(status == null ? null : status.getColor());
@@ -686,6 +692,12 @@ public class EntityContextUIImpl implements EntityContextUI {
         @Override
         public @NotNull NotificationBlockBuilder setUpdating(boolean value) {
             notificationBlock.setUpdating(value);
+            return this;
+        }
+
+        @Override
+        public @NotNull NotificationBlockBuilder setBorderColor(@Nullable String color) {
+            notificationBlock.setBorderColor(color);
             return this;
         }
 
@@ -723,7 +735,7 @@ public class EntityContextUIImpl implements EntityContextUI {
                 if (info.getStatus() == null) {
                     info.setRightText(ve.getFirmwareVersion(), null, null);
                 } else {
-                    info.updateTextInfo(entity.getTitle() + "[" + ve.getFirmwareVersion() + "]");
+                    info.updateTextInfo(entity.getTitle() + " [" + ve.getFirmwareVersion() + "]");
                 }
             }
             return this;

@@ -591,7 +591,7 @@ public class EntityContextImpl implements EntityContext {
                 String serverStartMsg = Lang.getServerMessage("SERVER_STARTED", FlowMap.of("VALUE",
                     new SimpleDateFormat("MM/dd HH:mm").format(new Date(START_TIME)),
                     "TIME", time));
-                builder.addInfo(serverStartMsg, new Icon("fas fa-clock"));
+                builder.addInfo("time", new Icon("fas fa-clock"), serverStartMsg);
             });
         });
     }

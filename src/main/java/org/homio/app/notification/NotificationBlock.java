@@ -8,17 +8,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContextUI.NotificationInfoLineBuilder;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.ui.action.UIActionHandler;
 import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
+import org.homio.app.builder.ui.layout.UIStickyDialogItemBuilderImpl;
 import org.homio.app.utils.UIFieldUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,19 +34,19 @@ import org.jetbrains.annotations.Nullable;
 public class NotificationBlock {
 
     private final @NotNull String entityID;
-    private final String name;
-    private final String icon;
-    private final String color;
-
-    private String version;
-
-    private @Nullable Collection<UIInputEntity> contextMenuActions;
+    private final @NotNull String name;
+    private final @Nullable Icon icon;
+    private @Nullable String nameColor;
+    private @Nullable String version;
     private @Nullable Status status;
     private @Nullable String statusColor;
-    private boolean updating;
+    private @Nullable Boolean updating;
     private @Nullable List<String> versions;
     private @Nullable String link;
     private @Nullable String linkType;
+    private @Nullable String borderColor;
+
+    private @Nullable Collection<UIInputEntity> contextMenuActions;
 
     @JsonIgnore
     private final @NotNull Map<String, Info> infoItemMap = new ConcurrentHashMap<>();
@@ -96,7 +101,6 @@ public class NotificationBlock {
         private final Icon icon;
 
         private String textColor;
-        private String borderColor;
 
         private String link;
         private String linkType;
@@ -110,7 +114,11 @@ public class NotificationBlock {
         private String buttonText;
         private String confirmMessage;
         @JsonIgnore private UIActionHandler handler;
-        private String actionEntityID;
+
+        private Icon settingIcon;
+        private UIInputEntity settingButton;
+
+        private String description;
 
         public Info(String key, String info, Icon icon) {
             this.key = key;
@@ -119,13 +127,13 @@ public class NotificationBlock {
         }
 
         @Override
-        public NotificationInfoLineBuilder setTextColor(@Nullable String color) {
+        public @NotNull NotificationInfoLineBuilder setTextColor(@Nullable String color) {
             this.textColor = color;
             return this;
         }
 
         @Override
-        public NotificationInfoLineBuilder setRightText(@NotNull String text, @Nullable Icon icon, @Nullable String color) {
+        public @NotNull NotificationInfoLineBuilder setRightText(@NotNull String text, @Nullable Icon icon, @Nullable String color) {
             this.status = text;
             this.statusIcon = icon;
             this.statusColor = color;
@@ -133,35 +141,39 @@ public class NotificationBlock {
         }
 
         @Override
-        public NotificationInfoLineBuilder setBorderColor(@Nullable String color) {
-            this.borderColor = color;
+        public @NotNull NotificationInfoLineBuilder setStatus(@NotNull HasStatusAndMsg entity) {
+            this.statusColor = entity.getStatus().getColor();
+            if(StringUtils.isNotEmpty(entity.getStatusMessage())) {
+                this.description = entity.getStatusMessage();
+            }
             return this;
         }
 
         @Override
-        public NotificationInfoLineBuilder setRightButton(@Nullable Icon buttonIcon, @Nullable String buttonText, @Nullable String confirmMessage,
+        public @NotNull NotificationInfoLineBuilder setRightButton(@Nullable Icon buttonIcon, @Nullable String buttonText, @Nullable String confirmMessage,
             @Nullable UIActionHandler handler) {
             this.buttonIcon = buttonIcon;
             this.buttonText = buttonText;
             this.confirmMessage = confirmMessage;
             this.handler = handler;
-
-            this.actionEntityID = key;
             return this;
         }
 
         @Override
-        public NotificationInfoLineBuilder setAsLink(BaseEntity entity) {
-            link = entity.getEntityID();
-            linkType = UIFieldUtils.getClassEntityNavLink(entity.getTitle(), entity.getClass());
+        public @NotNull NotificationInfoLineBuilder setRightSettingsButton(@NotNull Icon buttonIcon,
+            @NotNull Consumer<UILayoutBuilder> assembler) {
+            UIStickyDialogItemBuilderImpl builder = new UIStickyDialogItemBuilderImpl("actions");
+            assembler.accept(builder);
+            settingIcon = buttonIcon;
+            settingButton = builder.buildEntity();
             return this;
         }
 
-        public String getBorderColor() {
-            if (this.borderColor == null) {
-                return this.statusColor;
-            }
-            return borderColor;
+        @Override
+        public @NotNull NotificationInfoLineBuilder setAsLink(@NotNull BaseEntity entity) {
+            link = entity.getEntityID();
+            linkType = UIFieldUtils.getClassEntityNavLink(entity.getTitle(), entity.getClass());
+            return this;
         }
 
         public void updateTextInfo(String info) {

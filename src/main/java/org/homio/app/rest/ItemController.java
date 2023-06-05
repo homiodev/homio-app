@@ -64,7 +64,6 @@ import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.Lang;
 import org.homio.app.LogService;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
@@ -103,7 +102,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-@SuppressWarnings({"rawtypes", "unchecked"})
 @Log4j2
 @RestController
 @RequestMapping("/rest/item")
@@ -322,12 +320,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PostMapping("/{entityID}/notification/action")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel notificationAction(@PathVariable("entityID") String entityID,
-        @RequestBody ActionModelRequest request) {
-        try {
-            return entityContext.ui().handleNotificationAction(entityID, request.name, null, request.params);
-        } catch (Exception ex) {
-            throw new IllegalStateException(Lang.getServerMessage(ex.getMessage()));
-        }
+        @RequestBody ActionModelRequest request) throws Exception {
+        return entityContext.ui().handleNotificationAction(entityID, request.entityID, null, request.params);
     }
 
     @GetMapping("/{type}/actions")

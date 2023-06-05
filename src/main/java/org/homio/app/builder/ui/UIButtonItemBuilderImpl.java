@@ -36,7 +36,7 @@ public class UIButtonItemBuilderImpl
         if (icon == null || StringUtils.isEmpty(icon.getIcon())) {
             setValue(entityID);
         }
-        setText("CONTEXT.ACTION." + entityID);
+        setText(entityID.isEmpty() ? "" : "CONTEXT.ACTION." + entityID);
         setIcon(icon);
     }
 
