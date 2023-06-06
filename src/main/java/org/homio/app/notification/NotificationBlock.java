@@ -106,9 +106,9 @@ public class NotificationBlock {
         private String linkType;
 
 
-        private String status;
-        private Icon statusIcon;
-        private String statusColor;
+        private String rightText;
+        private Icon rightTextIcon;
+        private String rightTextColor;
 
         private Icon buttonIcon;
         private String buttonText;
@@ -119,6 +119,7 @@ public class NotificationBlock {
         private UIInputEntity settingButton;
 
         private String description;
+        private Status status;
 
         public Info(String key, String info, Icon icon) {
             this.key = key;
@@ -134,15 +135,15 @@ public class NotificationBlock {
 
         @Override
         public @NotNull NotificationInfoLineBuilder setRightText(@NotNull String text, @Nullable Icon icon, @Nullable String color) {
-            this.status = text;
-            this.statusIcon = icon;
-            this.statusColor = color;
+            this.rightText = text;
+            this.rightTextIcon = icon;
+            this.rightTextColor = color;
             return this;
         }
 
         @Override
         public @NotNull NotificationInfoLineBuilder setStatus(@NotNull HasStatusAndMsg entity) {
-            this.statusColor = entity.getStatus().getColor();
+            this.status = entity.getStatus();
             if(StringUtils.isNotEmpty(entity.getStatusMessage())) {
                 this.description = entity.getStatusMessage();
             }

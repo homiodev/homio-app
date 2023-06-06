@@ -1,8 +1,9 @@
 package org.homio.app.manager.common.impl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextInstall;
@@ -43,73 +44,64 @@ public class EntityContextInstallImpl implements EntityContextInstall {
     }
 
     private <T extends DependencyExecutableInstaller> InstallContext createContext(Class<T> installerClass) {
-        return cache.computeIfAbsent(installerClass, aClass -> new InstallContext() {
-            private final T installer;
-            private final ReentrantLock lock = new ReentrantLock();
-            private final ReentrantLock rLock = new ReentrantLock();
+        return cache.computeIfAbsent(installerClass, aClass -> {
+            return new InstallContext() {
+                private final T installer;
+                private volatile boolean installing;
+                private final List<Runnable> waiters = new ArrayList<>();
 
-            {
-                try {
-                    installer = installerClass.getConstructor(EntityContext.class).newInstance(entityContext);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            @Override
-            public void requireAsync(@Nullable String version, Runnable finishHandler) {
-                if (getVersion() == null) {
-                    lock.lock();
-                    if (getVersion() == null) {
-                        entityContext.bgp().runWithProgress("install-" + installer.getName())
-                                     .onFinally(() -> {
-                                         lock.unlock();
-                                         finishHandler.run();
-                                     })
-                                     .execute(pb -> {
-                                         pb.progress(0, "install-" + installer.getName());
-                                         installer.installDependency(pb, version);
-                                     });
-                    } else {
-                        lock.unlock();
-                    }
-                }
-            }
-
-            @Override
-            public @NotNull InstallContext requireSync(@NotNull ProgressBar progressBar, @Nullable String version) throws Exception {
-                if (getVersion() == null) {
+                {
                     try {
-                        lock.lock();
-                        if (getVersion() == null) {
-                            installer.installDependency(progressBar, version);
-                        }
-                    } finally {
-                        lock.unlock();
+                        installer = installerClass.getConstructor(EntityContext.class).newInstance(entityContext);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
                 }
-                return this;
-            }
 
-            @Override
-            public String getVersion() {
-                try {
-                    rLock.lock();
+                @Override
+                public synchronized void requireAsync(@Nullable String version, Runnable finishHandler) throws Exception {
+                    if (getVersion() != null) {
+                        finishHandler.run();
+                        return;
+                    }
+                    waiters.add(finishHandler);
+                    if (installing) { // installing - just return. thread will fire finishHandler
+                        return;
+                    }
+                    installing = true;
+                    entityContext.bgp().runWithProgress("install-" + installer.getName())
+                                 .onFinally(exception -> {
+                                     installing = false;
+                                     for (Runnable waiter : waiters) {
+                                         waiter.run();
+                                     }
+                                     waiters.clear();
+                                 })
+                                 .execute(pb -> {
+                                     pb.progress(0, "install-" + installer.getName());
+                                     installer.installDependency(pb, version);
+                                 });
+                }
+
+                @Override
+                public @NotNull
+                synchronized InstallContext requireSync(@NotNull ProgressBar progressBar, @Nullable String version) throws Exception {
+                    if (getVersion() == null) {
+                        installer.installDependency(progressBar, version);
+                    }
+                    return this;
+                }
+
+                @Override
+                public synchronized String getVersion() {
                     return installer.getVersion();
-                } finally {
-                    rLock.unlock();
                 }
-            }
 
-            @Override
-            public @Nullable String getPath(@NotNull String execName) {
-                try {
-                    rLock.lock();
+                @Override
+                public synchronized @Nullable String getPath(@NotNull String execName) {
                     return installer.getExecutablePath(execName);
-                } finally {
-                    rLock.unlock();
                 }
-            }
+            };
         });
     }
 }

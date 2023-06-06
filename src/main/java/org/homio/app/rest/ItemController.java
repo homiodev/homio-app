@@ -132,37 +132,37 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @SneakyThrows
-    public ActionResponseModel executeAction(ActionModelRequest actionModelRequest, Object actionHolder, BaseEntity actionEntity) {
+    public ActionResponseModel executeAction(ActionModelRequest request, Object actionHolder, BaseEntity actionEntity) {
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuAction.class)) {
             UIContextMenuAction menuAction = method.getDeclaredAnnotation(UIContextMenuAction.class);
-            if (menuAction.value().equals(actionModelRequest.getName())) {
-                return executeMethodAction(method, actionHolder, entityContext, actionEntity, actionModelRequest.getParams());
+            if (menuAction.value().equals(request.getEntityID())) {
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, request.getParams());
             }
         }
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuUploadAction.class)) {
             UIContextMenuUploadAction menuAction = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
-            if (menuAction.value().equals(actionModelRequest.getName())) {
-                return executeMethodAction(method, actionHolder, entityContext, actionEntity, actionModelRequest.getParams());
+            if (menuAction.value().equals(request.getEntityID())) {
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, request.getParams());
             }
         }
         // in case when action attached to field or method
-        if (actionModelRequest.metadata != null && actionModelRequest.metadata.has("field")) {
-            String fieldName = actionModelRequest.metadata.getString("field");
+        if (request.metadata != null && request.metadata.has("field")) {
+            String fieldName = request.metadata.getString("field");
 
             AccessibleObject field = Optional.ofNullable((AccessibleObject) FieldUtils.getField(actionHolder.getClass(), fieldName, true))
                                              .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
             if (field != null) {
                 for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
-                    if (actionButton.name().equals(actionModelRequest.name)) {
-                        CommonUtils.newInstance(actionButton.actionHandler()).handleAction(entityContext, actionModelRequest.params);
+                    if (actionButton.name().equals(request.getEntityID())) {
+                        CommonUtils.newInstance(actionButton.actionHandler()).handleAction(entityContext, request.params);
                     }
                 }
             }
         }
         if (actionHolder instanceof HasDynamicContextMenuActions) {
-            return ((HasDynamicContextMenuActions) actionHolder).handleAction(entityContext, actionModelRequest.name, actionModelRequest.params);
+            return ((HasDynamicContextMenuActions) actionHolder).handleAction(entityContext, request.getEntityID(), request.params);
         }
-        throw new IllegalArgumentException("Unable to find action: <" + actionModelRequest.getName() + "> for model: " + actionHolder);
+        throw new IllegalArgumentException("Unable to find action: <" + request.getEntityID() + "> for model: " + actionHolder);
     }
 
     @Override
@@ -519,8 +519,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPositionRequest position) {
         BaseEntity<?> entity = entityContext.getEntity(entityID);
         if (entity != null) {
-            if (entity instanceof HasPosition) {
-                HasPosition<?> hasPosition = (HasPosition<?>) entity;
+            if (entity instanceof HasPosition<?> hasPosition) {
                 hasPosition.setXb(position.xb);
                 hasPosition.setYb(position.yb);
                 hasPosition.setBw(position.bw);
@@ -761,8 +760,10 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         long count = FieldUtils.getFieldsListWithAnnotation(entity.getClass(), UIField.class).stream().map(p -> p.getAnnotation(UIField.class).type())
                                .filter(f -> f == UIFieldType.SelectBox).count();
         if (count == 1) {
-            List<Method> methodsListWithAnnotation = Stream.of(entity.getClass().getDeclaredMethods()).filter(m -> m.isAnnotationPresent(UIFilterOptions.class))
-                                                           .collect(Collectors.toList());
+            List<Method> methodsListWithAnnotation = Stream
+                .of(entity.getClass().getDeclaredMethods())
+                .filter(m -> m.isAnnotationPresent(UIFilterOptions.class))
+                .toList();
 
             if (methodsListWithAnnotation.size() == 1) {
                 return methodsListWithAnnotation.get(0);
@@ -837,7 +838,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     public static class ActionModelRequest {
 
         private String entityID;
-        private String name;
         private JSONObject metadata;
         private JSONObject params;
     }

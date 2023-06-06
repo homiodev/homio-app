@@ -106,9 +106,9 @@ public class MediaController {
             throw new IllegalArgumentException("File: " + path + " not exists");
         }
 
-        ResourceRegion region = resourceRegion(downloadFile.getStream(), downloadFile.getSize(), headers);
+        ResourceRegion region = resourceRegion(downloadFile.stream(), downloadFile.size(), headers);
         return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                             .contentType(MediaTypeFactory.getMediaType(downloadFile.getStream()).orElse(MediaType.APPLICATION_OCTET_STREAM)).body(region);
+                             .contentType(MediaTypeFactory.getMediaType(downloadFile.stream()).orElse(MediaType.APPLICATION_OCTET_STREAM)).body(region);
     }
 
     @GetMapping("/video/playback/days/{entityID}/{from}/{to}")
@@ -190,9 +190,9 @@ public class MediaController {
                                    });
         }
 
-        ResourceRegion region = resourceRegion(downloadFile.getStream(), downloadFile.getSize(), headers);
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                             .contentType(MediaTypeFactory.getMediaType(downloadFile.getStream()).orElse(MediaType.APPLICATION_OCTET_STREAM)).body(region);
+        ResourceRegion region = resourceRegion(downloadFile.stream(), downloadFile.size(), headers);
+        MediaType mediaType = MediaTypeFactory.getMediaType(downloadFile.stream()).orElse(MediaType.APPLICATION_OCTET_STREAM);
+        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).contentType(mediaType).body(region);
     }
 
     @GetMapping("/audio/{streamId}/play")

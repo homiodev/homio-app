@@ -37,13 +37,16 @@ public class FfmpegInstaller extends DependencyExecutableInstaller {
     @Override
     protected @Nullable String getInstalledVersion() {
         EntityContextHardware hardware = entityContext.hardware();
+        String version = null;
         if (IS_OS_WINDOWS) {
             Path targetPath = CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe");
             if (Files.isRegularFile(targetPath)) {
-                return hardware.executeNoErrorThrow(targetPath + " -v", 60, null);
+                version = hardware.executeNoErrorThrow(targetPath + " -v", 60, null);
             }
+        } else {
+            version = hardware.executeNoErrorThrow("ffmpeg -v", 60, null);
         }
-        return hardware.executeNoErrorThrow("ffmpeg -v", 60, null);
+        return version;
     }
 
     @Override
@@ -57,8 +60,8 @@ public class FfmpegInstaller extends DependencyExecutableInstaller {
             Curl.downloadAndExtract(entityContext.getBean(AppProperties.class).getSource().getFfmpeg(), "ffmpeg.7z",
                 (progress, message) -> {
                     progressBar.progress(progress, message);
-                    log.info("ffmpeg " + message + ". " + progress + "%");
-                }, log);
+                    log.info("FFMPEG: {}", message);
+                });
         }
         return Path.of(FFMPEG_LOCATION);
     }

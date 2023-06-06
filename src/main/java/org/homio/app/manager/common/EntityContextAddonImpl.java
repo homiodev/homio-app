@@ -205,7 +205,8 @@ public class EntityContextAddonImpl {
      * Load context from specific file 'contextFile' and wraps logging info
      */
     public void onContextCreated() throws Exception {
-        entityContext.ui().addNotificationBlockOptional("addons", "Addons", new Icon("fas fa-file-zipper", "#FF4400"));
+        entityContext.ui().addNotificationBlock("addons", "Addons", new Icon("fas fa-file-zipper", "#FF4400"),
+            block -> block.setBorderColor("#FF4400"));
         Path addonPath = CommonUtils.getAddonPath();
         for (Path contextFile : findAddonContextFilesFromPath(addonPath)) {
             try {

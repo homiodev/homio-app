@@ -19,16 +19,13 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.val;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.api.console.ConsolePlugin;
-import org.homio.api.console.ConsolePluginCommunicator;
 import org.homio.api.console.ConsolePluginEditor;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.console.dependency.ConsolePluginRequireZipDependency;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.FileModel;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.console.header.ConsoleHeaderSettingPlugin;
@@ -96,9 +93,7 @@ public class ConsoleController implements ContextRefreshed {
                 throw new IllegalArgumentException("Unable to find console plugin with name: " + tab);
             }
         }
-        if (consolePlugin instanceof ConsolePluginTable) {
-            ConsolePluginTable<? extends HasEntityIdentifier> tableConsolePlugin =
-                (ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin;
+        if (consolePlugin instanceof ConsolePluginTable<? extends HasEntityIdentifier> tableConsolePlugin) {
             Collection<? extends HasEntityIdentifier> baseEntities = tableConsolePlugin.getValue();
             Class<? extends HasEntityIdentifier> clazz = tableConsolePlugin.getEntityClass();
 
@@ -123,40 +118,20 @@ public class ConsoleController implements ContextRefreshed {
     @SneakyThrows
     @PostMapping("/tab/{tab}/action")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public ActionResponseModel executeAction(
-        @PathVariable("tab") String tab,
-        @RequestBody ActionModelRequest request) {
+    public ActionResponseModel executeAction(@PathVariable("tab") String tab, @RequestBody ActionModelRequest request) {
         String entityID = request.getEntityID();
         ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
-        if (consolePlugin instanceof ConsolePluginTable) {
-            Collection<? extends HasEntityIdentifier> baseEntities =
-                ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
-            HasEntityIdentifier identifier =
-                baseEntities.stream().filter(e -> e.getEntityID().equals(entityID))
-                            .findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
+        if (consolePlugin instanceof ConsolePluginTable table) {
+            HasEntityIdentifier identifier = table.findEntity(entityID);
             return itemController.executeAction(request, identifier, entityContext.getEntity(identifier.getEntityID()));
-        } else if (consolePlugin instanceof ConsolePluginCommunicator) {
-            return ((ConsolePluginCommunicator) consolePlugin).commandReceived(request.getName());
-        } else if (consolePlugin instanceof ConsolePluginEditor) {
-            if (request.getMetadata().has("glyph")) {
-                return ((ConsolePluginEditor) consolePlugin)
-                    .glyphClicked(request.getMetadata().getString("glyph"));
-            }
-            if (StringUtils.isNotEmpty(request.getName()) && request.getMetadata().has("content")) {
-                return ((ConsolePluginEditor) consolePlugin)
-                    .save(new FileModel(request.getName(), request.getMetadata().getString("content"), null, false));
-            }
-        } else {
-            return consolePlugin.executeAction(entityID, request.getMetadata(), request.getParams());
         }
-        throw new IllegalArgumentException("Unable to handle action for tab: " + tab);
+        return consolePlugin.executeAction(entityID, request.getMetadata(), request.getParams());
     }
 
     @PostMapping("/tab/{tab}/update")
     public void updateDependencies(@PathVariable("tab") String tab) {
         ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
-        if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
-            ConsolePluginRequireZipDependency dependency = (ConsolePluginRequireZipDependency) consolePlugin;
+        if (consolePlugin instanceof ConsolePluginRequireZipDependency dependency) {
             if (dependency.requireInstallDependencies()) {
                 entityContext.bgp()
                              .runWithProgress("install-deps-" + dependency.getClass().getSimpleName())

@@ -602,11 +602,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
 
         @Override
-        public ThreadContext<Void> execute(ThrowingConsumer<ProgressBar, Exception> command) {
-            return null;
-        }
-
-        @Override
         @SneakyThrows
         public <R> ThreadContext<R> execute(@NotNull ThrowingFunction<ProgressBar, R, Exception> command) {
             if (errorIfExists != null && isThreadExists(key, true)) {

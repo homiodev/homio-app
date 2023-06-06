@@ -81,6 +81,7 @@ public class AuthController {
             entityContext.ui().addNotificationBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
                 builder.visibleForUser(email)
                        .linkToEntity(entityContext.getEntityRequire(entityID))
+                       .setBorderColor("#AAAC2C")
                        .addInfo(key, null, "")
                        .setRightButton(new Icon("fas fa-right-from-bracket"), "W.INFO.LOGOUT", "W.CONFIRM.LOGOUT", (ignore, params) -> {
                            entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());

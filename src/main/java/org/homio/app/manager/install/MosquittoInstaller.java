@@ -54,12 +54,12 @@ public class MosquittoInstaller extends DependencyExecutableInstaller {
         if (IS_OS_LINUX) {
             entityContext.hardware().installSoftware(getName(), 600);
         } else {
-            Path path = Curl.downloadAndExtract(entityContext.getBean(AppProperties.class).getSource().getMosquitto(),
+            Curl.downloadAndExtract(entityContext.getBean(AppProperties.class).getSource().getMosquitto(),
                 "mosquitto.7z", (progress, message) -> {
                     progressBar.progress(progress, message);
-                    log.info("mosquitto " + message + ". " + progress + "%");
-                }, log);
-            return Objects.requireNonNull(path).resolve("mosquitto.exe");
+                    log.info("Mosquitto: {}", message);
+                });
+            return CommonUtils.getInstallPath().resolve("mosquitto").resolve("mosquitto.exe");
         }
         return null;
     }

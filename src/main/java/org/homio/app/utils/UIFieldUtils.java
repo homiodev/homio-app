@@ -6,6 +6,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.Pattern;
@@ -111,7 +112,6 @@ import org.homio.app.model.entity.widget.UIFieldPadding;
 import org.homio.app.model.entity.widget.UIFieldTimeSlider;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.model.var.UIFieldVariable;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.core.annotation.AnnotationUtils;
 
@@ -466,24 +466,22 @@ public class UIFieldUtils {
             jsonTypeMetadata.put("maxHeight", fieldImageSrc.maxHeight());
         }
 
-        // TODO: MAKE IT WORKS
         List<UIActionButton> uiActionButtons = fieldContext.getDeclaredAnnotationsByType(UIActionButton.class);
         if (!uiActionButtons.isEmpty()) {
-            JSONArray actionButtons = new JSONArray();
+            ArrayNode actionButtons = OBJECT_MAPPER.createArrayNode();
             for (UIActionButton actionButton : uiActionButtons) {
-                JSONArray inputs = new JSONArray();
+                ArrayNode inputs = OBJECT_MAPPER.createArrayNode();
                 for (UIActionInput actionInput : actionButton.inputs()) {
-                    inputs.put(new ActionInputParameter(actionInput).toJson());
+                    inputs.add(OBJECT_MAPPER.valueToTree(new ActionInputParameter(actionInput)));
                 }
-                actionButtons.put(
-                    new JSONObject()
-                        .put("name", actionButton.name())
-                        .put("icon", actionButton.icon())
-                        .put("color", actionButton.color())
-                        .put("inputs", inputs)
-                        .put("style", actionButton.style()));
+                actionButtons.add(OBJECT_MAPPER.createObjectNode()
+                                               .put("name", actionButton.name())
+                                               .put("icon", actionButton.icon())
+                                               .put("color", actionButton.color())
+                                               .putPOJO("inputs", inputs)
+                                               .put("style", actionButton.style()));
             }
-            jsonTypeMetadata.set("actionButtons", OBJECT_MAPPER.valueToTree(actionButtons));
+            jsonTypeMetadata.put("actionButtons", actionButtons);
         }
 
         var fieldPort = fieldContext.getDeclaredAnnotation(UIFieldPort.class);

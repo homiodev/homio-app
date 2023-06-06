@@ -5,7 +5,6 @@ import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
@@ -48,12 +47,12 @@ public class NodeJsInstaller extends DependencyExecutableInstaller {
             hardware.execute("curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -");
             hardware.installSoftware("nodejs", 600);
         } else {
-            Path path = Curl.downloadAndExtract(entityContext.getBean(AppProperties.class).getSource().getNode(),
+            Curl.downloadAndExtract(entityContext.getBean(AppProperties.class).getSource().getNode(),
                 "nodejs.7z", (progress, message) -> {
                     progressBar.progress(progress, message);
-                    log.info("nodejs " + message + ". " + progress + "%");
-                }, log);
-            return Objects.requireNonNull(path).resolve("node.exe");
+                    log.info("NodeJS: {}", message);
+                });
+            return CommonUtils.getInstallPath().resolve("nodejs").resolve("node.exe");
         }
         return null;
     }

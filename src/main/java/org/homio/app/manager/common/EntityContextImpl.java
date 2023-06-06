@@ -562,6 +562,7 @@ public class EntityContextImpl implements EntityContext {
 
     private void updateAppNotificationBlock() {
         ui().addNotificationBlock("app", "App", new Icon("fas fa-house", "#E65100"), builder -> {
+            builder.setBorderColor("#FF4400");
             String installedVersion = setting().getApplicationVersion();
             builder.setVersion(installedVersion);
             String latestVersion = appGitHub.getLastReleaseVersion();
