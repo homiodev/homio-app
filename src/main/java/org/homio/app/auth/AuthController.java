@@ -14,7 +14,7 @@ import org.homio.api.entity.UserEntity.UserType;
 import org.homio.api.model.Icon;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppProperties;
-import org.homio.app.manager.common.EntityContextAddonImpl;
+import org.homio.app.manager.common.impl.EntityContextAddonImpl;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.json.JSONObject;

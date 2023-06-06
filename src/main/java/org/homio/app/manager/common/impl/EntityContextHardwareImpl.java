@@ -3,6 +3,7 @@ package org.homio.app.manager.common.impl;
 import java.util.ArrayList;
 import java.util.function.BiConsumer;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContextHardware;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -11,15 +12,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Log4j2
+@RequiredArgsConstructor
 public class EntityContextHardwareImpl implements EntityContextHardware {
 
     @Getter private final EntityContextImpl entityContext;
     private final MachineHardwareRepository repo;
-
-    public EntityContextHardwareImpl(EntityContextImpl entityContext, MachineHardwareRepository machineHardwareRepository) {
-        this.entityContext = entityContext;
-        this.repo = machineHardwareRepository;
-    }
 
     @Override
     public @NotNull String execute(String command) {

@@ -33,6 +33,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
+import org.homio.api.EntityContextMedia;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.entity.DisableCacheEntity;
@@ -61,11 +62,14 @@ import org.homio.app.manager.LoggerService;
 import org.homio.app.manager.PortService;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.manager.WidgetService;
+import org.homio.app.manager.common.impl.EntityContextAddonImpl;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.homio.app.manager.common.impl.EntityContextEventImpl;
 import org.homio.app.manager.common.impl.EntityContextHardwareImpl;
 import org.homio.app.manager.common.impl.EntityContextInstallImpl;
+import org.homio.app.manager.common.impl.EntityContextMediaImpl;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
+import org.homio.app.manager.common.impl.EntityContextStorage;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.model.entity.LocalBoardEntity;
@@ -89,6 +93,7 @@ import org.homio.app.setting.system.SystemSoftRestartButtonSetting;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshTmateEntity;
+import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.homio.app.workspace.BroadcastLockManagerImpl;
 import org.homio.app.workspace.WorkspaceService;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
@@ -152,6 +157,7 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextVarImpl entityContextVar;
     private final EntityContextHardwareImpl entityContextHardware;
     private final EntityContextWidgetImpl entityContextWidget;
+    private final EntityContextMediaImpl entityContextMedia;
     @Getter private final EntityContextAddonImpl addon;
     @Getter private final EntityContextStorage entityContextStorage;
     private final ClassFinder classFinder;
@@ -174,6 +180,8 @@ public class EntityContextImpl implements EntityContext {
         VariableDataRepository variableDataRepository,
         EntityManagerFactory entityManagerFactory,
         MachineHardwareRepository machineHardwareRepository,
+        FfmpegHardwareRepository ffmpegHardwareRepository,
+
         AppProperties appProperties) {
         this.classFinder = classFinder;
         this.cacheService = cacheService;
@@ -186,6 +194,7 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextWidget = new EntityContextWidgetImpl(this);
         this.entityContextStorage = new EntityContextStorage(this);
         this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
+        this.entityContextMedia = new EntityContextMediaImpl(this, ffmpegHardwareRepository);
         this.entityContextHardware = new EntityContextHardwareImpl(this, machineHardwareRepository);
         this.addon = new EntityContextAddonImpl(this, cacheService);
     }
@@ -281,6 +290,11 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public @NotNull EntityContextHardware hardware() {
         return entityContextHardware;
+    }
+
+    @Override
+    public @NotNull EntityContextMedia media() {
+        return entityContextMedia;
     }
 
     @Override

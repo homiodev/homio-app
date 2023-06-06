@@ -1,4 +1,4 @@
-package org.homio.app.manager.common;
+package org.homio.app.manager.common.impl;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.repeat;
@@ -41,6 +41,7 @@ import org.homio.app.extloader.AddonClassLoader;
 import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.CacheService;
+import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.system.SystemAddonLibraryManagerSetting;
 import org.homio.app.utils.HardwareUtils;
 import org.jetbrains.annotations.NotNull;

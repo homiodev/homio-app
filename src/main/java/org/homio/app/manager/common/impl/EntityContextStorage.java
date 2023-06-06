@@ -1,4 +1,4 @@
-package org.homio.app.manager.common;
+package org.homio.app.manager.common.impl;
 
 import static org.homio.app.utils.InternalUtil.GB_DIVIDER;
 
@@ -22,6 +22,7 @@ import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
+import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.system.SystemCPUFetchValueIntervalSetting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
