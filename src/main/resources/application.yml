@@ -1,6 +1,6 @@
 rootDir: /opt/homio
 zigbee2mqtt-version: 1.30.0
-
+zigbee2mqtt-devices-uri: https://raw.githubusercontent.com/homiodev/addon-parent/master/zigbee-devices.json
 
 app:
   version: @project.version@

@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
@@ -32,7 +33,6 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.Lang;
-import org.homio.api.video.BaseFFMPEGVideoStreamEntity;
 import org.homio.api.widget.WidgetBaseTemplate;
 import org.homio.api.widget.WidgetJSBaseTemplate;
 import org.homio.app.config.cacheControl.CacheControl;
@@ -159,12 +159,12 @@ public class WidgetController {
     public void fireVideoAction(@RequestBody VideoActionRequest request) {
         WidgetVideoSeriesEntity series = getSeriesEntity(request);
         try {
-            BaseFFMPEGVideoStreamEntity streamEntity = entityContext.getEntity(series.getValueDataSource());
-            if (streamEntity == null) {
+            BaseVideoEntity entity = entityContext.getEntity(series.getValueDataSource());
+            if (entity == null) {
                 throw new NotFoundException("video.error.seriesNotFound");
             }
 
-            UIInputBuilder uiInputBuilder = streamEntity.getService().assembleActions();
+            UIInputBuilder uiInputBuilder = entity.getService().assembleActions();
             UIActionHandler actionHandler = uiInputBuilder.findActionHandler(request.name);
             if (actionHandler == null) {
                 throw new NotFoundException("video.error.actionNotFound");
@@ -255,26 +255,18 @@ public class WidgetController {
     public void updateColorsValue(@RequestBody ColorValueRequest request) {
         WidgetColorEntity entity = entityContext.getEntityRequire(request.entityID);
         switch (request.type) {
-            case colorTemp:
-                DataSourceUtil.setValue(entityContext,
-                    entity.getColorTemperatureSetValueDataSource(),
-                    entity.getDynamicParameterFields("colorTemp"), request.value);
-                break;
-            case color:
-                DataSourceUtil.setValue(entityContext,
-                    entity.getColorSetValueDataSource(),
-                    entity.getDynamicParameterFields("color"), request.value);
-                break;
-            case onOff:
-                DataSourceUtil.setValue(entityContext,
-                    entity.getOnOffSetValueDataSource(),
-                    entity.getDynamicParameterFields("onOff"), request.value);
-                break;
-            case brightness:
-                DataSourceUtil.setValue(entityContext,
-                    entity.getBrightnessSetValueDataSource(),
-                    entity.getDynamicParameterFields("brightness"), request.value);
-                break;
+            case colorTemp -> DataSourceUtil.setValue(entityContext,
+                entity.getColorTemperatureSetValueDataSource(),
+                entity.getDynamicParameterFields("colorTemp"), request.value);
+            case color -> DataSourceUtil.setValue(entityContext,
+                entity.getColorSetValueDataSource(),
+                entity.getDynamicParameterFields("color"), request.value);
+            case onOff -> DataSourceUtil.setValue(entityContext,
+                entity.getOnOffSetValueDataSource(),
+                entity.getDynamicParameterFields("onOff"), request.value);
+            case brightness -> DataSourceUtil.setValue(entityContext,
+                entity.getBrightnessSetValueDataSource(),
+                entity.getDynamicParameterFields("brightness"), request.value);
         }
     }
 
@@ -296,8 +288,7 @@ public class WidgetController {
     @GetMapping("/tab/{tabId}")
     public List<WidgetEntity> getWidgetsInTab(@PathVariable("tabId") String tabId) {
         List<WidgetBaseEntity> widgets = entityContext.findAll(WidgetBaseEntity.class).stream()
-                                                      .filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId))
-                                                      .collect(Collectors.toList());
+                                                      .filter(w -> w.getWidgetTabEntity().getEntityID().equals(tabId)).toList();
 
         List<WidgetEntity> result = new ArrayList<>();
         for (WidgetBaseEntity<?> widget : widgets) {
@@ -354,8 +345,7 @@ public class WidgetController {
         String params = "";
         boolean paramReadOnly = false;
         if (js == null) {
-            if (template instanceof WidgetJSBaseTemplate) {
-                WidgetJSBaseTemplate widgetJSBaseTemplate = (WidgetJSBaseTemplate) template;
+            if (template instanceof WidgetJSBaseTemplate widgetJSBaseTemplate) {
                 JavaScriptBuilderImpl javaScriptBuilder = new JavaScriptBuilderImpl(template.getClass());
                 widgetJSBaseTemplate.createWidget(javaScriptBuilder);
                 js = javaScriptBuilder.build();
@@ -442,7 +432,7 @@ public class WidgetController {
     }
 
     private <T extends WidgetSeriesEntity> T getSeriesEntity(SingleValueRequest<?> request) {
-        WidgetBaseEntityAndSeries entity = entityContext.getEntity(request.entityID);
+        WidgetBaseEntityAndSeries entity = entityContext.getEntityRequire(request.entityID);
         T series = ((Set<T>) entity.getSeries()).stream().filter(s -> s.getEntityID().equals(request.seriesEntityID)).findAny().orElse(null);
         if (series == null) {
             throw new NotFoundException("Unable to find series: " + request.seriesEntityID + " for entity: " + entity.getTitle());

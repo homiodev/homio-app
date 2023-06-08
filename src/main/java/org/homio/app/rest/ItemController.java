@@ -38,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -63,6 +64,7 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
+import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields.RequestDynamicParameter;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.LogService;
 import org.homio.app.config.cacheControl.CacheControl;
@@ -561,9 +563,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         if (!(selectedClassEntity instanceof SelectionWithDynamicParameterFields)) {
             throw new IllegalStateException("SelectedEntity must implement interface <" + SelectionWithDynamicParameterFields.class.getSimpleName() + ">");
         }
-        SelectionWithDynamicParameterFields.RequestDynamicParameter parameter = new SelectionWithDynamicParameterFields.RequestDynamicParameter(
-            classEntity, UIFieldUtils.fetchRequestWidgetType(classEntity, null));
-        DynamicParameterFields dynamicParameterFields = ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(parameter);
+        val parameter = new RequestDynamicParameter(classEntity, UIFieldUtils.buildDynamicParameterMetadata(classEntity, null));
+        val dynamicParameterFields = ((SelectionWithDynamicParameterFields) selectedClassEntity).getDynamicParameterFields(parameter);
         if (dynamicParameterFields == null) {
             throw new IllegalStateException("SelectedEntity getDynamicParameterFields returned null");
         }

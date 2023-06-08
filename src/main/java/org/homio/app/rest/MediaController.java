@@ -1,7 +1,10 @@
 package org.homio.app.rest;
 
-import static org.homio.api.util.CommonUtils.FFMPEG_LOCATION;
+import static java.lang.String.format;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
 
+import dev.failsafe.ExecutionContext;
 import dev.failsafe.Failsafe;
 import dev.failsafe.Fallback;
 import dev.failsafe.RetryPolicy;
@@ -29,17 +32,16 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.addon.camera.entity.VideoPlaybackStorage;
+import org.homio.addon.camera.entity.VideoPlaybackStorage.DownloadFile;
 import org.homio.api.EntityContext;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.SelfContainedAudioSourceContainer;
 import org.homio.api.model.OptionModel;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.video.DownloadFile;
-import org.homio.api.video.VideoPlaybackStorage;
-import org.homio.api.video.ffmpeg.FfmpegInputDeviceHardwareRepository;
 import org.homio.app.audio.AudioService;
 import org.homio.app.manager.ImageService;
-import org.homio.app.model.entity.ImageEntity;
+import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -70,6 +72,8 @@ public class MediaController {
     private final ImageService imageService;
     private final EntityContext entityContext;
     private final AudioService audioService;
+    private final FfmpegHardwareRepository ffmpegHardwareRepository;
+
     private final RetryPolicy<Path> PLAYBACK_THUMBNAIL_RETRY_POLICY =
         RetryPolicy.<Path>builder()
                    .handle(Exception.class)
@@ -183,7 +187,7 @@ public class MediaController {
             downloadFile = Failsafe.with(PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY)
                                    .onFailure(event ->
                                        log.error("Unable to download playback file: <{}>. <{}>. Msg: <{}>", entity.getTitle(), fileId,
-                                           CommonUtils.getErrorMessage(event.getException())))
+                                           getErrorMessage(event.getException())))
                                    .get(context -> {
                                        log.info("Reply <{}>. Download playback video file <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
                                        return entity.downloadPlaybackFile(entityContext, "main", fileId, path);
@@ -201,14 +205,9 @@ public class MediaController {
         audioService.playRequested(streamId, resp);
     }
 
-    @GetMapping("/image/{imagePath:.+}")
-    public ResponseEntity<InputStreamResource> getImage(@PathVariable String imagePath) {
-        ImageEntity imageEntity = entityContext.getEntity(imagePath);
-        if (imageEntity != null) {
-            return getImage(imageEntity.toPath().toString());
-        } else {
-            return imageService.getImage(imagePath);
-        }
+    @GetMapping("/image")
+    public ResponseEntity<InputStreamResource> getImage(@RequestParam String entityID) {
+        return imageService.getImage(entityID);
     }
 
     @GetMapping("/audioSource")
@@ -272,22 +271,18 @@ public class MediaController {
         Fallback<Path> fallback = Fallback.of((Path) null);
         return Failsafe.with(PLAYBACK_THUMBNAIL_RETRY_POLICY, fallback)
                        .onFailure(event ->
-                           log.error("Unable to get playback img: <{}>. Msg: <{}>", entity.getTitle(), CommonUtils.getErrorMessage(event.getException())))
+                           log.error("Unable to get playback img: <{}>. Msg: <{}>", entity.getTitle(), getErrorMessage(event.getException())))
                        .get(context -> {
-                           log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
-                           entityContext
-                               .getBean(FfmpegInputDeviceHardwareRepository.class)
-                               .fireFfmpeg(
-                                   FFMPEG_LOCATION,
-                                   "-y",
-                                   "\"" + uriStr + "\"",
-                                   "-frames:v 1 -vf scale="
-                                       + size
-                                       + " -q:v 3 "
-                                       + path, // q:v - jpg quality
-                                   60);
+                           fireFFmpeg(fileId, size, entity, path, uriStr, context);
                            return path;
                        });
+    }
+
+    private void fireFFmpeg(String fileId, String size, VideoPlaybackStorage entity, Path path, String uriStr, ExecutionContext<Path> context) {
+        log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
+        ffmpegHardwareRepository.fireFfmpeg(
+            FFMPEG_LOCATION, "-y", "\"" + uriStr + "\"", format("-frames:v 1 -vf scale=%s -q:v 3 %s", size, path), // q:v - jpg quality
+            60);
     }
 
     private ResourceRegion resourceRegion(Resource video, long contentLength, HttpHeaders headers) {

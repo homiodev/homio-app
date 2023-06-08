@@ -4,7 +4,7 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
-import static org.homio.app.utils.UIFieldUtils.fetchRequestWidgetType;
+import static org.homio.app.utils.UIFieldUtils.buildDynamicParameterMetadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
@@ -53,6 +54,7 @@ import org.homio.api.ui.field.selection.UIFieldClassSelection;
 import org.homio.api.ui.field.selection.UIFieldDevicePortSelection;
 import org.homio.api.ui.field.selection.UIFieldEmptySelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.homio.api.ui.field.selection.UIFieldEntityTypeSelection;
 import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.ui.field.selection.UIFieldSelectionCondition;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent;
@@ -60,9 +62,11 @@ import org.homio.api.ui.field.selection.UIFieldStaticSelection;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.api.ui.field.selection.dynamic.DynamicParameterFields;
 import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields;
+import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFields.RequestDynamicParameter;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ClassFinder;
+import org.homio.app.manager.common.impl.EntityContextServiceImpl;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.jetbrains.annotations.NotNull;
 
@@ -167,6 +171,10 @@ public final class UIFieldSelectionUtil {
             selectTypes.add(SelectHandler.entityByClass.name());
         }
 
+        if (uiFieldContext.isAnnotationPresent(UIFieldEntityTypeSelection.class)) {
+            selectTypes.add(SelectHandler.entityByType.name());
+        }
+
         UIFieldClassSelection classSelection = uiFieldContext.getDeclaredAnnotation(UIFieldClassSelection.class);
         if (classSelection != null) {
             if (classSelection.lazyLoading()) {
@@ -215,6 +223,7 @@ public final class UIFieldSelectionUtil {
             parameters.put("AMS", fileSelection.allowMultiSelect());
             parameters.put("ASF", fileSelection.allowSelectFiles());
             parameters.put("pattern", fileSelection.pattern());
+            parameters.put("dialogTitle", fileSelection.dialogTitle());
 
             meta.put("icon", fileSelection.icon());
             meta.put("iconColor", fileSelection.iconColor());
@@ -400,13 +409,10 @@ public final class UIFieldSelectionUtil {
         }
 
         if (target instanceof SelectionWithDynamicParameterFields) {
-            SelectionWithDynamicParameterFields.RequestDynamicParameter requestDynamicParameter =
-                new SelectionWithDynamicParameterFields.RequestDynamicParameter(
-                    requestedEntity, fetchRequestWidgetType(requestedEntity, sourceClassType));
+            val requestDynamicParameter = new RequestDynamicParameter(requestedEntity, buildDynamicParameterMetadata(requestedEntity, sourceClassType));
 
             optionModel.json(json -> {
-                DynamicParameterFields dynamicParameterFields = ((SelectionWithDynamicParameterFields) target).getDynamicParameterFields(
-                    requestDynamicParameter);
+                val dynamicParameterFields = ((SelectionWithDynamicParameterFields) target).getDynamicParameterFields(requestDynamicParameter);
                 if (dynamicParameterFields != null) {
                     DynamicParameter dynamicParameter =
                         new DynamicParameter(
@@ -471,8 +477,8 @@ public final class UIFieldSelectionUtil {
         return null;
     }
 
-    private static void assembleOptionsForEntityByClassSelection(LoadOptionsParameters params, List<OptionModel> list, UIFieldEntityByClassSelection item) {
-        Class<? extends HasEntityIdentifier> sourceClassType = item.value();
+    private static void assembleOptionsForEntityByClassSelection(LoadOptionsParameters params, List<OptionModel> list,
+        Class<? extends HasEntityIdentifier> sourceClassType) {
 
         for (Class<? extends HasEntityIdentifier> foundTargetType : params.entityContext.getClassesWithParent(sourceClassType)) {
             if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
@@ -530,8 +536,18 @@ public final class UIFieldSelectionUtil {
         entityByClass(UIFieldEntityByClassSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
             for (UIFieldEntityByClassSelection item : params.field.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class)) {
-                assembleOptionsForEntityByClassSelection(params, list, item);
+                assembleOptionsForEntityByClassSelection(params, list, item.value());
             }
+            return list;
+        }),
+        entityByType(UIFieldEntityTypeSelection.class, params -> {
+            List<OptionModel> list = new ArrayList<>();
+            UIFieldEntityTypeSelection item = params.field.getDeclaredAnnotation(UIFieldEntityTypeSelection.class);
+            Class<? extends HasEntityIdentifier> typeClass = EntityContextServiceImpl.entitySelectMap.get(item.type());
+            if (typeClass == null) {
+                throw new IllegalArgumentException("Unable to find entity class with type: " + item.type());
+            }
+            assembleOptionsForEntityByClassSelection(params, list, typeClass);
             return list;
         });
 

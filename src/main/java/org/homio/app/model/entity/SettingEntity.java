@@ -6,7 +6,6 @@ import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Transient;
 import java.util.Collection;
-import java.util.Date;
 import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
@@ -83,18 +82,6 @@ public class SettingEntity extends BaseEntity<SettingEntity> {
     @Column(length = 65535)
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
-
-    @Override
-    @JsonIgnore
-    public @NotNull Date getUpdateTime() {
-        return super.getUpdateTime();
-    }
-
-    @Override
-    @JsonIgnore
-    public @NotNull Date getCreationTime() {
-        return super.getCreationTime();
-    }
 
     public static String getKey(SettingPlugin settingPlugin) {
         if (settingPlugin instanceof DynamicConsoleHeaderSettingPlugin) {

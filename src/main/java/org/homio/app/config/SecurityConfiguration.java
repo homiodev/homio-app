@@ -68,6 +68,7 @@ public class SecurityConfiguration {
                     "/rest/auth/status",
                     "/rest/auth/login",
                     "/rest/addon/image/**",
+                    "/rest/media/image/**",
                     "/rest/device/**").permitAll();
                 authorize.requestMatchers("/rest/**").authenticated();
             });

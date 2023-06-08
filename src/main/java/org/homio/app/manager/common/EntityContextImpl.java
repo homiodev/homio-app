@@ -34,6 +34,8 @@ import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
 import org.homio.api.EntityContextMedia;
+import org.homio.api.EntityContextService;
+import org.homio.api.EntityContextWorkspace;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.entity.DisableCacheEntity;
@@ -49,7 +51,6 @@ import org.homio.api.service.scan.VideoStreamScanner;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
-import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.LogService;
 import org.homio.app.audio.AudioService;
 import org.homio.app.auth.JwtTokenProvider;
@@ -68,10 +69,12 @@ import org.homio.app.manager.common.impl.EntityContextEventImpl;
 import org.homio.app.manager.common.impl.EntityContextHardwareImpl;
 import org.homio.app.manager.common.impl.EntityContextInstallImpl;
 import org.homio.app.manager.common.impl.EntityContextMediaImpl;
+import org.homio.app.manager.common.impl.EntityContextServiceImpl;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.homio.app.manager.common.impl.EntityContextStorage;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
+import org.homio.app.manager.common.impl.EntityContextWorkspaceImpl;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
@@ -158,6 +161,8 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextHardwareImpl entityContextHardware;
     private final EntityContextWidgetImpl entityContextWidget;
     private final EntityContextMediaImpl entityContextMedia;
+    private final EntityContextServiceImpl entityContextService;
+    private final EntityContextWorkspaceImpl entityContextWorkspace;
     @Getter private final EntityContextAddonImpl addon;
     @Getter private final EntityContextStorage entityContextStorage;
     private final ClassFinder classFinder;
@@ -196,6 +201,8 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
         this.entityContextMedia = new EntityContextMediaImpl(this, ffmpegHardwareRepository);
         this.entityContextHardware = new EntityContextHardwareImpl(this, machineHardwareRepository);
+        this.entityContextService = new EntityContextServiceImpl(this);
+        this.entityContextWorkspace = new EntityContextWorkspaceImpl(this);
         this.addon = new EntityContextAddonImpl(this, cacheService);
     }
 
@@ -224,8 +231,10 @@ public class EntityContextImpl implements EntityContext {
         entityContextVar.onContextCreated();
         entityContextUI.onContextCreated();
         entityContextBGP.onContextCreated();
+        entityContextMedia.onContextCreated();
         // initialize all addons
         addon.onContextCreated();
+        entityContextWorkspace.onContextCreated(workspaceService);
 
         for (Class<? extends ContextCreated> beanUpdateClass : BEAN_CONTEXT_CREATED) {
             applicationContext.getBean(beanUpdateClass).onContextCreated(this);
@@ -263,6 +272,16 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
+    public @NotNull EntityContextWorkspace workspace() {
+        return entityContextWorkspace;
+    }
+
+    @Override
+    public @NotNull EntityContextService service() {
+        return entityContextService;
+    }
+
+    @Override
     public @NotNull EntityContextUIImpl ui() {
         return entityContextUI;
     }
@@ -295,11 +314,6 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public @NotNull EntityContextMedia media() {
         return entityContextMedia;
-    }
-
-    @Override
-    public void registerScratch3Extension(@NotNull Scratch3ExtensionBlocks scratch3ExtensionBlocks) {
-        workspaceService.registerScratch3Extension(scratch3ExtensionBlocks);
     }
 
     public @NotNull EntityContextWidgetImpl widget() {

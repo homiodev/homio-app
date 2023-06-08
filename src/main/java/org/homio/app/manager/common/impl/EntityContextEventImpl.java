@@ -89,12 +89,23 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
-    public void removeEvents(String key, String... additionalKeys) {
+    public synchronized void removeEvents(String key, String... additionalKeys) {
         eventListeners.remove(key);
         lastValues.remove(key);
         for (String additionalKey : additionalKeys) {
             eventListeners.remove(additionalKey);
             lastValues.remove(additionalKey);
+        }
+    }
+
+    @Override
+    public synchronized void removeEventListener(String discriminator, String key) {
+        Map<String, Consumer<Object>> map = eventListeners.get(discriminator);
+        if (map != null) {
+            map.remove(key);
+            if (map.isEmpty()) {
+                eventListeners.remove(discriminator);
+            }
         }
     }
 

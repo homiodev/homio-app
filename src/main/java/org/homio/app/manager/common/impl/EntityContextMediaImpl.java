@@ -1,5 +1,6 @@
 package org.homio.app.manager.common.impl;
 
+import java.util.Map;
 import java.util.Set;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class EntityContextMediaImpl implements EntityContextMedia {
     private final FfmpegHardwareRepository repo;
     public static String FFMPEG_LOCATION = SystemUtils.IS_OS_LINUX ? "ffmpeg" :
         CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe").toString();
+
 
     @Override
     public void fireFfmpeg(@NotNull String inputOptions, @NotNull String source, @NotNull String output, int maxWaitTimeout) {
@@ -49,5 +51,19 @@ public class EntityContextMediaImpl implements EntityContextMedia {
         @NotNull String username, @NotNull String password, @Nullable Runnable destroyListener) {
         return new FFMPEGImpl(entityID, description, handler, log, format, inputArguments, input, outArguments, output, username,
             password, destroyListener);
+    }
+
+    public void onContextCreated() throws Exception {
+        entityContext.bgp().registerThreadsPuller("camera-ffmpeg", threadPuller -> {
+            for (Map.Entry<String, FFMPEGImpl> threadEntry : FFMPEGImpl.ffmpegMap.entrySet()) {
+                FFMPEG ffmpeg = threadEntry.getValue();
+                if (ffmpeg.getIsAlive()) {
+                    threadPuller.addThread(threadEntry.getKey(), ffmpeg.getDescription(), ffmpeg.getCreationDate(),
+                        "working", null,
+                        "Command: " + String.join(" ", ffmpeg.getCommandArrayList())
+                    );
+                }
+            }
+        });
     }
 }

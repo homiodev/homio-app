@@ -1,8 +1,6 @@
 package org.homio.app.rest;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,20 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AddonController {
 
     private final AddonService addonService;
-
-    @GetMapping("/image/{addonID}")
-    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public ResponseEntity<InputStreamResource> getAddonImage(@PathVariable("addonID") String addonID) throws IOException {
-        AddonEntrypoint addonEntrypoint = addonService.getAddon(addonID.contains("-") ? addonID.substring(0, addonID.indexOf("-")) : addonID);
-        URL imageUrl = addonEntrypoint.getResource(addonID + ".png");
-        if (imageUrl == null) {
-            imageUrl = addonEntrypoint.getAddonImageURL();
-        }
-        if (imageUrl == null) {
-            throw new NotFoundException("Unable to find addon image: " + addonID);
-        }
-        return CommonUtils.inputStreamToResource(imageUrl.openStream(), MediaType.IMAGE_PNG);
-    }
 
     @GetMapping("/image/{addonID}/{baseEntityType:.+}")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)

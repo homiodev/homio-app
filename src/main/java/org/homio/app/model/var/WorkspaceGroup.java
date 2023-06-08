@@ -139,20 +139,6 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         return null;
     }
 
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public Date getCreationTime() {
-        return super.getCreationTime();
-    }
-
-    @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public Date getUpdateTime() {
-        throw new ProhibitedExecution();
-    }
-
     @UIField(order = 9999, hideInEdit = true)
     @UIFieldInlineEntities(bg = "#1E5E611F", noContentTitle = "NO_VARIABLES")
     public List<WorkspaceVariableEntity> getWorkspaceVariableEntities() {

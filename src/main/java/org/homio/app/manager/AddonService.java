@@ -1,6 +1,7 @@
 package org.homio.app.manager;
 
 import java.awt.image.BufferedImage;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.Collection;
 import java.util.HashMap;
@@ -11,18 +12,22 @@ import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.setting.SettingPluginPackageInstall;
 import org.homio.api.setting.SettingPluginPackageInstall.PackageRequest;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.utils.color.ColorThief;
 import org.homio.app.utils.color.MMCQ;
 import org.homio.app.utils.color.RGBUtil;
+import org.jetbrains.annotations.Nullable;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -105,5 +110,18 @@ public class AddonService implements ContextCreated, ContextRefreshed {
                 progressBar -> settingPlugin.unInstallPackage(entityContext, packageRequest, progressBar),
                 ex -> packagesInProgress.remove(packageRequest.getName()));
         }
+    }
+
+    @SneakyThrows
+    public @Nullable InputStream getImageStream(String addonID) {
+        AddonEntrypoint addonEntrypoint = getAddon(addonID.contains("-") ? addonID.substring(0, addonID.indexOf("-")) : addonID);
+        URL imageUrl = addonEntrypoint.getResource(addonID + ".png");
+        if (imageUrl == null) {
+            imageUrl = addonEntrypoint.getAddonImageURL();
+        }
+        if (imageUrl == null) {
+            return null;
+        }
+        return imageUrl.openStream();
     }
 }

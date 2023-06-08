@@ -89,8 +89,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     private final InternetAvailabilityBgpService internetAvailabilityService;
     private final WatchdogBgpService watchdogBgpService;
 
-    public EntityContextBGPImpl(
-        EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler, AppProperties appProperties) {
+    public EntityContextBGPImpl(EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler, AppProperties appProperties) {
         this.entityContext = entityContext;
         this.taskScheduler = taskScheduler;
         this.internetAvailabilityService = new InternetAvailabilityBgpService(entityContext, appProperties, this);

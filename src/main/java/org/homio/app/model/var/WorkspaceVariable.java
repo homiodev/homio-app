@@ -178,20 +178,6 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }
 
     @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public @NotNull Date getCreationTime() {
-        return super.getCreationTime();
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public @NotNull Date getUpdateTime() {
-        return super.getUpdateTime();
-    }
-
-    @Override
     public String getDefaultName() {
         return null;
     }

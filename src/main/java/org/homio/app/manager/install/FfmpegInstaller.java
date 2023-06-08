@@ -2,7 +2,7 @@ package org.homio.app.manager.install;
 
 import static org.apache.commons.lang3.SystemUtils.IS_OS_LINUX;
 import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
-import static org.homio.api.util.CommonUtils.FFMPEG_LOCATION;
+import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

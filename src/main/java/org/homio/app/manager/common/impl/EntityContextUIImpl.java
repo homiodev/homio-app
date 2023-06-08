@@ -333,7 +333,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
             @Override
             public @NotNull HeaderButtonBuilder icon(@NotNull Icon icon) {
-                builder.setIcon(icon.getIcon()).setIconRotate(icon.isRotate()).setIconColor(icon.getColor());
+                builder.setIcon(icon.getIcon()).setIconRotate(icon.getRotate()).setIconColor(icon.getColor());
                 return this;
             }
 

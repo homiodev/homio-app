@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.StylePosition;
 import org.homio.api.ui.action.DynamicOptionLoader;
@@ -11,10 +12,11 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnoreParent;
 import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
-import org.homio.api.video.BaseVideoStreamEntity;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
+import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("unused")
 @Entity
 public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntity>
     implements HasSingleValueDataSource {
@@ -123,7 +125,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
@@ -137,7 +139,7 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
         @Override
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             List<OptionModel> list = new ArrayList<>();
-            for (BaseVideoStreamEntity entity : parameters.getEntityContext().findAll(BaseVideoStreamEntity.class)) {
+            for (BaseVideoEntity entity : parameters.getEntityContext().findAll(BaseVideoEntity.class)) {
 
                 Set<String> sources = entity.getVideoSources();
                 if (!sources.isEmpty()) {

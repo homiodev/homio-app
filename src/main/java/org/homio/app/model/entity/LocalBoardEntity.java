@@ -13,6 +13,7 @@ import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
+import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
@@ -22,6 +23,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 @Log4j2
+@UISidebarChildren(icon = "", color = "", allowCreateItem = false)
 public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity>
     implements BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
 
@@ -40,11 +42,6 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
 
     public void setFileSystemRoot(String value) {
         setJsonData("fs_root", value);
-    }
-
-    @Override
-    public boolean isDisableEdit() {
-        return getEntityID().equals(DEFAULT_DEVICE_ENTITY_ID);
     }
 
     @Override
@@ -101,6 +98,11 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
 
     @Override
     public boolean isDisableDelete() {
+        return true;
+    }
+
+    @Override
+    public boolean isDisableEdit() {
         return true;
     }
 

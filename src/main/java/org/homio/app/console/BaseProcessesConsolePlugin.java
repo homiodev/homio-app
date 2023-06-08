@@ -1,7 +1,5 @@
 package org.homio.app.console;
 
-import static org.homio.api.ui.field.UIFieldType.StaticDate;
-
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.Collection;
@@ -23,6 +21,7 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
+import org.jetbrains.annotations.NotNull;
 
 @RequiredArgsConstructor
 public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<BaseProcessesConsolePlugin.BackgroundProcessJSON> {
@@ -79,7 +78,7 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
 
         EntityContextBGP.ThreadPuller threadPuller = new EntityContextBGP.ThreadPuller() {
             @Override
-            public EntityContextBGP.ThreadPuller addThread(String name, String description, Date creationTime,
+            public EntityContextBGP.ThreadPuller addThread(@NotNull String name, String description, @NotNull Date creationTime,
                 String state, String errorMessage, String bigDescription) {
                 if (BaseProcessesConsolePlugin.this.handleThreads()) {
                     result.add(new BackgroundProcessJSON(name, name, description, creationTime, null, null,
@@ -89,7 +88,7 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
             }
 
             @Override
-            public EntityContextBGP.ThreadPuller addScheduler(String name, String description, Date creationTime, String state,
+            public EntityContextBGP.@NotNull ThreadPuller addScheduler(@NotNull String name, String description, @NotNull Date creationTime, String state,
                 String errorMessage, Duration period, int runCount,
                 String bigDescription) {
                 if (!BaseProcessesConsolePlugin.this.handleThreads()) {
@@ -128,7 +127,7 @@ public abstract class BaseProcessesConsolePlugin implements ConsolePluginTable<B
         @UIField(hideInEdit = true, order = 3)
         private String description;
 
-        @UIField(order = 4, hideInEdit = true, type = StaticDate)
+        @UIField(order = 4, hideInEdit = true)
         private Date creationTime;
 
         @UIField(hideInEdit = true, order = 5)

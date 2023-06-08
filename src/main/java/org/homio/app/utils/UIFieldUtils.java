@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,6 +38,8 @@ import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.validation.MaxItems;
 import org.homio.api.entity.validation.UIFieldValidationSize;
+import org.homio.api.entity.widget.ability.HasGetStatusValue;
+import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
@@ -90,12 +93,12 @@ import org.homio.api.ui.field.selection.UIFieldClassSelection;
 import org.homio.api.ui.field.selection.UIFieldDevicePortSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassListSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.homio.api.ui.field.selection.UIFieldEntityTypeSelection;
 import org.homio.api.ui.field.selection.UIFieldSelectNoValue;
 import org.homio.api.ui.field.selection.UIFieldSelectValueOnEmpty;
 import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.ui.field.selection.UIFieldStaticSelection;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
-import org.homio.api.ui.field.selection.dynamic.DynamicRequestType;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
@@ -112,18 +115,23 @@ import org.homio.app.model.entity.widget.UIFieldPadding;
 import org.homio.app.model.entity.widget.UIFieldTimeSlider;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.model.var.UIFieldVariable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.core.annotation.AnnotationUtils;
 
 public class UIFieldUtils {
 
-    public static DynamicRequestType fetchRequestWidgetType(Object requestedEntity,
-        Class<?> sourceClassType) {
-        DynamicRequestType dynamicRequestType = null;
-        if (requestedEntity instanceof HasDynamicParameterFields) {
-            dynamicRequestType = ((HasDynamicParameterFields) requestedEntity).getDynamicRequestType(sourceClassType);
+    public static @NotNull JSONObject buildDynamicParameterMetadata(@NotNull Object requestedEntity, @Nullable Class<?> sourceClassType) {
+        JSONObject meta = new JSONObject();
+        if (requestedEntity instanceof HasDynamicParameterFields && sourceClassType != null) {
+            if (sourceClassType.equals(HasGetStatusValue.class)) {
+                meta.put("get", true);
+            } else if (sourceClassType.equals(HasSetStatusValue.class)) {
+                meta.put("set", true);
+            }
         }
-        return dynamicRequestType == null ? DynamicRequestType.Default : dynamicRequestType;
+        return meta;
     }
 
     public static Collection<UIInputEntity> fetchUIActionsFromClass(Class<?> clazz, EntityContext entityContext) {
@@ -268,6 +276,7 @@ public class UIFieldUtils {
                 || fieldContext.isAnnotationPresent(UIFieldStaticSelection.class)
                 || fieldContext.isAnnotationPresent(UIFieldEntityByClassListSelection.class)
                 || fieldContext.isAnnotationPresent(UIFieldEntityByClassSelection.class)
+                || fieldContext.isAnnotationPresent(UIFieldEntityTypeSelection.class)
                 || fieldContext.isAnnotationPresent(UIFieldClassSelection.class)
                 || fieldContext.isAnnotationPresent(UIFieldBeanSelection.class)) {
                 // detect types
@@ -303,6 +312,8 @@ public class UIFieldUtils {
                         entityUIMetaData.setType("Progress");
                     } else if (type.equals(boolean.class)) {
                         entityUIMetaData.setType(UIFieldType.Boolean.name());
+                    } else if (type.equals(Date.class)) {
+                        entityUIMetaData.setType(UIFieldType.StaticDate.name());
                     } else if (type.equals(float.class)) {
                         entityUIMetaData.setType(UIFieldType.Float.name());
                     } else if (type.equals(int.class)) {
@@ -481,7 +492,7 @@ public class UIFieldUtils {
                                                .putPOJO("inputs", inputs)
                                                .put("style", actionButton.style()));
             }
-            jsonTypeMetadata.put("actionButtons", actionButtons);
+            jsonTypeMetadata.set("actionButtons", actionButtons);
         }
 
         var fieldPort = fieldContext.getDeclaredAnnotation(UIFieldPort.class);

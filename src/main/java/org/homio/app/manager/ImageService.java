@@ -1,9 +1,13 @@
 package org.homio.app.manager;
 
+import static org.homio.app.model.entity.LocalBoardEntity.DEFAULT_DEVICE_ENTITY_ID;
+
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import javax.imageio.ImageIO;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -12,7 +16,9 @@ import org.homio.api.EntityContext;
 import org.homio.api.exception.ServerException;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.model.entity.ImageEntity;
+import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.repository.ImageRepository;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,16 +31,28 @@ public class ImageService {
 
     private final ImageRepository imageRepository;
     private final EntityContext entityContext;
+    private final AddonService addonService;
 
-    public ResponseEntity<InputStreamResource> getImage(String fileName) {
-        return getImage(CommonUtils.getImagePath().resolve(fileName));
+    @SneakyThrows
+    public ResponseEntity<InputStreamResource> getImage(String entityID) {
+        Path filePath = CommonUtils.getImagePath().resolve(entityID);
+        if (!Files.exists(filePath)) {
+            LocalBoardEntity LocalBoardEntity = this.entityContext.getEntityRequire(DEFAULT_DEVICE_ENTITY_ID);
+            filePath = Paths.get(LocalBoardEntity.getFileSystemRoot(), entityID);
+        }
+        if (Files.exists(filePath)) {
+            return getImage(Files.newInputStream(filePath), MediaType.parseMediaType(Files.probeContentType(filePath)));
+        }
+        InputStream stream = addonService.getImageStream(entityID);
+        if (stream != null) {
+            return getImage(stream, MediaType.IMAGE_PNG);
+        }
+        return null;
     }
 
     @SneakyThrows
-    public ResponseEntity<InputStreamResource> getImage(Path imagePath) {
-        return CommonUtils.inputStreamToResource(
-            Files.newInputStream(imagePath),
-            MediaType.parseMediaType(Files.probeContentType(imagePath)));
+    public ResponseEntity<InputStreamResource> getImage(@NotNull InputStream stream, MediaType mediaType) {
+        return CommonUtils.inputStreamToResource(stream, mediaType);
     }
 
     public boolean isExistsImage(String imageID) {
