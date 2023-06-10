@@ -23,7 +23,6 @@ import org.homio.api.entity.widget.ability.HasGetStatusValue.GetStatusValueReque
 import org.homio.api.entity.widget.ability.HasTimeValueSeries;
 import org.homio.api.entity.widget.ability.HasUpdateValueListener;
 import org.homio.api.model.HasEntityIdentifier;
-import org.homio.api.storage.InMemoryDB;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -34,6 +33,7 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueAggregatedData
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
+import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;

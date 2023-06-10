@@ -501,12 +501,12 @@ public class EntityContextUIImpl implements EntityContextUI {
         return false;
     }
 
-    public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, String value, JSONObject metadata) throws Exception {
+    public ActionResponseModel handleNotificationAction(String entityID, String actionEntityID, JSONObject params) throws Exception {
         HeaderButtonNotification headerButtonNotification = headerButtonNotifications.get(entityID);
         if (headerButtonNotification != null) {
             return headerButtonNotification.getClickAction().get();
         }
-        return handleNotificationBlockAction(entityID, actionEntityID, value, metadata);
+        return handleNotificationBlockAction(entityID, actionEntityID, params);
     }
 
     public void handleResponse(@Nullable ActionResponseModel response) {
@@ -543,17 +543,11 @@ public class EntityContextUIImpl implements EntityContextUI {
         sendGlobal(GlobalSendType.headerButton, notification.getEntityID(), null, notification.getTitle(), jsonNode);
     }
 
-    private ActionResponseModel handleNotificationBlockAction(String entityID, String actionEntityID, String value, JSONObject metadata) throws Exception {
+    private ActionResponseModel handleNotificationBlockAction(String entityID, String actionEntityID, JSONObject params) throws Exception {
         NotificationBlock notificationBlock = blockNotifications.get(entityID);
         if (notificationBlock != null) {
             if ("UPDATE".equals(actionEntityID)) {
-                notificationBlock.setUpdating(true);
-                entityContext.bgp()
-                             .runWithProgress("update-" + entityID)
-                             .execute(progressBar -> {
-                                 handleResponse(notificationBlock.getUpdateHandler().apply(progressBar, value));
-                             });
-                return null;
+                return fireUpdatePackageAction(entityID, params, notificationBlock);
             }
             Info info = actionEntityID == null ? null :
                 notificationBlock.getInfoItems().stream()
@@ -564,10 +558,24 @@ public class EntityContextUIImpl implements EntityContextUI {
             }
             UIActionHandler actionHandler = findNotificationAction(actionEntityID, notificationBlock);
             if (actionHandler != null) {
-                return actionHandler.handleAction(entityContext, metadata);
+                return actionHandler.handleAction(entityContext, params);
             }
         }
         throw new IllegalArgumentException("Unable to find header notification: <" + entityID + ">");
+    }
+
+    private ActionResponseModel fireUpdatePackageAction(String entityID, JSONObject params, NotificationBlock notificationBlock) {
+        if (!params.has("version")) {
+            throw new IllegalArgumentException("Version must be specified for update: " + entityID);
+        }
+        notificationBlock.setUpdating(true);
+        entityContext.bgp()
+                     .runWithProgress("update-" + entityID)
+                     .execute(progressBar -> {
+                         val handler = Objects.requireNonNull(notificationBlock.getUpdateHandler());
+                         handleResponse(handler.apply(progressBar, params.getString("version")));
+                     });
+        return ActionResponseModel.fired();
     }
 
     private UIActionHandler findNotificationAction(String actionEntityID, NotificationBlock notificationBlock) {

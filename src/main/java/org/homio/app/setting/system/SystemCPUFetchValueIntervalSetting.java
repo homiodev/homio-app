@@ -33,7 +33,7 @@ public class SystemCPUFetchValueIntervalSetting
 
     @Override
     public String getHeader() {
-        return "min";
+        return "sec.";
     }
 
     @Override

@@ -32,6 +32,7 @@ import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeConfiguration;
 import org.homio.api.fs.TreeNode;
 import org.homio.api.fs.archive.ArchiveUtil;
+import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.LocalBoardEntity;
@@ -289,7 +290,9 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
             List<Path> filesToArchive =
                 Arrays.stream(Objects.requireNonNull(tmpArchiveAssemblerPath.toFile().listFiles())).map(File::toPath).collect(Collectors.toList());
 
-            return ArchiveUtil.zip(filesToArchive, targetPath, ArchiveUtil.ArchiveFormat.getHandlerByExtension(format), level, password, null);
+            ArchiveFormat archiveFormat = ArchiveFormat.getHandlerByExtension(format);
+            ArchiveUtil.zip(filesToArchive, targetPath, archiveFormat, level, password, null);
+            return targetPath;
         } finally {
             FileUtils.deleteDirectory(tmpArchiveAssemblerPath.toFile());
         }

@@ -26,7 +26,6 @@ import org.homio.api.model.Icon;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.State;
 import org.homio.api.storage.DataStorageService;
-import org.homio.api.storage.InMemoryDB;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -317,7 +316,12 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     private Object convertBigDecimal(BigDecimal value) {
-        return value.scale() == 0 ? value.longValue() : value.floatValue();
+        // using unary operation will lead that return value would be always as float for some reason
+        if (value.scale() == 0) {
+            return value.longValueExact();
+        } else {
+            return value.floatValue();
+        }
     }
 
     private String createVariableInternal(
@@ -372,7 +376,8 @@ public class EntityContextVarImpl implements EntityContextVar {
 
     private VariableContext createContext(WorkspaceVariable variable) {
         String variableId = variable.getVariableId();
-        var service = InMemoryDB.getOrCreateService(WorkspaceVariableMessage.class, variable.getEntityID(), (long) variable.getQuota());
+        var service = entityContext.storage().getOrCreateInMemoryService(
+            WorkspaceVariableMessage.class, variable.getEntityID(), (long) variable.getQuota());
 
         VariableContext context = new VariableContext(service);
         context.groupVariable = variable;

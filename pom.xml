@@ -13,7 +13,6 @@
   <properties>
     <graalvm.version>22.3.1</graalvm.version>
     <homio-api.version>1.3.2-SNAPSHOT</homio-api.version>
-    <homio-hquery.version>1.1.0</homio-hquery.version>
     <homio-primary-addons.version>1.3.0-SNAPSHOT</homio-primary-addons.version>
     <start-class>org.homio.app.HomioApplication</start-class>
   </properties>
@@ -108,12 +107,6 @@
       <artifactId>chromeinspector</artifactId>
       <version>${graalvm.version}</version>
       <scope>runtime</scope>
-    </dependency>
-
-    <dependency>
-      <artifactId>homio-hquery</artifactId>
-      <groupId>org.homio</groupId>
-      <version>${homio-hquery.version}</version>
     </dependency>
 
     <dependency>

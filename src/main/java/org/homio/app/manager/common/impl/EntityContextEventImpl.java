@@ -50,12 +50,12 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.service.EntityService.ServiceInstance;
-import org.homio.api.storage.InMemoryDB;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.EntityContextImpl.ItemAction;
+import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -415,7 +415,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
             if (entity instanceof BaseEntity) {
                 String entityID = ((BaseEntity<?>) entity).getEntityID();
                 // remove all status for entity
-                EntityContextStorage.ENTITY_MEMORY_MAP.remove(entityID);
+                EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
                 // remove in-memory data if any exists
                 InMemoryDB.removeService(entityID);
                 // clear all registered console plugins if any exists
@@ -431,7 +431,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                     }
                 }
                 // remove in-memory data
-                context.getEntityContextStorage().remove(entityID);
+                context.getEntityContextStorageImpl().remove(entityID);
                 ((BaseEntity) entity).afterDelete(context);
             }
             context.sendEntityUpdateNotification(entity, ItemAction.Remove);

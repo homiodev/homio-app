@@ -168,14 +168,14 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
         return PREFIX;
     }
 
-    @Override
+    /*@Override
     public @NotNull String getTitle() {
         String title = super.getTitle();
         if (isNotEmpty(unit)) {
             return format("%s %s", title, unit);
         }
         return title;
-    }
+    }*/
 
     @Override
     public String getDefaultName() {

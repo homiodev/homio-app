@@ -35,6 +35,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
 import org.homio.api.EntityContextMedia;
 import org.homio.api.EntityContextService;
+import org.homio.api.EntityContextStorage;
 import org.homio.api.EntityContextWorkspace;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.DeviceBaseEntity;
@@ -71,7 +72,7 @@ import org.homio.app.manager.common.impl.EntityContextInstallImpl;
 import org.homio.app.manager.common.impl.EntityContextMediaImpl;
 import org.homio.app.manager.common.impl.EntityContextServiceImpl;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
-import org.homio.app.manager.common.impl.EntityContextStorage;
+import org.homio.app.manager.common.impl.EntityContextStorageImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.manager.common.impl.EntityContextWorkspaceImpl;
@@ -163,8 +164,9 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextMediaImpl entityContextMedia;
     private final EntityContextServiceImpl entityContextService;
     private final EntityContextWorkspaceImpl entityContextWorkspace;
+    private final EntityContextStorageImpl entityContextStorage;
     @Getter private final EntityContextAddonImpl addon;
-    @Getter private final EntityContextStorage entityContextStorage;
+    @Getter private final EntityContextStorageImpl entityContextStorageImpl;
     private final ClassFinder classFinder;
     @Getter private final CacheService cacheService;
     @Getter private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
@@ -197,12 +199,13 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextInstall = new EntityContextInstallImpl(this);
         this.entityContextSetting = new EntityContextSettingImpl(this, environment, classFinder, appProperties);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
-        this.entityContextStorage = new EntityContextStorage(this);
+        this.entityContextStorageImpl = new EntityContextStorageImpl(this);
         this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
         this.entityContextMedia = new EntityContextMediaImpl(this, ffmpegHardwareRepository);
         this.entityContextHardware = new EntityContextHardwareImpl(this, machineHardwareRepository);
         this.entityContextService = new EntityContextServiceImpl(this);
         this.entityContextWorkspace = new EntityContextWorkspaceImpl(this);
+        this.entityContextStorage = new EntityContextStorageImpl(this);
         this.addon = new EntityContextAddonImpl(this, cacheService);
     }
 
@@ -263,7 +266,7 @@ public class EntityContextImpl implements EntityContext {
         setting().listenValue(ScanVideoStreamSourcesSetting.class, "scan-video-sources", () ->
             ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
 
-        this.entityContextStorage.init();
+        this.entityContextStorageImpl.init();
     }
 
     @Override
@@ -309,6 +312,11 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public @NotNull EntityContextHardware hardware() {
         return entityContextHardware;
+    }
+
+    @Override
+    public @NotNull EntityContextStorage storage() {
+        return entityContextStorage;
     }
 
     @Override
@@ -596,8 +604,8 @@ public class EntityContextImpl implements EntityContext {
             String latestVersion = appGitHub.getLastReleaseVersion();
             if (!installedVersion.equals(latestVersion)) {
                 builder.setUpdatable(
-                    (progressBar, version) -> appGitHub.updating("homio", CommonUtils.getInstallPath().resolve("homio"), progressBar,
-                        projectUpdate -> {
+                    (progressBar, version) -> appGitHub.updating("homio", CommonUtils.getInstallPath().resolve("homio"),
+                        progressBar, projectUpdate -> {
                             projectUpdate.downloadSource(version);
                             long pid = ProcessHandle.current().pid();
                             Path updateScript = CommonUtils.getInstallPath().resolve("app-update." + (IS_OS_WINDOWS ? "sh" : "bat"));

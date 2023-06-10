@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -16,26 +17,31 @@ import org.apache.logging.log4j.LogManager;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextSetting;
 import org.homio.api.EntityContextSetting.MemSetterHandler;
+import org.homio.api.EntityContextStorage;
 import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
+import org.homio.api.storage.DataStorageEntity;
+import org.homio.api.storage.DataStorageService;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.service.mem.InMemoryDB;
 import org.homio.app.setting.system.SystemCPUFetchValueIntervalSetting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Log4j2
 @RequiredArgsConstructor
-public class EntityContextStorage {
+public class EntityContextStorageImpl implements EntityContextStorage {
 
     public static final OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
     public static final Map<String, EntityMemoryData> ENTITY_MEMORY_MAP = new ConcurrentHashMap<>();
     public static final long TOTAL_MEMORY = osBean.getTotalMemorySize();
     public static final double TOTAL_MEMORY_GB = osBean.getTotalMemorySize() / GB_DIVIDER;
     // constructor parameters
+    @Getter
     private final EntityContextImpl entityContext;
     private EntityContextBGP.ThreadContext<Void> hardwareCpuScheduler;
 
@@ -60,6 +66,12 @@ public class EntityContextStorage {
 
     public void remove(String entityID) {
         ENTITY_MEMORY_MAP.remove(entityID);
+    }
+
+    @Override
+    public <T extends DataStorageEntity> DataStorageService<T> getOrCreateInMemoryService(@NotNull Class<T> pojoClass, @NotNull String uniqueId,
+        @Nullable Long quota) {
+        return InMemoryDB.getOrCreateService(pojoClass, uniqueId, quota);
     }
 
     private void setMemValue(@NotNull HasEntityIdentifier entity, @NotNull String key, @NotNull String title, @Nullable Object value) {

@@ -59,6 +59,7 @@ import org.homio.app.json.BgpProcessResponse;
 import org.homio.app.manager.bgp.InternetAvailabilityBgpService;
 import org.homio.app.manager.bgp.WatchdogBgpService;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.hquery.HQueryProgressBar;
 import org.homio.hquery.LinesReader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -363,9 +364,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     }
                 });
                 processConsumer.accept(process);
-                Thread inputThread = new Thread(new LinesReader(name + "inputReader", process.getInputStream(), null, message ->
+                HQueryProgressBar progressBar = HQueryProgressBar.of(s -> {});
+                Thread inputThread = new Thread(new LinesReader(name + "inputReader", process.getInputStream(), progressBar, false, message ->
                     log.info("[{}]: {}", name, message)));
-                Thread errorThread = new Thread(new LinesReader(name + "errorReader", process.getErrorStream(), null, message ->
+                Thread errorThread = new Thread(new LinesReader(name + "errorReader", process.getErrorStream(), progressBar, true, message ->
                     log.error("[{}]: {}", name, message)));
                 inputThread.start();
                 errorThread.start();
@@ -583,7 +585,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
         private @NotNull final String key;
         private boolean cancellable;
-        private boolean logToConsole;
+        private boolean logToConsole = true;
         private @Nullable Consumer<Exception> onFinally;
         private @Nullable Runnable onError;
         private @Nullable Exception errorIfExists;
@@ -610,7 +612,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             return builder.execute(arg -> {
                 ProgressBar progressBar = (progress, message) -> {
                     if (logToConsole) {
-                        log.info(message);
+                        log.info("Progress: {}", message);
                     }
                     getEntityContext().ui().progress(key, progress, message, cancellable);
                 };

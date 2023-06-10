@@ -128,11 +128,11 @@ public final class UIFieldSelectionUtil {
     public static void assembleItemsToOptions(List<OptionModel> list, Class<? extends HasEntityIdentifier> sourceClassType,
         List<? extends BaseEntity> items, EntityContext entityContext, Object classEntityForDynamicOptionLoader) {
         for (BaseEntity baseEntity : items) {
-            String currentValue = tryFetchCurrentValueFromEntity(baseEntity, entityContext);
+            String lastValue = tryFetchCurrentValueFromEntity(baseEntity, entityContext);
             String title = baseEntity.getTitle();
             OptionModel optionModel = OptionModel.of(baseEntity.getEntityID(), title);
-            if (currentValue != null) {
-                optionModel.json(jsonNodes -> jsonNodes.put("cv", currentValue));
+            if (lastValue != null) {
+                optionModel.json(jsonNodes -> jsonNodes.put("cv", lastValue));
             }
             if (baseEntity instanceof UIFieldSelection.SelectionConfiguration conf) {
                 optionModel.setIcon(conf.selectionIcon().getIcon());

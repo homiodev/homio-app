@@ -323,7 +323,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel notificationAction(@PathVariable("entityID") String entityID,
         @RequestBody ActionModelRequest request) throws Exception {
-        return entityContext.ui().handleNotificationAction(entityID, request.entityID, null, request.params);
+        return entityContext.ui().handleNotificationAction(entityID, request.entityID, request.params);
     }
 
     @GetMapping("/{type}/actions")
