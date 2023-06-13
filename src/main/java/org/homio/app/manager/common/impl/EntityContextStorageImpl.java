@@ -121,7 +121,7 @@ public class EntityContextStorageImpl implements EntityContextStorage {
                 builder.setDescription("sys.java_cpu_load_description").setReadOnly(true).setUnit("%").setColor("#B03780"));
         String memID = entityContext.var().createVariable("hardware", "sys_mem_load", "sys.mem_load",
             VariableType.Float, builder ->
-                builder.setDescription("sys.mem_load_description").setReadOnly(true).setColor("#939C35"));
+                builder.setDescription("sys.mem_load_description").setReadOnly(true).setUnit("%").setColor("#939C35"));
         entityContext.event().addEvent("sys_cpu_load");
         entityContext.event().addEvent("java_cpu_load");
         entityContext.event().addEvent("sys_mem_load");

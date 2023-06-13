@@ -46,7 +46,7 @@ public interface HasChartTimePeriod extends HasJsonData {
 
     @UIField(order = 3, disableEdit = true)
     @UIFieldGroup(value = "TIME_PERIOD")
-    @UIFieldFunction("return (context.get('chartMinutesToShow') / context.get('chartPointsPerHour')).toFixed(2)")
+    @UIFieldFunction("return (context.get('chartMinutesToShow') / context.get('chartPointsPerHour')).toFixed(3)")
     default String getMinutesPerPoint() {
         return null;
     }

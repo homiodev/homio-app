@@ -4,9 +4,7 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -16,7 +14,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.ManyToOne;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -42,7 +39,6 @@ import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.color.UIFieldColorRef;
@@ -271,10 +267,12 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
         sourceHistory.setAttributes(new ArrayList<>(Arrays.asList(
             "Owner:" + workspaceGroup.getName(),
             "Backup:" + backup,
-            "Unit:" + unit,
             "Quota:" + quota,
             "Type:" + restriction.name().toLowerCase(),
             "Writable:" + !readOnly)));
+        if (unit != null) {
+            sourceHistory.getAttributes().add("Unit: " + unit);
+        }
         sourceHistory.getAttributes().addAll(getAttributes());
 
         return sourceHistory;

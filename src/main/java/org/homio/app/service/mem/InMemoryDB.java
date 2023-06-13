@@ -74,17 +74,6 @@ public final class InMemoryDB {
         client = MongoClients.create(MongoClientSettings.builder().codecRegistry(codecRegistry).applyToClusterSettings(
             builder -> builder.hosts(Collections.singletonList(new ServerAddress(serverAddress)))).build());
         datastore = client.getDatabase(DATABASE);
-        /*Mapper mapper = new Mapper(datastore, datastore.getDatabase().getCodecRegistry(), MapperOptions.DEFAULT) {
-            @Override
-            public <T> boolean isMappable(Class<T> type) {
-                return super.isMappable(type) || InMemoryDBEntity.class.isAssignableFrom(type);
-            }
-        };
-        try {
-            FieldUtils.writeDeclaredField(datastore, "mapper", mapper, true);
-        } catch (IllegalAccessException ex) {
-            throw new RuntimeException(ex);
-        }*/
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
@@ -168,16 +157,15 @@ public final class InMemoryDB {
 
         private final Class<T> pojoClass;
         private final String collectionName;
-        private final MongoCollection<T> collection;
+        private final @NotNull MongoCollection<T> collection;
         private final AtomicLong estimateUsed = new AtomicLong(0);
         private final Map<String, Consumer<T>> saveListeners = new HashMap<>();
-        private Long quota;
+        private @Nullable Long quota;
         // delta is 10% of quota but not more than 1000
         private int delta;
 
         @Override
-        public List<SourceHistoryItem> getSourceHistoryItems(@Nullable String field, @Nullable String value, int from,
-            int count) {
+        public List<SourceHistoryItem> getSourceHistoryItems(@Nullable String field, @Nullable String value, int from, int count) {
             Bson filter = field == null || value == null ? new Document() : Filters.eq(field, value);
             try (MongoCursor<T> cursor = queryWithSort(filter, SortBy.sortDesc(CREATED), count, from)) {
                 return StreamSupport.stream(Spliterators.spliteratorUnknownSize(cursor, 0), false)
@@ -260,7 +248,7 @@ public final class InMemoryDB {
         }
 
         @Override
-        public Long getQuota() {
+        public @Nullable Long getQuota() {
             return quota;
         }
 
