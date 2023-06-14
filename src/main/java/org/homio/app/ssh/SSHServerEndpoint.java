@@ -1,6 +1,8 @@
 package org.homio.app.ssh;
 
+import static java.lang.String.format;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
 import com.sshtools.client.SessionChannelNG;
 import com.sshtools.client.SshClient;
@@ -10,6 +12,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +20,10 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.map.PassiveExpiringMap;
-import org.homio.api.EntityContext;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.impl.EntityContextServiceImpl.DynamicWebSocketHandler;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermHandler;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermMessageType;
 import org.homio.app.ssh.SshProviderService.SshSession;
@@ -26,24 +31,28 @@ import org.jetbrains.annotations.NotNull;
 import org.msgpack.core.MessageBufferPacker;
 import org.msgpack.core.MessagePack;
 import org.msgpack.core.MessageUnpacker;
-import org.springframework.context.ApplicationContext;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
 @Log4j2
 @Service
-@RequiredArgsConstructor
-public class SSHServerEndpoint extends BinaryWebSocketHandler {
+public class SSHServerEndpoint extends BinaryWebSocketHandler implements DynamicWebSocketHandler {
+
+    private static final String WEBSSH_PATH = CUSTOM_WEB_SOCKET_ENDPOINT + "/webssh";
 
     private static final PassiveExpiringMap<String, SessionContext> sessionByToken = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
     private static final PassiveExpiringMap<String, SessionContext> sessionBySessionId = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
-    private final ApplicationContext applicationContext;
+    private final EntityContextImpl entityContext;
 
-    public boolean hasToken(String token) {
-        return sessionByToken.containsKey(token);
+    public SSHServerEndpoint(EntityContextImpl entityContext) {
+        this.entityContext = entityContext;
     }
 
     @Override
@@ -79,13 +88,15 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler {
     }
 
     public SshSession openSession(SshGenericEntity entity) {
+        entityContext.service().registerWebSocketEndpoint(WEBSSH_PATH, this);
+
         String token = UUID.randomUUID().toString();
         SessionContext sessionContext = new SessionContext(token, entity);
         sessionByToken.put(token, sessionContext);
 
         SshSession session = new SshSession();
         session.setToken(token);
-        session.setWsURL("ws://" + MACHINE_IP_ADDRESS + ":9111/webssh?token=" + token);
+        session.setWsURL(format("ws://%s:9111%s?token=${TOKEN}&Authentication=${BEARER}", MACHINE_IP_ADDRESS, WEBSSH_PATH));
         return session;
     }
 
@@ -126,13 +137,13 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler {
             payload.packArrayHeader(2);
             payload.packByte((byte) messageType.id);
             switch (xtermHandler) {
-                case pty_data:
+                case pty_data -> {
                     payload.packArrayHeader(3);
                     payload.packByte((byte) xtermHandler.id);
                     payload.packByte((byte) 0);
                     payload.packString(new String(data));
-                    break;
-                case sync:
+                }
+                case sync -> {
                     payload.packArrayHeader(5);
                     payload.packByte((byte) xtermHandler.id); // handler id
                     payload.packByte((byte) 120); // col width
@@ -144,9 +155,8 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler {
                     payload.packString("bash");
                     payload.packByte((byte) 0); // 0 instead of array: [0, 120, 29, 0, 0]
                     payload.packByte((byte) 0);
-
                     payload.packByte((byte) 0);
-
+                }
             }
             payload.close();
             return ByteBuffer.wrap(payload.toByteArray());
@@ -198,7 +208,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler {
             if (threadContext != null && !threadContext.isStopped()) {
                 return;
             }
-            threadContext = applicationContext.getBean(EntityContext.class).bgp().builder("ssh-shell-" + sessionId).execute(() -> {
+            threadContext = entityContext.bgp().builder("ssh-shell-" + sessionId).execute(() -> {
                 try {
                     connect();
                 } catch (Exception e) {
@@ -265,5 +275,18 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler {
                 });
             }
         }
+    }
+
+    @Override
+    public boolean beforeHandshake(@NotNull ServerHttpRequest serverHttpRequest, ServerHttpResponse response, WebSocketHandler wsHandler,
+        Map<String, Object> attributes) {
+        if (serverHttpRequest instanceof ServletServerHttpRequest request) {
+            String token = request.getServletRequest().getParameter("token");
+            if (!StringUtils.isEmpty(token) && sessionByToken.containsKey(token)) {
+                attributes.put("token", token);
+                return true;
+            }
+        }
+        return false;
     }
 }

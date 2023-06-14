@@ -1,5 +1,8 @@
 package org.homio.app.config;
 
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
+import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
+
 import lombok.AllArgsConstructor;
 import lombok.val;
 import org.apache.catalina.filters.RequestFilter;
@@ -54,19 +57,19 @@ public class SecurityConfiguration {
                 + "\n!!! TouchHome security disabled !!!"
                 + "\n-----------------------------------");
             http.authorizeHttpRequests(authorize ->
-                authorize.requestMatchers(WebSocketConfig.ENDPOINT, "/rest/**").permitAll());
+                authorize.requestMatchers(WEB_SOCKET_ENDPOINT, CUSTOM_WEB_SOCKET_ENDPOINT + "/**", "/rest/**").permitAll());
         } else {
             http.authorizeHttpRequests(authorize -> {
                 authorize.requestMatchers(
-                    WebSocketConfig.ENDPOINT,
+                    WEB_SOCKET_ENDPOINT,
+                    CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
                     "/rest/test",
-                    "/rest/frame/**",
-                    "/rest/media/audio/**/play",
-                    "/rest/media/video/**/play",
-                    "/rest/media/video/playback/**/download",
-                    "/rest/media/video/playback/**/thumbnail/**",
                     "/rest/auth/status",
                     "/rest/auth/login",
+                    "/rest/frame/**",
+                    "/rest/media/audio/**",
+                    "/rest/media/video/**",
+                    "/rest/media/video/playback/**",
                     "/rest/addon/image/**",
                     "/rest/media/image/**",
                     "/rest/device/**").permitAll();

@@ -3,6 +3,7 @@ package org.homio.app.rest;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
 import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE_AUTHORIZE;
+import static org.homio.app.model.entity.user.UserBaseEntity.log;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,6 +18,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 import lombok.val;
 import org.homio.api.console.ConsolePlugin;
@@ -211,6 +213,7 @@ public class ConsoleController implements ContextRefreshed {
     @PostMapping("/ssh")
     @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
     public SshProviderService.SshSession openSshSession(@RequestBody SshRequest request) {
+        log.info("Request open ssh: {}", request);
         BaseEntity entity = entityContext.getEntity(request.getEntityID());
         if (entity instanceof SshBaseEntity) {
             SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
@@ -292,6 +295,7 @@ public class ConsoleController implements ContextRefreshed {
 
     @Getter
     @Setter
+    @ToString
     public static class SshRequest {
 
         private String entityID;

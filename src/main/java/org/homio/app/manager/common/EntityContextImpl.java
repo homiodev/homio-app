@@ -34,9 +34,7 @@ import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
 import org.homio.api.EntityContextMedia;
-import org.homio.api.EntityContextService;
 import org.homio.api.EntityContextStorage;
-import org.homio.api.EntityContextWorkspace;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.entity.DisableCacheEntity;
@@ -275,12 +273,12 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public @NotNull EntityContextWorkspace workspace() {
+    public @NotNull EntityContextWorkspaceImpl workspace() {
         return entityContextWorkspace;
     }
 
     @Override
-    public @NotNull EntityContextService service() {
+    public @NotNull EntityContextServiceImpl service() {
         return entityContextService;
     }
 

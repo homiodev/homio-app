@@ -1,5 +1,7 @@
 package org.homio.app.auth;
 
+import static org.apache.commons.lang3.StringUtils.defaultString;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -7,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,7 +25,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
         throws ServletException, IOException {
         log.debug("Request: {}. Host: {}", request.getRequestURI(), request.getHeader("Host"));
-        String token = jwtTokenProvider.resolveToken(request.getHeader("Authorization"));
+        String token = jwtTokenProvider.resolveToken(defaultString(request.getHeader("Authorization"), request.getParameter("Authorization")));
         try {
             if (token != null) {
                 if (jwtTokenProvider.validateToken(token)) {
