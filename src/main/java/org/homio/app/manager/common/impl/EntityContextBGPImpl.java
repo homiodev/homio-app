@@ -4,6 +4,7 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 
+import com.pivovarit.function.ThrowingBiConsumer;
 import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingConsumer;
 import com.pivovarit.function.ThrowingFunction;
@@ -11,7 +12,6 @@ import com.pivovarit.function.ThrowingRunnable;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
@@ -39,19 +39,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.SystemUtils;
-import org.homio.api.EntityContext;
+import org.apache.logging.log4j.Level;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.service.EntityService.WatchdogService;
-import org.homio.api.setting.SettingPlugin;
 import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppProperties;
@@ -69,7 +66,6 @@ import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-@SuppressWarnings("unchecked")
 @Log4j2
 public class EntityContextBGPImpl implements EntityContextBGP {
 
@@ -191,6 +187,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @Override
     public void executeOnExit(ThrowingRunnable runnable) {
+        executeOnExitImpl(runnable);
+    }
+
+    private static void executeOnExitImpl(ThrowingRunnable runnable) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 runnable.run();
@@ -213,7 +213,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public <T> ScheduleBuilder<T> builder(@NotNull String name) {
+    public <T> @NotNull ScheduleBuilder<T> builder(@NotNull String name) {
         ThreadContextImpl<T> context = new ThreadContextImpl<>();
         context.name = name;
         context.scheduleType = ScheduleType.SINGLE;
@@ -221,7 +221,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             private Function<Runnable, ScheduledFuture<?>> scheduleHandler;
 
             @Override
-            public ThreadContext<T> execute(@NotNull ThrowingFunction<ThreadContext<T>, T, Exception> command, boolean start) {
+            public @NotNull ThreadContext<T> execute(@NotNull ThrowingFunction<ThreadContext<T>, T, Exception> command, boolean start) {
                 context.command = command;
                 if (scheduleHandler == null) {
                     scheduleHandler = runnable -> {
@@ -249,7 +249,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             }
 
             @Override
-            public ThreadContext<Void> execute(@NotNull ThrowingRunnable<Exception> command, boolean start) {
+            public @NotNull ThreadContext<Void> execute(@NotNull ThrowingRunnable<Exception> command, boolean start) {
                 context.command = arg -> {
                     if (context.authentication == null) {
                         command.run();
@@ -267,81 +267,81 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             }
 
             @Override
-            public ScheduleBuilder<T> interval(@NotNull String cron) {
+            public @NotNull ScheduleBuilder<T> interval(@NotNull String cron) {
                 context.scheduleType = ScheduleType.CRON;
                 scheduleHandler = runnable -> taskScheduler.schedule(runnable, new CronTrigger(cron));
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> interval(@NotNull Duration duration) {
+            public @NotNull ScheduleBuilder<T> interval(@NotNull Duration duration) {
                 context.scheduleType = ScheduleType.DELAY;
                 context.period = duration;
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> throwOnError(boolean value) {
+            public @NotNull ScheduleBuilder<T> throwOnError(boolean value) {
                 context.throwOnError = value;
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> onError(@NotNull Consumer<Exception> errorListener) {
+            public @NotNull ScheduleBuilder<T> onError(@NotNull Consumer<Exception> errorListener) {
                 context.errorListener = errorListener;
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> metadata(@NotNull String key, @NotNull Object value) {
+            public @NotNull ScheduleBuilder<T> metadata(@NotNull String key, @NotNull Object value) {
                 context.metadata.put(key, value);
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> tap(Consumer<ThreadContext<T>> handler) {
+            public @NotNull ScheduleBuilder<T> tap(Consumer<ThreadContext<T>> handler) {
                 handler.accept(context);
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> delay(@NotNull Duration duration) {
+            public @NotNull ScheduleBuilder<T> delay(@NotNull Duration duration) {
                 context.delay = duration;
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> auth() {
+            public @NotNull ScheduleBuilder<T> auth() {
                 context.authentication = SecurityContextHolder.getContext().getAuthentication();
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> hideOnUI(boolean value) {
+            public @NotNull ScheduleBuilder<T> hideOnUI(boolean value) {
                 context.showOnUI = !value;
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> hideOnUIAfterCancel(boolean value) {
+            public @NotNull ScheduleBuilder<T> hideOnUIAfterCancel(boolean value) {
                 context.hideOnUIAfterCancel = value;
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> cancelOnError(boolean value) {
+            public @NotNull ScheduleBuilder<T> cancelOnError(boolean value) {
                 context.cancelOnError = value;
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> linkLogFile(Path logFile) {
+            public @NotNull ScheduleBuilder<T> linkLogFile(@NotNull Path logFile) {
                 context.logFile = logFile;
                 return this;
             }
 
             @Override
-            public ScheduleBuilder<T> valueListener(@NotNull String name, @NotNull ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
+            public @NotNull ScheduleBuilder<T> valueListener(@NotNull String name, @NotNull ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
                 context.addValueListener(name, valueListener);
                 return this;
             }
@@ -349,39 +349,43 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public <T> void runService(@NotNull EntityContext entityContext, @NotNull Consumer<Process> processConsumer, @NotNull String name,
-        @NotNull Class<? extends SettingPlugin<T>> settingClass) {
-        if (SystemUtils.IS_OS_LINUX) {
-            entityContext.hardware().startSystemCtl(name);
-        } else {
-            Path targetPath = Paths.get(entityContext.setting().getRawValue(settingClass));
-            Path logFile = targetPath.getParent().resolve("execution-" + name + ".log");
-            entityContext.bgp().builder(name + "-service").linkLogFile(logFile).hideOnUIAfterCancel(false).execute(() -> {
-                Process process = Runtime.getRuntime().exec(targetPath.toString());
-                entityContext.bgp().executeOnExit(() -> {
-                    if (process != null) {
-                        process.destroyForcibly();
-                    }
-                });
-                processConsumer.accept(process);
-                HQueryProgressBar progressBar = HQueryProgressBar.of(s -> {});
-                Thread inputThread = new Thread(new LinesReader(name + "inputReader", process.getInputStream(), progressBar, false, message ->
-                    log.info("[{}]: {}", name, message)));
-                Thread errorThread = new Thread(new LinesReader(name + "errorReader", process.getErrorStream(), progressBar, true, message ->
-                    log.error("[{}]: {}", name, message)));
-                inputThread.start();
-                errorThread.start();
+    public @NotNull ProcessBuilder processBuilder(@NotNull String name) {
+        ProcessContextImpl processContext = new ProcessContextImpl();
+        processContext.name = name;
+        return new ProcessBuilder() {
 
-                process.waitFor();
-                inputThread.interrupt();
-                errorThread.interrupt();
-            });
-        }
+            @Override
+            public @NotNull ProcessBuilder logToConsole(boolean value) {
+                processContext.logToConsole = value;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessBuilder onStarted(@NotNull ThrowingConsumer<ProcessContext, Exception> startedHandler) {
+                processContext.startedHandler = startedHandler;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessBuilder onFinished(@NotNull ThrowingBiConsumer<@Nullable Exception, @NotNull Integer, Exception> finishHandler) {
+                processContext.finishHandler = finishHandler;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessContext execute(@NotNull String command) {
+                builder(name)
+                    .metadata("processContext", processContext)
+                    .onError(processContext::onError)
+                    .execute(() -> processContext.run(command));
+                return processContext;
+            }
+        };
     }
 
     @Override
     @SneakyThrows
-    public ThreadContext<Void> runDirectoryWatchdog(@NotNull Path dir, @NotNull ThrowingConsumer<WatchEvent<Path>, Exception> onUpdateCommand,
+    public @NotNull ThreadContext<Void> runDirectoryWatchdog(@NotNull Path dir, @NotNull ThrowingConsumer<WatchEvent<Path>, Exception> onUpdateCommand,
         Kind<?>... eventsToListen) {
         String threadKey = "dir-watchdog-" + dir.getFileName().toString();
         if (isThreadExists(threadKey, true)) {
@@ -415,7 +419,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @Override
     @SneakyThrows
-    public ThreadContext<Void> runFileWatchdog(@NotNull Path file, String key, @NotNull ThrowingRunnable<Exception> onUpdateCommand) {
+    public @NotNull ThreadContext<Void> runFileWatchdog(@NotNull Path file, String key, @NotNull ThrowingRunnable<Exception> onUpdateCommand) {
         if (!Files.exists(file)) {
             throw new IllegalArgumentException("File: " + file + " does not exists");
         }
@@ -444,7 +448,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public ProgressBuilder runWithProgress(@NotNull String key) {
+    public @NotNull ProgressBuilder runWithProgress(@NotNull String key) {
         return new ProgressBuilderImpl(key);
     }
 
@@ -591,20 +595,20 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private @Nullable Exception errorIfExists;
 
         @Override
-        public ProgressBuilder onFinally(@Nullable Consumer<Exception> finallyBlock) {
+        public @NotNull ProgressBuilder onFinally(@Nullable Consumer<Exception> finallyBlock) {
             this.onFinally = finallyBlock;
             return this;
         }
 
         @Override
-        public ProgressBuilder onError(@Nullable Runnable errorBlock) {
+        public @NotNull ProgressBuilder onError(@Nullable Runnable errorBlock) {
             this.onError = errorBlock;
             return this;
         }
 
         @Override
         @SneakyThrows
-        public <R> ThreadContext<R> execute(@NotNull ThrowingFunction<ProgressBar, R, Exception> command) {
+        public <R> @NotNull ThreadContext<R> execute(@NotNull ThrowingFunction<ProgressBar, R, Exception> command) {
             if (errorIfExists != null && isThreadExists(key, true)) {
                 throw errorIfExists;
             }
@@ -637,7 +641,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Getter
-    @NoArgsConstructor
     public class ThreadContextImpl<T> implements ThreadContext<T> {
 
         private final JSONObject metadata = new JSONObject();
@@ -665,16 +668,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private Map<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
         private Map<String, ThrowingRunnable<Exception>> simpleWorkUnitListeners;
         private Consumer<Exception> errorListener;
-
-        public ThreadContextImpl(String name, ThrowingFunction<ThreadContext<T>, T, Exception> command, ScheduleType scheduleType, Duration period,
-            boolean showOnUI, boolean hideOnUIAfterCancel) {
-            this.name = name;
-            this.command = command;
-            this.scheduleType = scheduleType;
-            this.period = period;
-            this.showOnUI = showOnUI;
-            this.hideOnUIAfterCancel = hideOnUIAfterCancel;
-        }
 
         @Override
         public String getTimeToNextSchedule() {
@@ -769,6 +762,92 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             stopped = true;
             if (!showOnUI || hideOnUIAfterCancel) {
                 EntityContextBGPImpl.this.schedulers.remove(name);
+            }
+        }
+    }
+
+    @Getter
+    public static class ProcessContextImpl implements ProcessContext {
+
+        private final Date creationTime = new Date();
+        public @Nullable ThrowingConsumer<ProcessContext, Exception> startedHandler;
+        public @Nullable ThrowingBiConsumer<Exception, Integer, Exception> finishHandler;
+        public Process process;
+        private boolean logToConsole;
+        private String name;
+        private Thread inputThread;
+        private Thread errorThread;
+
+        @Override
+        public boolean isStopped() {
+            return process == null || !process.isAlive();
+        }
+
+        @Override
+        public void cancel() {
+            process.destroyForcibly();
+            // executeFinishHandler(null, -1, false);
+        }
+
+        public void run(@NotNull String command) throws Exception {
+            process = Runtime.getRuntime().exec(command);
+            executeOnExitImpl(() -> {
+                if (process != null) {
+                    process.destroyForcibly();
+                }
+            });
+            if (startedHandler != null) {
+                try {
+                    startedHandler.accept(this);
+                } catch (Exception ex) {
+                    log.error("Error during process: '{}' start handler. Err: {}", name, CommonUtils.getErrorMessage(ex));
+                    throw ex;
+                }
+            }
+
+            if(logToConsole) {
+                HQueryProgressBar progressBar = HQueryProgressBar.of(s -> {});
+                inputThread = new Thread(new LinesReader(name + "inputReader", process.getInputStream(), progressBar, false, message ->
+                    log.log(message.contains("error") ? Level.ERROR : Level.INFO, "[{}]: {}", name, message)));
+                errorThread = new Thread(new LinesReader(name + "errorReader", process.getErrorStream(), progressBar, true, message ->
+                    log.error("[{}]: {}", name, message)));
+                inputThread.start();
+                errorThread.start();
+            }
+
+            int responseCode = process.waitFor();
+            executeFinishHandler(null, responseCode, true);
+        }
+
+        public void onError(Exception ex) {
+            executeFinishHandler(ex, -1, true);
+        }
+
+        private void executeFinishHandler(Exception ex, int exitCode, boolean callFinishHandler) {
+            if (ex != null) {
+                log.error("Process '{}' finished with error code: {}. Err: {}", name, exitCode, CommonUtils.getErrorMessage(ex));
+            } else {
+                log.info("Process '{}' finished with code: {}", name, exitCode);
+            }
+            if (callFinishHandler && finishHandler != null) {
+                try {
+                    finishHandler.accept(ex, exitCode);
+                } catch (Exception fex) {
+                    log.error("Error occurred during finish process: {}", name);
+                }
+            }
+            if (inputThread != null) {
+                executeSilently(() -> inputThread.join(100));
+            }
+            if (errorThread != null) {
+                executeSilently(() -> errorThread.join(100));
+            }
+        }
+
+        private void executeSilently(ThrowingRunnable<Exception> handler) {
+            try {
+                handler.run();
+            } catch (Exception ignore) {
             }
         }
     }

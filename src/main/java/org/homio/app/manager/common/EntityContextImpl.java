@@ -150,7 +150,7 @@ public class EntityContextImpl implements EntityContext {
         BEAN_CONTEXT_REFRESH.add(AudioService.class);
     }
 
-    private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app");
+    private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app", CommonUtils.getInstallPath().resolve("homio"));
     private final EntityContextUIImpl entityContextUI;
     private final EntityContextInstallImpl entityContextInstall;
     private final EntityContextEventImpl entityContextEvent;
@@ -602,7 +602,7 @@ public class EntityContextImpl implements EntityContext {
             String latestVersion = appGitHub.getLastReleaseVersion();
             if (!installedVersion.equals(latestVersion)) {
                 builder.setUpdatable(
-                    (progressBar, version) -> appGitHub.updating("homio", CommonUtils.getInstallPath().resolve("homio"),
+                    (progressBar, version) -> appGitHub.updateWithBackup("homio",
                         progressBar, projectUpdate -> {
                             projectUpdate.downloadSource(version);
                             long pid = ProcessHandle.current().pid();
@@ -610,7 +610,7 @@ public class EntityContextImpl implements EntityContext {
                             String jarLocation = EntityContextImpl.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
                             String content = format(IS_OS_WINDOWS ? "@echo off\ntaskkill /F /PID %s\nmove %s %s\nstart javaw -jar \"%s\"\nexit"
                                     : "#!/bin/bash\nkill -9 %s\nmv %s %s\nnohup sudo java -jar %s &>/dev/null &", pid,
-                                projectUpdate.getProjectPath(), jarLocation, jarLocation);
+                                projectUpdate.getProject().getLocalProjectPath(), jarLocation, jarLocation);
                             CommonUtils.writeToFile(updateScript, content, false);
                             Runtime.getRuntime().exec(updateScript.toString());
                             return null;
