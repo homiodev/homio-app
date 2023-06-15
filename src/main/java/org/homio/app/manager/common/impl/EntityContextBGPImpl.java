@@ -9,6 +9,7 @@ import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingConsumer;
 import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
+import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,6 +45,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.logging.log4j.Level;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.exception.ServerException;
@@ -56,11 +58,11 @@ import org.homio.app.json.BgpProcessResponse;
 import org.homio.app.manager.bgp.InternetAvailabilityBgpService;
 import org.homio.app.manager.bgp.WatchdogBgpService;
 import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.hquery.HQueryProgressBar;
-import org.homio.hquery.LinesReader;
+import org.homio.hquery.StreamGobbler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+import org.jvnet.winp.WinProcess;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.security.core.Authentication;
@@ -108,17 +110,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
         return response;
     }
-
-    /* @Override
-    public <T> ThreadContext<T> runAndGet(@NotNull String name,
-        @Nullable Duration delay,
-        @NotNull ThrowingSupplier<T, Exception> command,
-        boolean showOnUI) {
-      return createSchedule(name, delay, threadContext -> command.get(),
-          EntityContextBGPImpl.ScheduleType.SINGLE, showOnUI, true,
-          runnable -> taskScheduler.schedule(runnable, delay == null ?
-              new Date() : new Date(System.currentTimeMillis() + delay.toMillis())));
-    }*/
 
     @Override
     public void cancelThread(@NotNull String name) {
@@ -374,8 +365,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
             @Override
             public @NotNull ProcessContext execute(@NotNull String command) {
-                builder(name)
-                    .metadata("processContext", processContext)
+                processContext.threadContext = builder(name)
                     .onError(processContext::onError)
                     .execute(() -> processContext.run(command));
                 return processContext;
@@ -475,6 +465,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         try {
             while (!executor.isTerminated()) {
                 try {
+                    //noinspection ResultOfMethodCallIgnored
                     executor.awaitTermination(1, TimeUnit.SECONDS);
                     long completedTaskCount = executor.getCompletedTaskCount();
                     progressConsumer.accept((int) completedTaskCount);
@@ -773,10 +764,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         public @Nullable ThrowingConsumer<ProcessContext, Exception> startedHandler;
         public @Nullable ThrowingBiConsumer<Exception, Integer, Exception> finishHandler;
         public Process process;
-        private boolean logToConsole;
+        public ThreadContext<Void> threadContext;
+        private boolean logToConsole = true;
         private String name;
-        private Thread inputThread;
-        private Thread errorThread;
+        private StreamGobbler streamGobbler;
 
         @Override
         public boolean isStopped() {
@@ -784,70 +775,75 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
 
         @Override
-        public void cancel() {
-            process.destroyForcibly();
-            // executeFinishHandler(null, -1, false);
+        @SneakyThrows
+        public void cancel(boolean sendSignal) {
+            cancelProcess(sendSignal, false);
+        }
+
+        private void cancelProcess(boolean sendSignal, boolean shutdownHook) throws InterruptedException, IOException {
+            if (process != null) {
+                if (sendSignal) {
+                    if (SystemUtils.IS_OS_WINDOWS) {
+                        WinProcess p = new WinProcess(process);
+                        log.info("Sending Ctrl-C to process: {}. Result: {}", name, p.sendCtrlC());
+                        Thread.sleep(1000);
+                        log.info("Killing process tree: {}", name);
+                        p.killRecursively();
+                    } else {
+                        StreamGobbler.streamAndStop(Runtime.getRuntime().exec("kill -SIGINT " + process.pid()), 200, 500);
+                    }
+                }
+
+                if (streamGobbler != null && !shutdownHook) {
+                    this.streamGobbler.stopStream(1000, 5000);
+                }
+                process.destroy();
+            }
         }
 
         public void run(@NotNull String command) throws Exception {
+            log.info("[{}]: Starting process command: '{}'", name, command);
             process = Runtime.getRuntime().exec(command);
-            executeOnExitImpl(() -> {
-                if (process != null) {
-                    process.destroyForcibly();
-                }
-            });
+            executeOnExitImpl(() -> cancelProcess(true, true));
             if (startedHandler != null) {
                 try {
                     startedHandler.accept(this);
                 } catch (Exception ex) {
-                    log.error("Error during process: '{}' start handler. Err: {}", name, CommonUtils.getErrorMessage(ex));
+                    log.error("[{}]: Error during run process start handler. Err: {}", name, CommonUtils.getErrorMessage(ex));
                     throw ex;
                 }
             }
 
-            if(logToConsole) {
-                HQueryProgressBar progressBar = HQueryProgressBar.of(s -> {});
-                inputThread = new Thread(new LinesReader(name + "inputReader", process.getInputStream(), progressBar, false, message ->
-                    log.log(message.contains("error") ? Level.ERROR : Level.INFO, "[{}]: {}", name, message)));
-                errorThread = new Thread(new LinesReader(name + "errorReader", process.getErrorStream(), progressBar, true, message ->
-                    log.error("[{}]: {}", name, message)));
-                inputThread.start();
-                errorThread.start();
+            if (logToConsole) {
+                this.streamGobbler = new StreamGobbler(name,
+                    message -> log.log(message.contains("error") ? Level.ERROR : Level.INFO, "[{}]: {}", name, message),
+                    message -> log.error("[{}]: {}", name, message));
             }
 
+            log.info("[{}]: wait process to finish.", name);
             int responseCode = process.waitFor();
-            executeFinishHandler(null, responseCode, true);
+            executeFinishHandler(null, responseCode);
         }
 
         public void onError(Exception ex) {
-            executeFinishHandler(ex, -1, true);
+            executeFinishHandler(ex, -1);
         }
 
-        private void executeFinishHandler(Exception ex, int exitCode, boolean callFinishHandler) {
+        private void executeFinishHandler(Exception ex, int exitCode) {
             if (ex != null) {
                 log.error("Process '{}' finished with error code: {}. Err: {}", name, exitCode, CommonUtils.getErrorMessage(ex));
             } else {
                 log.info("Process '{}' finished with code: {}", name, exitCode);
             }
-            if (callFinishHandler && finishHandler != null) {
+            if (finishHandler != null) {
                 try {
                     finishHandler.accept(ex, exitCode);
                 } catch (Exception fex) {
                     log.error("Error occurred during finish process: {}", name);
                 }
             }
-            if (inputThread != null) {
-                executeSilently(() -> inputThread.join(100));
-            }
-            if (errorThread != null) {
-                executeSilently(() -> errorThread.join(100));
-            }
-        }
-
-        private void executeSilently(ThrowingRunnable<Exception> handler) {
-            try {
-                handler.run();
-            } catch (Exception ignore) {
+            if (streamGobbler != null) {
+                this.streamGobbler.stopStream(100, 1000);
             }
         }
     }

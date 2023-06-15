@@ -21,6 +21,7 @@ public class SystemSoftRestartButtonSetting
         return GroupKey.system;
     }
 
+
     @Override
     public @NotNull Icon getIcon() {
         return new Icon("fas fa-power-off");

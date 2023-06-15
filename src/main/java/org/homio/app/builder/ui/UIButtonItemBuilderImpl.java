@@ -24,6 +24,8 @@ public class UIButtonItemBuilderImpl
     private String[] fireActionsBeforeChange;
     private String actionReference;
     private JSONObject metadata;
+    private String confirmMessage;
+    private String confirmMessageDialogColor;
 
     private UIDialogLayoutBuilder dialogEntityBuilder;
 

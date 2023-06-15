@@ -3,6 +3,7 @@ package org.homio.app.setting.system;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class SystemClearCacheButtonSetting
@@ -19,7 +20,12 @@ public class SystemClearCacheButtonSetting
     }
 
     @Override
-    public Icon getIcon() {
+    public String getDialogColor() {
+        return "#672E18";
+    }
+
+    @Override
+    public @NotNull Icon getIcon() {
         return new Icon("fas fa-trash");
     }
 

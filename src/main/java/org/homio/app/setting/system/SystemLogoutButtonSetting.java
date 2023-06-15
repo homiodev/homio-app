@@ -50,6 +50,11 @@ public class SystemLogoutButtonSetting
     }
 
     @Override
+    public String getDialogColor() {
+        return "#672E18";
+    }
+
+    @Override
     public void assertUserAccess(@NotNull EntityContext entityContext, @Nullable UserEntity user) {
         // allow logout for everyone
     }

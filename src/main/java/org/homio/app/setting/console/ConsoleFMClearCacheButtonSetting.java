@@ -3,12 +3,13 @@ package org.homio.app.setting.console;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class ConsoleFMClearCacheButtonSetting implements ConsoleSettingPlugin<JSONObject>, SettingPluginButton {
 
     @Override
-    public Icon getIcon() {
+    public @NotNull Icon getIcon() {
         return new Icon("fas fa-brush");
     }
 
@@ -20,6 +21,11 @@ public class ConsoleFMClearCacheButtonSetting implements ConsoleSettingPlugin<JS
     @Override
     public String getConfirmMsg() {
         return "W.CONFIRM.FM_CLEAR";
+    }
+
+    @Override
+    public String getDialogColor() {
+        return "#672E18";
     }
 
     @Override

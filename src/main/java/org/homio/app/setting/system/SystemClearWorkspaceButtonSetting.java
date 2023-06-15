@@ -30,6 +30,11 @@ public class SystemClearWorkspaceButtonSetting
     }
 
     @Override
+    public String getDialogColor() {
+        return "#672E18";
+    }
+
+    @Override
     public int order() {
         return 100;
     }

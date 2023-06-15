@@ -149,7 +149,10 @@ public class UIFieldUtils {
                             }
                         });
                 } else {
-                    uiInputBuilder.addSelectableButton(action.value(), icon, null).setText(action.value());
+                    uiInputBuilder.addSelectableButton(action.value(), icon, null)
+                                  .setConfirmMessage(action.confirmMessage())
+                                  .setConfirmMessageDialogColor(action.confirmMessageDialogColor())
+                                  .setText(action.value());
                 }
             }
             for (Method method : MethodUtils.getMethodsWithAnnotation(clazz, UIContextMenuUploadAction.class)) {
