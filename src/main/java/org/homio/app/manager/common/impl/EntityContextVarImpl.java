@@ -100,12 +100,21 @@ public class EntityContextVarImpl implements EntityContextVar {
 
     @Override
     public Object get(@NotNull String variableId) {
-        WorkspaceVariableMessage latest = getOrCreateContext(variableId).storageService.getLatest();
-        return latest == null ? null : latest.getValue();
+        VariableContext context = getOrCreateContext(variableId);
+        WorkspaceVariableMessage latest = context.storageService.getLatest();
+        if (latest == null) {
+            return null;
+        }
+        Object value = latest.getValue();
+        // force convert from double to float
+        if (value instanceof Double) {
+            return ((Double) value).floatValue();
+        }
+        return value;
     }
 
     @Override
-    public void set(@NotNull String variableId, @Nullable Object value, Consumer<Object> convertedValue) throws IllegalArgumentException {
+    public void set(@NotNull String variableId, @Nullable Object value, @NotNull Consumer<Object> convertedValue) throws IllegalArgumentException {
         set(variableId, value, convertedValue, false);
     }
 
@@ -460,31 +469,31 @@ public class EntityContextVarImpl implements EntityContextVar {
         private List<String> attributes;
 
         @Override
-        public VariableMetaBuilder setReadOnly(boolean value) {
+        public @NotNull VariableMetaBuilder setReadOnly(boolean value) {
             this.readOnly = value;
             return this;
         }
 
         @Override
-        public VariableMetaBuilder setColor(String value) {
+        public @NotNull VariableMetaBuilder setColor(String value) {
             this.color = value;
             return this;
         }
 
         @Override
-        public VariableMetaBuilder setDescription(String value) {
+        public @NotNull VariableMetaBuilder setDescription(String value) {
             this.description = value;
             return this;
         }
 
         @Override
-        public VariableMetaBuilder setUnit(String value) {
+        public @NotNull VariableMetaBuilder setUnit(String value) {
             this.unit = value;
             return this;
         }
 
         @Override
-        public VariableMetaBuilder setAttributes(List<String> attributes) {
+        public @NotNull VariableMetaBuilder setAttributes(List<String> attributes) {
             this.attributes = attributes;
             return this;
         }

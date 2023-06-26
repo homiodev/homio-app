@@ -24,7 +24,9 @@ import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.homio.app.model.entity.widget.impl.chart.HasLineChartBehaviour;
+import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("unused")
 @Entity
 public class WidgetDisplayEntity
     extends WidgetBaseEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
@@ -53,7 +55,7 @@ public class WidgetDisplayEntity
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
@@ -65,7 +67,7 @@ public class WidgetDisplayEntity
     }
 
     @Override
-    @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
+    @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true)
     public String getBackground() {
         return super.getBackground();
     }
@@ -123,6 +125,16 @@ public class WidgetDisplayEntity
 
     public void setShowChartFullScreenButton(boolean value) {
         setJsonData("sfsb", value);
+    }
+
+    @UIField(order = 2)
+    @UIFieldGroup("CHART")
+    public boolean isShowChart() {
+        return getJsonData("showC", true);
+    }
+
+    public void setShowChart(boolean value) {
+        setJsonData("showC", value);
     }
 
     private String getDefaultLayout() {

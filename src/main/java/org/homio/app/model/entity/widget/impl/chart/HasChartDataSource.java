@@ -31,7 +31,7 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 1)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
     @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
-    @UIFieldGroup(value = "CHART", order = 60, borderColor = "#9C27B0")
+    @UIFieldGroup(value = "CHART", order = 50, borderColor = "#9C27B0")
     @UIEditReloadWidget
     default String getChartDataSource() {
         return getJsonData("chartDS");
@@ -66,7 +66,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 1, isRevert = true)
-    @UIFieldGroup(value = "CHART_UI", order = 35, borderColor = "#673AB7")
+    @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
     default String getChartColor() {
@@ -78,7 +78,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 2, isRevert = true)
-    @UIFieldSlider(min = 25, max = 100, step = 5)
+    @UIFieldSlider(min = 0, max = 100, step = 5)
     @UIFieldGroup("CHART_UI")
     @UIFieldReadDefaultValue
     default int getChartColorOpacity() {

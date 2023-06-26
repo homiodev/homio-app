@@ -29,7 +29,7 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     @UIField(order = 1, required = true)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
     @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
-    @UIFieldGroup(value = "CHART", order = 10, borderColor = "#9C27B0")
+    @UIFieldGroup(value = "CHART", order = 50, borderColor = "#9C27B0")
     @UIFieldIgnoreParent
     public String getChartDataSource() {
         return getJsonData("chartDS");

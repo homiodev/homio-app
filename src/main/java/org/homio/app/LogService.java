@@ -48,8 +48,8 @@ import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.spi.AbstractLogger;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.model.HasEntityLog;
-import org.homio.api.model.HasEntityLog.EntityLogBuilder;
+import org.homio.api.entity.log.HasEntityLog;
+import org.homio.api.entity.log.HasEntityLog.EntityLogBuilder;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.spring.ContextCreated;
@@ -282,7 +282,7 @@ public class LogService
             super("Global", null);
         }
 
-        public synchronized void setEntityContext(EntityContextImpl entityContext) throws Exception {
+        public synchronized void setEntityContext(EntityContextImpl entityContext) {
             this.logStrategy = event -> sendLogs(entityContext, event);
             flushBufferedLogs();
         }
@@ -307,9 +307,8 @@ public class LogService
                 || !allowDebugLevel && event.getLevel().intLevel() <= Level.INFO.intLevel()) {
                 for (Entry<String, DefinedAppenderConsumer> entry : definedAppender.entrySet()) {
                     if (entry.getValue().accept(event.getLoggerName())) {
-                        sendLogEvent(event, message -> {
-                            entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message);
-                        });
+                        sendLogEvent(event, message ->
+                            entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message));
                     }
                 }
             }
@@ -384,7 +383,7 @@ public class LogService
 
         @Override
         @SneakyThrows
-        public void addTopic(String topic, String filterByField) {
+        public void addTopic(@NotNull String topic, String filterByField) {
             String filterValue =
                 isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity, "get" + StringUtils.capitalize(filterByField)));
             logConsumer.logTopics.add(filterValue == null

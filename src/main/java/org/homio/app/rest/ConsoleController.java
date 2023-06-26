@@ -183,10 +183,7 @@ public class ConsoleController implements ContextRefreshed {
             }
             String parentName = consolePlugin.getParentTab();
             ConsoleTab consoleTab = new ConsoleTab(entry.getKey(), consolePlugin.getRenderType(), consolePlugin.getOptions());
-            if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
-                consoleTab.getOptions().put("reqDeps",
-                    ((ConsolePluginRequireZipDependency<?>) consolePlugin).requireInstallDependencies());
-            }
+            consolePlugin.assembleOptions(consoleTab.getOptions());
 
             if (parentName != null) {
                 parens.putIfAbsent(parentName, new ConsoleTab(parentName, null, consolePlugin.getOptions()));

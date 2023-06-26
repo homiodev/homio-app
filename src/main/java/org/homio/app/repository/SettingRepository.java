@@ -13,6 +13,7 @@ import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.exception.ServerException;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginButton;
@@ -65,8 +66,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             entity.setOrder(plugin.order());
             entity.setAdvanced(plugin.isAdvanced());
             entity.setStorable(plugin.isStorable());
-            entity.setColor(plugin.getIcon().getColor());
-            entity.setIcon(plugin.getIcon().getIcon());
+            Icon icon = plugin.getIcon();
+            entity.setColor(icon == null ? null : icon.getColor());
+            entity.setIcon(icon == null ? null : icon.getIcon());
             if (plugin instanceof SettingPluginToggle) {
                 entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon().getIcon());
             }

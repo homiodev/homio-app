@@ -13,9 +13,9 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextSetting;
+import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.HasEntityLog;
 import org.homio.api.model.Status;
 import org.homio.api.service.CloudProviderService;
 import org.homio.api.ui.UI.Color;
@@ -40,8 +40,7 @@ import org.json.JSONObject;
 @Entity
 @UISidebarChildren(icon = "fas fa-cloud", color = "#644DAB")
 public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
-    CloudProviderService.SshCloud<SshCloudEntity>,
-    HasEntityLog
+    CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog
     /*, HasDynamicContextMenuActions*/ {
 
     public static final String PREFIX = "sshcloud_";

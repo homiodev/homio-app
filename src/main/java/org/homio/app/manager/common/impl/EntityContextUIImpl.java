@@ -26,12 +26,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContextUI;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasFirmwareVersion;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.HasFirmwareVersion;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.setting.SettingPluginButton;
@@ -136,7 +136,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public UIInputBuilder inputBuilder() {
+    public @NotNull UIInputBuilder inputBuilder() {
         return new UIInputBuilderImpl(entityContext);
     }
 
@@ -230,7 +230,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     @Override
     @SuppressWarnings("rawtypes")
-    public <T extends BaseEntity> void sendEntityUpdated(T entity) {
+    public <T extends BaseEntity> void sendEntityUpdated(@NotNull T entity) {
         entityContext.sendEntityUpdateNotification(entity, EntityContextImpl.ItemAction.Update);
     }
 
@@ -333,7 +333,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
             @Override
             public @NotNull HeaderButtonBuilder icon(@NotNull Icon icon) {
-                builder.setIcon(icon.getIcon()).setIconRotate(icon.getRotate()).setIconColor(icon.getColor());
+                builder.setIcon(icon.getIcon()).setIconColor(icon.getColor());
                 return this;
             }
 
@@ -401,7 +401,6 @@ public class EntityContextUIImpl implements EntityContextUI {
             if (notification.getDialogs().isEmpty()) {
                 headerButtonNotifications.remove(entityID);
             } else {
-                notification.setIconRotate(false);
                 notification.setIcon(icon == null ? notification.getIcon() : icon);
             }
             sendHeaderButtonToUI(
@@ -427,9 +426,9 @@ public class EntityContextUIImpl implements EntityContextUI {
         sendGlobal(GlobalSendType.popup, null, message, title, param);
     }
 
-    public void wdisableHeaderButton(String entityID, boolean disable) {
+    /*public void disableHeaderButton(String entityID, boolean disable) {
         sendGlobal(GlobalSendType.headerButton, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "toggle").put("disable", disable));
-    }
+    }*/
 
     public NotificationResponse getNotifications() {
         long time = System.currentTimeMillis();

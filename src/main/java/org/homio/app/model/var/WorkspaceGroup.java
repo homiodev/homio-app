@@ -14,7 +14,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import lombok.Getter;
@@ -26,14 +25,12 @@ import org.homio.api.EntityContext;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
-import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldIconPicker;
-import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldProgress.Progress;
 import org.homio.api.ui.field.UIFieldSlider;
@@ -260,20 +257,25 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
         @UIFieldInlineEntityWidth(15)
         public String restriction;
+
         @UIField(order = 30, inlineEdit = true, hideInView = true)
         @UIFieldInlineEntityWidth(12)
         @UIFieldSlider(min = 500, max = 10_000, step = 500)
         public int quota;
+
         private String entityID;
+
         @UIField(order = 10, type = UIFieldType.HTML)
         @UIFieldInlineGroup(value = "return context.get('groupName')", editable = true)
         @UIFieldColorBgRef("color")
         private String groupName;
+
         @UIField(order = 10, type = UIFieldType.HTML)
         @UIFieldColorRef("color")
         @UIFieldTitleRef("nameTitle")
         @UIFieldVariable
         private JSONObject name;
+
         @UIField(order = 40)
         @UIFieldProgress
         @UIFieldInlineEntityWidth(20)

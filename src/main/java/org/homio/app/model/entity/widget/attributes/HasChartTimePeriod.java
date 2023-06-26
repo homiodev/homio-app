@@ -21,7 +21,7 @@ public interface HasChartTimePeriod extends HasJsonData {
 
     @UIField(order = 1)
     @UIFieldTimeSlider
-    @UIFieldGroup(value = "TIME_PERIOD", order = 55, borderColor = "#166F37")
+    @UIFieldGroup(value = "CHART_TIME_PERIOD", order = 52, borderColor = "#166F37")
     @UIEditReloadWidget
     default int getChartMinutesToShow() {
         return getJsonData("mts", 60);
@@ -33,7 +33,7 @@ public interface HasChartTimePeriod extends HasJsonData {
 
     @UIField(order = 2)
     @UIFieldSlider(min = 1, max = 600, step = 5) // max 10 point per minute
-    @UIFieldGroup(value = "TIME_PERIOD")
+    @UIFieldGroup(value = "CHART_TIME_PERIOD")
     @UIEditReloadWidget
     @UIFieldReadDefaultValue
     default int getChartPointsPerHour() {
@@ -45,14 +45,14 @@ public interface HasChartTimePeriod extends HasJsonData {
     }
 
     @UIField(order = 3, disableEdit = true)
-    @UIFieldGroup(value = "TIME_PERIOD")
+    @UIFieldGroup(value = "CHART_TIME_PERIOD")
     @UIFieldFunction("return (context.get('chartMinutesToShow') / context.get('chartPointsPerHour')).toFixed(3)")
     default String getMinutesPerPoint() {
         return null;
     }
 
     @UIField(order = 4, disableEdit = true)
-    @UIFieldGroup(value = "TIME_PERIOD")
+    @UIFieldGroup(value = "CHART_TIME_PERIOD")
     @UIFieldFunction("return Math.ceil(context.get('chartMinutesToShow') * context.get('chartPointsPerHour') / 60)")
     default String getTotalPointsCount() {
         return null;

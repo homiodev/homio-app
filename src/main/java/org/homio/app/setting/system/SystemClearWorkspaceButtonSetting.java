@@ -2,6 +2,7 @@ package org.homio.app.setting.system;
 
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
+import org.homio.api.ui.UI.Color;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -31,7 +32,7 @@ public class SystemClearWorkspaceButtonSetting
 
     @Override
     public String getDialogColor() {
-        return "#672E18";
+        return Color.ERROR_DIALOG;
     }
 
     @Override

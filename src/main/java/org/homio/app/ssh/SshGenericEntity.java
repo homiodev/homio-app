@@ -172,7 +172,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     @UIField(order = 1)
     @UIFieldGroup(value = "FS", order = 20, borderColor = "#914991")
     public @NotNull String getFileSystemRoot() {
-        return getJsonData("fs_root", "/home");
+        return Objects.requireNonNull(getJsonData("fs_root", "/home"));
     }
 
     public void setFileSystemRoot(String value) {

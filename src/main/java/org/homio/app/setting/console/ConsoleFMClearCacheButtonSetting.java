@@ -3,6 +3,7 @@ package org.homio.app.setting.console;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
+import org.homio.api.ui.UI.Color;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
@@ -25,7 +26,7 @@ public class ConsoleFMClearCacheButtonSetting implements ConsoleSettingPlugin<JS
 
     @Override
     public String getDialogColor() {
-        return "#672E18";
+        return Color.ERROR_DIALOG;
     }
 
     @Override

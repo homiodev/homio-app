@@ -275,7 +275,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value,
         SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
         if (settingListeners.containsKey(settingPluginClazz.getName())) {
-            entityContext.bgp().builder("update-setting-" + settingPluginClazz.getSimpleName()).auth().auth().execute(() -> {
+            entityContext.bgp().builder("update-setting-" + settingPluginClazz.getSimpleName()).auth().execute(() -> {
                 for (ThrowingConsumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {
                     try {
                         consumer.accept(value);
@@ -306,7 +306,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         }
     }
 
-    private <T> String setValueSilence(SettingPlugin pluginFor, @NotNull T value) {
+    private <T> String setValueSilence(SettingPlugin pluginFor, @Nullable T value) {
         String strValue = pluginFor.writeValue(value);
         this.setValueSilenceRaw(pluginFor, strValue);
         return strValue;

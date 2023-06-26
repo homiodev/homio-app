@@ -191,7 +191,7 @@ public class LoggerService implements ContextCreated {
                 new PropertiesUtil(new Properties()), stream);
             this.showDateTime = showDateTime;
             if (showDateTime) {
-                this.dateFormatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss:SSS zzz");
+                this.dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS zzz");
             } else {
                 this.dateFormatter = null;
             }

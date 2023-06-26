@@ -14,10 +14,10 @@ import org.apache.logging.log4j.Logger;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.UserEntity;
+import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.HasEntityLog;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.ui.UI.Color;
@@ -27,13 +27,13 @@ import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Entity
 public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityEntity<T>
-    implements UserEntity, HasEntityLog,
-    HasDynamicContextMenuActions {
+    implements UserEntity, HasEntityLog, HasDynamicContextMenuActions {
 
     public static final String LOG_RESOURCE = "ROLE_LOG";
     public static final String LOG_RESOURCE_AUTHORIZE = "hasRole('" + LOG_RESOURCE + "')";

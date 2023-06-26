@@ -1,5 +1,6 @@
 package org.homio.app.rest;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE_AUTHORIZE;
 
@@ -10,14 +11,19 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import java.awt.image.BufferedImage;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -46,10 +52,11 @@ import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.api.entity.log.HasEntityLog;
+import org.homio.api.entity.log.HasEntitySourceLog;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.HasEntityLog;
 import org.homio.api.model.OptionModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
@@ -125,7 +132,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     private final ReentrantLock putItemsLock = new ReentrantLock();
     private final ReentrantLock updateItemLock = new ReentrantLock();
 
-    private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses;
+    private Map<String, Class<? extends BaseEntity>> baseEntitySimpleClasses = new HashMap<>();
 
     @PostConstruct
     public void postConstruct() {
@@ -223,7 +230,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             }
         }
         Class<?> entityClass = classEntity.getClass();
-        if (StringUtils.isNotEmpty(optionsRequest.getFieldFetchType())) {
+        if (isNotEmpty(optionsRequest.getFieldFetchType())) {
             String[] addonAndClassName = optionsRequest.getFieldFetchType().split(":");
             entityClass = entityContext.getAddon()
                                        .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]).getClass();
@@ -274,14 +281,47 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @GetMapping(value = "/{entityID}/logs")
     @PreAuthorize(LOG_RESOURCE_AUTHORIZE)
-    public ResponseEntity<StreamingResponseBody> getLogs(@PathVariable("entityID") String entityID) {
-        Path logPath = logService.getEntityLogsFile(entityContext.getEntityRequire(entityID));
-        if (logPath == null) {
+    public ResponseEntity<StreamingResponseBody> getLogs(
+        @PathVariable("entityID") String entityID,
+        @RequestParam(value = "source", required = false) String sourceID) {
+        BaseEntity entity = entityContext.getEntityRequire(entityID);
+        if (isNotEmpty(sourceID)) {
+            if (!(entity instanceof HasEntitySourceLog)) {
+                throw new IllegalStateException("Entity: " + entityID + " not implement HasEntitySourceLog interface");
+            }
+            return new ResponseEntity<>(
+                outputStream -> {
+                    try (InputStream inputStream = ((HasEntitySourceLog) entity).getSourceLogInputStream(sourceID)) {
+                        inputStream.transferTo(outputStream);
+                    }
+                },
+                HttpStatus.OK);
+        }
+        Path logFile = logService.getEntityLogsFile(entity);
+        if (logFile == null || !Files.exists(logFile)) {
             throw new IllegalArgumentException("Unable to find log file path for entity: " + entityID);
         }
 
-        StreamingResponseBody stream = out -> Files.copy(logPath, out);
-        return new ResponseEntity(stream, HttpStatus.OK);
+        return new ResponseEntity<>(
+            outputStream -> {
+                try (FileChannel inChannel = FileChannel.open(logFile, StandardOpenOption.READ)) {
+                    long size = inChannel.size();
+                    WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+                    inChannel.transferTo(0, size, writableByteChannel);
+                }
+            },
+            HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/{entityID}/logs/source")
+    @PreAuthorize(LOG_RESOURCE_AUTHORIZE)
+    public @NotNull List<OptionModel> getSourceLogs(
+        @PathVariable("entityID") String entityID) {
+        BaseEntity entity = entityContext.getEntityRequire(entityID);
+        if (entity instanceof HasEntitySourceLog) {
+            return ((HasEntitySourceLog) entity).getLogSources();
+        }
+        throw new IllegalStateException("Entity: " + entityID + " not implement HasEntitySourceLog interface");
     }
 
     @GetMapping("/type/{type}/options")
@@ -616,7 +656,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             // fetch type actions
             Collection<UIInputEntity> actions = UIFieldUtils.fetchUIActionsFromClass(classType, entityContext);
 
-            itemContexts.add(new ItemContextResponse(classType.getSimpleName(), HasEntityLog.class.isAssignableFrom(classType), entityUIMetaData, actions));
+            boolean hasSourceLogs = HasEntitySourceLog.class.isAssignableFrom(classType);
+            boolean hasLogs = HasEntityLog.class.isAssignableFrom(classType);
+            itemContexts.add(new ItemContextResponse(classType.getSimpleName(), hasLogs, hasSourceLogs, entityUIMetaData, actions));
         }
 
         return itemContexts;
@@ -795,6 +837,12 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         return classTypes;
     }
 
+    private void addFilePath(List<Path> files, Path file) {
+        if (file != null && Files.exists(file)) {
+            files.add(file);
+        }
+    }
+
     @Getter
     @Setter
     public static class GetOptionsRequest {
@@ -830,6 +878,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         private final String type;
         private final boolean hasLogs;
+        private final boolean hasSourceLogs;
         private final List<EntityUIMetaData> fields;
         private final Collection<UIInputEntity> actions;
     }

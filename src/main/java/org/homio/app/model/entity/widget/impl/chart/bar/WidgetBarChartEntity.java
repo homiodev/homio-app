@@ -19,7 +19,7 @@ public class WidgetBarChartEntity
     public static final String PREFIX = "wgtbc_";
 
     @UIField(order = 10)
-    @UIFieldGroup(value = "CHART_UI", order = 2, borderColor = "#673AB7")
+    @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
     public BarChartType getDisplayType() {
         return getJsonDataEnum("displayType", BarChartType.Vertical);
     }

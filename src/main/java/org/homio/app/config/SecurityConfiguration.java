@@ -3,6 +3,7 @@ package org.homio.app.config;
 import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
 
+import jakarta.servlet.DispatcherType;
 import lombok.AllArgsConstructor;
 import lombok.val;
 import org.apache.catalina.filters.RequestFilter;
@@ -60,6 +61,8 @@ public class SecurityConfiguration {
                 authorize.requestMatchers(WEB_SOCKET_ENDPOINT, CUSTOM_WEB_SOCKET_ENDPOINT + "/**", "/rest/**").permitAll());
         } else {
             http.authorizeHttpRequests(authorize -> {
+                // to avoid issue with ResponseEntity<StreamingResponseBody>
+                authorize.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD, DispatcherType.ASYNC).permitAll();
                 authorize.requestMatchers(
                     WEB_SOCKET_ENDPOINT,
                     CUSTOM_WEB_SOCKET_ENDPOINT + "/**",

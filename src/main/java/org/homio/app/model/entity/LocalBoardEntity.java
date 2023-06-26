@@ -9,6 +9,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
+import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.model.Icon;
@@ -20,6 +21,7 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.service.LocalFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Entity
 @Log4j2
@@ -93,7 +95,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     @JsonIgnore
     @UIFieldIgnore
     public Status getStatus() {
-        return super.getStatus();
+        throw new ProhibitedExecution();
     }
 
     @Override

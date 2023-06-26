@@ -46,7 +46,6 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
-import org.apache.logging.log4j.Level;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
@@ -346,8 +345,14 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         return new ProcessBuilder() {
 
             @Override
-            public @NotNull ProcessBuilder logToConsole(boolean value) {
-                processContext.logToConsole = value;
+            public @NotNull ProcessBuilder setInputLoggerOutput(@Nullable Consumer<String> inputConsumer) {
+                processContext.inputConsumer = inputConsumer;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessBuilder setErrorLoggerOutput(@Nullable Consumer<String> errorConsumer) {
+                processContext.errorConsumer = errorConsumer;
                 return this;
             }
 
@@ -765,7 +770,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         public @Nullable ThrowingBiConsumer<Exception, Integer, Exception> finishHandler;
         public Process process;
         public ThreadContext<Void> threadContext;
-        private boolean logToConsole = true;
+        public Consumer<String> inputConsumer;
+        public Consumer<String> errorConsumer;
         private String name;
         private StreamGobbler streamGobbler;
 
@@ -814,10 +820,17 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 }
             }
 
-            if (logToConsole) {
-                this.streamGobbler = new StreamGobbler(name,
-                    message -> log.log(message.contains("error") ? Level.ERROR : Level.INFO, "[{}]: {}", name, message),
-                    message -> log.error("[{}]: {}", name, message));
+            if (errorConsumer != null || inputConsumer != null) {
+                if (errorConsumer == null) {
+                    errorConsumer = s -> {
+                    };
+                }
+                if (inputConsumer == null) {
+                    inputConsumer = s -> {
+                    };
+                }
+                streamGobbler = new StreamGobbler(name, inputConsumer, errorConsumer);
+                streamGobbler.stream(process);
             }
 
             log.info("[{}]: wait process to finish.", name);
@@ -839,7 +852,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 try {
                     finishHandler.accept(ex, exitCode);
                 } catch (Exception fex) {
-                    log.error("Error occurred during finish process: {}", name);
+                    log.error("Error occurred during finish process: {}", name, fex);
                 }
             }
             if (streamGobbler != null) {
