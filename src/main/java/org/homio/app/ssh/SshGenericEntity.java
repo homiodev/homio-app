@@ -444,13 +444,18 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         }
 
         @Override
-        public SshSession openSshSession(SshGenericEntity entity) {
+        public SshSession<SshGenericEntity> openSshSession(SshGenericEntity entity) {
             return sshServerEndpoint.openSession(entity);
         }
 
         @Override
-        public void closeSshSession(String token, SshGenericEntity entity) {
-            sshServerEndpoint.closeSession(token);
+        public void resizeSshConsole(SshSession sshSession, int cols) {
+            sshServerEndpoint.resizeSshConsole(sshSession, cols);
+        }
+
+        @Override
+        public void closeSshSession(SshSession<SshGenericEntity> sshSession) {
+            sshServerEndpoint.closeSession(sshSession);
         }
     }
 }

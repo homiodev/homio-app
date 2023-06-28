@@ -8,6 +8,7 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class DashboardFontFamilySetting
@@ -24,22 +25,22 @@ public class DashboardFontFamilySetting
     }
 
     @Override
-    public UIFieldType getSettingType() {
+    public @NotNull UIFieldType getSettingType() {
         return UIFieldType.SelectBox;
     }
 
     @Override
-    public Class<String> getType() {
+    public @NotNull Class<String> getType() {
         return String.class;
     }
 
     @Override
-    public String getDefaultValue() {
+    public @NotNull String getDefaultValue() {
         return "sans-serif";
     }
 
     @Override
-    public Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
+    public @NotNull Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
         return new ArrayList<>(
             Arrays.asList(
                 OptionModel.of("inherit"),

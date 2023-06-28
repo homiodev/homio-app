@@ -12,11 +12,9 @@ import jakarta.persistence.Entity;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
-import org.homio.api.EntityContextSetting;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.Status;
 import org.homio.api.service.CloudProviderService;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
@@ -62,11 +60,6 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
             entityContext.save(entity);
         }
         return entity;
-    }
-
-    @Override
-    public Status getStatus() {
-        return EntityContextSetting.getStatus(this, DISTINGUISH_KEY, null);
     }
 
     @UIField(order = 1, hideInEdit = true, disableEdit = true)
@@ -138,11 +131,14 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
         return this;
     }
 
-    @Override
     @UIField(order = 7)
     @UIFieldGroup("SSH")
-    public boolean isRestartOnFailure() {
+    public boolean isEnableWatchdog() {
         return true;
+    }
+
+    public boolean isRestartOnFailure() {
+        return isEnableWatchdog();
     }
 
     @UIField(order = 2, required = true, inlineEditWhenEmpty = true)

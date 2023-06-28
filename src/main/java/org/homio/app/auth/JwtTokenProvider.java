@@ -22,7 +22,6 @@ import org.homio.app.setting.system.auth.SystemJWTTokenValidSetting;
 import org.homio.app.spring.ContextCreated;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -56,8 +55,7 @@ public class JwtTokenProvider implements ContextCreated {
             UserEntity user = entityContext.getUser();
             if (user != null) {
                 boolean removed = userCache.entrySet().removeIf(entry -> {
-                    User entryUser = (User) entry.getValue().getPrincipal();
-                    if (user.getEntityID().equals(entryUser.getUsername())) {
+                    if (user.getEntityID().equals(UserEntityDetailsService.getEntityID(entry.getValue()))) {
                         blockedTokens.put(entry.getKey(), NULL);
                         return true;
                     }

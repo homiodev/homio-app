@@ -52,6 +52,11 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         RESOURCES.add(FILE_MANAGER_RESOURCE);
     }
 
+    @Override
+    public @Nullable Status.EntityStatus getEntityStatus() {
+        return null;
+    }
+
     public static void registerResource(String resource) {
         RESOURCES.add(resource);
     }
@@ -81,15 +86,6 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         setJsonData("pwd", value);
     }
 
-    @UIField(order = 10, inlineEdit = true)
-    public @NotNull String getLang() {
-        return getJsonData("lang", "en");
-    }
-
-    public void setLang(String value) {
-        setJsonData("lang", value);
-    }
-
     @JsonIgnore
     public abstract @NotNull UserType getUserType();
 
@@ -103,18 +99,17 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         logBuilder.addTopicFilterByEntityID("org.homio.app.model.entity.user");
     }
 
+    @JsonIgnore
     public @NotNull Set<String> getRoles() {
         Set<String> roles = new HashSet<>();
         roles.add(GUEST_ROLE);
         switch (getUserType()) {
-            case ADMIN:
+            case ADMIN -> {
                 roles.add(ADMIN_ROLE);
                 roles.add(PRIVILEGED_USER_ROLE);
                 roles.addAll(RESOURCES);
-                break;
-            case PRIVILEGED:
-                roles.add(PRIVILEGED_USER_ROLE);
-                break;
+            }
+            case PRIVILEGED -> roles.add(PRIVILEGED_USER_ROLE);
         }
         return roles;
     }
@@ -145,7 +140,7 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
     @UIFieldIgnore
     @JsonIgnore
     public Status getStatus() {
-        throw new ProhibitedExecution();
+        return null;
     }
 
     @Override

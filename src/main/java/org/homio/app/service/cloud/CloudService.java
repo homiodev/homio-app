@@ -123,7 +123,7 @@ public class CloudService implements ContextCreated {
                 currentEntity.setStatusError(ex);
                 log.error("Unable to start cloud connection: '{}'. Msg: {}", currentEntity, CommonUtils.getErrorMessage(ex));
                 cloudProvider.updateNotificationBlock(ex);
-                entityContext.ui().sendErrorMessage(Lang.getServerMessage("ERROR.UNABLE_CONNECT", message), ex);
+                entityContext.ui().sendErrorMessage(Lang.getServerMessage("ERROR.CLOUD", message), ex);
             }
         });
     }

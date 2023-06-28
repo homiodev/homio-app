@@ -10,6 +10,7 @@ import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sshtools.client.SshClient;
 import com.sshtools.client.SshClientContext;
+import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -79,6 +80,8 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
             log.info("SSH cloud: wait for disconnect");
             ssh.getConnection().getDisconnectFuture().waitForever();
             log.warn("Ssh connection finished: {}", entity);
+        } catch (ConnectException ex) {
+            throw new ConnectException(Lang.getServerMessage("ERROR.CLOUD_CONNECTION", entity.getHostname()));
         } finally {
             if (ssh != null) {
                 ssh.close();
@@ -150,7 +153,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         } catch (Exception ex) {
             log.error("Unable to call cloud sync: {}", CommonUtils.getErrorMessage(ex));
             if (ex.getCause() instanceof UnknownHostException) {
-                entityContext.ui().sendErrorMessage(Lang.getServerMessage("ERROR.UNKNOWN_HOST", ex.getCause().getMessage()));
+                entityContext.ui().sendErrorMessage(Lang.getServerMessage("ERROR.CLOUD_UNKNOWN_HOST", ex.getCause().getMessage()));
             } else {
                 entityContext.ui().sendErrorMessage("W.ERROR.SYNC");
             }

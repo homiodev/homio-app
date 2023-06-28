@@ -2,6 +2,9 @@
   "PACKAGE_UPDATE_QUESTION": "Are you sure update {{NAME}}-{{VERSION}} package?",
   "SERVER_STARTED": "Started: {{VALUE}}. Uptime: {{TIME}}",
   "ERROR": {
+    "CLOUD": "Cloud error: {{VALUE}}",
+    "CLOUD_UNKNOWN_HOST": "Unknown host: {{VALUE}}",
+    "CLOUD_CONNECTION": "Unable connect to: '{{VALUE}}'",
     "ADDON_UNABLE_LOAD_CONFIG": "Loaded batch definition has different ws-service-api.jar version and can not be instantiated",
     "ADDON_MANY_CONFIG": "Configuration class with annotation @AddonConfiguration must be unique, but found: {{VALUE}}",
     "ADDON_NO_CONFIG": "Configuration class with annotation @AddonConfiguration not found. Not possible to create spring context",
@@ -12,10 +15,8 @@
     "VIDEO_NOT_STARTED": "Video '{{VALUE}}' not started",
     "TTS_QUOTA": "Exceeded quota of '{{VALUE}}' characters",
     "ADDON_INSTALLED": "Addon '{{VALUE}}' already installed with same version",
-    "UNABLE_CONNECT": "Unable connect to cloud: {{VALUE}}",
     "ADDON_NOT_EXISTS": "Addon {{VALUE}} not exists",
-    "PORT_NOT_AVAILABLE": "Port {{VALUE}} not available",
-    "UNKNOWN_HOST": "Unknown host: {{VALUE}}"
+    "PORT_NOT_AVAILABLE": "Port {{VALUE}} not available"
   },
   "sys_cpu_load": "System cpu load",
   "java_cpu_load": "Java cpu load",

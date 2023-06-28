@@ -95,7 +95,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     @JsonIgnore
     @UIFieldIgnore
     public Status getStatus() {
-        throw new ProhibitedExecution();
+        return null;
     }
 
     @Override

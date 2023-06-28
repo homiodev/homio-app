@@ -18,7 +18,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
-import lombok.ToString;
 import lombok.experimental.Accessors;
 import lombok.val;
 import org.homio.api.console.ConsolePlugin;
@@ -45,6 +44,7 @@ import org.homio.app.rest.ItemController.ActionModelRequest;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshBaseEntity;
 import org.homio.app.ssh.SshProviderService;
+import org.homio.app.ssh.SshProviderService.SshSession;
 import org.homio.app.utils.UIFieldSelectionUtil;
 import org.homio.app.utils.UIFieldUtils;
 import org.json.JSONObject;
@@ -67,6 +67,9 @@ public class ConsoleController implements ContextRefreshed {
     private final ItemController itemController;
     private final Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
     private List<ConsoleTab> logs;
+
+    @Getter
+    private static final Map<String, SshSession<?>> sessions = new HashMap<>();
 
     @Override
     public void onContextRefresh() {
@@ -207,28 +210,37 @@ public class ConsoleController implements ContextRefreshed {
         return tabs;
     }
 
-    @PostMapping("/ssh")
+    @PostMapping("/{entityID}/ssh")
     @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
-    public SshProviderService.SshSession openSshSession(@RequestBody SshRequest request) {
-        log.info("Request open ssh: {}", request);
-        BaseEntity entity = entityContext.getEntity(request.getEntityID());
+    public SshProviderService.SshSession openSshSession(@PathVariable("entityID") String entityID) {
+        log.info("Request to open ssh: {}", entityID);
+        BaseEntity entity = entityContext.getEntity(entityID);
         if (entity instanceof SshBaseEntity) {
             SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
-            return service.openSshSession((SshBaseEntity) entity);
+            SshSession sshSession = service.openSshSession((SshBaseEntity) entity);
+            sessions.put(sshSession.getToken(), sshSession);
+            return sshSession;
         }
-        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
+        throw new IllegalArgumentException("Entity: " + entityID + " has to implement 'SshBaseEntity'");
     }
 
-    @DeleteMapping("/ssh")
+    @PostMapping("/ssh/{token}/resize")
     @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
-    public void closeSshSession(@RequestBody SshRequest request) {
-        BaseEntity entity = entityContext.getEntity(request.getEntityID());
-        if (entity instanceof SshBaseEntity) {
-            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
-            service.closeSshSession(request.token, (SshBaseEntity) entity);
-            return;
+    public void resizeSshConsole(@PathVariable("token") String token, @RequestBody SshResizeRequest request) {
+        SshSession<?> sshSession = sessions.get(token);
+        if (sshSession != null) {
+            ((SshProviderService) sshSession.getEntity().getService())
+                .resizeSshConsole(sshSession, request.cols);
         }
-        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
+    }
+
+    @DeleteMapping("/ssh/{token}")
+    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
+    public void closeSshSession(@PathVariable("token") String token) {
+        SshSession<?> sshSession = sessions.remove(token);
+        if (sshSession != null) {
+            ((SshProviderService) sshSession.getEntity().getService()).closeSshSession(sshSession);
+        }
     }
 
     /**
@@ -290,12 +302,9 @@ public class ConsoleController implements ContextRefreshed {
         Collection<UIInputEntity> actions;
     }
 
-    @Getter
     @Setter
-    @ToString
-    public static class SshRequest {
+    public static class SshResizeRequest {
 
-        private String entityID;
-        private String token;
+        private int cols;
     }
 }

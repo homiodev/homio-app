@@ -32,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 @UISidebarChildren(icon = "fas fa-satellite-dish", color = "#0088CC", allowCreateItem = false)
 public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateService> implements HasDynamicContextMenuActions {
 
+    private static final String URL = "wss://lon1.tmate.io/ws/session/%s";
     public static final String PREFIX = "sshtmate_";
     private static final String DEFAULT_TMATE_ENTITY_ID = PREFIX + "primary";
     private static boolean TMATE_INSTALLED = false;
@@ -115,7 +116,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     public static class SshTmateService implements SshProviderService<SshTmateEntity> {
 
         private final EntityContext entityContext;
-        private final SshSession sshSession = new SshSession();
+        private SshSession sshSession;
         @Getter
         private SshTmateEntity entity;
         private ThreadContext<Void> tmateThread;
@@ -140,7 +141,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
 
         @Override
         public void destroy() {
-            closeSshSession(null, null);
+            closeSshSession(null);
         }
 
         @Override
@@ -158,8 +159,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
                         IOUtils.read(inputStream, array);
                         String[] lines = new String(array, Charset.defaultCharset()).split("\\r?\\n");
                         String tmateSessionId = TmateSessions.WebSession.find(lines);
-                        sshSession.setToken(tmateSessionId);
-                        sshSession.setWsURL("wss://lon1.tmate.io/ws/session/" + tmateSessionId);
+                        sshSession = new SshSession(tmateSessionId, URL, entity);
                         // Curl.get("https://tmate.io/api/t/" + tmateSessionId, SessionStatusModel.class);
                         countDownLatch.countDown();
 
@@ -178,7 +178,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         }
 
         @Override
-        public void closeSshSession(String token, SshTmateEntity entity) {
+        public void closeSshSession(SshSession<SshTmateEntity> sshSession) {
             if (tmateThread != null) {
                 tmateThread.cancel();
                 tmateThread = null;

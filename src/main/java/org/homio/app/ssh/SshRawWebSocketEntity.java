@@ -133,14 +133,11 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
 
         @Override
         public SshSession openSshSession(SshRawWebSocketEntity sshEntity) {
-            SshSession session = new SshSession();
-            session.setWsURL(address);
-            session.setToken(UUID.randomUUID().toString());
-            return session;
+            return new SshSession(UUID.randomUUID().toString(), address, sshEntity);
         }
 
         @Override
-        public void closeSshSession(String token, SshRawWebSocketEntity sshEntity) {
+        public void closeSshSession(SshSession<SshRawWebSocketEntity> sshSession) {
             // no need to close session due it's raw ws address
         }
     }

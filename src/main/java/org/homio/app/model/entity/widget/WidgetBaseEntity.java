@@ -20,6 +20,7 @@ import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.JSON;
+import org.homio.api.model.Status;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
@@ -31,6 +32,7 @@ import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.attributes.HasStyle;
 import org.homio.app.setting.dashboard.DashboardHorizontalBlockCountSetting;
 import org.homio.app.setting.dashboard.DashboardVerticalBlockCountSetting;
+import org.jetbrains.annotations.Nullable;
 
 @Getter
 @Setter

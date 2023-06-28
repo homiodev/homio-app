@@ -89,7 +89,6 @@ import org.homio.app.service.cloud.CloudService;
 import org.homio.app.setting.ScanMicroControllersSetting;
 import org.homio.app.setting.ScanVideoStreamSourcesSetting;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
-import org.homio.app.setting.system.SystemLanguageSetting;
 import org.homio.app.setting.system.SystemShowEntityStateSetting;
 import org.homio.app.setting.system.SystemSoftRestartButtonSetting;
 import org.homio.app.spring.ContextCreated;
@@ -257,7 +256,6 @@ public class EntityContextImpl implements EntityContext {
             cacheService.clearCache();
             ui().sendSuccessMessage("Cache has been cleared successfully");
         });
-        setting().listenValueAndGet(SystemLanguageSetting.class, "listen-lang", lang -> Lang.CURRENT_LANG = lang.name());
         setting().listenValue(SystemSoftRestartButtonSetting.class, "soft-restart", () -> SystemSoftRestartButtonSetting.restart(this));
         setting().listenValue(ScanMicroControllersSetting.class, "scan-micro-controllers", () ->
             ui().handleResponse(new BeansItemsDiscovery(MicroControllerScanner.class).handleAction(this, null)));

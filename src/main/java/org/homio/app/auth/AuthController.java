@@ -21,7 +21,6 @@ import org.json.JSONObject;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -44,10 +43,10 @@ public class AuthController {
         if (user == null) {
             return new StatusResponse(401, null);
         }
-        User principal = (User) user.getPrincipal();
-        String credentials = principal.getUsername();
-        String[] items = credentials.split("~~~");
-        addUserNotificationBlock(items[0], items[1], false);
+        String email = UserEntityDetailsService.getEmail(user);
+        String userEntityID = UserEntityDetailsService.getEntityID(user);
+
+        addUserNotificationBlock(userEntityID, email, false);
         String version = format("%s-%s-%s", appProperties.getVersion(), EntityContextAddonImpl.ADDON_UPDATE_COUNT, CommonUtils.RUN_COUNT);
         return new StatusResponse(200, version);
     }
@@ -65,9 +64,9 @@ public class AuthController {
             val userToken = new UsernamePasswordAuthenticationToken(username, credentials.getPassword());
             Authentication authentication = authenticationManager.authenticate(userToken);
             UserBaseEntity.log.info("Login success for <{}>", credentials.getEmail());
-            User user = (User) authentication.getPrincipal();
-            String[] items = user.getUsername().split("~~~");
-            addUserNotificationBlock(items[0], items[1], true);
+            String entityID = UserEntityDetailsService.getEntityID(authentication);
+            String email = UserEntityDetailsService.getEmail(authentication);
+            addUserNotificationBlock(entityID, email, true);
             return jwtTokenProvider.createToken(username, authentication);
         } catch (Exception ex) {
             UserBaseEntity.log.info("Login failed for <{}>", credentials.getEmail(), ex);
