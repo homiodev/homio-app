@@ -6,16 +6,16 @@ import org.homio.api.console.ConsolePlugin;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.SettingType;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
-import org.homio.api.ui.field.UIFieldType;
 import org.json.JSONObject;
 
 public class ConsoleLinesTextWrapSetting
     implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
 
     @Override
-    public UIFieldType getSettingType() {
-        return UIFieldType.SelectBoxButton;
+    public SettingType getSettingType() {
+        return SettingType.SelectBoxButton;
     }
 
     @Override

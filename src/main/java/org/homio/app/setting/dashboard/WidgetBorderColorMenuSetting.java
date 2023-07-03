@@ -1,33 +1,34 @@
 package org.homio.app.setting.dashboard;
 
-import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.setting.SettingType;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 
 public class WidgetBorderColorMenuSetting implements CoreSettingPlugin<String> {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.dashboard;
     }
 
     @Override
-    public String getSubGroupKey() {
+    public @NotNull String getSubGroupKey() {
         return "WIDGET";
     }
 
     @Override
-    public Class<String> getType() {
+    public @NotNull Class<String> getType() {
         return String.class;
     }
 
     @Override
-    public String getDefaultValue() {
+    public @NotNull String getDefaultValue() {
         return "#18576D";
     }
 
     @Override
-    public UIFieldType getSettingType() {
-        return UIFieldType.ColorPicker;
+    public @NotNull SettingType getSettingType() {
+        return SettingType.ColorPicker;
     }
 
     @Override

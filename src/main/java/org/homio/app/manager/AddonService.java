@@ -3,8 +3,11 @@ package org.homio.app.manager;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,15 +22,14 @@ import org.homio.api.EntityContext;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.setting.SettingPluginPackageInstall;
 import org.homio.api.setting.SettingPluginPackageInstall.PackageRequest;
-import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.utils.color.ColorThief;
 import org.homio.app.utils.color.MMCQ;
 import org.homio.app.utils.color.RGBUtil;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -39,7 +41,7 @@ public class AddonService implements ContextCreated, ContextRefreshed {
     private final EntityContext entityContext;
     private Map<String, String> addonColorMap;
     private Map<String, AddonEntrypoint> addonMap;
-    private Collection<AddonEntrypoint> addonEntrypoints;
+    private Collection<AddonEntrypoint> allAddonEntrypoint;
 
     // true - installing, false removing
     @Getter
@@ -52,11 +54,11 @@ public class AddonService implements ContextCreated, ContextRefreshed {
 
     @Override
     public void onContextRefresh() throws Exception {
-        this.addonEntrypoints = entityContext.getBeansOfType(AddonEntrypoint.class);
-        this.addonMap = addonEntrypoints.stream().collect(Collectors.toMap(AddonEntrypoint::getAddonID, s -> s));
+        this.allAddonEntrypoint = entityContext.getBeansOfType(AddonEntrypoint.class);
+        this.addonMap = allAddonEntrypoint.stream().collect(Collectors.toMap(AddonEntrypoint::getAddonID, s -> s));
         this.addonColorMap = new HashMap<>();
 
-        for (AddonEntrypoint addonEntrypoint : addonEntrypoints) {
+        for (AddonEntrypoint addonEntrypoint : allAddonEntrypoint) {
             try {
                 URL imageURL = addonEntrypoint.getAddonImageURL();
                 BufferedImage img = ImageIO.read(Objects.requireNonNull(imageURL));
@@ -88,7 +90,7 @@ public class AddonService implements ContextCreated, ContextRefreshed {
     }
 
     public Collection<AddonEntrypoint> getAddons() {
-        return addonEntrypoints;
+        return allAddonEntrypoint;
     }
 
     public void installPackage(SettingPluginPackageInstall settingPlugin, PackageRequest packageRequest) {
@@ -123,5 +125,23 @@ public class AddonService implements ContextCreated, ContextRefreshed {
             return null;
         }
         return imageUrl.openStream();
+    }
+
+    public List<AddonJson> getAllAddonJson() {
+        List<AddonJson> addons = new ArrayList<>();
+        for (AddonEntrypoint addonEntrypoint : getAddons()) {
+            addons.add(new AddonJson(addonEntrypoint.getAddonID(),
+                getAddonColor(addonEntrypoint.getAddonID()), 0));
+        }
+        Collections.sort(addons);
+        return addons;
+    }
+
+    public record AddonJson(String id, String color, int order) implements Comparable<AddonJson> {
+
+        @Override
+        public int compareTo(@NotNull AddonJson o) {
+            return Integer.compare(order, o.order);
+        }
     }
 }

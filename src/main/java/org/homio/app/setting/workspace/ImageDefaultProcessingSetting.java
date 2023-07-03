@@ -4,23 +4,24 @@ import org.homio.api.service.ImageProviderService;
 import org.homio.api.setting.SettingPluginOptionsBean;
 import org.homio.app.service.image.AwtImageProviderService;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 
 public class ImageDefaultProcessingSetting implements
     CoreSettingPlugin<ImageProviderService>,
     SettingPluginOptionsBean<ImageProviderService> {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.workspace;
     }
 
     @Override
-    public Class<ImageProviderService> getType() {
+    public @NotNull Class<ImageProviderService> getType() {
         return ImageProviderService.class;
     }
 
     @Override
-    public String getDefaultValue() {
+    public @NotNull String getDefaultValue() {
         return AwtImageProviderService.class.getSimpleName();
     }
 

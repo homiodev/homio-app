@@ -10,13 +10,18 @@ import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
-import org.homio.api.setting.SettingPluginText;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class ConsoleVisibleTabsSetting
-    implements ConsoleSettingPlugin<String>, SettingPluginText, SettingPluginOptions<String> {
+    implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
+
+    @Override
+    public @NotNull Class<String> getType() {
+        return String.class;
+    }
 
     @Override
     public int order() {
@@ -24,7 +29,7 @@ public class ConsoleVisibleTabsSetting
     }
 
     @Override
-    public Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
+    public @NotNull Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
         Map<String, OptionModel> result = new HashMap<>();
         result.put("logs", OptionModel.key("logs").setDisabled(!entityContext.accessEnabled(LOG_RESOURCE)));
         Map<String, ConsolePlugin<?>> map = EntityContextUIImpl.consolePluginsMap;
@@ -44,10 +49,5 @@ public class ConsoleVisibleTabsSetting
             result.putIfAbsent(pluginName, OptionModel.key(pluginName).setDisabled(true));
         }
         return result.values();
-    }
-
-    @Override
-    public boolean acceptConsolePluginPage(ConsolePlugin consolePlugin) {
-        return false;
     }
 }

@@ -17,8 +17,8 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.model.JSON;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingType;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.homio.app.repository.SettingRepository;
 import org.jetbrains.annotations.NotNull;
@@ -99,7 +99,7 @@ public class SettingEntity extends BaseEntity<SettingEntity> {
         this.settingType = settingTypeRaw;
     }
 
-    public SettingEntity setSettingType(UIFieldType settingType) {
+    public SettingEntity setSettingType(SettingType settingType) {
         this.settingType = settingType.name();
         return this;
     }

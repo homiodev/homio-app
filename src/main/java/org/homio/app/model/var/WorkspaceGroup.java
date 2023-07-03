@@ -21,6 +21,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
@@ -52,6 +53,7 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.UIFieldClickToEdit;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
 import org.homio.app.repository.VariableDataRepository;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 @Entity
@@ -99,12 +101,15 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
 
     @ManyToOne(fetch = FetchType.EAGER)
     private WorkspaceGroup parent;
+
     @Getter
     @Column(length = 1000)
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
+
     @Column(unique = true, nullable = false)
     private String groupId;
+
     @Getter
     @JsonIgnore
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "parent")
@@ -116,7 +121,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
@@ -127,7 +132,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     }
 
     @Override
-    public String getEntityID() {
+    public @NotNull String getEntityID() {
         return super.getEntityID();
     }
 
@@ -180,7 +185,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     }
 
     @Override
-    public void getAllRelatedEntities(Set<BaseEntity> set) {
+    public void getAllRelatedEntities(@NotNull Set<BaseEntity> set) {
         if (parent != null) {
             set.add(parent);
         }
@@ -253,16 +258,6 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     @NoArgsConstructor
     public static class WorkspaceVariableEntity {
 
-        @UIField(order = 20, label = "format", style = "padding-left:5px")
-        @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
-        @UIFieldInlineEntityWidth(15)
-        public String restriction;
-
-        @UIField(order = 30, inlineEdit = true, hideInView = true)
-        @UIFieldInlineEntityWidth(12)
-        @UIFieldSlider(min = 500, max = 10_000, step = 500)
-        public int quota;
-
         private String entityID;
 
         @UIField(order = 10, type = UIFieldType.HTML)
@@ -275,6 +270,21 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         @UIFieldTitleRef("nameTitle")
         @UIFieldVariable
         private JSONObject name;
+
+        @UIField(order = 15, style = "font-size:12px")
+        @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
+        @UIFieldInlineEntityWidth(12)
+        public String value;
+
+        @UIField(order = 20, label = "fmt")
+        @UIFieldShowOnCondition("return context.getParent('groupId') !== 'broadcasts'")
+        @UIFieldInlineEntityWidth(10)
+        public String restriction;
+
+        @UIField(order = 30, inlineEdit = true, hideInView = true)
+        @UIFieldInlineEntityWidth(12)
+        @UIFieldSlider(min = 500, max = 10_000, step = 500)
+        public int quota;
 
         @UIField(order = 40)
         @UIFieldProgress
@@ -308,9 +318,16 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
                 name.put("backupCount", entityContext.var().backupCount(variable.getVariableId()));
             }
             this.restriction = variable.getRestriction().name().toLowerCase();
+            Object val = entityContext.var().get(variable.getVariableId());
+            this.value = generateValue(val, variable);
             this.quota = variable.getQuota();
             this.usedQuota = variable.getUsedQuota();
             this.nameTitle = variable.getName();
         }
+
+    }
+
+    public static String generateValue(Object val, WorkspaceVariable variable) {
+        return val == null ? "-" : val + StringUtils.trimToEmpty(variable.getUnit());
     }
 }

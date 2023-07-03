@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -113,6 +114,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     private String iconColor;
     private String unit;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     private WorkspaceGroup workspaceGroup;
 
@@ -248,7 +250,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }
 
     @Override
-    public List<Object[]> getTimeValueSeries(PeriodRequest request) {
+    public @NotNull List<Object[]> getTimeValueSeries(PeriodRequest request) {
         return ((EntityContextVarImpl) request.getEntityContext().var()).getTimeSeries(variableId, request.getFromTime(), request.getToTime());
     }
 

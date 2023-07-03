@@ -199,14 +199,14 @@ public class MediaController {
         return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).contentType(mediaType).body(region);
     }
 
-    @GetMapping("/audio/{streamId}/play")
-    public void playAudioFile(@PathVariable String streamId, HttpServletResponse resp)
+    @GetMapping("/audio/{streamID}/play")
+    public void playAudioFile(@PathVariable String streamID, HttpServletResponse resp)
         throws IOException {
-        audioService.playRequested(streamId, resp);
+        audioService.playRequested(streamID, resp);
     }
 
-    @GetMapping("/image")
-    public ResponseEntity<InputStreamResource> getImage(@RequestParam String entityID) {
+    @GetMapping("/image/{entityID}")
+    public ResponseEntity<InputStreamResource> getImage(@PathVariable String entityID) {
         return imageService.getImage(entityID);
     }
 

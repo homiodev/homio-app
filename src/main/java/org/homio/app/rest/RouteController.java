@@ -12,10 +12,11 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.ui.UISidebarMenu;
+import org.homio.app.manager.AddonService;
+import org.homio.app.manager.AddonService.AddonJson;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
-import org.homio.app.rest.AddonController.AddonJson;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,16 +27,16 @@ public class RouteController {
 
     private final EntityContext entityContext;
     private final List<Class<?>> uiSidebarMenuClasses;
-    private final AddonController addonController;
+    private final AddonService addonService;
     private final SettingController settingController;
 
     public RouteController(
         ClassFinder classFinder,
-        AddonController addonController,
+        AddonService addonService,
         SettingController settingController,
         EntityContext entityContext) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
-        this.addonController = addonController;
+        this.addonService = addonService;
         this.settingController = settingController;
         this.entityContext = entityContext;
     }
@@ -45,7 +46,7 @@ public class RouteController {
         BootstrapContext context = new BootstrapContext();
         context.routes = getRoutes();
         context.menu = getMenu();
-        context.addons = addonController.getAddons();
+        context.addons = addonService.getAllAddonJson();
         context.settings = settingController.getSettings();
         context.notifications = ((EntityContextUIImpl) entityContext.ui()).getNotifications();
 
@@ -83,7 +84,7 @@ public class RouteController {
             addRouteFromUISideBarMenu(routes, aClass, aClass.getAnnotation(UISidebarMenu.class));
         }
 
-        routes.addAll(Stream.of("dashboard").map(RouteDTO::new).collect(Collectors.toList()));
+        routes.addAll(Stream.of("dashboard").map(RouteDTO::new).toList());
         return routes;
     }
 
@@ -95,6 +96,7 @@ public class RouteController {
         route.path = href;
         route.allowCreateNewItems = uiSidebarMenu.allowCreateNewItems();
         route.sort = Stream.of(uiSidebarMenu.sort()).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+        route.filter = Stream.of(uiSidebarMenu.filter()).filter(s -> !s.isEmpty()).collect(Collectors.toList());
         routes.add(route);
     }
 
@@ -133,6 +135,7 @@ public class RouteController {
 
         private final String url;
         private List<String> sort;
+        private List<String> filter;
         private String path;
         private String type;
         private boolean allowCreateNewItems;

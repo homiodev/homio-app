@@ -29,6 +29,7 @@ import org.homio.api.util.Curl;
 import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 @Log4j2
@@ -45,7 +46,7 @@ public class SystemAddonLibraryManagerSetting
     }
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.system;
     }
 

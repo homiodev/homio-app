@@ -1,28 +1,29 @@
 package org.homio.app.setting.workspace;
 
-import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.setting.SettingType;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 
 public class WorkspaceToolboxColorSetting implements CoreSettingPlugin<String> {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.workspace;
     }
 
     @Override
-    public Class<String> getType() {
+    public @NotNull Class<String> getType() {
         return String.class;
     }
 
     @Override
-    public String getDefaultValue() {
+    public @NotNull String getDefaultValue() {
         return "#F9F9F9";
     }
 
     @Override
-    public UIFieldType getSettingType() {
-        return UIFieldType.ColorPicker;
+    public @NotNull SettingType getSettingType() {
+        return SettingType.ColorPicker;
     }
 
     @Override

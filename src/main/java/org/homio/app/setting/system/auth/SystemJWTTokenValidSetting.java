@@ -2,16 +2,17 @@ package org.homio.app.setting.system.auth;
 
 import org.homio.api.setting.SettingPluginSlider;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 
 public class SystemJWTTokenValidSetting implements CoreSettingPlugin<Integer>, SettingPluginSlider {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.system;
     }
 
     @Override
-    public String getSubGroupKey() {
+    public @NotNull String getSubGroupKey() {
         return "AUTH";
     }
 

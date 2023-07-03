@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -79,6 +80,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     // constructor parameters
     @Getter private final EntityContextImpl entityContext;
     private final SimpMessagingTemplate messagingTemplate;
+    private final Map<String, SendUpdateContext> sendToUIMap = new ConcurrentHashMap<>();
 
     public void onContextCreated() {
         // run hourly script to drop not used dynamicUpdateRegisters
@@ -89,6 +91,16 @@ public class EntityContextUIImpl implements EntityContextUI {
             .interval(Duration.ofHours(1))
             .execute(() ->
                 this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - v.timeout) > 1));
+
+        entityContext.bgp().builder("send-ui-updates").interval(Duration.ofSeconds(1)).execute(() -> {
+            for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator(); iterator.hasNext(); ) {
+                SendUpdateContext context = iterator.next();
+
+                String entityType = context.entity instanceof WidgetBaseEntity ? "widget" : context.entity.getType();
+                sendDynamicUpdate("entity-type-" + entityType, null, context.handler);
+                iterator.remove();
+            }
+        });
     }
 
     public void registerForUpdates(DynamicUpdateRequest request) {
@@ -99,7 +111,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             context.timeout = System.currentTimeMillis(); // refresh timer
             context.registerCounter.incrementAndGet();
         }
-        entityContext.event().addEventListener(request.getDynamicUpdateId(), o -> this.sendDynamicUpdate(request, o));
+        entityContext.event().addEventListener(request.getDynamicUpdateId(), o -> this.sendDynamicUpdate(request, () -> o));
     }
 
     public void unRegisterForUpdates(DynamicUpdateRequest request) {
@@ -113,15 +125,17 @@ public class EntityContextUIImpl implements EntityContextUI {
         sendDynamicUpdate(dynamicUpdateId, null, value);
     }
 
-    public void sendDynamicUpdate(
-        @NotNull String dynamicUpdateId, @Nullable String entityId, @Nullable Object value) {
-        sendDynamicUpdate(new DynamicUpdateRequest(dynamicUpdateId, entityId), value);
+    public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @Nullable String entityId, @Nullable Object value) {
+        if (value != null) {
+            sendDynamicUpdate(new DynamicUpdateRequest(dynamicUpdateId, entityId), () -> value);
+        }
     }
 
-    public void sendDynamicUpdate(@NotNull DynamicUpdateRequest request, @Nullable Object value) {
-        if (value != null) {
-            DynamicUpdateContext context = dynamicUpdateRegisters.get(request);
-            if (context != null) {
+    public void sendDynamicUpdate(@NotNull DynamicUpdateRequest request, @NotNull Supplier<Object> supplier) {
+        DynamicUpdateContext context = dynamicUpdateRegisters.get(request);
+        if (context != null) {
+            Object value = supplier.get();
+            if (value != null) {
                 if (System.currentTimeMillis() - context.timeout > 60000) {
                     dynamicUpdateRegisters.remove(request);
                 } else {
@@ -168,16 +182,18 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     @Override
     public void updateItem(
-        @NotNull BaseEntity<?> entity, @NotNull String updateField, @Nullable Object value) {
-        ObjectNode metadata =
-            OBJECT_MAPPER
-                .createObjectNode()
-                .put("type", "add")
-                .putPOJO("entityID", entity.getEntityID())
-                .put("updateField", updateField)
-                .putPOJO("value", value);
-
-        sendDynamicUpdate("entity-type-" + entity.getType(), metadata);
+        @NotNull BaseEntity<?> entity,
+        @NotNull String updateField,
+        @Nullable Object value) {
+        if (!isUpdateRegistered(entity)) {
+            return;
+        }
+        this.sendToUIMap.put(entity.getEntityID() + updateField, new SendUpdateContext(
+            entity,
+            () -> OBJECT_MAPPER.createObjectNode()
+                               .put("type", "add")
+                               .put("entityID", entity.getEntityID())
+                               .put("updateField", updateField).putPOJO("value", value)));
     }
 
     @Override
@@ -187,45 +203,55 @@ public class EntityContextUIImpl implements EntityContextUI {
         @NotNull String innerEntityID,
         @NotNull String updateField,
         @NotNull Object value) {
-        ObjectNode metadata =
-            OBJECT_MAPPER
-                .createObjectNode()
-                .put("type", "add")
-                .put("entityID", parentEntity.getEntityID())
-                .put("updateField", updateField)
-                .putPOJO("value", value);
 
-        metadata.putPOJO(
-            "inner",
-            OBJECT_MAPPER
-                .createObjectNode()
-                .put("id", innerEntityID)
-                .put("parentField", parentFieldName));
+        if (!isUpdateRegistered(parentEntity)) {
+            return;
+        }
+        this.sendToUIMap.put(parentEntity.getEntityID() + parentFieldName + innerEntityID + updateField, new SendUpdateContext(
+            parentEntity, () -> {
+            ObjectNode metadata =
+                OBJECT_MAPPER
+                    .createObjectNode()
+                    .put("type", "add")
+                    .put("entityID", parentEntity.getEntityID())
+                    .put("updateField", updateField)
+                    .putPOJO("value", value);
 
-        sendDynamicUpdate("entity-type-" + parentEntity.getType(), metadata);
+            metadata.putPOJO(
+                "inner",
+                OBJECT_MAPPER
+                    .createObjectNode()
+                    .put("id", innerEntityID)
+                    .put("parentField", parentFieldName));
+            return metadata;
+        }));
+    }
+
+    private boolean isUpdateRegistered(@NotNull BaseEntity<?> parentEntity) {
+        return this.dynamicUpdateRegisters.containsKey(new DynamicUpdateRequest(parentEntity.getEntityID()));
     }
 
     public void updateItem(@NotNull BaseEntity<?> entity, boolean ignoreExtra) {
-        ObjectNode metadata =
-            OBJECT_MAPPER
-                .createObjectNode()
-                .put("type", "add")
-                .put("entityID", entity.getEntityID())
-                .putPOJO("entity", entity);
-
-        if (!ignoreExtra) {
-            // insert context actions ixf we need
-            if (entity instanceof HasDynamicContextMenuActions) {
-                UIInputBuilder uiInputBuilder = inputBuilder();
-                ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
-                metadata.putPOJO("actions", uiInputBuilder.buildAll());
-                /* TODO: if (actions != null && !actions.isEmpty()) {
-                   metadata.put("actions", actions.stream().map(UIActionResponse::new).collect(Collectors.toSet()));
-                }*/
-            }
+        if (!isUpdateRegistered(entity)) {
+            return;
         }
-        String entityType = entity instanceof WidgetBaseEntity ? "widget" : entity.getType();
-        sendDynamicUpdate("entity-type-" + entityType, metadata);
+        this.sendToUIMap.put(entity.getEntityID(), new SendUpdateContext(
+            entity, () -> {
+            ObjectNode metadata = OBJECT_MAPPER.createObjectNode()
+                                               .put("type", "add")
+                                               .put("entityID", entity.getEntityID())
+                                               .putPOJO("entity", entity);
+
+            if (!ignoreExtra) {
+                // insert context actions. maybe it's changed
+                if (entity instanceof HasDynamicContextMenuActions) {
+                    UIInputBuilder uiInputBuilder = inputBuilder();
+                    ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
+                    metadata.putPOJO("actions", uiInputBuilder.buildAll());
+                }
+            }
+            return metadata;
+        }));
     }
 
     @Override
@@ -425,10 +451,6 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
         sendGlobal(GlobalSendType.popup, null, message, title, param);
     }
-
-    /*public void disableHeaderButton(String entityID, boolean disable) {
-        sendGlobal(GlobalSendType.headerButton, entityID, null, null, OBJECT_MAPPER.createObjectNode().put("action", "toggle").put("disable", disable));
-    }*/
 
     public NotificationResponse getNotifications() {
         long time = System.currentTimeMillis();
@@ -631,11 +653,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         private long timeout = System.currentTimeMillis();
     }
 
-    @RequiredArgsConstructor
-    private static class NotificationBlockBuilderImpl implements NotificationBlockBuilder {
-
-        private final NotificationBlock notificationBlock;
-        private final EntityContextImpl entityContext;
+    private record NotificationBlockBuilderImpl(NotificationBlock notificationBlock, EntityContextImpl entityContext) implements NotificationBlockBuilder {
 
         @Override
         public @NotNull NotificationBlockBuilder linkToEntity(@NotNull BaseEntity entity) {
@@ -758,5 +776,9 @@ public class EntityContextUIImpl implements EntityContextUI {
             }
             return removed;
         }
+    }
+
+    private record SendUpdateContext(BaseEntity entity, Supplier<ObjectNode> handler) {
+
     }
 }

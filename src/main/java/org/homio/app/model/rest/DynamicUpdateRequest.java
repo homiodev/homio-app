@@ -19,6 +19,10 @@ public class DynamicUpdateRequest {
     @NotNull private String dynamicUpdateId;
     @Nullable private String entityID;
 
+    public DynamicUpdateRequest(@NotNull String dynamicUpdateId) {
+        this.dynamicUpdateId = dynamicUpdateId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

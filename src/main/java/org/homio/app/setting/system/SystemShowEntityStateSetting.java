@@ -2,6 +2,7 @@ package org.homio.app.setting.system;
 
 import org.homio.api.setting.SettingPluginBoolean;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Show BaseEntity CRUD
@@ -10,12 +11,12 @@ public class SystemShowEntityStateSetting
     implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.system;
     }
 
     @Override
-    public String getSubGroupKey() {
+    public @NotNull String getSubGroupKey() {
         return "EVENTS";
     }
 

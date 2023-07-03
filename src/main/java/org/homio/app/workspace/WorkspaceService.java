@@ -35,7 +35,7 @@ import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.manager.AddonService;
 import org.homio.app.model.entity.WorkspaceEntity;
 import org.homio.app.repository.device.WorkspaceRepository;
-import org.homio.app.setting.system.SystemClearWorkspaceButtonSetting;
+import org.homio.app.setting.workspace.WorkspaceClearButtonSetting;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.workspace.block.Scratch3Space;
 import org.homio.app.workspace.block.core.Scratch3ControlBlocks;
@@ -262,7 +262,7 @@ public class WorkspaceService implements ContextRefreshed {
             entity -> tabs.remove(entity.getEntityID()));
 
         // listen for clear workspace
-        entityContext.setting().listenValue(SystemClearWorkspaceButtonSetting.class, "wm-clear-workspace",
+        entityContext.setting().listenValue(WorkspaceClearButtonSetting.class, "wm-clear-workspace",
             () -> entityContext.findAll(WorkspaceEntity.class)
                                .forEach(entity -> entityContext.save(entity.setContent(""))));
     }

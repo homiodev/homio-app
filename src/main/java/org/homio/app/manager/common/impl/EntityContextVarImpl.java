@@ -1,14 +1,17 @@
 package org.homio.app.manager.common.impl;
 
 import static java.lang.String.format;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
 
+import com.pivovarit.function.ThrowingConsumer;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -41,9 +44,10 @@ import org.jetbrains.annotations.Nullable;
 @RequiredArgsConstructor
 public class EntityContextVarImpl implements EntityContextVar {
 
-    public static final Map<String, VariableContext> globalVarStorageMap = new HashMap<>();
+    public static final Map<String, VariableContext> globalVarStorageMap = new ConcurrentHashMap<>();
     @Getter private final EntityContextImpl entityContext;
     private final VariableDataRepository variableDataRepository;
+    private final ReentrantLock createContextLock = new ReentrantLock();
 
     public static void createBroadcastGroup(EntityContext entityContext) {
         entityContext.var().createGroup("broadcasts", "Broadcasts", true, new Icon("fas fa-tower-broadcast", "#A32677"));
@@ -53,14 +57,15 @@ public class EntityContextVarImpl implements EntityContextVar {
         createBroadcastGroup(entityContext);
 
         for (WorkspaceVariable workspaceVariable : entityContext.findAll(WorkspaceVariable.class)) {
-            createContext(workspaceVariable);
+            getOrCreateContext(workspaceVariable.getVariableId());
         }
 
-        entityContext.event().addEntityCreateListener(WorkspaceVariable.class, "var-create", this::createContext);
-        entityContext.event().addEntityUpdateListener(WorkspaceVariable.class, "var-update", workspaceVariable -> {
-            VariableContext context = getOrCreateContext(workspaceVariable.getVariableId());
-            context.groupVariable = workspaceVariable;
-            context.storageService.updateQuota((long) workspaceVariable.getQuota());
+        entityContext.event().addEntityCreateListener(WorkspaceVariable.class, "var-create", variable ->
+            getOrCreateContext(variable.getVariableId()));
+        entityContext.event().addEntityUpdateListener(WorkspaceVariable.class, "var-update", variable -> {
+            VariableContext context = getOrCreateContext(variable.getVariableId());
+            context.groupVariable = variable;
+            context.storageService.updateQuota((long) variable.getQuota());
         });
         entityContext.event().addEntityRemovedListener(WorkspaceVariable.class, "var-delete",
             workspaceVariable -> {
@@ -80,7 +85,7 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @Override
-    public void setLinkListener(@NotNull String variableId, @NotNull Consumer<Object> listener) {
+    public void setLinkListener(@NotNull String variableId, @NotNull ThrowingConsumer<Object, Exception> listener) {
         getOrCreateContext(getVariableId(variableId)).linkListener = listener;
     }
 
@@ -128,17 +133,33 @@ public class EntityContextVarImpl implements EntityContextVar {
 
         VariableContext context = getOrCreateContext(variableId);
         value = tryConvertValueToRestrictionTypeFormat(value, context);
+        WorkspaceGroup workspaceGroup = context.groupVariable.getWorkspaceGroup();
         if (validateValueBeforeSave(value, context)) {
             String error = format("Validation type restriction: Unable to set value: '%s' to variable: '%s/%s' of type: '%s'", value,
-                context.groupVariable.getName(), context.groupVariable.getWorkspaceGroup().getGroupId(), context.groupVariable.getRestriction().name());
+                context.groupVariable.getName(), workspaceGroup.getGroupId(), context.groupVariable.getRestriction().name());
             throw new IllegalArgumentException(error);
         }
         convertedValue.accept(value);
         context.storageService.save(new WorkspaceVariableMessage(value));
         entityContext.event().fireEvent(context.groupVariable.getVariableId(), value);
         entityContext.event().fireEvent(context.groupVariable.getEntityID(), value);
+
+        // Fire update 'value' on UI
+        // Update only value. Skip updating usedQuota field because not so important
+        if (workspaceGroup.getParent() == null) {
+            entityContext.ui().updateInnerSetItem(workspaceGroup, "workspaceVariableEntities",
+                context.groupVariable.getEntityID(), "value", WorkspaceGroup.generateValue(value, context.groupVariable));
+        } else {
+            entityContext.ui().updateInnerSetItem(workspaceGroup.getParent(), "workspaceVariableEntities",
+                context.groupVariable.getEntityID(), "value", WorkspaceGroup.generateValue(value, context.groupVariable));
+        }
+
         if (context.linkListener != null) {
-            context.linkListener.accept(value);
+            try {
+                context.linkListener.accept(value);
+            } catch (Exception ex) {
+                log.error("Unable to handle variable {} link handler. {}", variableId, getErrorMessage(ex));
+            }
         } else if (logIfNoLinked) {
             log.warn("Updated variable: {} has no linked handler", context.groupVariable.getTitle());
         }
@@ -278,6 +299,9 @@ public class EntityContextVarImpl implements EntityContextVar {
         return getOrCreateContext(getVariableId(getVariableId(variableId))).linkListener != null;
     }
 
+    /**
+     * Backup all variables in scheduler
+     */
     private void backupVariables() {
         for (VariableContext context : globalVarStorageMap.values()) {
             if (context.groupVariable.isBackup()) {
@@ -295,16 +319,14 @@ public class EntityContextVarImpl implements EntityContextVar {
     private Object tryConvertValueToRestrictionTypeFormat(Object value, VariableContext context) {
         if (value instanceof State) {
             switch (context.groupVariable.getRestriction()) {
-                case Bool:
-                    value = ((State) value).boolValue();
-                    break;
-                case Float:
+                case Bool -> value = ((State) value).boolValue();
+                case Float -> {
                     if (value instanceof DecimalType) {
                         value = convertBigDecimal(((DecimalType) value).getValue());
                     } else {
                         value = ((State) value).floatValue();
                     }
-                    break;
+                }
             }
         }
 
@@ -374,11 +396,19 @@ public class EntityContextVarImpl implements EntityContextVar {
         final String variableId = getVariableId(varId);
         VariableContext context = globalVarStorageMap.get(variableId);
         if (context == null) {
-            WorkspaceVariable entity = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
-            if (entity == null) {
-                throw new NotFoundException("Unable to find variable: " + varId);
+            try {
+                createContextLock.lock();
+                context = globalVarStorageMap.get(variableId);
+                if (context == null) {
+                    WorkspaceVariable entity = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
+                    if (entity == null) {
+                        throw new NotFoundException("Unable to find variable: " + varId);
+                    }
+                    context = createContext(entity);
+                }
+            } finally {
+                createContextLock.unlock();
             }
-            context = createContext(entity);
         }
         return context;
     }
@@ -392,14 +422,6 @@ public class EntityContextVarImpl implements EntityContextVar {
         context.groupVariable = variable;
         globalVarStorageMap.put(variableId, context);
 
-        // initialize variable to put first value. require to getLatest(), ...
-        /*switch (variable.getRestriction()) {
-            case Json -> service.save(new WorkspaceVariableMessage("{}"));
-            case Color -> service.save(new WorkspaceVariableMessage("#FFFFFF"));
-            case Bool -> service.save(new WorkspaceVariableMessage(false));
-            case Float -> service.save(new WorkspaceVariableMessage(0));
-            default -> service.save(new WorkspaceVariableMessage(""));
-        }*/
         if (context.groupVariable.isBackup()) {
             List<VariableBackup> backupData = variableDataRepository.findAll(
                 context.groupVariable.getVariableId(),
@@ -456,7 +478,14 @@ public class EntityContextVarImpl implements EntityContextVar {
         private final DataStorageService<WorkspaceVariableMessage> storageService;
         public long lastBackupTimestamp = System.currentTimeMillis();
         private WorkspaceVariable groupVariable;
-        private Consumer<Object> linkListener;
+        // fire every link listener in separate thread
+        private ThrowingConsumer<Object, Exception> linkListener;
+
+        @Override
+        public String toString() {
+            return format("%s. RO:[%s]. BP:[%s]. LL: [%s]", groupVariable.getVariableId(), groupVariable.isReadOnly(),
+                groupVariable.isBackup(), linkListener != null);
+        }
     }
 
     @Getter

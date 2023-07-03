@@ -9,24 +9,19 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
-import org.homio.api.ui.field.UIFieldType;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class ConsoleRefreshContentPeriodSetting
     implements ConsoleSettingPlugin<Integer>, SettingPluginOptions<Integer> {
 
     @Override
-    public UIFieldType getSettingType() {
-        return UIFieldType.SelectBox;
-    }
-
-    @Override
-    public String getDefaultValue() {
+    public @NotNull String getDefaultValue() {
         return "0";
     }
 
     @Override
-    public Class<Integer> getType() {
+    public @NotNull Class<Integer> getType() {
         return Integer.class;
     }
 
@@ -36,7 +31,7 @@ public class ConsoleRefreshContentPeriodSetting
     }
 
     @Override
-    public Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
+    public @NotNull Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
         return new ArrayList<>(
             Arrays.asList(
                 OptionModel.of("0", "time.NEVER"),

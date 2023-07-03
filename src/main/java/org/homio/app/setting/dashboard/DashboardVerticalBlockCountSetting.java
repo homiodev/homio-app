@@ -2,17 +2,18 @@ package org.homio.app.setting.dashboard;
 
 import org.homio.api.setting.SettingPluginSlider;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 
 public class DashboardVerticalBlockCountSetting
     implements CoreSettingPlugin<Integer>, SettingPluginSlider {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.dashboard;
     }
 
     @Override
-    public String getSubGroupKey() {
+    public @NotNull String getSubGroupKey() {
         return "BLOCKS";
     }
 

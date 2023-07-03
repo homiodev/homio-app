@@ -26,9 +26,9 @@ import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.SettingPluginOptionsRemovable;
 import org.homio.api.setting.SettingPluginPackageInstall;
+import org.homio.api.setting.SettingType;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -265,7 +265,7 @@ public class SettingController implements ContextRefreshed {
                         }
                     };
                     settingEntity
-                        .setSettingType(UIFieldType.Description)
+                        .setSettingType(SettingType.Description)
                         .setVisible(true)
                         .setEntityID(SettingEntity.PREFIX + addonEntrypoint.getAddonID() + "_Description")
                         .setValue(descriptionKey)

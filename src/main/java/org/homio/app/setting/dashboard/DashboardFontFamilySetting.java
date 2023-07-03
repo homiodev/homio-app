@@ -6,7 +6,6 @@ import java.util.Collection;
 import org.homio.api.EntityContext;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
-import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -15,18 +14,13 @@ public class DashboardFontFamilySetting
     implements CoreSettingPlugin<String>, SettingPluginOptions<String> {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.dashboard;
     }
 
     @Override
-    public String getSubGroupKey() {
+    public @NotNull String getSubGroupKey() {
         return "WIDGET";
-    }
-
-    @Override
-    public @NotNull UIFieldType getSettingType() {
-        return UIFieldType.SelectBox;
     }
 
     @Override

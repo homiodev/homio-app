@@ -4,7 +4,7 @@ import org.homio.api.setting.SettingPluginSlider;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 
-public class DashboardHorizontalBlockCountSetting
+public class ItemShowFilterThresholdCountSetting
     implements CoreSettingPlugin<Integer>, SettingPluginSlider {
 
     @Override
@@ -13,27 +13,22 @@ public class DashboardHorizontalBlockCountSetting
     }
 
     @Override
-    public @NotNull String getSubGroupKey() {
-        return "BLOCKS";
-    }
-
-    @Override
-    public int defaultValue() {
-        return 8;
-    }
-
-    @Override
     public Integer getMin() {
-        return 1;
+        return 3;
     }
 
     @Override
     public Integer getMax() {
+        return 20;
+    }
+
+    @Override
+    public int defaultValue() {
         return 10;
     }
 
     @Override
     public int order() {
-        return 100;
+        return 350;
     }
 }

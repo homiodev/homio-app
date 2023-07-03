@@ -9,17 +9,11 @@ import org.homio.api.EntityContext;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
-import org.homio.api.ui.field.UIFieldType;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class ConsoleSshFontFamilySetting
     implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
-
-    @Override
-    public @NotNull UIFieldType getSettingType() {
-        return UIFieldType.SelectBox;
-    }
 
     @Override
     public @NotNull Class<String> getType() {

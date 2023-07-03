@@ -33,36 +33,13 @@ public class AddonController {
     @GetMapping("/image/{addonID}/{baseEntityType:.+}")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public ResponseEntity<InputStreamResource> getAddonImage(
-        @PathVariable("addonID") String addonID, @PathVariable String baseEntityType) {
+        @PathVariable("addonID") String addonID,
+        @PathVariable String baseEntityType) {
         AddonEntrypoint addonEntrypoint = addonService.getAddon(addonID);
         InputStream stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("images/" + baseEntityType);
         if (stream == null) {
             throw new NotFoundException("Unable to find image <" + baseEntityType + "> of addon: " + addonID);
         }
         return CommonUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
-    }
-
-    public List<AddonJson> getAddons() {
-        List<AddonJson> addons = new ArrayList<>();
-        for (AddonEntrypoint addonEntrypoint : addonService.getAddons()) {
-            addons.add(new AddonJson(addonEntrypoint.getAddonID(),
-                addonService.getAddonColor(addonEntrypoint.getAddonID()), 0));
-        }
-        Collections.sort(addons);
-        return addons;
-    }
-
-    @Getter
-    @RequiredArgsConstructor
-    static class AddonJson implements Comparable<AddonJson> {
-
-        private final String id;
-        private final String color;
-        private final int order;
-
-        @Override
-        public int compareTo(@NotNull AddonController.AddonJson o) {
-            return Integer.compare(order, o.order);
-        }
     }
 }

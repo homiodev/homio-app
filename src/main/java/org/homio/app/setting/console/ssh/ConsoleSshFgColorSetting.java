@@ -1,7 +1,7 @@
 package org.homio.app.setting.console.ssh;
 
+import org.homio.api.setting.SettingType;
 import org.homio.api.setting.console.ConsoleSettingPlugin;
-import org.homio.api.ui.field.UIFieldType;
 import org.jetbrains.annotations.NotNull;
 
 public class ConsoleSshFgColorSetting implements ConsoleSettingPlugin<String> {
@@ -17,8 +17,8 @@ public class ConsoleSshFgColorSetting implements ConsoleSettingPlugin<String> {
     }
 
     @Override
-    public @NotNull UIFieldType getSettingType() {
-        return UIFieldType.ColorPicker;
+    public @NotNull SettingType getSettingType() {
+        return SettingType.ColorPicker;
     }
 
     @Override

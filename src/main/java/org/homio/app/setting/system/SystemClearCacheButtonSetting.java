@@ -11,7 +11,7 @@ public class SystemClearCacheButtonSetting
     implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.system;
     }
 

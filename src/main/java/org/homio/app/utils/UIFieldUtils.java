@@ -6,6 +6,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.OneToMany;
@@ -26,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +64,7 @@ import org.homio.api.ui.field.UIFieldOrder;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldPosition;
 import org.homio.api.ui.field.UIFieldProgress;
+import org.homio.api.ui.field.UIFieldProgress.UIFieldProgressColorChange;
 import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldTableLayout;
@@ -400,11 +403,12 @@ public class UIFieldUtils {
 
         var fieldProgress = fieldContext.getDeclaredAnnotation(UIFieldProgress.class);
         if (fieldProgress != null) {
+            JsonNode colorChange = OBJECT_MAPPER.valueToTree(Arrays.stream(fieldProgress.colorChange()).collect(
+                Collectors.toMap(UIFieldProgressColorChange::color, UIFieldProgressColorChange::whenMoreThan)));
             entityUIMetaData.setType("Progress");
             jsonTypeMetadata.put("color", fieldProgress.color());
             jsonTypeMetadata.put("bgColor", fieldProgress.fillColor());
-            jsonTypeMetadata.set("colorChange", OBJECT_MAPPER.valueToTree(Arrays.stream(fieldProgress.colorChange()).collect(
-                Collectors.toMap(UIFieldProgress.UIFieldProgressColorChange::color, UIFieldProgress.UIFieldProgressColorChange::whenMoreThan))));
+            jsonTypeMetadata.set("colorChange", colorChange);
         }
 
         var fieldImage = fieldContext.getDeclaredAnnotation(UIFieldImage.class);
@@ -731,22 +735,21 @@ public class UIFieldUtils {
     private static void detectFieldSelectionType(UIFieldContext fieldContext, EntityUIMetaData entityUIMetaData, Class<?> type, UIField field,
         ObjectNode jsonTypeMetadata) {
         // detect types
-        UIFieldType fieldType = (field.hideInEdit() || field.disableEdit()) ? UIFieldType.String : UIFieldType.SelectBox;
+        UIFieldType fieldType = field.disableEdit() ? UIFieldType.String : UIFieldType.SelectBox;
 
-        if (fieldContext.isAnnotationPresent(UIFieldSelection.class) && fieldContext.getDeclaredAnnotation(UIFieldSelection.class)
-                                                                                    .allowInputRawText()) {
+        if (isMatch(fieldContext, UIFieldSelection.class, UIFieldSelection::allowInputRawText)) {
             fieldType = UIFieldType.TextSelectBoxDynamic;
         }
-        if (fieldContext.isAnnotationPresent(UIFieldStaticSelection.class) && fieldContext.getDeclaredAnnotation(UIFieldStaticSelection.class)
-                                                                                          .allowInputRawText()) {
+
+        if (isMatch(fieldContext, UIFieldStaticSelection.class, UIFieldStaticSelection::allowInputRawText)) {
             fieldType = UIFieldType.TextSelectBoxDynamic;
         }
-        if (fieldContext.isAnnotationPresent(UIFieldTreeNodeSelection.class) && fieldContext.getDeclaredAnnotation(UIFieldTreeNodeSelection.class)
-                                                                                            .allowInputRawText()) {
+
+        if (isMatch(fieldContext, UIFieldTreeNodeSelection.class, UIFieldTreeNodeSelection::allowInputRawText)) {
             fieldType = UIFieldType.TextSelectBoxDynamic;
         }
-        if (fieldContext.isAnnotationPresent(UIFieldDevicePortSelection.class) && fieldContext.getDeclaredAnnotation(UIFieldDevicePortSelection.class)
-                                                                                              .allowInputRawText()) {
+
+        if (isMatch(fieldContext, UIFieldDevicePortSelection.class, UIFieldDevicePortSelection::allowInputRawText)) {
             fieldType = UIFieldType.TextSelectBoxDynamic;
         }
 
@@ -754,6 +757,10 @@ public class UIFieldUtils {
         if (Collection.class.isAssignableFrom(type)) {
             jsonTypeMetadata.put("multiple", true);
         }
+    }
+
+    private static <T extends Annotation> boolean isMatch(UIFieldContext fieldContext, Class<T> annotationClass, Predicate<T> predicate) {
+        return fieldContext.isAnnotationPresent(annotationClass) && predicate.test(fieldContext.getDeclaredAnnotation(annotationClass));
     }
 
     private static void assembleTextOptions(UIFieldContext fieldContext, String sourceName, ObjectNode jsonTypeMetadata) {
@@ -1030,8 +1037,8 @@ public class UIFieldUtils {
 
         @Override
         public UIField getUIField() {
-            return methods.stream().filter(m -> m.isAnnotationPresent(UIField.class)).findFirst().get()
-                          .getDeclaredAnnotation(UIField.class);
+            return methods.stream().filter(m -> m.isAnnotationPresent(UIField.class))
+                          .findFirst().map(s -> s.getDeclaredAnnotation(UIField.class)).orElse(null);
         }
 
         @Override

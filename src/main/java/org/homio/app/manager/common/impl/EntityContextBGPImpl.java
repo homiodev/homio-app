@@ -834,7 +834,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             }
 
             log.info("[{}]: wait process to finish.", name);
+            Thread.sleep(1000);
             int responseCode = process.waitFor();
+            Thread.sleep(1000);
             executeFinishHandler(null, responseCode);
         }
 
@@ -844,9 +846,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
         private void executeFinishHandler(Exception ex, int exitCode) {
             if (ex != null) {
-                log.error("Process '{}' finished with error code: {}. Err: {}", name, exitCode, CommonUtils.getErrorMessage(ex));
+                log.error("Process '{}' finished with error StatusCode: {}. Err: {}", name, exitCode, CommonUtils.getErrorMessage(ex));
             } else {
-                log.info("Process '{}' finished with code: {}", name, exitCode);
+                log.info("Process '{}' finished with StatusCode: {}", name, exitCode);
             }
             if (finishHandler != null) {
                 try {

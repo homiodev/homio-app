@@ -206,7 +206,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Override
     public void addDuration(long value, @Nullable String color) {
-        addEntity(new UIDurationBuilderImpl(System.currentTimeMillis() + "", getNextOrder(), value, color));
+        addEntity(new UIDurationBuilderImpl(String.valueOf(System.currentTimeMillis()), getNextOrder(), value, color));
     }
 
     public <T extends UIEntityBuilder> T addEntity(T entityBuilder) {

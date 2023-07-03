@@ -2,11 +2,12 @@ package org.homio.app.setting.system;
 
 import org.homio.api.setting.SettingPluginBoolean;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 
 public class SystemShowConsoleSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.system;
     }
 
