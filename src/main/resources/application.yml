@@ -12,6 +12,7 @@ app:
   check-port-interval: PT10S
   disable-security: false
   min-script-thread-sleep: PT0.1S
+  send-ui-updates-interval: PT0.5S
   source:
     mosquitto: https://github.com/homiodev/static-files/raw/master/mosquitto.7z
     ffmpeg: https://github.com/homiodev/static-files/raw/master/ffmpeg.7z

@@ -30,7 +30,6 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
 
     @Override
     public void configureOptionModel(OptionModel optionModel) {
-        optionModel.setStatus(this);
         optionModel.setDescription(getRawWebSocketAddress());
     }
 

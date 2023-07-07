@@ -190,7 +190,7 @@ public class EntityContextImpl implements EntityContext {
         this.classFinder = classFinder;
         this.cacheService = cacheService;
 
-        this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
+        this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate, appProperties);
         this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler, appProperties);
         this.entityContextEvent = new EntityContextEventImpl(this, entityManagerFactory);
         this.entityContextInstall = new EntityContextInstallImpl(this);

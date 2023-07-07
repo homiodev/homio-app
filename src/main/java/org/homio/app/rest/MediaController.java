@@ -10,6 +10,7 @@ import dev.failsafe.Fallback;
 import dev.failsafe.RetryPolicy;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,12 +35,17 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
 import org.homio.addon.camera.entity.VideoPlaybackStorage.DownloadFile;
+import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.audio.AudioSink;
 import org.homio.api.audio.SelfContainedAudioSourceContainer;
+import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.audio.AudioService;
+import org.homio.app.config.cacheControl.CacheControl;
+import org.homio.app.config.cacheControl.CachePolicy;
+import org.homio.app.manager.AddonService;
 import org.homio.app.manager.ImageService;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.springframework.core.io.InputStreamResource;
@@ -73,6 +79,7 @@ public class MediaController {
     private final EntityContext entityContext;
     private final AudioService audioService;
     private final FfmpegHardwareRepository ffmpegHardwareRepository;
+    private final AddonService addonService;
 
     private final RetryPolicy<Path> PLAYBACK_THUMBNAIL_RETRY_POLICY =
         RetryPolicy.<Path>builder()
@@ -208,6 +215,19 @@ public class MediaController {
     @GetMapping("/image/{entityID}")
     public ResponseEntity<InputStreamResource> getImage(@PathVariable String entityID) {
         return imageService.getImage(entityID);
+    }
+
+    @GetMapping("/image/{addonID}/{baseEntityType:.+}")
+    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
+    public ResponseEntity<InputStreamResource> getAddonImage(
+        @PathVariable("addonID") String addonID,
+        @PathVariable String baseEntityType) {
+        AddonEntrypoint addonEntrypoint = addonService.getAddon(addonID);
+        InputStream stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("images/" + baseEntityType);
+        if (stream == null) {
+            throw new NotFoundException("Unable to find image <" + baseEntityType + "> of addon: " + addonID);
+        }
+        return CommonUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
     }
 
     @GetMapping("/audioSource")

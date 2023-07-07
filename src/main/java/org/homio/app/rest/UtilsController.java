@@ -1,6 +1,7 @@
 package org.homio.app.rest;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
+import static java.lang.String.format;
 import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
@@ -20,11 +21,16 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.AllArgsConstructor;
@@ -36,17 +42,25 @@ import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
+import org.homio.addon.z2m.service.Z2MDeviceService;
 import org.homio.api.EntityContextUI;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.PeriodRequest;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasGetStatusValue.GetStatusValueRequest;
 import org.homio.api.entity.widget.ability.HasTimeValueSeries;
+import org.homio.api.entity.zigbee.ZigBeeDeviceBaseEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
+import org.homio.api.model.OptionModel;
 import org.homio.api.state.State;
 import org.homio.api.storage.SourceHistory;
 import org.homio.api.storage.SourceHistoryItem;
+import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Curl;
 import org.homio.api.util.DataSourceUtil;
@@ -69,6 +83,9 @@ import org.homio.app.rest.widget.WidgetChartsController;
 import org.homio.app.rest.widget.WidgetChartsController.TimeSeriesChartData;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+import org.springframework.core.annotation.MergedAnnotation;
+import org.springframework.core.annotation.MergedAnnotations;
+import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -101,6 +118,44 @@ public class UtilsController {
                 return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
             }
         });
+
+    // get all device that able to get status
+    @GetMapping("/deviceWithStatus")
+    public List<OptionModel> getItemOptionsByType() {
+        List<BaseEntity> entities = new ArrayList<>(entityContext.findAll(DeviceBaseEntity.class));
+        for (Z2MLocalCoordinatorEntity coordinator : entityContext.findAll(Z2MLocalCoordinatorEntity.class)) {
+            entities.addAll(coordinator.getService().getDeviceHandlers().values().stream()
+                                       .map(Z2MDeviceService::getDeviceEntity).toList());
+        }
+        entities.removeIf(e -> !(e instanceof HasStatusAndMsg<?>) || ((HasStatusAndMsg<?>) e).getStatus() == null);
+        Map<String, List<BaseEntity>> groups =
+            entities.stream().collect(Collectors.groupingBy(obj -> {
+
+                Class<?> superClass = (Class<?>) MergedAnnotations
+                    .from(obj.getClass(), SearchStrategy.SUPERCLASS)
+                    .get(UISidebarMenu.class, MergedAnnotation::isDirectlyPresent)
+                    .getSource();
+                if (superClass != null && !DeviceBaseEntity.class.getSimpleName().equals(superClass.getSimpleName())) {
+                    return superClass.getSimpleName();
+                }
+                return obj.getClass().getSimpleName();
+            }));
+
+        List<OptionModel> models = new ArrayList<>();
+        for (Entry<String, List<BaseEntity>> entry : groups.entrySet()) {
+            OptionModel parent = OptionModel.of(entry.getKey(), "DEVICE_TYPE." + entry.getKey());
+            models.add(parent);
+            BiConsumer<BaseEntity, OptionModel> configurator = null;
+            if (!entry.getKey().equals(ZigBeeDeviceBaseEntity.class.getSimpleName())) {
+                configurator = (entity, optionModel) -> optionModel
+                    .setTitle(format("${selection.%s}: %s", entity.getClass().getSimpleName(), entity.getTitle()));
+            }
+            parent.setChildren(OptionModel.entityList(entry.getValue(), configurator));
+        }
+
+        Collections.sort(models);
+        return models;
+    }
 
     @PutMapping("/multiDynamicUpdates")
     public void multiDynamicUpdates(@Valid @RequestBody List<DynamicRequestItem> request) {
@@ -203,7 +258,7 @@ public class UtilsController {
         HttpHeaders headers = new HttpHeaders();
         headers.add(
             HttpHeaders.CONTENT_DISPOSITION,
-            String.format("attachment; filename=\"%s\"", outputPath.getFileName()));
+            format("attachment; filename=\"%s\"", outputPath.getFileName()));
         headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
 
         return new ResponseEntity<>(

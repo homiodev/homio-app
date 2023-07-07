@@ -59,7 +59,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     public void configureOptionModel(OptionModel optionModel) {
         String user = getUser();
         optionModel.setDescription((user.isEmpty() ? "" : user + "@") + getHost() + ":" + getPort());
-        optionModel.setStatus(this);
     }
 
     @UIField(order = 1, inlineEditWhenEmpty = true, required = true)

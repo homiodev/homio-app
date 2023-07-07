@@ -130,10 +130,6 @@ public class EntityContextStorageImpl implements EntityContextStorage {
             VariableType.Float, builder ->
                 builder.setDescription("sys.mem_load_description").setReadOnly(true).setUnit("%").setColor("#939C35"));
 
-        entityContext.event().addEvent("sys_cpu_load");
-        entityContext.event().addEvent("java_cpu_load");
-        entityContext.event().addEvent("sys_mem_load");
-
         entityContext.setting().listenValueAndGet(SystemCPUFetchValueIntervalSetting.class,
             "hardware-cpu",
             timeout -> {

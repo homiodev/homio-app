@@ -18,6 +18,7 @@ public class AppProperties {
     private boolean disableSecurity;
     private Duration internetTestInterval;
     private Duration checkPortInterval;
+    private Duration sendUiUpdatesInterval;
     private Duration minScriptThreadSleep;
     private Duration maxJavaScriptOnceCallBeforeInterrupt;
     private Duration maxJavaScriptCompileBeforeInterrupt;

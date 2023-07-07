@@ -132,11 +132,6 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     }
 
     @Override
-    public @NotNull String getEntityID() {
-        return super.getEntityID();
-    }
-
-    @Override
     public String getDefaultName() {
         return null;
     }

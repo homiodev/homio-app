@@ -49,6 +49,7 @@ import org.homio.api.util.Lang;
 import org.homio.api.util.NotificationLevel;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.UIInputEntityActionHandler;
+import org.homio.app.config.AppProperties;
 import org.homio.app.config.WebSocketConfig;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
@@ -80,6 +81,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     // constructor parameters
     @Getter private final EntityContextImpl entityContext;
     private final SimpMessagingTemplate messagingTemplate;
+    private final AppProperties appProperties;
     private final Map<String, SendUpdateContext> sendToUIMap = new ConcurrentHashMap<>();
 
     public void onContextCreated() {
@@ -92,12 +94,12 @@ public class EntityContextUIImpl implements EntityContextUI {
             .execute(() ->
                 this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - v.timeout) > 1));
 
-        entityContext.bgp().builder("send-ui-updates").interval(Duration.ofSeconds(1)).execute(() -> {
+        entityContext.bgp().builder("send-ui-updates").interval(appProperties.getSendUiUpdatesInterval()).execute(() -> {
             for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator(); iterator.hasNext(); ) {
                 SendUpdateContext context = iterator.next();
 
                 String entityType = context.entity instanceof WidgetBaseEntity ? "widget" : context.entity.getType();
-                sendDynamicUpdate("entity-type-" + entityType, null, context.handler);
+                sendDynamicUpdateSupplied(new DynamicUpdateRequest("entity-type-" + entityType, null), context.handler::get);
                 iterator.remove();
             }
         });
@@ -111,7 +113,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             context.timeout = System.currentTimeMillis(); // refresh timer
             context.registerCounter.incrementAndGet();
         }
-        entityContext.event().addEventListener(request.getDynamicUpdateId(), o -> this.sendDynamicUpdate(request, () -> o));
+        entityContext.event().addEventListener(request.getDynamicUpdateId(), o -> this.sendDynamicUpdateSupplied(request, () -> o));
     }
 
     public void unRegisterForUpdates(DynamicUpdateRequest request) {
@@ -127,11 +129,11 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     public void sendDynamicUpdate(@NotNull String dynamicUpdateId, @Nullable String entityId, @Nullable Object value) {
         if (value != null) {
-            sendDynamicUpdate(new DynamicUpdateRequest(dynamicUpdateId, entityId), () -> value);
+            sendDynamicUpdateSupplied(new DynamicUpdateRequest(dynamicUpdateId, entityId), () -> value);
         }
     }
 
-    public void sendDynamicUpdate(@NotNull DynamicUpdateRequest request, @NotNull Supplier<Object> supplier) {
+    public void sendDynamicUpdateSupplied(@NotNull DynamicUpdateRequest request, @NotNull Supplier<Object> supplier) {
         DynamicUpdateContext context = dynamicUpdateRegisters.get(request);
         if (context != null) {
             Object value = supplier.get();
@@ -228,7 +230,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     private boolean isUpdateRegistered(@NotNull BaseEntity<?> parentEntity) {
-        return this.dynamicUpdateRegisters.containsKey(new DynamicUpdateRequest(parentEntity.getEntityID()));
+        return this.dynamicUpdateRegisters.containsKey(new DynamicUpdateRequest("entity-type-" + parentEntity.getType()));
     }
 
     public void updateItem(@NotNull BaseEntity<?> entity, boolean ignoreExtra) {

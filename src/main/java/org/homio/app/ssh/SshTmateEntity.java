@@ -47,11 +47,6 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     }
 
     @Override
-    public void configureOptionModel(OptionModel optionModel) {
-        optionModel.setStatus(this);
-    }
-
-    @Override
     public @NotNull Class<SshTmateService> getEntityServiceItemClass() {
         return SshTmateService.class;
     }
