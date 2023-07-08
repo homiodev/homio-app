@@ -1,5 +1,7 @@
 package org.homio.app;
 
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
@@ -12,6 +14,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Log4j2
@@ -31,6 +34,13 @@ public class HomioApplication implements WebMvcConfigurer {
         }
         log.info("Copying resources done");
 
-        new SpringApplicationBuilder(AppConfig.class).listeners(new LogService()).run(args);
+        try {
+            new SpringApplicationBuilder(AppConfig.class).listeners(new LogService()).run(args);
+        } catch (Exception ex) {
+            Throwable cause = NestedExceptionUtils.getRootCause(ex);
+            cause = cause == null ? ex : cause;
+            log.error("Unable to start Homio application: {}", getErrorMessage(cause));
+            throw ex;
+        }
     }
 }
