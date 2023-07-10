@@ -7,16 +7,18 @@ import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin
 
 import com.pivovarit.function.ThrowingConsumer;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -28,7 +30,6 @@ import org.homio.api.setting.SettingPluginOptions;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
 import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.config.AppProperties;
 import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
@@ -37,11 +38,14 @@ import org.homio.app.repository.SettingRepository;
 import org.homio.app.setting.system.SystemPlaceSetting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.core.env.Environment;
+import org.springframework.core.env.ConfigurableEnvironment;
 
 @Log4j2
 @RequiredArgsConstructor
 public class EntityContextSettingImpl implements EntityContextSetting {
+
+    private static Path propertiesLocation;
+    private static Properties homioProperties;
 
     public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
     public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
@@ -51,10 +55,8 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> settingListeners = new HashMap<>();
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> httpRequestSettingListeners = new HashMap<>();
     private final EntityContextImpl entityContext;
-    private final Environment environment;
+    private final ConfigurableEnvironment environment;
     private final ClassFinder classFinder;
-    @Getter
-    private final AppProperties appProperties;
 
     public static List<SettingPlugin> settingPluginsBy(Predicate<SettingPlugin> predicate) {
         return settingPluginsByPluginKey.values().stream().filter(predicate).collect(Collectors.toList());
@@ -66,7 +68,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     @Override
-    public void reloadSettings(Class<? extends SettingPluginOptions> settingPlugin) {
+    public void reloadSettings(@NotNull Class<? extends SettingPluginOptions> settingPlugin) {
         String entityID = SettingEntity.getKey(settingPlugin);
         SettingPluginOptions<?> pluginOptions = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
 
@@ -78,7 +80,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
      * Reload updated settings to UI
      */
     @Override
-    public void reloadSettings(Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass,
+    public void reloadSettings(@NotNull Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass,
         List<? extends DynamicConsoleHeaderSettingPlugin> dynamicSettings) {
         List<SettingEntity> dynamicEntities = dynamicSettings
             .stream()
@@ -135,19 +137,20 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     @Override
-    public <T> void listenValueInRequest(Class<? extends SettingPlugin<T>> settingClass, String key, ThrowingConsumer<T, Exception> listener) {
+    public <T> void listenValueInRequest(Class<? extends SettingPlugin<T>> settingClass, @NotNull String key,
+        @NotNull ThrowingConsumer<T, Exception> listener) {
         httpRequestSettingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
         httpRequestSettingListeners.get(settingClass.getName()).put(key, listener);
     }
 
     @Override
-    public <T> void listenValue(Class<? extends SettingPlugin<T>> settingClass, String key, ThrowingConsumer<T, Exception> listener) {
+    public <T> void listenValue(Class<? extends SettingPlugin<T>> settingClass, @NotNull String key, @NotNull ThrowingConsumer<T, Exception> listener) {
         settingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
         settingListeners.get(settingClass.getName()).put(key, listener);
     }
 
     @Override
-    public <T> void unListenValue(Class<? extends SettingPlugin<T>> settingClass, String key) {
+    public <T> void unListenValue(Class<? extends SettingPlugin<T>> settingClass, @NotNull String key) {
         if (settingListeners.containsKey(settingClass.getName())) {
             settingListeners.get(settingClass.getName()).remove(key);
         }
@@ -169,13 +172,42 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         setValueSilenceRaw(settingPluginsByPluginClass.get(settingPluginClazz.getName()), value);
     }
 
-    public <T> T getEnv(@NotNull String key, @NotNull Class<T> classType, T defaultValue) {
-        return environment.getProperty(key, classType, defaultValue);
+    @Override
+    @SneakyThrows
+    public void setEnv(@NotNull String key, @NotNull Object value) {
+        Properties properties = getHomioProperties();
+        properties.setProperty(key, value.toString());
+        properties.store(Files.newOutputStream(propertiesLocation), null);
+    }
+
+    @Override
+    public <T> T getEnv(@NotNull String key, @NotNull Class<T> classType, @Nullable T defaultValue, boolean store) {
+        String value = getHomioProperties().getProperty(key);
+        if (value == null) {
+            if (environment.containsProperty(key)) {
+                return environment.getProperty(key, classType);
+            }
+            if (store && defaultValue != null) {
+                setEnv(key, defaultValue.toString());
+            }
+            return defaultValue;
+        }
+        return environment.getConversionService().convert(value, classType);
+    }
+
+    @SneakyThrows
+    public static Properties getHomioProperties() {
+        if (homioProperties == null) {
+            homioProperties = new Properties();
+            propertiesLocation = CommonUtils.getHomioPropertiesLocation();
+            homioProperties.load(Files.newInputStream(propertiesLocation));
+        }
+        return homioProperties;
     }
 
     @Override
     public @NotNull String getApplicationVersion() {
-        return appProperties.getVersion();
+        return StringUtils.defaultIfEmpty(getClass().getPackage().getImplementationVersion(), "0.0");
     }
 
     @SneakyThrows
@@ -206,14 +238,14 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     @Override
-    public <T> void setValue(Class<? extends SettingPlugin<T>> settingPluginClazz, T value) {
+    public <T> void setValue(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull T value) {
         SettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
         String strValue = setValueSilence(settingPluginClazz, value);
         fireNotifyHandlers(settingPluginClazz, value, pluginFor, strValue, true);
     }
 
     @Override
-    public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value) {
+    public <T> void setValueRaw(@NotNull Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value) {
         setValueRaw(settingPluginClazz, value, true);
     }
 

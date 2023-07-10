@@ -1,12 +1,12 @@
 package org.homio.app.manager.common;
 
-import static java.lang.String.format;
-import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import jakarta.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -54,7 +54,6 @@ import org.homio.app.LogService;
 import org.homio.app.audio.AudioService;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.builder.widget.EntityContextWidgetImpl;
-import org.homio.app.config.AppProperties;
 import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.CacheService;
@@ -106,8 +105,9 @@ import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.Environment;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
@@ -149,7 +149,8 @@ public class EntityContextImpl implements EntityContext {
         BEAN_CONTEXT_REFRESH.add(AudioService.class);
     }
 
-    private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app", CommonUtils.getInstallPath().resolve("homio"));
+    private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app", CommonUtils.getInstallPath().resolve("homio"))
+                                                         .setInstalledVersionResolver(() -> setting().getApplicationVersion());
     private final EntityContextUIImpl entityContextUI;
     private final EntityContextInstallImpl entityContextInstall;
     private final EntityContextEventImpl entityContextEvent;
@@ -180,21 +181,19 @@ public class EntityContextImpl implements EntityContext {
         CacheService cacheService,
         ThreadPoolTaskScheduler taskScheduler,
         SimpMessagingTemplate messagingTemplate,
-        Environment environment,
+        ConfigurableEnvironment environment,
         VariableDataRepository variableDataRepository,
         EntityManagerFactory entityManagerFactory,
         MachineHardwareRepository machineHardwareRepository,
-        FfmpegHardwareRepository ffmpegHardwareRepository,
-
-        AppProperties appProperties) {
+        FfmpegHardwareRepository ffmpegHardwareRepository) {
         this.classFinder = classFinder;
         this.cacheService = cacheService;
 
-        this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate, appProperties);
-        this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler, appProperties);
+        this.entityContextSetting = new EntityContextSettingImpl(this, environment, classFinder);
+        this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
+        this.entityContextBGP = new EntityContextBGPImpl(this, taskScheduler);
         this.entityContextEvent = new EntityContextEventImpl(this, entityManagerFactory);
         this.entityContextInstall = new EntityContextInstallImpl(this);
-        this.entityContextSetting = new EntityContextSettingImpl(this, environment, classFinder, appProperties);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
         this.entityContextStorageImpl = new EntityContextStorageImpl(this);
         this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
@@ -595,24 +594,29 @@ public class EntityContextImpl implements EntityContext {
     private void updateAppNotificationBlock() {
         ui().addNotificationBlock("app", "App", new Icon("fas fa-house", "#E65100"), builder -> {
             builder.setBorderColor("#FF4400");
-            String installedVersion = setting().getApplicationVersion();
+            String installedVersion = appGitHub.getInstalledVersion();
+            builder.setUpdating(appGitHub.isUpdating());
             builder.setVersion(installedVersion);
             String latestVersion = appGitHub.getLastReleaseVersion();
-            if (!installedVersion.equals(latestVersion)) {
+            if (!Objects.equals(installedVersion, latestVersion)) {
                 builder.setUpdatable(
-                    (progressBar, version) -> appGitHub.updateWithBackup("homio",
-                        progressBar, projectUpdate -> {
-                            projectUpdate.downloadSource(version);
-                            long pid = ProcessHandle.current().pid();
-                            Path updateScript = CommonUtils.getInstallPath().resolve("app-update." + (IS_OS_WINDOWS ? "sh" : "bat"));
-                            String jarLocation = EntityContextImpl.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
-                            String content = format(IS_OS_WINDOWS ? "@echo off\ntaskkill /F /PID %s\nmove %s %s\nstart javaw -jar \"%s\"\nexit"
-                                    : "#!/bin/bash\nkill -9 %s\nmv %s %s\nnohup sudo java -jar %s &>/dev/null &", pid,
-                                projectUpdate.getProject().getLocalProjectPath(), jarLocation, jarLocation);
-                            CommonUtils.writeToFile(updateScript, content, false);
-                            Runtime.getRuntime().exec(updateScript.toString());
-                            return null;
-                        }), appGitHub.getReleasesSince(installedVersion, false));
+                    (progressBar, version) -> appGitHub.updateProject("homio", progressBar, false, projectUpdate -> {
+                        Path jarLocation = Paths.get(setting().getEnvRequire("appPath", String.class, CommonUtils.getRootPath().toString(), true));
+                        Path archiveAppPath = jarLocation.resolve("homio-app.zip");
+                        Files.deleteIfExists(archiveAppPath);
+                        projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
+                        ui().reloadWindow("Finish update", 60);
+                        log.info("Exit app to restart it after update");
+                        SpringApplication.exit(applicationContext, () -> 4);
+                        System.exit(4);
+                        // sleep to allow program exist
+                        Thread.sleep(30000);
+                        log.info("Unable to stop app in 30sec. Force stop it");
+                        // force exit
+                        Runtime.getRuntime().halt(4);
+                        return null;
+                    }, null),
+                    appGitHub.getReleasesSince(installedVersion, false));
             }
             builder.fireOnFetch(() -> {
                 long runDuration = TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - START_TIME);

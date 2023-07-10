@@ -23,12 +23,12 @@ import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.UnzipFileIssueHandler;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.setting.SettingPluginPackageInstall;
-import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.Curl;
 import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.CoreSettingPlugin;
+import org.homio.hquery.Curl;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 

@@ -50,13 +50,12 @@ import org.homio.api.EntityContextBGP;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.service.EntityService.WatchdogService;
-import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.config.AppProperties;
 import org.homio.app.json.BgpProcessResponse;
 import org.homio.app.manager.bgp.InternetAvailabilityBgpService;
 import org.homio.app.manager.bgp.WatchdogBgpService;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.hquery.ProgressBar;
 import org.homio.hquery.StreamGobbler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -87,10 +86,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     private final InternetAvailabilityBgpService internetAvailabilityService;
     private final WatchdogBgpService watchdogBgpService;
 
-    public EntityContextBGPImpl(EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler, AppProperties appProperties) {
+    public EntityContextBGPImpl(EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler) {
         this.entityContext = entityContext;
         this.taskScheduler = taskScheduler;
-        this.internetAvailabilityService = new InternetAvailabilityBgpService(entityContext, appProperties, this);
+        this.internetAvailabilityService = new InternetAvailabilityBgpService(entityContext, this);
         this.watchdogBgpService = new WatchdogBgpService(this);
     }
 
@@ -610,7 +609,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             }
             ScheduleBuilder<R> builder = builder(key);
             return builder.execute(arg -> {
-                ProgressBar progressBar = (progress, message) -> {
+                ProgressBar progressBar = (progress, message, error) -> {
                     if (logToConsole) {
                         log.info("Progress: {}", message);
                     }

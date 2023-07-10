@@ -11,7 +11,7 @@
   </parent>
 
   <properties>
-    <graalvm.version>22.3.1</graalvm.version>
+    <graalvm.version>23.0.0</graalvm.version>
     <homio-api.version>1.3.2-SNAPSHOT</homio-api.version>
     <homio-primary-addons.version>1.3.0-SNAPSHOT</homio-primary-addons.version>
     <start-class>org.homio.app.HomioApplication</start-class>
@@ -26,6 +26,9 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
+          <layers>
+            <includeLayerTools>false</includeLayerTools>
+          </layers>
           <arguments>
             <argument>--add-opens java.base/java.net=ALL-UNNAMED</argument>
             <argument>--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED</argument>
@@ -57,18 +60,7 @@
     <resources>
       <resource>
         <directory>src/main/resources</directory>
-        <filtering>true</filtering>
-        <includes>
-          <include>application.yml</include>
-        </includes>
-      </resource>
-
-      <resource>
-        <directory>src/main/resources</directory>
         <filtering>false</filtering>
-        <includes>
-          <include>**/*</include>
-        </includes>
       </resource>
     </resources>
   </build>
@@ -116,6 +108,12 @@
     </dependency>
 
     <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <version>1.70</version>
+    </dependency>
+
+    <dependency>
       <artifactId>addon-camera</artifactId>
       <groupId>org.homio.addon</groupId>
       <version>${homio-primary-addons.version}</version>
@@ -145,10 +143,6 @@
       <version>${homio-primary-addons.version}</version>
     </dependency>
 
-    <dependency>
-      <artifactId>spring-boot-configuration-processor</artifactId>
-      <groupId>org.springframework.boot</groupId>
-    </dependency>
     <dependency>
       <artifactId>spring-boot-starter-validation</artifactId>
       <groupId>org.springframework.boot</groupId>

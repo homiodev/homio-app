@@ -13,6 +13,7 @@ import org.homio.app.auth.CacheAuthenticationProvider;
 import org.homio.app.auth.JwtTokenFilterConfigurer;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.auth.UserEntityDetailsService;
+import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,7 +36,6 @@ public class SecurityConfiguration {
     private final PasswordEncoder passwordEncoder;
     private final UserEntityDetailsService userEntityDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
-    private final AppProperties appProperties;
     private final Log log = LogFactory.getLog(RequestFilter.class);
 
     @Bean
@@ -53,10 +53,12 @@ public class SecurityConfiguration {
             session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         // Entry points
-        if (appProperties.isDisableSecurity()) {
-            log.warn("\n-----------------------------------"
-                + "\n!!! TouchHome security disabled !!!"
-                + "\n-----------------------------------");
+        if (EntityContextSettingImpl.getHomioProperties().getProperty("security-disable", "false").equalsIgnoreCase("true")) {
+            log.warn("""
+                -----------------------------------
+                !!! TouchHome security disabled !!!
+                -----------------------------------
+                """);
             http.authorizeHttpRequests(authorize ->
                 authorize.requestMatchers(WEB_SOCKET_ENDPOINT, CUSTOM_WEB_SOCKET_ENDPOINT + "/**", "/rest/**").permitAll());
         } else {

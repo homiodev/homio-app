@@ -47,7 +47,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
     @Override
     public void onContextCreated(EntityContextImpl entityContext) {
         listenPortAvailability();
-        Duration checkPortInterval = this.entityContext.setting().getAppProperties().getCheckPortInterval();
+        Duration checkPortInterval = entityContext.setting().getEnvRequire("interval-port-test", Duration.class, Duration.ofSeconds(10), true);
         this.entityContext
             .bgp()
             .builder("check-port")

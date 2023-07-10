@@ -280,6 +280,7 @@ public class LogService
 
         GlobalAppender() {
             super("Global", null);
+            start();
         }
 
         public synchronized void setEntityContext(EntityContextImpl entityContext) {

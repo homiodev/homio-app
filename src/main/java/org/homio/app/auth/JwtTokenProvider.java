@@ -11,10 +11,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.UserEntity;
-import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.homio.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
@@ -30,6 +30,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class JwtTokenProvider implements ContextCreated {
 
+    @Getter
+    public static int RUN_COUNT = -1;
+
     private final UserEntityDetailsService userEntityDetailsService;
     private final Object NULL = new Object();
     private final Map<String, Authentication> userCache = new ConcurrentHashMap<>();
@@ -38,9 +41,14 @@ public class JwtTokenProvider implements ContextCreated {
     private boolean regenerateSecurityIdOnRestart;
     private int jwtValidityTimeout;
     private byte[] securityId;
+    private String appId;
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
+        this.appId = entityContext.setting().getEnv("appId", String.valueOf(System.currentTimeMillis()), true);
+        RUN_COUNT = entityContext.setting().getEnv("runCount", 1, true);
+        entityContext.setting().setEnv("runCount", RUN_COUNT + 1);
+
         entityContext.setting().listenValueAndGet(SystemJWTTokenValidSetting.class, "jwt-valid", value -> {
             this.jwtValidityTimeout = value;
             regenerateSecurityID(entityContext);
@@ -146,9 +154,9 @@ public class JwtTokenProvider implements ContextCreated {
 
     private byte[] buildSecurityId() {
         userCache.clear();
-        String securityId = CommonUtils.APP_UUID + "_" + jwtValidityTimeout;
+        String securityId = appId + "_" + jwtValidityTimeout;
         if (regenerateSecurityIdOnRestart) {
-            securityId += "_" + CommonUtils.RUN_COUNT;
+            securityId += "_" + RUN_COUNT;
         }
         return Base64.getEncoder().encode(securityId.getBytes());
     }

@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContextUI.NotificationBlockBuilder;
 import org.homio.api.EntityContextUI.NotificationInfoLineBuilder;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasStatusAndMsg;
@@ -20,11 +21,11 @@ import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.ui.action.UIActionHandler;
-import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.homio.app.builder.ui.layout.UIStickyDialogItemBuilderImpl;
 import org.homio.app.utils.UIFieldUtils;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,6 +37,7 @@ public class NotificationBlock {
     private final @NotNull String entityID;
     private final @NotNull String name;
     private final @Nullable Icon icon;
+    private @Nullable Consumer<NotificationBlockBuilder> refreshBlockBuilder;
     private @Nullable String nameColor;
     private @Nullable String version;
     private @Nullable Status status;

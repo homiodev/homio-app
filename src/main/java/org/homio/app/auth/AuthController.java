@@ -12,8 +12,6 @@ import org.homio.api.EntityContext;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.UserEntity.UserType;
 import org.homio.api.model.Icon;
-import org.homio.api.util.CommonUtils;
-import org.homio.app.config.AppProperties;
 import org.homio.app.manager.common.impl.EntityContextAddonImpl;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
@@ -36,7 +34,6 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final EntityContext entityContext;
-    private final AppProperties appProperties;
 
     @GetMapping("/status")
     public StatusResponse getStatus(UsernamePasswordAuthenticationToken user) {
@@ -47,7 +44,8 @@ public class AuthController {
         String userEntityID = UserEntityDetailsService.getEntityID(user);
 
         addUserNotificationBlock(userEntityID, email, false);
-        String version = format("%s-%s-%s", appProperties.getVersion(), EntityContextAddonImpl.ADDON_UPDATE_COUNT, CommonUtils.RUN_COUNT);
+        String version = format("%s-%s-%s", entityContext.setting().getApplicationVersion(),
+            EntityContextAddonImpl.ADDON_UPDATE_COUNT, JwtTokenProvider.RUN_COUNT);
         return new StatusResponse(200, version);
     }
 

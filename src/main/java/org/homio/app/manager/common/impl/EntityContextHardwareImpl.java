@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContextHardware;
 import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.hquery.HQueryProgressBar;
+import org.homio.hquery.ProgressBar;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -19,23 +19,23 @@ public class EntityContextHardwareImpl implements EntityContextHardware {
     private final MachineHardwareRepository repo;
 
     @Override
-    public @NotNull String execute(String command) {
+    public @NotNull String execute(@NotNull String command) {
         return repo.execute(command);
     }
 
     @Override
-    public @NotNull String executeNoErrorThrow(@NotNull String command, int maxSecondsTimeout, @Nullable HQueryProgressBar progressBar) {
+    public @NotNull String executeNoErrorThrow(@NotNull String command, int maxSecondsTimeout, @Nullable ProgressBar progressBar) {
         return repo.executeNoErrorThrow(command, maxSecondsTimeout, progressBar);
     }
 
     @Override
     public @NotNull ArrayList<String> executeNoErrorThrowList(@NotNull String command, int maxSecondsTimeout,
-        @Nullable HQueryProgressBar progressBar) {
+        @Nullable ProgressBar progressBar) {
         return repo.executeNoErrorThrowList(command, maxSecondsTimeout, progressBar);
     }
 
     @Override
-    public @NotNull String execute(@NotNull String command, @Nullable HQueryProgressBar progressBar) {
+    public @NotNull String execute(@NotNull String command, @Nullable ProgressBar progressBar) {
         return repo.execute(command, progressBar);
     }
 
@@ -45,7 +45,7 @@ public class EntityContextHardwareImpl implements EntityContextHardware {
     }
 
     @Override
-    public @NotNull String execute(@NotNull String command, int maxSecondsTimeout, HQueryProgressBar progressBar) {
+    public @NotNull String execute(@NotNull String command, int maxSecondsTimeout, ProgressBar progressBar) {
         return repo.execute(command, maxSecondsTimeout, progressBar);
     }
 
@@ -55,25 +55,25 @@ public class EntityContextHardwareImpl implements EntityContextHardware {
     }
 
     @Override
-    public EntityContextHardware installSoftware(@NotNull String soft, int maxSecondsTimeout) {
+    public @NotNull EntityContextHardware installSoftware(@NotNull String soft, int maxSecondsTimeout) {
         repo.installSoftware(soft, maxSecondsTimeout);
         return this;
     }
 
     @Override
-    public EntityContextHardware installSoftware(@NotNull String soft, int maxSecondsTimeout, HQueryProgressBar progressBar) {
+    public @NotNull EntityContextHardware installSoftware(@NotNull String soft, int maxSecondsTimeout, ProgressBar progressBar) {
         repo.installSoftware(soft, maxSecondsTimeout, progressBar);
         return this;
     }
 
     @Override
-    public EntityContextHardware enableSystemCtl(@NotNull String soft) {
+    public @NotNull EntityContextHardware enableSystemCtl(@NotNull String soft) {
         repo.enableSystemCtl(soft);
         return this;
     }
 
     @Override
-    public EntityContextHardware startSystemCtl(@NotNull String soft) {
+    public @NotNull EntityContextHardware startSystemCtl(@NotNull String soft) {
         repo.startSystemCtl(soft);
         return this;
     }

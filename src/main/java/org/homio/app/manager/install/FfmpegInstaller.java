@@ -10,10 +10,8 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
 import org.homio.api.entity.dependency.DependencyExecutableInstaller;
-import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.Curl;
-import org.homio.app.config.AppProperties;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,8 +55,10 @@ public class FfmpegInstaller extends DependencyExecutableInstaller {
                 hardware.installSoftware("ffmpeg", 600);
             }
         } else {
-            Curl.downloadAndExtract(entityContext.getBean(AppProperties.class).getSource().getFfmpeg(), "ffmpeg.7z",
-                (progress, message) -> {
+            String url = entityContext.setting().getEnvRequire("source-ffmpeg", String.class,
+                "https://github.com/homiodev/static-files/raw/master/ffmpeg.7z", true);
+            CommonUtils.downloadAndExtract(url, "ffmpeg.7z",
+                (progress, message, error) -> {
                     progressBar.progress(progress, message);
                     log.info("FFMPEG: {}", message);
                 });

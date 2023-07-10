@@ -39,7 +39,6 @@ import org.homio.api.setting.SettingPluginButton;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.action.UIActionHandler;
 import org.homio.api.ui.dialog.DialogModel;
-import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.UIInputEntity;
@@ -49,7 +48,6 @@ import org.homio.api.util.Lang;
 import org.homio.api.util.NotificationLevel;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.UIInputEntityActionHandler;
-import org.homio.app.config.AppProperties;
 import org.homio.app.config.WebSocketConfig;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
@@ -59,6 +57,7 @@ import org.homio.app.notification.NotificationBlock;
 import org.homio.app.notification.NotificationBlock.Info;
 import org.homio.app.notification.ProgressNotification;
 import org.homio.app.utils.UIFieldUtils;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -81,7 +80,6 @@ public class EntityContextUIImpl implements EntityContextUI {
     // constructor parameters
     @Getter private final EntityContextImpl entityContext;
     private final SimpMessagingTemplate messagingTemplate;
-    private final AppProperties appProperties;
     private final Map<String, SendUpdateContext> sendToUIMap = new ConcurrentHashMap<>();
 
     public void onContextCreated() {
@@ -94,7 +92,8 @@ public class EntityContextUIImpl implements EntityContextUI {
             .execute(() ->
                 this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - v.timeout) > 1));
 
-        entityContext.bgp().builder("send-ui-updates").interval(appProperties.getSendUiUpdatesInterval()).execute(() -> {
+        Duration interval = entityContext.setting().getEnvRequire("interval-ui-send-updates", Duration.class, Duration.ofMillis(500), true);
+        entityContext.bgp().builder("send-ui-updates").interval(interval).execute(() -> {
             for (Iterator<SendUpdateContext> iterator = sendToUIMap.values().iterator(); iterator.hasNext(); ) {
                 SendUpdateContext context = iterator.next();
 
@@ -162,8 +161,14 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public void reloadWindow(@NotNull String reason) {
-        sendGlobal(GlobalSendType.reload, reason, null, null, null);
+    public void reloadWindow(@NotNull String reason, int timeoutToReload) {
+        if (timeoutToReload < 5) {
+            throw new IllegalArgumentException("TimeoutToReload must greater than 4 seconds");
+        }
+        if (timeoutToReload > 60) {
+            throw new IllegalArgumentException("TimeoutToReload must be lowe than 61 seconds");
+        }
+        sendGlobal(GlobalSendType.reload, reason, timeoutToReload, null, null);
     }
 
     @Override
@@ -316,6 +321,9 @@ public class EntityContextUIImpl implements EntityContextUI {
         val notificationBlock = new NotificationBlock(entityID, name, icon);
         if (builder != null) {
             builder.accept(new NotificationBlockBuilderImpl(notificationBlock, entityContext));
+        }
+        if (notificationBlock.getUpdateHandler() != null) {
+            notificationBlock.setRefreshBlockBuilder(builder);
         }
         blockNotifications.put(entityID, notificationBlock);
         sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
@@ -595,8 +603,19 @@ public class EntityContextUIImpl implements EntityContextUI {
         entityContext.bgp()
                      .runWithProgress("update-" + entityID)
                      .execute(progressBar -> {
-                         val handler = Objects.requireNonNull(notificationBlock.getUpdateHandler());
-                         handleResponse(handler.apply(progressBar, params.getString("version")));
+                         val handler = notificationBlock.getUpdateHandler();
+                         if (handler == null) {
+                             throw new IllegalStateException("Unable to fire update action without handler");
+                         }
+                         try {
+                             handleResponse(handler.apply(progressBar, params.getString("version")));
+                         } finally {
+                             if (notificationBlock.getRefreshBlockBuilder() != null) {
+                                 notificationBlock.getRefreshBlockBuilder().accept(
+                                     new NotificationBlockBuilderImpl(notificationBlock, entityContext));
+                                 sendGlobal(GlobalSendType.notification, entityID, notificationBlock, null, null);
+                             }
+                         }
                      });
         return ActionResponseModel.fired();
     }

@@ -7,6 +7,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import java.io.PrintStream;
 import java.io.StringReader;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -33,7 +34,6 @@ import org.homio.api.model.Status;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.config.AppProperties;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.CompileScriptContext;
 import org.homio.app.model.entity.ScriptEntity;
@@ -54,7 +54,6 @@ public class ScriptService implements ContextCreated {
 
     private final LoggerService loggerService;
     private final EntityContext entityContext;
-    private final AppProperties properties;
 
     private ExecutorService createCompiledScriptSingleCallExecutorService = Executors.newSingleThreadExecutor();
 
@@ -101,8 +100,9 @@ public class ScriptService implements ContextCreated {
             if (entityContext.bgp().isThreadExists(scriptEntity.getEntityID(), true)) {
                 throw new ServerException("Script already in progress. Stop script to restart");
             }
-            if (scriptEntity.getRepeatInterval() < properties.getMinScriptThreadSleep().toMillis()) {
-                throw new ServerException("Script has bad 'REPEAT_EVERY' value. Must be >= " + properties.getMinScriptThreadSleep());
+            // throw if sleep less than 0.1s
+            if (scriptEntity.getRepeatInterval() < 100) {
+                throw new ServerException("Script has bad 'REPEAT_EVERY' value. Must be >= 100ms");
             }
             entityContext.save(scriptEntity);
         } else {
@@ -162,7 +162,7 @@ public class ScriptService implements ContextCreated {
             compiled = ((Compilable) engine).compile(new StringReader(formattedJavaScript));
             Future<Object> future = createCompiledScriptSingleCallExecutorService.submit((Callable<Object>) compiled::eval);
             try {
-                future.get(properties.getMaxJavaScriptCompileBeforeInterrupt().toSeconds(), TimeUnit.SECONDS);
+                future.get(60, TimeUnit.SECONDS);
             } catch (TimeoutException ex) {
                 future.cancel(true);
                 createCompiledScriptSingleCallExecutorService.shutdownNow();
@@ -186,7 +186,7 @@ public class ScriptService implements ContextCreated {
                 .throwOnError(true)
                 .execute(arg -> runJavaScript(compiledScriptContext));
         try {
-            State value = threadContext.await(properties.getMaxJavaScriptOnceCallBeforeInterrupt());
+            State value = threadContext.await(Duration.ofSeconds(60));
             return value == null ? State.of("") : value;
         } catch (Exception ex) {
             threadContext.cancel();

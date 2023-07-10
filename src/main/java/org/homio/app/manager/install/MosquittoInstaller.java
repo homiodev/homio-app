@@ -6,15 +6,12 @@ import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
 import org.homio.api.entity.dependency.DependencyExecutableInstaller;
-import org.homio.api.ui.field.ProgressBar;
 import org.homio.api.util.CommonUtils;
-import org.homio.api.util.Curl;
-import org.homio.app.config.AppProperties;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -54,8 +51,10 @@ public class MosquittoInstaller extends DependencyExecutableInstaller {
         if (IS_OS_LINUX) {
             entityContext.hardware().installSoftware(getName(), 600);
         } else {
-            Curl.downloadAndExtract(entityContext.getBean(AppProperties.class).getSource().getMosquitto(),
-                "mosquitto.7z", (progress, message) -> {
+            String url = entityContext.setting().getEnvRequire("source-mosquitto", String.class,
+                "https://github.com/homiodev/static-files/raw/master/mosquitto.7z", true);
+            CommonUtils.downloadAndExtract(url,
+                "mosquitto.7z", (progress, message, error) -> {
                     progressBar.progress(progress, message);
                     log.info("Mosquitto: {}", message);
                 });

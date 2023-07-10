@@ -9,7 +9,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
@@ -61,7 +60,10 @@ public class AddonService implements ContextCreated, ContextRefreshed {
         for (AddonEntrypoint addonEntrypoint : allAddonEntrypoint) {
             try {
                 URL imageURL = addonEntrypoint.getAddonImageURL();
-                BufferedImage img = ImageIO.read(Objects.requireNonNull(imageURL));
+                if (imageURL == null) {
+                    throw new IllegalStateException("Unable to find image for addon: " + addonEntrypoint.getAddonID());
+                }
+                BufferedImage img = ImageIO.read(imageURL);
                 MMCQ.CMap result = ColorThief.getColorMap(img, 5);
                 MMCQ.VBox dominantColor = result.vboxes.get(addonEntrypoint.getAddonImageColorIndex().ordinal());
                 int[] rgb = dominantColor.avg(false);

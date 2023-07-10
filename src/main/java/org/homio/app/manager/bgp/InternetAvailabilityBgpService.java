@@ -9,7 +9,6 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP.ScheduleBuilder;
 import org.homio.api.EntityContextBGP.ThreadContext;
 import org.homio.api.model.Status;
-import org.homio.app.config.AppProperties;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.homio.app.utils.InternalUtil;
 
@@ -20,10 +19,10 @@ public class InternetAvailabilityBgpService {
     private final EntityContext entityContext;
     private ThreadContext<Boolean> internetThreadContext;
 
-    public InternetAvailabilityBgpService(EntityContext entityContext, AppProperties appProperties, EntityContextBGPImpl entityContextBGP) {
+    public InternetAvailabilityBgpService(EntityContext entityContext, EntityContextBGPImpl entityContextBGP) {
         this.entityContext = entityContext;
         ScheduleBuilder<Boolean> builder = entityContextBGP.builder("internet-test");
-        Duration interval = appProperties.getInternetTestInterval();
+        Duration interval = entityContext.setting().getEnvRequire("interval-internet-test", Duration.class, Duration.ofSeconds(10), true);
         ScheduleBuilder<Boolean> internetAccessBuilder = builder
             .interval(interval).delay(interval).interval(interval)
             .valueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {

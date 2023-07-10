@@ -9,7 +9,6 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
-import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.fs.archive.ArchiveUtil;
 import org.homio.api.fs.archive.ArchiveUtil.ArchiveFormat;
 import org.homio.api.model.Icon;
@@ -21,7 +20,6 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.service.LocalFileSystemProvider;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 @Entity
 @Log4j2
@@ -30,7 +28,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     implements BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
 
     public static final String PREFIX = "cbe_";
-    public static final String DEFAULT_DEVICE_ENTITY_ID = PREFIX + CommonUtils.APP_UUID;
+    public static final String DEFAULT_DEVICE_ENTITY_ID = PREFIX + "default";
 
     @Override
     public String getDefaultName() {

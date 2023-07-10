@@ -51,7 +51,6 @@ import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
-import org.homio.app.config.AppProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
@@ -63,13 +62,13 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
     private final DatagramSocket udpSocket = new DatagramSocket();
 
-    public Scratch3NetworkBlocks(EntityContext entityContext, AppProperties appProperties)
+    public Scratch3NetworkBlocks(EntityContext entityContext)
         throws SocketException {
         super("#595F4B", entityContext, null, "net");
         this.udpSocket.setBroadcast(true);
 
         blockCommand(10, "request", "HTTP [URL] | [SETTING]", this::httpRequestHandler, block -> {
-            block.addArgument("URL", appProperties.getServerSiteURL() + "/sample");
+            block.addArgument("URL", "https://homio.org/sample");
             block.addSetting(HttpRequestEntity.class);
         });
 
