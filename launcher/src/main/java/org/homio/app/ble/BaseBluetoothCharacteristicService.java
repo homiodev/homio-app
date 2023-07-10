@@ -1,6 +1,5 @@
 package org.homio.app.ble;
 
-import com.pivovarit.function.ThrowingRunnable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -90,11 +89,10 @@ public abstract class BaseBluetoothCharacteristicService {
             System.currentTimeMillis() - wifiWriteProtect.get(uuid) > MIN_WRITE_TIMEOUT)) {
             wifiWriteProtect.put(uuid, System.currentTimeMillis());
             switch (uuid) {
-                case DEVICE_MODEL_UUID:
+                case DEVICE_MODEL_UUID -> {
                     rebootDevice(null);
-                    return;
-                case WIFI_NAME_UUID:
-                    writeWifiSSID(value);
+                }
+                case WIFI_NAME_UUID -> writeWifiSSID(value);
             }
         }
     }
@@ -167,7 +165,7 @@ public abstract class BaseBluetoothCharacteristicService {
     }
 
     @SneakyThrows
-    protected void writeSafeValue(ThrowingRunnable<Exception> runnable) {
+    protected void writeSafeValue(Runnable runnable) {
         if (hasAccess()) {
             try {
                 runnable.run();

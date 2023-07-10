@@ -1,15 +1,16 @@
 package org.homio.app.rest;
 
-import lombok.Getter;
+import static org.homio.app.rest.MainController.getErrorMessage;
 
-import static org.homio.app.rest.RestResponseEntityExceptionHandler.getErrorMessage;
+import lombok.Getter;
 
 @Getter
 public class ErrorHolderModel {
-    private String title;
-    private String message;
-    private String cause;
-    private String errorType;
+
+    private final String title;
+    private final String message;
+    private final String cause;
+    private final String errorType;
 
     public ErrorHolderModel(String title, String message, Exception ex) {
         this.title = title;
