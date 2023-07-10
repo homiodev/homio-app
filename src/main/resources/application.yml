@@ -4,23 +4,12 @@ spring:
       matching-strategy: ant_path_matcher
   banner:
     location: classpath:/banner.txt
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: password
+  sql.init.mode: never
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        jdbc:
-          batch_size: 10
-          lob:
-            non_contextual_creation: true
-    show-sql: false
+    show-sql: true
 
 server:
   port: 9111

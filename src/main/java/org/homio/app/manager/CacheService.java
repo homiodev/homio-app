@@ -55,7 +55,7 @@ public class CacheService {
     public void clearCache() {
         log.info("Clear cache");
         for (String cache : cacheManager.getCacheNames()) {
-            cacheManager.getCache(cache).clear();
+            Objects.requireNonNull(cacheManager.getCache(cache)).clear();
         }
     }
 

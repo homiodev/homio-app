@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.UserEntity;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.homio.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
 import org.homio.app.setting.system.auth.SystemJWTTokenValidSetting;
@@ -48,6 +49,11 @@ public class JwtTokenProvider implements ContextCreated {
         this.appId = entityContext.setting().getEnv("appId", String.valueOf(System.currentTimeMillis()), true);
         RUN_COUNT = entityContext.setting().getEnv("runCount", 1, true);
         entityContext.setting().setEnv("runCount", RUN_COUNT + 1);
+
+        entityContext.setting().listenValue(SystemClearCacheButtonSetting.class, "jwt-clear-cache", () -> {
+            userCache.clear();
+            blockedTokens.clear();
+        });
 
         entityContext.setting().listenValueAndGet(SystemJWTTokenValidSetting.class, "jwt-valid", value -> {
             this.jwtValidityTimeout = value;

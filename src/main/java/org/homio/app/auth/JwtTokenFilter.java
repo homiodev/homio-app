@@ -29,8 +29,12 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         try {
             if (token != null) {
                 if (jwtTokenProvider.validateToken(token)) {
-                    Authentication auth = jwtTokenProvider.getAuthentication(token);
-                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    try {
+                        Authentication auth = jwtTokenProvider.getAuthentication(token);
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    } catch (Exception ex) {
+                        jwtTokenProvider.revokeToken(token);
+                    }
                 } else {
                     jwtTokenProvider.revokeToken(token);
                 }

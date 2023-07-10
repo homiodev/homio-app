@@ -71,6 +71,7 @@ public class SecurityConfiguration {
                     "/rest/test",
                     "/rest/auth/status",
                     "/rest/auth/login",
+                    "/rest/auth/register",
                     "/rest/frame/**",
                     "/rest/media/audio/**",
                     "/rest/media/video/**",

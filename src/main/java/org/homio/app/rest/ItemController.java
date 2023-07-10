@@ -1,6 +1,5 @@
 package org.homio.app.rest;
 
-import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE_AUTHORIZE;
@@ -11,7 +10,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
-import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
@@ -52,7 +50,6 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.log.HasEntitySourceLog;
@@ -83,7 +80,6 @@ import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.EntityManager;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
-import org.homio.app.model.entity.ImageEntity;
 import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.repository.AbstractRepository;
@@ -576,7 +572,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
     }
 
-    @PostMapping("/{entityID}/uploadImageBase64")
+    /*@PostMapping("/{entityID}/uploadImageBase64")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ImageEntity uploadImageBase64(@PathVariable("entityID") String entityID, @RequestBody BufferedImage bufferedImage) {
         try {
@@ -586,7 +582,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             log.error(e.getMessage(), e);
             throw new ServerException(e);
         }
-    }
+    }*/
 
     @GetMapping("/{entityID}/{fieldName}/{selectedEntityID}/dynamicParameterOptions")
     public Collection<OptionModel> getDynamicParameterOptions(

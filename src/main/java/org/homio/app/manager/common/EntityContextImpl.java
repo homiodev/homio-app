@@ -423,7 +423,6 @@ public class EntityContextImpl implements EntityContext {
 
         if (StringUtils.isEmpty(entity.getEntityID())) {
             entity.setEntityID(updatedEntity.getEntityID());
-            entity.setId(updatedEntity.getId());
         }
 
         // post save

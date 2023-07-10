@@ -28,7 +28,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     implements BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
 
     public static final String PREFIX = "cbe_";
-    public static final String DEFAULT_DEVICE_ENTITY_ID = PREFIX + "default";
+    public static final String DEFAULT_DEVICE_ENTITY_ID = PREFIX + "primary";
 
     @Override
     public String getDefaultName() {

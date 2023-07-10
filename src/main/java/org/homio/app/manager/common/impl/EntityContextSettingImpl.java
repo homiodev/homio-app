@@ -19,6 +19,7 @@ import java.util.Properties;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -44,6 +45,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 @RequiredArgsConstructor
 public class EntityContextSettingImpl implements EntityContextSetting {
 
+    @Getter
     private static Path propertiesLocation;
     private static Properties homioProperties;
 

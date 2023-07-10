@@ -5,7 +5,6 @@ import java.util.List;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Entity
 @UISidebarChildren(icon = "fas fa-chalkboard-user", color = "#B5094E", allowCreateItem = false)
@@ -37,11 +36,7 @@ public final class UserAdminEntity extends UserBaseEntity<UserAdminEntity> {
     public static void ensureUserExists(EntityContextImpl entityContext) {
         List<UserAdminEntity> users = entityContext.findAll(UserAdminEntity.class);
         if (users.isEmpty()) {
-            entityContext.save(new UserAdminEntity()
-                .setEntityID(ENTITY_ID)
-                .setPassword("adminadmin", entityContext.getBean(PasswordEncoder.class))
-                .setEmail("admin@gmail.com")
-                .setName("admin"));
+            entityContext.save(new UserAdminEntity().setEntityID(ENTITY_ID));
         }
     }
 }

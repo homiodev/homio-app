@@ -1,5 +1,6 @@
 package org.homio.app.model.var;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -8,6 +9,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.GenericGenerator;
 
 @Getter
 @Setter
@@ -17,7 +19,9 @@ import lombok.Setter;
 public class VariableBackup {
 
     @Id
-    @GeneratedValue
+    @Column(length = 64, nullable = false, unique = true)
+    @GeneratedValue(generator = "id-generator")
+    @GenericGenerator(name = "id-generator", strategy = "org.homio.app.repository.HomioIdGenerator")
     private Integer id;
 
     private String vid;

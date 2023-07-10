@@ -2,22 +2,16 @@ package org.homio.app.manager;
 
 import static org.homio.app.model.entity.LocalBoardEntity.DEFAULT_DEVICE_ENTITY_ID;
 
-import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import javax.imageio.ImageIO;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
-import org.homio.api.exception.ServerException;
 import org.homio.api.util.CommonUtils;
-import org.homio.app.model.entity.ImageEntity;
 import org.homio.app.model.entity.LocalBoardEntity;
-import org.homio.app.repository.ImageRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
@@ -29,7 +23,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ImageService {
 
-    private final ImageRepository imageRepository;
     private final EntityContext entityContext;
     private final AddonService addonService;
 
@@ -55,7 +48,7 @@ public class ImageService {
         return CommonUtils.inputStreamToResource(stream, mediaType);
     }
 
-    public boolean isExistsImage(String imageID) {
+    /*public boolean isExistsImage(String imageID) {
         ImageEntity imageEntity = imageRepository.getByEntityID(imageID);
         if (imageEntity != null) {
             if (imageEntity.toPath() != null) {
@@ -90,5 +83,5 @@ public class ImageService {
             log.error(e.getMessage(), e);
             throw new ServerException(e);
         }
-    }
+    }*/
 }

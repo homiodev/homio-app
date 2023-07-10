@@ -2,30 +2,31 @@ package org.homio.app.auth;
 
 import static java.lang.String.format;
 
-import jakarta.validation.Valid;
+import jakarta.ws.rs.BadRequestException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
 import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.UserEntity.UserType;
 import org.homio.api.model.Icon;
 import org.homio.app.manager.common.impl.EntityContextAddonImpl;
+import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.json.JSONObject;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Log4j2
 @RestController
 @RequestMapping("/rest/auth")
 @RequiredArgsConstructor
@@ -38,6 +39,10 @@ public class AuthController {
     @GetMapping("/status")
     public StatusResponse getStatus(UsernamePasswordAuthenticationToken user) {
         if (user == null) {
+            UserAdminEntity userAdminEntity = entityContext.getEntityRequire(UserAdminEntity.ENTITY_ID);
+            if (StringUtils.isBlank(userAdminEntity.getEmail())) {
+                return new StatusResponse(402, null);
+            }
             return new StatusResponse(401, null);
         }
         String email = UserEntityDetailsService.getEmail(user);
@@ -49,13 +54,33 @@ public class AuthController {
         return new StatusResponse(200, version);
     }
 
+    @PostMapping("/register")
+    public void register(@RequestBody LoginRequest credentials) {
+        credentials.validate();
+        UserBaseEntity.log.info("Registering <{}>", credentials.getEmail());
+        try {
+            UserAdminEntity userAdminEntity = entityContext.getEntityRequire(UserAdminEntity.ENTITY_ID);
+            if (StringUtils.isNotBlank(userAdminEntity.getEmail())) {
+                throw new IllegalStateException("Unable to register second primary user");
+            }
+            userAdminEntity.setEmail(credentials.email);
+            userAdminEntity.setPassword(credentials.password, entityContext.getBean(PasswordEncoder.class));
+
+            entityContext.save(userAdminEntity);
+        } catch (Exception ex) {
+            UserBaseEntity.log.info("Register failed for <{}>", credentials.getEmail(), ex);
+            throw ex;
+        }
+    }
+
     @GetMapping("/user")
     public UserEntity getUser() {
         return entityContext.getUser();
     }
 
     @PostMapping("/login")
-    public String login(@Valid @RequestBody LoginRequest credentials) {
+    public String login(@RequestBody LoginRequest credentials) {
+        credentials.validate();
         UserBaseEntity.log.info("Login <{}>", credentials.getEmail());
         try {
             String username = credentials.getEmail();
@@ -93,6 +118,15 @@ public class AuthController {
 
         private String email;
         private String password;
+
+        public void validate() {
+            if (email == null || email.length() < 4) {
+                throw new BadRequestException("Provided email length  < 4");
+            }
+            if (password == null || password.length() < 4) {
+                throw new BadRequestException("Provided password length  < 4");
+            }
+        }
     }
 
     @Getter
