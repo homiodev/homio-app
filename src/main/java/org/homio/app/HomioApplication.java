@@ -35,6 +35,7 @@ public class HomioApplication implements WebMvcConfigurer {
     public static void main(String[] args) throws IOException {
         // copy resources from jars
         copyResources();
+        log.info("Run homio-app v.{}", HomioApplication.class.getPackage().getImplementationVersion());
         setProperty("server.port", "port", "9111");
         setDatabaseProperties();
 
@@ -51,7 +52,7 @@ public class HomioApplication implements WebMvcConfigurer {
     private static void setDatabaseProperties() {
         Properties properties = EntityContextSettingImpl.getHomioProperties();
 
-        @NotNull String type = properties.getProperty("dbType", "postgresql");
+        @NotNull String type = properties.getProperty("dbType", "sqlite");
         @NotNull String url = properties.getProperty("dbUrl", "");
         @NotNull String user = properties.getProperty("dbUser", "postgres");
         @NotNull String pwd = properties.getProperty("dbPassword", "password");

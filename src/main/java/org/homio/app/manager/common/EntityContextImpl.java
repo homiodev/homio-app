@@ -606,13 +606,7 @@ public class EntityContextImpl implements EntityContext {
                         projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
                         ui().reloadWindow("Finish update", 60);
                         log.info("Exit app to restart it after update");
-                        SpringApplication.exit(applicationContext, () -> 4);
-                        System.exit(4);
-                        // sleep to allow program exist
-                        Thread.sleep(30000);
-                        log.info("Unable to stop app in 30sec. Force stop it");
-                        // force exit
-                        Runtime.getRuntime().halt(4);
+                        restartApplication();
                         return null;
                     }, null),
                     appGitHub.getReleasesSince(installedVersion, false));
@@ -630,6 +624,20 @@ public class EntityContextImpl implements EntityContext {
                 builder.addInfo("time", new Icon("fas fa-clock"), serverStartMsg);
             });
         });
+    }
+
+    /**
+     * Fully restart application
+     */
+    @SneakyThrows
+    private void restartApplication() {
+        SpringApplication.exit(applicationContext, () -> 4);
+        System.exit(4);
+        // sleep to allow program exist
+        Thread.sleep(30000);
+        log.info("Unable to stop app in 30sec. Force stop it");
+        // force exit
+        Runtime.getRuntime().halt(4);
     }
 
     private void putToCache(BaseEntity entity, Map<String, Object[]> changeFields) {

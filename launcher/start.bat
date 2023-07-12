@@ -62,7 +62,7 @@ if exist "%root_path%\homio-app.jar" (
    set "app=homio-launcher.jar"
 )
 
-echo "Run !java_path! -jar $root_path/$app"
+echo "Run '!java_path! -jar %root_path%/%app%'"
 "!java_path!" -jar "%root_path%\%app%"
 set "exit_code=%errorlevel%"
 

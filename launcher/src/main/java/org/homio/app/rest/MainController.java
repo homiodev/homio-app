@@ -20,6 +20,7 @@ import org.homio.app.rest.MainController.GitHubDescription.Asset;
 import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.system.ApplicationHome;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -91,6 +92,11 @@ public class MainController {
             ProgressBar progressBar = (progress, message, error) ->
                 messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + "-global",
                     new Progress(progress, message));
+            if (Files.exists(rootPath.resolve("homio-app.jar"))) {
+                System.err.println("homio-app.jar already downloaded. Made restart...");
+                finishInstallApp(progressBar);
+                return;
+            }
             try {
                 Path archiveAppPath = rootPath.resolve("homio-app.zip");
                 Files.deleteIfExists(archiveAppPath);
@@ -107,11 +113,7 @@ public class MainController {
                 }
                 System.out.printf("Downloading '%s' to '%s'%n", archiveAppPath.getFileName(), archiveAppPath);
                 Curl.downloadWithProgress(asset.browser_download_url, archiveAppPath, progressBar);
-
-                // this command send 100 to ui that fires 'reload-page'
-                progressBar.accept(100D, "Restarting application...");
-                System.out.println("App installation finished. Restarting...");
-                exitApplication();
+                finishInstallApp(progressBar);
             } catch (Exception ex) {
                 System.err.printf("Error while downloading app: %s%n", ex.getMessage());
                 progressBar.accept(-1D, ex.getMessage());
@@ -119,6 +121,13 @@ public class MainController {
                 installing = false;
             }
         }).start();
+    }
+
+    private void finishInstallApp(ProgressBar progressBar) {
+        // this command send 100 to ui that fires 'reload-page'
+        progressBar.accept(100D, "Restarting application...");
+        System.out.println("App installation finished. Restarting...");
+        exitApplication();
     }
 
     @SneakyThrows
@@ -206,16 +215,15 @@ public class MainController {
     private static Properties getHomioProperties() {
         if (homioProperties == null) {
             propertiesLocation = getHomioPropertiesLocation();
+            System.out.printf("Uses configuration file: %s%n".formatted(propertiesLocation.toString()));
             homioProperties = new Properties();
             try {
                 homioProperties.load(Files.newInputStream(propertiesLocation));
                 rootPath = Paths.get(homioProperties.getProperty("rootPath"));
                 Files.createDirectories(rootPath);
             } catch (Exception ignore) {
-            }
-            if (rootPath == null || !Files.exists(rootPath)) {
                 rootPath = propertiesLocation.getParent();
-                homioProperties.put("rootPath", rootPath.toString());
+                homioProperties.setProperty("rootPath", rootPath.toString());
                 homioProperties.store(Files.newOutputStream(propertiesLocation), null);
             }
         }
@@ -227,11 +235,9 @@ public class MainController {
         Path propertiesFile = (SystemUtils.IS_OS_WINDOWS ? SystemUtils.getUserHome().toPath().resolve("homio") :
             createDirectoriesIfNotExists(Paths.get("/opt/homio"))).resolve("homio.properties");
         if (!Files.exists(propertiesFile)) {
-            Path jarLocation = Paths.get(MainController.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-            Path launchPath = jarLocation.resolve("homio.properties");
-            if (Files.exists(launchPath)) {
-                propertiesFile = launchPath;
-            }
+            ApplicationHome applicationHome = new ApplicationHome();
+            Path jarLocation = applicationHome.getDir().toPath();
+            return jarLocation.resolve("homio.properties");
         }
         return propertiesFile;
     }

@@ -202,6 +202,8 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         if (homioProperties == null) {
             homioProperties = new Properties();
             propertiesLocation = CommonUtils.getHomioPropertiesLocation();
+            log.info("Uses configuration file: {}", propertiesLocation);
+            // must exist because CommonUtils.logsPath, etc.. init it first
             homioProperties.load(Files.newInputStream(propertiesLocation));
         }
         return homioProperties;
