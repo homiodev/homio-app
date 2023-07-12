@@ -1,6 +1,6 @@
 spring:
   banner:
     location: classpath:/banner.txt
-
-server:
-  port: 9111
+logging:
+  level:
+    root: info

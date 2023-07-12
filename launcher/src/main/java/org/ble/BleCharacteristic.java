@@ -1,7 +1,5 @@
 package org.ble;
 
-import static org.homio.app.ble.BaseBluetoothCharacteristicService.MIN_WRITE_TIMEOUT;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -11,7 +9,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
+
 import org.bluez.GattCharacteristic1;
 import org.dbus.PropertiesChangedSignal;
 import org.freedesktop.DBus.Properties;
@@ -21,7 +19,7 @@ import org.freedesktop.dbus.UInt16;
 import org.freedesktop.dbus.Variant;
 import org.freedesktop.dbus.exceptions.DBusException;
 
-@Log4j2
+
 @RequiredArgsConstructor
 class BleCharacteristic implements GattCharacteristic1, Properties {
 
@@ -133,11 +131,11 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
             try {
                 value = readListener.get();
             } catch (Exception ex) {
-                log.error("Error while read from ble: <{}>", ex.getMessage());
+                System.err.printf("Error while read from ble: '%s'%n", ex.getMessage());
                 value = new byte[0];
             }
         }
-        log.debug("Request value from characteristic: <{}>, value: <{}>", path, new String(value));
+        System.out.printf("Request value from characteristic: '%s', value: '%s'%n", path, new String(value));
         return Arrays.copyOfRange(value, offset, value.length);
     }
 
@@ -146,14 +144,14 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
      */
     @Override
     public void WriteValue(byte[] value, Map<String, Variant> option) {
-        if (writeListener != null && !isBanOnWrite()) {
+        if (writeListener != null) {
 
             if (lastIntermediateWriteTime != -1 && System.currentTimeMillis() - lastIntermediateWriteTime > 5000) {
-                log.error("Too big timeout between writing packages");
+                System.err.println("Too big timeout between writing packages");
                 this.resetWrite();
             }
 
-            log.info("Response characteristic <{}> value <{}>", uuid, new String(value));
+            System.out.printf("Response characteristic '%s' value '%s'%n", uuid, new String(value));
 
             if (!this.writeStarted && value.length > 3 && value[0] == '@' && value[1] == '#' && value[2] == '@') {
                 try {
@@ -167,7 +165,7 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
                     this.lastIntermediateWriteTime = System.currentTimeMillis();
                     return;
                 } catch (Exception ex) {
-                    log.error("Error start writing. Unable to parse data length");
+                    System.err.println("Error start writing. Unable to parse data length");
                     return;
                 }
             }
@@ -186,7 +184,7 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
                 writeListener.accept(this.packet);
                 this.resetWrite();
             } catch (Exception ex) {
-                log.warn("Error write from ble", ex);
+                System.err.printf("Error write from ble: %s%n", ex.getMessage());
             }
         }
     }
@@ -200,7 +198,7 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
     @Override
     public void StartNotify() {
         if (isNotifying) {
-            log.warn("Characteristic already notifying");
+            System.err.printf("Characteristic already notifying");
             return;
         }
         this.isNotifying = true;
@@ -209,7 +207,7 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
     @Override
     public void StopNotify() {
         if (!isNotifying) {
-            log.warn("Characteristic already not notifying");
+            System.err.printf("Characteristic already not notifying");
             return;
         }
         this.isNotifying = false;
@@ -230,13 +228,5 @@ class BleCharacteristic implements GattCharacteristic1, Properties {
             return this.getProperties().get(GATT_CHARACTERISTIC_INTERFACE);
         }
         throw new RuntimeException("Wrong interface [interface_name=" + interfaceName + "]");
-    }
-
-    boolean isBanOnWrite() {
-        return System.currentTimeMillis() - lastWriteTime < MIN_WRITE_TIMEOUT;
-    }
-
-    int secToReleaseBan() {
-        return (int) ((MIN_WRITE_TIMEOUT - (System.currentTimeMillis() - lastWriteTime)) / 1000);
     }
 }

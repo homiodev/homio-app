@@ -1,5 +1,7 @@
 package org.homio.app.console;
 
+import static java.lang.String.format;
+
 import com.fazecast.jSerialComm.SerialPort;
 import com.pivovarit.function.ThrowingSupplier;
 import java.util.ArrayList;
@@ -44,6 +46,9 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     public Collection<HardwarePluginEntity> getValue() {
         List<HardwarePluginEntity> list = new ArrayList<>();
 
+        list.add(new HardwarePluginEntity("Database", format("Type: (%s). Url: (%s)",
+            entityContext.setting().getEnv("databaseType"),
+            entityContext.setting().getEnv("spring.datasource.url"))));
         list.add(new HardwarePluginEntity("Cpu load", machineHardwareRepository.getCpuLoad()));
         list.add(new HardwarePluginEntity("Cpu temperature", onLinux(machineHardwareRepository::getCpuTemperature)));
         list.add(new HardwarePluginEntity("Ram memory", machineHardwareRepository.getMemory()));

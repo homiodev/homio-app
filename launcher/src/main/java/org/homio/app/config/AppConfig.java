@@ -1,7 +1,7 @@
 package org.homio.app.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.log4j.Log4j2;
+
 import org.homio.hquery.HardwareRepositoryFactoryPostProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -27,7 +27,7 @@ import java.util.Collections;
 import java.util.concurrent.Executors;
 import org.homio.hquery.HardwareRepositoryFactoryPostProcessor;
 
-@Log4j2
+
 @Configuration
 @EntityScan(basePackages = {"org.homio"})
 @ComponentScan({"org.homio"})

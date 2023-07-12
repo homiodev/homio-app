@@ -174,11 +174,6 @@ public class UtilsController {
         entityContext.ui().unRegisterForUpdates(request);
     }
 
-    @GetMapping("/app/config")
-    public DeviceConfig getAppConfiguration() {
-        return new DeviceConfig();
-    }
-
     @PostMapping("/source/history/info")
     public SourceHistory getSourceHistory(@RequestBody SourceHistoryRequest request) {
         DataSourceContext context = DataSourceUtil.getSource(entityContext, request.dataSource);
@@ -378,15 +373,6 @@ public class UtilsController {
         private String log;
         private String error;
         private String logUrl;
-    }
-
-    @Getter
-    @Setter
-    private static class DeviceConfig {
-
-        private final boolean bootOnly = false;
-        private final boolean hasApp = true;
-        private final boolean hasInitSetup = true;
     }
 
     @Getter

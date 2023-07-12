@@ -4,12 +4,9 @@ spring:
       matching-strategy: ant_path_matcher
   banner:
     location: classpath:/banner.txt
-  sql.init.mode: never
+  sql.init.mode: always
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
-
-server:
-  port: 9111

@@ -1,14 +1,9 @@
 package org.homio.app.rest;
 
-import static org.apache.commons.lang3.StringUtils.defaultString;
-
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.DriverManager;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -17,17 +12,15 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
-import net.lingala.zip4j.ZipFile;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.app.ble.BluetoothBundleService;
 import org.homio.app.config.WebSocketConfig;
-import org.homio.app.hardware.StartupHardwareRepository;
+import org.homio.app.rest.MainController.GitHubDescription.Asset;
 import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
-import org.homio.hquery.hardware.other.MachineHardwareRepository;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -44,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 
-@Log4j2
+
 @RestController
 @RequestMapping("/rest")
 @RequiredArgsConstructor
@@ -56,10 +49,8 @@ public class MainController {
 
     private final BluetoothBundleService bluetoothBundleService;
     private final SimpMessagingTemplate messagingTemplate;
-    private final MachineHardwareRepository machineHardwareRepository;
-    private final StartupHardwareRepository startupHardwareRepository;
-    private boolean installingApp;
-    private boolean initInstalling;
+    private final ApplicationContext applicationContext;
+    private boolean installing;
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorHolderModel> handleException(Exception ex, WebRequest request) {
@@ -67,7 +58,7 @@ public class MainController {
         if (ex instanceof NullPointerException) {
             msg += ". src: " + ex.getStackTrace()[0].toString();
         }
-        log.error("Error <{}>", msg, ex);
+        System.err.printf("Error '%s'%n", msg);
         Objects.requireNonNull(((ServletWebRequest) request).getResponse())
                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -76,7 +67,7 @@ public class MainController {
 
     @GetMapping("/auth/status")
     public StatusResponse getStatus() {
-        return new StatusResponse(407, "0");
+        return new StatusResponse(407, installing ? "1" : "0", SystemUtils.IS_OS_LINUX);
     }
 
     @GetMapping("/device/characteristic/{uuid}")
@@ -90,145 +81,58 @@ public class MainController {
     }
 
     @SneakyThrows
-    @PostMapping("/app/config/finish")
-    public void finishConfiguration() {
-        if (SystemUtils.IS_OS_LINUX) {
-            log.info("Update /etc/systemd/system/homio.service");
-
-            machineHardwareRepository.execute("sed -i '3 i After=postgresql.service' /etc/systemd/system/homio.service");
-            machineHardwareRepository.execute("sed -i '4 i Requires=postgresql.service' /etc/systemd/system/homio.service");
-            machineHardwareRepository.reboot();
+    @PostMapping("/app/config/install")
+    public void downloadApp() {
+        if (installing) {
+            throw new IllegalStateException("App already installing...");
         }
-    }
-
-    @GetMapping("/app/config")
-    public DeviceConfig getConfiguration() {
-        DeviceConfig deviceConfig = new DeviceConfig();
-        deviceConfig.hasApp = Files.exists(rootPath.resolve("homio-app.jar"));
-        deviceConfig.installingApp = this.installingApp;
-        deviceConfig.initInstalling = this.initInstalling;
-        deviceConfig.hasInitSetup = isPostgresAvailable();
-        return deviceConfig;
-    }
-
-    @PostMapping("/app/config/init")
-    public void initialSetup() {
-        if (initInstalling) {
-            throw new IllegalStateException("Already installing...");
-        }
-        initInstalling = true;
+        installing = true;
         new Thread(() -> {
+            ProgressBar progressBar = (progress, message, error) ->
+                messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + "-global",
+                    new Progress(progress, message));
             try {
-                ProgressBar progressBar = (message, progress, error) ->
-                    messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + "-global",
-                        new Progress(Progress.Type.init, message, progress));
-                try {
-                    if (!isPostgresAvailable()) {
-                        if (SystemUtils.IS_OS_LINUX) {
-                            progressBar.progress(5D, "Update os", false);
-                            machineHardwareRepository.execute("apt-get update", 600, progressBar);
-                            progressBar.progress(20D, "Full upgrade os", false);
-                            machineHardwareRepository.execute("apt-get -y full-upgrade", 1200, progressBar);
-                            progressBar.progress(40D, "Installing Postgresql", false);
-                            installPostgreSql(progressBar);
-                            machineHardwareRepository.execute("apt-get clean");
-                        } else if (SystemUtils.IS_OS_WINDOWS) {
-                            installPostgreSql(progressBar);
-                        }
-                    }
-                    progressBar.progress(100D, "Done.", false);
-                } catch (Exception ex) {
-                    progressBar.progress(100D, "Error: " + ex.getMessage(), true);
-                    throw new IllegalStateException(ex);
+                Path archiveAppPath = rootPath.resolve("homio-app.zip");
+                Files.deleteIfExists(archiveAppPath);
+
+                System.out.println("Downloading application..");
+                GitHubDescription gitHubDescription =
+                    Curl.get("https://api.github.com/repos/homiodev/homio-app/releases/latest", GitHubDescription.class);
+
+                Asset asset = gitHubDescription.assets.stream()
+                                                      .filter(a -> a.name.equals(archiveAppPath.getFileName().toString()))
+                                                      .findAny().orElse(null);
+                if (asset == null) {
+                    throw new IllegalStateException("Unable to find " + archiveAppPath.getFileName() + " asset from server");
                 }
+                System.out.printf("Downloading '%s' to '%s'%n", archiveAppPath.getFileName(), archiveAppPath);
+                Curl.downloadWithProgress(asset.browser_download_url, archiveAppPath, progressBar);
+
+                // this command send 100 to ui that fires 'reload-page'
+                progressBar.accept(100D, "Restarting application...");
+                System.out.println("App installation finished. Restarting...");
+                exitApplication();
+            } catch (Exception ex) {
+                System.err.printf("Error while downloading app: %s%n", ex.getMessage());
+                progressBar.accept(-1D, ex.getMessage());
             } finally {
-                initInstalling = false;
+                installing = false;
             }
         }).start();
     }
 
-    public static boolean isPostgresAvailable() {
-        try {
-            DriverManager.getConnection(
-                defaultString(getHomioProperty("dbUrl", "jdbc:postgresql://localhost:5432/postgres")),
-                defaultString(getHomioProperty("dbUser", "postgres")),
-                defaultString(getHomioProperty("dbPassword", "password")));
-            return true;
-        } catch (Exception ignore) {
-
-        }
-        return false;
-    }
-
     @SneakyThrows
-    @PostMapping("/app/config/downloadApp")
-    public void downloadApp() {
-        if (installingApp) {
-            throw new IllegalStateException("App already installing...");
-        }
-        ProgressBar progressBar = (progress, message, error) ->
-            messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + "-global",
-                new Progress(Progress.Type.download, progress, message));
-        Path targetPath = rootPath.resolve("homio-app.jar");
-        if (Files.exists(targetPath)) {
-            progressBar.accept(100D, "App already downloaded.");
-            return;
-        }
-        Path archiveAppPath = rootPath.resolve("homio-app.zip");
-        try {
-            this.installingApp = true;
-            Files.deleteIfExists(archiveAppPath);
-
-            log.info("Installing application...");
-            GitHubDescription gitHubDescription =
-                Curl.get("https://api.github.com/repos/homiodev/homio-app/releases/latest", GitHubDescription.class);
-
-            GitHubDescription.Asset asset =
-                gitHubDescription.assets.stream().filter(a -> a.name.equals(archiveAppPath.getFileName().toString())).findAny().orElse(null);
-            if (asset == null) {
-                throw new IllegalStateException("Unable to find " + archiveAppPath.getFileName() + " asset from server");
-            }
-            log.info("Downloading '{}' to '{}'", archiveAppPath.getFileName(), archiveAppPath);
-            Curl.downloadWithProgress(asset.browser_download_url, archiveAppPath, progressBar);
-
-            progressBar.accept(90D, "Uncompressing files...");
-            log.info("Uncompressing files...");
-
-            try (ZipFile zipFile = new ZipFile(archiveAppPath.toFile())) {
-                zipFile.extractAll(rootPath.toString());
-            }
-
-            Files.deleteIfExists(archiveAppPath);
-            log.info("App installation finished");
-        } finally {
-            installingApp = false;
-        }
+    private void exitApplication() {
+        System.out.println("Exit app to restart it after update");
+        SpringApplication.exit(applicationContext, () -> 4);
+        System.exit(4);
+        // sleep to allow program exist
+        Thread.sleep(30000);
+        System.out.println("Unable to stop app in 30sec. Force stop it...");
+        // force exit
+        Runtime.getRuntime().halt(4);
     }
 
-    public static List<String> readFile(String fileName) {
-        try {
-            return IOUtils.readLines(Objects.requireNonNull(MainController.class.getClassLoader().getResourceAsStream(fileName)),
-                Charset.defaultCharset());
-        } catch (Exception ex) {
-            log.error("Error reading file", ex);
-
-        }
-        return Collections.emptyList();
-    }
-
-    /*
-        # IN CASE OF sub:
-        # export PRIMARY_IP=192.168.0.110
-        # sudo systemctl stop postgresql
-        # sudo -H -u postgres bash -c 'rm -rf $PSQL_DATA_PATH/main/*'
-        # sudo PGPASSWORD="password" -H -u postgres bash -c "pg_basebackup -h $PRIMARY_IP -D /usr/local/pgsql/data -P -U replicator
-         --xlog-method=stream"
-        # sudo sed -i "s/#hot_standby = 'off'/hot_standby = 'on'/g" $PSQL_CONF_PATH/postgresql.conf
-        # echo "standby_mode = 'on'\nprimary_conninfo = 'host=$PRIMARY_IP port=5432 user=replicator
-        password=password'\ntrigger_file = '/var/lib/postgresql/9.6/trigger'\nrestore_command = 'cp /var/lib/postgresql/9.6/archive/%f \"%p\"'" >>
-        $PSQL_DATA_PATH/main/recovery.conf
-        # sudo systemctl start postgresql
-    */
     public static String getErrorMessage(Throwable ex) {
         if (ex == null) {
             return null;
@@ -246,32 +150,16 @@ public class MainController {
     }
 
     @Getter
-    @Setter
-    private static class DeviceConfig {
-
-        private final boolean bootOnly = true;
-        public boolean initInstalling;
-        private boolean hasInitSetup;
-        private boolean installingApp;
-        private boolean hasApp;
-    }
-
-    @Getter
     @AllArgsConstructor
     private static class Progress {
 
-        private final Type type;
         private double value;
         private String title;
-
-        private enum Type {
-            download, init
-        }
     }
 
     @Setter
     @Getter
-    private static class GitHubDescription {
+    public static class GitHubDescription {
 
         private String name;
         private String tag_name;
@@ -279,7 +167,7 @@ public class MainController {
 
         @Setter
         @Getter
-        private static class Asset {
+        public static class Asset {
 
             private String name;
             private long size;
@@ -293,17 +181,13 @@ public class MainController {
             try {
                 Files.createDirectories(path);
             } catch (Exception ex) {
-                log.error("Unable to create path: <{}>", path.toAbsolutePath().toString());
+                System.err.printf("Unable to create path: '%s'%n", path.toAbsolutePath());
             }
         }
         return path;
     }
 
-    public static String getHomioPropertyRequire(String key) {
-        return getHomioProperties().getProperty(key);
-    }
-
-    public record StatusResponse(int status, String version) {
+    public record StatusResponse(int status, String version, boolean isLinux) {
 
     }
 
@@ -316,46 +200,6 @@ public class MainController {
         properties.setProperty(key, defaultValue);
         properties.store(Files.newOutputStream(propertiesLocation), null);
         return defaultValue;
-    }
-
-    private void installPostgreSql(ProgressBar progressBar) {
-        if (SystemUtils.IS_OS_WINDOWS) {
-            installWindowsPostgresql(progressBar);
-            return;
-        }
-        machineHardwareRepository.installSoftware("postgresql", 1200, progressBar);
-        String postgresPath = machineHardwareRepository.execute("find /usr -wholename '*/bin/postgres'", 60, progressBar);
-        String version = Paths.get(postgresPath).subpath(3, 4).toString();
-        for (String config : readFile("configurePostgresql.conf")) {
-            config = config.replace("$PSQL_CONF_PATH", "/etc/postgresql/" + version + "/main");
-            machineHardwareRepository.execute(config);
-        }
-        if (!startupHardwareRepository.isPostgreSQLRunning()) {
-            throw new IllegalStateException("Postgresql is not running");
-        }
-        machineHardwareRepository.execute("sudo -u postgres psql -c \"ALTER user postgres WITH PASSWORD 'password'\"");
-        machineHardwareRepository.execute(
-            "sudo -u postgres psql -c \"CREATE ROLE replication WITH REPLICATION PASSWORD 'password' LOGIN\"");
-    }
-
-    @SneakyThrows
-    private void installWindowsPostgresql(ProgressBar progressBar) {
-        Path installPath = rootPath.resolve("installs");
-        Path postgresqlPath = installPath.resolve("postgresql");
-        Path pgCtl = postgresqlPath.resolve("bin/pg_ctl.exe");
-        String url = "https://get.enterprisedb.com/postgresql/postgresql-15.3-2-windows-x64-binaries.zip";
-        Path postgresqlZip = installPath.resolve("postgresql.zip");
-        if (!Files.exists(pgCtl)) {
-            Curl.download(url, postgresqlZip);
-        }
-        try (ZipFile zipFile = new ZipFile(postgresqlZip.toString())) {
-            zipFile.extractAll(postgresqlPath.toString());
-        }
-        Files.deleteIfExists(postgresqlZip);
-        String initDb = postgresqlPath.resolve("pgsql/bin/initdb.exe").toString();
-        machineHardwareRepository.execute(initDb + " -D " + rootPath.resolve("db_data"), progressBar);
-
-        machineHardwareRepository.execute(pgCtl + " -D " + rootPath.resolve("db_data"), progressBar);
     }
 
     @SneakyThrows

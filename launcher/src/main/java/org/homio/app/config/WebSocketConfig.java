@@ -1,6 +1,6 @@
 package org.homio.app.config;
 
-import lombok.extern.log4j.Log4j2;
+
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -9,7 +9,7 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 import org.springframework.web.socket.messaging.StompSubProtocolErrorHandler;
 
-@Log4j2
+
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
@@ -28,7 +28,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setErrorHandler(new StompSubProtocolErrorHandler() {
             @Override
             public Message<byte[]> handleClientMessageProcessingError(Message<byte[]> clientMessage, Throwable ex) {
-                log.error("WebSocket error: <{}>", ex.getMessage());
+                System.err.printf("WebSocket error: '%s'%n", ex.getMessage());
                 return null; // WebSocket avoid response error messages to client
             }
         });

@@ -35,6 +35,7 @@ public class HomioApplication implements WebMvcConfigurer {
     public static void main(String[] args) throws IOException {
         // copy resources from jars
         copyResources();
+        setProperty("server.port", "port", "9111");
         setDatabaseProperties();
 
         try {
@@ -76,7 +77,7 @@ public class HomioApplication implements WebMvcConfigurer {
         log.info("Use database of type '{}'. Url: {}. Auth: '{}'/'{}'", type,
             defaultIfEmpty(url, defaultURL), user, pwd);
 
-        setProperty(null, "dbType", defaultIfEmpty(type, "sqlite"));
+        setProperty("databaseType", "dbType", defaultIfEmpty(type, "sqlite"));
         setProperty("spring.datasource.url", "dbUrl", defaultIfEmpty(url, defaultURL));
         setProperty("spring.datasource.username", "dbUser", user);
         setProperty("spring.datasource.password", "dbPassword", pwd);

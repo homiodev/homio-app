@@ -1,18 +1,12 @@
 package org.ble;
 
-import static org.ble.CharacteristicFlag.C_READ;
 import static org.ble.CharacteristicFlag.C_READ_WRITE;
-import static org.ble.CharacteristicFlag.C_WRITE;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.Getter;
-import lombok.extern.log4j.Log4j2;
 import org.freedesktop.dbus.exceptions.DBusException;
 
-@Log4j2
 public class BluetoothApplication {
 
     @Getter
@@ -30,21 +24,21 @@ public class BluetoothApplication {
         return value -> characteristic.setValue(value.getBytes());
     }
 
-    public ValueConsumer newReadCharacteristic(String name, String uuid, Supplier<byte[]> readValueListener) {
+    /*public ValueConsumer newReadCharacteristic(String name, String uuid, Supplier<byte[]> readValueListener) {
         BleCharacteristic characteristic = new BleCharacteristic(uuid, bleApplication.path + "/" + name, bleApplication.bleService, C_READ);
         characteristic.setReadListener(readValueListener);
         bleApplication.bleService.getCharacteristics().add(characteristic);
         return value -> characteristic.setValue(value.getBytes());
-    }
+    }*/
 
-    public ValueConsumer newWriteCharacteristic(String name, String uuid, Consumer<byte[]> writeValueListener) {
+    /*public ValueConsumer newWriteCharacteristic(String name, String uuid, Consumer<byte[]> writeValueListener) {
         final BleCharacteristic characteristic = new BleCharacteristic(uuid, bleApplication.path + "/" + name, bleApplication.bleService, C_WRITE);
         characteristic.setWriteListener(writeValueListener);
         bleApplication.bleService.getCharacteristics().add(characteristic);
         return value -> characteristic.setValue(value.getBytes());
-    }
+    }*/
 
-    private ValueNotifyConsumer createSetValueNotify(BleCharacteristic characteristic) {
+    /*private ValueNotifyConsumer createSetValueNotify(BleCharacteristic characteristic) {
         return new ValueNotifyConsumer() {
             @Override
             public void setValue(String value) {
@@ -57,20 +51,10 @@ public class BluetoothApplication {
                 characteristic.sendNotification();
             }
         };
-    }
+    }*/
 
     public void start() throws DBusException {
         this.bleApplication.start();
-    }
-
-    public String gatherWriteBan() {
-        List<String> status = new ArrayList<>();
-        for (BleCharacteristic characteristic : bleApplication.bleService.getCharacteristics()) {
-            if (characteristic.isBanOnWrite()) {
-                status.add(characteristic.uuid + "%&%" + characteristic.secToReleaseBan());
-            }
-        }
-        return String.join("%#%", status);
     }
 
     public interface ValueConsumer {
