@@ -1,6 +1,6 @@
 @echo off
 
-setlocal
+setlocal enabledelayedexpansion
 
 set "root_path=%USERPROFILE%\homio"
 
@@ -17,23 +17,29 @@ if exist "homio.properties" (
 echo root_path: '%root_path%'
 
 set "java_path=java"
-where java >nul 2>&1
+where %java_path% >nul 2>&1
 if %errorlevel% neq 0 (
     set "java_path=%root_path%/jdk-17.0.7+7-jre/bin/java"
-    echo Java not installed. Downloading...
+    echo Java not found. Checking local: !java_path!
 
-    REM Download the Java installer
-    powershell -Command "(New-Object System.Net.WebClient).DownloadFile('https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.7+7/OpenJDK17U-jre_x64_windows_hotspot_17.0.7_7.zip', '%root_path%\jre.zip')"
+    if exist "!java_path!" (
+	     echo Java is installed at path !java_path!
+	  ) else (
+	     echo Java not installed. Downloading...
 
-    REM Unzip the downloaded file to the root path
-    tar -xf "%root_path%\jre.zip" -C "%root_path%"
+       REM Download the Java installer
+       powershell -Command "(New-Object System.Net.WebClient).DownloadFile('https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.7+7/OpenJDK17U-jre_x64_windows_hotspot_17.0.7_7.zip', '%root_path%\jre.zip')"
 
-    REM Clean up the downloaded zip file
-    del "%root_path%\jre.zip"
-    echo Java has been installed.
-) else (
-    echo Java already installed.
+       REM Unzip the downloaded file to the root path
+       tar -xf "%root_path%\jre.zip" -C "%root_path%"
+
+       REM Clean up the downloaded zip file
+       del "%root_path%\jre.zip"
+       echo Java has been installed.
+	  )
 )
+
+echo Use java: !java_path!
 
 :start
 
