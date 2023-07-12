@@ -19,9 +19,15 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
@@ -59,6 +65,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.Ordered;
+import org.springframework.core.env.AbstractEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.MutablePropertySources;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -263,12 +273,35 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
      */
     @Override
     public void onApplicationEvent(@NotNull ApplicationEvent event) {
-        if (event instanceof ContextRefreshedEvent && !this.applicationReady) {
+        if (event instanceof ContextRefreshedEvent cre && !this.applicationReady) {
             this.applicationReady = true;
+            this.printEnvVariables(cre.getApplicationContext().getEnvironment());
             ApplicationContext applicationContext = ((ContextRefreshedEvent) event).getApplicationContext();
             EntityContextImpl entityContextImpl = applicationContext.getBean(EntityContextImpl.class);
             entityContextImpl.afterContextStart(applicationContext);
         }
+    }
+
+    private void printEnvVariables(Environment env) {
+        final MutablePropertySources sources = ((AbstractEnvironment) env).getPropertySources();
+        StringBuilder props = new StringBuilder();
+        props.append("\n\tActive profiles: %s\n".formatted(Arrays.toString(env.getActiveProfiles())));
+        Map<String, String> variables = StreamSupport
+            .stream(sources.spliterator(), false)
+            .filter(ps -> ps instanceof EnumerablePropertySource)
+            .map(ps -> ((EnumerablePropertySource) ps).getPropertyNames())
+            .flatMap(Arrays::stream)
+            .distinct()
+            .filter(prop -> !(prop.contains("java.class.path") || prop.contains("Path") || prop.contains("java.library.path") || prop.contains("credentials")
+                || prop.contains("password")))
+            .collect(Collectors.toMap(prop -> prop, key -> env.getProperty(key, "---"),
+                (v1, v2) -> {throw new RuntimeException(String.format("Duplicate key for values %s and %s", v1, v2));},
+                TreeMap::new));
+        for (Entry<String, String> entry : variables.entrySet()) {
+            props.append("\t\t%s: %s\n".formatted(entry.getKey(), entry.getValue()));
+        }
+        log.info("====== Environment and configuration ======{}", props.toString());
+        log.info("===========================================");
     }
 
     /**
@@ -289,17 +322,6 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
         return registrationBean;
     }
-
-    /*@Bean
-    public PersistenceUnitManager persistenceUnitManager(PersistenceManagedTypes managedTypes, DataSource dataSource,
-        ApplicationContext applicationContext) {
-        DefaultPersistenceUnitManager manager = new DefaultPersistenceUnitManager();
-        manager.setManagedTypes(managedTypes);
-        manager.setDataSourceLookup(new SingleDataSourceLookup(dataSource));
-        manager.setDefaultDataSource(dataSource);
-        manager.setResourceLoader(applicationContext);
-        return manager;
-    }*/
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
