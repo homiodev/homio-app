@@ -20,9 +20,9 @@ import org.homio.api.EntityContextSetting;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.field.UIField;
-import org.homio.api.util.BoardInfo;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
+import org.homio.hquery.hardware.other.MachineInfo;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
@@ -51,8 +51,8 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
             entityContext.setting().getEnv("spring.datasource.url"))));
         list.add(new HardwarePluginEntity("Cpu load", machineHardwareRepository.getCpuLoad()));
         list.add(new HardwarePluginEntity("Cpu temperature", onLinux(machineHardwareRepository::getCpuTemperature)));
-        list.add(new HardwarePluginEntity("Ram memory", machineHardwareRepository.getMemory()));
-        list.add(new HardwarePluginEntity("SD memory", toString(machineHardwareRepository.getSDCardMemory())));
+        list.add(new HardwarePluginEntity("Ram memory", machineHardwareRepository.getRamMemory()));
+        list.add(new HardwarePluginEntity("Disk memory", toString(machineHardwareRepository.getDiscMemory())));
         list.add(new HardwarePluginEntity("Uptime", machineHardwareRepository.getUptime()));
         String activeNetworkInterface = networkHardwareRepository.getActiveNetworkInterface();
         list.add(new HardwarePluginEntity("Network interface", activeNetworkInterface));
@@ -65,21 +65,12 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         list.add(new HardwarePluginEntity("Java", "Name: " + SystemUtils.JAVA_RUNTIME_NAME + ". Version: " + SystemUtils.JAVA_RUNTIME_VERSION));
 
         list.add(new HardwarePluginEntity("IP address", networkHardwareRepository.getIPAddress()));
-        list.add(new HardwarePluginEntity("Device model",
-            EntityContextSetting.isLinuxEnvironment() ? machineHardwareRepository.catDeviceModel() : SystemUtils.OS_NAME));
+        list.add(new HardwarePluginEntity("Device model", SystemUtils.OS_NAME));
 
-        list.add(new HardwarePluginEntity("Processor", BoardInfo.processor));
-        list.add(new HardwarePluginEntity("BogoMIPS", BoardInfo.bogoMIPS));
-        list.add(new HardwarePluginEntity("Processor features", String.join(";", BoardInfo.features)));
-        list.add(new HardwarePluginEntity("Cpu implementor", BoardInfo.cpuImplementer));
-        list.add(new HardwarePluginEntity("Cpu architecture", BoardInfo.cpuArchitecture));
-        list.add(new HardwarePluginEntity("Cpu variant", BoardInfo.cpuVariant));
-        list.add(new HardwarePluginEntity("Cpu part", BoardInfo.cpuPart));
-        list.add(new HardwarePluginEntity("Cpu revision", BoardInfo.cpuRevision));
-        list.add(new HardwarePluginEntity("Cpu Hardware", BoardInfo.hardware));
-        list.add(new HardwarePluginEntity("Cpu Revision", BoardInfo.revision));
-        list.add(new HardwarePluginEntity("Cpu Serial", BoardInfo.serial));
-        list.add(new HardwarePluginEntity("Hostname", machineHardwareRepository.getHostname()));
+        MachineInfo machineInfo = machineHardwareRepository.getMachineInfo();
+
+        list.add(new HardwarePluginEntity("CPU", "cpus(s) - %s, arch - %s".formatted(machineInfo.getCpuNum(), machineInfo.getArchitecture())));
+        list.add(new HardwarePluginEntity("Hostname", machineInfo.getProcessorModelName()));
 
         for (SerialPort serialPort : SerialPort.getCommPorts()) {
             list.add(new HardwarePluginEntity("Com port <" + serialPort.getSystemPortName() + ">",

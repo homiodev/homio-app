@@ -3,22 +3,18 @@ package org.homio.app.rest;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.app.ble.BluetoothBundleService;
 import org.homio.app.config.WebSocketConfig;
-import org.homio.app.rest.MainController.GitHubDescription.Asset;
-import org.homio.hquery.Curl;
 import org.homio.hquery.ProgressBar;
+import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.system.ApplicationHome;
 import org.springframework.context.ApplicationContext;
@@ -51,6 +47,7 @@ public class MainController {
     private final BluetoothBundleService bluetoothBundleService;
     private final SimpMessagingTemplate messagingTemplate;
     private final ApplicationContext applicationContext;
+    private final MachineHardwareRepository repository;
     private boolean installing;
 
     @ExceptionHandler(Exception.class)
@@ -98,21 +95,9 @@ public class MainController {
                 return;
             }
             try {
-                Path archiveAppPath = rootPath.resolve("homio-app.zip");
-                Files.deleteIfExists(archiveAppPath);
+                InstallUtils.downloadTmate(progressBar, repository, rootPath);
+                InstallUtils.downloadApp(progressBar, repository, rootPath);
 
-                System.out.println("Downloading application..");
-                GitHubDescription gitHubDescription =
-                    Curl.get("https://api.github.com/repos/homiodev/homio-app/releases/latest", GitHubDescription.class);
-
-                Asset asset = gitHubDescription.assets.stream()
-                                                      .filter(a -> a.name.equals(archiveAppPath.getFileName().toString()))
-                                                      .findAny().orElse(null);
-                if (asset == null) {
-                    throw new IllegalStateException("Unable to find " + archiveAppPath.getFileName() + " asset from server");
-                }
-                System.out.printf("Downloading '%s' to '%s'%n", archiveAppPath.getFileName(), archiveAppPath);
-                Curl.downloadWithProgress(asset.browser_download_url, archiveAppPath, progressBar);
                 finishInstallApp(progressBar);
             } catch (Exception ex) {
                 System.err.printf("Error while downloading app: %s%n", ex.getMessage());
@@ -164,25 +149,6 @@ public class MainController {
 
         private double value;
         private String title;
-    }
-
-    @Setter
-    @Getter
-    public static class GitHubDescription {
-
-        private String name;
-        private String tag_name;
-        private List<Asset> assets = new ArrayList<>();
-
-        @Setter
-        @Getter
-        public static class Asset {
-
-            private String name;
-            private long size;
-            private String browser_download_url;
-            private String updated_at;
-        }
     }
 
     public static Path createDirectoriesIfNotExists(Path path) {

@@ -1,9 +1,7 @@
 package org.homio.app.manager.common.impl;
 
-import static org.homio.app.utils.InternalUtil.GB_DIVIDER;
+import static org.homio.hquery.hardware.other.MachineHardwareRepository.osBean;
 
-import com.sun.management.OperatingSystemMXBean;
-import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
@@ -37,10 +35,8 @@ import org.jetbrains.annotations.Nullable;
 @RequiredArgsConstructor
 public class EntityContextStorageImpl implements EntityContextStorage {
 
-    public static final OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
     public static final Map<String, EntityMemoryData> ENTITY_MEMORY_MAP = new ConcurrentHashMap<>();
     public static final long TOTAL_MEMORY = osBean.getTotalMemorySize();
-    public static final double TOTAL_MEMORY_GB = osBean.getTotalMemorySize() / GB_DIVIDER;
     // constructor parameters
     @Getter
     private final EntityContextImpl entityContext;

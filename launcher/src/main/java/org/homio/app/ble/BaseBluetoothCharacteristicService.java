@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-
 import org.apache.commons.lang3.SystemUtils;
 import org.ble.BleApplicationListener;
 import org.ble.BluetoothApplication;
@@ -91,7 +90,7 @@ public abstract class BaseBluetoothCharacteristicService {
     @SneakyThrows
     private String getData() {
         try {
-            return new ObjectMapper().writeValueAsString(new Data());
+            return new ObjectMapper().writeValueAsString(new MachineSummary());
         } catch (Exception ex) {
             System.err.printf("Error during reading: %s%n", ex.getMessage());
             throw ex;
@@ -140,24 +139,16 @@ public abstract class BaseBluetoothCharacteristicService {
     }
 
     @Getter
-    public class Data {
+    public class MachineSummary {
 
-        private final boolean linux = SystemUtils.IS_OS_LINUX;
         private final String mac = networkHardwareRepository.getMacAddress();
-        private final String model = machineHardwareRepository.getDeviceModel();
+        private final String model = SystemUtils.OS_NAME;
         private final String wifi = networkHardwareRepository.getWifiName();
         private final String ip = networkHardwareRepository.getIPAddress();
+        private final String time = machineHardwareRepository.getUptime();
+        private final String memory = machineHardwareRepository.getRamMemory();
+        private final String disc = machineHardwareRepository.getDiscCapacity();
         private final boolean net = networkHardwareRepository.pingAddress("www.google.com", 80, 5000);
-        private String time;
-        private String memory;
-        private String disc;
-
-        public Data() {
-            if (linux) {
-                this.disc = machineHardwareRepository.getSDCardMemory().toString();
-                this.memory = machineHardwareRepository.getMemory();
-                this.time = machineHardwareRepository.getUptime();
-            }
-        }
+        private final boolean linux = SystemUtils.IS_OS_LINUX;
     }
 }

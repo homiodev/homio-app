@@ -1,5 +1,32 @@
 #!/bin/bash
 
+set -e
+
+echo "Check wget,tar command is presents"
+abort=0
+for cmd in wget tar; do
+	if [ -z "$(command -v $cmd)" ]; then
+		cat >&2 <<-EOF
+		Error: unable to find required command: $cmd
+		EOF
+		abort=1
+	fi
+done
+[ $abort = 1 ] && exit 1
+
+echo "Check sudo"
+sudo=
+if [ "$(id -u)" -ne 0 ]; then
+	if [ -z "$(command -v sudo)" ]; then
+		cat >&2 <<-EOF
+		Error: this app needs the ability to run commands as root.
+		You are not running as root and we are unable to find "sudo" available.
+		EOF
+		exit 1
+	fi
+	sudo="sudo -E"
+fi
+
 root_path="$HOME/homio"
 
 if [[ -f "homio.properties" ]]; then
@@ -10,7 +37,7 @@ if [[ -f "homio.properties" ]]; then
     done < "homio.properties"
 fi
 
-mkdir -p $root_path
+sudo mkdir -p $root_path
 echo "root_path: '$root_path'"
 
 java_path=$(command -v java)
@@ -55,7 +82,7 @@ else
 fi
 
 echo "Run $java_path -jar $root_path/$app"
-"$java_path" -jar "$root_path/$app"
+sudo "$java_path" -jar "$root_path/$app"
 exit_code=$?
 
 # Unzip install/update if result code is 4 and update file exists
