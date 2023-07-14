@@ -27,7 +27,7 @@ if [ "$(id -u)" -ne 0 ]; then
 	sudo="sudo -E"
 fi
 
-root_path="$HOME/homio"
+root_path="/opt/homio"
 
 if [[ -f "homio.properties" ]]; then
     while IFS="=" read -r key value; do
