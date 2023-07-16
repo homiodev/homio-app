@@ -52,7 +52,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         list.add(new HardwarePluginEntity("Cpu load", machineHardwareRepository.getCpuLoad()));
         list.add(new HardwarePluginEntity("Cpu temperature", onLinux(machineHardwareRepository::getCpuTemperature)));
         list.add(new HardwarePluginEntity("Ram memory", machineHardwareRepository.getRamMemory()));
-        list.add(new HardwarePluginEntity("Disk memory", toString(machineHardwareRepository.getDiscMemory())));
+        list.add(new HardwarePluginEntity("Disk memory", toString(machineHardwareRepository.getDiscCapacity())));
         list.add(new HardwarePluginEntity("Uptime", machineHardwareRepository.getUptime()));
         String activeNetworkInterface = networkHardwareRepository.getActiveNetworkInterface();
         list.add(new HardwarePluginEntity("Network interface", activeNetworkInterface));

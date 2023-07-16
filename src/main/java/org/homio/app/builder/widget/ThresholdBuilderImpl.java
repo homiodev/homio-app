@@ -5,8 +5,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.EntityContextWidget.AnimateBuilder;
-import org.homio.api.EntityContextWidget.AnimateColor;
+import org.homio.api.EntityContextWidget.PulseBuilder;
+import org.homio.api.EntityContextWidget.PulseColor;
 import org.homio.api.EntityContextWidget.ThresholdBuilder;
 import org.homio.api.EntityContextWidget.ValueCompare;
 import org.homio.api.ui.UI.Color;
@@ -14,7 +14,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 @RequiredArgsConstructor
-public class ThresholdBuilderImpl implements ThresholdBuilder, AnimateBuilder {
+public class ThresholdBuilderImpl implements ThresholdBuilder, PulseBuilder {
 
     private static final Set<String> ANIMATIONS = Set.of("fa-beat", "fa-beat-fade", "fa-bounce", "fa-fade", "fa-flip", "fa-shake", "fa-spin",
         "fa-spin fa-spin-reverse");
@@ -24,7 +24,7 @@ public class ThresholdBuilderImpl implements ThresholdBuilder, AnimateBuilder {
 
     private static final String THRESHOLD_MODELS = "thresholdModel";
     private static final String MODEL = "model";
-    private static final String PULSE_ANIMATION = "pulseModel";
+    private static final String PULSE_ANIMATION = "pulseThresholdModel";
 
     private final JSONObject node = new JSONObject();
     private final String entity;
@@ -60,12 +60,12 @@ public class ThresholdBuilderImpl implements ThresholdBuilder, AnimateBuilder {
     }
 
     @Override
-    public AnimateBuilder setAnimate(AnimateColor animateColor, Object value, ValueCompare op) {
+    public PulseBuilder setPulse(PulseColor pulseColor, Object value, ValueCompare op) {
         node.put(PULSE_ANIMATION,
             new JSONObject()
                 .put("value", value)
                 .put("op", op.getOp())
-                .put("entity", animateColor.name()));
+                .put("entity", pulseColor.name()));
 
         return this;
     }

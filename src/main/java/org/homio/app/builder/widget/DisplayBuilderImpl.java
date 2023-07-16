@@ -8,9 +8,9 @@ import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContextWidget;
-import org.homio.api.EntityContextWidget.AnimateBuilder;
 import org.homio.api.EntityContextWidget.DisplayWidgetBuilder;
 import org.homio.api.EntityContextWidget.DisplayWidgetSeriesBuilder;
+import org.homio.api.EntityContextWidget.PulseBuilder;
 import org.homio.api.EntityContextWidget.ThresholdBuilder;
 import org.homio.api.entity.widget.AggregationType;
 import org.homio.app.builder.widget.hasBuilder.HasActionOnClickBuilder;
@@ -63,16 +63,16 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     @Override
     public DisplayWidgetBuilder setBackground(@Nullable String color,
         @Nullable Consumer<ThresholdBuilder> colorBuilder,
-        @Nullable Consumer<AnimateBuilder> animateBuilder) {
-        if (colorBuilder == null && animateBuilder == null) {
+        @Nullable Consumer<PulseBuilder> pulseBuilder) {
+        if (colorBuilder == null && pulseBuilder == null) {
             getWidget().setBackground(color);
         } else {
             ThresholdBuilderImpl builder = new ThresholdBuilderImpl(color);
             if (colorBuilder != null) {
                 colorBuilder.accept(builder);
             }
-            if (animateBuilder != null) {
-                animateBuilder.accept(builder);
+            if (pulseBuilder != null) {
+                pulseBuilder.accept(builder);
             }
             getWidget().setBackground(builder.build());
         }

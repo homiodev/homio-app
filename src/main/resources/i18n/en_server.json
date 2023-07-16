@@ -2,6 +2,7 @@
   "PACKAGE_UPDATE_QUESTION": "Are you sure update {{NAME}}-{{VERSION}} package?",
   "SERVER_STARTED": "Started: {{VALUE}}. Uptime: {{TIME}}",
   "ERROR": {
+    "NOT_STARTED": "Entity {{VALUE}} not started",
     "CLOUD": "Cloud error: {{VALUE}}",
     "CLOUD_UNKNOWN_HOST": "Unknown host: {{VALUE}}",
     "CLOUD_CONNECTION": "Unable connect to: '{{VALUE}}'",
@@ -12,7 +13,6 @@
     "WIDGET_NO_TAB": "Unable to save widget without attach to tab",
     "WRONG_TAB_NAME": "Widget tab name must be between 2..10 characters",
     "REMOVE_NON_EMPTY_TAB": "Unable to remove non empty tab",
-    "VIDEO_NOT_STARTED": "Video '{{VALUE}}' not started",
     "TTS_QUOTA": "Exceeded quota of '{{VALUE}}' characters",
     "ADDON_INSTALLED": "Addon '{{VALUE}}' already installed with same version",
     "ADDON_NOT_EXISTS": "Addon {{VALUE}} not exists",

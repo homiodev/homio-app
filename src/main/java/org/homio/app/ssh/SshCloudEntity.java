@@ -169,7 +169,7 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     }
 
     @Override
-    public CloudProviderService<SshCloudEntity> getCloudProviderService(EntityContext entityContext) {
+    public CloudProviderService<SshCloudEntity> getCloudProviderService(@NotNull EntityContext entityContext) {
         try {
             DataSourceContext sourceContext = DataSourceUtil.getSource(entityContext, getProvider());
             CloudProviderService service = (CloudProviderService) sourceContext.getSource();

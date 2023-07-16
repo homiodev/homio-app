@@ -413,26 +413,31 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }),
         Delete((context, entity) -> {
             if (entity instanceof BaseEntity) {
-                String entityID = ((BaseEntity<?>) entity).getEntityID();
-                // remove all status for entity
-                EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
-                // remove in-memory data if any exists
-                InMemoryDB.removeService(entityID);
-                // clear all registered console plugins if any exists
-                context.ui().unRegisterConsolePlugin(entityID);
-                // remove any registered notifications/notification block
-                context.ui().removeNotificationBlock(entityID);
-                // destroy any additional services
-                if (entity instanceof EntityService) {
-                    try {
-                        ((EntityService<?, ?>) entity).destroyService();
-                    } catch (Exception ex) {
-                        log.warn("Unable to destroy service for entity: {}", getTitle());
-                    }
-                }
-                // remove in-memory data
-                context.getEntityContextStorageImpl().remove(entityID);
-                ((BaseEntity) entity).afterDelete(context);
+                // execute in separate thread
+                context.bgp().builder("delete-delay-entity-" + ((BaseEntity<?>) entity).getEntityID())
+                       .execute(() -> {
+                           // destroy any additional services
+                           if (entity instanceof EntityService) {
+                               try {
+                                   ((EntityService<?, ?>) entity).destroyService();
+                               } catch (Exception ex) {
+                                   log.warn("Unable to destroy service for entity: {}", getTitle());
+                               }
+                           }
+                           ((BaseEntity) entity).afterDelete(context);
+
+                           String entityID = ((BaseEntity<?>) entity).getEntityID();
+                           // remove all status for entity
+                           EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
+                           // remove in-memory data if any exists
+                           InMemoryDB.removeService(entityID);
+                           // clear all registered console plugins if any exists
+                           context.ui().unRegisterConsolePlugin(entityID);
+                           // remove any registered notifications/notification block
+                           context.ui().removeNotificationBlock(entityID);
+                           // remove in-memory data
+                           context.getEntityContextStorageImpl().remove(entityID);
+                       });
             }
             context.sendEntityUpdateNotification(entity, ItemAction.Remove);
         });
