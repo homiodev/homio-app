@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
 import org.homio.api.entity.dependency.DependencyExecutableInstaller;
@@ -33,8 +34,10 @@ public class MosquittoInstaller extends DependencyExecutableInstaller {
         List<String> versionList = null;
         if (IS_OS_WINDOWS) {
             Path mosquittoPath = CommonUtils.getInstallPath().resolve("mosquitto").resolve("mosquitto.exe");
-            if (Files.isRegularFile(mosquittoPath)) {
-                versionList = hardware.executeNoErrorThrowList(mosquittoPath + " -h", 10, null);
+            String mosquittoDir = Files.isRegularFile(mosquittoPath) ? mosquittoPath.toString() :
+                System.getProperty("MOSQUITTO_DIR", System.getenv("MOSQUITTO_DIR"));
+            if (StringUtils.isNotEmpty(mosquittoDir)) {
+                versionList = hardware.executeNoErrorThrowList(mosquittoDir + " -h", 10, null);
             }
         }
         if (versionList == null || versionList.isEmpty()) {

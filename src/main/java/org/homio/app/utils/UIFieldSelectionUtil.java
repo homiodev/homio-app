@@ -66,6 +66,7 @@ import org.homio.api.ui.field.selection.dynamic.SelectionWithDynamicParameterFie
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.Lang;
 import org.homio.app.manager.common.ClassFinder;
+import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextServiceImpl;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.jetbrains.annotations.NotNull;
@@ -247,7 +248,6 @@ public final class UIFieldSelectionUtil {
         return list.stream().filter(predicate).map(c -> OptionModel.of(c.getName(), c.getSimpleName())).collect(Collectors.toList());
     }
 
-    @SneakyThrows
     private static List<OptionModel> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass, Object classEntity,
         Object classEntityForDynamicOptionLoader, String[] selectType, Map<String, String> deps, String param0) {
 
@@ -272,6 +272,12 @@ public final class UIFieldSelectionUtil {
             return null;
         }
 
+        return filterAndGroupingOptions(options);
+    }
+
+    @SneakyThrows
+
+    private static List<OptionModel> filterAndGroupingOptions(List<OptionModel> options) {
         // filter options
         options = filterOptions(options);
 
@@ -327,6 +333,14 @@ public final class UIFieldSelectionUtil {
             }
         }
         return handled;
+    }
+
+    @SneakyThrows
+    public static Collection<OptionModel> getAllOptions(EntityContextImpl entityContext) {
+        LoadOptionsParameters param = new LoadOptionsParameters(null, entityContext, Object.class, new Object(), null, null, null);
+        List<OptionModel> options = new ArrayList<>();
+        assembleOptionsForEntityByClassSelection(param, options, HasGetStatusValue.class);
+        return filterAndGroupingOptions(options);
     }
 
     private static List<OptionModel> fetchOptionsFromDynamicOptionLoader(Class<?> targetClass, Object classEntityForDynamicOptionLoader,
@@ -529,10 +543,10 @@ public final class UIFieldSelectionUtil {
             buildSelectionsFromBean(selections, params.entityContext, list);
             return list;
         }),
-        port(UIFieldDevicePortSelection.class, params -> OptionModel.listOfPorts(false)),
-        clazz(UIFieldClassSelection.class, params -> {
-            return getOptionsForClassSelection(params.entityContext, params.field.getDeclaredAnnotation(UIFieldClassSelection.class));
-        }),
+        port(UIFieldDevicePortSelection.class, params ->
+            OptionModel.listOfPorts(false)),
+        clazz(UIFieldClassSelection.class, params ->
+            getOptionsForClassSelection(params.entityContext, params.field.getDeclaredAnnotation(UIFieldClassSelection.class))),
         entityByClass(UIFieldEntityByClassSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
             for (UIFieldEntityByClassSelection item : params.field.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class)) {

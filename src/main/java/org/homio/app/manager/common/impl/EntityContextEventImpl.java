@@ -528,17 +528,11 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }
     }
 
-    @RequiredArgsConstructor
-    private static class Event {
+    private record Event(String key, Object value) {
 
-        private final String key;
-        private final Object value;
     }
 
-    @RequiredArgsConstructor
-    private static class EntityUpdate {
+    private record EntityUpdate(Object entity, EntityUpdateAction itemAction) {
 
-        private final Object entity;
-        private final EntityUpdateAction itemAction;
     }
 }

@@ -12,6 +12,7 @@ import org.homio.api.ui.field.UIFieldNumber;
 import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimelineEntity> {
@@ -55,7 +56,7 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-boxes";
     }
 

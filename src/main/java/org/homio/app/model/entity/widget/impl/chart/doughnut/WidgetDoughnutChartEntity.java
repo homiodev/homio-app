@@ -15,6 +15,7 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetDoughnutChartEntity
@@ -58,7 +59,7 @@ public class WidgetDoughnutChartEntity
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-circle-dot";
     }
 

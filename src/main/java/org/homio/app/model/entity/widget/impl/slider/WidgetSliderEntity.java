@@ -11,6 +11,7 @@ import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasPadding;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSliderEntity
@@ -49,7 +50,7 @@ public class WidgetSliderEntity
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-sliders-h";
     }
 

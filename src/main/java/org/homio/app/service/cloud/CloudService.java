@@ -88,7 +88,7 @@ public class CloudService implements ContextCreated {
             }
         }
         if (cloudServiceThread != null) {
-            log.warn("Stopping ssh cloud");
+            log.info("Stopping ssh cloud");
             try {
                 cloudServiceThread.cancel();
             } catch (Exception ex) {
@@ -112,7 +112,7 @@ public class CloudService implements ContextCreated {
         cloudProvider.setCurrentEntity(currentEntity);
         cloudServiceThread = entityContext.bgp().builder("cloud-" + currentEntity.getEntityID()).execute(() -> {
             try {
-                log.warn("Starting cloud connection: '{}'", currentEntity);
+                log.info("Starting cloud connection: '{}'", currentEntity);
                 currentEntity.setStatus(Status.INITIALIZE);
                 cloudProvider.updateNotificationBlock();
                 cloudProvider.start();

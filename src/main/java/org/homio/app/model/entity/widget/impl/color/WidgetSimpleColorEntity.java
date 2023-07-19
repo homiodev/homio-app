@@ -18,6 +18,7 @@ import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasSetSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorEntity>
@@ -31,12 +32,12 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
     }
 
     @Override
-    public String getImage() {
-        return null;
+    public @NotNull String getImage() {
+        return "";
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 

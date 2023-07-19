@@ -20,7 +20,6 @@ import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.JSON;
-import org.homio.api.model.Status;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldColorPicker;
@@ -32,7 +31,7 @@ import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.attributes.HasStyle;
 import org.homio.app.setting.dashboard.DashboardHorizontalBlockCountSetting;
 import org.homio.app.setting.dashboard.DashboardVerticalBlockCountSetting;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter
@@ -83,7 +82,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         return super.getName();
     }
 
-    public abstract String getImage();
+    public abstract @NotNull String getImage();
 
     /*protected boolean invalidateWrongEntity(EntityContext entityContext, Object item) {
         boolean updated = false;
@@ -151,10 +150,15 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         this.findSuitablePosition();
     }
 
+    @Override
+    public @NotNull String getDynamicUpdateType() {
+        return "widget";
+    }
+
     /**
      * Find free space in matrix for new item
      */
-    protected void findSuitablePosition() {
+    private void findSuitablePosition() {
         List<WidgetBaseEntity> widgets = getEntityContext().findAll(WidgetBaseEntity.class);
         if (isNotEmpty(getParent())) {
             WidgetBaseEntity layout = widgets.stream().filter(w -> w.getEntityID().equals(getParent())).findAny().orElse(null);

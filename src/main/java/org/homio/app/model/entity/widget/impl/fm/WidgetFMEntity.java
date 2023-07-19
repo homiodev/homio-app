@@ -29,7 +29,7 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-folder-tree";
     }
 

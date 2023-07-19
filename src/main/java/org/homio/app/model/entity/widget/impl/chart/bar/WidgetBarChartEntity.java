@@ -10,6 +10,7 @@ import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasAxis;
 import org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.homio.app.model.entity.widget.impl.chart.HasMinMaxChartValue;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetBarChartEntity
@@ -54,7 +55,7 @@ public class WidgetBarChartEntity
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-chart-bar";
     }
 

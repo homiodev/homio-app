@@ -8,6 +8,7 @@ import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetPieChartEntity
@@ -28,7 +29,7 @@ public class WidgetPieChartEntity
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-chart-pie";
     }
 

@@ -5,6 +5,7 @@ import java.util.Set;
 import org.homio.api.entity.validation.MaxItems;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetVideoEntity
@@ -23,7 +24,7 @@ public class WidgetVideoEntity
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-video";
     }
 

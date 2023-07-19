@@ -211,6 +211,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         @PathVariable("entityID") String entityID,
         @PathVariable("fieldName") String fieldName,
         @RequestBody GetOptionsRequest optionsRequest) {
+        if("any".equals(entityID)) {
+
+        }
         Object classEntity = entityContext.getEntity(entityID);
         if (classEntity == null) {
             // i.e in case we load Widget
@@ -241,6 +244,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(), optionsRequest.getDeps(),
             optionsRequest.getParam0());
+    }
+
+    @GetMapping("/options")
+    public Collection<OptionModel> getAllOptions() {
+        return UIFieldSelectionUtil.getAllOptions(entityContext);
     }
 
     @GetMapping("/{type}/types")

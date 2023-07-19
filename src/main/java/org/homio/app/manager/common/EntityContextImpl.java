@@ -39,6 +39,7 @@ import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.entity.DisableCacheEntity;
 import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
@@ -76,6 +77,11 @@ import org.homio.app.manager.common.impl.EntityContextWorkspaceImpl;
 import org.homio.app.model.entity.LocalBoardEntity;
 import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
+import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
+import org.homio.app.model.entity.widget.WidgetSeriesEntity;
+import org.homio.app.model.entity.widget.attributes.HasPosition;
+import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableDataRepository;
@@ -550,10 +556,73 @@ public class EntityContextImpl implements EntityContext {
     }
 
     public BaseEntity<?> copyEntity(BaseEntity entity) {
-        entity.copy();
-        BaseEntity<?> saved = save(entity, true);
+        BaseEntity newEntity = copyEntityItem(entity);
+        BaseEntity<?> saved = save(newEntity, false);
+
+        // copy children if current entity is layout(it may contains children)
+        if (entity instanceof WidgetLayoutEntity) {
+            for (BaseEntity baseEntity : findAll(WidgetBaseEntity.class)) {
+                if (baseEntity instanceof HasPosition<?> positionEntity) {
+                    if (entity.getEntityID().equals(positionEntity.getParent())) {
+                        BaseEntity newChildEntity = copyEntityItem(baseEntity);
+                        ((HasPosition) newChildEntity).setParent(saved.getEntityID());
+                        save(newChildEntity, false);
+                    }
+                }
+            }
+        }
+
+        saved = save(saved, true);
         cacheService.clearCache();
         return saved;
+    }
+
+    private BaseEntity copyEntityItem(BaseEntity entity) {
+        BaseEntity newEntity = buildInitialCopyEntity(entity);
+
+        // save to assign id
+        newEntity = save(newEntity, false);
+
+        if (entity instanceof WidgetBaseEntityAndSeries widgetSeriesEntity) {
+            WidgetBaseEntityAndSeries newWidgetSeriesData = (WidgetBaseEntityAndSeries) newEntity;
+            Set<WidgetSeriesEntity> entitySeries = widgetSeriesEntity.getSeries();
+            Set<WidgetSeriesEntity> series = new HashSet<>();
+            for (WidgetSeriesEntity entry : entitySeries) {
+                WidgetSeriesEntity seriesEntry = (WidgetSeriesEntity) buildInitialCopyEntity(entry);
+                seriesEntry.setPriority(entry.getPriority());
+                seriesEntry.setWidgetEntity((WidgetBaseEntityAndSeries) newEntity);
+                seriesEntry = save(seriesEntry, false);
+                series.add(seriesEntry);
+            }
+            newWidgetSeriesData.setSeries(series);
+        }
+        return newEntity;
+    }
+
+    @NotNull
+    private static BaseEntity buildInitialCopyEntity(BaseEntity entity) {
+        BaseEntity newEntity = CommonUtils.newInstance(entity.getClass());
+        newEntity.setName(entity.getName());
+
+        if (entity instanceof HasJsonData entityData) {
+            HasJsonData newEntityData = (HasJsonData) newEntity;
+            for (String key : entityData.getJsonData().keySet()) {
+                newEntityData.setJsonData(key, entityData.getJsonData().get(key));
+            }
+        }
+
+        if (entity instanceof WidgetBaseEntity widgetEntity) {
+            WidgetBaseEntity newWidgetData = (WidgetBaseEntity) newEntity;
+            newWidgetData.setWidgetTabEntity(widgetEntity.getWidgetTabEntity());
+        }
+
+        if (entity instanceof DeviceBaseEntity deviceEntity) {
+            DeviceBaseEntity newDeviceData = (DeviceBaseEntity) newEntity;
+            newDeviceData.setIeeeAddress(deviceEntity.getIeeeAddress());
+            newDeviceData.setImageIdentifier(deviceEntity.getImageIdentifier());
+            newDeviceData.setPlace(deviceEntity.getPlace());
+        }
+        return newEntity;
     }
 
     public void fireAllBroadcastLock(Consumer<BroadcastLockManagerImpl> handler) {

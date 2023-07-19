@@ -11,6 +11,7 @@ import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasPadding;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggleEntity>
@@ -24,12 +25,12 @@ public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggl
     }
 
     @Override
-    public String getImage() {
-        return null;
+    public @NotNull String getImage() {
+        return "";
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 

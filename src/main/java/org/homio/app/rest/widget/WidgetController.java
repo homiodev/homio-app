@@ -96,6 +96,18 @@ public class WidgetController {
         this.timeSeriesUtil = new TimeSeriesUtil(entityContext);
     }
 
+    @PostMapping("/sources")
+    public SingleValueData getSources(@Valid @RequestBody Sources request) {
+        for (String source : request.sources) {
+
+        }
+        WidgetBaseEntity entity = request.getEntity(entityContext, objectMapper);
+        if (entity instanceof HasSingleValueDataSource) {
+            return new SingleValueData(timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o), null);
+        }
+        throw new IllegalStateException("Entity: " + request.getEntityID() + " not implement 'HasSingleValueDataSource'");
+    }
+
     @SneakyThrows
     @GetMapping("/plugins")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
@@ -513,5 +525,10 @@ public class WidgetController {
         private enum Type {
             color, colorTemp, onOff, brightness
         }
+    }
+
+    @Setter
+    private static class Sources {
+        private List<String> sources;
     }
 }

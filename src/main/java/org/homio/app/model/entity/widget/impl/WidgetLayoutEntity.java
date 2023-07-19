@@ -11,6 +11,7 @@ import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.setting.dashboard.WidgetBorderColorMenuSetting;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
@@ -19,12 +20,12 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
     public static final String PREFIX = "wgtcmp_";
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-layer-group";
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
@@ -52,17 +53,14 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
         setJsonData("bc", value);
     }
 
-    @UIField(order = 31, showInContextMenu = true, icon = "fas fa-border-top-left")
-    public Boolean isShowWidgetBorders() {
-        return getJsonData("swb", Boolean.FALSE);
-    }
-
-    public void setShowWidgetBorders(Boolean value) {
-        setJsonData("swb", value);
+    @Override
+    @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true)
+    public String getBackground() {
+        return super.getBackground();
     }
 
     @Override
-    public void afterDelete(EntityContext entityContext) {
+    public void afterDelete(@NotNull EntityContext entityContext) {
         for (WidgetBaseEntity entity : getEntityContext().findAll(WidgetBaseEntity.class)) {
             if (getEntityID().equals(entity.getParent())) {
                 entityContext.delete(entity);
@@ -80,14 +78,4 @@ public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
         }
         super.beforePersist();
     }
-
-   /* @Override
-   // findAll has to have be in separate transaction in case of deleted entity
-    public void getAllRelatedEntities(Set<BaseEntity> set) {
-        for (WidgetBaseEntity entity : getEntityContext().findAll(WidgetBaseEntity.class)) {
-            if (getEntityID().equals(entity.getParent())) {
-                set.add(entity);
-            }
-        }
-    }*/
 }

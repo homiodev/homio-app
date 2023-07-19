@@ -192,7 +192,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         @NotNull BaseEntity<?> entity,
         @NotNull String updateField,
         @Nullable Object value) {
-        if (!isUpdateRegistered(entity)) {
+        if (isUpdateNotRegistered(entity)) {
             return;
         }
         this.sendToUIMap.put(entity.getEntityID() + updateField, new SendUpdateContext(
@@ -211,7 +211,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         @NotNull String updateField,
         @NotNull Object value) {
 
-        if (!isUpdateRegistered(parentEntity)) {
+        if (isUpdateNotRegistered(parentEntity)) {
             return;
         }
         this.sendToUIMap.put(parentEntity.getEntityID() + parentFieldName + innerEntityID + updateField, new SendUpdateContext(
@@ -234,12 +234,12 @@ public class EntityContextUIImpl implements EntityContextUI {
         }));
     }
 
-    private boolean isUpdateRegistered(@NotNull BaseEntity<?> parentEntity) {
-        return this.dynamicUpdateRegisters.containsKey(new DynamicUpdateRequest("entity-type-" + parentEntity.getType()));
+    private boolean isUpdateNotRegistered(@NotNull BaseEntity<?> parentEntity) {
+        return !this.dynamicUpdateRegisters.containsKey(new DynamicUpdateRequest("entity-type-" + parentEntity.getDynamicUpdateType()));
     }
 
     public void updateItem(@NotNull BaseEntity<?> entity, boolean ignoreExtra) {
-        if (!isUpdateRegistered(entity)) {
+        if (isUpdateNotRegistered(entity)) {
             return;
         }
         this.sendToUIMap.put(entity.getEntityID(), new SendUpdateContext(

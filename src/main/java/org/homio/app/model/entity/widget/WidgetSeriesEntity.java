@@ -18,7 +18,6 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.model.JSON;
 import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.jetbrains.annotations.NotNull;
-import org.json.JSONObject;
 
 @Setter
 @Getter
@@ -38,16 +37,6 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
     @Column(length = 65535)
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
-
-    @Override
-    public JSONObject getDynamicParameterFieldsHolder() {
-        return getJsonData().optJSONObject("dsp");
-    }
-
-    @Override
-    public void setDynamicParameterFieldsHolder(JSON value) {
-        setJsonData("dsp", value);
-    }
 
     @Override
     public void getAllRelatedEntities(Set<BaseEntity> set) {

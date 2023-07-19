@@ -13,6 +13,7 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
 import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 @Getter
@@ -57,7 +58,7 @@ public class WidgetFrameEntity extends WidgetBaseEntity<WidgetFrameEntity> imple
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fab fa-html5";
     }
 

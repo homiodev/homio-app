@@ -19,8 +19,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -43,7 +45,6 @@ import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.workspace.block.Scratch3Space;
-import org.homio.hquery.HardwareRepositoryFactoryPostProcessor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +75,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.orm.jpa.persistenceunit.PersistenceUnitManager;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.retry.RetryPolicy;
+import org.springframework.retry.backoff.FixedBackOffPolicy;
+import org.springframework.retry.policy.ExceptionClassifierRetryPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -127,12 +133,6 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer, Applic
 
     public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
         configurer.setTaskExecutor(threadPoolTaskScheduler());
-    }
-
-    @Bean
-    public HardwareRepositoryFactoryPostProcessor.HardwareRepositoryThreadPool hardwareRepositoryThreadPool(
-        ThreadPoolTaskScheduler scheduler) {
-        return (name, runnable) -> scheduler.submit(runnable);
     }
 
     @Bean

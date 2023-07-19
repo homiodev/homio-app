@@ -4,6 +4,8 @@ import static org.apache.commons.lang3.StringUtils.repeat;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -17,6 +19,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.internal.SessionFactoryImpl;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.extloader.CustomPersistenceManagedTypes;
 import org.homio.app.manager.CacheService;
 import org.jetbrains.annotations.NotNull;
@@ -25,7 +28,16 @@ import org.springframework.boot.autoconfigure.orm.jpa.HibernateSettings;
 import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.ApplicationContext;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.retry.RetryCallback;
+import org.springframework.retry.RetryContext;
+import org.springframework.retry.RetryListener;
+import org.springframework.retry.RetryPolicy;
+import org.springframework.retry.backoff.FixedBackOffPolicy;
+import org.springframework.retry.policy.ExceptionClassifierRetryPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -42,6 +54,7 @@ public class TransactionManagerContext {
     private final @NotNull CacheService cacheService;
     private final @NotNull EntityManagerFactory entityManagerFactory;
     private final @NotNull EntityManager entityManager;
+    private final @NotNull RetryTemplate dbRetryTemplate;
 
     private EntityManagerFactory updatedEntityManagerFactory;
     private final AtomicInteger currentActiveQueries = new AtomicInteger(0);
@@ -63,6 +76,8 @@ public class TransactionManagerContext {
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.readOnlyTransactionTemplate = new TransactionTemplate(transactionManager);
         this.readOnlyTransactionTemplate.setReadOnly(true);
+
+        this.dbRetryTemplate = buildRetryTemplate();
     }
 
     public <T> T executeInTransactionReadOnly(Function<EntityManager, T> handler) {
@@ -74,19 +89,22 @@ public class TransactionManagerContext {
     }
 
     public <T> T executeInTransaction(Function<EntityManager, T> handler) {
-        return executeQuery(() -> transactionTemplate.execute(status -> handler.apply(entityManager)));
+        return executeQuery(() ->
+            dbRetryTemplate.execute(arg0 ->
+                transactionTemplate.execute(status -> handler.apply(entityManager))));
     }
 
     public void executeInTransaction(Consumer<EntityManager> handler) {
-        executeQuery(() -> {
-            transactionTemplate.execute(new TransactionCallbackWithoutResult() {
-                @Override
-                protected void doInTransactionWithoutResult(@NotNull TransactionStatus status) {
-                    handler.accept(entityManager);
-                }
-            });
-            return null;
-        });
+        executeQuery(() ->
+            dbRetryTemplate.execute(arg0 -> {
+                transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+                    @Override
+                    protected void doInTransactionWithoutResult(@NotNull TransactionStatus status) {
+                        handler.accept(entityManager);
+                    }
+                });
+                return null;
+            }));
     }
 
     @SneakyThrows
@@ -160,5 +178,37 @@ public class TransactionManagerContext {
         } finally {
             currentActiveQueries.decrementAndGet();
         }
+    }
+
+    private RetryTemplate buildRetryTemplate() {
+        RetryTemplate retryTemplate = new RetryTemplate();
+
+        FixedBackOffPolicy fixedBackOffPolicy = new FixedBackOffPolicy();
+        fixedBackOffPolicy.setBackOffPeriod(200L);
+        retryTemplate.setBackOffPolicy(fixedBackOffPolicy);
+
+        Map<Class<? extends Throwable>, RetryPolicy> exceptionMap = new HashMap<>();
+        exceptionMap.put(SQLException.class, new SimpleRetryPolicy(3));
+        exceptionMap.put(CannotAcquireLockException.class, new SimpleRetryPolicy(10));
+
+        ExceptionClassifierRetryPolicy retryPolicy = new ExceptionClassifierRetryPolicy();
+        retryPolicy.setPolicyMap(exceptionMap);
+
+        retryTemplate.setRetryPolicy(retryPolicy);
+        retryTemplate.registerListener(new RetryListener() {
+            @Override
+            public <T, E extends Throwable> void onError(RetryContext context, RetryCallback<T, E> callback, Throwable throwable) {
+                log.warn("DB unable attempt to execute command: {}", CommonUtils.getErrorMessage(throwable));
+            }
+
+            @Override
+            public <T, E extends Throwable> void close(RetryContext context, RetryCallback<T, E> callback, Throwable throwable) {
+                if (throwable != null) {
+                    log.error("DB failed to execute db command: {}", CommonUtils.getErrorMessage(throwable));
+                }
+            }
+        });
+
+        return retryTemplate;
     }
 }

@@ -30,6 +30,7 @@ import org.homio.app.model.entity.widget.attributes.HasIconWithoutThreshold;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
@@ -59,7 +60,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fa fa-palette";
     }
 

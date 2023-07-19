@@ -28,10 +28,4 @@ public class LayoutBuilderImpl extends WidgetBaseBuilderImpl<LayoutWidgetBuilder
         widget.setBorderColor(value);
         return this;
     }
-
-    @Override
-    public LayoutWidgetBuilder setShowWidgetBorders(boolean value) {
-        widget.setShowWidgetBorders(value);
-        return this;
-    }
 }

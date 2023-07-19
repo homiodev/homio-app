@@ -10,7 +10,6 @@ import jakarta.persistence.OrderBy;
 import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
-import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.validation.MaxItems;
 import org.homio.api.exception.ServerException;
 import org.homio.api.ui.field.UIField;
@@ -27,20 +26,6 @@ public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSer
     @MaxItems(10)
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "widgetEntity", targetEntity = WidgetSeriesEntity.class)
     private Set<S> series;
-
-    @Override
-    public void copy() {
-        super.copy();
-        series.forEach(BaseEntity::copy);
-    }
-
-    /* Looks like we may need verify relations only during fetch all variables from UI
-    @Override
-    public void afterFetch(EntityContext entityContext) {
-        if (updateRelations(entityContext)) {
-            entityContext.save(this);
-        }
-    }*/
 
     @Override
     protected void validate() {

@@ -118,6 +118,8 @@ import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.UIFieldOptionVerticalAlign;
 import org.homio.app.model.entity.widget.UIFieldPadding;
 import org.homio.app.model.entity.widget.UIFieldTimeSlider;
+import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
+import org.homio.app.model.entity.widget.impl.chart.UIFieldTab;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.model.var.UIFieldVariable;
 import org.jetbrains.annotations.NotNull;
@@ -341,6 +343,10 @@ public class UIFieldUtils {
             entityUIMetaData.setType(UIFieldType.ColorPicker.name());
             jsonTypeMetadata.put("allowThreshold", fieldColorPicker.allowThreshold());
             jsonTypeMetadata.put("pulseColorCondition", fieldColorPicker.pulseColorCondition());
+            // layout entity has no 'state' itself, so need manually enter/select state from children
+            if (instance instanceof WidgetLayoutEntity) {
+                jsonTypeMetadata.put("selectValueThreshold", true);
+            }
         }
 
         UIFieldTableLayout fieldTableLayout = fieldContext.getDeclaredAnnotation(UIFieldTableLayout.class);
@@ -516,6 +522,11 @@ public class UIFieldUtils {
         var fieldExpand = fieldContext.getDeclaredAnnotation(UIFieldExpand.class);
         if (fieldExpand != null && type.isAssignableFrom(List.class)) {
             jsonTypeMetadata.put("expand", "true");
+        }
+
+        var fieldTab = fieldContext.getDeclaredAnnotation(UIFieldTab.class);
+        if (fieldTab != null) {
+            jsonTypeMetadata.put("tab", fieldTab.value());
         }
 
         var fieldLink = fieldContext.getDeclaredAnnotation(UIFieldLinkToEntity.class);

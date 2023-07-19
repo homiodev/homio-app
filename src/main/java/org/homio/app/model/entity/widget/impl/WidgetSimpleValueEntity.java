@@ -13,6 +13,7 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueAggregatedData
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueEntity>
@@ -29,8 +30,8 @@ public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueE
     public static final String PREFIX = "wgtvs_";
 
     @Override
-    public String getImage() {
-        return null;
+    public @NotNull String getImage() {
+        return "";
     }
 
     @Override
@@ -39,7 +40,7 @@ public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueE
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
