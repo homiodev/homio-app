@@ -111,6 +111,7 @@ import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
 import org.homio.app.model.UIFieldClickToEdit;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
+import org.homio.app.model.entity.widget.UIFieldColorPickerSource;
 import org.homio.app.model.entity.widget.UIFieldFunction;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
 import org.homio.app.model.entity.widget.UIFieldOptionColor;
@@ -343,9 +344,12 @@ public class UIFieldUtils {
             entityUIMetaData.setType(UIFieldType.ColorPicker.name());
             jsonTypeMetadata.put("allowThreshold", fieldColorPicker.allowThreshold());
             jsonTypeMetadata.put("pulseColorCondition", fieldColorPicker.pulseColorCondition());
+
             // layout entity has no 'state' itself, so need manually enter/select state from children
-            if (instance instanceof WidgetLayoutEntity) {
-                jsonTypeMetadata.put("selectValueThreshold", true);
+            if (fieldContext.isAnnotationPresent(UIFieldColorPickerSource.class)) {
+                if (instance instanceof WidgetLayoutEntity) {
+                    jsonTypeMetadata.put("thresholdSource", true);
+                }
             }
         }
 

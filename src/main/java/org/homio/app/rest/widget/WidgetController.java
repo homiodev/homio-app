@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -17,10 +18,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
+import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
@@ -97,15 +100,21 @@ public class WidgetController {
     }
 
     @PostMapping("/sources")
-    public SingleValueData getSources(@Valid @RequestBody Sources request) {
+    public Map<String, Object> getSources(@Valid @RequestBody Sources request) {
+        Map<String, Object> result = new HashMap<>();
         for (String source : request.sources) {
-
+            DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, source);
+            if (dsContext.getSource() instanceof HasGetStatusValue) {
+                val valueRequest = new HasGetStatusValue.GetStatusValueRequest(entityContext, null);
+                result.put(source, ((HasGetStatusValue) dsContext.getSource()).getStatusValue(valueRequest));
+                timeSeriesUtil.addListenValueIfRequire(true, "dashboard",
+                    dsContext.getSource(), null, null, source,
+                    object -> ((HasGetStatusValue) dsContext.getSource()).getStatusValue(valueRequest));
+            } else {
+                throw new IllegalArgumentException("Unable to get value from non source entity");
+            }
         }
-        WidgetBaseEntity entity = request.getEntity(entityContext, objectMapper);
-        if (entity instanceof HasSingleValueDataSource) {
-            return new SingleValueData(timeSeriesUtil.getSingleValue(entity, (HasSingleValueDataSource) entity, o -> o), null);
-        }
-        throw new IllegalStateException("Entity: " + request.getEntityID() + " not implement 'HasSingleValueDataSource'");
+        return result;
     }
 
     @SneakyThrows
@@ -529,6 +538,7 @@ public class WidgetController {
 
     @Setter
     private static class Sources {
-        private List<String> sources;
+
+        private String[] sources;
     }
 }
