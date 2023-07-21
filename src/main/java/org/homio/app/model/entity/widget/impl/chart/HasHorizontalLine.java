@@ -11,7 +11,6 @@ import org.homio.api.ui.field.UIFieldSlider;
 public interface HasHorizontalLine extends HasJsonData {
 
     @UIField(order = 1)
-    @UIFieldTab("CHART")
     @UIFieldGroup(value = "CHART_HL", order = 59, borderColor = "#953CEE")
     @UIFieldSlider(min = -1, max = 100)
     default Integer getSingleLinePos() {

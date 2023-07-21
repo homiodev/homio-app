@@ -116,7 +116,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     @UIField(order = 21, isRevert = true)
     @UIFieldGroup("UI")
-    @UIFieldColorPicker
+    @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
     @UIFieldReadDefaultValue
     public String getBackground() {
         return getJsonData("bg", "transparent");

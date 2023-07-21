@@ -2,7 +2,6 @@ package org.homio.app.model.entity.widget.impl.slider;
 
 import jakarta.persistence.Entity;
 import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldColorPicker;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldLayout;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
@@ -52,12 +51,6 @@ public class WidgetSliderEntity
     @Override
     public @NotNull String getImage() {
         return "fas fa-sliders-h";
-    }
-
-    @Override
-    @UIFieldColorPicker(allowThreshold = true)
-    public String getBackground() {
-        return super.getBackground();
     }
 
     @Override

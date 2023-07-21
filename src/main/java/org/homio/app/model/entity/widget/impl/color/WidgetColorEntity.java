@@ -78,7 +78,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIFieldIgnore
     @JsonIgnore
     public String getBackground() {
-
         return super.getBackground();
     }
 

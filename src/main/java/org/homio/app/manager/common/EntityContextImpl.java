@@ -579,6 +579,9 @@ public class EntityContextImpl implements EntityContext {
 
     private BaseEntity copyEntityItem(BaseEntity entity) {
         BaseEntity newEntity = buildInitialCopyEntity(entity);
+        if (newEntity instanceof WidgetBaseEntity<?> widget) {
+            widget.setParent(null);
+        }
 
         // save to assign id
         newEntity = save(newEntity, false);

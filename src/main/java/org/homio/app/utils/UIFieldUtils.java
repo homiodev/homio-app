@@ -67,6 +67,7 @@ import org.homio.api.ui.field.UIFieldProgress;
 import org.homio.api.ui.field.UIFieldProgress.UIFieldProgressColorChange;
 import org.homio.api.ui.field.UIFieldReadDefaultValue;
 import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldTab;
 import org.homio.api.ui.field.UIFieldTableLayout;
 import org.homio.api.ui.field.UIFieldTitleRef;
 import org.homio.api.ui.field.UIFieldType;
@@ -111,7 +112,6 @@ import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
 import org.homio.app.model.UIFieldClickToEdit;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
-import org.homio.app.model.entity.widget.UIFieldColorPickerSource;
 import org.homio.app.model.entity.widget.UIFieldFunction;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
 import org.homio.app.model.entity.widget.UIFieldOptionColor;
@@ -119,8 +119,6 @@ import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.UIFieldOptionVerticalAlign;
 import org.homio.app.model.entity.widget.UIFieldPadding;
 import org.homio.app.model.entity.widget.UIFieldTimeSlider;
-import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
-import org.homio.app.model.entity.widget.impl.chart.UIFieldTab;
 import org.homio.app.model.rest.EntityUIMetaData;
 import org.homio.app.model.var.UIFieldVariable;
 import org.jetbrains.annotations.NotNull;
@@ -189,7 +187,11 @@ public class UIFieldUtils {
         if (instance == null) {
             throw new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName());
         }
-        return fillEntityUIMetadataList(instance, entityUIMetaDataSet, entityContext, false);
+        List<EntityUIMetaData> result = fillEntityUIMetadataList(instance, entityUIMetaDataSet, entityContext, false);
+        if (instance instanceof ConfigureFieldsService configurator) {
+            configurator.configure(result);
+        }
+        return result;
     }
 
     public static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet,
@@ -310,11 +312,11 @@ public class UIFieldUtils {
         UIFieldIconPicker fieldIconPicker = fieldContext.getDeclaredAnnotation(UIFieldIconPicker.class);
         if (fieldIconPicker != null) {
             entityUIMetaData.setType("IconPicker");
-            jsonTypeMetadata.put("allowEmptyIcon", fieldIconPicker.allowEmptyIcon());
-            jsonTypeMetadata.put("allowSize", fieldIconPicker.allowSize());
-            jsonTypeMetadata.put("allowSpin", fieldIconPicker.allowSpin());
-            jsonTypeMetadata.put("allowThreshold", fieldIconPicker.allowThreshold());
-            jsonTypeMetadata.put("allowBackground", fieldIconPicker.allowBackground());
+            putIfTrue(jsonTypeMetadata, "allowEmptyIcon", fieldIconPicker.allowEmptyIcon());
+            putIfTrue(jsonTypeMetadata, "allowSize", fieldIconPicker.allowSize());
+            putIfTrue(jsonTypeMetadata, "allowSpin", fieldIconPicker.allowSpin());
+            putIfTrue(jsonTypeMetadata, "allowThreshold", fieldIconPicker.allowThreshold());
+            putIfTrue(jsonTypeMetadata, "allowBackground", fieldIconPicker.allowBackground());
         }
 
         UIFieldVariable fieldVariable = fieldContext.getDeclaredAnnotation(UIFieldVariable.class);
@@ -331,7 +333,7 @@ public class UIFieldUtils {
         UIFieldPosition fieldPosition = fieldContext.getDeclaredAnnotation(UIFieldPosition.class);
         if (fieldPosition != null) {
             entityUIMetaData.setType("Position");
-            jsonTypeMetadata.put("disableCenter", fieldPosition.disableCenter());
+            putIfTrue(jsonTypeMetadata, "disableCenter", fieldPosition.disableCenter());
         }
 
         UIFieldFunction fieldFunction = fieldContext.getDeclaredAnnotation(UIFieldFunction.class);
@@ -342,15 +344,9 @@ public class UIFieldUtils {
         UIFieldColorPicker fieldColorPicker = fieldContext.getDeclaredAnnotation(UIFieldColorPicker.class);
         if (fieldColorPicker != null) {
             entityUIMetaData.setType(UIFieldType.ColorPicker.name());
-            jsonTypeMetadata.put("allowThreshold", fieldColorPicker.allowThreshold());
-            jsonTypeMetadata.put("pulseColorCondition", fieldColorPicker.pulseColorCondition());
-
-            // layout entity has no 'state' itself, so need manually enter/select state from children
-            if (fieldContext.isAnnotationPresent(UIFieldColorPickerSource.class)) {
-                if (instance instanceof WidgetLayoutEntity) {
-                    jsonTypeMetadata.put("thresholdSource", true);
-                }
-            }
+            putIfTrue(jsonTypeMetadata, "allowThreshold", fieldColorPicker.allowThreshold());
+            putIfTrue(jsonTypeMetadata, "pulseColorCondition", fieldColorPicker.pulseColorCondition());
+            putIfTrue(jsonTypeMetadata, "thresholdSource", fieldColorPicker.thresholdSource());
         }
 
         UIFieldTableLayout fieldTableLayout = fieldContext.getDeclaredAnnotation(UIFieldTableLayout.class);
@@ -508,9 +504,7 @@ public class UIFieldUtils {
         if (fieldColorBgRef != null) {
             assertFieldExists(instance, fieldColorBgRef.value());
             jsonTypeMetadata.put("colorBgRef", fieldColorBgRef.value());
-            if (fieldColorBgRef.animate()) {
-                jsonTypeMetadata.put("colorBgRefAnimate", true);
-            }
+            putIfTrue(jsonTypeMetadata, "colorBgRefAnimate", fieldColorBgRef.animate());
         }
 
         var fieldInlineEditConfirm = fieldContext.getDeclaredAnnotation(UIFieldInlineEditConfirm.class);
@@ -524,9 +518,7 @@ public class UIFieldUtils {
         }
 
         var fieldExpand = fieldContext.getDeclaredAnnotation(UIFieldExpand.class);
-        if (fieldExpand != null && type.isAssignableFrom(List.class)) {
-            jsonTypeMetadata.put("expand", "true");
-        }
+        putIfTrue(jsonTypeMetadata, "expand", fieldExpand != null && type.isAssignableFrom(List.class));
 
         var fieldTab = fieldContext.getDeclaredAnnotation(UIFieldTab.class);
         if (fieldTab != null) {
@@ -621,7 +613,7 @@ public class UIFieldUtils {
         var fieldInlineGroup = fieldContext.getDeclaredAnnotation(UIFieldInlineGroup.class);
         if (fieldInlineGroup != null) {
             jsonTypeMetadata.put("inlineShowGroupCondition", fieldInlineGroup.value());
-            jsonTypeMetadata.put("inlineGroupEditable", fieldInlineGroup.editable());
+            putIfTrue(jsonTypeMetadata, "inlineGroupEditable", fieldInlineGroup.editable());
         }
         var fieldInlineEntityEditWidth =
             fieldContext.getDeclaredAnnotation(UIFieldInlineEntityEditWidth.class);
@@ -1102,5 +1094,10 @@ public class UIFieldUtils {
                 "type=" + getType() +
                 '}';
         }
+    }
+
+    public interface ConfigureFieldsService {
+
+        void configure(@NotNull List<EntityUIMetaData> result);
     }
 }
