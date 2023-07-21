@@ -1,12 +1,10 @@
 package org.homio.app.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.homio.hquery.HardwareRepositoryFactoryPostProcessor;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.Collections;
+import java.util.concurrent.Executors;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -14,43 +12,18 @@ import org.springframework.core.Ordered;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.util.Collections;
-import java.util.concurrent.Executors;
-import org.homio.hquery.HardwareRepositoryFactoryPostProcessor;
 
 
 @Configuration
 @EntityScan(basePackages = {"org.homio"})
 @ComponentScan({"org.homio"})
-public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer {
-
-    @Autowired
-    private ApplicationContext applicationContext;
-
-    private boolean applicationReady;
-
-    @Bean
-    public ThreadPoolTaskScheduler threadPoolTaskScheduler() {
-        ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
-        threadPoolTaskScheduler.setPoolSize(10);
-        threadPoolTaskScheduler.setThreadNamePrefix("th-async-");
-        threadPoolTaskScheduler.setRemoveOnCancelPolicy(true);
-        return threadPoolTaskScheduler;
-    }
-
-    @Bean
-    public HardwareRepositoryFactoryPostProcessor.HardwareRepositoryThreadPool hardwareRepositoryThreadPool(ThreadPoolTaskScheduler scheduler) {
-        return (name, runnable) -> scheduler.submit(runnable);
-    }
+public class LaunchConfig implements WebMvcConfigurer, SchedulingConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -59,7 +32,7 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer {
 
     // not too safe for now
     @Bean
-    public FilterRegistrationBean corsFilter() {
+    public FilterRegistrationBean<CorsFilter> corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(false);
@@ -97,10 +70,5 @@ public class AppConfig implements WebMvcConfigurer, SchedulingConfigurer {
         converter.setSupportedMediaTypes(Collections.singletonList(MediaType.APPLICATION_JSON));
         converter.setObjectMapper(objectMapper);
         return converter;
-    }
-
-    @Override
-    public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-        configurer.favorPathExtension(false);
     }
 }
