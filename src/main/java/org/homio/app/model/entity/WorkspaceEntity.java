@@ -16,7 +16,7 @@ public final class WorkspaceEntity extends BaseEntity<WorkspaceEntity> {
 
     public static final String PREFIX = "ws_";
 
-    @Column(length = 10_000_000)
+    @Column(length = 10_485_760)
     private String content;
 
     @Override

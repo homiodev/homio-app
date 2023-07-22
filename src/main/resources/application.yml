@@ -10,3 +10,7 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: true
+server:
+  compression:
+    enabled: true
+    min-response-size: 512B

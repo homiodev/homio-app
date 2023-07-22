@@ -164,11 +164,6 @@ public class UtilsController {
         }
     }
 
-    @PutMapping("/dynamicUpdates")
-    public void registerForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
-        entityContext.ui().registerForUpdates(request);
-    }
-
     @DeleteMapping("/dynamicUpdates")
     public void unregisterForUpdates(@Valid @RequestBody DynamicUpdateRequest request) {
         entityContext.ui().unRegisterForUpdates(request);

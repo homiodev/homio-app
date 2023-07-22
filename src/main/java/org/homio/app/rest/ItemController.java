@@ -75,7 +75,6 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.LogService;
 import org.homio.app.config.cacheControl.CacheControl;
 import org.homio.app.config.cacheControl.CachePolicy;
-import org.homio.app.manager.ImageService;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.EntityManager;
@@ -124,7 +123,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     private final EntityContextImpl entityContext;
     private final EntityManager entityManager;
     private final ClassFinder classFinder;
-    private final ImageService imageService;
     private final LogService logService;
 
     private final ReentrantLock putItemsLock = new ReentrantLock();
@@ -211,9 +209,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         @PathVariable("entityID") String entityID,
         @PathVariable("fieldName") String fieldName,
         @RequestBody GetOptionsRequest optionsRequest) {
-        if("any".equals(entityID)) {
-
-        }
         Object classEntity = entityContext.getEntity(entityID);
         if (classEntity == null) {
             // i.e in case we load Widget
@@ -464,26 +459,31 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
     }
 
-    @GetMapping("/typeContext/{type}")
-    public ItemsByTypeResponse getItemsTypeContextByType(@PathVariable("type") String type) {
+    @GetMapping("/{type}/list")
+    public List<BaseEntity> getItems(@PathVariable("type") String type) {
         putTypeToEntityIfNotExists(type);
         List<BaseEntity> items = new ArrayList<>();
 
         for (Class<? extends BaseEntity> aClass : typeToEntityClassNames.get(type)) {
             items.addAll(entityContext.findAll(aClass));
         }
-        List<Collection<UIInputEntity>> contextActions = new ArrayList<>();
         items.removeIf(this::isRemoveItemFromResult);
         Collections.sort(items);
+        return items;
+    }
 
-        for (BaseEntity item : items) {
+    @PostMapping("/actions")
+    public Map<String, Collection<UIInputEntity>> getActions(@RequestBody List<String> entityIDs) {
+        Map<String, Collection<UIInputEntity>> contextActions = new HashMap<>();
+        for (String entityID : entityIDs) {
+            BaseEntity entity = entityContext.getEntityRequire(entityID);
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
-            if (item instanceof HasDynamicContextMenuActions) {
-                ((HasDynamicContextMenuActions) item).assembleActions(uiInputBuilder);
+            if (entity instanceof HasDynamicContextMenuActions) {
+                ((HasDynamicContextMenuActions) entity).assembleActions(uiInputBuilder);
             }
-            contextActions.add(uiInputBuilder.buildAll());
+            contextActions.put(entity.getEntityID(), uiInputBuilder.buildAll());
         }
-        return new ItemsByTypeResponse(items, contextActions);
+        return contextActions;
     }
 
     @GetMapping("/service/{esName}")
@@ -857,14 +857,6 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         private String[] selectType;
         private String param0; // for lazy loading
         private Map<String, String> deps;
-    }
-
-    @Getter
-    @RequiredArgsConstructor
-    public static class ItemsByTypeResponse {
-
-        private final List<BaseEntity> items;
-        private final List<Collection<UIInputEntity>> contextActions;
     }
 
     @Getter

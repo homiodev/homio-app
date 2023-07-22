@@ -5,6 +5,7 @@ import static java.lang.String.format;
 import org.homio.api.EntityContextWidget.LayoutWidgetBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class LayoutBuilderImpl extends WidgetBaseBuilderImpl<LayoutWidgetBuilder, WidgetLayoutEntity>
@@ -15,7 +16,7 @@ public class LayoutBuilderImpl extends WidgetBaseBuilderImpl<LayoutWidgetBuilder
     }
 
     @Override
-    public LayoutWidgetBuilder setLayoutDimension(int rows, int columns) {
+    public @NotNull LayoutWidgetBuilder setLayoutDimension(int rows, int columns) {
         if (rows > 30 || columns > 15) {
             throw new IllegalArgumentException("rows/columns must be less than 9");
         }
@@ -24,7 +25,7 @@ public class LayoutBuilderImpl extends WidgetBaseBuilderImpl<LayoutWidgetBuilder
     }
 
     @Override
-    public LayoutWidgetBuilder setBorderColor(@Nullable String value) {
+    public @NotNull LayoutWidgetBuilder setBorderColor(@Nullable String value) {
         widget.setBorderColor(value);
         return this;
     }

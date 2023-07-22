@@ -242,7 +242,7 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     @UIContextMenuAction(value = "CONNECT", icon = "fas fa-rss")
     public ActionResponseModel connect(EntityContext entityContext) {
         entityContext.getBean(CloudService.class).restart(this);
-        return null;
+        return ActionResponseModel.fired();
     }
 
     @SneakyThrows

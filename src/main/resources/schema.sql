@@ -122,7 +122,7 @@ create table if not exists workspace_entity
     name          varchar(255),
     update_time   timestamp(6) not null,
     version       integer,
-    content       varchar(10000000),
+    content       varchar(10485760),
     primary key (entityid)
 );
 

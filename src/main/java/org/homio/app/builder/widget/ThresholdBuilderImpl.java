@@ -10,7 +10,6 @@ import org.homio.api.EntityContextWidget.PulseBuilder;
 import org.homio.api.EntityContextWidget.PulseColor;
 import org.homio.api.EntityContextWidget.ThresholdBuilder;
 import org.homio.api.EntityContextWidget.ValueCompare;
-import org.homio.api.ui.UI.Color;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONArray;
@@ -33,30 +32,33 @@ public class ThresholdBuilderImpl implements ThresholdBuilder, PulseBuilder {
     private final String entity;
 
     public String build() {
-        if (!node.has(THRESHOLD_MODELS) && !node.has(PULSE_ANIMATION)) {
+        if (!node.has(THRESHOLD_MODELS) && !node.has(PULSE_ANIMATION) && StringUtils.isEmpty(entity)) {
             return entity;
         }
-        String finalEntity = StringUtils.defaultIfEmpty(entity, Color.random());
-        node.put(MODEL, new JSONObject().put("entity", finalEntity));
+        if (entity != null) {
+            node.put(MODEL, new JSONObject().put("entity", entity));
+        }
         return node.toString();
     }
 
     @Override
-    public ThresholdBuilder setThreshold(String entity, Object value, ValueCompare op) {
+    public @NotNull ThresholdBuilder setThreshold(@NotNull String entity, @NotNull Object value,
+        @NotNull ValueCompare op, @Nullable String source) {
         return addThreshold(THRESHOLD_MODELS, entity, value, op, (items, json) -> {
             removeItem(items, ANIMATIONS, json, "spin");
             removeItem(items, ROTATIONS, json, "rotate");
             removeItem(items, SPEED, json, "spinSpeed");
-        });
+        }, source);
     }
 
     @Override
-    public PulseBuilder setPulse(PulseColor pulseColor, Object value, ValueCompare op) {
-        return addThreshold(PULSE_ANIMATION, pulseColor.name(), value, op, null);
+    public @NotNull PulseBuilder setPulse(@NotNull PulseColor pulseColor, @NotNull Object value,
+        @NotNull ValueCompare op, @NotNull String source) {
+        return addThreshold(PULSE_ANIMATION, pulseColor.name(), value, op, null, source);
     }
 
     private ThresholdBuilderImpl addThreshold(@NotNull String key, @NotNull String entity, @NotNull Object value,
-        @NotNull ValueCompare op, @Nullable BiConsumer<Set<String>, JSONObject> builder) {
+        @NotNull ValueCompare op, @Nullable BiConsumer<Set<String>, JSONObject> builder, @Nullable String source) {
         JSONArray thresholds = node.optJSONArray(key);
         if (thresholds == null) {
             thresholds = new JSONArray();
@@ -66,6 +68,7 @@ public class ThresholdBuilderImpl implements ThresholdBuilder, PulseBuilder {
         JSONObject json = new JSONObject().put("value", value).put("op", op.getOp());
         Set<String> items = Stream.of(entity.split(" ")).collect(Collectors.toSet());
         json.put("entity", String.join(" ", items));
+        json.put("source", source);
         if (builder != null) {
             builder.accept(items, json);
         }

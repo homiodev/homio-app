@@ -37,7 +37,7 @@ public class LineChartBuilderImpl extends WidgetBaseBuilderImpl<LineChartBuilder
     }
 
     @Override
-    public LineChartBuilder addSeries(@Nullable String name, @NotNull Consumer<LineChartSeriesBuilder> builder) {
+    public @NotNull LineChartBuilder addSeries(@Nullable String name, @NotNull Consumer<LineChartSeriesBuilder> builder) {
         WidgetLineChartSeriesEntity entity = new WidgetLineChartSeriesEntity();
         entity.setName(name);
         series.add(entity);
@@ -47,13 +47,13 @@ public class LineChartBuilderImpl extends WidgetBaseBuilderImpl<LineChartBuilder
     }
 
     @Override
-    public LineChartBuilder setShowChartFullScreenButton(boolean value) {
+    public @NotNull LineChartBuilder setShowChartFullScreenButton(boolean value) {
         widget.setShowChartFullScreenButton(value);
         return this;
     }
 
     @Override
-    public LineChartBuilder setFetchDataFromServerInterval(int value) {
+    public @NotNull LineChartBuilder setFetchDataFromServerInterval(int value) {
         widget.setFetchDataFromServerInterval(value);
         return this;
     }

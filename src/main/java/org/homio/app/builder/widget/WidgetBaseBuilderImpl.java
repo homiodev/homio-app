@@ -1,12 +1,17 @@
 package org.homio.app.builder.widget;
 
+import java.util.Objects;
+import java.util.function.Consumer;
 import lombok.Getter;
+import org.homio.api.EntityContextWidget.PulseBuilder;
+import org.homio.api.EntityContextWidget.ThresholdBuilder;
 import org.homio.api.EntityContextWidget.WidgetBaseBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Getter
 public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements WidgetBaseBuilder<T> {
@@ -20,33 +25,52 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
     }
 
     @Override
-    public T setZIndex(int index) {
+    public @NotNull T setZIndex(int index) {
         widget.setIndex(index);
         return (T) this;
     }
 
     @Override
-    public T setName(String name) {
+    public @NotNull T setName(String name) {
         widget.setName(name);
         return (T) this;
     }
 
     @Override
-    public T setStyle(String... styles) {
+    public @NotNull T setStyle(String... styles) {
         widget.setStyle(String.join("~~~", styles));
         return (T) this;
     }
 
     @Override
-    public T setBackground(String value) {
+    public @NotNull T setBackground(@Nullable String backgroundColor,
+        @Nullable Consumer<ThresholdBuilder> colorBuilder,
+        @Nullable Consumer<PulseBuilder> pulseBuilder) {
+        if (colorBuilder == null && pulseBuilder == null) {
+            getWidget().setBackground(backgroundColor);
+        } else {
+            ThresholdBuilderImpl builder = new ThresholdBuilderImpl(backgroundColor);
+            if (colorBuilder != null) {
+                colorBuilder.accept(builder);
+            }
+            if (pulseBuilder != null) {
+                pulseBuilder.accept(builder);
+            }
+            getWidget().setBackground(builder.build());
+        }
+        return (T) this;
+    }
+
+    @Override
+    public @NotNull T setBackground(String value) {
         widget.setBackground(value);
         return (T) this;
     }
 
     @Override
-    public T attachToTab(@NotNull String name) {
+    public @NotNull T attachToTab(@NotNull String name) {
         for (WidgetTabEntity widgetTabEntity : entityContext.findAll(WidgetTabEntity.class)) {
-            if (widgetTabEntity.getName().equals(name)) {
+            if (Objects.equals(widgetTabEntity.getName(), name)) {
                 widget.setWidgetTabEntity(widgetTabEntity);
                 break;
             }
@@ -55,7 +79,7 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
     }
 
     @Override
-    public T attachToLayout(@NotNull String layoutEntityID, int rowNum, int columnNum) {
+    public @NotNull T attachToLayout(@NotNull String layoutEntityID, int rowNum, int columnNum) {
         WidgetLayoutEntity entity = entityContext.getEntity(WidgetLayoutEntity.PREFIX + layoutEntityID);
         if (entity == null) {
             throw new IllegalArgumentException("Unable to find layout: " + layoutEntityID);
@@ -74,7 +98,7 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
     }
 
     @Override
-    public T setBlockSize(int width, int height) {
+    public @NotNull T setBlockSize(int width, int height) {
         widget.setBw(width);
         widget.setBh(height);
         return (T) this;

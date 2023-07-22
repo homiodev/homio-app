@@ -12,6 +12,7 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueAggregatedData
 import org.homio.app.model.entity.widget.attributes.HasStyle;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>
@@ -38,7 +39,7 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 

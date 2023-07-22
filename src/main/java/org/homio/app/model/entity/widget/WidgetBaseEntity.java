@@ -3,6 +3,7 @@ package org.homio.app.model.entity.widget;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -44,6 +45,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
     implements HasPosition<WidgetBaseEntity>, HasStyle, HasJsonData {
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnore
     private WidgetTabEntity widgetTabEntity;
 
     @Column(length = 65535)

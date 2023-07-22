@@ -9,6 +9,7 @@ import org.homio.app.builder.widget.hasBuilder.HasValueConverterBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.WidgetSimpleValueEntity;
+import org.jetbrains.annotations.NotNull;
 
 public class SimpleValueBuilderImpl extends WidgetBaseBuilderImpl<SimpleValueWidgetBuilder, WidgetSimpleValueEntity>
     implements SimpleValueWidgetBuilder,
@@ -24,7 +25,7 @@ public class SimpleValueBuilderImpl extends WidgetBaseBuilderImpl<SimpleValueWid
     }
 
     @Override
-    public SimpleValueWidgetBuilder setValueDataSource(String value) {
+    public @NotNull SimpleValueWidgetBuilder setValueDataSource(String value) {
         widget.setValueDataSource(value);
         return this;
     }

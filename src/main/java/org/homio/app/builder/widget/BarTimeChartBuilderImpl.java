@@ -36,7 +36,7 @@ public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartB
     }
 
     @Override
-    public BarTimeChartBuilder addSeries(@Nullable String name, @NotNull Consumer<BarTimeChartSeriesBuilder> builder) {
+    public @NotNull BarTimeChartBuilder addSeries(@Nullable String name, @NotNull Consumer<BarTimeChartSeriesBuilder> builder) {
         WidgetBarTimeChartSeriesEntity entity = new WidgetBarTimeChartSeriesEntity();
         entity.setName(name);
         series.add(entity);
@@ -46,31 +46,31 @@ public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartB
     }
 
     @Override
-    public BarTimeChartBuilder setAxisLabel(String value) {
+    public @NotNull BarTimeChartBuilder setAxisLabel(String value) {
         widget.setAxisLabel(value);
         return this;
     }
 
     @Override
-    public BarTimeChartBuilder setDisplayType(BarChartType value) {
+    public @NotNull BarTimeChartBuilder setDisplayType(BarChartType value) {
         widget.setDisplayType(value);
         return this;
     }
 
     @Override
-    public BarTimeChartBuilder setBarBorderWidth(String value) {
+    public @NotNull BarTimeChartBuilder setBarBorderWidth(String value) {
         widget.setBarBorderWidth(value);
         return this;
     }
 
     @Override
-    public BarTimeChartBuilder setShowChartFullScreenButton(boolean value) {
+    public @NotNull BarTimeChartBuilder setShowChartFullScreenButton(boolean value) {
         widget.setShowChartFullScreenButton(value);
         return this;
     }
 
     @Override
-    public BarTimeChartBuilder setFetchDataFromServerInterval(int value) {
+    public @NotNull BarTimeChartBuilder setFetchDataFromServerInterval(int value) {
         widget.setFetchDataFromServerInterval(value);
         return this;
     }
