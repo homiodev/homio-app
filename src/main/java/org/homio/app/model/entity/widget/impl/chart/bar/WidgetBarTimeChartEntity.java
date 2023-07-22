@@ -1,15 +1,16 @@
 package org.homio.app.model.entity.widget.impl.chart.bar;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
+import org.homio.api.EntityContextWidget.BarChartType;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.app.model.entity.widget.UIFieldJSONLine;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasAxis;
 import org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.homio.app.model.entity.widget.impl.chart.HasMinMaxChartValue;
-import org.homio.bundle.api.EntityContextWidget.BarChartType;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetBarTimeChartEntity
@@ -30,7 +31,7 @@ public class WidgetBarTimeChartEntity
     }
 
     @UIField(order = 10)
-    @UIFieldGroup(value = "CHART_UI", order = 5, borderColor = "#673AB7")
+    @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
     public BarChartType getDisplayType() {
         return getJsonDataEnum("displayType", BarChartType.Vertical);
     }
@@ -53,7 +54,7 @@ public class WidgetBarTimeChartEntity
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-chart-bar";
     }
 

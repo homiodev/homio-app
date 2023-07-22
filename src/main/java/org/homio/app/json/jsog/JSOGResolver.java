@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.ObjectIdResolver;
 import com.fasterxml.jackson.annotation.SimpleObjectIdResolver;
 import java.util.HashMap;
 import java.util.Map;
-import org.homio.bundle.api.entity.BaseEntity;
+import org.homio.api.entity.BaseEntity;
 
 /**
  * Need in deserialization cases when json may contains more than one instance of same entity

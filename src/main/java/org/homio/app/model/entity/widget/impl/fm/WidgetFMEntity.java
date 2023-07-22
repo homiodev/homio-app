@@ -1,20 +1,22 @@
 package org.homio.app.model.entity.widget.impl.fm;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldTableLayout;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
-import org.homio.bundle.api.model.ActionResponseModel;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
-import org.homio.bundle.api.ui.field.UIFieldTableLayout;
-import org.homio.bundle.api.ui.field.action.HasDynamicContextMenuActions;
-import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
+import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("unused")
 @Entity
 public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, WidgetFMSeriesEntity>
     implements HasDynamicContextMenuActions, HasLayout, HasSourceServerUpdates {
@@ -27,25 +29,18 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-folder-tree";
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
     @Override
     public String getDefaultName() {
         return null;
-    }
-
-    @Override
-    protected void beforePersist() {
-        setBh(3);
-        setBw(3);
-        super.beforePersist();
     }
 
     @UIField(order = 24, isRevert = true)
@@ -138,18 +133,19 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
 
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
-        uiInputBuilder.addTableLayoutButton(
-            "field.layout",
-            8,
-            8,
-            this.getLayout(),
-            null,
-            null,
+        uiInputBuilder.addTableLayoutButton("LAYOUT", 8, 8, getLayout(), null,
             (entityContext, params) -> {
                 this.setLayout(params.getString("value"));
                 entityContext.save(this);
                 return ActionResponseModel.showSuccess("SUCCESS");
             },
             0);
+    }
+
+    @Override
+    protected void beforePersist() {
+        setBh(3);
+        setBw(3);
+        super.beforePersist();
     }
 }

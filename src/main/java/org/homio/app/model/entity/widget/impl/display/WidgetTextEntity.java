@@ -1,10 +1,11 @@
 package org.homio.app.model.entity.widget.impl.display;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldCodeEditor;
+import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldCodeEditor;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> {
@@ -12,7 +13,7 @@ public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> {
     public static final String PREFIX = "wgttht_";
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-file-text";
     }
 

@@ -1,10 +1,10 @@
 package org.homio.app.model.entity;
 
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
 import org.hibernate.mapping.PersistentClass;
-import org.homio.bundle.api.entity.DeviceBaseEntity;
-import org.homio.bundle.api.ui.UISidebarChildren;
+import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.ui.UISidebarChildren;
 
 @Entity
 @DiscriminatorValue(PersistentClass.NOT_NULL_DISCRIMINATOR_MAPPING)

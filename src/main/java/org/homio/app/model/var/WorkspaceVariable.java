@@ -4,55 +4,53 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToOne;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import javax.persistence.Column;
-import javax.persistence.Convert;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
-import javax.persistence.ManyToOne;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextVar;
+import org.homio.api.EntityContextVar.VariableType;
+import org.homio.api.converter.JSONConverter;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.entity.widget.AggregationType;
+import org.homio.api.entity.widget.PeriodRequest;
+import org.homio.api.entity.widget.ability.HasAggregateValueFromSeries;
+import org.homio.api.entity.widget.ability.HasGetStatusValue;
+import org.homio.api.entity.widget.ability.HasSetStatusValue;
+import org.homio.api.entity.widget.ability.HasTimeValueSeries;
+import org.homio.api.model.Icon;
+import org.homio.api.model.JSON;
+import org.homio.api.storage.SourceHistory;
+import org.homio.api.storage.SourceHistoryItem;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldProgress;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.color.UIFieldColorRef;
+import org.homio.api.ui.field.condition.UIFieldDisableEditOnCondition;
+import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
+import org.homio.api.ui.field.inline.UIFieldInlineEntityEditWidth;
+import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
+import org.homio.api.ui.field.selection.UIFieldSelectionParent;
+import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.repository.VariableDataRepository;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextVar;
-import org.homio.bundle.api.EntityContextVar.VariableType;
-import org.homio.bundle.api.converter.JSONConverter;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.entity.widget.AggregationType;
-import org.homio.bundle.api.entity.widget.PeriodRequest;
-import org.homio.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
-import org.homio.bundle.api.entity.widget.ability.HasGetStatusValue;
-import org.homio.bundle.api.entity.widget.ability.HasSetStatusValue;
-import org.homio.bundle.api.entity.widget.ability.HasTimeValueSeries;
-import org.homio.bundle.api.model.JSON;
-import org.homio.bundle.api.storage.SourceHistory;
-import org.homio.bundle.api.storage.SourceHistoryItem;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldIgnore;
-import org.homio.bundle.api.ui.field.UIFieldProgress;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
-import org.homio.bundle.api.ui.field.color.UIFieldColorRef;
-import org.homio.bundle.api.ui.field.condition.UIFieldDisableEditOnCondition;
-import org.homio.bundle.api.ui.field.condition.UIFieldShowOnCondition;
-import org.homio.bundle.api.ui.field.inline.UIFieldInlineEntityEditWidth;
-import org.homio.bundle.api.ui.field.inline.UIFieldInlineEntityWidth;
-import org.homio.bundle.api.ui.field.selection.UIFieldSelectionParent;
-import org.homio.bundle.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -116,6 +114,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     private String iconColor;
     private String unit;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     private WorkspaceGroup workspaceGroup;
 
@@ -123,10 +122,6 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     @Column(length = 1000)
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
-
-    public int getBackupStorageCount() {
-        return backup ? getEntityContext().getBean(VariableDataRepository.class).count(variableId) : 0;
-    }
 
     public WorkspaceVariable(@NotNull String variableId, @NotNull String variableName, @NotNull WorkspaceGroup workspaceGroup,
         @NotNull VariableType variableType, @Nullable String description, @Nullable String color, boolean readOnly, @Nullable String unit) {
@@ -139,6 +134,10 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
         this.unit = unit;
         this.setName(variableName);
         this.setEntityID(variableId);
+    }
+
+    public int getBackupStorageCount() {
+        return backup ? getEntityContext().getBean(VariableDataRepository.class).count(variableId) : 0;
     }
 
     @Override
@@ -163,32 +162,18 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
-    @Override
-    public String getTitle() {
+    /*@Override
+    public @NotNull String getTitle() {
         String title = super.getTitle();
         if (isNotEmpty(unit)) {
             return format("%s %s", title, unit);
         }
         return title;
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public Date getCreationTime() {
-        return super.getCreationTime();
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public Date getUpdateTime() {
-        return super.getUpdateTime();
-    }
+    }*/
 
     @Override
     public String getDefaultName() {
@@ -265,7 +250,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }
 
     @Override
-    public List<Object[]> getTimeValueSeries(PeriodRequest request) {
+    public @NotNull List<Object[]> getTimeValueSeries(PeriodRequest request) {
         return ((EntityContextVarImpl) request.getEntityContext().var()).getTimeSeries(variableId, request.getFromTime(), request.getToTime());
     }
 
@@ -278,17 +263,18 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     public SourceHistory getSourceHistory(GetStatusValueRequest request) {
         SourceHistory sourceHistory = ((EntityContextVarImpl) request.getEntityContext().var())
             .getSourceHistory(variableId)
-            .setIcon(icon)
-            .setIconColor(iconColor)
+            .setIcon(new Icon(icon, iconColor))
             .setName(getName())
             .setDescription(getDescription());
         sourceHistory.setAttributes(new ArrayList<>(Arrays.asList(
             "Owner:" + workspaceGroup.getName(),
             "Backup:" + backup,
-            "Unit:" + unit,
             "Quota:" + quota,
             "Type:" + restriction.name().toLowerCase(),
             "Writable:" + !readOnly)));
+        if (unit != null) {
+            sourceHistory.getAttributes().add("Unit: " + unit);
+        }
         sourceHistory.getAttributes().addAll(getAttributes());
 
         return sourceHistory;

@@ -1,13 +1,14 @@
 package org.homio.app.model.entity.widget.impl.chart.pie;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
+import org.homio.api.exception.ProhibitedExecution;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
-import org.homio.bundle.api.exception.ProhibitedExecution;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldIgnore;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetPieChartEntity
@@ -28,7 +29,7 @@ public class WidgetPieChartEntity
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-chart-pie";
     }
 

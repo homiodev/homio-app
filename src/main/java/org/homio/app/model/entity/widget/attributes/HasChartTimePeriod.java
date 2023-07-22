@@ -6,14 +6,14 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.UIFieldFunction;
 import org.homio.app.model.entity.widget.UIFieldTimeSlider;
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,7 +21,7 @@ public interface HasChartTimePeriod extends HasJsonData {
 
     @UIField(order = 1)
     @UIFieldTimeSlider
-    @UIFieldGroup(value = "TIME_PERIOD", order = 55, borderColor = "#166F37")
+    @UIFieldGroup(value = "CHART_TIME_PERIOD", order = 52, borderColor = "#166F37")
     @UIEditReloadWidget
     default int getChartMinutesToShow() {
         return getJsonData("mts", 60);
@@ -33,7 +33,7 @@ public interface HasChartTimePeriod extends HasJsonData {
 
     @UIField(order = 2)
     @UIFieldSlider(min = 1, max = 600, step = 5) // max 10 point per minute
-    @UIFieldGroup(value = "TIME_PERIOD")
+    @UIFieldGroup(value = "CHART_TIME_PERIOD")
     @UIEditReloadWidget
     @UIFieldReadDefaultValue
     default int getChartPointsPerHour() {
@@ -45,14 +45,14 @@ public interface HasChartTimePeriod extends HasJsonData {
     }
 
     @UIField(order = 3, disableEdit = true)
-    @UIFieldGroup(value = "TIME_PERIOD")
-    @UIFieldFunction("return (context.get('chartMinutesToShow') / context.get('chartPointsPerHour')).toFixed(2)")
+    @UIFieldGroup(value = "CHART_TIME_PERIOD")
+    @UIFieldFunction("return (context.get('chartMinutesToShow') / context.get('chartPointsPerHour')).toFixed(3)")
     default String getMinutesPerPoint() {
         return null;
     }
 
     @UIField(order = 4, disableEdit = true)
-    @UIFieldGroup(value = "TIME_PERIOD")
+    @UIFieldGroup(value = "CHART_TIME_PERIOD")
     @UIFieldFunction("return Math.ceil(context.get('chartMinutesToShow') * context.get('chartPointsPerHour') / 60)")
     default String getTotalPointsCount() {
         return null;

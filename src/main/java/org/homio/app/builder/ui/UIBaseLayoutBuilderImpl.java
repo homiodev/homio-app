@@ -1,7 +1,5 @@
 package org.homio.app.builder.ui;
 
-import static org.apache.commons.lang3.StringUtils.defaultString;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,25 +9,26 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import org.homio.api.model.Icon;
+import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.field.action.v1.UIEntityBuilder;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.action.v1.item.UIButtonItemBuilder;
+import org.homio.api.ui.field.action.v1.item.UICheckboxItemBuilder;
+import org.homio.api.ui.field.action.v1.item.UIColorPickerItemBuilder;
+import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder;
+import org.homio.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
+import org.homio.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
+import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
+import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder;
+import org.homio.api.ui.field.action.v1.item.UITextInputItemBuilder.InputType;
+import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
+import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
+import org.homio.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
+import org.homio.api.ui.field.action.v1.layout.dialog.UIStickyDialogItemBuilder;
 import org.homio.app.builder.ui.layout.UIDialogLayoutBuilderImpl;
 import org.homio.app.builder.ui.layout.UIFlexLayoutBuilderImpl;
 import org.homio.app.builder.ui.layout.UIStickyDialogItemBuilderImpl;
-import org.homio.bundle.api.ui.action.UIActionHandler;
-import org.homio.bundle.api.ui.field.action.v1.UIEntityBuilder;
-import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.bundle.api.ui.field.action.v1.item.UIButtonItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.item.UICheckboxItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.item.UIColorPickerItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.item.UIInfoItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.item.UISelectBoxItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.item.UISliderItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.item.UITextInputItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.item.UITextInputItemBuilder.InputType;
-import org.homio.bundle.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
-import org.homio.bundle.api.ui.field.action.v1.layout.UILayoutBuilder;
-import org.homio.bundle.api.ui.field.action.v1.layout.dialog.UIDialogLayoutBuilder;
-import org.homio.bundle.api.ui.field.action.v1.layout.dialog.UIStickyDialogItemBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -50,11 +49,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Override
     public String getStyle() {
-        return styleMap == null
-                ? null
-                : styleMap.entrySet().stream()
-                        .map(e -> e.getKey() + ":" + e.getValue() + ";")
-                        .collect(Collectors.joining());
+        return styleMap == null ? null : styleMap.entrySet().stream().map(e -> e.getKey() + ":" + e.getValue() + ";").collect(Collectors.joining());
     }
 
     @Override
@@ -76,23 +71,22 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Override
     public Collection<UIEntityBuilder> getUiEntityBuilders(boolean flat) {
-        if (flat) {
-            Collection<UIEntityBuilder> builders = new ArrayList<>();
-            for (UIEntityBuilder entityBuilder : inputBuilders.values()) {
-                builders.add(entityBuilder);
-                if (entityBuilder instanceof UILayoutBuilder) {
-                    builders.addAll(((UILayoutBuilder) entityBuilder).getUiEntityBuilders(flat));
-                } else if (entityBuilder instanceof UIButtonItemBuilder) {
-                    UIStickyDialogItemBuilder stickyDialogBuilder =
-                            ((UIButtonItemBuilderImpl) entityBuilder).getStickyDialogBuilder();
-                    if (stickyDialogBuilder != null) {
-                        builders.addAll(stickyDialogBuilder.getUiEntityBuilders(flat));
-                    }
+        if (!flat) {
+            return Collections.unmodifiableCollection(inputBuilders.values());
+        }
+        Collection<UIEntityBuilder> builders = new ArrayList<>();
+        for (UIEntityBuilder entityBuilder : inputBuilders.values()) {
+            builders.add(entityBuilder);
+            if (entityBuilder instanceof UILayoutBuilder) {
+                builders.addAll(((UILayoutBuilder) entityBuilder).getUiEntityBuilders(flat));
+            } else if (entityBuilder instanceof UIButtonItemBuilder) {
+                UIStickyDialogItemBuilder stickyDialogBuilder = ((UIButtonItemBuilderImpl) entityBuilder).getStickyDialogBuilder();
+                if (stickyDialogBuilder != null) {
+                    builders.addAll(stickyDialogBuilder.getUiEntityBuilders(flat));
                 }
             }
-            return builders;
         }
-        return Collections.unmodifiableCollection(inputBuilders.values());
+        return builders;
     }
 
     @Override
@@ -101,20 +95,17 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public DialogEntity<UIStickyDialogItemBuilder> addStickyDialogButton(
-            @NotNull String name, String icon, String iconColor, int order) {
+    public DialogEntity<UIStickyDialogItemBuilder> addStickyDialogButton(@NotNull String name, Icon icon, int order) {
         UIStickyDialogItemBuilderImpl stickyDialogBuilder;
         UIButtonItemBuilderImpl buttonItemBuilder;
         if (inputBuilders.containsKey(name)) {
             buttonItemBuilder = (UIButtonItemBuilderImpl) inputBuilders.get(name);
-            stickyDialogBuilder =
-                    (UIStickyDialogItemBuilderImpl) buttonItemBuilder.getStickyDialogBuilder();
+            stickyDialogBuilder = (UIStickyDialogItemBuilderImpl) buttonItemBuilder.getStickyDialogBuilder();
         } else {
             String entityID = getText(name);
             stickyDialogBuilder = new UIStickyDialogItemBuilderImpl(entityID + "_dialog");
-            buttonItemBuilder =
-                    ((UIButtonItemBuilderImpl) addButton(entityID, icon, iconColor, null, order))
-                            .setStickyDialogEntityBuilder(stickyDialogBuilder);
+            buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, null, order))
+                .setStickyDialogBuilder(stickyDialogBuilder);
         }
         return new DialogEntity<>() {
             @Override
@@ -131,14 +122,11 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public DialogEntity<UIDialogLayoutBuilder> addOpenDialogActionButton(
-            @NotNull String name, String icon, String iconColor, Integer width, int order) {
+    public DialogEntity<UIDialogLayoutBuilder> addOpenDialogActionButton(@NotNull String name, Icon icon, Integer width, int order) {
         String entityID = getText(name);
-        UIDialogLayoutBuilderImpl dialogEntityBuilder =
-                new UIDialogLayoutBuilderImpl(entityID, width);
-        UIButtonItemBuilderImpl buttonItemBuilder =
-                ((UIButtonItemBuilderImpl) addButton(entityID, icon, iconColor, null, order))
-                        .setDialogEntityBuilder(dialogEntityBuilder);
+        UIDialogLayoutBuilderImpl dialogEntityBuilder = new UIDialogLayoutBuilderImpl(entityID, width);
+        UIButtonItemBuilderImpl buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, null, order))
+            .setDialogEntityBuilder(dialogEntityBuilder);
         return new DialogEntity<>() {
             @Override
             public UIDialogLayoutBuilder up() {
@@ -154,11 +142,9 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public UITextInputItemBuilder addInput(
-            @NotNull String name, String defaultValue, InputType inputType, boolean required) {
-        return addEntity(
-                new UITextInputItemBuilderImpl(name, getNextOrder(), defaultValue, inputType)
-                        .setRequired(required));
+    public UITextInputItemBuilder addInput(@NotNull String name, String defaultValue, InputType inputType, boolean required) {
+        return addEntity(new UITextInputItemBuilderImpl(name, getNextOrder(), defaultValue, inputType)
+            .setRequired(required));
     }
 
     @Override
@@ -167,105 +153,60 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     }
 
     @Override
-    public UIInfoItemBuilder addInfo(
-            @NotNull String name, UIInfoItemBuilder.InfoType infoType, int order) {
+    public UIInfoItemBuilder addInfo(@NotNull String name, UIInfoItemBuilder.InfoType infoType, int order) {
         return addEntity(new UIInfoItemBuilderImpl(name, order, name, infoType));
     }
 
     @Override
-    public UISelectBoxItemBuilder addSelectBox(
-            @NotNull String name, UIActionHandler action, int order) {
+    public UISelectBoxItemBuilder addSelectBox(@NotNull String name, UIActionHandler action, int order) {
         return addEntity(new UISelectBoxItemBuilderImpl(name, order, action));
     }
 
     @Override
-    public UICheckboxItemBuilder addCheckbox(
-            @NotNull String name, boolean value, UIActionHandler action, int order) {
+    public UICheckboxItemBuilder addCheckbox(@NotNull String name, boolean value, UIActionHandler action, int order) {
         return addEntity(new UICheckboxItemBuilderImpl(name, order, action, value));
     }
 
     @Override
-    public UIMultiButtonItemBuilder addMultiButton(
-            @Nullable String text, UIActionHandler action, int order) {
+    public UIMultiButtonItemBuilder addMultiButton(@Nullable String text, UIActionHandler action, int order) {
         return addEntity(new UIMultiButtonItemBuilderImpl(getText(text), order, action));
     }
 
     @Override
-    public UISliderItemBuilder addSlider(
-            @NotNull String name,
-            Float value,
-            Float min,
-            Float max,
-            UIActionHandler action,
-            UISliderItemBuilder.SliderType sliderType,
-            int order) {
+    public UISliderItemBuilder addSlider(@NotNull String name, Float value, Float min, Float max, UIActionHandler action,
+        UISliderItemBuilder.SliderType sliderType, int order) {
         return addEntity(
-                new UISliderItemBuilderImpl(name, order, action, value, min, max)
-                        .setSliderType(sliderType));
+            new UISliderItemBuilderImpl(name, order, action, value, min, max)
+                .setSliderType(sliderType));
     }
 
     @Override
-    public UIButtonItemBuilder addButton(
-            @NotNull String name,
-            String icon,
-            String iconColor,
-            UIActionHandler action,
-            int order) {
-        return addEntity(
-                new UIButtonItemBuilderImpl(
-                        UIItemType.Button, name, icon, iconColor, order, action));
+    public UIButtonItemBuilder addButton(@NotNull String name, Icon icon, UIActionHandler action, int order) {
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, icon, order, action));
     }
 
     @Override
-    public UIButtonItemBuilder addTableLayoutButton(
-            @NotNull String name,
-            int maxRows,
-            int maxColumns,
-            String value,
-            @Nullable String icon,
-            @Nullable String iconColor,
-            UIActionHandler action,
-            int order) {
-        return addEntity(
-                new UIButtonItemBuilderImpl(
-                                UIItemType.TableLayout,
-                                name,
-                                defaultString(icon, "fas fa-table"),
-                                iconColor,
-                                order,
-                                action)
-                        .setMetadata(
-                                new JSONObject()
-                                        .put("maxRows", maxRows)
-                                        .put("maxColumns", maxColumns)
-                                        .put("value", value)));
+    public UIButtonItemBuilder addTableLayoutButton(@NotNull String name, int maxRows, int maxColumns, String value, @Nullable Icon icon,
+        UIActionHandler action, int order) {
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.TableLayout, name, icon == null ? new Icon("fas fa-table") : icon, order, action)
+            .setMetadata(new JSONObject().put("maxRows", maxRows).put("maxColumns", maxColumns).put("value", value)));
     }
 
     @Override
-    public UIButtonItemBuilder addSimpleUploadButton(
-            @NotNull String name,
-            @Nullable String icon,
-            @Nullable String iconColor,
-            String[] supportedFormats,
-            UIActionHandler action,
-            int order) {
-        return addEntity(
-                new UIButtonItemBuilderImpl(
-                                UIItemType.SimpleUploadButton, name, icon, iconColor, order, action)
-                        .setMetadata(new JSONObject().put("supportedFormats", supportedFormats)));
+    public UIButtonItemBuilder addSimpleUploadButton(@NotNull String name, @Nullable Icon icon, String[] supportedFormats,
+        UIActionHandler action, int order) {
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.SimpleUploadButton, name, icon, order, action)
+            .setMetadata(new JSONObject().put("supportedFormats", supportedFormats)));
     }
 
     @Override
-    public UIColorPickerItemBuilder addColorPicker(
-            @NotNull String name, String color, UIActionHandler action) {
+    public UIColorPickerItemBuilder addColorPicker(@NotNull String name, String color, UIActionHandler action) {
         return addEntity(new UIColorPickerBuilderImpl(name, getNextOrder(), color, action));
     }
 
     @Override
     public void addDuration(long value, @Nullable String color) {
-        addEntity(
-                new UIDurationBuilderImpl(
-                        System.currentTimeMillis() + "", getNextOrder(), value, color));
+        addEntity(new UIDurationBuilderImpl(String.valueOf(System.currentTimeMillis()), getNextOrder(), value, color));
     }
 
     public <T extends UIEntityBuilder> T addEntity(T entityBuilder) {

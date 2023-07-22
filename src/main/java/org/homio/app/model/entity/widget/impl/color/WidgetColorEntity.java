@@ -3,9 +3,26 @@ package org.homio.app.model.entity.widget.impl.color;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Entity;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.persistence.Entity;
+import org.homio.api.entity.widget.ability.HasGetStatusValue;
+import org.homio.api.entity.widget.ability.HasSetStatusValue;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldKeyValue;
+import org.homio.api.ui.field.UIFieldKeyValue.KeyValueType;
+import org.homio.api.ui.field.UIFieldLayout;
+import org.homio.api.ui.field.UIFieldLayout.HorizontalAlign;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.selection.UIFieldBeanSelection;
+import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
@@ -13,23 +30,7 @@ import org.homio.app.model.entity.widget.attributes.HasIconWithoutThreshold;
 import org.homio.app.model.entity.widget.attributes.HasLayout;
 import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
-import org.homio.bundle.api.entity.widget.ability.HasGetStatusValue;
-import org.homio.bundle.api.entity.widget.ability.HasSetStatusValue;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldIgnore;
-import org.homio.bundle.api.ui.field.UIFieldLayout;
-import org.homio.bundle.api.ui.field.UIFieldLayout.HorizontalAlign;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
-import org.homio.bundle.api.ui.field.UIFieldType;
-import org.homio.bundle.api.ui.field.UIKeyValueField;
-import org.homio.bundle.api.ui.field.UIKeyValueField.KeyValueType;
-import org.homio.bundle.api.ui.field.selection.UIFieldBeanSelection;
-import org.homio.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
-import org.homio.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
@@ -59,7 +60,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fa fa-palette";
     }
 
@@ -77,7 +78,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     @UIFieldIgnore
     @JsonIgnore
     public String getBackground() {
-
         return super.getBackground();
     }
 
@@ -89,7 +89,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @UIField(order = 1)
-    @UIKeyValueField(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
+    @UIFieldKeyValue(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
                      defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
     @UIFieldGroup(value = "COLORS", order = 10)
     public String getColors() {

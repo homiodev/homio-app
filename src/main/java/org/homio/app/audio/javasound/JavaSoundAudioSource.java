@@ -5,10 +5,10 @@ import java.util.Set;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.TargetDataLine;
-import org.homio.bundle.api.audio.AudioFormat;
-import org.homio.bundle.api.audio.AudioSource;
-import org.homio.bundle.api.audio.AudioStream;
-import org.homio.bundle.api.audio.stream.JavaSoundInputStream;
+import org.homio.api.audio.AudioFormat;
+import org.homio.api.audio.AudioSource;
+import org.homio.api.audio.AudioStream;
+import org.homio.api.audio.stream.JavaSoundInputStream;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +35,33 @@ public class JavaSoundAudioSource implements AudioSource {
      * Constructs a JavaSoundAudioSource
      */
     public JavaSoundAudioSource() {
+    }
+
+    @Override
+    public synchronized AudioStream getInputStream(AudioFormat expectedFormat) {
+        if (!expectedFormat.isCompatible(audioFormat)) {
+            throw new IllegalStateException("Cannot produce streams in format " + expectedFormat);
+        }
+        TargetDataLine mic = this.microphone;
+        if (mic == null) {
+            mic = initMicrophone(format);
+        }
+        return new JavaSoundInputStream(mic, audioFormat);
+    }
+
+    @Override
+    public String toString() {
+        return "javasound";
+    }
+
+    @Override
+    public String getEntityID() {
+        return "javasound";
+    }
+
+    @Override
+    public Set<AudioFormat> getSupportedFormats() {
+        return Collections.singleton(audioFormat);
     }
 
     private static AudioFormat convertAudioFormat(javax.sound.sampled.AudioFormat audioFormat) {
@@ -70,32 +97,5 @@ public class JavaSoundAudioSource implements AudioSource {
         } catch (Exception e) {
             throw new RuntimeException("Error creating the audio input stream.", e);
         }
-    }
-
-    @Override
-    public synchronized AudioStream getInputStream(AudioFormat expectedFormat) {
-        if (!expectedFormat.isCompatible(audioFormat)) {
-            throw new IllegalStateException("Cannot produce streams in format " + expectedFormat);
-        }
-        TargetDataLine mic = this.microphone;
-        if (mic == null) {
-            mic = initMicrophone(format);
-        }
-        return new JavaSoundInputStream(mic, audioFormat);
-    }
-
-    @Override
-    public String toString() {
-        return "javasound";
-    }
-
-    @Override
-    public String getEntityID() {
-        return "javasound";
-    }
-
-    @Override
-    public Set<AudioFormat> getSupportedFormats() {
-        return Collections.singleton(audioFormat);
     }
 }

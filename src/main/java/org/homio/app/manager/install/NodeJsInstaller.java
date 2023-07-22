@@ -5,15 +5,12 @@ import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
 import lombok.extern.log4j.Log4j2;
-import org.homio.app.config.AppProperties;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextHardware;
-import org.homio.bundle.api.entity.dependency.DependencyExecutableInstaller;
-import org.homio.bundle.api.ui.field.ProgressBar;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.util.Curl;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextHardware;
+import org.homio.api.entity.dependency.DependencyExecutableInstaller;
+import org.homio.api.util.CommonUtils;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -48,12 +45,14 @@ public class NodeJsInstaller extends DependencyExecutableInstaller {
             hardware.execute("curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -");
             hardware.installSoftware("nodejs", 600);
         } else {
-            Path path = Curl.downloadAndExtract(entityContext.getBean(AppProperties.class).getSource().getNode(),
-                "nodejs.7z", (progress, message) -> {
+            String url = entityContext.setting().getEnvRequire("source-ffmpeg", String.class,
+                "https://github.com/homiodev/static-files/raw/master/nodejs.7z", true);
+            CommonUtils.downloadAndExtract(url,
+                "nodejs.7z", (progress, message, error) -> {
                     progressBar.progress(progress, message);
-                    log.info("nodejs " + message + ". " + progress + "%");
-                }, log);
-            return Objects.requireNonNull(path).resolve("node.exe");
+                    log.info("NodeJS: {}", message);
+                });
+            return CommonUtils.getInstallPath().resolve("nodejs").resolve("node.exe");
         }
         return null;
     }

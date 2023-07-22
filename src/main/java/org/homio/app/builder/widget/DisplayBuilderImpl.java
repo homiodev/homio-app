@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.homio.api.EntityContextWidget;
+import org.homio.api.EntityContextWidget.DisplayWidgetBuilder;
+import org.homio.api.EntityContextWidget.DisplayWidgetSeriesBuilder;
+import org.homio.api.entity.widget.AggregationType;
 import org.homio.app.builder.widget.hasBuilder.HasActionOnClickBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
@@ -21,12 +25,6 @@ import org.homio.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplayEntity;
 import org.homio.app.model.entity.widget.impl.display.WidgetDisplaySeriesEntity;
-import org.homio.bundle.api.EntityContextWidget;
-import org.homio.bundle.api.EntityContextWidget.AnimateBuilder;
-import org.homio.bundle.api.EntityContextWidget.DisplayWidgetBuilder;
-import org.homio.bundle.api.EntityContextWidget.DisplayWidgetSeriesBuilder;
-import org.homio.bundle.api.EntityContextWidget.ThresholdBuilder;
-import org.homio.bundle.api.entity.widget.AggregationType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,25 +55,6 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
     @Override
     public DisplayWidgetBuilder setValueToPushSource(@Nullable String value) {
         widget.setSetValueDataSource(value);
-        return this;
-    }
-
-    @Override
-    public DisplayWidgetBuilder setBackground(@Nullable String color,
-        @Nullable Consumer<ThresholdBuilder> colorBuilder,
-        @Nullable Consumer<AnimateBuilder> animateBuilder) {
-        if (colorBuilder == null && animateBuilder == null) {
-            getWidget().setBackground(color);
-        } else {
-            ThresholdBuilderImpl builder = new ThresholdBuilderImpl(color);
-            if (colorBuilder != null) {
-                colorBuilder.accept(builder);
-            }
-            if (animateBuilder != null) {
-                animateBuilder.accept(builder);
-            }
-            getWidget().setBackground(builder.build());
-        }
         return this;
     }
 

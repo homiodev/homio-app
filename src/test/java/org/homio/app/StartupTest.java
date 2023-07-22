@@ -2,7 +2,7 @@ package org.homio.app;
 
 import static org.junit.Assert.assertNotNull;
 
-import org.homio.bundle.api.EntityContext;
+import org.homio.api.EntityContext;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;

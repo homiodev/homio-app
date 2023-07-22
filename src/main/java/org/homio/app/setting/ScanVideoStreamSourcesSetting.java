@@ -1,9 +1,11 @@
 package org.homio.app.setting;
 
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.setting.SettingPluginButton;
-import org.homio.bundle.api.video.BaseVideoStreamEntity;
+import org.homio.addon.camera.entity.BaseVideoEntity;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.model.Icon;
+import org.homio.api.setting.SettingPluginButton;
+import org.jetbrains.annotations.NotNull;
 
 public class ScanVideoStreamSourcesSetting implements SettingPluginButton {
 
@@ -13,13 +15,8 @@ public class ScanVideoStreamSourcesSetting implements SettingPluginButton {
     }
 
     @Override
-    public String getIcon() {
-        return "fas fa-qrcode";
-    }
-
-    @Override
-    public String getIconColor() {
-        return "#ED703E";
+    public @NotNull Icon getIcon() {
+        return new Icon("fas fa-qrcode", "#ED703E");
     }
 
     @Override
@@ -34,6 +31,6 @@ public class ScanVideoStreamSourcesSetting implements SettingPluginButton {
 
     @Override
     public Class<? extends BaseEntity> availableForEntity() {
-        return BaseVideoStreamEntity.class;
+        return BaseVideoEntity.class;
     }
 }

@@ -1,13 +1,13 @@
 package org.homio.app.model.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
 
 @Getter
 @Setter

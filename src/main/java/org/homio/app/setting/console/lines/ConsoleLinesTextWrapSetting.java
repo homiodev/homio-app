@@ -1,20 +1,21 @@
 package org.homio.app.setting.console.lines;
 
 import java.util.Collection;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.setting.SettingPluginOptions;
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
-import org.homio.bundle.api.ui.field.UIFieldType;
+import org.homio.api.EntityContext;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.SettingType;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.json.JSONObject;
 
 public class ConsoleLinesTextWrapSetting
-        implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
+    implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
 
     @Override
-    public UIFieldType getSettingType() {
-        return UIFieldType.SelectBoxButton;
+    public SettingType getSettingType() {
+        return SettingType.SelectBoxButton;
     }
 
     @Override
@@ -23,8 +24,8 @@ public class ConsoleLinesTextWrapSetting
     }
 
     @Override
-    public String getIcon() {
-        return "fas fa-text-width";
+    public Icon getIcon() {
+        return new Icon("fas fa-text-width");
     }
 
     @Override
@@ -39,6 +40,6 @@ public class ConsoleLinesTextWrapSetting
 
     @Override
     public ConsolePlugin.RenderType[] renderTypes() {
-        return new ConsolePlugin.RenderType[] {ConsolePlugin.RenderType.lines};
+        return new ConsolePlugin.RenderType[]{ConsolePlugin.RenderType.lines};
     }
 }

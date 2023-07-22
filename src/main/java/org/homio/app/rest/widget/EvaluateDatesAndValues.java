@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.homio.api.entity.widget.AggregationType;
+import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
-import org.homio.bundle.api.entity.widget.AggregationType;
-import org.homio.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 
 public final class EvaluateDatesAndValues {
 
@@ -80,6 +80,23 @@ public final class EvaluateDatesAndValues {
         return dates;
     }
 
+    public static List<List<Float>> convertValuesToFloat(List<Date> dates, List<Object[]> chartItems) {
+        List<List<Float>> values = new ArrayList<>(dates.size());
+        IntStream.range(0, dates.size()).forEach(value -> values.add(new ArrayList<>()));
+        // push values to date between buckets
+        for (Object[] chartItem : chartItems) {
+            long time =
+                chartItem[0] instanceof Date
+                    ? ((Date) chartItem[0]).getTime()
+                    : (long) chartItem[0];
+            int index = getDateIndex(dates, time);
+            if (index >= 0) {
+                values.get(index).add(((Number) chartItem[1]).floatValue());
+            }
+        }
+        return values;
+    }
+
     private static <T extends HasDynamicParameterFields & HasChartDataSource> void fulfillValues(
         List<Date> dates, List<TimeSeriesValues<T>> timeSeriesValues) {
         //  List<Iterator<List<Float>>> fullChartValueIterators = new ArrayList<>();
@@ -111,23 +128,6 @@ public final class EvaluateDatesAndValues {
                 }
             }
         }*/
-    }
-
-    public static List<List<Float>> convertValuesToFloat(List<Date> dates, List<Object[]> chartItems) {
-        List<List<Float>> values = new ArrayList<>(dates.size());
-        IntStream.range(0, dates.size()).forEach(value -> values.add(new ArrayList<>()));
-        // push values to date between buckets
-        for (Object[] chartItem : chartItems) {
-            long time =
-                chartItem[0] instanceof Date
-                    ? ((Date) chartItem[0]).getTime()
-                    : (long) chartItem[0];
-            int index = getDateIndex(dates, time);
-            if (index >= 0) {
-                values.get(index).add(((Number) chartItem[1]).floatValue());
-            }
-        }
-        return values;
     }
 
     private static int getDateIndex(List<Date> dateList, long time) {

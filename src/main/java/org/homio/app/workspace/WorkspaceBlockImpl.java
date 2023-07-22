@@ -1,5 +1,7 @@
 package org.homio.app.workspace;
 
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+
 import com.pivovarit.function.ThrowingRunnable;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -25,20 +27,20 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.exception.ServerException;
+import org.homio.api.state.RawType;
+import org.homio.api.state.State;
+import org.homio.api.util.CommonUtils;
+import org.homio.api.workspace.BroadcastLockManager;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.BlockType;
+import org.homio.api.workspace.scratch.MenuBlock;
+import org.homio.api.workspace.scratch.Scratch3Block;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.workspace.WorkspaceService.WorkspaceTabHolder;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextBGP;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.exception.ServerException;
-import org.homio.bundle.api.state.RawType;
-import org.homio.bundle.api.state.State;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.workspace.BroadcastLockManager;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.scratch.BlockType;
-import org.homio.bundle.api.workspace.scratch.MenuBlock;
-import org.homio.bundle.api.workspace.scratch.Scratch3Block;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -96,19 +98,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         }
     }
 
-    private static String valueToStr(Object content, String defaultValue) {
-        if (content != null) {
-            if (content instanceof State) {
-                return ((State) content).stringValue();
-            } else if (content instanceof byte[]) {
-                return new String((byte[]) content);
-            } else {
-                return content.toString();
-            }
-        }
-        return defaultValue;
-    }
-
     @Override
     public void logError(String message, Object... params) {
         log(Level.ERROR, message, params);
@@ -133,15 +122,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public void logInfo(String message, Object... params) {
         log(Level.INFO, message, params);
-    }
-
-    private void log(Level level, String message, Object... params) {
-        log.log(level, "[" + this.extensionId + " -> " + this.opcode + "] - " + message, params);
-    }
-
-    void setOpcode(String opcode) {
-        this.extensionId = opcode.contains("_") ? opcode.substring(0, opcode.indexOf("_")) : "";
-        this.opcode = opcode.contains("_") ? opcode.substring(opcode.indexOf("_") + 1) : opcode;
     }
 
     @Override
@@ -185,27 +165,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             }
         }
         return value;
-    }
-
-    private <P> P getMenuValueInternal(String key, MenuBlock menuBlock, Class<P> type) {
-        String menuId = this.inputs.get(key).getString(1);
-        WorkspaceBlock refWorkspaceBlock = workspaceTabHolder.getBlocks().get(menuId);
-        String fieldValue = refWorkspaceBlock.getField(menuBlock.getName());
-        if (Enum.class.isAssignableFrom(type)) {
-            for (P p : type.getEnumConstants()) {
-                if (((Enum<?>) p).name().equals(fieldValue)) {
-                    return p;
-                }
-            }
-        } else if (String.class.isAssignableFrom(type)) {
-            return (P) fieldValue;
-        } else if (Long.class.isAssignableFrom(type)) {
-            return (P) Long.valueOf(fieldValue);
-        } else if (BaseEntity.class.isAssignableFrom(type)) {
-            return (P) getEntityContext().getEntity(fieldValue);
-        }
-        logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
-        return null; // unreachable block
     }
 
     @Override
@@ -253,6 +212,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         return this.fields.containsKey(fieldName);
     }
 
+    @SneakyThrows
+    @Override
+    public <T> T getSetting(Class<T> settingClass) {
+        String ref = getInputString("SETTING");
+        String content = workspaceTabHolder.getBlocks().get(ref).getField("TEXT");
+        return OBJECT_MAPPER.readValue(content, settingClass);
+    }
+
     @Override
     public void setValue(String key, State value) {
         if (key == null) {
@@ -293,9 +260,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         return this.handleInternal(
             scratch3Block -> {
                 try {
-                    State value = scratch3Block.getEvaluateHandler().handle(this);
-                    this.setValue("value", value);
-                    return value;
+                    return this.setValue(scratch3Block.getEvaluateHandler().handle(this));
                 } catch (Exception ex) {
                     getEntityContext().ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
                     throw new ServerException(ex);
@@ -303,22 +268,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             });
     }
 
-    private State handleInternal(Function<Scratch3Block, State> function) {
-        setActiveWorkspace();
-        return function.apply(getScratch3Block());
-    }
-
     public void setActiveWorkspace() {
         getNearestLiveThread().setMetadata("activeWorkspaceId", id);
-    }
-
-    private EntityContextBGP.ThreadContext<?> getNearestLiveThread() {
-        if (this.threadContext != null) {
-            return this.threadContext;
-        } else if (this.parent != null) {
-            return this.parent.getNearestLiveThread();
-        }
-        throw new RuntimeException("Must be never calls");
     }
 
     public Scratch3Block getScratch3Block() {
@@ -357,7 +308,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             } else if (item instanceof String) {
                 return new JSONObject((String) item);
             } else {
-                return new JSONObject(CommonUtils.OBJECT_MAPPER.writeValueAsString(item));
+                return new JSONObject(OBJECT_MAPPER.writeValueAsString(item));
             }
         }
         return defaultValue;
@@ -403,10 +354,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public WorkspaceBlock getInputWorkspaceBlock(String key) {
         return workspaceTabHolder.getBlocks().get(cast(getInput(key, false)));
-    }
-
-    private String cast(Object object) {
-        return (String) object;
     }
 
     @Override
@@ -517,18 +464,6 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         this.releaseListeners.add(listener);
     }
 
-    private String sendScratch3ExtensionNotFound(String extensionId) {
-        String msg = "No scratch extension <" + extensionId + "> found";
-        getEntityContext().ui().sendErrorMessage(msg, extensionId);
-        return msg;
-    }
-
-    private String sendScratch3BlockNotFound(String extensionId, String opcode) {
-        String msg = "No scratch block <" + opcode + "> found in extension <" + extensionId + ">";
-        getEntityContext().ui().sendErrorMessage("W.ERROR.SCRATCH_BLOCK_NOT_FOUND", opcode);
-        return msg;
-    }
-
     @Override
     public String toString() {
         return "WorkspaceBlockImpl{"
@@ -571,7 +506,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
                         }
                     }
                 }
-                this.setValue("value", State.of(value));
+                this.setValue(State.of(value));
             });
     }
 
@@ -583,6 +518,79 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     public EntityContext getEntityContext() {
         return workspaceTabHolder.getEntityContext();
+    }
+
+    void setOpcode(String opcode) {
+        this.extensionId = opcode.contains("_") ? opcode.substring(0, opcode.indexOf("_")) : "";
+        this.opcode = opcode.contains("_") ? opcode.substring(opcode.indexOf("_") + 1) : opcode;
+    }
+
+    private static String valueToStr(Object content, String defaultValue) {
+        if (content != null) {
+            if (content instanceof State) {
+                return ((State) content).stringValue();
+            } else if (content instanceof byte[]) {
+                return new String((byte[]) content);
+            } else {
+                return content.toString();
+            }
+        }
+        return defaultValue;
+    }
+
+    private void log(Level level, String message, Object... params) {
+        log.log(level, "[" + this.extensionId + " -> " + this.opcode + "] - " + message, params);
+    }
+
+    private <P> P getMenuValueInternal(String key, MenuBlock menuBlock, Class<P> type) {
+        String menuId = this.inputs.get(key).getString(1);
+        WorkspaceBlock refWorkspaceBlock = workspaceTabHolder.getBlocks().get(menuId);
+        String fieldValue = refWorkspaceBlock.getField(menuBlock.getName());
+        if (Enum.class.isAssignableFrom(type)) {
+            for (P p : type.getEnumConstants()) {
+                if (((Enum<?>) p).name().equals(fieldValue)) {
+                    return p;
+                }
+            }
+        } else if (String.class.isAssignableFrom(type)) {
+            return (P) fieldValue;
+        } else if (Long.class.isAssignableFrom(type)) {
+            return (P) Long.valueOf(fieldValue);
+        } else if (BaseEntity.class.isAssignableFrom(type)) {
+            return (P) getEntityContext().getEntity(fieldValue);
+        }
+        logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
+        return null; // unreachable block
+    }
+
+    private State handleInternal(Function<Scratch3Block, State> function) {
+        setActiveWorkspace();
+        return function.apply(getScratch3Block());
+    }
+
+    private EntityContextBGP.ThreadContext<?> getNearestLiveThread() {
+        if (this.threadContext != null) {
+            return this.threadContext;
+        } else if (this.parent != null) {
+            return this.parent.getNearestLiveThread();
+        }
+        throw new RuntimeException("Must be never calls");
+    }
+
+    private String cast(Object object) {
+        return (String) object;
+    }
+
+    private String sendScratch3ExtensionNotFound(String extensionId) {
+        String msg = "No scratch extension <" + extensionId + "> found";
+        getEntityContext().ui().sendErrorMessage(msg, extensionId);
+        return msg;
+    }
+
+    private String sendScratch3BlockNotFound(String extensionId, String opcode) {
+        String msg = "No scratch block <" + opcode + "> found in extension <" + extensionId + ">";
+        getEntityContext().ui().sendErrorMessage("W.ERROR.SCRATCH_BLOCK_NOT_FOUND", opcode);
+        return msg;
     }
 
     @AllArgsConstructor

@@ -1,23 +1,23 @@
 package org.homio.app.model.entity.widget.impl.chart;
 
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.entity.widget.AggregationType;
+import org.homio.api.entity.widget.ability.HasTimeValueSeries;
+import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.MonacoLanguage;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldCodeEditor;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.selection.UIFieldBeanSelection;
+import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.rest.widget.ChartDataset;
 import org.homio.app.rest.widget.EvaluateDatesAndValues;
 import org.homio.app.rest.widget.TimeSeriesContext;
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.entity.widget.AggregationType;
-import org.homio.bundle.api.entity.widget.ability.HasTimeValueSeries;
-import org.homio.bundle.api.model.HasEntityIdentifier;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.MonacoLanguage;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldCodeEditor;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
-import org.homio.bundle.api.ui.field.selection.UIFieldBeanSelection;
-import org.homio.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 public interface HasChartDataSource extends HasJsonData {
 
@@ -31,7 +31,7 @@ public interface HasChartDataSource extends HasJsonData {
     @UIField(order = 1)
     @UIFieldEntityByClassSelection(HasTimeValueSeries.class)
     @UIFieldBeanSelection(value = HasTimeValueSeries.class, lazyLoading = true)
-    @UIFieldGroup(value = "CHART", order = 60, borderColor = "#9C27B0")
+    @UIFieldGroup(value = "CHART", order = 50, borderColor = "#9C27B0")
     @UIEditReloadWidget
     default String getChartDataSource() {
         return getJsonData("chartDS");
@@ -66,7 +66,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 1, isRevert = true)
-    @UIFieldGroup(value = "CHART_UI", order = 35, borderColor = "#673AB7")
+    @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
     @UIFieldColorPicker(allowThreshold = true)
     @UIFieldReadDefaultValue
     default String getChartColor() {
@@ -78,7 +78,7 @@ public interface HasChartDataSource extends HasJsonData {
     }
 
     @UIField(order = 2, isRevert = true)
-    @UIFieldSlider(min = 25, max = 100, step = 5)
+    @UIFieldSlider(min = 0, max = 100, step = 5)
     @UIFieldGroup("CHART_UI")
     @UIFieldReadDefaultValue
     default int getChartColorOpacity() {

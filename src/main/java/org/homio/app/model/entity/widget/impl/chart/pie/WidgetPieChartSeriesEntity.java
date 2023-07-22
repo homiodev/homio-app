@@ -1,15 +1,15 @@
 package org.homio.app.model.entity.widget.impl.chart.pie;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
 
 @Entity
 public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChartEntity>
@@ -18,7 +18,7 @@ public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChar
     public static final String PREFIX = "wgspcs_";
 
     @UIField(order = 20, isRevert = true)
-    @UIFieldGroup(value = "CHART_UI", order = 5, borderColor = "#673AB7")
+    @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
     @UIFieldColorPicker
     @UIFieldReadDefaultValue
     public String getChartColor() {

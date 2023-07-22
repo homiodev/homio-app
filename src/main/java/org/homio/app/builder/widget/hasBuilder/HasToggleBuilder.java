@@ -1,7 +1,7 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.bundle.api.EntityContextWidget.HasToggle;
-import org.homio.bundle.api.entity.BaseEntity;
+import org.homio.api.EntityContextWidget.HasToggle;
+import org.homio.api.entity.BaseEntity;
 
 public interface HasToggleBuilder<T extends BaseEntity & org.homio.app.model.entity.widget.impl.toggle.HasToggle, R>
     extends HasToggle<R> {

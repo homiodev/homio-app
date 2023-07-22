@@ -1,32 +1,38 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <artifactId>homio-app</artifactId>
+  <modelVersion>4.0.0</modelVersion>
+  <packaging>jar</packaging>
+
+  <parent>
+    <artifactId>homio-dependency</artifactId>
+    <groupId>org.homio</groupId>
+    <version>2.5.0</version>
+  </parent>
+
+  <properties>
+    <graalvm.version>23.0.0</graalvm.version>
+    <homio-api.version>1.3.2-SNAPSHOT</homio-api.version>
+    <homio-primary-addons.version>1.3.0-SNAPSHOT</homio-primary-addons.version>
+    <start-class>org.homio.app.HomioApplication</start-class>
+  </properties>
+
+  <version>1.4.0-SNAPSHOT</version>
+
   <build>
     <finalName>${project.artifactId}</finalName>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <release>11</release>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>net.ju-n.maven.plugins</groupId>
-        <artifactId>checksum-maven-plugin</artifactId>
-        <version>1.2</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>artifacts</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
+          <layers>
+            <includeLayerTools>false</includeLayerTools>
+          </layers>
+          <arguments>
+            <argument>--add-opens java.base/java.net=ALL-UNNAMED</argument>
+            <argument>--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED</argument>
+          </arguments>
           <mainClass>${start-class}</mainClass>
         </configuration>
         <executions>
@@ -36,6 +42,17 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Implementation-Version>${project.version}</Implementation-Version>
+            </manifestEntries>
+          </archive>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -51,32 +68,60 @@
     <resources>
       <resource>
         <directory>src/main/resources</directory>
-        <filtering>true</filtering>
-        <includes>
-          <include>application.yml</include>
-        </includes>
-      </resource>
-
-      <resource>
-        <directory>src/main/resources</directory>
         <filtering>false</filtering>
-        <includes>
-          <include>**/*</include>
-        </includes>
       </resource>
     </resources>
   </build>
   <dependencies>
-    <!--<dependency>
-      <artifactId>addon-gdrive</artifactId>
-      <groupId>org.homio</groupId>
-      <classifier>sources</classifier>
-      <version>1.0.1-SNAPSHOT</version>
-    </dependency>-->
+
+    <!--https://github.com/rubenlagus/TelegramBots 6.5 Caused by: java.lang.ClassNotFoundException: javax.xml.bind.annotation.XmlElement-->
     <dependency>
-      <artifactId>homio-hquery</artifactId>
-      <groupId>org.homio</groupId>
-      <version>1.0.2-SNAPSHOT</version>
+      <groupId>javax.xml.bind</groupId>
+      <artifactId>jaxb-api</artifactId>
+      <version>2.3.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.retry</groupId>
+      <artifactId>spring-retry</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.hibernate.orm</groupId>
+      <artifactId>hibernate-community-dialects</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.xerial</groupId>
+      <artifactId>sqlite-jdbc</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.graalvm.sdk</groupId>
+      <artifactId>graal-sdk</artifactId>
+      <version>${graalvm.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.graalvm.js</groupId>
+      <artifactId>js</artifactId>
+      <version>${graalvm.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.graalvm.js</groupId>
+      <artifactId>js-scriptengine</artifactId>
+      <version>${graalvm.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.graalvm.tools</groupId>
+      <artifactId>profiler</artifactId>
+      <version>${graalvm.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.graalvm.tools</groupId>
+      <artifactId>chromeinspector</artifactId>
+      <version>${graalvm.version}</version>
+      <scope>runtime</scope>
     </dependency>
 
     <dependency>
@@ -85,43 +130,41 @@
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-camera</artifactId>
-      <groupId>org.homio.bundle</groupId>
-      <version>${homio-bundle.version}</version>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <version>1.70</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-telegram</artifactId>
-      <groupId>org.homio.bundle</groupId>
-      <version>${homio-bundle.version}</version>
+      <artifactId>addon-camera</artifactId>
+      <groupId>org.homio.addon</groupId>
+      <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-mqtt</artifactId>
-      <groupId>org.homio.bundle</groupId>
-      <version>${homio-bundle.version}</version>
+      <artifactId>addon-telegram</artifactId>
+      <groupId>org.homio.addon</groupId>
+      <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-z2m</artifactId>
-      <groupId>org.homio.bundle</groupId>
-      <version>${homio-bundle.version}</version>
+      <artifactId>addon-mqtt</artifactId>
+      <groupId>org.homio.addon</groupId>
+      <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-bluetooth</artifactId>
-      <groupId>org.homio.bundle</groupId>
-      <version>${homio-bundle.version}</version>
+      <artifactId>addon-z2m</artifactId>
+      <groupId>org.homio.addon</groupId>
+      <version>${homio-primary-addons.version}</version>
     </dependency>
 
     <dependency>
-      <artifactId>jsch</artifactId>
-      <groupId>com.jcraft</groupId>
+      <artifactId>addon-bluetooth</artifactId>
+      <groupId>org.homio.addon</groupId>
+      <version>${homio-primary-addons.version}</version>
     </dependency>
-    <dependency>
-      <artifactId>spring-boot-configuration-processor</artifactId>
-      <groupId>org.springframework.boot</groupId>
-    </dependency>
+
     <dependency>
       <artifactId>spring-boot-starter-validation</artifactId>
       <groupId>org.springframework.boot</groupId>
@@ -191,7 +234,6 @@
     <dependency>
       <artifactId>converter-gson</artifactId>
       <groupId>com.squareup.retrofit2</groupId>
-      <version>2.9.0</version>
     </dependency>
 
     <dependency>
@@ -236,19 +278,8 @@
     </dependency>
 
     <dependency>
-      <artifactId>httpclient</artifactId>
-      <groupId>org.apache.httpcomponents</groupId>
-    </dependency>
-
-    <dependency>
       <artifactId>lombok</artifactId>
       <groupId>org.projectlombok</groupId>
-    </dependency>
-
-    <dependency>
-      <artifactId>jersey-apache-client</artifactId>
-      <groupId>com.sun.jersey.contribs</groupId>
-      <version>1.19</version>
     </dependency>
 
     <dependency>
@@ -300,7 +331,7 @@
     <dependency>
       <artifactId>reflections</artifactId>
       <groupId>org.reflections</groupId>
-      <version>0.9.12</version>
+      <version>0.10.2</version>
     </dependency>
 
     <dependency>
@@ -329,23 +360,13 @@
     <dependency>
       <artifactId>vlcj</artifactId>
       <groupId>uk.co.caprica</groupId>
-      <version>3.10.1</version>
-    </dependency>
-
-    <dependency>
-      <artifactId>validation-api</artifactId>
-      <groupId>javax.validation</groupId>
+      <version>4.8.2</version>
     </dependency>
 
     <dependency>
       <artifactId>cglib</artifactId>
       <groupId>cglib</groupId>
       <version>3.2.1</version>
-    </dependency>
-
-    <dependency>
-      <artifactId>postgresql</artifactId>
-      <groupId>org.postgresql</groupId>
     </dependency>
 
     <dependency>
@@ -356,7 +377,7 @@
     <dependency>
       <artifactId>mp3spi</artifactId>
       <groupId>com.googlecode.soundlibs</groupId>
-      <version>1.9.5-1</version>
+      <version>1.9.5.4</version>
     </dependency>
 
     <dependency>
@@ -364,8 +385,8 @@
       <groupId>com.fasterxml.jackson.core</groupId>
     </dependency>
     <dependency>
-      <artifactId>jackson-datatype-hibernate5</artifactId>
       <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-hibernate5-jakarta</artifactId>
     </dependency>
     <dependency>
       <artifactId>jackson-dataformat-xml</artifactId>
@@ -415,21 +436,15 @@
     </dependency>
 
     <dependency>
-      <artifactId>spring-mvc-cache-control</artifactId>
-      <groupId>net.rossillo.mvc.cache</groupId>
-      <version>1.1.1-RELEASE</version>
-    </dependency>
-
-    <dependency>
       <artifactId>h2</artifactId>
       <groupId>com.h2database</groupId>
       <scope>test</scope>
     </dependency>
 
     <dependency>
-      <artifactId>homio-bundle-api</artifactId>
+      <artifactId>homio-api</artifactId>
       <groupId>org.homio</groupId>
-      <version>${homio-bundle-api.version}</version>
+      <version>${homio-api.version}</version>
     </dependency>
 
     <dependency>
@@ -465,24 +480,17 @@
       <artifactId>grpc-all</artifactId>
       <groupId>io.grpc</groupId>
     </dependency>
-
+    <dependency>
+      <groupId>org.jvnet.winp</groupId>
+      <artifactId>winp</artifactId>
+      <version>1.30</version>
+    </dependency>
   </dependencies>
 
-  <modelVersion>4.0.0</modelVersion>
-  <packaging>jar</packaging>
-
-  <parent>
-    <artifactId>homio-dependency</artifactId>
-    <groupId>org.homio</groupId>
-    <version>2.4.5</version>
-  </parent>
-
-  <properties>
-    <os.detected.classifier>linux-armhf</os.detected.classifier>
-    <homio-bundle-api.version>1.2.4-SNAPSHOT</homio-bundle-api.version>
-    <homio-bundle.version>1.2.1-SNAPSHOT</homio-bundle.version>
-    <start-class>org.homio.app.HomioApplication</start-class>
-  </properties>
-
-  <version>1.4.0-SNAPSHOT</version>
+  <repositories>
+    <repository>
+      <id>repo.jenkins-ci.org</id>
+      <url>https://repo.jenkins-ci.org/releases/</url>
+    </repository>
+  </repositories>
 </project>

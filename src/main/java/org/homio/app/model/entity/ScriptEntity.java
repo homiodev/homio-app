@@ -1,14 +1,14 @@
 package org.homio.app.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Transient;
 import java.io.StringReader;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Lob;
-import javax.persistence.Transient;
 import javax.script.Compilable;
 import javax.script.CompiledScript;
 import javax.script.Invocable;
@@ -17,20 +17,21 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.model.Status;
-import org.homio.bundle.api.ui.field.MonacoLanguage;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldCodeEditor;
-import org.homio.bundle.api.util.SpringUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.model.Status;
+import org.homio.api.ui.UISidebarMenu;
+import org.homio.api.ui.field.MonacoLanguage;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldCodeEditor;
+import org.homio.api.util.SpringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.springframework.core.env.Environment;
 
-// TODO: Temporary remove scripting engine from app due lack of time to fix everything
 @Entity
-/*@UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
-               overridePath = "scripts")*/
+@UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
+               overridePath = "scripts")
 @Accessors(chain = true)
 public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
@@ -44,7 +45,8 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @Getter
     @Setter
     @UIField(order = 13)
-    @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript, autoFormat = true)
+    @Column(length = 65_535)
+    @UIFieldCodeEditor(editorType = MonacoLanguage.Json, autoFormat = true)
     private String javaScriptParameters = "{}";
 
     @Getter
@@ -52,16 +54,15 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @UIField(order = 16, inlineEdit = true)
     private boolean autoStart = false;
 
+    @Column(length = 1_000)
     @Getter @Setter private String error;
 
-    @Lob
     @Getter
     @Setter
     @UIField(order = 30)
-    @Column(length = 1000_000)
+    @Column(length = 65_535)
     @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript, autoFormat = true)
-    private String javaScript =
-        "function before() { };\nfunction run() { };\nfunction after() { };";
+    private String javaScript = "function before() { };\nfunction run() { };\nfunction after() { };";
 
     @Transient @JsonIgnore private long formattedJavaScriptHash;
 
@@ -77,19 +78,19 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
         int i = javaScript.indexOf("function " + prefix);
         while (i >= 0) {
             int endIndex = i + 1;
-            int countOfBrakets = 0;
+            int countOfBrackets = 0;
             while (javaScript.length() > endIndex) {
                 char at = javaScript.charAt(endIndex);
 
-                if (at == '}' && countOfBrakets == 1) {
+                if (at == '}' && countOfBrackets == 1) {
                     endIndex++;
                     break;
                 }
 
                 if (at == '{') {
-                    countOfBrakets++;
+                    countOfBrackets++;
                 } else if (at == '}') {
-                    countOfBrakets--;
+                    countOfBrackets--;
                 }
                 endIndex++;
             }
@@ -112,23 +113,20 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
 
             Environment env = entityContext.getBean(Environment.class);
             JSONObject params = new JSONObject(jsonParams);
-            String envFormattedJavaScript =
-                SpringUtils.replaceEnvValues(
-                    javaScript,
-                    (key, defValue, prefix) -> {
-                        if (params.has(key)) {
-                            return params.get(key).toString();
-                        }
-                        return env.getProperty(key, defValue);
-                    });
-            this.formattedJavaScript =
-                detectReplaceableValues(params, engine, envFormattedJavaScript);
+            String envFormattedJavaScript = SpringUtils.replaceEnvValues(javaScript,
+                (key, defValue, prefix) -> {
+                    if (params.has(key)) {
+                        return params.get(key).toString();
+                    }
+                    return env.getProperty(key, defValue);
+                });
+            this.formattedJavaScript = detectReplaceableValues(params, engine, envFormattedJavaScript);
         }
         return this.formattedJavaScript;
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
@@ -140,32 +138,23 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> {
     @SneakyThrows
     private String detectReplaceableValues(
         JSONObject params, Compilable engine, String formattedJavaScript) {
-        List<String> patternValues =
-            SpringUtils.getPatternValues(SpringUtils.HASH_PATTERN, formattedJavaScript);
+        List<String> patternValues = SpringUtils.getPatternValues(SpringUtils.HASH_PATTERN, formattedJavaScript);
         if (!patternValues.isEmpty()) {
             StringBuilder sb = new StringBuilder(formattedJavaScript);
             for (String patternValue : patternValues) {
                 String fnName = "rpl_" + Math.abs(patternValue.hashCode());
-                sb.append("\nfunction ")
-                  .append(fnName)
-                  .append("() { ")
-                  .append(
-                      patternValue.contains("return ")
-                          ? patternValue
-                          : "return " + patternValue)
+                sb.append("\nfunction ").append(fnName).append("() {")
+                  .append(patternValue.contains("return ") ? patternValue : "return " + patternValue)
                   .append(" }");
             }
 
             // fire rpl functions
             String jsWithRplFunctions = sb.toString();
-            CompiledScript cmpl = engine.compile(new StringReader(jsWithRplFunctions));
-            cmpl.eval();
-            return SpringUtils.replaceHashValues(
-                jsWithRplFunctions,
+            CompiledScript compileScript = engine.compile(new StringReader(jsWithRplFunctions));
+            compileScript.eval();
+            return SpringUtils.replaceHashValues(jsWithRplFunctions,
                 (s, s2, prefix) -> {
-                    Object ret =
-                        ((Invocable) cmpl.getEngine())
-                            .invokeFunction("rpl_" + Math.abs(s.hashCode()), params);
+                    Object ret = ((Invocable) compileScript.getEngine()).invokeFunction("rpl_" + Math.abs(s.hashCode()), params);
                     return ret == null ? "" : ret.toString();
                 });
         }

@@ -1,55 +1,32 @@
 package org.homio.app.builder.ui;
 
 import lombok.Getter;
-import org.homio.bundle.api.ui.action.UIActionHandler;
-import org.homio.bundle.api.ui.field.action.v1.item.UISliderItemBuilder;
+import lombok.Setter;
+import lombok.experimental.Accessors;
+import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
 
 @Getter
+@Accessors(chain = true)
 public class UISliderItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UISliderItemBuilder, Float>
-        implements UISliderItemBuilder {
+    implements UISliderItemBuilder {
 
     private final Float min;
     private final Float max;
+    @Setter
     private Float step;
+    @Setter
     private boolean required;
-
+    @Setter
     private SliderType sliderType;
+    @Setter
     private boolean hideThumbLabel;
 
-    public UISliderItemBuilderImpl(
-            String entityID,
-            int order,
-            UIActionHandler actionHandler,
-            float value,
-            Float min,
-            Float max) {
+    public UISliderItemBuilderImpl(String entityID, int order, UIActionHandler actionHandler, float value, Float min, Float max) {
         super(UIItemType.Slider, entityID, order, actionHandler);
         this.min = min;
         this.max = max;
         setValue(value);
         this.sliderType = SliderType.Regular;
-    }
-
-    public UISliderItemBuilder setRequired(boolean required) {
-        this.required = required;
-        return this;
-    }
-
-    @Override
-    public UISliderItemBuilder setHideThumbLabel(boolean hideThumbLabel) {
-        this.hideThumbLabel = hideThumbLabel;
-        return this;
-    }
-
-    @Override
-    public UISliderItemBuilder setSliderType(SliderType sliderType) {
-        this.sliderType = sliderType;
-        return this;
-    }
-
-    @Override
-    public UISliderItemBuilder setStep(Float step) {
-        this.step = step;
-        return this;
     }
 }

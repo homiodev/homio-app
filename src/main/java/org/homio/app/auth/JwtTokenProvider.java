@@ -11,19 +11,18 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import lombok.val;
+import org.homio.api.entity.UserEntity;
 import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
 import org.homio.app.setting.system.auth.SystemDisableAuthTokenOnRestartSetting;
 import org.homio.app.setting.system.auth.SystemJWTTokenValidSetting;
 import org.homio.app.spring.ContextCreated;
-import org.homio.bundle.api.entity.UserEntity;
-import org.homio.bundle.api.util.CommonUtils;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -32,18 +31,30 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class JwtTokenProvider implements ContextCreated {
 
+    @Getter
+    public static int RUN_COUNT = -1;
+
     private final UserEntityDetailsService userEntityDetailsService;
     private final Object NULL = new Object();
-
+    private final Map<String, Authentication> userCache = new ConcurrentHashMap<>();
+    private final Map<String, Object> blockedTokens = new ConcurrentHashMap<>();
     private JwtParser jwtParser;
     private boolean regenerateSecurityIdOnRestart;
     private int jwtValidityTimeout;
     private byte[] securityId;
-    private final Map<String, Authentication> userCache = new ConcurrentHashMap<>();
-    private final Map<String, Object> blockedTokens = new ConcurrentHashMap<>();
+    private String appId;
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
+        this.appId = entityContext.setting().getEnv("appId", String.valueOf(System.currentTimeMillis()), true);
+        RUN_COUNT = entityContext.setting().getEnv("runCount", 1, true);
+        entityContext.setting().setEnv("runCount", RUN_COUNT + 1);
+
+        entityContext.setting().listenValue(SystemClearCacheButtonSetting.class, "jwt-clear-cache", () -> {
+            userCache.clear();
+            blockedTokens.clear();
+        });
+
         entityContext.setting().listenValueAndGet(SystemJWTTokenValidSetting.class, "jwt-valid", value -> {
             this.jwtValidityTimeout = value;
             regenerateSecurityID(entityContext);
@@ -58,8 +69,7 @@ public class JwtTokenProvider implements ContextCreated {
             UserEntity user = entityContext.getUser();
             if (user != null) {
                 boolean removed = userCache.entrySet().removeIf(entry -> {
-                    User entryUser = (User) entry.getValue().getPrincipal();
-                    if (user.getEntityID().equals(entryUser.getUsername())) {
+                    if (user.getEntityID().equals(UserEntityDetailsService.getEntityID(entry.getValue()))) {
                         blockedTokens.put(entry.getKey(), NULL);
                         return true;
                     }
@@ -78,22 +88,14 @@ public class JwtTokenProvider implements ContextCreated {
         userCache.remove(token);
     }
 
-    private void regenerateSecurityID(EntityContextImpl entityContext) {
-        this.securityId = buildSecurityId();
-        this.jwtParser = Jwts.parser().setSigningKey(securityId);
-        entityContext.ui().reloadWindow("sys.auth_changed");
-    }
-
     public Authentication getAuthentication(String token) {
         return userCache.computeIfAbsent(token, key -> {
             removeOutdatedTokens();
 
             String userName = getUsername(key);
             UserDetails userDetails = userEntityDetailsService.loadUserByUsername(userName);
-            val authentication = new UsernamePasswordAuthenticationToken(userDetails,
+            return new UsernamePasswordAuthenticationToken(userDetails,
                 userDetails.getUsername(), userDetails.getAuthorities());
-            authentication.setDetails(userName);
-            return authentication;
         });
     }
 
@@ -106,6 +108,13 @@ public class JwtTokenProvider implements ContextCreated {
             throw new ExpiredJwtException(null, null, "Token is expired");
         }
         return isTokenValid(token);
+    }
+
+    public String resolveToken(String bearerToken) {
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 
     String createToken(String username, Authentication authentication) {
@@ -126,11 +135,10 @@ public class JwtTokenProvider implements ContextCreated {
         return token;
     }
 
-    public String resolveToken(String bearerToken) {
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
-        }
-        return null;
+    private void regenerateSecurityID(EntityContextImpl entityContext) {
+        this.securityId = buildSecurityId();
+        this.jwtParser = Jwts.parser().setSigningKey(securityId);
+        entityContext.ui().reloadWindow("sys.auth_changed");
     }
 
     private void removeOutdatedTokens() {
@@ -152,9 +160,9 @@ public class JwtTokenProvider implements ContextCreated {
 
     private byte[] buildSecurityId() {
         userCache.clear();
-        String securityId = CommonUtils.APP_UUID + "_" + jwtValidityTimeout;
+        String securityId = appId + "_" + jwtValidityTimeout;
         if (regenerateSecurityIdOnRestart) {
-            securityId += "_" + CommonUtils.RUN_COUNT;
+            securityId += "_" + RUN_COUNT;
         }
         return Base64.getEncoder().encode(securityId.getBytes());
     }

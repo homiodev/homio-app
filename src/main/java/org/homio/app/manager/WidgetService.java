@@ -1,7 +1,5 @@
 package org.homio.app.manager;
 
-import static org.homio.app.model.entity.widget.WidgetTabEntity.GENERAL_WIDGET_TAB_NAME;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -9,13 +7,13 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
+import org.homio.api.widget.WidgetBaseTemplate;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetGroup;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
 import org.homio.app.spring.ContextCreated;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.widget.WidgetBaseTemplate;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -52,13 +50,13 @@ public class WidgetService implements ContextCreated {
 
         AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", null, new ArrayList<>());
         for (Map.Entry<String, Collection<WidgetBaseTemplate>> entry :
-                entityContext.getBeansOfTypeByBundles(WidgetBaseTemplate.class).entrySet()) {
-            AvailableWidget bundleExtraWidget = new AvailableWidget(entry.getKey(), "http", null, new ArrayList<>());
+            entityContext.getBeansOfTypeByAddons(WidgetBaseTemplate.class).entrySet()) {
+            AvailableWidget availableWidget = new AvailableWidget(entry.getKey(), "http", null, new ArrayList<>());
             for (WidgetBaseTemplate widgetBase : entry.getValue()) {
-                bundleExtraWidget.children.add(new AvailableWidget(widgetBase.getClass().getSimpleName(), widgetBase.getIcon(), null, null));
+                availableWidget.children.add(new AvailableWidget(widgetBase.getClass().getSimpleName(), widgetBase.getIcon(), null, null));
             }
-            if (!bundleExtraWidget.children.isEmpty()) {
-                extraWidgets.children.add(bundleExtraWidget);
+            if (!availableWidget.children.isEmpty()) {
+                extraWidgets.children.add(availableWidget);
             }
         }
         if (!extraWidgets.children.isEmpty()) {

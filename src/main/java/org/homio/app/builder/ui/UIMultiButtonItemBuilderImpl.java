@@ -4,13 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.homio.bundle.api.ui.action.UIActionHandler;
-import org.homio.bundle.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
+import org.homio.api.model.Icon;
+import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.field.action.v1.item.UIMultiButtonItemBuilder;
+import org.jetbrains.annotations.NotNull;
 
 @Getter
 public class UIMultiButtonItemBuilderImpl
-        extends UIBaseEntityItemBuilderImpl<UIMultiButtonItemBuilder, String>
-        implements UIMultiButtonItemBuilder {
+    extends UIBaseEntityItemBuilderImpl<UIMultiButtonItemBuilder, String>
+    implements UIMultiButtonItemBuilder {
 
     private final List<ExtraButton> buttons = new ArrayList<>();
 
@@ -19,23 +21,24 @@ public class UIMultiButtonItemBuilderImpl
     }
 
     @Override
-    public UIMultiButtonItemBuilderImpl addButton(String title) {
+    public @NotNull UIMultiButtonItemBuilderImpl addButton(@NotNull String title) {
         buttons.add(new ExtraButton(title, null, null));
         return this;
     }
 
     @Override
-    public UIMultiButtonItemBuilderImpl addButton(String title, String icon, String iconColor) {
-        buttons.add(new ExtraButton(title, iconColor, icon));
+    public @NotNull UIMultiButtonItemBuilderImpl addButton(@NotNull String title, @NotNull Icon icon) {
+        buttons.add(new ExtraButton(title, icon.getColor(), icon.getIcon()));
         return this;
     }
 
     @Override
-    public UIMultiButtonItemBuilderImpl setActive(String activeButton) {
+    public @NotNull UIMultiButtonItemBuilderImpl setActive(@NotNull String activeButton) {
         setValue(activeButton);
         return this;
     }
 
+    @SuppressWarnings("unused")
     public List<ExtraButton> getButtons() {
         ArrayList<ExtraButton> list = new ArrayList<>();
         list.add(new ExtraButton(getEntityID(), getIconColor(), getIcon()));

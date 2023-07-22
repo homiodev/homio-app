@@ -3,7 +3,7 @@ package org.homio.app.builder.ui;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.ui.field.action.v1.UIInputEntity;
 
 @Getter
 @AllArgsConstructor

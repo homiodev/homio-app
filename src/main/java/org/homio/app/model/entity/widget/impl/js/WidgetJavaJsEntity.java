@@ -1,14 +1,14 @@
 package org.homio.app.model.entity.widget.impl.js;
 
-import javax.persistence.Transient;
+import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.model.JSON;
-import org.homio.bundle.api.ui.field.MonacoLanguage;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldCodeEditor;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.model.JSON;
+import org.homio.api.ui.field.MonacoLanguage;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldCodeEditor;
 import org.jetbrains.annotations.NotNull;
 
 // @Entity

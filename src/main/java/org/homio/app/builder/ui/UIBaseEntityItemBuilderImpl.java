@@ -5,14 +5,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Getter;
-import org.homio.bundle.api.ui.action.UIActionHandler;
-import org.homio.bundle.api.ui.field.action.v1.UIEntityItemBuilder;
-import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.model.Icon;
+import org.homio.api.ui.action.UIActionHandler;
+import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
+import org.homio.api.ui.field.action.v1.UIInputEntity;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Getter
 public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
-        implements UIEntityItemBuilder<Owner, Value>, UIInputEntity, UIInputEntityActionHandler {
+    implements UIEntityItemBuilder<Owner, Value>, UIInputEntity, UIInputEntityActionHandler {
 
     private final String itemType;
     private final UIActionHandler actionHandler;
@@ -32,7 +34,7 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     private String separatedText;
 
     public UIBaseEntityItemBuilderImpl(
-            UIItemType uiItemType, String entityID, int order, UIActionHandler actionHandler) {
+        UIItemType uiItemType, String entityID, int order, UIActionHandler actionHandler) {
         this.itemType = uiItemType.name();
         this.entityID = entityID;
         this.actionHandler = actionHandler;
@@ -58,10 +60,10 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     @Override
     public String getStyle() {
         return styleMap == null
-                ? null
-                : styleMap.entrySet().stream()
-                        .map(e -> e.getKey() + ":" + e.getValue() + ";")
-                        .collect(Collectors.joining());
+            ? null
+            : styleMap.entrySet().stream()
+                      .map(e -> e.getKey() + ":" + e.getValue() + ";")
+                      .collect(Collectors.joining());
     }
 
     @Override
@@ -110,9 +112,11 @@ public abstract class UIBaseEntityItemBuilderImpl<Owner, Value>
     }
 
     @Override
-    public Owner setIcon(String icon, String iconColor) {
-        this.icon = icon;
-        this.iconColor = iconColor;
+    public Owner setIcon(@Nullable Icon icon) {
+        if(icon != null) {
+            this.icon = icon.getIcon();
+            this.iconColor = icon.getColor();
+        }
         return (Owner) this;
     }
 

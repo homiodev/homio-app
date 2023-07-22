@@ -1,53 +1,60 @@
 package org.homio.app.model.entity.user;
 
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
-import static org.homio.bundle.api.util.Constants.GUEST_ROLE;
-import static org.homio.bundle.api.util.Constants.PRIVILEGED_USER_ROLE;
+import static org.homio.api.util.Constants.ADMIN_ROLE;
+import static org.homio.api.util.Constants.GUEST_ROLE;
+import static org.homio.api.util.Constants.PRIVILEGED_USER_ROLE;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Entity;
 import java.util.HashSet;
 import java.util.Set;
-import javax.persistence.Entity;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.UserEntity;
-import org.homio.bundle.api.entity.types.IdentityEntity;
-import org.homio.bundle.api.exception.ProhibitedExecution;
-import org.homio.bundle.api.model.ActionResponseModel;
-import org.homio.bundle.api.model.HasEntityLog;
-import org.homio.bundle.api.model.Status;
-import org.homio.bundle.api.ui.UI.Color;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldIgnore;
-import org.homio.bundle.api.ui.field.action.HasDynamicContextMenuActions;
-import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.bundle.api.util.SecureString;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.UserEntity;
+import org.homio.api.entity.log.HasEntityLog;
+import org.homio.api.entity.types.IdentityEntity;
+import org.homio.api.exception.ProhibitedExecution;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.Icon;
+import org.homio.api.model.Status;
+import org.homio.api.ui.UI.Color;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Entity
 public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityEntity<T>
-    implements UserEntity, HasEntityLog,
-    HasDynamicContextMenuActions {
-
-    public static Logger log = LogManager.getLogger(UserBaseEntity.class);
-
-    private static final Set<String> RESOURCES = new HashSet<>();
+    implements UserEntity, HasEntityLog, HasDynamicContextMenuActions {
 
     public static final String LOG_RESOURCE = "ROLE_LOG";
+    public static final String LOG_RESOURCE_AUTHORIZE = "hasRole('" + LOG_RESOURCE + "')";
     public static final String SSH_RESOURCE = "ROLE_SSH";
+    public static final String SSH_RESOURCE_AUTHORIZE = "hasRole('" + SSH_RESOURCE + "')";
     public static final String MQTT_RESOURCE = "ROLE_MQTT";
     public static final String FILE_MANAGER_RESOURCE = "ROLE_FILE_MANAGER";
+    public static final String FILE_MANAGER_RESOURCE_AUTHORIZE = "hasRole('" + FILE_MANAGER_RESOURCE + "')";
+    private static final Set<String> RESOURCES = new HashSet<>();
+    public static Logger log = LogManager.getLogger(UserBaseEntity.class);
 
     static {
         RESOURCES.add(LOG_RESOURCE);
         RESOURCES.add(SSH_RESOURCE);
         RESOURCES.add(MQTT_RESOURCE);
         RESOURCES.add(FILE_MANAGER_RESOURCE);
+    }
+
+    @Override
+    public @Nullable Status.EntityStatus getEntityStatus() {
+        return null;
     }
 
     public static void registerResource(String resource) {
@@ -79,15 +86,6 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         setJsonData("pwd", value);
     }
 
-    @UIField(order = 10, inlineEdit = true)
-    public @NotNull String getLang() {
-        return getJsonData("lang", "en");
-    }
-
-    public void setLang(String value) {
-        setJsonData("lang", value);
-    }
-
     @JsonIgnore
     public abstract @NotNull UserType getUserType();
 
@@ -101,18 +99,17 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         logBuilder.addTopicFilterByEntityID("org.homio.app.model.entity.user");
     }
 
+    @JsonIgnore
     public @NotNull Set<String> getRoles() {
         Set<String> roles = new HashSet<>();
         roles.add(GUEST_ROLE);
         switch (getUserType()) {
-            case ADMIN:
+            case ADMIN -> {
                 roles.add(ADMIN_ROLE);
                 roles.add(PRIVILEGED_USER_ROLE);
                 roles.addAll(RESOURCES);
-                break;
-            case PRIVILEGED:
-                roles.add(PRIVILEGED_USER_ROLE);
-                break;
+            }
+            case PRIVILEGED -> roles.add(PRIVILEGED_USER_ROLE);
         }
         return roles;
     }
@@ -143,15 +140,15 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
     @UIFieldIgnore
     @JsonIgnore
     public Status getStatus() {
-        throw new ProhibitedExecution();
+        return null;
     }
 
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
         UserEntity user = uiInputBuilder.getEntityContext().getUser();
         if (user != null && user.isAdmin()) {
-            uiInputBuilder.addOpenDialogSelectableButton("CHANGE_PASSWORD", "fas fa-unlock-keyhole",
-                              Color.RED, null, this::changePassword)
+            uiInputBuilder.addOpenDialogSelectableButton("CHANGE_PASSWORD", new Icon("fas fa-unlock-keyhole",
+                              Color.RED), null, this::changePassword)
                           .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
                               if (this.getUserType() == UserType.ADMIN) {
                                   flex.addTextInput("field.currentPassword", "", true);
@@ -159,8 +156,8 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
                               flex.addTextInput("field.newPassword", "", true);
                               flex.addTextInput("field.repeatNewPassword", "", true);
                           }));
-            uiInputBuilder.addOpenDialogSelectableButton("CHANGE_EMAIL", "fas fa-at",
-                              Color.PRIMARY_COLOR, null, this::changeEmail)
+            uiInputBuilder.addOpenDialogSelectableButton("CHANGE_EMAIL", new Icon("fas fa-at",
+                              Color.PRIMARY_COLOR), null, this::changeEmail)
                           .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
                               if (this.getUserType() == UserType.ADMIN) {
                                   flex.addTextInput("field.currentPassword", "", true);

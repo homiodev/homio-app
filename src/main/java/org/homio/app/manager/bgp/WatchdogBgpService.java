@@ -9,10 +9,10 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.service.EntityService;
+import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.api.service.EntityService.WatchdogService;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
-import org.homio.bundle.api.service.EntityService;
-import org.homio.bundle.api.service.EntityService.ServiceInstance;
-import org.homio.bundle.api.service.EntityService.WatchdogService;
 
 @Log4j2
 public class WatchdogBgpService {

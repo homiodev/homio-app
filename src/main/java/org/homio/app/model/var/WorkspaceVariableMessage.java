@@ -3,11 +3,12 @@ package org.homio.app.model.var;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.homio.bundle.api.storage.DataStorageEntity;
+import org.homio.api.storage.DataStorageEntity;
 
 @NoArgsConstructor
 public class WorkspaceVariableMessage extends DataStorageEntity {
 
+    // @Setter need for deserialize from mongo
     @Getter @Setter private Object value;
 
     public WorkspaceVariableMessage(Object value) {

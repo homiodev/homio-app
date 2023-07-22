@@ -2,8 +2,8 @@ package org.homio.app.builder.widget.hasBuilder;
 
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 
-import org.homio.bundle.api.EntityContextWidget.HasValueTemplate;
-import org.homio.bundle.api.EntityContextWidget.VerticalAlign;
+import org.homio.api.EntityContextWidget.HasValueTemplate;
+import org.homio.api.EntityContextWidget.VerticalAlign;
 import org.jetbrains.annotations.Nullable;
 
 public interface HasValueTemplateBuilder<T extends org.homio.app.model.entity.widget.attributes.HasValueTemplate, R>

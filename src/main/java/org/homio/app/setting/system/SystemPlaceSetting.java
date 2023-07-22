@@ -1,22 +1,16 @@
 package org.homio.app.setting.system;
 
-import static org.homio.bundle.api.util.Constants.DANGER_COLOR;
-
 import java.util.Set;
+import org.homio.api.setting.SettingPluginTextSet;
+import org.homio.api.util.Lang;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginTextSet;
-import org.homio.bundle.api.util.Lang;
+import org.jetbrains.annotations.NotNull;
 
 public class SystemPlaceSetting implements CoreSettingPlugin<Set<String>>, SettingPluginTextSet {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.system;
-    }
-
-    @Override
-    public String getIconColor() {
-        return DANGER_COLOR;
     }
 
     @Override

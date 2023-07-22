@@ -1,9 +1,9 @@
 package org.homio.app.ssh;
 
-import org.homio.bundle.api.entity.types.IdentityEntity;
-import org.homio.bundle.api.service.EntityService;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldType;
+import org.homio.api.entity.types.IdentityEntity;
+import org.homio.api.service.EntityService;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldType;
 
 /**
  * Base class for all ssh entities to allow to connect to it

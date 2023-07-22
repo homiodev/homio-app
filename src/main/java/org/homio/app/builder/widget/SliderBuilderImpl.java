@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.homio.api.EntityContextWidget.SliderWidgetBuilder;
+import org.homio.api.EntityContextWidget.SliderWidgetSeriesBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasIconColorThresholdBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasNameBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
@@ -12,8 +14,6 @@ import org.homio.app.builder.widget.hasBuilder.HasValueTemplateBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderEntity;
 import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
-import org.homio.bundle.api.EntityContextWidget.SliderWidgetBuilder;
-import org.homio.bundle.api.EntityContextWidget.SliderWidgetSeriesBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,7 +30,7 @@ public class SliderBuilderImpl extends WidgetBaseBuilderImpl<SliderWidgetBuilder
     }
 
     @Override
-    public SliderWidgetBuilder addSeries(@Nullable String name, @NotNull Consumer<SliderWidgetSeriesBuilder> builder) {
+    public @NotNull SliderWidgetBuilder addSeries(@Nullable String name, @NotNull Consumer<SliderWidgetSeriesBuilder> builder) {
         WidgetSliderSeriesEntity entity = new WidgetSliderSeriesEntity();
         entity.setName(name);
         series.add(entity);
@@ -40,19 +40,19 @@ public class SliderBuilderImpl extends WidgetBaseBuilderImpl<SliderWidgetBuilder
     }
 
     @Override
-    public SliderWidgetBuilder setLayout(String value) {
+    public @NotNull SliderWidgetBuilder setLayout(String value) {
         widget.setLayout(value);
         return this;
     }
 
     @Override
-    public SliderWidgetBuilder setListenSourceUpdates(@Nullable Boolean value) {
+    public @NotNull SliderWidgetBuilder setListenSourceUpdates(@Nullable Boolean value) {
         widget.setListenSourceUpdates(value);
         return this;
     }
 
     @Override
-    public SliderWidgetBuilder setShowLastUpdateTimer(@Nullable Boolean value) {
+    public @NotNull SliderWidgetBuilder setShowLastUpdateTimer(@Nullable Boolean value) {
         widget.setShowLastUpdateTimer(value);
         return this;
     }
@@ -73,43 +73,43 @@ class SliderSeriesBuilderImpl implements SliderWidgetSeriesBuilder,
     }
 
     @Override
-    public SliderWidgetSeriesBuilder setValueDataSource(String value) {
+    public @NotNull SliderWidgetSeriesBuilder setValueDataSource(String value) {
         series.setValueDataSource(value);
         return this;
     }
 
     @Override
-    public SliderWidgetSeriesBuilder setSetValueDataSource(String value) {
+    public @NotNull SliderWidgetSeriesBuilder setSetValueDataSource(String value) {
         series.setSetValueDataSource(value);
         return this;
     }
 
     @Override
-    public SliderWidgetSeriesBuilder setSliderColor(String value) {
+    public @NotNull SliderWidgetSeriesBuilder setSliderColor(String value) {
         series.setSliderColor(value);
         return this;
     }
 
     @Override
-    public SliderWidgetSeriesBuilder setMin(int value) {
+    public @NotNull SliderWidgetSeriesBuilder setMin(int value) {
         series.setMin(value);
         return this;
     }
 
     @Override
-    public SliderWidgetSeriesBuilder setMax(int value) {
+    public @NotNull SliderWidgetSeriesBuilder setMax(int value) {
         series.setMax(value);
         return this;
     }
 
     @Override
-    public SliderWidgetSeriesBuilder setStep(int value) {
+    public @NotNull SliderWidgetSeriesBuilder setStep(int value) {
         series.setStep(value);
         return this;
     }
 
     @Override
-    public SliderWidgetSeriesBuilder setTextConverter(String value) {
+    public @NotNull SliderWidgetSeriesBuilder setTextConverter(String value) {
         series.setTextConverter(value);
         return this;
     }

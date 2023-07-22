@@ -15,15 +15,15 @@ public class URLWidgetVideoSourceResolver implements WidgetVideoSourceResolver {
         try {
             if (Files.exists(Paths.get(item.getValueDataSource()))) {
                 return new VideoEntityResponse(
-                        item.getValueDataSource(),
-                        MediaController.createVideoLink(item.getValueDataSource()),
-                        videoType);
+                    item.getValueDataSource(),
+                    MediaController.createVideoLink(item.getValueDataSource()),
+                    videoType);
             }
         } catch (Exception ignore) {
         }
         if (item.getValueDataSource().startsWith("http")) {
             return new VideoEntityResponse(
-                    item.getValueDataSource(), item.getValueDataSource(), videoType);
+                item.getValueDataSource(), item.getValueDataSource(), videoType);
         }
         return null;
     }

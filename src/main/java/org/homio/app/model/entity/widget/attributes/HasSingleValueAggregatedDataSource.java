@@ -1,15 +1,15 @@
 package org.homio.app.model.entity.widget.attributes;
 
+import org.homio.api.entity.widget.AggregationType;
+import org.homio.api.entity.widget.ability.HasAggregateValueFromSeries;
+import org.homio.api.entity.widget.ability.HasGetStatusValue;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.selection.UIFieldBeanSelection;
+import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.UIEditReloadWidget;
 import org.homio.app.model.entity.widget.UIFieldTimeSlider;
-import org.homio.bundle.api.entity.widget.AggregationType;
-import org.homio.bundle.api.entity.widget.ability.HasAggregateValueFromSeries;
-import org.homio.bundle.api.entity.widget.ability.HasGetStatusValue;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.selection.UIFieldBeanSelection;
-import org.homio.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 public interface HasSingleValueAggregatedDataSource extends HasSingleValueDataSource {
 

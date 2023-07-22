@@ -1,22 +1,22 @@
 package org.homio.app.ssh;
 
+import jakarta.persistence.Entity;
 import java.net.URI;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.persistence.Entity;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.model.OptionModel;
+import org.homio.api.service.EntityService;
+import org.homio.api.ui.UISidebarChildren;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.ssh.SshRawWebSocketEntity.RawWebSocketService;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.service.EntityService;
-import org.homio.bundle.api.ui.UISidebarChildren;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.util.CommonUtils;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
@@ -30,7 +30,6 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
 
     @Override
     public void configureOptionModel(OptionModel optionModel) {
-        optionModel.setStatus(this);
         optionModel.setDescription(getRawWebSocketAddress());
     }
 
@@ -133,14 +132,11 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
 
         @Override
         public SshSession openSshSession(SshRawWebSocketEntity sshEntity) {
-            SshSession session = new SshSession();
-            session.setWsURL(address);
-            session.setToken(UUID.randomUUID().toString());
-            return session;
+            return new SshSession(UUID.randomUUID().toString(), address, sshEntity);
         }
 
         @Override
-        public void closeSshSession(String token, SshRawWebSocketEntity sshEntity) {
+        public void closeSshSession(SshSession<SshRawWebSocketEntity> sshSession) {
             // no need to close session due it's raw ws address
         }
     }

@@ -1,10 +1,9 @@
 package org.homio.app.model.var;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.Index;
-import javax.persistence.Table;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,7 +16,6 @@ import lombok.Setter;
 public class VariableBackup {
 
     @Id
-    @GeneratedValue
     private Integer id;
 
     private String vid;
@@ -27,6 +25,7 @@ public class VariableBackup {
     private String value;
 
     public VariableBackup(String variableId, WorkspaceVariableMessage message) {
+        this.id = Math.toIntExact(System.currentTimeMillis() % 1000000000);
         this.vid = variableId;
         this.created = message.getCreated();
         this.value = message.getValue().toString();

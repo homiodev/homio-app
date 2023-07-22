@@ -2,7 +2,6 @@ package org.homio.app;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
-import com.jcraft.jsch.JSch;
 import com.pivovarit.function.ThrowingConsumer;
 import com.sshtools.common.logger.DefaultLoggerContext;
 import com.sshtools.common.logger.Log;
@@ -48,12 +47,12 @@ import org.apache.logging.log4j.core.impl.DefaultLogEventFactory;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.spi.AbstractLogger;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.log.HasEntityLog;
+import org.homio.api.entity.log.HasEntityLog.EntityLogBuilder;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.spring.ContextCreated;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.model.HasEntityLog;
-import org.homio.bundle.api.model.HasEntityLog.EntityLogBuilder;
-import org.homio.bundle.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
@@ -62,20 +61,19 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class LogService
-        implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
+    implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
 
     private static final org.apache.logging.log4j.Logger maverickLogger = LogManager.getLogger("com.ssh.maverick");
-    private static final org.apache.logging.log4j.Logger jschLogger = LogManager.getLogger("com.ssh.jsch");
 
     private static final GlobalAppender globalAppender = new GlobalAppender();
     private static final Set<String> excludeDebugPackages =
-            Set.of(
-                    "org.springframework",
-                    "com.mongodb",
-                    "de.bwaldvogel",
-                    "org.mongodb",
-                    "com.zaxxer",
-                    "org.hibernate");
+        Set.of(
+            "org.springframework",
+            "com.mongodb",
+            "de.bwaldvogel",
+            "org.mongodb",
+            "com.zaxxer",
+            "org.hibernate");
 
     static {
         Log.setDefaultContext(new DefaultLoggerContext() {
@@ -91,47 +89,45 @@ public class LogService
             }
 
             private Level getLogLevel(Log.Level level) {
-                switch (level) {
-                    case ERROR:
-                        return Level.ERROR;
-                    case WARN:
-                        return Level.WARN;
-                    case DEBUG:
-                        return Level.DEBUG;
-                    case TRACE:
-                        return Level.TRACE;
-                    default:
-                        return Level.INFO;
-                }
+                return switch (level) {
+                    case ERROR -> Level.ERROR;
+                    case WARN -> Level.WARN;
+                    case TRACE -> Level.TRACE;
+                    default -> Level.DEBUG;
+                };
             }
         });
-        JSch.setLogger(new com.jcraft.jsch.Logger() {
+    }
 
-            @Override
-            public boolean isEnabled(int level) {
-                return true;
-            }
+    public Set<String> getTabs() {
+        return globalAppender.definedAppender.keySet();
+    }
 
-            @Override
-            public void log(int level, String message) {
-                jschLogger.log(getLogLevel(level), "Jsch: " + message);
-            }
+    @SneakyThrows
+    public List<String> getLogs(String tab) {
+        DefinedAppenderConsumer definedAppender = globalAppender.definedAppender.get(tab);
+        if (definedAppender != null) {
+            return FileUtils.readLines(
+                new File(definedAppender.fileName), Charset.defaultCharset());
+        }
+        return null;
+    }
 
-            private Level getLogLevel(int level) {
-                switch (level) {
-                    case com.jcraft.jsch.Logger.DEBUG:
-                        return Level.DEBUG;
-                    case com.jcraft.jsch.Logger.WARN:
-                        return Level.WARN;
-                    case com.jcraft.jsch.Logger.ERROR:
-                        return Level.ERROR;
-                    case com.jcraft.jsch.Logger.FATAL:
-                        return Level.FATAL;
-                    default:
-                        return Level.INFO;
-                }
-            }
-        });
+    @Override
+    public void onApplicationEvent(@NotNull ApplicationEnvironmentPreparedEvent ignore) {
+        initLogAppender();
+    }
+
+    @Override
+    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
+        LogService.scanEntityLogs(entityContext);
+        globalAppender.setEntityContext(entityContext);
+    }
+
+    public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
+        return Optional.ofNullable(globalAppender.logConsumers.get(baseEntity.getEntityID()))
+                       .map(c -> c.path)
+                       .orElse(null);
     }
 
     @SneakyThrows
@@ -154,7 +150,7 @@ public class LogService
 
             // hack: add global logger for every log since DEBUG level.
             configuration.addFilter(new AbstractFilter() {
-                public void logIfRequire(Logger logger, Level level, Marker marker, String message, Throwable t, Object... params) {
+                public void logIfRequire(Logger logger, Level level, Marker marker, String message, Throwable ignored, Object... params) {
                     if (level.intLevel() == Level.DEBUG.intLevel() && disabledDebugPackage(logger.getName())) {
                         return;
                     }
@@ -271,43 +267,12 @@ public class LogService
         return prefixSet;
     }
 
-    public Set<String> getTabs() {
-        return globalAppender.definedAppender.keySet();
-    }
-
-    @SneakyThrows
-    public List<String> getLogs(String tab) {
-        DefinedAppenderConsumer definedAppender = globalAppender.definedAppender.get(tab);
-        if (definedAppender != null) {
-            return FileUtils.readLines(
-                    new File(definedAppender.fileName), Charset.defaultCharset());
-        }
-        return null;
-    }
-
-    @Override
-    public void onApplicationEvent(@NotNull ApplicationEnvironmentPreparedEvent ignore) {
-        initLogAppender();
-    }
-
-    @Override
-    public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        LogService.scanEntityLogs(entityContext);
-        globalAppender.setEntityContext(entityContext);
-    }
-
-    public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
-        return Optional.ofNullable(globalAppender.logConsumers.get(baseEntity.getEntityID()))
-                .map(c -> c.path)
-                .orElse(null);
-    }
-
     public static class GlobalAppender extends CountingNoOpAppender {
 
         private final Map<String, LogConsumer> logConsumers = new ConcurrentHashMap<>();
         private final Map<String, DefinedAppenderConsumer> definedAppender = new HashMap<>();
         // allow debug level for appender
-        private boolean allowDebugLevel = false;
+        private final boolean allowDebugLevel = false;
 
         // keep all logs in memory until we switch strategy via setEntityContext(...) method
         private List<LogEvent> bufferedLogEvents = new CopyOnWriteArrayList<>();
@@ -315,36 +280,12 @@ public class LogService
 
         GlobalAppender() {
             super("Global", null);
+            start();
         }
 
-        public synchronized void setEntityContext(EntityContextImpl entityContext) throws Exception {
+        public synchronized void setEntityContext(EntityContextImpl entityContext) {
             this.logStrategy = event -> sendLogs(entityContext, event);
             flushBufferedLogs();
-        }
-
-        // Scan LogConsumers and send to ui if match
-        private void sendLogs(EntityContextImpl entityContext, LogEvent event) {
-            if (allowDebugLevel && event.getLevel().intLevel() <= Level.DEBUG.intLevel()
-                || !allowDebugLevel && event.getLevel().intLevel() <= Level.INFO.intLevel()) {
-                for (Entry<String, DefinedAppenderConsumer> entry : definedAppender.entrySet()) {
-                    if (entry.getValue().accept(event.getLoggerName())) {
-                        sendLogEvent(event, message -> {
-                            entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message);
-                        });
-                    }
-                }
-            }
-            for (LogConsumer logConsumer : logConsumers.values()) {
-                if (!logConsumer.debug && event.getLevel() == Level.DEBUG) {
-                    return;
-                }
-                if (logConsumer.logTopics.stream().anyMatch(l -> l.test(event))) {
-                    sendLogEvent(event, message -> {
-                        Files.writeString(logConsumer.path, message + System.lineSeparator(), StandardOpenOption.APPEND);
-                        entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, message);
-                    });
-                }
-            }
         }
 
         @Override
@@ -359,6 +300,30 @@ public class LogService
             }
             bufferedLogEvents.clear();
             bufferedLogEvents = null;
+        }
+
+        // Scan LogConsumers and send to ui if match
+        private void sendLogs(EntityContextImpl entityContext, LogEvent event) {
+            if (allowDebugLevel && event.getLevel().intLevel() <= Level.DEBUG.intLevel()
+                || !allowDebugLevel && event.getLevel().intLevel() <= Level.INFO.intLevel()) {
+                for (Entry<String, DefinedAppenderConsumer> entry : definedAppender.entrySet()) {
+                    if (entry.getValue().accept(event.getLoggerName())) {
+                        sendLogEvent(event, message ->
+                            entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message));
+                    }
+                }
+            }
+            for (LogConsumer logConsumer : logConsumers.values()) {
+                if (!logConsumer.debug && event.getLevel() == Level.DEBUG) {
+                    return;
+                }
+                if (logConsumer.logTopics.stream().anyMatch(l -> l.test(event))) {
+                    sendLogEvent(event, message -> {
+                        Files.writeString(logConsumer.path, message + System.lineSeparator(), StandardOpenOption.APPEND);
+                        entityContext.ui().sendDynamicUpdate("entity-log-" + logConsumer.entityID, message);
+                    });
+                }
+            }
         }
     }
 
@@ -419,7 +384,7 @@ public class LogService
 
         @Override
         @SneakyThrows
-        public void addTopic(String topic, String filterByField) {
+        public void addTopic(@NotNull String topic, String filterByField) {
             String filterValue =
                 isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity, "get" + StringUtils.capitalize(filterByField)));
             logConsumer.logTopics.add(filterValue == null

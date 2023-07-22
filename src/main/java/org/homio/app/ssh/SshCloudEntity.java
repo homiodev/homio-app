@@ -1,38 +1,36 @@
 package org.homio.app.ssh;
 
+import static org.homio.api.ui.field.action.UIActionInput.Type.text;
+import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
 import static org.homio.app.ssh.SshGenericEntity.execDeletePrivateKey;
 import static org.homio.app.ssh.SshGenericEntity.execUploadPrivateKey;
 import static org.homio.app.ssh.SshGenericEntity.updateSSHData;
-import static org.homio.bundle.api.ui.field.action.UIActionInput.Type.text;
-import static org.homio.bundle.api.ui.field.action.UIActionInput.Type.textarea;
 
 import com.sshtools.common.publickey.SshPrivateKeyFile;
 import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.log.HasEntityLog;
+import org.homio.api.entity.types.IdentityEntity;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.service.CloudProviderService;
+import org.homio.api.ui.UI.Color;
+import org.homio.api.ui.UISidebarChildren;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldPort;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.action.UIActionInput;
+import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.selection.UIFieldBeanSelection;
+import org.homio.api.util.DataSourceUtil;
+import org.homio.api.util.DataSourceUtil.DataSourceContext;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.service.cloud.CloudService;
 import org.homio.app.service.cloud.SshTunnelCloudProviderService;
 import org.homio.app.ssh.SshGenericEntity.PublicKeyAuthSign;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextSetting;
-import org.homio.bundle.api.entity.types.IdentityEntity;
-import org.homio.bundle.api.model.ActionResponseModel;
-import org.homio.bundle.api.model.HasEntityLog;
-import org.homio.bundle.api.model.Status;
-import org.homio.bundle.api.service.CloudProviderService;
-import org.homio.bundle.api.ui.UI.Color;
-import org.homio.bundle.api.ui.UISidebarChildren;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldPort;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
-import org.homio.bundle.api.ui.field.action.UIActionInput;
-import org.homio.bundle.api.ui.field.action.UIContextMenuAction;
-import org.homio.bundle.api.ui.field.selection.UIFieldBeanSelection;
-import org.homio.bundle.api.util.DataSourceUtil;
-import org.homio.bundle.api.util.DataSourceUtil.DataSourceContext;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
@@ -40,8 +38,7 @@ import org.json.JSONObject;
 @Entity
 @UISidebarChildren(icon = "fas fa-cloud", color = "#644DAB")
 public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
-    CloudProviderService.SshCloud<SshCloudEntity>,
-    HasEntityLog
+    CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog
     /*, HasDynamicContextMenuActions*/ {
 
     public static final String PREFIX = "sshcloud_";
@@ -63,11 +60,6 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
             entityContext.save(entity);
         }
         return entity;
-    }
-
-    @Override
-    public Status getStatus() {
-        return EntityContextSetting.getStatus(this, DISTINGUISH_KEY, null);
     }
 
     @UIField(order = 1, hideInEdit = true, disableEdit = true)
@@ -139,11 +131,14 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
         return this;
     }
 
-    @Override
     @UIField(order = 7)
     @UIFieldGroup("SSH")
-    public boolean isRestartOnFailure() {
+    public boolean isEnableWatchdog() {
         return true;
+    }
+
+    public boolean isRestartOnFailure() {
+        return isEnableWatchdog();
     }
 
     @UIField(order = 2, required = true, inlineEditWhenEmpty = true)
@@ -174,7 +169,7 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     }
 
     @Override
-    public CloudProviderService<SshCloudEntity> getCloudProviderService(EntityContext entityContext) {
+    public CloudProviderService<SshCloudEntity> getCloudProviderService(@NotNull EntityContext entityContext) {
         try {
             DataSourceContext sourceContext = DataSourceUtil.getSource(entityContext, getProvider());
             CloudProviderService service = (CloudProviderService) sourceContext.getSource();
@@ -247,7 +242,7 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     @UIContextMenuAction(value = "CONNECT", icon = "fas fa-rss")
     public ActionResponseModel connect(EntityContext entityContext) {
         entityContext.getBean(CloudService.class).restart(this);
-        return null;
+        return ActionResponseModel.fired();
     }
 
     @SneakyThrows

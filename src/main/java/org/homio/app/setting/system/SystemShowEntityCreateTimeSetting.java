@@ -1,10 +1,11 @@
 package org.homio.app.setting.system;
 
+import org.homio.api.setting.SettingPluginBoolean;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginBoolean;
+import org.jetbrains.annotations.NotNull;
 
 public class SystemShowEntityCreateTimeSetting
-        implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
+    implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
     public int order() {
@@ -17,7 +18,7 @@ public class SystemShowEntityCreateTimeSetting
     }
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.system;
     }
 }

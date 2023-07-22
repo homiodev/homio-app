@@ -1,7 +1,7 @@
 package org.homio.app.repository;
 
+import static org.homio.api.AddonEntrypoint.ADDON_PREFIX;
 import static org.homio.app.model.entity.SettingEntity.getKey;
-import static org.homio.bundle.api.BundleEntrypoint.BUNDLE_PREFIX;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -9,33 +9,32 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import org.homio.api.AddonEntrypoint;
+import org.homio.api.EntityContext;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.exception.ServerException;
+import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingPluginButton;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.SettingPluginOptionsRemovable;
+import org.homio.api.setting.SettingPluginToggle;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
+import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.setting.CoreSettingPlugin;
 import org.homio.app.spring.ContextRefreshed;
-import org.homio.bundle.api.BundleEntrypoint;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.exception.ServerException;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.repository.AbstractRepository;
-import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginButton;
-import org.homio.bundle.api.setting.SettingPluginOptions;
-import org.homio.bundle.api.setting.SettingPluginOptionsRemovable;
-import org.homio.bundle.api.setting.SettingPluginToggle;
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
-import org.homio.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
-import org.homio.bundle.api.ui.field.UIFieldType;
 import org.json.JSONObject;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class SettingRepository extends AbstractRepository<SettingEntity>
     implements ContextRefreshed {
 
-    private static final Map<String, String> settingToBundleMap = new HashMap<>();
+    private static final Map<String, String> settingToAddonMap = new HashMap<>();
     private final EntityContext entityContext;
 
     public SettingRepository(EntityContext entityContext) {
@@ -67,10 +66,11 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             entity.setOrder(plugin.order());
             entity.setAdvanced(plugin.isAdvanced());
             entity.setStorable(plugin.isStorable());
-            entity.setColor(plugin.getIconColor());
-            entity.setIcon(plugin.getIcon());
+            Icon icon = plugin.getIcon();
+            entity.setColor(icon == null ? null : icon.getColor());
+            entity.setIcon(icon == null ? null : icon.getIcon());
             if (plugin instanceof SettingPluginToggle) {
-                entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon());
+                entity.setToggleIcon(((SettingPluginToggle) plugin).getToggleIcon().getIcon());
             }
             if (plugin instanceof SettingPluginButton) {
                 entity.setValue(((SettingPluginButton) plugin).getText());
@@ -91,8 +91,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
                 }
             }
 
-            if (plugin instanceof CoreSettingPlugin) {
-                CoreSettingPlugin<?> settingPlugin = (CoreSettingPlugin<?>) plugin;
+            if (plugin instanceof CoreSettingPlugin<?> settingPlugin) {
                 entity.setGroupKey(settingPlugin.getGroupKey().name());
                 entity.setSubGroupKey(settingPlugin.getSubGroupKey());
             }
@@ -116,29 +115,25 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
     }
 
     /**
-     * Search bundleId for setting.
+     * Search addonID for setting.
      */
-    public static String getSettingBundleName(EntityContext entityContext, Class<? extends SettingPlugin> settingPluginClass) {
+    public static String getSettingAddonName(EntityContext entityContext, Class<? extends SettingPlugin> settingPluginClass) {
         String name = settingPluginClass.getName();
-        return settingToBundleMap.computeIfAbsent(name, key -> {
-            if (name.startsWith(BUNDLE_PREFIX + "api.")) {
-                return "api";
-            }
-            if (name.startsWith(BUNDLE_PREFIX)) {
-                String pathName = name.substring(0, BUNDLE_PREFIX.length() + name.substring(BUNDLE_PREFIX.length()).indexOf('.'));
-                BundleEntrypoint bundleEntrypoint = entityContext.getBeansOfType(BundleEntrypoint.class).stream()
-                                                                 .filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
-                if (bundleEntrypoint == null) {
-                    throw new ServerException("Unable find bundle entry-point for setting: " + key);
+        return settingToAddonMap.computeIfAbsent(name, key -> {
+            if (name.startsWith(ADDON_PREFIX)) {
+                String pathName = name.substring(0, ADDON_PREFIX.length() + name.substring(ADDON_PREFIX.length()).indexOf('.'));
+                AddonEntrypoint addonEntrypoint = entityContext.getBeansOfType(AddonEntrypoint.class).stream()
+                                                               .filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
+                if (addonEntrypoint == null) {
+                    throw new ServerException("Unable find addon entry-point for setting: " + key);
                 }
-                return bundleEntrypoint.getBundleId();
+                return addonEntrypoint.getAddonID();
             }
             return null;
         });
     }
 
     @Override
-    @Transactional
     public void onContextRefresh() {
         for (SettingPlugin settingPlugin : EntityContextSettingImpl.settingPluginsBy(p -> !p.transientState())) {
             SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));

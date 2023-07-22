@@ -6,7 +6,9 @@ import java.util.Set;
 
 public final class CollectionUtils {
 
-    /** Set which skip adding null values, and replace exiting values */
+    /**
+     * Set which skip adding null values, and replace exiting values
+     */
     public static <T> Set<T> nullSafeSet() {
         return new HashSet<T>() {
             @Override

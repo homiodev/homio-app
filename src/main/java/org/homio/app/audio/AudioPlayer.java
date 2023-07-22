@@ -9,7 +9,7 @@ import javax.sound.sampled.Mixer;
 import javax.sound.sampled.SourceDataLine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.bundle.api.audio.AudioStream;
+import org.homio.api.audio.AudioStream;
 import org.jetbrains.annotations.Nullable;
 
 @Log4j2
@@ -72,14 +72,14 @@ public class AudioPlayer extends Thread {
         }
     }
 
-    protected @Nullable AudioFormat convertAudioFormat(org.homio.bundle.api.audio.AudioFormat audioFormat) {
+    protected @Nullable AudioFormat convertAudioFormat(org.homio.api.audio.AudioFormat audioFormat) {
         String codec = audioFormat.getCodec();
         AudioFormat.Encoding encoding = new AudioFormat.Encoding(codec);
-        if (org.homio.bundle.api.audio.AudioFormat.CODEC_PCM_SIGNED.equals(codec)) {
+        if (org.homio.api.audio.AudioFormat.CODEC_PCM_SIGNED.equals(codec)) {
             encoding = AudioFormat.Encoding.PCM_SIGNED;
-        } else if (org.homio.bundle.api.audio.AudioFormat.CODEC_PCM_ULAW.equals(codec)) {
+        } else if (org.homio.api.audio.AudioFormat.CODEC_PCM_ULAW.equals(codec)) {
             encoding = AudioFormat.Encoding.ULAW;
-        } else if (org.homio.bundle.api.audio.AudioFormat.CODEC_PCM_ALAW.equals(codec)) {
+        } else if (org.homio.api.audio.AudioFormat.CODEC_PCM_ALAW.equals(codec)) {
             encoding = AudioFormat.Encoding.ALAW;
         }
 

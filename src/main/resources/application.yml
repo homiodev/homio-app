@@ -1,47 +1,16 @@
-rootDir: /opt/homio
-zigbee2mqtt-version: 1.30.0
-
-app:
-  version: @project.version@
-  internet-test-interval: PT10S
-  max-java-script-compile-before-interrupt: PT5S
-  max-java-script-once-call-before-interrupt: PT60S
-  server-site-url: https://homio.org
-  http-port: 9119
-  check-port-interval: PT10S
-  disable-security: false
-  min-script-thread-sleep: PT0.1S
-  source:
-    mosquitto: https://github.com/homiodev/static-files/raw/master/mosquitto.7z
-    ffmpeg: https://github.com/homiodev/static-files/raw/master/ffmpeg.7z
-    node: https://github.com/homiodev/static-files/raw/master/nodejs.7z
-
 spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   banner:
     location: classpath:/banner.txt
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: password
+  sql.init.mode: always
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        jdbc:
-          batch_size: 10
-          lob:
-            non_contextual_creation: true
-    show-sql: false
-
+      ddl-auto: none
+    show-sql: true
 server:
-  port: 9111
-
----
-spring:
-  config:
-    activate:
-      on-profile: dev
+  compression:
+    enabled: true
+    min-response-size: 512B

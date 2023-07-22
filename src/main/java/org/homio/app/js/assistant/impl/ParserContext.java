@@ -1,7 +1,7 @@
 package org.homio.app.js.assistant.impl;
 
 import java.util.function.Consumer;
-import org.homio.bundle.api.model.UpdatableValue;
+import org.homio.api.model.UpdatableValue;
 
 public class ParserContext {
 

@@ -1,10 +1,10 @@
 package org.homio.app.setting.console.ssh;
 
-import org.homio.bundle.api.setting.SettingPluginSlider;
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
+import org.homio.api.setting.SettingPluginSlider;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
 
 public class ConsoleSshFontSizeSetting
-        implements ConsoleSettingPlugin<Integer>, SettingPluginSlider {
+    implements ConsoleSettingPlugin<Integer>, SettingPluginSlider {
 
     @Override
     public Integer getMin() {
@@ -28,6 +28,6 @@ public class ConsoleSshFontSizeSetting
 
     @Override
     public String[] pages() {
-        return new String[] {"ssh"};
+        return new String[]{"ssh"};
     }
 }

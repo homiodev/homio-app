@@ -2,33 +2,31 @@ package org.homio.app.auth;
 
 import static java.lang.String.format;
 
-import java.security.Principal;
-import javax.validation.Valid;
+import jakarta.ws.rs.BadRequestException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
 import lombok.val;
-import org.homio.app.config.AppProperties;
-import org.homio.app.manager.common.EntityContextImpl;
+import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.UserEntity;
+import org.homio.api.entity.UserEntity.UserType;
+import org.homio.api.model.Icon;
+import org.homio.app.manager.common.impl.EntityContextAddonImpl;
+import org.homio.app.model.entity.user.UserAdminEntity;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.setting.system.SystemLogoutButtonSetting;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.UserEntity;
-import org.homio.bundle.api.entity.UserEntity.UserType;
-import org.homio.bundle.api.ui.UI.Color;
-import org.homio.bundle.api.util.CommonUtils;
 import org.json.JSONObject;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Log4j2
 @RestController
 @RequestMapping("/rest/auth")
 @RequiredArgsConstructor
@@ -37,17 +35,42 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final EntityContext entityContext;
-    private final AppProperties appProperties;
 
     @GetMapping("/status")
-    public StatusResponse getStatus(Principal user) {
+    public StatusResponse getStatus(UsernamePasswordAuthenticationToken user) {
         if (user == null) {
+            UserAdminEntity userAdminEntity = entityContext.getEntityRequire(UserAdminEntity.ENTITY_ID);
+            if (StringUtils.isBlank(userAdminEntity.getEmail())) {
+                return new StatusResponse(402, null);
+            }
             return new StatusResponse(401, null);
         }
-        String email = (String) ((UsernamePasswordAuthenticationToken) user).getDetails();
-        addUserNotificationBlock(email, false);
-        String version = format("%s-%s-%s", appProperties.getVersion(), EntityContextImpl.BUNDLE_UPDATE_COUNT, CommonUtils.RUN_COUNT);
+        String email = UserEntityDetailsService.getEmail(user);
+        String userEntityID = UserEntityDetailsService.getEntityID(user);
+
+        addUserNotificationBlock(userEntityID, email, false);
+        String version = format("%s-%s-%s", entityContext.setting().getApplicationVersion(),
+            EntityContextAddonImpl.ADDON_UPDATE_COUNT, JwtTokenProvider.RUN_COUNT);
         return new StatusResponse(200, version);
+    }
+
+    @PostMapping("/register")
+    public void register(@RequestBody LoginRequest credentials) {
+        credentials.validate();
+        UserBaseEntity.log.info("Registering <{}>", credentials.getEmail());
+        try {
+            UserAdminEntity userAdminEntity = entityContext.getEntityRequire(UserAdminEntity.ENTITY_ID);
+            if (StringUtils.isNotBlank(userAdminEntity.getEmail())) {
+                throw new IllegalStateException("Unable to register second primary user");
+            }
+            userAdminEntity.setEmail(credentials.email);
+            userAdminEntity.setPassword(credentials.password, entityContext.getBean(PasswordEncoder.class));
+
+            entityContext.save(userAdminEntity);
+        } catch (Exception ex) {
+            UserBaseEntity.log.info("Register failed for <{}>", credentials.getEmail(), ex);
+            throw ex;
+        }
     }
 
     @GetMapping("/user")
@@ -56,14 +79,17 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public String login(@Valid @RequestBody LoginRequest credentials) {
+    public String login(@RequestBody LoginRequest credentials) {
+        credentials.validate();
         UserBaseEntity.log.info("Login <{}>", credentials.getEmail());
         try {
             String username = credentials.getEmail();
-            val user = new UsernamePasswordAuthenticationToken(username, credentials.getPassword());
-            Authentication authentication = authenticationManager.authenticate(user);
+            val userToken = new UsernamePasswordAuthenticationToken(username, credentials.getPassword());
+            Authentication authentication = authenticationManager.authenticate(userToken);
             UserBaseEntity.log.info("Login success for <{}>", credentials.getEmail());
-            addUserNotificationBlock(username, true);
+            String entityID = UserEntityDetailsService.getEntityID(authentication);
+            String email = UserEntityDetailsService.getEmail(authentication);
+            addUserNotificationBlock(entityID, email, true);
             return jwtTokenProvider.createToken(username, authentication);
         } catch (Exception ex) {
             UserBaseEntity.log.info("Login failed for <{}>", credentials.getEmail(), ex);
@@ -71,16 +97,18 @@ public class AuthController {
         }
     }
 
-    private void addUserNotificationBlock(String username, boolean replace) {
-        String key = "user-" + username;
+    private void addUserNotificationBlock(String entityID, String email, boolean replace) {
+        String key = "user-" + entityID;
         if (replace || !entityContext.ui().isHasNotificationBlock(key)) {
-            entityContext.ui().addNotificationBlock(key, key, "fas fa-user", "#AAAC2C", builder ->
-                builder.addButtonInfo("", "", "", Color.RED,
-                    "fas fa-right-from-bracket", "W.INFO.LOGOUT",
-                    "W.CONFIRM.LOGOUT", (ignore, params) -> {
-                        entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
-                        return null;
-                    }));
+            entityContext.ui().addNotificationBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
+                builder.visibleForUser(email)
+                       .linkToEntity(entityContext.getEntityRequire(entityID))
+                       .setBorderColor("#AAAC2C")
+                       .addInfo(key, null, "")
+                       .setRightButton(new Icon("fas fa-right-from-bracket"), "W.INFO.LOGOUT", "W.CONFIRM.LOGOUT", (ignore, params) -> {
+                           entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
+                           return null;
+                       }));
         }
     }
 
@@ -90,6 +118,15 @@ public class AuthController {
 
         private String email;
         private String password;
+
+        public void validate() {
+            if (email == null || email.length() < 4) {
+                throw new BadRequestException("Provided email length  < 4");
+            }
+            if (password == null || password.length() < 4) {
+                throw new BadRequestException("Provided password length  < 4");
+            }
+        }
     }
 
     @Getter
@@ -100,11 +137,7 @@ public class AuthController {
         private UserType userType;
     }
 
-    @Getter
-    @RequiredArgsConstructor
-    public static class StatusResponse {
+    public record StatusResponse(int status, String version) {
 
-        private final int status;
-        private final String version;
     }
 }

@@ -1,12 +1,12 @@
 package org.homio.app.model.entity.widget.attributes;
 
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldIconPicker;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIconPicker;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
 
 public interface HasIconWithoutThreshold extends HasJsonData {
 
@@ -21,11 +21,11 @@ public interface HasIconWithoutThreshold extends HasJsonData {
     @UIFieldIconPicker(allowEmptyIcon = true)
     @UIFieldGroup(value = "ICON", order = 20, borderColor = "#009688")
     @UIFieldReadDefaultValue
-    default String getIcon() {
+    default String getWidgetIcon() {
         return getJsonData("icon", "fas fa-adjust");
     }
 
-    default void setIcon(String value) {
+    default void setWidgetIcon(String value) {
         setJsonData("icon", value);
     }
 
@@ -33,11 +33,11 @@ public interface HasIconWithoutThreshold extends HasJsonData {
     @UIFieldColorPicker
     @UIFieldGroup("ICON")
     @UIFieldReadDefaultValue
-    default String getIconColor() {
+    default String getWidgetIconColor() {
         return getJsonData("iconColor", UI.Color.WHITE);
     }
 
-    default void setIconColor(String value) {
+    default void setWidgetIconColor(String value) {
         setJsonData("iconColor", value);
     }
 }

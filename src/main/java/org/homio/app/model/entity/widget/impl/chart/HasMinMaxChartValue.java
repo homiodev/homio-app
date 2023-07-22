@@ -1,13 +1,13 @@
 package org.homio.app.model.entity.widget.impl.chart;
 
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
 
 public interface HasMinMaxChartValue extends HasJsonData {
 
     @UIField(order = 1)
-    @UIFieldGroup(value = "CHART_AXIS", order = 100, borderColor = "#0C73A6")
+    @UIFieldGroup(value = "CHART_AXIS", order = 56, borderColor = "#0C73A6")
     default Integer getMin() {
         return getJsonData().has("min") ? getJsonData().getInt("min") : null;
     }

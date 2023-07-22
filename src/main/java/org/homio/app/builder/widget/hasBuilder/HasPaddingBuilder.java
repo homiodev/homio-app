@@ -2,7 +2,7 @@ package org.homio.app.builder.widget.hasBuilder;
 
 import static java.lang.String.format;
 
-import org.homio.bundle.api.EntityContextWidget.HasPadding;
+import org.homio.api.EntityContextWidget.HasPadding;
 
 public interface HasPaddingBuilder<T extends org.homio.app.model.entity.widget.attributes.HasPadding, R> extends HasPadding<R> {
 

@@ -5,9 +5,9 @@ import static com.sshtools.common.publickey.SshKeyPairGenerator.ED25519;
 import static com.sshtools.common.publickey.SshKeyPairGenerator.SSH2_RSA;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.homio.bundle.api.ui.field.action.UIActionInput.Type.select;
-import static org.homio.bundle.api.ui.field.action.UIActionInput.Type.text;
-import static org.homio.bundle.api.ui.field.action.UIActionInput.Type.textarea;
+import static org.homio.api.ui.field.action.UIActionInput.Type.select;
+import static org.homio.api.ui.field.action.UIActionInput.Type.text;
+import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sshtools.client.SshClient;
@@ -18,32 +18,31 @@ import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
 import com.sshtools.common.publickey.SshPublicKeyFile;
 import com.sshtools.common.publickey.SshPublicKeyFileFactory;
 import com.sshtools.common.ssh.components.SshKeyPair;
+import jakarta.persistence.Entity;
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
-import javax.persistence.Entity;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.storage.BaseFileSystemEntity;
+import org.homio.api.entity.types.IdentityEntity;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.FileContentType;
+import org.homio.api.model.FileModel;
+import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
+import org.homio.api.service.EntityService;
+import org.homio.api.ui.UISidebarChildren;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.action.UIActionInput;
+import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.util.SecureString;
 import org.homio.app.ssh.SshGenericEntity.GenericWebSocketService;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.storage.BaseFileSystemEntity;
-import org.homio.bundle.api.entity.types.IdentityEntity;
-import org.homio.bundle.api.model.ActionResponseModel;
-import org.homio.bundle.api.model.FileContentType;
-import org.homio.bundle.api.model.FileModel;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.service.EntityService;
-import org.homio.bundle.api.ui.UISidebarChildren;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
-import org.homio.bundle.api.ui.field.UIFieldType;
-import org.homio.bundle.api.ui.field.action.UIActionInput;
-import org.homio.bundle.api.ui.field.action.UIContextMenuAction;
-import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.bundle.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -60,7 +59,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     public void configureOptionModel(OptionModel optionModel) {
         String user = getUser();
         optionModel.setDescription((user.isEmpty() ? "" : user + "@") + getHost() + ":" + getPort());
-        optionModel.setStatus(this);
     }
 
     @UIField(order = 1, inlineEditWhenEmpty = true, required = true)
@@ -172,8 +170,8 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     @UIField(order = 1)
     @UIFieldGroup(value = "FS", order = 20, borderColor = "#914991")
-    public String getFileSystemRoot() {
-        return getJsonData("fs_root", "/home");
+    public @NotNull String getFileSystemRoot() {
+        return Objects.requireNonNull(getJsonData("fs_root", "/home"));
     }
 
     public void setFileSystemRoot(String value) {
@@ -211,20 +209,22 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         String algorithm = params.optString("algorithm", "SSH2_RSA");
         int bits = params.optInt("bits", 3072);
         String alg = "SSH2_RSA".equals(algorithm) ? SSH2_RSA : "ECDSA".equals(algorithm) ? ECDSA : ED25519;
-        entityContext.bgp().runWithProgress("generate-ssh", false, progressBar -> {
-            progressBar.progress(10, "PROGRESS.GENERATE_SSH");
-            SshKeyPair keyPair = SshKeyPairGenerator.generateKeyPair(alg, bits);
-            SshPrivateKeyFile kf = SshPrivateKeyFileFactory.create(keyPair, passphrase, params.optString("comment"));
-            updateSSHData(this, passphrase, kf);
+        entityContext.bgp().runWithProgress("generate-ssh")
+                     .onFinally(exception -> {
+                         if (exception != null) {
+                             entityContext.ui().sendErrorMessage("ERROR.SSH_GENERATE");
+                         } else {
+                             entityContext.ui().sendSuccessMessage("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
+                         }
+                     })
+                     .execute(progressBar -> {
+                         progressBar.progress(10, "PROGRESS.GENERATE_SSH");
+                         SshKeyPair keyPair = SshKeyPairGenerator.generateKeyPair(alg, bits);
+                         SshPrivateKeyFile kf = SshPrivateKeyFileFactory.create(keyPair, passphrase, params.optString("comment"));
+                         updateSSHData(this, passphrase, kf);
 
-            entityContext.save(this);
-        }, exception -> {
-            if (exception != null) {
-                entityContext.ui().sendErrorMessage("ERROR.SSH_GENERATE");
-            } else {
-                entityContext.ui().sendSuccessMessage("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
-            }
-        });
+                         entityContext.save(this);
+                     });
         return null;
     }
 
@@ -327,13 +327,11 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         String privateKey = entity.getJsonData("prv_key");
         SshPrivateKeyFile keyFile = SshPrivateKeyFileFactory.parse(privateKey.getBytes());
         SshKeyPair keyPair = keyFile.toKeyPair(passphrase);
-        switch (entity.getJsonDataEnum("pk_sign", PublicKeyAuthSign.SHA256)) {
-            case SHA256:
-                return SshKeyUtils.makeRSAWithSHA256Signature(keyPair);
-            case SHA512:
-                return SshKeyUtils.makeRSAWithSHA512Signature(keyPair);
-        }
-        return keyPair;
+        return switch (entity.getJsonDataEnum("pk_sign", PublicKeyAuthSign.SHA256)) {
+            case SHA256 -> SshKeyUtils.makeRSAWithSHA256Signature(keyPair);
+            case SHA512 -> SshKeyUtils.makeRSAWithSHA512Signature(keyPair);
+            default -> keyPair;
+        };
     }
 
     @Override
@@ -352,7 +350,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public String getFileSystemAlias() {
+    public @NotNull String getFileSystemAlias() {
         return "SSH[" + getTitle() + "]";
     }
 
@@ -362,13 +360,8 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public String getFileSystemIcon() {
-        return "fas fa-road-spikes";
-    }
-
-    @Override
-    public String getFileSystemIconColor() {
-        return "#37A987";
+    public @NotNull Icon getFileSystemIcon() {
+        return new Icon("fas fa-road-spikes", "#37A987");
     }
 
     @Override
@@ -377,7 +370,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public SshGenericFileSystem buildFileSystem(EntityContext entityContext) {
+    public @NotNull SshGenericFileSystem buildFileSystem(@NotNull EntityContext entityContext) {
         return new SshGenericFileSystem(this, entityContext);
     }
 
@@ -391,10 +384,6 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     }
 
-    private long getDeepHashCode() {
-        return getJsonDataHashCode("host", "port", "user", "pwd", "key_pwd", "prv_key", "ct");
-    }
-
     @Override
     public @NotNull Class<GenericWebSocketService> getEntityServiceItemClass() {
         return GenericWebSocketService.class;
@@ -405,6 +394,14 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         GenericWebSocketService service = new GenericWebSocketService(entityContext.getBean(SSHServerEndpoint.class));
         service.entityUpdated(this);
         return service;
+    }
+
+    private long getDeepHashCode() {
+        return getJsonDataHashCode("host", "port", "user", "pwd", "key_pwd", "prv_key", "ct");
+    }
+
+    protected enum PublicKeyAuthSign {
+        SHA1, SHA256, SHA512
     }
 
     @RequiredArgsConstructor
@@ -446,17 +443,18 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         }
 
         @Override
-        public SshSession openSshSession(SshGenericEntity entity) {
+        public SshSession<SshGenericEntity> openSshSession(SshGenericEntity entity) {
             return sshServerEndpoint.openSession(entity);
         }
 
         @Override
-        public void closeSshSession(String token, SshGenericEntity entity) {
-            sshServerEndpoint.closeSession(token);
+        public void resizeSshConsole(SshSession sshSession, int cols) {
+            sshServerEndpoint.resizeSshConsole(sshSession, cols);
         }
-    }
 
-    protected enum PublicKeyAuthSign {
-        SHA1, SHA256, SHA512
+        @Override
+        public void closeSshSession(SshSession<SshGenericEntity> sshSession) {
+            sshServerEndpoint.closeSession(sshSession);
+        }
     }
 }

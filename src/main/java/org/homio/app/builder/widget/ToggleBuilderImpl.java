@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.homio.api.EntityContextWidget.ToggleType;
+import org.homio.api.EntityContextWidget.ToggleWidgetBuilder;
+import org.homio.api.EntityContextWidget.ToggleWidgetSeriesBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasIconColorThresholdBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasNameBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasPaddingBuilder;
@@ -12,9 +15,6 @@ import org.homio.app.builder.widget.hasBuilder.HasToggleBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
-import org.homio.bundle.api.EntityContextWidget.ToggleType;
-import org.homio.bundle.api.EntityContextWidget.ToggleWidgetBuilder;
-import org.homio.bundle.api.EntityContextWidget.ToggleWidgetSeriesBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,19 +31,19 @@ public class ToggleBuilderImpl extends WidgetBaseBuilderImpl<ToggleWidgetBuilder
     }
 
     @Override
-    public ToggleWidgetBuilder setShowAllButton(Boolean value) {
+    public @NotNull ToggleWidgetBuilder setShowAllButton(Boolean value) {
         widget.setShowAllButton(value);
         return this;
     }
 
     @Override
-    public ToggleWidgetBuilder setDisplayType(ToggleType value) {
+    public @NotNull ToggleWidgetBuilder setDisplayType(@NotNull ToggleType value) {
         widget.setDisplayType(value);
         return this;
     }
 
     @Override
-    public ToggleWidgetBuilder addSeries(@Nullable String name, @NotNull Consumer<ToggleWidgetSeriesBuilder> builder) {
+    public @NotNull ToggleWidgetBuilder addSeries(@Nullable String name, @NotNull Consumer<ToggleWidgetSeriesBuilder> builder) {
         WidgetToggleSeriesEntity entity = new WidgetToggleSeriesEntity();
         entity.setName(name);
         series.add(entity);
@@ -53,19 +53,19 @@ public class ToggleBuilderImpl extends WidgetBaseBuilderImpl<ToggleWidgetBuilder
     }
 
     @Override
-    public ToggleWidgetBuilder setLayout(String value) {
+    public @NotNull ToggleWidgetBuilder setLayout(String value) {
         widget.setLayout(value);
         return this;
     }
 
     @Override
-    public ToggleWidgetBuilder setListenSourceUpdates(@Nullable Boolean value) {
+    public @NotNull ToggleWidgetBuilder setListenSourceUpdates(@Nullable Boolean value) {
         widget.setListenSourceUpdates(value);
         return this;
     }
 
     @Override
-    public ToggleWidgetBuilder setShowLastUpdateTimer(@Nullable Boolean value) {
+    public @NotNull ToggleWidgetBuilder setShowLastUpdateTimer(@Nullable Boolean value) {
         widget.setShowLastUpdateTimer(value);
         return this;
     }
@@ -85,13 +85,13 @@ class ToggleSeriesBuilderImpl implements ToggleWidgetSeriesBuilder,
     }
 
     @Override
-    public ToggleWidgetSeriesBuilder setValueDataSource(String value) {
+    public @NotNull ToggleWidgetSeriesBuilder setValueDataSource(String value) {
         series.setValueDataSource(value);
         return this;
     }
 
     @Override
-    public ToggleWidgetSeriesBuilder setSetValueDataSource(String value) {
+    public @NotNull ToggleWidgetSeriesBuilder setSetValueDataSource(String value) {
         series.setSetValueDataSource(value);
         return this;
     }

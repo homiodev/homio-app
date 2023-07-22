@@ -5,12 +5,12 @@ import java.util.function.BiFunction;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.homio.api.EntityContext;
+import org.homio.api.state.State;
+import org.homio.api.workspace.BroadcastLock;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.workspace.WorkspaceBlockImpl;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.state.State;
-import org.homio.bundle.api.workspace.BroadcastLock;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
 
 @Getter
@@ -103,14 +103,6 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
         private final String op;
         private final BiFunction<WorkspaceBlock, Object, Boolean> checkFn;
 
-        @SneakyThrows
-        private static float toNumber(Object value) {
-            if (value instanceof Number) {
-                return ((Number) value).floatValue();
-            }
-            return NumberFormat.getInstance().parse(value.toString()).floatValue();
-        }
-
         public static WhenValueOperator getByOp(String operator) {
             for (WhenValueOperator item : WhenValueOperator.values()) {
                 if (item.op.equals(operator)) {
@@ -118,6 +110,14 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
                 }
             }
             throw new IllegalStateException("Unable to find compare operator: " + operator);
+        }
+
+        @SneakyThrows
+        private static float toNumber(Object value) {
+            if (value instanceof Number) {
+                return ((Number) value).floatValue();
+            }
+            return NumberFormat.getInstance().parse(value.toString()).floatValue();
         }
     }
 }

@@ -1,23 +1,24 @@
 package org.homio.app.setting.console.ssh;
 
-import org.homio.bundle.api.setting.console.ConsoleSettingPlugin;
-import org.homio.bundle.api.ui.field.UIFieldType;
+import org.homio.api.setting.SettingType;
+import org.homio.api.setting.console.ConsoleSettingPlugin;
+import org.jetbrains.annotations.NotNull;
 
 public class ConsoleSshCursorColorSetting implements ConsoleSettingPlugin<String> {
 
     @Override
-    public Class<String> getType() {
+    public @NotNull Class<String> getType() {
         return String.class;
     }
 
     @Override
-    public String getDefaultValue() {
+    public @NotNull String getDefaultValue() {
         return "#D9D9D9";
     }
 
     @Override
-    public UIFieldType getSettingType() {
-        return UIFieldType.ColorPicker;
+    public @NotNull SettingType getSettingType() {
+        return SettingType.ColorPicker;
     }
 
     @Override
@@ -27,7 +28,7 @@ public class ConsoleSshCursorColorSetting implements ConsoleSettingPlugin<String
 
     @Override
     public String[] pages() {
-        return new String[] {"ssh"};
+        return new String[]{"ssh"};
     }
 
     @Override

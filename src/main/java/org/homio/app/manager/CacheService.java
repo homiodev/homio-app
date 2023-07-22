@@ -12,12 +12,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.exception.ServerException;
+import org.homio.api.model.HasEntityIdentifier;
+import org.homio.app.repository.AbstractRepository;
 import org.homio.app.utils.CollectionUtils;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.exception.ServerException;
-import org.homio.bundle.api.model.HasEntityIdentifier;
-import org.homio.bundle.api.repository.PureRepository;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.ApplicationContext;
@@ -34,6 +34,7 @@ public class CacheService {
         "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
     public static final String ENTITY_IDS_BY_CLASS_NAME = "ENTITY_IDS_BY_CLASS_NAME";
     public static final String REPOSITORY_BY_ENTITY_ID = "REPOSITORY_BY_ENTITY_ID";
+    public static final String JS_COMPLETIONS = "JS_COMPLETIONS";
 
     private final Map<String, UpdateStatement> entityCache = new ConcurrentHashMap<>();
 
@@ -47,13 +48,14 @@ public class CacheService {
             ENTITY_IDS_BY_CLASS_NAME,
             REPOSITORY_BY_CLAZZ,
             CACHE_CLASS_BY_TYPE,
-            REPOSITORY_BY_ENTITY_ID);
+            REPOSITORY_BY_ENTITY_ID,
+            JS_COMPLETIONS);
     }
 
     public void clearCache() {
         log.info("Clear cache");
         for (String cache : cacheManager.getCacheNames()) {
-            cacheManager.getCache(cache).clear();
+            Objects.requireNonNull(cacheManager.getCache(cache)).clear();
         }
     }
 
@@ -71,10 +73,7 @@ public class CacheService {
         Objects.requireNonNull(cacheManager.getCache(ENTITY_IDS_BY_CLASS_NAME)).clear();
     }
 
-    public void putToCache(
-        PureRepository repository,
-        HasEntityIdentifier entity,
-        Map<String, Object[]> changeFields) {
+    public void putToCache(AbstractRepository repository, HasEntityIdentifier entity, Map<String, Object[]> changeFields) {
         String identifier = entity.getIdentifier();
         if (identifier == null) {
             throw new ServerException("Unable update state without id" + entity);
@@ -84,8 +83,7 @@ public class CacheService {
                 // override changed fields
                 entityCache.get(identifier).changeFields.putAll(changeFields);
             } else {
-                entityCache.put(
-                    identifier, new UpdateStatement(identifier, repository, changeFields));
+                entityCache.put(identifier, new UpdateStatement(identifier, repository, changeFields));
             }
         }
     }
@@ -112,12 +110,9 @@ public class CacheService {
                 for (UpdateStatement updateStatement : entityCache.values()) {
                     try {
                         if (updateStatement.changeFields != null) {
-                            HasEntityIdentifier baseEntity =
-                                entityContext.getEntity(updateStatement.entityID, false);
-                            for (Map.Entry<String, Object[]> entry :
-                                updateStatement.changeFields.entrySet()) {
-                                MethodUtils.invokeMethod(
-                                    baseEntity, entry.getKey(), entry.getValue());
+                            BaseEntity baseEntity = entityContext.getEntity(updateStatement.entityID, false);
+                            for (Map.Entry<String, Object[]> entry : updateStatement.changeFields.entrySet()) {
+                                MethodUtils.invokeMethod(baseEntity, entry.getKey(), entry.getValue());
                             }
                             updateStatement.repository.flushCashedEntity(baseEntity);
 
@@ -147,7 +142,7 @@ public class CacheService {
     private static class UpdateStatement {
 
         String entityID;
-        PureRepository repository;
+        AbstractRepository repository;
         Map<String, Object[]> changeFields;
     }
 }

@@ -1,22 +1,21 @@
 package org.homio.app.service.cloud;
 
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
-import javax.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.model.Status;
+import org.homio.api.service.CloudProviderService;
+import org.homio.api.service.CloudProviderService.SshCloud;
+import org.homio.api.service.EntityService.WatchdogService;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.ssh.SshCloudEntity;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextBGP.ThreadContext;
-import org.homio.bundle.api.model.Status;
-import org.homio.bundle.api.service.CloudProviderService;
-import org.homio.bundle.api.service.CloudProviderService.SshCloud;
-import org.homio.bundle.api.service.EntityService.WatchdogService;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.util.FlowMap;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -89,7 +88,7 @@ public class CloudService implements ContextCreated {
             }
         }
         if (cloudServiceThread != null) {
-            log.warn("Stopping ssh cloud");
+            log.info("Stopping ssh cloud");
             try {
                 cloudServiceThread.cancel();
             } catch (Exception ex) {
@@ -103,7 +102,7 @@ public class CloudService implements ContextCreated {
     }
 
     @SuppressWarnings("unchecked")
-    @RolesAllowed(ADMIN_ROLE)
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void start() {
         currentEntity.setStatus(Status.WAITING);
         cloudProvider = currentEntity.getCloudProviderService(entityContext);
@@ -113,7 +112,7 @@ public class CloudService implements ContextCreated {
         cloudProvider.setCurrentEntity(currentEntity);
         cloudServiceThread = entityContext.bgp().builder("cloud-" + currentEntity.getEntityID()).execute(() -> {
             try {
-                log.warn("Starting cloud connection: '{}'", currentEntity);
+                log.info("Starting cloud connection: '{}'", currentEntity);
                 currentEntity.setStatus(Status.INITIALIZE);
                 cloudProvider.updateNotificationBlock();
                 cloudProvider.start();
@@ -123,7 +122,7 @@ public class CloudService implements ContextCreated {
                 currentEntity.setStatusError(ex);
                 log.error("Unable to start cloud connection: '{}'. Msg: {}", currentEntity, CommonUtils.getErrorMessage(ex));
                 cloudProvider.updateNotificationBlock(ex);
-                entityContext.ui().sendErrorMessage("W.ERROR.UNABLE_CONNECT", FlowMap.of("MSG", message), ex);
+                // entityContext.ui().sendErrorMessage(Lang.getServerMessage("ERROR.CLOUD", message), ex);
             }
         });
     }

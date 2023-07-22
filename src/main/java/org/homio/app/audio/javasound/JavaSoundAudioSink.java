@@ -20,11 +20,11 @@ import javazoom.jl.player.advanced.PlaybackEvent;
 import javazoom.jl.player.advanced.PlaybackListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
+import org.homio.api.audio.AudioFormat;
+import org.homio.api.audio.AudioSink;
+import org.homio.api.audio.AudioStream;
 import org.homio.app.audio.AudioPlayer;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.audio.AudioFormat;
-import org.homio.bundle.api.audio.AudioSink;
-import org.homio.bundle.api.audio.AudioStream;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
@@ -90,39 +90,6 @@ public class JavaSoundAudioSink implements AudioSink {
         }
     }
 
-    private void playInThread(AdvancedPlayer player, Integer from, Integer to) {
-        if (player != null) {
-            player.setPlayBackListener(new PlaybackListener() {
-                @Override
-                public void playbackFinished(PlaybackEvent event) {
-                    pausedOnFrame = event.getFrame();
-                }
-            });
-            entityContext.bgp().builder("java_sink-audio").execute(() -> {
-                try {
-                    Integer start = from;
-                    Integer end = to;
-
-                    if (start != null || end != null) {
-                        if (end != null) {
-                            if (start == null) {
-                                start = 0;
-                            }
-                        } else {
-                            end = Integer.MAX_VALUE;
-                        }
-
-                        player.play(start, end);
-                    } else {
-                        player.play();
-                    }
-                } finally {
-                    player.close();
-                }
-            });
-        }
-    }
-
     @Override
     public Set<AudioFormat> getSupportedFormats() {
         return SUPPORTED_AUDIO_FORMATS;
@@ -177,6 +144,39 @@ public class JavaSoundAudioSink implements AudioSink {
             input.setValue(volume / 100f);
             return true;
         });
+    }
+
+    private void playInThread(AdvancedPlayer player, Integer from, Integer to) {
+        if (player != null) {
+            player.setPlayBackListener(new PlaybackListener() {
+                @Override
+                public void playbackFinished(PlaybackEvent event) {
+                    pausedOnFrame = event.getFrame();
+                }
+            });
+            entityContext.bgp().builder("java_sink-audio").execute(() -> {
+                try {
+                    Integer start = from;
+                    Integer end = to;
+
+                    if (start != null || end != null) {
+                        if (end != null) {
+                            if (start == null) {
+                                start = 0;
+                            }
+                        } else {
+                            end = Integer.MAX_VALUE;
+                        }
+
+                        player.play(start, end);
+                    } else {
+                        player.play();
+                    }
+                } finally {
+                    player.close();
+                }
+            });
+        }
     }
 
     private void runVolumeCommand(Function<FloatControl, Boolean> closure) {

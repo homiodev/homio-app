@@ -1,12 +1,14 @@
 package org.homio.app.setting.system;
 
-import static org.homio.bundle.api.util.Constants.DANGER_COLOR;
+import static org.homio.api.util.Constants.DANGER_COLOR;
 
+import org.homio.api.EntityContext;
+import org.homio.api.entity.UserEntity;
+import org.homio.api.model.Icon;
+import org.homio.api.setting.SettingPluginButton;
+import org.homio.api.ui.UI.Color;
+import org.homio.api.util.ApplicationContextHolder;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.entity.UserEntity;
-import org.homio.bundle.api.setting.SettingPluginButton;
-import org.homio.bundle.api.util.ApplicationContextHolder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -15,18 +17,13 @@ public class SystemLogoutButtonSetting
     implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.system;
     }
 
     @Override
-    public String getIconColor() {
-        return DANGER_COLOR;
-    }
-
-    @Override
-    public String getIcon() {
-        return "fas fa-right-from-bracket";
+    public @NotNull Icon getIcon() {
+        return new Icon("fas fa-right-from-bracket", DANGER_COLOR);
     }
 
     @Override
@@ -51,6 +48,11 @@ public class SystemLogoutButtonSetting
     @Override
     public String getConfirmMsg() {
         return "W.CONFIRM.LOGOUT";
+    }
+
+    @Override
+    public String getDialogColor() {
+        return Color.ERROR_DIALOG;
     }
 
     @Override

@@ -5,8 +5,8 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.homio.api.entity.widget.ability.HasTimeValueSeries;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
-import org.homio.bundle.api.entity.widget.ability.HasTimeValueSeries;
 
 @Getter
 @RequiredArgsConstructor

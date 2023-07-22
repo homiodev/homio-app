@@ -1,26 +1,26 @@
 package org.homio.app.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Transient;
 import java.util.Collection;
 import java.util.Set;
-import javax.persistence.Column;
-import javax.persistence.Convert;
-import javax.persistence.Entity;
-import javax.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.converter.JSONConverter;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.model.JSON;
+import org.homio.api.model.OptionModel;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingType;
+import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.homio.app.repository.SettingRepository;
-import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.converter.JSONConverter;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.model.JSON;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
-import org.homio.bundle.api.ui.field.UIFieldType;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
@@ -99,7 +99,7 @@ public class SettingEntity extends BaseEntity<SettingEntity> {
         this.settingType = settingTypeRaw;
     }
 
-    public SettingEntity setSettingType(UIFieldType settingType) {
+    public SettingEntity setSettingType(SettingType settingType) {
         this.settingType = settingType.name();
         return this;
     }
@@ -132,9 +132,9 @@ public class SettingEntity extends BaseEntity<SettingEntity> {
     }
 
     @Override
-    public String getBundle() {
+    public String getAddonID() {
         // dynamic settings(firmata has no parameters)
         SettingPlugin plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(getEntityID());
-        return plugin == null ? null : SettingRepository.getSettingBundleName(getEntityContext(), plugin.getClass());
+        return plugin == null ? null : SettingRepository.getSettingAddonName(getEntityContext(), plugin.getClass());
     }
 }

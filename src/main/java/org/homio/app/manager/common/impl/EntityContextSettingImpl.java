@@ -1,42 +1,53 @@
 package org.homio.app.manager.common.impl;
 
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 import static org.homio.app.manager.common.impl.EntityContextUIImpl.GlobalSendType.setting;
 import static org.homio.app.model.entity.SettingEntity.getKey;
 import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
-import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.pivovarit.function.ThrowingConsumer;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContextSetting;
+import org.homio.api.model.OptionModel;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
+import org.homio.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
+import org.homio.api.util.CommonUtils;
+import org.homio.app.extloader.AddonContext;
 import org.homio.app.manager.common.ClassFinder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.setting.system.SystemPlaceSetting;
-import org.homio.bundle.api.EntityContextSetting;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginOptions;
-import org.homio.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderContainerSettingPlugin;
-import org.homio.bundle.api.setting.console.header.dynamic.DynamicConsoleHeaderSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.core.env.ConfigurableEnvironment;
 
 @Log4j2
 @RequiredArgsConstructor
 public class EntityContextSettingImpl implements EntityContextSetting {
+
+    @Getter
+    private static Path propertiesLocation;
+    private static Properties homioProperties;
 
     public static final Map<String, SettingPlugin> settingPluginsByPluginKey = new HashMap<>();
     public static final Map<Class<? extends DynamicConsoleHeaderContainerSettingPlugin>, List<SettingEntity>> dynamicHeaderSettings = new HashMap<>();
@@ -46,6 +57,8 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> settingListeners = new HashMap<>();
     private final Map<String, Map<String, ThrowingConsumer<?, Exception>>> httpRequestSettingListeners = new HashMap<>();
     private final EntityContextImpl entityContext;
+    private final ConfigurableEnvironment environment;
+    private final ClassFinder classFinder;
 
     public static List<SettingPlugin> settingPluginsBy(Predicate<SettingPlugin> predicate) {
         return settingPluginsByPluginKey.values().stream().filter(predicate).collect(Collectors.toList());
@@ -57,7 +70,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     @Override
-    public void reloadSettings(Class<? extends SettingPluginOptions> settingPlugin) {
+    public void reloadSettings(@NotNull Class<? extends SettingPluginOptions> settingPlugin) {
         String entityID = SettingEntity.getKey(settingPlugin);
         SettingPluginOptions<?> pluginOptions = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
 
@@ -65,17 +78,11 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         entityContext.ui().sendGlobal(setting, entityID, options, null, OBJECT_MAPPER.createObjectNode().put("subType", "list"));
     }
 
-    private SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin) {
-        SettingEntity settingEntity = new SettingEntity().setEntityID(getKey(settingPlugin));
-        fulfillEntityFromPlugin(settingEntity, entityContext, settingPlugin);
-        return settingEntity;
-    }
-
     /**
      * Reload updated settings to UI
      */
     @Override
-    public void reloadSettings(Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass,
+    public void reloadSettings(@NotNull Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass,
         List<? extends DynamicConsoleHeaderSettingPlugin> dynamicSettings) {
         List<SettingEntity> dynamicEntities = dynamicSettings
             .stream()
@@ -97,16 +104,6 @@ public class EntityContextSettingImpl implements EntityContextSetting {
             value = settingEntity == null ? null : settingEntity.getValue();
         }
         return parseSettingValue(pluginFor, value);
-    }
-
-    @Nullable
-    private <T> T parseSettingValue(SettingPlugin<T> pluginFor, String value) {
-        try {
-            return pluginFor.parseValue(entityContext, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
-        } catch (Exception ex) {
-            log.error("Unable to parse value: '{}' to type: '{}'", value, pluginFor.getType());
-            return null;
-        }
     }
 
     /**
@@ -142,24 +139,20 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     @Override
-    public <T> void listenValueInRequest(Class<? extends SettingPlugin<T>> settingClass, String key, ThrowingConsumer<T, Exception> listener) {
+    public <T> void listenValueInRequest(Class<? extends SettingPlugin<T>> settingClass, @NotNull String key,
+        @NotNull ThrowingConsumer<T, Exception> listener) {
         httpRequestSettingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
         httpRequestSettingListeners.get(settingClass.getName()).put(key, listener);
     }
 
     @Override
-    public <T> void listenValue(Class<? extends SettingPlugin<T>> settingClass, String key, ThrowingConsumer<T, Exception> listener) {
-        settingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
-        settingListeners.get(settingClass.getName()).put(key, listener);
-    }
-
-    public void listenObjectValue(Class<?> settingClass, String key, ThrowingConsumer<Object, Exception> listener) {
+    public <T> void listenValue(Class<? extends SettingPlugin<T>> settingClass, @NotNull String key, @NotNull ThrowingConsumer<T, Exception> listener) {
         settingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
         settingListeners.get(settingClass.getName()).put(key, listener);
     }
 
     @Override
-    public <T> void unListenValue(Class<? extends SettingPlugin<T>> settingClass, String key) {
+    public <T> void unListenValue(Class<? extends SettingPlugin<T>> settingClass, @NotNull String key) {
         if (settingListeners.containsKey(settingClass.getName())) {
             settingListeners.get(settingClass.getName()).remove(key);
         }
@@ -181,12 +174,52 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         setValueSilenceRaw(settingPluginsByPluginClass.get(settingPluginClazz.getName()), value);
     }
 
+    @Override
     @SneakyThrows
-    public void updatePlugins(Class<? extends SettingPlugin> settingPluginClass, boolean addBundle) {
+    public void setEnv(@NotNull String key, @NotNull Object value) {
+        Properties properties = getHomioProperties();
+        properties.setProperty(key, value.toString());
+        properties.store(Files.newOutputStream(propertiesLocation), null);
+    }
+
+    @Override
+    public <T> T getEnv(@NotNull String key, @NotNull Class<T> classType, @Nullable T defaultValue, boolean store) {
+        String value = getHomioProperties().getProperty(key);
+        if (value == null) {
+            if (environment.containsProperty(key)) {
+                return environment.getProperty(key, classType);
+            }
+            if (store && defaultValue != null) {
+                setEnv(key, defaultValue.toString());
+            }
+            return defaultValue;
+        }
+        return environment.getConversionService().convert(value, classType);
+    }
+
+    @SneakyThrows
+    public static Properties getHomioProperties() {
+        if (homioProperties == null) {
+            homioProperties = new Properties();
+            propertiesLocation = CommonUtils.getHomioPropertiesLocation();
+            log.info("Uses configuration file: {}", propertiesLocation);
+            // must exist because CommonUtils.logsPath, etc.. init it first
+            homioProperties.load(Files.newInputStream(propertiesLocation));
+        }
+        return homioProperties;
+    }
+
+    @Override
+    public @NotNull String getApplicationVersion() {
+        return StringUtils.defaultIfEmpty(getClass().getPackage().getImplementationVersion(), "0.0");
+    }
+
+    @SneakyThrows
+    public void updatePlugins(Class<? extends SettingPlugin> settingPluginClass, boolean addAddon) {
         if (Modifier.isPublic(settingPluginClass.getModifiers())) {
             SettingPlugin settingPlugin = settingPluginClass.newInstance();
             String key = SettingEntity.getKey(settingPlugin);
-            if (addBundle) {
+            if (addAddon) {
                 settingPluginsByPluginKey.put(key, settingPlugin);
                 settingPluginsByPluginClass.put(settingPluginClass.getName(), settingPlugin);
             } else {
@@ -208,10 +241,77 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         fireNotifyHandlers(settingPluginClazz, value, pluginFor, settingEntity.getValue(), true);
     }
 
+    @Override
+    public <T> void setValue(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull T value) {
+        SettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
+        String strValue = setValueSilence(settingPluginClazz, value);
+        fireNotifyHandlers(settingPluginClazz, value, pluginFor, strValue, true);
+    }
+
+    @Override
+    public <T> void setValueRaw(@NotNull Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value) {
+        setValueRaw(settingPluginClazz, value, true);
+    }
+
+    public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value, boolean fireNotificationOnUI) {
+        SettingPlugin<?> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
+        T parsedValue = (T) pluginFor.parseValue(entityContext, value);
+        String strValue = setValueSilence(pluginFor, parsedValue);
+        fireNotifyHandlers(settingPluginClazz, parsedValue, pluginFor, strValue, fireNotificationOnUI);
+    }
+
+    @SneakyThrows
+    public void onContextCreated() {
+        List<Class<? extends SettingPlugin>> settingClasses = classFinder.getClassesWithParent(SettingPlugin.class);
+        addSettingsFromSystem(settingClasses);
+    }
+
+    public void addSettingsFromClassLoader(AddonContext addonContext) {
+        List<Class<? extends SettingPlugin>> settingClasses = classFinder.getClassesWithParent(SettingPlugin.class, null, addonContext.getClassLoader());
+        addSettingsFromSystem(settingClasses);
+        addonContext.onDestroy(() -> {
+            for (Class<? extends SettingPlugin> settingPluginClass : settingClasses) {
+                SettingPlugin settingPlugin = CommonUtils.newInstance(settingPluginClass);
+                String key = SettingEntity.getKey(settingPlugin);
+                settingPluginsByPluginKey.remove(key);
+                settingPluginsByPluginClass.remove(settingPluginClass.getName());
+                settingListeners.remove(settingPluginClass.getName());
+                httpRequestSettingListeners.remove(settingPluginClass.getName());
+            }
+        });
+    }
+
+    private void addSettingsFromSystem(List<Class<? extends SettingPlugin>> settingClasses) {
+        for (Class<? extends SettingPlugin> settingPluginClass : settingClasses) {
+            if (Modifier.isPublic(settingPluginClass.getModifiers())) {
+                SettingPlugin settingPlugin = CommonUtils.newInstance(settingPluginClass);
+                String key = SettingEntity.getKey(settingPlugin);
+                settingPluginsByPluginKey.put(key, settingPlugin);
+                settingPluginsByPluginClass.put(settingPluginClass.getName(), settingPlugin);
+            }
+        }
+    }
+
+    private SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin) {
+        SettingEntity settingEntity = new SettingEntity().setEntityID(getKey(settingPlugin));
+        fulfillEntityFromPlugin(settingEntity, entityContext, settingPlugin);
+        return settingEntity;
+    }
+
+    @Nullable
+    private <T> T parseSettingValue(SettingPlugin<T> pluginFor, String value) {
+        try {
+            return pluginFor.parseValue(entityContext, StringUtils.defaultIfEmpty(value, pluginFor.getDefaultValue()));
+        } catch (Exception ex) {
+            log.error("Unable to parse value: '{}' to type: '{}'", value, pluginFor.getType());
+            return null;
+        }
+    }
+
     private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value,
         SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
         if (settingListeners.containsKey(settingPluginClazz.getName())) {
-            entityContext.bgp().builder("update-setting-" + settingPluginClazz.getSimpleName()).auth().auth().execute(() -> {
+            entityContext.bgp().builder("update-setting-" + settingPluginClazz.getSimpleName()).auth().execute(() -> {
                 for (ThrowingConsumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {
                     try {
                         consumer.accept(value);
@@ -242,26 +342,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
         }
     }
 
-    @Override
-    public <T> void setValue(Class<? extends SettingPlugin<T>> settingPluginClazz, T value) {
-        SettingPlugin pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        String strValue = setValueSilence(settingPluginClazz, value);
-        fireNotifyHandlers(settingPluginClazz, value, pluginFor, strValue, true);
-    }
-
-    @Override
-    public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value) {
-        setValueRaw(settingPluginClazz, value, true);
-    }
-
-    public <T> void setValueRaw(Class<? extends SettingPlugin<T>> settingPluginClazz, @NotNull String value, boolean fireNotificationOnUI) {
-        SettingPlugin<?> pluginFor = settingPluginsByPluginClass.get(settingPluginClazz.getName());
-        T parsedValue = (T) pluginFor.parseValue(entityContext, value);
-        String strValue = setValueSilence(pluginFor, parsedValue);
-        fireNotifyHandlers(settingPluginClazz, parsedValue, pluginFor, strValue, fireNotificationOnUI);
-    }
-
-    private <T> String setValueSilence(SettingPlugin pluginFor, @NotNull T value) {
+    private <T> String setValueSilence(SettingPlugin pluginFor, @Nullable T value) {
         String strValue = pluginFor.writeValue(value);
         this.setValueSilenceRaw(pluginFor, strValue);
         return strValue;
@@ -284,13 +365,6 @@ public class EntityContextSettingImpl implements EntityContextSetting {
                 }
                 entityContext.save(settingEntity.setValue(value));
             }
-        }
-    }
-
-    public void fetchSettingPlugins(String basePackage, ClassFinder classFinder, boolean addBundle) {
-        List<Class<? extends SettingPlugin>> classes = classFinder.getClassesWithParent(SettingPlugin.class, basePackage);
-        for (Class<? extends SettingPlugin> settingPlugin : classes) {
-            updatePlugins(settingPlugin, addBundle);
         }
     }
 }

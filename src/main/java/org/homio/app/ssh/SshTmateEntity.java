@@ -1,11 +1,11 @@
 package org.homio.app.ssh;
 
+import jakarta.persistence.Entity;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import javax.persistence.Entity;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -13,17 +13,18 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.EntityContextHardware;
+import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
+import org.homio.api.service.EntityService;
+import org.homio.api.ui.UISidebarChildren;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.ssh.SshTmateEntity.SshTmateService;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextBGP.ThreadContext;
-import org.homio.bundle.api.EntityContextHardware;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.service.EntityService;
-import org.homio.bundle.api.ui.UISidebarChildren;
-import org.homio.bundle.api.ui.field.action.HasDynamicContextMenuActions;
-import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.bundle.api.util.Lang;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 @UISidebarChildren(icon = "fas fa-satellite-dish", color = "#0088CC", allowCreateItem = false)
 public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateService> implements HasDynamicContextMenuActions {
 
+    private static final String URL = "wss://lon1.tmate.io/ws/session/%s";
     public static final String PREFIX = "sshtmate_";
     private static final String DEFAULT_TMATE_ENTITY_ID = PREFIX + "primary";
     private static boolean TMATE_INSTALLED = false;
@@ -42,11 +44,6 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
                 .setName("Tmate");
             entityContext.save(tmateSshEntity);
         }
-    }
-
-    @Override
-    public void configureOptionModel(OptionModel optionModel) {
-        optionModel.setStatus(this);
     }
 
     @Override
@@ -87,8 +84,19 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         }
     }
 
+    @Override
+    public boolean isDisableDelete() {
+        return true;
+    }
+
+    @Override
+    protected void beforePersist() {
+        super.beforePersist();
+        setJsonData("description", Lang.getServerMessage("TMATE_DESCRIPTION"));
+    }
+
     private void addTmateInstallButton(UIInputBuilder uiInputBuilder, EntityContextHardware hardware) {
-        uiInputBuilder.addSelectableButton("install_tmate", "fab fa-instalod", null, (entityContext, params) -> {
+        uiInputBuilder.addSelectableButton("install_tmate", new Icon("fab fa-instalod"), (entityContext, params) -> {
             hardware.installSoftware("tmate", 60);
             TMATE_INSTALLED = hardware.isSoftwareInstalled("tmate");
             if (!TMATE_INSTALLED) {
@@ -98,29 +106,15 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         });
     }
 
-    @Override
-    protected void beforePersist() {
-        super.beforePersist();
-        setJsonData("description", Lang.getServerMessage("TMATE_DESCRIPTION"));
-    }
-
-    @Override
-    public boolean isDisableDelete() {
-        return true;
-    }
-
     @Log4j2
     @RequiredArgsConstructor
     public static class SshTmateService implements SshProviderService<SshTmateEntity> {
 
         private final EntityContext entityContext;
-
+        private SshSession sshSession;
         @Getter
         private SshTmateEntity entity;
-
         private ThreadContext<Void> tmateThread;
-
-        private final SshSession sshSession = new SshSession();
         private Process process;
 
         @Override
@@ -142,7 +136,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
 
         @Override
         public void destroy() {
-            closeSshSession(null, null);
+            closeSshSession(null);
         }
 
         @Override
@@ -160,8 +154,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
                         IOUtils.read(inputStream, array);
                         String[] lines = new String(array, Charset.defaultCharset()).split("\\r?\\n");
                         String tmateSessionId = TmateSessions.WebSession.find(lines);
-                        sshSession.setToken(tmateSessionId);
-                        sshSession.setWsURL("wss://lon1.tmate.io/ws/session/" + tmateSessionId);
+                        sshSession = new SshSession(tmateSessionId, URL, entity);
                         // Curl.get("https://tmate.io/api/t/" + tmateSessionId, SessionStatusModel.class);
                         countDownLatch.countDown();
 
@@ -180,7 +173,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         }
 
         @Override
-        public void closeSshSession(String token, SshTmateEntity entity) {
+        public void closeSshSession(SshSession<SshTmateEntity> sshSession) {
             if (tmateThread != null) {
                 tmateThread.cancel();
                 tmateThread = null;

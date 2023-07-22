@@ -1,11 +1,16 @@
 package org.homio.app.rest;
 
-import static org.homio.bundle.api.util.CommonUtils.FFMPEG_LOCATION;
+import static java.lang.String.format;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
 
+import dev.failsafe.ExecutionContext;
 import dev.failsafe.Failsafe;
 import dev.failsafe.Fallback;
 import dev.failsafe.RetryPolicy;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import javax.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -29,17 +33,21 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.addon.camera.entity.VideoPlaybackStorage;
+import org.homio.addon.camera.entity.VideoPlaybackStorage.DownloadFile;
+import org.homio.api.AddonEntrypoint;
+import org.homio.api.EntityContext;
+import org.homio.api.audio.AudioSink;
+import org.homio.api.audio.SelfContainedAudioSourceContainer;
+import org.homio.api.exception.NotFoundException;
+import org.homio.api.model.OptionModel;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.audio.AudioService;
+import org.homio.app.config.cacheControl.CacheControl;
+import org.homio.app.config.cacheControl.CachePolicy;
+import org.homio.app.manager.AddonService;
 import org.homio.app.manager.ImageService;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.audio.AudioSink;
-import org.homio.bundle.api.audio.SelfContainedAudioSourceContainer;
-import org.homio.bundle.api.entity.ImageEntity;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.video.DownloadFile;
-import org.homio.bundle.api.video.VideoPlaybackStorage;
-import org.homio.bundle.api.video.ffmpeg.FfmpegInputDeviceHardwareRepository;
+import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -70,6 +78,9 @@ public class MediaController {
     private final ImageService imageService;
     private final EntityContext entityContext;
     private final AudioService audioService;
+    private final FfmpegHardwareRepository ffmpegHardwareRepository;
+    private final AddonService addonService;
+
     private final RetryPolicy<Path> PLAYBACK_THUMBNAIL_RETRY_POLICY =
         RetryPolicy.<Path>builder()
                    .handle(Exception.class)
@@ -106,9 +117,9 @@ public class MediaController {
             throw new IllegalArgumentException("File: " + path + " not exists");
         }
 
-        ResourceRegion region = resourceRegion(downloadFile.getStream(), downloadFile.getSize(), headers);
+        ResourceRegion region = resourceRegion(downloadFile.stream(), downloadFile.size(), headers);
         return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                             .contentType(MediaTypeFactory.getMediaType(downloadFile.getStream()).orElse(MediaType.APPLICATION_OCTET_STREAM)).body(region);
+                             .contentType(MediaTypeFactory.getMediaType(downloadFile.stream()).orElse(MediaType.APPLICATION_OCTET_STREAM)).body(region);
     }
 
     @GetMapping("/video/playback/days/{entityID}/{from}/{to}")
@@ -117,7 +128,7 @@ public class MediaController {
         @PathVariable(value = "from") @DateTimeFormat(pattern = "yyyyMMdd") Date from,
         @PathVariable(value = "to") @DateTimeFormat(pattern = "yyyyMMdd") Date to)
         throws Exception {
-        VideoPlaybackStorage entity = entityContext.getEntity(entityID);
+        VideoPlaybackStorage entity = entityContext.getEntityRequire(entityID);
         return entity.getAvailableDaysPlaybacks(entityContext, "main", from, to);
     }
 
@@ -126,7 +137,7 @@ public class MediaController {
         @PathVariable("entityID") String entityID,
         @PathVariable(value = "date") @DateTimeFormat(pattern = "yyyyMMdd") Date date)
         throws Exception {
-        VideoPlaybackStorage entity = entityContext.getEntity(entityID);
+        VideoPlaybackStorage entity = entityContext.getEntityRequire(entityID);
         return entity.getPlaybackFiles(entityContext, "main", date, new Date(date.getTime() + TimeUnit.DAYS.toMillis(1) - 1));
     }
 
@@ -183,32 +194,40 @@ public class MediaController {
             downloadFile = Failsafe.with(PLAYBACK_DOWNLOAD_FILE_RETRY_POLICY)
                                    .onFailure(event ->
                                        log.error("Unable to download playback file: <{}>. <{}>. Msg: <{}>", entity.getTitle(), fileId,
-                                           CommonUtils.getErrorMessage(event.getException())))
+                                           getErrorMessage(event.getException())))
                                    .get(context -> {
                                        log.info("Reply <{}>. Download playback video file <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
                                        return entity.downloadPlaybackFile(entityContext, "main", fileId, path);
                                    });
         }
 
-        ResourceRegion region = resourceRegion(downloadFile.getStream(), downloadFile.getSize(), headers);
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                             .contentType(MediaTypeFactory.getMediaType(downloadFile.getStream()).orElse(MediaType.APPLICATION_OCTET_STREAM)).body(region);
+        ResourceRegion region = resourceRegion(downloadFile.stream(), downloadFile.size(), headers);
+        MediaType mediaType = MediaTypeFactory.getMediaType(downloadFile.stream()).orElse(MediaType.APPLICATION_OCTET_STREAM);
+        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).contentType(mediaType).body(region);
     }
 
-    @GetMapping("/audio/{streamId}/play")
-    public void playAudioFile(@PathVariable String streamId, HttpServletResponse resp)
+    @GetMapping("/audio/{streamID}/play")
+    public void playAudioFile(@PathVariable String streamID, HttpServletResponse resp)
         throws IOException {
-        audioService.playRequested(streamId, resp);
+        audioService.playRequested(streamID, resp);
     }
 
-    @GetMapping("/image/{imagePath:.+}")
-    public ResponseEntity<InputStreamResource> getImage(@PathVariable String imagePath) {
-        ImageEntity imageEntity = entityContext.getEntity(imagePath);
-        if (imageEntity != null) {
-            return getImage(imageEntity.toPath().toString());
-        } else {
-            return imageService.getImage(imagePath);
+    @GetMapping("/image/{entityID}")
+    public ResponseEntity<InputStreamResource> getImage(@PathVariable String entityID) {
+        return imageService.getImage(entityID);
+    }
+
+    @GetMapping("/image/{addonID}/{baseEntityType:.+}")
+    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
+    public ResponseEntity<InputStreamResource> getAddonImage(
+        @PathVariable("addonID") String addonID,
+        @PathVariable String baseEntityType) {
+        AddonEntrypoint addonEntrypoint = addonService.getAddon(addonID);
+        InputStream stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("images/" + baseEntityType);
+        if (stream == null) {
+            throw new NotFoundException("Unable to find image <" + baseEntityType + "> of addon: " + addonID);
         }
+        return CommonUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
     }
 
     @GetMapping("/audioSource")
@@ -257,7 +276,7 @@ public class MediaController {
 
     @SneakyThrows
     private Path getPlaybackThumbnailPath(String entityID, String fileId, String size) {
-        VideoPlaybackStorage entity = entityContext.getEntity(entityID);
+        VideoPlaybackStorage entity = entityContext.getEntityRequire(entityID);
         Path path = CommonUtils.getMediaPath().resolve("camera").resolve(entityID).resolve("playback")
                                .resolve(fileId + "_" + size.replaceAll(":", "x") + ".jpg");
         if (Files.exists(path) && Files.size(path) > 0) {
@@ -272,22 +291,18 @@ public class MediaController {
         Fallback<Path> fallback = Fallback.of((Path) null);
         return Failsafe.with(PLAYBACK_THUMBNAIL_RETRY_POLICY, fallback)
                        .onFailure(event ->
-                           log.error("Unable to get playback img: <{}>. Msg: <{}>", entity.getTitle(), CommonUtils.getErrorMessage(event.getException())))
+                           log.error("Unable to get playback img: <{}>. Msg: <{}>", entity.getTitle(), getErrorMessage(event.getException())))
                        .get(context -> {
-                           log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
-                           entityContext
-                               .getBean(FfmpegInputDeviceHardwareRepository.class)
-                               .fireFfmpeg(
-                                   FFMPEG_LOCATION,
-                                   "-y",
-                                   "\"" + uriStr + "\"",
-                                   "-frames:v 1 -vf scale="
-                                       + size
-                                       + " -q:v 3 "
-                                       + path, // q:v - jpg quality
-                                       60);
-                               return path;
-                           });
+                           fireFFmpeg(fileId, size, entity, path, uriStr, context);
+                           return path;
+                       });
+    }
+
+    private void fireFFmpeg(String fileId, String size, VideoPlaybackStorage entity, Path path, String uriStr, ExecutionContext<Path> context) {
+        log.info("Reply <{}>. playback img <{}>. <{}>", context.getAttemptCount(), entity.getTitle(), fileId);
+        ffmpegHardwareRepository.fireFfmpeg(
+            FFMPEG_LOCATION, "-y", "\"" + uriStr + "\"", format("-frames:v 1 -vf scale=%s -q:v 3 %s", size, path), // q:v - jpg quality
+            60);
     }
 
     private ResourceRegion resourceRegion(Resource video, long contentLength, HttpHeaders headers) {

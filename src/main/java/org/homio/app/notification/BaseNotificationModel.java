@@ -51,8 +51,8 @@ public class BaseNotificationModel<T extends BaseNotificationModel> implements C
             return 0;
         }
         int compareValue =
-                defaultString(this.title, this.entityID)
-                        .compareTo(defaultString(other.getTitle(), other.getEntityID()));
+            defaultString(this.title, this.entityID)
+                .compareTo(defaultString(other.getTitle(), other.getEntityID()));
         if (compareValue == 0) {
             compareValue = String.valueOf(this.value).compareTo(String.valueOf(other.getValue()));
         }

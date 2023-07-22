@@ -1,9 +1,7 @@
 package org.homio.app.repository;
 
 import org.homio.app.model.entity.ScriptEntity;
-import org.homio.bundle.api.repository.AbstractRepository;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 @Repository("executeRepository")
 public class ScriptRepository extends AbstractRepository<ScriptEntity> {
@@ -12,8 +10,10 @@ public class ScriptRepository extends AbstractRepository<ScriptEntity> {
         super(ScriptEntity.class);
     }
 
-    @Transactional(readOnly = true)
     public ScriptEntity getByURL(String url) {
-        return findSingleByField("url", url);
+        /*return tm.executeInTransaction(entityManager -> {
+            return findSingle(entityManager, "url", url);
+        });*/
+        return null;
     }
 }

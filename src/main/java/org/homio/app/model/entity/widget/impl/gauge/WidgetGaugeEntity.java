@@ -1,11 +1,18 @@
 package org.homio.app.model.entity.widget.impl.gauge;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.Entity;
-import org.homio.app.model.entity.widget.UIEditReloadWidget;
+import jakarta.persistence.Entity;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldColorPicker;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldNumber;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.UIFieldType;
 import org.homio.app.model.entity.widget.UIFieldMarkers;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
-import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 import org.homio.app.model.entity.widget.attributes.HasIcon;
 import org.homio.app.model.entity.widget.attributes.HasName;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
@@ -13,20 +20,11 @@ import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.homio.app.model.entity.widget.attributes.HasTextConverter;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldIgnore;
-import org.homio.bundle.api.ui.field.UIFieldNumber;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
-import org.homio.bundle.api.ui.field.UIFieldType;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     implements HasSingleValueDataSource,
-    HasChartTimePeriod,
     HasIcon,
     HasValueConverter,
     HasTextConverter,
@@ -211,27 +209,13 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
         setJsonData("ms", value);
     }
 
-    @UIField(order = 100, label = "duration_aggr")
-    @UIFieldGroup("VALUE")
-    @UIEditReloadWidget
-    public int getChartMinutesToShow() {
-        return HasChartTimePeriod.super.getChartMinutesToShow();
-    }
-
     @Override
-    @JsonIgnore
-    @UIFieldIgnore
-    public int getChartPointsPerHour() {
-        return 0;
-    }
-
-    @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-tachometer-alt";
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
@@ -241,18 +225,18 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @Override
+    @UIFieldIgnore
+    @JsonIgnore
+    public String getValueTemplate() {
+        return HasValueTemplate.super.getValueTemplate();
+    }
+
+    @Override
     protected void beforePersist() {
         if (!getJsonData().has("gfg")) {
             setGaugeForeground(UI.Color.random());
         }
         HasIcon.randomColor(this);
-    }
-
-    @Override
-    @UIFieldIgnore
-    @JsonIgnore
-    public String getValueTemplate() {
-        return HasValueTemplate.super.getValueTemplate();
     }
 
     public enum GaugeType {

@@ -1,14 +1,15 @@
 package org.homio.app.model.entity.widget.impl.chart.line;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
+import org.homio.api.EntityContextWidget.ChartType;
+import org.homio.api.ui.field.UIField;
 import org.homio.app.model.entity.widget.impl.chart.ChartBaseEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasAxis;
 import org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.homio.app.model.entity.widget.impl.chart.HasLineChartBehaviour;
-import org.homio.bundle.api.EntityContextWidget.ChartType;
-import org.homio.bundle.api.ui.field.UIField;
+import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter
@@ -20,7 +21,7 @@ public class WidgetLineChartEntity
     public static final String LINE_CHART_WIDGET_PREFIX = "wgtlc_";
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-chart-line";
     }
 

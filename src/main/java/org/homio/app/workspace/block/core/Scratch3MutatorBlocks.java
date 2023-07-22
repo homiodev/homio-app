@@ -6,22 +6,23 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.state.JsonType;
+import org.homio.api.state.State;
+import org.homio.api.state.StringType;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.WorkspaceEventListener;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.model.CompileScriptContext;
 import org.homio.app.model.entity.ScriptEntity;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.state.JsonType;
-import org.homio.bundle.api.state.State;
-import org.homio.bundle.api.state.StringType;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.WorkspaceEventListener;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.springframework.stereotype.Component;
 
 @Getter
 @Component
 public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
-        implements WorkspaceEventListener {
+    implements WorkspaceEventListener {
 
     private final Map<Integer, CompileScriptContext> compileScriptContextMap = new HashMap<>();
     private final ScriptService scriptService;
@@ -52,18 +53,17 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
     private State mapEvaluate(WorkspaceBlock workspaceBlock) {
         String source = workspaceBlock.getInputString("SOURCE");
         String map = workspaceBlock.getInputString("MAP");
+        State lastValue = ((WorkspaceBlockImpl) workspaceBlock).getLastValue();
 
-        CompileScriptContext compileScriptContext =
-                this.compileScriptContextMap.computeIfAbsent(
-                        map.hashCode(),
-                        integer -> {
-                            String code = map;
-                            if (ScriptEntity.getFunctionWithName(code, "run") == null) {
-                                code = "function run() { " + code + " }";
-                            }
-                            ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(code);
-                            return scriptService.createCompiledScript(scriptEntity, null);
-                        });
+        CompileScriptContext compileScriptContext = this.compileScriptContextMap.computeIfAbsent(map.hashCode(),
+            integer -> {
+                String code = map;
+                if (ScriptEntity.getFunctionWithName(code, "run") == null) {
+                    code = "function run() { " + code + " }";
+                }
+                ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(code);
+                return scriptService.createCompiledScript(scriptEntity, null, lastValue);
+            });
         compileScriptContext.getEngine().put("input", source);
         return scriptService.runJavaScript(compileScriptContext);
     }
@@ -76,7 +76,7 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
 
     private State joinStringEvaluate(WorkspaceBlock workspaceBlock) {
         return new StringType(
-                workspaceBlock.getInputString("STRING1")
-                        + workspaceBlock.getInputString("STRING2"));
+            workspaceBlock.getInputString("STRING1")
+                + workspaceBlock.getInputString("STRING2"));
     }
 }

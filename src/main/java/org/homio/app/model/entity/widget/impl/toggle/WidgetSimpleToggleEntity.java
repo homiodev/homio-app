@@ -1,16 +1,17 @@
 package org.homio.app.model.entity.widget.impl.toggle;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
+import org.homio.api.EntityContextWidget.ToggleType;
+import org.homio.api.exception.ProhibitedExecution;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
 import org.homio.app.model.entity.widget.attributes.HasPadding;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
-import org.homio.bundle.api.EntityContextWidget.ToggleType;
-import org.homio.bundle.api.exception.ProhibitedExecution;
-import org.homio.bundle.api.ui.UI;
-import org.homio.bundle.api.ui.field.UIFieldIgnore;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggleEntity>
@@ -24,12 +25,12 @@ public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggl
     }
 
     @Override
-    public String getImage() {
-        return null;
+    public @NotNull String getImage() {
+        return "";
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 

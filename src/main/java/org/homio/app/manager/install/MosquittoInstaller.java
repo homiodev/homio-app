@@ -6,15 +6,13 @@ import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 import lombok.extern.log4j.Log4j2;
-import org.homio.app.config.AppProperties;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextHardware;
-import org.homio.bundle.api.entity.dependency.DependencyExecutableInstaller;
-import org.homio.bundle.api.ui.field.ProgressBar;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.util.Curl;
+import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextHardware;
+import org.homio.api.entity.dependency.DependencyExecutableInstaller;
+import org.homio.api.util.CommonUtils;
+import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,8 +34,10 @@ public class MosquittoInstaller extends DependencyExecutableInstaller {
         List<String> versionList = null;
         if (IS_OS_WINDOWS) {
             Path mosquittoPath = CommonUtils.getInstallPath().resolve("mosquitto").resolve("mosquitto.exe");
-            if (Files.isRegularFile(mosquittoPath)) {
-                versionList = hardware.executeNoErrorThrowList(mosquittoPath + " -h", 10, null);
+            String mosquittoDir = Files.isRegularFile(mosquittoPath) ? mosquittoPath.toString() :
+                System.getProperty("MOSQUITTO_DIR", System.getenv("MOSQUITTO_DIR"));
+            if (StringUtils.isNotEmpty(mosquittoDir)) {
+                versionList = hardware.executeNoErrorThrowList(mosquittoDir + " -h", 10, null);
             }
         }
         if (versionList == null || versionList.isEmpty()) {
@@ -54,12 +54,14 @@ public class MosquittoInstaller extends DependencyExecutableInstaller {
         if (IS_OS_LINUX) {
             entityContext.hardware().installSoftware(getName(), 600);
         } else {
-            Path path = Curl.downloadAndExtract(entityContext.getBean(AppProperties.class).getSource().getMosquitto(),
-                "mosquitto.7z", (progress, message) -> {
+            String url = entityContext.setting().getEnvRequire("source-mosquitto", String.class,
+                "https://github.com/homiodev/static-files/raw/master/mosquitto.7z", true);
+            CommonUtils.downloadAndExtract(url,
+                "mosquitto.7z", (progress, message, error) -> {
                     progressBar.progress(progress, message);
-                    log.info("mosquitto " + message + ". " + progress + "%");
-                }, log);
-            return Objects.requireNonNull(path).resolve("mosquitto.exe");
+                    log.info("Mosquitto: {}", message);
+                });
+            return CommonUtils.getInstallPath().resolve("mosquitto").resolve("mosquitto.exe");
         }
         return null;
     }

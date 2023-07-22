@@ -1,8 +1,9 @@
 package org.homio.app.rest;
 
+import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
-import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE;
-import static org.homio.bundle.api.util.Constants.ADMIN_ROLE;
+import static org.homio.app.model.entity.user.UserBaseEntity.SSH_RESOURCE_AUTHORIZE;
+import static org.homio.app.model.entity.user.UserBaseEntity.log;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,14 +14,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import javax.annotation.security.RolesAllowed;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.val;
-import org.apache.commons.lang3.StringUtils;
+import org.homio.api.console.ConsolePlugin;
+import org.homio.api.console.ConsolePluginEditor;
+import org.homio.api.console.ConsolePluginTable;
+import org.homio.api.console.dependency.ConsolePluginRequireZipDependency;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.exception.NotFoundException;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.OptionModel;
+import org.homio.api.setting.console.header.ConsoleHeaderSettingPlugin;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.action.v1.UIInputEntity;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.LogService;
 import org.homio.app.builder.ui.UIInputBuilderImpl;
 import org.homio.app.console.LogsConsolePlugin;
@@ -28,27 +40,15 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextUIImpl;
 import org.homio.app.model.entity.SettingEntity;
 import org.homio.app.model.rest.EntityUIMetaData;
+import org.homio.app.rest.ItemController.ActionModelRequest;
 import org.homio.app.spring.ContextRefreshed;
 import org.homio.app.ssh.SshBaseEntity;
 import org.homio.app.ssh.SshProviderService;
+import org.homio.app.ssh.SshProviderService.SshSession;
 import org.homio.app.utils.UIFieldSelectionUtil;
 import org.homio.app.utils.UIFieldUtils;
-import org.homio.bundle.api.console.ConsolePlugin;
-import org.homio.bundle.api.console.ConsolePluginCommunicator;
-import org.homio.bundle.api.console.ConsolePluginEditor;
-import org.homio.bundle.api.console.ConsolePluginTable;
-import org.homio.bundle.api.console.dependency.ConsolePluginRequireZipDependency;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.exception.NotFoundException;
-import org.homio.bundle.api.model.ActionResponseModel;
-import org.homio.bundle.api.model.FileModel;
-import org.homio.bundle.api.model.HasEntityIdentifier;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.setting.console.header.ConsoleHeaderSettingPlugin;
-import org.homio.bundle.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.bundle.api.ui.field.action.v1.UIInputEntity;
-import org.homio.bundle.api.util.CommonUtils;
 import org.json.JSONObject;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -67,6 +67,9 @@ public class ConsoleController implements ContextRefreshed {
     private final ItemController itemController;
     private final Map<String, ConsolePlugin<?>> logsConsolePluginsMap = new HashMap<>();
     private List<ConsoleTab> logs;
+
+    @Getter
+    private static final Map<String, SshSession<?>> sessions = new HashMap<>();
 
     @Override
     public void onContextRefresh() {
@@ -95,9 +98,7 @@ public class ConsoleController implements ContextRefreshed {
                 throw new IllegalArgumentException("Unable to find console plugin with name: " + tab);
             }
         }
-        if (consolePlugin instanceof ConsolePluginTable) {
-            ConsolePluginTable<? extends HasEntityIdentifier> tableConsolePlugin =
-                (ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin;
+        if (consolePlugin instanceof ConsolePluginTable<? extends HasEntityIdentifier> tableConsolePlugin) {
             Collection<? extends HasEntityIdentifier> baseEntities = tableConsolePlugin.getValue();
             Class<? extends HasEntityIdentifier> clazz = tableConsolePlugin.getEntityClass();
 
@@ -121,49 +122,28 @@ public class ConsoleController implements ContextRefreshed {
 
     @SneakyThrows
     @PostMapping("/tab/{tab}/action")
-    @RolesAllowed(ADMIN_ROLE)
-    public ActionResponseModel executeAction(
-        @PathVariable("tab") String tab,
-        @RequestBody ItemController.ActionRequestModel request) {
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public ActionResponseModel executeAction(@PathVariable("tab") String tab, @RequestBody ActionModelRequest request) {
         String entityID = request.getEntityID();
         ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
-        if (consolePlugin instanceof ConsolePluginTable) {
-            Collection<? extends HasEntityIdentifier> baseEntities =
-                ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
-            HasEntityIdentifier identifier =
-                baseEntities.stream().filter(e -> e.getEntityID().equals(entityID))
-                            .findAny().orElseThrow(() -> new NotFoundException("Entity <" + entityID + "> not found"));
+        if (consolePlugin instanceof ConsolePluginTable table) {
+            HasEntityIdentifier identifier = table.findEntity(entityID);
             return itemController.executeAction(request, identifier, entityContext.getEntity(identifier.getEntityID()));
-        } else if (consolePlugin instanceof ConsolePluginCommunicator) {
-            return ((ConsolePluginCommunicator) consolePlugin).commandReceived(request.getName());
-        } else if (consolePlugin instanceof ConsolePluginEditor) {
-            if (request.getMetadata().has("glyph")) {
-                return ((ConsolePluginEditor) consolePlugin)
-                    .glyphClicked(request.getMetadata().getString("glyph"));
-            }
-            if (StringUtils.isNotEmpty(request.getName()) && request.getMetadata().has("content")) {
-                return ((ConsolePluginEditor) consolePlugin)
-                    .save(new FileModel(request.getName(), request.getMetadata().getString("content"), null, false));
-            }
-        } else {
-            return consolePlugin.executeAction(entityID, request.getMetadata(), request.getParams());
         }
-        throw new IllegalArgumentException("Unable to handle action for tab: " + tab);
+        return consolePlugin.executeAction(entityID, request.getMetadata(), request.getParams());
     }
 
     @PostMapping("/tab/{tab}/update")
     public void updateDependencies(@PathVariable("tab") String tab) {
         ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
-        if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
-            ConsolePluginRequireZipDependency dependency =
-                (ConsolePluginRequireZipDependency) consolePlugin;
+        if (consolePlugin instanceof ConsolePluginRequireZipDependency dependency) {
             if (dependency.requireInstallDependencies()) {
-                entityContext.bgp().runWithProgress(
-                    "install-deps-" + dependency.getClass().getSimpleName(),
-                    false,
-                    progressBar -> dependency.installDependency(entityContext, progressBar),
-                    null,
-                    () -> new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"));
+                entityContext.bgp()
+                             .runWithProgress("install-deps-" + dependency.getClass().getSimpleName())
+                             .setErrorIfExists(new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"))
+                             .execute(progressBar -> {
+                                 dependency.installDependency(entityContext, progressBar);
+                             });
             }
         }
     }
@@ -206,10 +186,7 @@ public class ConsoleController implements ContextRefreshed {
             }
             String parentName = consolePlugin.getParentTab();
             ConsoleTab consoleTab = new ConsoleTab(entry.getKey(), consolePlugin.getRenderType(), consolePlugin.getOptions());
-            if (consolePlugin instanceof ConsolePluginRequireZipDependency) {
-                consoleTab.getOptions().put("reqDeps",
-                    ((ConsolePluginRequireZipDependency<?>) consolePlugin).requireInstallDependencies());
-            }
+            consolePlugin.assembleOptions(consoleTab.getOptions());
 
             if (parentName != null) {
                 parens.putIfAbsent(parentName, new ConsoleTab(parentName, null, consolePlugin.getOptions()));
@@ -231,6 +208,39 @@ public class ConsoleController implements ContextRefreshed {
         }
 
         return tabs;
+    }
+
+    @PostMapping("/{entityID}/ssh")
+    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
+    public SshProviderService.SshSession openSshSession(@PathVariable("entityID") String entityID) {
+        log.info("Request to open ssh: {}", entityID);
+        BaseEntity entity = entityContext.getEntity(entityID);
+        if (entity instanceof SshBaseEntity) {
+            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
+            SshSession sshSession = service.openSshSession((SshBaseEntity) entity);
+            sessions.put(sshSession.getToken(), sshSession);
+            return sshSession;
+        }
+        throw new IllegalArgumentException("Entity: " + entityID + " has to implement 'SshBaseEntity'");
+    }
+
+    @PostMapping("/ssh/{token}/resize")
+    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
+    public void resizeSshConsole(@PathVariable("token") String token, @RequestBody SshResizeRequest request) {
+        SshSession<?> sshSession = sessions.get(token);
+        if (sshSession != null) {
+            ((SshProviderService) sshSession.getEntity().getService())
+                .resizeSshConsole(sshSession, request.cols);
+        }
+    }
+
+    @DeleteMapping("/ssh/{token}")
+    @PreAuthorize(SSH_RESOURCE_AUTHORIZE)
+    public void closeSshSession(@PathVariable("token") String token) {
+        SshSession<?> sshSession = sessions.remove(token);
+        if (sshSession != null) {
+            ((SshProviderService) sshSession.getEntity().getService()).closeSshSession(sshSession);
+        }
     }
 
     /**
@@ -258,38 +268,15 @@ public class ConsoleController implements ContextRefreshed {
         }
     }
 
-    @PostMapping("/ssh")
-    @RolesAllowed(SSH_RESOURCE)
-    public SshProviderService.SshSession openSshSession(@RequestBody SshRequest request) {
-        BaseEntity entity = entityContext.getEntity(request.getEntityID());
-        if (entity instanceof SshBaseEntity) {
-            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
-            return service.openSshSession((SshBaseEntity) entity);
-        }
-        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
-    }
-
-    @DeleteMapping("/ssh")
-    @RolesAllowed(SSH_RESOURCE)
-    public void closeSshSession(@RequestBody SshRequest request) {
-        BaseEntity entity = entityContext.getEntity(request.getEntityID());
-        if (entity instanceof SshBaseEntity) {
-            SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
-            service.closeSshSession(request.token, (SshBaseEntity) entity);
-            return;
-        }
-        throw new IllegalArgumentException("Entity: " + request.getEntityID() + " has to implement 'SshBaseEntity'");
-    }
-
     @Getter
     @Setter
     @Accessors(chain = true)
     @RequiredArgsConstructor
     private static class ConsoleTab {
 
-        private List<ConsoleTab> children;
         private final String name;
         private final ConsolePlugin.RenderType renderType;
+        private List<ConsoleTab> children;
         private JSONObject options;
 
         public ConsoleTab(String name, ConsolePlugin.RenderType renderType, JSONObject options) {
@@ -315,11 +302,9 @@ public class ConsoleController implements ContextRefreshed {
         Collection<UIInputEntity> actions;
     }
 
-    @Getter
     @Setter
-    public static class SshRequest {
+    public static class SshResizeRequest {
 
-        private String entityID;
-        private String token;
+        private int cols;
     }
 }

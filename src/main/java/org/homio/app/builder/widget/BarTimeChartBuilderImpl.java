@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.homio.api.EntityContextWidget.BarChartType;
+import org.homio.api.EntityContextWidget.BarTimeChartBuilder;
+import org.homio.api.EntityContextWidget.BarTimeChartSeriesBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasAxisBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasChartDataSourceBuilder;
 import org.homio.app.builder.widget.hasBuilder.HasChartTimePeriodBuilder;
@@ -14,9 +17,6 @@ import org.homio.app.builder.widget.hasBuilder.HasMinMaxChartValueBuilder;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartEntity;
 import org.homio.app.model.entity.widget.impl.chart.bar.WidgetBarTimeChartSeriesEntity;
-import org.homio.bundle.api.EntityContextWidget.BarChartType;
-import org.homio.bundle.api.EntityContextWidget.BarTimeChartBuilder;
-import org.homio.bundle.api.EntityContextWidget.BarTimeChartSeriesBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,7 +36,7 @@ public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartB
     }
 
     @Override
-    public BarTimeChartBuilder addSeries(@Nullable String name, @NotNull Consumer<BarTimeChartSeriesBuilder> builder) {
+    public @NotNull BarTimeChartBuilder addSeries(@Nullable String name, @NotNull Consumer<BarTimeChartSeriesBuilder> builder) {
         WidgetBarTimeChartSeriesEntity entity = new WidgetBarTimeChartSeriesEntity();
         entity.setName(name);
         series.add(entity);
@@ -46,31 +46,31 @@ public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartB
     }
 
     @Override
-    public BarTimeChartBuilder setAxisLabel(String value) {
+    public @NotNull BarTimeChartBuilder setAxisLabel(String value) {
         widget.setAxisLabel(value);
         return this;
     }
 
     @Override
-    public BarTimeChartBuilder setDisplayType(BarChartType value) {
+    public @NotNull BarTimeChartBuilder setDisplayType(BarChartType value) {
         widget.setDisplayType(value);
         return this;
     }
 
     @Override
-    public BarTimeChartBuilder setBarBorderWidth(String value) {
+    public @NotNull BarTimeChartBuilder setBarBorderWidth(String value) {
         widget.setBarBorderWidth(value);
         return this;
     }
 
     @Override
-    public BarTimeChartBuilder setShowChartFullScreenButton(boolean value) {
+    public @NotNull BarTimeChartBuilder setShowChartFullScreenButton(boolean value) {
         widget.setShowChartFullScreenButton(value);
         return this;
     }
 
     @Override
-    public BarTimeChartBuilder setFetchDataFromServerInterval(int value) {
+    public @NotNull BarTimeChartBuilder setFetchDataFromServerInterval(int value) {
         widget.setFetchDataFromServerInterval(value);
         return this;
     }

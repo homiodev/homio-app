@@ -10,8 +10,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.bundle.api.fs.archive.ArchiveUtil;
-import org.homio.bundle.api.util.CommonUtils;
+import org.homio.api.fs.archive.ArchiveUtil;
+import org.homio.api.util.CommonUtils;
 
 @Log4j2
 public final class HardwareUtils {
@@ -28,9 +28,9 @@ public final class HardwareUtils {
                 stream = Files.exists(filesPath) ? Files.newInputStream(filesPath) : null;
             }
             if (stream != null) {
-                String bundleJar = url.getFile().replaceAll(".jar!/", "_");
-                bundleJar = bundleJar.substring(bundleJar.lastIndexOf("/") + 1);
-                Path targetPath = target.resolve(target.resolve(bundleJar));
+                String addonJar = url.getFile().replaceAll(".jar!/", "_");
+                addonJar = addonJar.substring(addonJar.lastIndexOf("/") + 1);
+                Path targetPath = target.resolve(target.resolve(addonJar));
                 if (!Files.exists(targetPath) || Files.size(targetPath) != stream.available()) {
                     // copy files
                     log.info("Copy resource <{}>", url);

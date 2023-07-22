@@ -1,7 +1,9 @@
 package org.homio.app.model.entity.widget.impl;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
+import org.homio.api.exception.ProhibitedExecution;
+import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.attributes.HasActionOnClick;
 import org.homio.app.model.entity.widget.attributes.HasAlign;
@@ -11,8 +13,7 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueAggregatedData
 import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
-import org.homio.bundle.api.exception.ProhibitedExecution;
-import org.homio.bundle.api.ui.field.UIFieldIgnore;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueEntity>
@@ -29,8 +30,8 @@ public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueE
     public static final String PREFIX = "wgtvs_";
 
     @Override
-    public String getImage() {
-        return null;
+    public @NotNull String getImage() {
+        return "";
     }
 
     @Override
@@ -39,7 +40,7 @@ public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueE
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 

@@ -5,18 +5,19 @@ import static org.homio.app.manager.CacheService.ENTITY_IDS_BY_CLASS_NAME;
 import static org.homio.app.manager.CacheService.ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI;
 import static org.homio.app.manager.CacheService.REPOSITORY_BY_ENTITY_ID;
 
+import jakarta.persistence.Entity;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import javax.persistence.Entity;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.repository.AbstractRepository;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.app.repository.AbstractRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
@@ -27,27 +28,21 @@ public class EntityManager {
 
     private final ClassFinder classFinder;
 
-    <T extends BaseEntity> T getEntityNoCache(String entityID) {
-        return (T)
-                getRepositoryByEntityID(entityID).map(r -> r.getByEntityID(entityID)).orElse(null);
-    }
-
     @Cacheable(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI)
     public <T extends BaseEntity> T getEntityWithFetchLazy(String entityID) {
         return (T)
-                getRepositoryByEntityID(entityID)
-                        .map(r -> r.getByEntityIDWithFetchLazy(entityID, false))
-                        .orElse(null);
+            getRepositoryByEntityID(entityID)
+                .map(r -> r.getByEntityIDWithFetchLazy(entityID, false))
+                .orElse(null);
     }
 
     @Cacheable(CACHE_CLASS_BY_TYPE)
-    public Class<? extends BaseEntity> getClassByType(String type) {
-        for (Class<? extends BaseEntity> aClass :
-                EntityContextImpl.baseEntityNameToClass.values()) {
+    public Class<? extends EntityFieldMetadata> getUIFieldClassByType(String type) {
+        for (Class<? extends EntityFieldMetadata> aClass : EntityContextImpl.uiFieldClasses.values()) {
             Entity entity = aClass.getDeclaredAnnotation(Entity.class);
             if (entity != null && entity.name().equals(type)
-                    || aClass.getName().equals(type)
-                    || aClass.getSimpleName().equals(type)) {
+                || aClass.getName().equals(type)
+                || aClass.getSimpleName().equals(type)) {
                 return aClass;
             }
         }
@@ -56,8 +51,8 @@ public class EntityManager {
 
     public BaseEntity<? extends BaseEntity> delete(String entityID) {
         return getRepositoryByEntityID(entityID)
-                .map(r -> r.deleteByEntityID(entityID))
-                .orElse(null);
+            .map(r -> r.deleteByEntityID(entityID))
+            .orElse(null);
     }
 
     @Cacheable(REPOSITORY_BY_ENTITY_ID)
@@ -70,8 +65,7 @@ public class EntityManager {
             }
         }
         // in case if entity has no 1-1 repository then try to find base repository if possible
-        for (Map.Entry<String, AbstractRepository> entry :
-                EntityContextImpl.repositoriesByPrefix.entrySet()) {
+        for (Map.Entry<String, AbstractRepository> entry : EntityContextImpl.repositoriesByPrefix.entrySet()) {
             if (entityID.startsWith(entry.getKey())) {
                 return Optional.of(entry.getValue());
             }
@@ -84,8 +78,7 @@ public class EntityManager {
     public Set<String> getEntityIDsByEntityClassFullName(Class<BaseEntity> entityClass) {
         List<BaseEntity> list;
         Predicate<BaseEntity> filter = baseEntity -> true;
-        AbstractRepository<BaseEntity> repositoryByClass =
-                classFinder.getRepositoryByClass(entityClass);
+        AbstractRepository<BaseEntity> repositoryByClass = classFinder.getRepositoryByClass(entityClass);
 
         // in case we not found repository, but found potential repository - we should filter
         if (!repositoryByClass.getEntityClass().equals(entityClass)) {
@@ -94,8 +87,13 @@ public class EntityManager {
 
         list = repositoryByClass.listAll();
         return list.stream()
-                .filter(filter)
-                .map(BaseEntity::getEntityID)
-                .collect(Collectors.toSet());
+                   .filter(filter)
+                   .map(BaseEntity::getEntityID)
+                   .collect(Collectors.toSet());
+    }
+
+    <T extends BaseEntity> T getEntityNoCache(String entityID) {
+        return (T)
+            getRepositoryByEntityID(entityID).map(r -> r.getByEntityID(entityID)).orElse(null);
     }
 }

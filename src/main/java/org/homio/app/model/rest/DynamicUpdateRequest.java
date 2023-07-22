@@ -1,12 +1,12 @@
 package org.homio.app.model.rest;
 
 import java.util.Objects;
-import javax.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Getter
@@ -18,6 +18,10 @@ public class DynamicUpdateRequest {
 
     @NotNull private String dynamicUpdateId;
     @Nullable private String entityID;
+
+    public DynamicUpdateRequest(@NotNull String dynamicUpdateId) {
+        this.dynamicUpdateId = dynamicUpdateId;
+    }
 
     @Override
     public boolean equals(Object o) {

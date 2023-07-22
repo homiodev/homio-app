@@ -1,19 +1,20 @@
 package org.homio.app.workspace.block.core;
 
-import static org.homio.bundle.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContext;
+import org.homio.api.state.RawType;
+import org.homio.api.state.State;
+import org.homio.api.state.StringType;
+import org.homio.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.app.manager.ScriptService;
 import org.homio.app.model.entity.ScriptEntity;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.state.RawType;
-import org.homio.bundle.api.state.State;
-import org.homio.bundle.api.state.StringType;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.homio.bundle.api.workspace.scratch.Scratch3ExtensionBlocks;
+import org.homio.app.workspace.WorkspaceBlockImpl;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -34,20 +35,18 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void runCodeHandler(WorkspaceBlock workspaceBlock) {
-        runCodeValueEvaluate(workspaceBlock);
+        workspaceBlock.setValue(runCodeValueEvaluate(workspaceBlock));
     }
 
     @SneakyThrows
     private State runCodeValueEvaluate(WorkspaceBlock workspaceBlock) {
-        String scriptEntityId =
-                workspaceBlock.getInputWorkspaceBlock("SCRIPT").getField("SCRIPT_REF");
+        String scriptEntityId = workspaceBlock.getInputWorkspaceBlock("SCRIPT").getField("SCRIPT_REF");
         ScriptEntity scriptEntity = entityContext.getEntity(scriptEntityId);
         if (scriptEntity == null) {
             entityContext.ui().sendErrorMessage("W.ERROR.SCRIPT_NOT_FOUND", scriptEntityId);
         } else {
-            Object result =
-                    scriptService.executeJavaScriptOnce(
-                            scriptEntity, scriptEntity.getJavaScriptParameters(), null, false);
+            State lastValue = ((WorkspaceBlockImpl) workspaceBlock).getLastValue();
+            Object result = scriptService.executeJavaScriptOnce(scriptEntity, null, false, lastValue);
             return State.of(result);
         }
         return StringType.EMPTY;
@@ -64,15 +63,15 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
             rawType = RawType.ofPlainText("NULL");
         } else if ("text/plain".equals(rawType.getMimeType())) {
             rawType =
-                    new RawType(workspaceBlock.getInputStringRequiredWithContext(VALUE).getBytes());
+                new RawType(workspaceBlock.getInputStringRequiredWithContext(VALUE).getBytes());
         }
         ObjectNode node =
-                OBJECT_MAPPER
-                        .createObjectNode()
-                        .put("block", workspaceBlock.getId())
-                        .put("value", rawType.stringValue())
-                        .put("mimeType", rawType.getMimeType())
-                        .put("name", rawType.getName());
+            OBJECT_MAPPER
+                .createObjectNode()
+                .put("block", workspaceBlock.getId())
+                .put("value", rawType.stringValue())
+                .put("mimeType", rawType.getMimeType())
+                .put("name", rawType.getName());
         entityContext.ui().sendNotification("-workspace-block-update", node);
     }
 }

@@ -7,6 +7,8 @@ import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.homio.api.EntityContextWidget;
+import org.homio.api.model.OptionModel;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
@@ -25,8 +27,6 @@ import org.homio.app.model.entity.widget.impl.slider.WidgetSliderSeriesEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetSimpleToggleEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
-import org.homio.bundle.api.EntityContextWidget;
-import org.homio.bundle.api.model.OptionModel;
 import org.jetbrains.annotations.NotNull;
 
 @Log4j2

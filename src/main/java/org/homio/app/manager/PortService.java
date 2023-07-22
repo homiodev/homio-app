@@ -13,18 +13,19 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.model.Icon;
+import org.homio.api.setting.SettingPlugin;
+import org.homio.api.setting.SettingPluginOptions;
+import org.homio.api.ui.UI.Color;
+import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.homio.app.spring.ContextCreated;
 import org.homio.app.spring.ContextRefreshed;
-import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginOptions;
-import org.homio.bundle.api.util.Lang;
 import org.springframework.stereotype.Component;
 
 /**
- * Port manager scan all setting bundles to match type as SerialPort and listen if ports available
- * or not, fire notifications and set header notifications
+ * Port manager scan all setting addons to match type as SerialPort and listen if ports available or not, fire notifications and set header notifications
  */
 @Log4j2
 @Component
@@ -34,7 +35,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
     private final EntityContextImpl entityContext;
 
     private final Map<Class<? extends SettingPlugin<SerialPort>>, Pair<String, Boolean>>
-            portListeners = new HashMap<>();
+        portListeners = new HashMap<>();
     private Set<String> ports = new HashSet<>();
     private List<SettingPluginOptions<SerialPort>> portSettingPlugins;
 
@@ -46,13 +47,13 @@ public class PortService implements ContextCreated, ContextRefreshed {
     @Override
     public void onContextCreated(EntityContextImpl entityContext) {
         listenPortAvailability();
-        Duration checkPortInterval = this.entityContext.getAppProperties().getCheckPortInterval();
+        Duration checkPortInterval = entityContext.setting().getEnvRequire("interval-port-test", Duration.class, Duration.ofSeconds(10), true);
         this.entityContext
-                .bgp()
-                .builder("check-port")
-                .cancelOnError(false)
-                .interval(checkPortInterval)
-                .execute(this::checkPortsAvailability);
+            .bgp()
+            .builder("check-port")
+            .cancelOnError(false)
+            .interval(checkPortInterval)
+            .execute(this::checkPortsAvailability);
     }
 
     public void listenPortAvailability() {
@@ -84,9 +85,9 @@ public class PortService implements ContextCreated, ContextRefreshed {
     }
 
     private void addPortToListening(
-            Class<? extends SettingPlugin<SerialPort>> clazz,
-            String portRawValue,
-            SerialPort serialPort) {
+        Class<? extends SettingPlugin<SerialPort>> clazz,
+        String portRawValue,
+        SerialPort serialPort) {
         portListeners.put(clazz, MutablePair.of(portRawValue, serialPort != null));
         if (serialPort == null) {
             addPortNotAvailableNotification(portRawValue);
@@ -110,7 +111,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
             }
         }
         for (Map.Entry<Class<? extends SettingPlugin<SerialPort>>, Pair<String, Boolean>> entry :
-                portListeners.entrySet()) {
+            portListeners.entrySet()) {
             String portName = entry.getValue().getKey();
             if (ports.containsKey(portName)) {
                 // check if we didn't fire event already
@@ -130,16 +131,13 @@ public class PortService implements ContextCreated, ContextRefreshed {
     private void portAvailable(String portName) {
         log.info("Port became available: <{}>", portName);
         entityContext.ui().updateNotificationBlock("PORTS", blockBuilder ->
-            blockBuilder.removeInfo(getPortInfo(portName)));
+            blockBuilder.removeInfo(portName));
     }
 
     private void addPortNotAvailableNotification(String portName) {
         log.warn("Port became not available: <{}>", portName);
-        entityContext.ui().addOrUpdateNotificationBlock("PORTS", "PORTS", "", "", blockBuilder ->
-            blockBuilder.addInfo(getPortInfo(portName), "", "fas fa-usb", "#9C8033"));
-    }
-
-    private String getPortInfo(String portName) {
-        return Lang.getServerMessage("ERROR.PORT_NOT_AVAILABLE", "PORT", portName);
+        entityContext.ui().addOrUpdateNotificationBlock("PORTS", "PORTS", new Icon("fab fa-usb", "#A18123"), blockBuilder ->
+            blockBuilder.addInfo(portName, new Icon("fas fa-square", Color.RED),
+                Lang.getServerMessage("ERROR.PORT_NOT_AVAILABLE", portName)));
     }
 }

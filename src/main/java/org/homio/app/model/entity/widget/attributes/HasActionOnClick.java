@@ -1,12 +1,12 @@
 package org.homio.app.model.entity.widget.attributes;
 
-import org.homio.bundle.api.entity.HasJsonData;
-import org.homio.bundle.api.entity.widget.ability.HasSetStatusValue;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
-import org.homio.bundle.api.ui.field.selection.UIFieldBeanSelection;
-import org.homio.bundle.api.ui.field.selection.UIFieldEntityByClassSelection;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.entity.widget.ability.HasSetStatusValue;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.selection.UIFieldBeanSelection;
+import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 
 public interface HasActionOnClick extends HasJsonData {
 

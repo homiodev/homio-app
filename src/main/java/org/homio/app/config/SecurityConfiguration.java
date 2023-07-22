@@ -1,5 +1,9 @@
 package org.homio.app.config;
 
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
+import static org.homio.app.config.WebSocketConfig.WEB_SOCKET_ENDPOINT;
+
+import jakarta.servlet.DispatcherType;
 import lombok.AllArgsConstructor;
 import lombok.val;
 import org.apache.catalina.filters.RequestFilter;
@@ -9,29 +13,35 @@ import org.homio.app.auth.CacheAuthenticationProvider;
 import org.homio.app.auth.JwtTokenFilterConfigurer;
 import org.homio.app.auth.JwtTokenProvider;
 import org.homio.app.auth.UserEntityDetailsService;
+import org.homio.app.manager.common.impl.EntityContextSettingImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
 
 @Configuration
 @EnableWebSecurity
 @AllArgsConstructor
-@EnableGlobalMethodSecurity(jsr250Enabled = true)
 public class SecurityConfiguration {
 
     private final PasswordEncoder passwordEncoder;
     private final UserEntityDetailsService userEntityDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
-    private final AppProperties appProperties;
     private final Log log = LogFactory.getLog(RequestFilter.class);
+
+    @Bean
+    public MethodValidationPostProcessor methodValidationPostProcessor() {
+        return new MethodValidationPostProcessor();
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -39,47 +49,49 @@ public class SecurityConfiguration {
         // http.csrf().csrfTokenRepository(csrfTokenRepository()).;
 
         // No session will be created or used by spring security
-        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+        http.sessionManagement(session ->
+            session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         // Entry points
-        if (appProperties.isDisableSecurity()) {
-            log.warn("\n-----------------------------------"
-                + "\n!!! TouchHome security disabled !!!"
-                + "\n-----------------------------------");
-            http.authorizeRequests().antMatchers(WebSocketConfig.ENDPOINT, "/rest/**").permitAll();
+        if (EntityContextSettingImpl.getHomioProperties().getProperty("security-disable", "false").equalsIgnoreCase("true")) {
+            log.warn("""
+                -----------------------------------
+                !!! TouchHome security disabled !!!
+                -----------------------------------
+                """);
+            http.authorizeHttpRequests(authorize ->
+                authorize.requestMatchers(WEB_SOCKET_ENDPOINT, CUSTOM_WEB_SOCKET_ENDPOINT + "/**", "/rest/**").permitAll());
         } else {
-            http.authorizeRequests()//
-                .antMatchers(
-                    WebSocketConfig.ENDPOINT,
-                    "/rest/frame/**",
-                    "/rest/media/audio/**/play",
-                    "/rest/media/video/**/play",
-                    "/rest/media/video/playback/**/download",
-                    "/rest/media/video/playback/**/thumbnail/**",
+            http.authorizeHttpRequests(authorize -> {
+                // to avoid issue with ResponseEntity<StreamingResponseBody>
+                authorize.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD, DispatcherType.ASYNC).permitAll();
+                authorize.requestMatchers(
+                    WEB_SOCKET_ENDPOINT,
+                    CUSTOM_WEB_SOCKET_ENDPOINT + "/**",
+                    "/rest/test",
                     "/rest/auth/status",
                     "/rest/auth/login",
-                    "/rest/bundle/image/**",
-                    "/rest/device/**").permitAll()
-                .antMatchers("/rest/**").authenticated()
-                .and()
-                .csrf().disable()
-                .headers().frameOptions().disable();
+                    "/rest/auth/register",
+                    "/rest/frame/**",
+                    "/rest/media/audio/**",
+                    "/rest/media/video/**",
+                    "/rest/media/video/playback/**",
+                    "/rest/addon/image/**",
+                    "/rest/media/image/**",
+                    "/rest/device/**").permitAll();
+                authorize.requestMatchers("/rest/**").authenticated();
+            });
+            http.csrf(AbstractHttpConfigurer::disable);
+            http.headers(headers -> headers.frameOptions(FrameOptionsConfig::disable));
         }
 
         // If a user try to access a resource without having enough permissions
-        http.exceptionHandling().accessDeniedPage("/login");
+        http.exceptionHandling(exception -> exception.accessDeniedPage("/login"));
 
         // Apply JWT
         http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider));
         return http.build();
     }
-
-    /*@Bean
-    public CsrfTokenRepository csrfTokenRepository() {
-        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        repository.setCookiePath("/");
-        return repository;
-    }*/
 
     @Bean
     public AuthenticationManager authManager(HttpSecurity http) throws Exception {
@@ -95,40 +107,4 @@ public class SecurityConfiguration {
         authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
-
-   /* @Override
-    protected void configure(AuthenticationManagerBuilder auth) {
-        auth.authenticationProvider(authenticationProvider(null));
-    }*/
-
-    /*@Bean
-    public FilterRegistrationBean remoteAddressFilter() {
-        FilterRegistrationBean<RequestFilter> filterRegistrationBean = new FilterRegistrationBean<>();
-        RequestFilter filter = new RequestFilter() {
-
-            @Override
-            protected Log getLogger() {
-                return log;
-            }
-
-            @Override
-            public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException,
-            ServletException {
-                if (!"https".equals(request.getScheme())) {
-                    process(request.getRemoteAddr(), request, response, chain);
-                } else {
-                    chain.doFilter(request, response);
-                }
-            }
-        };
-
-        filter.setAllow("0:0:0:0:0:0:0:1");
-        filter.setDenyStatus(HttpStatus.FORBIDDEN.value());
-
-        filterRegistrationBean.setFilter(filter);
-        filterRegistrationBean.addUrlPatterns("/*");
-
-        return filterRegistrationBean;
-
-    }*/
 }

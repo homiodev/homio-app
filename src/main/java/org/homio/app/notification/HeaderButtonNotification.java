@@ -6,8 +6,8 @@ import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.bundle.api.model.ActionResponseModel;
-import org.homio.bundle.api.ui.dialog.DialogModel;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.ui.dialog.DialogModel;
 
 @Getter
 @Setter
@@ -19,7 +19,6 @@ public class HeaderButtonNotification extends BaseNotificationModel<HeaderButton
 
     private String icon;
     private String iconColor;
-    private Boolean iconRotate;
 
     private Integer borderWidth = 1;
     private String borderColor;

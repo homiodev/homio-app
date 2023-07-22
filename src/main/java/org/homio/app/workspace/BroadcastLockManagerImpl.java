@@ -9,11 +9,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.homio.bundle.api.EntityContextBGP.ThreadContext;
-import org.homio.bundle.api.workspace.BroadcastLock;
-import org.homio.bundle.api.workspace.BroadcastLockManager;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
-import org.springframework.data.util.Pair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.workspace.BroadcastLock;
+import org.homio.api.workspace.BroadcastLockManager;
+import org.homio.api.workspace.WorkspaceBlock;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -57,8 +57,7 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     @Override
     public BroadcastLock listenEvent(WorkspaceBlock workspaceBlock, Supplier<Boolean> supplier) {
         BroadcastLockImpl lock = getOrCreateLock(workspaceBlock);
-        workspaceWarehouse.broadcastListenersMap.put(
-            workspaceBlock.getId(), Pair.of(lock, supplier));
+        workspaceWarehouse.broadcastListenersMap.put(workspaceBlock.getId(), Pair.of(lock, supplier));
 
         if (workspaceWarehouse.threadContext == null) {
             workspaceBlock
@@ -69,8 +68,8 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
                 .tap(context -> workspaceWarehouse.threadContext = context)
                 .execute(() -> {
                     for (Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item : workspaceWarehouse.broadcastListenersMap.entrySet()) {
-                        if (item.getValue().getSecond().get()) {
-                            item.getValue().getFirst().signalAll();
+                        if (item.getValue().getValue().get()) {
+                            item.getValue().getKey().signalAll();
                         }
                     }
                 });
@@ -82,7 +81,7 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
     public void release() {
         for (Pair<BroadcastLockImpl, Supplier<Boolean>> pair :
             workspaceWarehouse.broadcastListenersMap.values()) {
-            pair.getFirst().release();
+            pair.getKey().release();
         }
         workspaceWarehouse.broadcastListenersMap.clear();
 

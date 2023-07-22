@@ -1,6 +1,8 @@
 package org.homio.app.ssh;
 
-import static org.homio.bundle.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static java.lang.String.format;
+import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
 import com.sshtools.client.SessionChannelNG;
 import com.sshtools.client.SshClient;
@@ -10,6 +12,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
@@ -17,39 +20,49 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.map.PassiveExpiringMap;
+import org.apache.commons.lang3.StringUtils;
+import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.app.manager.common.EntityContextImpl;
+import org.homio.app.manager.common.impl.EntityContextServiceImpl.DynamicWebSocketHandler;
+import org.homio.app.rest.ConsoleController;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermHandler;
 import org.homio.app.ssh.SSHServerEndpoint.XtermMessage.XtermMessageType;
 import org.homio.app.ssh.SshProviderService.SshSession;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextBGP.ThreadContext;
 import org.jetbrains.annotations.NotNull;
 import org.msgpack.core.MessageBufferPacker;
 import org.msgpack.core.MessagePack;
 import org.msgpack.core.MessageUnpacker;
-import org.springframework.context.ApplicationContext;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
 @Log4j2
 @Service
-@RequiredArgsConstructor
-public class SSHServerEndpoint extends BinaryWebSocketHandler {
+public class SSHServerEndpoint extends BinaryWebSocketHandler implements DynamicWebSocketHandler {
 
-    private final ApplicationContext applicationContext;
+    private static final String TOKEN = "token";
+    private static final String COLS = "cols";
+    private static final String WEBSSH_PATH = CUSTOM_WEB_SOCKET_ENDPOINT + "/webssh";
+    private static final String FORMAT = "ws://%s:9111%s?%s=${TOKEN}&Authentication=${BEARER}&%s=${COLS}";
 
     private static final PassiveExpiringMap<String, SessionContext> sessionByToken = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
     private static final PassiveExpiringMap<String, SessionContext> sessionBySessionId = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
+    private final EntityContextImpl entityContext;
 
-    public boolean hasToken(String token) {
-        return sessionByToken.containsKey(token);
+    public SSHServerEndpoint(EntityContextImpl entityContext) {
+        this.entityContext = entityContext;
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        String token = (String) session.getAttributes().get("token");
+        String token = (String) session.getAttributes().get(TOKEN);
+        Integer cols = (Integer) session.getAttributes().get(COLS);
         SessionContext sessionContext = sessionByToken.get(token);
         if (sessionContext == null) {
             session.close(CloseStatus.GOING_AWAY);
@@ -61,14 +74,8 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler {
             message.setData("bash".getBytes());
             session.sendMessage(message.build());
 
-            sessionContext.connectToSSH();
+            sessionContext.connectToSSH(cols);
         }
-    }
-
-    @Override
-    protected void handleBinaryMessage(WebSocketSession session, @NotNull BinaryMessage message) {
-        SessionContext sessionContext = sessionBySessionId.get(session.getId());
-        sessionContext.onMessage(message);
     }
 
     @Override
@@ -79,136 +86,45 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, @NotNull CloseStatus status) {
         log.info("SSH close connection: {}/{}", session.getId(), status);
-        SessionContext sessionContext = sessionBySessionId.get(session.getId());
+        SessionContext sessionContext = sessionBySessionId.remove(session.getId());
         if (sessionContext != null) {
             sessionContext.closeSessionContext();
         }
     }
 
     public SshSession openSession(SshGenericEntity entity) {
-        String token = UUID.randomUUID().toString();
-        SessionContext sessionContext = new SessionContext(token, entity);
-        sessionByToken.put(token, sessionContext);
+        entityContext.service().registerWebSocketEndpoint(WEBSSH_PATH, this);
 
-        SshSession session = new SshSession();
-        session.setToken(token);
-        session.setWsURL("ws://" + MACHINE_IP_ADDRESS + ":9111/webssh?token=" + token);
+        String token = UUID.randomUUID().toString();
+
+        SshSession<SshGenericEntity> session = new SshSession<>(token, format(FORMAT, MACHINE_IP_ADDRESS, WEBSSH_PATH, TOKEN, COLS), entity);
+        sessionByToken.put(token, new SessionContext(session));
+
         return session;
     }
 
-    /**
-     * Remove session from UI
-     *
-     * @param token - token
-     */
     @SneakyThrows
-    public void closeSession(String token) {
-        SessionContext sessionContext = sessionByToken.get(token);
+    public void closeSession(SshSession<SshGenericEntity> session) {
+        SessionContext sessionContext = sessionByToken.remove(session.getToken());
         if (sessionContext != null) {
             sessionContext.closeSessionContext();
-            sessionByToken.remove(token);
             if (sessionContext.wsSession != null) {
                 sessionBySessionId.remove(sessionContext.wsSession.getId());
             }
         }
     }
 
-    @RequiredArgsConstructor
-    private class SessionContext {
-
-        private @NotNull final String token;
-        private @NotNull final SshGenericEntity entity;
-        private String sessionId;
-        private WebSocketSession wsSession;
-        private ThreadContext<Void> threadContext;
-        private SshClient sshClient;
-        private SessionChannelNG sshChannel;
-
-        @SneakyThrows
-        private void closeSessionContext() {
-            log.info("SSH close connection: {}", token);
-            try {
-                wsSession.close(CloseStatus.NORMAL);
-                if (sshClient != null) {
-                    sshClient.close();
-                }
-                if (threadContext != null) {
-                    threadContext.cancel();
-                }
-            } catch (Exception ex) {
-                log.error("SSH error while close ssh session", ex);
-            }
+    public void resizeSshConsole(SshSession<SshGenericEntity> session, int cols) {
+        SessionContext sessionContext = sessionByToken.remove(session.getToken());
+        if (sessionContext != null && sessionContext.sshChannel != null) {
+            sessionContext.sshChannel.changeTerminalDimensions(cols, 30, 0, 0);
         }
+    }
 
-        public void onMessage(BinaryMessage buffer) {
-            MessageUnpacker payload = MessagePack.newDefaultUnpacker(buffer.getPayload());
-            try {
-                payload.unpackArrayHeader(); // must be always 3
-                payload.unpackByte();
-                payload.unpackByte(); // pane id - 0
-                String content = payload.unpackString();
-                transToSSH(content.getBytes());
-            } catch (IOException ex) {
-                log.error("SSH send to sse", ex);
-                this.closeSessionContext();
-            }
-        }
-
-        private void transToSSH(byte[] buffer) throws IOException {
-            if (sshChannel != null) {
-                OutputStream outputStream = sshChannel.getOutputStream();
-                outputStream.write(buffer);
-                outputStream.flush();
-            }
-        }
-
-        public void connectToSSH() {
-            if (threadContext != null && !threadContext.isStopped()) {
-                return;
-            }
-            threadContext = applicationContext.getBean(EntityContext.class).bgp().builder("ssh-shell-" + sessionId).execute(() -> {
-                try {
-                    connect();
-                } catch (Exception e) {
-                    log.error("SSH error connect to ssh");
-                    closeSessionContext();
-                }
-            });
-        }
-
-        private void connect() throws IOException {
-            try (SshClient sshClient = entity.createSshClient()) {
-                this.sshClient = sshClient;
-                log.info("SSH connected: {}", token);
-                sshClient.runTask(new ShellTask(sshClient) {
-
-                    @Override
-                    protected void onOpenSession(SessionChannelNG channel) {
-                        sshChannel = channel;
-                        try {
-                            log.info("SSH shell session opened: {}", token);
-                            XtermMessage welcomeMessage = new XtermMessage(XtermMessageType.OutMessage, XtermHandler.pty_data);
-                            welcomeMessage.setData(("Homio: welcome to " + entity.getHost() + "\n\r").getBytes());
-                            wsSession.sendMessage(welcomeMessage.build());
-                            // transToSSH("\r\n".getBytes());
-
-                            try (InputStream inputStream = channel.getInputStream()) {
-                                byte[] buffer = new byte[1024];
-                                int i;
-                                while ((i = inputStream.read(buffer)) != -1) {
-                                    byte[] bytesToSend = Arrays.copyOfRange(buffer, 0, i);
-                                    XtermMessage message = new XtermMessage(XtermMessageType.OutMessage, XtermHandler.pty_data);
-                                    message.setData(bytesToSend);
-                                    wsSession.sendMessage(message.build());
-                                }
-                            }
-                        } catch (Exception ex) {
-                            log.error("SSH error during session", ex);
-                        }
-                    }
-                });
-            }
-        }
+    @Override
+    protected void handleBinaryMessage(WebSocketSession session, @NotNull BinaryMessage message) {
+        SessionContext sessionContext = sessionBySessionId.get(session.getId());
+        sessionContext.onMessage(message);
     }
 
     @RequiredArgsConstructor
@@ -225,13 +141,13 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler {
             payload.packArrayHeader(2);
             payload.packByte((byte) messageType.id);
             switch (xtermHandler) {
-                case pty_data:
+                case pty_data -> {
                     payload.packArrayHeader(3);
                     payload.packByte((byte) xtermHandler.id);
                     payload.packByte((byte) 0);
                     payload.packString(new String(data));
-                    break;
-                case sync:
+                }
+                case sync -> {
                     payload.packArrayHeader(5);
                     payload.packByte((byte) xtermHandler.id); // handler id
                     payload.packByte((byte) 120); // col width
@@ -243,9 +159,8 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler {
                     payload.packString("bash");
                     payload.packByte((byte) 0); // 0 instead of array: [0, 120, 29, 0, 0]
                     payload.packByte((byte) 0);
-
                     payload.packByte((byte) 0);
-
+                }
             }
             payload.close();
             return ByteBuffer.wrap(payload.toByteArray());
@@ -265,6 +180,166 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler {
         public enum XtermHandler {
             sync(1), pty_data(2), status(5), sync_copy_mode(6), fin(8);
             private final int id;
+        }
+    }
+
+    @Override
+    public boolean beforeHandshake(@NotNull ServerHttpRequest serverHttpRequest, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler,
+        @NotNull Map<String, Object> attributes) {
+        if (serverHttpRequest instanceof ServletServerHttpRequest request) {
+            String token = request.getServletRequest().getParameter(TOKEN);
+            if (!StringUtils.isEmpty(token) && sessionByToken.containsKey(token)) {
+                attributes.put(TOKEN, token);
+
+                String cols = request.getServletRequest().getParameter(COLS);
+                if (!StringUtils.isEmpty(cols)) {
+                    attributes.put(COLS, Integer.parseInt(cols));
+                }
+                return true;
+            }
+
+        }
+        return false;
+    }
+
+    @RequiredArgsConstructor
+    private class SessionContext {
+
+        private @NotNull final SshSession<SshGenericEntity> session;
+        private String sessionId;
+        private WebSocketSession wsSession;
+        private ThreadContext<Void> threadContext;
+        private SshClient sshClient;
+        private SessionChannelNG sshChannel;
+
+        public void onMessage(BinaryMessage buffer) {
+            MessageUnpacker payload = MessagePack.newDefaultUnpacker(buffer.getPayload());
+            try {
+                payload.unpackArrayHeader(); // must be always 3
+                payload.unpackByte();
+                payload.unpackByte(); // pane id - 0
+                String content = payload.unpackString();
+                transToSSH(content.getBytes());
+            } catch (IOException ex) {
+                log.error("SSH send to sse", ex);
+                this.closeSessionContext();
+            }
+        }
+
+        public void connectToSSH(Integer cols) {
+            if (threadContext != null && !threadContext.isStopped()) {
+                return;
+            }
+            threadContext = entityContext.bgp().builder("ssh-shell-" + sessionId).execute(() -> {
+                try {
+                    connect(cols);
+                } catch (Exception e) {
+                    log.error("SSH error connect to ssh");
+                    closeSessionContext();
+                }
+            });
+        }
+
+        @SneakyThrows
+        private void closeSessionContext() {
+            ConsoleController.getSessions().remove(session.getToken());
+            log.info("SSH close connection: {}", session);
+            try {
+                wsSession.close(CloseStatus.NORMAL);
+                if (sshClient != null) {
+                    sshClient.close();
+                }
+                if (threadContext != null) {
+                    threadContext.cancel();
+                }
+            } catch (Exception ex) {
+                log.error("SSH error while close ssh session", ex);
+            }
+        }
+
+        private void transToSSH(byte[] buffer) throws IOException {
+            if (sshChannel != null) {
+                OutputStream outputStream = sshChannel.getOutputStream();
+                outputStream.write(buffer);
+                outputStream.flush();
+            }
+        }
+
+        private void connect(Integer cols) throws IOException {
+            try (SshClient sshClient = session.getEntity().createSshClient()) {
+                this.sshClient = sshClient;
+                log.info("SSH connected: {}", session);
+                sshClient.runTask(createShellTask(cols, sshClient));
+            }
+        }
+
+        @NotNull
+        private ShellTask createShellTask(Integer cols, SshClient sshClient) {
+            return new ShellTask(sshClient) {
+
+                @Override
+                protected void beforeStartShell(SessionChannelNG session1) {
+                    session1.allocatePseudoTerminal("xterm", cols == null ? 80 : cols, 30);
+                }
+
+                @Override
+                protected void onOpenSession(SessionChannelNG channel) {
+                    sshChannel = channel;
+                    try {
+                        log.info("SSH shell session opened: {}", session);
+                        XtermMessage welcomeMessage = new XtermMessage(XtermMessageType.OutMessage, XtermHandler.pty_data);
+                        welcomeMessage.setData(("Homio: welcome to " + session.getEntity().getHost() + "\n\r").getBytes());
+                        wsSession.sendMessage(welcomeMessage.build());
+
+                        readInfiniteFromTerminal(channel);
+                    } catch (Exception ex) {
+                        log.error("SSH error during session", ex);
+                    }
+                }
+
+                private void readInfiniteFromTerminal(SessionChannelNG channel) throws IOException {
+                    try (InputStream inputStream = channel.getInputStream()) {
+                        byte[] buffer = new byte[1024];
+                        int i;
+                        while ((i = inputStream.read(buffer)) != -1) {
+                            XtermMessage message = new XtermMessage(XtermMessageType.OutMessage, XtermHandler.pty_data);
+                            if (i == 1024) { // too much data
+                                int availableBytes = inputStream.available();
+                                if (availableBytes > 10_000_000) { // read by 1MB if more that 10MB
+                                    log.warn("Too much ssh data to read. Read data one by one");
+                                    writeBigDataToSocket(inputStream, availableBytes);
+                                    continue;
+                                }
+                                byte[] bigBuffer = new byte[i + availableBytes];
+                                int readBytesIntoBigBuffer = inputStream.read(bigBuffer, i, availableBytes);
+                                if (readBytesIntoBigBuffer != availableBytes) {
+                                    log.warn("Not all data read from ssh stream: {}/{}", readBytesIntoBigBuffer, availableBytes);
+                                }
+                                System.arraycopy(buffer, 0, bigBuffer, 0, i);
+                                message.setData(bigBuffer);
+                            } else {
+                                message.setData(Arrays.copyOfRange(buffer, 0, i));
+                            }
+                            wsSession.sendMessage(message.build());
+                        }
+                    }
+                }
+
+                private void writeBigDataToSocket(InputStream inputStream, int availableBytes) throws IOException {
+                    byte[] buffer = new byte[1_000_000];
+                    XtermMessage message = new XtermMessage(XtermMessageType.OutMessage, XtermHandler.pty_data);
+                    while (availableBytes > 0) {
+                        int rb = inputStream.read(buffer);
+                        if (rb < 1_000_000) {
+                            message.setData(Arrays.copyOfRange(buffer, 0, rb));
+                        } else {
+                            message.setData(buffer);
+                        }
+                        wsSession.sendMessage(message.build());
+                        availableBytes -= rb;
+                    }
+                }
+            };
         }
     }
 }

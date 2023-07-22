@@ -5,6 +5,7 @@ import static org.apache.xmlbeans.XmlBeans.getTitle;
 
 import com.pivovarit.function.ThrowingBiConsumer;
 import com.pivovarit.function.ThrowingRunnable;
+import jakarta.persistence.EntityManagerFactory;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -21,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import javax.persistence.EntityManagerFactory;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -39,25 +39,23 @@ import org.hibernate.event.spi.EventType;
 import org.hibernate.event.spi.PostDeleteEvent;
 import org.hibernate.event.spi.PostInsertEvent;
 import org.hibernate.event.spi.PostUpdateEvent;
-import org.hibernate.event.spi.PreDeleteEventListener;
 import org.hibernate.internal.SessionFactoryImpl;
+import org.homio.api.EntityContextBGP;
+import org.homio.api.EntityContextEvent;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.BaseEntityIdentifier;
+import org.homio.api.entity.PinBaseEntity;
+import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
+import org.homio.api.service.EntityService;
+import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.api.util.CommonUtils;
+import org.homio.api.util.FlowMap;
+import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.manager.common.EntityContextImpl.ItemAction;
-import org.homio.app.manager.common.EntityContextStorage;
-import org.homio.bundle.api.EntityContextBGP;
-import org.homio.bundle.api.EntityContextEvent;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.BaseEntityIdentifier;
-import org.homio.bundle.api.entity.PinBaseEntity;
-import org.homio.bundle.api.model.HasEntityIdentifier;
-import org.homio.bundle.api.model.OptionModel;
-import org.homio.bundle.api.service.EntityService;
-import org.homio.bundle.api.service.EntityService.ServiceInstance;
-import org.homio.bundle.api.storage.InMemoryDB;
-import org.homio.bundle.api.ui.UI.Color;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.api.util.FlowMap;
-import org.homio.bundle.api.util.Lang;
+import org.homio.app.service.mem.InMemoryDB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -88,44 +86,26 @@ public class EntityContextEventImpl implements EntityContextEvent {
     public EntityContextEventImpl(EntityContextImpl entityContext, EntityManagerFactory entityManagerFactory) {
         this.entityContext = entityContext;
         registerEntityListeners(entityManagerFactory);
-
-        // execute all updates in thread
-        new Thread(() -> {
-            while (true) {
-                try {
-                    EntityUpdate entityUpdate = entityUpdatesQueue.take();
-                    entityUpdate.itemAction.handler.accept(entityContext, entityUpdate.entity);
-                } catch (Exception ex) {
-                    log.error("Error while execute postUpdate action", ex);
-                }
-            }
-        }).start();
-        // event handler
-        new Thread(() -> {
-            while (true) {
-                try {
-                    Event event = eventQueue.take();
-                    for (Map<String, Consumer<Object>> eventListenerMap : eventListeners.values()) {
-                        if (eventListenerMap.containsKey(event.key)) {
-                            eventListenerMap.get(event.key).accept(event.value);
-                        }
-                    }
-                    globalEvenListeners.forEach(l -> l.accept(event.key, event.value));
-                    entityContext.fireAllBroadcastLock(broadcastLockManager -> broadcastLockManager.signalAll(event.key, event.value));
-                } catch (Exception ex) {
-                    log.error("Error while execute event handler", ex);
-                }
-            }
-        }).start();
     }
 
     @Override
-    public void removeEvents(String key, String... additionalKeys) {
+    public synchronized void removeEvents(String key, String... additionalKeys) {
         eventListeners.remove(key);
         lastValues.remove(key);
         for (String additionalKey : additionalKeys) {
             eventListeners.remove(additionalKey);
             lastValues.remove(additionalKey);
+        }
+    }
+
+    @Override
+    public synchronized void removeEventListener(String discriminator, String key) {
+        Map<String, Consumer<Object>> map = eventListeners.get(discriminator);
+        if (map != null) {
+            map.remove(key);
+            if (map.isEmpty()) {
+                eventListeners.remove(discriminator);
+            }
         }
     }
 
@@ -152,29 +132,6 @@ public class EntityContextEventImpl implements EntityContextEvent {
     @Override
     public EntityContextEvent fireEvent(@NotNull String key, @Nullable Object value) {
         return fireEvent(key, value, false);
-    }
-
-    @NotNull
-    private EntityContextEventImpl fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
-        // fire by key and key + value type
-        fireEventInternal(key, value, compareValues);
-        if (value != null && !(value instanceof String)) {
-            fireEventInternal(key + "_" + value.getClass().getSimpleName(), value, compareValues);
-        }
-        return this;
-    }
-
-    private void fireEventInternal(@NotNull String key, @Nullable Object value, boolean compareValues) {
-        if (StringUtils.isEmpty(key)) {
-            throw new IllegalArgumentException("Unable to fire event with empty key");
-        }
-        if (value != null) {
-            if (compareValues && Objects.equals(value, lastValues.get(key))) {
-                return;
-            }
-            lastValues.put(key, value);
-        }
-        eventQueue.add(new Event(key, value));
     }
 
     public void addEvent(String key) {
@@ -276,9 +233,9 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 });
                 scheduleFuture.setDescription("Listen udp: " + hostPortKey);
             } catch (Exception ex) {
-                entityContext.ui().addOrUpdateNotificationBlock("UPD", "UDP", "fas fa-kip-sign", "#482594", blockBuilder -> {
-                    blockBuilder.addInfo(Lang.getServerMessage("UDP_ERROR", FlowMap.of("key", hostPortKey, "msg", ex.getMessage())),
-                        "", "fas fa-triangle-exclamation", Color.RED);
+                entityContext.ui().addOrUpdateNotificationBlock("UPD", "UDP", new Icon("fas fa-kip-sign", "#482594"), blockBuilder -> {
+                    String info = Lang.getServerMessage("UDP_ERROR", FlowMap.of("key", hostPortKey, "msg", ex.getMessage()));
+                    blockBuilder.addInfo(info, new Icon("fas fa-triangle-exclamation"));
                 });
                 log.error("Unable to listen udp host:port: <{}>", hostPortKey);
                 return;
@@ -294,87 +251,58 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }
     }
 
-    @RequiredArgsConstructor
-    private static class UdpContext {
-
-        private final Map<String, BiConsumer<DatagramPacket, String>> keyToListener = new HashMap<>();
-        private final EntityContextBGP.ThreadContext<Void> scheduleFuture;
-
-        public void handle(DatagramPacket datagramPacket, String text) {
-            for (BiConsumer<DatagramPacket, String> listener : keyToListener.values()) {
-                listener.accept(datagramPacket, text);
+    public void onContextCreated() throws Exception {
+        // execute all updates in thread
+        new Thread(() -> {
+            while (true) {
+                try {
+                    EntityUpdate entityUpdate = entityUpdatesQueue.take();
+                    entityUpdate.itemAction.handler.accept(entityContext, entityUpdate.entity);
+                } catch (Exception ex) {
+                    log.error("Error while execute postUpdate action", ex);
+                }
             }
-        }
-
-        public void put(String key, BiConsumer<DatagramPacket, String> listener) {
-            this.keyToListener.put(key, listener);
-        }
-
-        public void cancel(String key) {
-            keyToListener.remove(key);
-            if (keyToListener.isEmpty()) {
-                scheduleFuture.cancel();
+        }).start();
+        // event handler
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Event event = eventQueue.take();
+                    for (Map<String, Consumer<Object>> eventListenerMap : eventListeners.values()) {
+                        if (eventListenerMap.containsKey(event.key)) {
+                            eventListenerMap.get(event.key).accept(event.value);
+                        }
+                    }
+                    globalEvenListeners.forEach(l -> l.accept(event.key, event.value));
+                    entityContext.fireAllBroadcastLock(broadcastLockManager -> broadcastLockManager.signalAll(event.key, event.value));
+                } catch (Exception ex) {
+                    log.error("Error while execute event handler", ex);
+                }
             }
-        }
+        }).start();
     }
 
-    @Getter
-    public static class EntityListener {
-
-        private final Map<String, Map<String, EntityUpdateListener>> typeBiListeners = new HashMap<>();
-        private final Map<String, Map<String, Consumer>> typeListeners = new HashMap<>();
-
-        private final Map<String, Map<String, Consumer>> idListeners = new HashMap<>();
-        private final Map<String, Map<String, EntityUpdateListener>> idBiListeners = new HashMap<>();
-
-        public <T extends HasEntityIdentifier> void notify(T saved, T oldEntity) {
-            // notify by entityID
-            String entityId = saved == null ? oldEntity.getEntityID() : saved.getEntityID();
-            for (Consumer listener : idListeners.getOrDefault(entityId, emptyMap()).values()) {
-                listener.accept(saved);
-            }
-            for (EntityUpdateListener listener : idBiListeners.getOrDefault(entityId, emptyMap()).values()) {
-                listener.entityUpdated(saved, oldEntity);
-            }
-
-            // notify by class type
-            Class typeClass = saved == null ? oldEntity.getClass() : saved.getClass();
-
-            for (Class<?> entityClass : ClassUtils.getAllInterfaces(typeClass)) {
-                this.notifyByType(entityClass.getName(), saved, oldEntity);
-            }
-            for (Class<?> entityClass : ClassUtils.getAllSuperclasses(typeClass)) {
-                this.notifyByType(entityClass.getName(), saved, oldEntity);
-            }
-            this.notifyByType(typeClass.getName(), saved, oldEntity);
+    @NotNull
+    private EntityContextEventImpl fireEvent(@NotNull String key, @Nullable Object value, boolean compareValues) {
+        // fire by key and key + value type
+        fireEventInternal(key, value, compareValues);
+        if (value != null && !(value instanceof String)) {
+            fireEventInternal(key + "_" + value.getClass().getSimpleName(), value, compareValues);
         }
+        return this;
+    }
 
-        private <T extends HasEntityIdentifier> void notifyByType(String name, T saved, T oldEntity) {
-            for (EntityUpdateListener listener : typeBiListeners.getOrDefault(name, emptyMap()).values()) {
-                listener.entityUpdated(saved, oldEntity);
-            }
-            for (Consumer listener : typeListeners.getOrDefault(name, emptyMap()).values()) {
-                listener.accept(saved == null ? oldEntity : saved); // for Delete we have to use oldEntity
-            }
+    private void fireEventInternal(@NotNull String key, @Nullable Object value, boolean compareValues) {
+        if (StringUtils.isEmpty(key)) {
+            throw new IllegalArgumentException("Unable to fire event with empty key");
         }
-
-        public <T extends BaseEntity> boolean isRequireFetchOldEntity(T entity) {
-            if (!idBiListeners.getOrDefault(entity.getEntityID(), emptyMap()).isEmpty()) {
-                return true;
+        if (value != null) {
+            if (compareValues && Objects.equals(value, lastValues.get(key))) {
+                return;
             }
-            Class<?> cursor = entity.getClass();
-            while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
-                if (!typeBiListeners.getOrDefault(cursor.getName(), emptyMap()).isEmpty()) {
-                    return true;
-                }
-                cursor = cursor.getSuperclass();
-            }
-            return false;
+            lastValues.put(key, value);
         }
-
-        public int getCount(String key) {
-            return 0;
-        }
+        eventQueue.add(new Event(key, value));
     }
 
     private void registerEntityListeners(EntityManagerFactory entityManagerFactory) {
@@ -386,10 +314,9 @@ public class EntityContextEventImpl implements EntityContextEvent {
                 loadEntityService(entityContext, entity);
             }
         });
-        registry.getEventListenerGroup(EventType.PRE_DELETE).appendListener((PreDeleteEventListener) event -> {
+        registry.getEventListenerGroup(EventType.PRE_DELETE).appendListener(event -> {
             Object entity = event.getEntity();
-            if (entity instanceof BaseEntity) {
-                BaseEntity baseEntity = (BaseEntity) entity;
+            if (entity instanceof BaseEntity baseEntity) {
                 if (baseEntity.isDisableDelete()) {
                     throw new IllegalStateException("Unable to remove entity");
                 }
@@ -473,26 +400,12 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }
     }
 
-    @RequiredArgsConstructor
-    private static class Event {
-
-        private final String key;
-        private final Object value;
-    }
-
-    @RequiredArgsConstructor
-    private static class EntityUpdate {
-
-        private final Object entity;
-        private final EntityUpdateAction itemAction;
-    }
-
     @AllArgsConstructor
     public enum EntityUpdateAction {
         Insert((context, entity) -> {
             postInsertUpdate(context, entity, true);
             if (entity instanceof BaseEntity && !(entity instanceof PinBaseEntity)) {
-                context.ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", "NAME", ((BaseEntity<?>) entity).getEntityID()));
+                context.ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", ((BaseEntity<?>) entity).getEntityID()));
             }
         }),
         Update((context, entity) -> {
@@ -500,30 +413,126 @@ public class EntityContextEventImpl implements EntityContextEvent {
         }),
         Delete((context, entity) -> {
             if (entity instanceof BaseEntity) {
-                String entityID = ((BaseEntity<?>) entity).getEntityID();
-                // remove all status for entity
-                EntityContextStorage.ENTITY_MEMORY_MAP.remove(entityID);
-                // remove in-memory data if any exists
-                InMemoryDB.removeService(entityID);
-                // clear all registered console plugins if any exists
-                context.ui().unRegisterConsolePlugin(entityID);
-                // remove any registered notifications/notification block
-                context.ui().removeNotificationBlock(entityID);
-                // destroy any additional services
-                if (entity instanceof EntityService) {
-                    try {
-                        ((EntityService<?, ?>) entity).destroyService();
-                    } catch (Exception ex) {
-                        log.warn("Unable to destroy service for entity: {}", getTitle());
-                    }
-                }
-                // remove in-memory data
-                context.getEntityContextStorage().remove(entityID);
-                ((BaseEntity) entity).afterDelete(context);
+                // execute in separate thread
+                context.bgp().builder("delete-delay-entity-" + ((BaseEntity<?>) entity).getEntityID())
+                       .execute(() -> {
+                           // destroy any additional services
+                           if (entity instanceof EntityService) {
+                               try {
+                                   ((EntityService<?, ?>) entity).destroyService();
+                               } catch (Exception ex) {
+                                   log.warn("Unable to destroy service for entity: {}", getTitle());
+                               }
+                           }
+                           ((BaseEntity) entity).afterDelete(context);
+
+                           String entityID = ((BaseEntity<?>) entity).getEntityID();
+                           // remove all status for entity
+                           EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
+                           // remove in-memory data if any exists
+                           InMemoryDB.removeService(entityID);
+                           // clear all registered console plugins if any exists
+                           context.ui().unRegisterConsolePlugin(entityID);
+                           // remove any registered notifications/notification block
+                           context.ui().removeNotificationBlock(entityID);
+                           // remove in-memory data
+                           context.getEntityContextStorageImpl().remove(entityID);
+                       });
             }
             context.sendEntityUpdateNotification(entity, ItemAction.Remove);
         });
 
         private final ThrowingBiConsumer<EntityContextImpl, Object, Exception> handler;
+    }
+
+    @RequiredArgsConstructor
+    private static class UdpContext {
+
+        private final Map<String, BiConsumer<DatagramPacket, String>> keyToListener = new HashMap<>();
+        private final EntityContextBGP.ThreadContext<Void> scheduleFuture;
+
+        public void handle(DatagramPacket datagramPacket, String text) {
+            for (BiConsumer<DatagramPacket, String> listener : keyToListener.values()) {
+                listener.accept(datagramPacket, text);
+            }
+        }
+
+        public void put(String key, BiConsumer<DatagramPacket, String> listener) {
+            this.keyToListener.put(key, listener);
+        }
+
+        public void cancel(String key) {
+            keyToListener.remove(key);
+            if (keyToListener.isEmpty()) {
+                scheduleFuture.cancel();
+            }
+        }
+    }
+
+    @Getter
+    public static class EntityListener {
+
+        private final Map<String, Map<String, EntityUpdateListener>> typeBiListeners = new HashMap<>();
+        private final Map<String, Map<String, Consumer>> typeListeners = new HashMap<>();
+
+        private final Map<String, Map<String, Consumer>> idListeners = new HashMap<>();
+        private final Map<String, Map<String, EntityUpdateListener>> idBiListeners = new HashMap<>();
+
+        public <T extends HasEntityIdentifier> void notify(T saved, T oldEntity) {
+            // notify by entityID
+            String entityId = saved == null ? oldEntity.getEntityID() : saved.getEntityID();
+            for (Consumer listener : idListeners.getOrDefault(entityId, emptyMap()).values()) {
+                listener.accept(saved);
+            }
+            for (EntityUpdateListener listener : idBiListeners.getOrDefault(entityId, emptyMap()).values()) {
+                listener.entityUpdated(saved, oldEntity);
+            }
+
+            // notify by class type
+            Class typeClass = saved == null ? oldEntity.getClass() : saved.getClass();
+
+            for (Class<?> entityClass : ClassUtils.getAllInterfaces(typeClass)) {
+                this.notifyByType(entityClass.getName(), saved, oldEntity);
+            }
+            for (Class<?> entityClass : ClassUtils.getAllSuperclasses(typeClass)) {
+                this.notifyByType(entityClass.getName(), saved, oldEntity);
+            }
+            this.notifyByType(typeClass.getName(), saved, oldEntity);
+        }
+
+        public <T extends BaseEntity> boolean isRequireFetchOldEntity(T entity) {
+            if (!idBiListeners.getOrDefault(entity.getEntityID(), emptyMap()).isEmpty()) {
+                return true;
+            }
+            Class<?> cursor = entity.getClass();
+            while (!cursor.getSimpleName().equals(BaseEntity.class.getSimpleName())) {
+                if (!typeBiListeners.getOrDefault(cursor.getName(), emptyMap()).isEmpty()) {
+                    return true;
+                }
+                cursor = cursor.getSuperclass();
+            }
+            return false;
+        }
+
+        public int getCount(String key) {
+            return 0;
+        }
+
+        private <T extends HasEntityIdentifier> void notifyByType(String name, T saved, T oldEntity) {
+            for (EntityUpdateListener listener : typeBiListeners.getOrDefault(name, emptyMap()).values()) {
+                listener.entityUpdated(saved, oldEntity);
+            }
+            for (Consumer listener : typeListeners.getOrDefault(name, emptyMap()).values()) {
+                listener.accept(saved == null ? oldEntity : saved); // for Delete we have to use oldEntity
+            }
+        }
+    }
+
+    private record Event(String key, Object value) {
+
+    }
+
+    private record EntityUpdate(Object entity, EntityUpdateAction itemAction) {
+
     }
 }

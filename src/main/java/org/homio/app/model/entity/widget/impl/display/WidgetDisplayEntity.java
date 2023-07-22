@@ -1,7 +1,22 @@
 package org.homio.app.model.entity.widget.impl.display;
 
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.Entity;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.persistence.Entity;
+import java.util.List;
+import lombok.SneakyThrows;
+import org.homio.api.EntityContextWidget.ChartType;
+import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldLayout;
+import org.homio.api.ui.field.UIFieldLayout.HorizontalAlign;
+import org.homio.api.ui.field.UIFieldReadDefaultValue;
+import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
+import org.homio.api.ui.field.selection.dynamic.HasDynamicParameterFields;
 import org.homio.app.model.entity.widget.UIFieldJSONLine;
 import org.homio.app.model.entity.widget.UIFieldOptionFontSize;
 import org.homio.app.model.entity.widget.WidgetBaseEntityAndSeries;
@@ -13,18 +28,11 @@ import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
 import org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine;
 import org.homio.app.model.entity.widget.impl.chart.HasLineChartBehaviour;
-import org.homio.bundle.api.EntityContextWidget.ChartType;
-import org.homio.bundle.api.ui.field.UIField;
-import org.homio.bundle.api.ui.field.UIFieldColorPicker;
-import org.homio.bundle.api.ui.field.UIFieldGroup;
-import org.homio.bundle.api.ui.field.UIFieldIgnore;
-import org.homio.bundle.api.ui.field.UIFieldLayout;
-import org.homio.bundle.api.ui.field.UIFieldLayout.HorizontalAlign;
-import org.homio.bundle.api.ui.field.UIFieldReadDefaultValue;
-import org.homio.bundle.api.ui.field.UIFieldSlider;
-import org.homio.bundle.api.ui.field.condition.UIFieldShowOnCondition;
-import org.homio.bundle.api.ui.field.selection.dynamic.HasDynamicParameterFields;
+import org.homio.app.model.rest.EntityUIMetaData;
+import org.homio.app.utils.UIFieldUtils.ConfigureFieldsService;
+import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("unused")
 @Entity
 public class WidgetDisplayEntity
     extends WidgetBaseEntityAndSeries<WidgetDisplayEntity, WidgetDisplaySeriesEntity>
@@ -36,7 +44,8 @@ public class WidgetDisplayEntity
     HasName,
     HasActionOnClick,
     HasPadding,
-    HasSourceServerUpdates {
+    HasSourceServerUpdates,
+    ConfigureFieldsService {
 
     public static final String PREFIX = "wgtdp_";
 
@@ -48,12 +57,12 @@ public class WidgetDisplayEntity
     }
 
     @Override
-    public String getImage() {
+    public @NotNull String getImage() {
         return "fas fa-tv";
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
@@ -62,12 +71,6 @@ public class WidgetDisplayEntity
     @UIFieldReadDefaultValue
     public String getLayout() {
         return getJsonData("layout", getDefaultLayout());
-    }
-
-    @Override
-    @UIFieldColorPicker(allowThreshold = true, animateColorCondition = true)
-    public String getBackground() {
-        return super.getBackground();
     }
 
     @JsonIgnore
@@ -125,6 +128,16 @@ public class WidgetDisplayEntity
         setJsonData("sfsb", value);
     }
 
+    @UIField(order = 2)
+    @UIFieldGroup("CHART")
+    public boolean isShowChart() {
+        return getJsonData("showC", true);
+    }
+
+    public void setShowChart(boolean value) {
+        setJsonData("showC", value);
+    }
+
     private String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder
             .builder(15, 50, 35)
@@ -133,5 +146,17 @@ public class WidgetDisplayEntity
                 .addCol("name", UIFieldLayout.HorizontalAlign.left)
                 .addCol("value", HorizontalAlign.right))
             .build();
+    }
+
+    @SneakyThrows
+    @Override
+    public void configure(@NotNull List<EntityUIMetaData> result) {
+        for (EntityUIMetaData entityUIMetaData : result) {
+            ObjectNode meta = OBJECT_MAPPER.readValue(entityUIMetaData.getTypeMetaData(), ObjectNode.class);
+            if (meta.path("group").asText("").startsWith("GROUP.CHART")) {
+                meta.put("tab", "CHART");
+                entityUIMetaData.setTypeMetaData(OBJECT_MAPPER.writeValueAsString(meta));
+            }
+        }
     }
 }

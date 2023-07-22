@@ -1,11 +1,22 @@
 package org.homio.app.manager.common.impl;
 
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+
+import com.pivovarit.function.ThrowingBiConsumer;
 import com.pivovarit.function.ThrowingBiFunction;
+import com.pivovarit.function.ThrowingConsumer;
 import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
+import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchEvent.Kind;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -29,27 +40,27 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
-import org.homio.app.config.AppProperties;
+import org.homio.api.EntityContextBGP;
+import org.homio.api.exception.ServerException;
+import org.homio.api.model.HasEntityIdentifier;
+import org.homio.api.service.EntityService.WatchdogService;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.json.BgpProcessResponse;
 import org.homio.app.manager.bgp.InternetAvailabilityBgpService;
 import org.homio.app.manager.bgp.WatchdogBgpService;
 import org.homio.app.manager.common.EntityContextImpl;
-import org.homio.bundle.api.EntityContext;
-import org.homio.bundle.api.EntityContextBGP;
-import org.homio.bundle.api.model.HasEntityIdentifier;
-import org.homio.bundle.api.service.EntityService.WatchdogService;
-import org.homio.bundle.api.setting.SettingPlugin;
-import org.homio.bundle.api.util.CommonUtils;
-import org.homio.bundle.hquery.LinesReader;
+import org.homio.hquery.ProgressBar;
+import org.homio.hquery.StreamGobbler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
+import org.jvnet.winp.WinProcess;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.security.core.Authentication;
@@ -63,7 +74,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @Getter private final Map<String, ThreadContextImpl<?>> schedulers = new ConcurrentHashMap<>();
 
-    // not all threads may be run inside ThreadContextImpl, so we need bundle able to register
+    // not all threads may be run inside ThreadContextImpl, so we need addon able to register
     // custom
     // threads to show them on ui
     @Getter
@@ -75,11 +86,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     private final InternetAvailabilityBgpService internetAvailabilityService;
     private final WatchdogBgpService watchdogBgpService;
 
-    public EntityContextBGPImpl(
-        EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler, AppProperties appProperties) {
+    public EntityContextBGPImpl(EntityContextImpl entityContext, ThreadPoolTaskScheduler taskScheduler) {
         this.entityContext = entityContext;
         this.taskScheduler = taskScheduler;
-        this.internetAvailabilityService = new InternetAvailabilityBgpService(entityContext, appProperties, this);
+        this.internetAvailabilityService = new InternetAvailabilityBgpService(entityContext, this);
         this.watchdogBgpService = new WatchdogBgpService(this);
     }
 
@@ -98,17 +108,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
         return response;
     }
-
-    /* @Override
-    public <T> ThreadContext<T> runAndGet(@NotNull String name,
-        @Nullable Duration delay,
-        @NotNull ThrowingSupplier<T, Exception> command,
-        boolean showOnUI) {
-      return createSchedule(name, delay, threadContext -> command.get(),
-          EntityContextBGPImpl.ScheduleType.SINGLE, showOnUI, true,
-          runnable -> taskScheduler.schedule(runnable, delay == null ?
-              new Date() : new Date(System.currentTimeMillis() + delay.toMillis())));
-    }*/
 
     @Override
     public void cancelThread(@NotNull String name) {
@@ -162,7 +161,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @SneakyThrows
     @Override
-    public <T> List<T> runInBatchAndGet(
+    public <T> @NotNull List<T> runInBatchAndGet(
         @NotNull String batchName,
         @Nullable Duration maxTerminateTimeout,
         int threadsCount,
@@ -176,8 +175,17 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public void executeOnExit(Runnable runnable) {
-        Runtime.getRuntime().addShutdownHook(new Thread(runnable));
+    public void executeOnExit(ThrowingRunnable runnable) {
+        executeOnExitImpl(runnable);
+    }
+
+    private static void executeOnExitImpl(ThrowingRunnable runnable) {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                runnable.run();
+            } catch (Exception ignore) {
+            }
+        }));
     }
 
     @Override
@@ -191,6 +199,251 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     public void addWatchDogService(String key, WatchdogService watchdogService) {
         this.watchdogBgpService.addWatchDogService(key, watchdogService);
+    }
+
+    @Override
+    public <T> @NotNull ScheduleBuilder<T> builder(@NotNull String name) {
+        ThreadContextImpl<T> context = new ThreadContextImpl<>();
+        context.name = name;
+        context.scheduleType = ScheduleType.SINGLE;
+        return new ScheduleBuilder<>() {
+            private Function<Runnable, ScheduledFuture<?>> scheduleHandler;
+
+            @Override
+            public @NotNull ThreadContext<T> execute(@NotNull ThrowingFunction<ThreadContext<T>, T, Exception> command, boolean start) {
+                context.command = command;
+                if (scheduleHandler == null) {
+                    scheduleHandler = runnable -> {
+                        Date startDate = new Date();
+                        if (context.delay != null) {
+                            startDate = new Date(System.currentTimeMillis() + context.delay.toMillis());
+                        }
+                        if (context.scheduleType == ScheduleType.SINGLE) {
+                            return taskScheduler.schedule(runnable, startDate.toInstant());
+                        } else {
+                            return taskScheduler.scheduleWithFixedDelay(runnable, startDate.toInstant(), context.period);
+                        }
+                    };
+                }
+
+                if (start) {
+                    createSchedule(context, scheduleHandler);
+                } else {
+                    context.postponeScheduleHandler = scheduleHandler;
+                    cancelThread(context.name);
+                    schedulers.put(context.name, context);
+
+                }
+                return context;
+            }
+
+            @Override
+            public @NotNull ThreadContext<Void> execute(@NotNull ThrowingRunnable<Exception> command, boolean start) {
+                context.command = arg -> {
+                    if (context.authentication == null) {
+                        command.run();
+                    } else {
+                        try {
+                            SecurityContextHolder.getContext().setAuthentication(context.authentication);
+                            command.run();
+                        } finally {
+                            SecurityContextHolder.getContext().setAuthentication(null);
+                        }
+                    }
+                    return null;
+                };
+                return (ThreadContext<Void>) execute(context.command, start);
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> interval(@NotNull String cron) {
+                context.scheduleType = ScheduleType.CRON;
+                scheduleHandler = runnable -> taskScheduler.schedule(runnable, new CronTrigger(cron));
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> interval(@NotNull Duration duration) {
+                context.scheduleType = ScheduleType.DELAY;
+                context.period = duration;
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> throwOnError(boolean value) {
+                context.throwOnError = value;
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> onError(@NotNull Consumer<Exception> errorListener) {
+                context.errorListener = errorListener;
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> metadata(@NotNull String key, @NotNull Object value) {
+                context.metadata.put(key, value);
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> tap(Consumer<ThreadContext<T>> handler) {
+                handler.accept(context);
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> delay(@NotNull Duration duration) {
+                context.delay = duration;
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> auth() {
+                context.authentication = SecurityContextHolder.getContext().getAuthentication();
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> hideOnUI(boolean value) {
+                context.showOnUI = !value;
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> hideOnUIAfterCancel(boolean value) {
+                context.hideOnUIAfterCancel = value;
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> cancelOnError(boolean value) {
+                context.cancelOnError = value;
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> linkLogFile(@NotNull Path logFile) {
+                context.logFile = logFile;
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> valueListener(@NotNull String name, @NotNull ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
+                context.addValueListener(name, valueListener);
+                return this;
+            }
+        };
+    }
+
+    @Override
+    public @NotNull ProcessBuilder processBuilder(@NotNull String name) {
+        ProcessContextImpl processContext = new ProcessContextImpl();
+        processContext.name = name;
+        return new ProcessBuilder() {
+
+            @Override
+            public @NotNull ProcessBuilder setInputLoggerOutput(@Nullable Consumer<String> inputConsumer) {
+                processContext.inputConsumer = inputConsumer;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessBuilder setErrorLoggerOutput(@Nullable Consumer<String> errorConsumer) {
+                processContext.errorConsumer = errorConsumer;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessBuilder onStarted(@NotNull ThrowingConsumer<ProcessContext, Exception> startedHandler) {
+                processContext.startedHandler = startedHandler;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessBuilder onFinished(@NotNull ThrowingBiConsumer<@Nullable Exception, @NotNull Integer, Exception> finishHandler) {
+                processContext.finishHandler = finishHandler;
+                return this;
+            }
+
+            @Override
+            public @NotNull ProcessContext execute(@NotNull String command) {
+                processContext.threadContext = builder(name)
+                    .onError(processContext::onError)
+                    .execute(() -> processContext.run(command));
+                return processContext;
+            }
+        };
+    }
+
+    @Override
+    @SneakyThrows
+    public @NotNull ThreadContext<Void> runDirectoryWatchdog(@NotNull Path dir, @NotNull ThrowingConsumer<WatchEvent<Path>, Exception> onUpdateCommand,
+        Kind<?>... eventsToListen) {
+        String threadKey = "dir-watchdog-" + dir.getFileName().toString();
+        if (isThreadExists(threadKey, true)) {
+            throw new RuntimeException("Directory already watching");
+        }
+        if (!Files.isDirectory(dir)) {
+            throw new IllegalArgumentException("Path: " + dir + " is not a directory");
+        }
+        if (eventsToListen.length == 0) {
+            eventsToListen = new Kind<?>[]{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY};
+        }
+        WatchService watchService = FileSystems.getDefault().newWatchService();
+        dir.register(watchService, eventsToListen);
+
+        return builder(threadKey)
+            .interval(Duration.ofSeconds(1))
+            .execute(() -> {
+                WatchKey key;
+                while ((key = watchService.take()) != null) {
+                    for (WatchEvent<?> event : key.pollEvents()) {
+                        try {
+                            onUpdateCommand.accept((WatchEvent<Path>) event);
+                        } catch (Exception ex) {
+                            log.error("Error during handle on watch directory {}/{}", event.kind(), event.context());
+                        }
+                    }
+                    key.reset();
+                }
+            });
+    }
+
+    @Override
+    @SneakyThrows
+    public @NotNull ThreadContext<Void> runFileWatchdog(@NotNull Path file, String key, @NotNull ThrowingRunnable<Exception> onUpdateCommand) {
+        if (!Files.exists(file)) {
+            throw new IllegalArgumentException("File: " + file + " does not exists");
+        }
+        if (!Files.isRegularFile(file)) {
+            throw new IllegalArgumentException("File: " + file + " is not a regular file");
+        }
+        if (!Files.isReadable(file)) {
+            throw new IllegalArgumentException("File: " + file + " is not readable");
+        }
+
+        ThreadContext<Void> fileWatchDog = (ThreadContext<Void>) this.schedulers.get("file-watchdog" + file);
+        if (fileWatchDog != null) {
+            ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners.put(key, onUpdateCommand);
+        } else {
+            ScheduleBuilder<Void> scheduleBuilder = builder("file-watchdog" + file);
+            final AtomicLong lastModified = new AtomicLong(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis());
+            fileWatchDog = scheduleBuilder.delay(Duration.ofSeconds(10)).interval(Duration.ofSeconds(10))
+                                          .execute(context -> {
+                                              checkFileModifiedAndFireHandler(file, lastModified, (ThreadContextImpl) context);
+                                              return null;
+                                          });
+            ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners = new ConcurrentHashMap<>();
+            ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners.put(key, onUpdateCommand);
+        }
+        return fileWatchDog;
+    }
+
+    @Override
+    public @NotNull ProgressBuilder runWithProgress(@NotNull String key) {
+        return new ProgressBuilderImpl(key);
     }
 
     private <T> EntityContextBGPImpl.BatchRunContext<T> prepareBatchProcessContext(@NotNull String batchName, int threadsCount) {
@@ -216,6 +469,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         try {
             while (!executor.isTerminated()) {
                 try {
+                    //noinspection ResultOfMethodCallIgnored
                     executor.awaitTermination(1, TimeUnit.SECONDS);
                     long completedTaskCount = executor.getCompletedTaskCount();
                     progressConsumer.accept((int) completedTaskCount);
@@ -244,178 +498,6 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             batchRunContextMap.remove(batchName);
             log.info("Finish batch run <{}>", batchName);
         }
-    }
-
-    @Override
-    public <T> ScheduleBuilder<T> builder(@NotNull String name) {
-        ThreadContextImpl<T> context = new ThreadContextImpl<>();
-        context.name = name;
-        context.scheduleType = ScheduleType.SINGLE;
-        return new ScheduleBuilder<T>() {
-            private Function<Runnable, ScheduledFuture<?>> scheduleHandler;
-
-            @Override
-            public ThreadContext<T> execute(@NotNull ThrowingFunction<ThreadContext<T>, T, Exception> command, boolean start) {
-                context.command = command;
-                if (scheduleHandler == null) {
-                    scheduleHandler = runnable -> {
-                        Date startDate = new Date();
-                        if (context.delay != null) {
-                            startDate = new Date(System.currentTimeMillis() + context.delay.toMillis());
-                        }
-                        if (context.scheduleType == ScheduleType.SINGLE) {
-                            return taskScheduler.schedule(runnable, startDate);
-                        } else {
-                            return taskScheduler.scheduleWithFixedDelay(runnable, startDate, context.period.toMillis());
-                        }
-                    };
-                }
-
-                if (start) {
-                    createSchedule(context, scheduleHandler);
-                } else {
-                    context.postponeScheduleHandler = scheduleHandler;
-                    cancelThread(context.name);
-                    schedulers.put(context.name, context);
-
-                }
-                return context;
-            }
-
-            @Override
-            public ThreadContext<Void> execute(@NotNull ThrowingRunnable<Exception> command, boolean start) {
-                context.command = arg -> {
-                    if (context.authentication == null) {
-                        command.run();
-                    } else {
-                        try {
-                            SecurityContextHolder.getContext().setAuthentication(context.authentication);
-                            command.run();
-                        } finally {
-                            SecurityContextHolder.getContext().setAuthentication(null);
-                        }
-                    }
-                    return null;
-                };
-                return (ThreadContext<Void>) execute(context.command, start);
-            }
-
-            @Override
-            public ScheduleBuilder<T> interval(@NotNull String cron) {
-                context.scheduleType = ScheduleType.CRON;
-                scheduleHandler = runnable -> taskScheduler.schedule(runnable, new CronTrigger(cron));
-                return this;
-            }
-
-            @Override
-            public ScheduleBuilder<T> interval(@NotNull Duration duration) {
-                context.scheduleType = ScheduleType.DELAY;
-                context.period = duration;
-                return this;
-            }
-
-            @Override
-            public ScheduleBuilder<T> tap(Consumer<ThreadContext<T>> handler) {
-                handler.accept(context);
-                return this;
-            }
-
-            @Override
-            public ScheduleBuilder<T> delay(@NotNull Duration duration) {
-                context.delay = duration;
-                return this;
-            }
-
-            @Override
-            public ScheduleBuilder<T> auth() {
-                context.authentication = SecurityContextHolder.getContext().getAuthentication();
-                return this;
-            }
-
-            @Override
-            public ScheduleBuilder<T> hideOnUI(boolean value) {
-                context.showOnUI = !value;
-                return this;
-            }
-
-            @Override
-            public ScheduleBuilder<T> hideOnUIAfterCancel(boolean value) {
-                context.hideOnUIAfterCancel = value;
-                return this;
-            }
-
-            @Override
-            public ScheduleBuilder<T> cancelOnError(boolean value) {
-                context.cancelOnError = value;
-                return this;
-            }
-
-            @Override
-            public ScheduleBuilder<T> linkLogFile(Path logFile) {
-                context.logFile = logFile;
-                return this;
-            }
-        };
-    }
-
-    @Override
-    public <T> void runService(@NotNull EntityContext entityContext, @NotNull Consumer<Process> processConsumer, @NotNull String name,
-        @NotNull Class<? extends SettingPlugin<T>> settingClass) {
-        if (SystemUtils.IS_OS_LINUX) {
-            entityContext.hardware().startSystemCtl(name);
-        } else {
-            Path targetPath = Paths.get(entityContext.setting().getRawValue(settingClass));
-            Path logFile = targetPath.getParent().resolve("execution-" + name + ".log");
-            entityContext.bgp().builder(name + "-service").linkLogFile(logFile).hideOnUIAfterCancel(false).execute(() -> {
-                Process process = Runtime.getRuntime().exec(targetPath.toString());
-                entityContext.bgp().executeOnExit(() -> {
-                    if (process != null) {
-                        process.destroyForcibly();
-                    }
-                });
-                processConsumer.accept(process);
-                Thread inputThread = new Thread(new LinesReader(name + "inputReader", process.getInputStream(), null, message ->
-                    log.info("[{}]: {}", name, message)));
-                Thread errorThread = new Thread(new LinesReader(name + "errorReader", process.getErrorStream(), null, message ->
-                    log.error("[{}]: {}", name, message)));
-                inputThread.start();
-                errorThread.start();
-
-                process.waitFor();
-                inputThread.interrupt();
-                errorThread.interrupt();
-            });
-        }
-    }
-
-    @Override
-    @SneakyThrows
-    public ThreadContext<Void> runFileWatchdog(@NotNull Path file, String key, @NotNull ThrowingRunnable<Exception> onUpdateCommand) {
-        if (!Files.exists(file)) {
-            throw new IllegalArgumentException("File: " + file + " does not exists");
-        }
-        if (!Files.isRegularFile(file)) {
-            throw new IllegalArgumentException("File: " + file + " is not a regular file");
-        }
-        if (!Files.isReadable(file)) {
-            throw new IllegalArgumentException("File: " + file + " is not readable");
-        }
-
-        ThreadContext<Void> fileWatchDog = (ThreadContext<Void>) this.schedulers.get("file-watchdog" + file);
-        if (fileWatchDog != null) {
-            ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners.put(key, onUpdateCommand);
-        } else {
-            ScheduleBuilder<Void> scheduleBuilder = builder("file-watchdog" + file);
-            final AtomicLong lastModified = new AtomicLong(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis());
-            fileWatchDog = scheduleBuilder.delay(Duration.ofSeconds(10)).interval(Duration.ofSeconds(10))
-                                          .execute(context -> {
-                                              checkFileModifiedAndFireHandler(file, lastModified, (ThreadContextImpl) context);
-                                              return null;
-                                          });
-            ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners = new ConcurrentHashMap<>();
-            ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners.put(key, onUpdateCommand);
-        }
-        return fileWatchDog;
     }
 
     private void checkFileModifiedAndFireHandler(@NotNull Path file, AtomicLong lastModified, ThreadContextImpl context) throws Exception {
@@ -448,16 +530,19 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                             } catch (InterruptedException ignore) {}
                             // threadContext.scheduledFuture = ....
                         }
-                        threadContext.cancelProcessInternal();
+                        threadContext.processFinished();
                     }
                 } catch (Exception ex) {
                     if (ex instanceof CancellationException) {
                         threadContext.state = "FINISHED";
-                        threadContext.cancel();
+                        threadContext.processFinished();
                         return;
                     }
                     threadContext.state = "FINISHED_WITH_ERROR";
                     threadContext.error = CommonUtils.getErrorMessage(ex);
+                    if (threadContext.throwOnError) {
+                        throw new ServerException(threadContext.error);
+                    }
 
                     log.error("Exception in thread: <{}>. Message: <{}>", threadContext.name, CommonUtils.getErrorMessage(ex), ex);
                     entityContext.ui().sendErrorMessage(ex);
@@ -470,7 +555,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     }
 
                     if (threadContext.cancelOnError || threadContext.scheduleType == ScheduleType.SINGLE) {
-                        threadContext.cancel();
+                        threadContext.processFinished();
                     }
                 }
             };
@@ -492,12 +577,72 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private final Map<String, Future<T>> processes = new HashMap<>();
     }
 
+    @Setter
+    @Accessors(chain = true)
+    @RequiredArgsConstructor
+    private class ProgressBuilderImpl implements ProgressBuilder {
+
+        private @NotNull final String key;
+        private boolean cancellable;
+        private boolean logToConsole = true;
+        private @Nullable Consumer<Exception> onFinally;
+        private @Nullable Runnable onError;
+        private @Nullable Exception errorIfExists;
+
+        @Override
+        public @NotNull ProgressBuilder onFinally(@Nullable Consumer<Exception> finallyBlock) {
+            this.onFinally = finallyBlock;
+            return this;
+        }
+
+        @Override
+        public @NotNull ProgressBuilder onError(@Nullable Runnable errorBlock) {
+            this.onError = errorBlock;
+            return this;
+        }
+
+        @Override
+        @SneakyThrows
+        public <R> @NotNull ThreadContext<R> execute(@NotNull ThrowingFunction<ProgressBar, R, Exception> command) {
+            if (errorIfExists != null && isThreadExists(key, true)) {
+                throw errorIfExists;
+            }
+            ScheduleBuilder<R> builder = builder(key);
+            return builder.execute(arg -> {
+                ProgressBar progressBar = (progress, message, error) -> {
+                    if (logToConsole) {
+                        log.info("Progress: {}", message);
+                    }
+                    getEntityContext().ui().progress(key, progress, message, cancellable);
+                };
+                progressBar.progress(0, key);
+                Exception exception = null;
+                try {
+                    return command.apply(progressBar);
+                } catch (Exception ex) {
+                    exception = ex;
+                    if (onError != null) {
+                        onError.run();
+                    }
+                } finally {
+                    progressBar.done();
+                    if (onFinally != null) {
+                        onFinally.accept(exception);
+                    }
+                }
+                return null;
+            });
+        }
+    }
+
     @Getter
-    @NoArgsConstructor
     public class ThreadContextImpl<T> implements ThreadContext<T> {
 
         private final JSONObject metadata = new JSONObject();
         private final Date creationTime = new Date();
+        // in case if start = false
+        public Function<Runnable, ScheduledFuture<?>> postponeScheduleHandler;
+        private boolean throwOnError;
         private Authentication authentication;
         private Path logFile;
         private Duration delay;
@@ -517,21 +662,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         @Setter private boolean cancelOnError = true;
         private Map<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
         private Map<String, ThrowingRunnable<Exception>> simpleWorkUnitListeners;
-
-        // in case if start = false
-        public Function<Runnable, ScheduledFuture<?>> postponeScheduleHandler;
-
         private Consumer<Exception> errorListener;
-
-        public ThreadContextImpl(String name, ThrowingFunction<ThreadContext<T>, T, Exception> command, ScheduleType scheduleType, Duration period,
-            boolean showOnUI, boolean hideOnUIAfterCancel) {
-            this.name = name;
-            this.command = command;
-            this.scheduleType = scheduleType;
-            this.period = period;
-            this.showOnUI = showOnUI;
-            this.hideOnUIAfterCancel = hideOnUIAfterCancel;
-        }
 
         @Override
         public String getTimeToNextSchedule() {
@@ -547,7 +678,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         }
 
         @Override
-        public void setMetadata(String key, Object value) {
+        public void setMetadata(@NotNull String key, @NotNull Object value) {
             metadata.put(key, value);
         }
 
@@ -562,40 +693,32 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             createSchedule(this, this.postponeScheduleHandler);
         }
 
-        private ThreadContextImpl<?> cancelProcessInternal() {
-            if (scheduledFuture != null) {
-                if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
-                    stopped = true;
-                    if (!showOnUI || hideOnUIAfterCancel) {
-                        return EntityContextBGPImpl.this.schedulers.remove(name);
-                    }
-                }
-            }
-            return null;
-        }
-
         @Override
         @SneakyThrows
         public T await(@NotNull Duration timeout) {
-            return scheduledFuture.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-        }
-
-        @Override
-        public void onError(@NotNull Consumer<Exception> errorListener) {
-            this.errorListener = errorListener;
+            scheduledFuture.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            return getRetValue();
         }
 
         @Override
         public boolean addValueListener(@NotNull String name, @NotNull ThrowingBiFunction<T, T, Boolean, Exception> valueListener) {
-            if (this.valueListeners == null) {
-                this.valueListeners = new ConcurrentHashMap<>();
+            if (valueListeners == null) {
+                valueListeners = new ConcurrentHashMap<>();
             }
-            if (this.valueListeners.containsKey(name)) {
+            if (valueListeners.containsKey(name)) {
                 log.warn("Unable to add run/schedule listener with name <{}> Listener already exists", name);
                 return false;
             }
-            this.valueListeners.put(name, valueListener);
+            valueListeners.put(name, valueListener);
             return true;
+        }
+
+        @Override
+        public boolean removeValueListener(@NotNull String name) {
+            if (valueListeners != null) {
+                return valueListeners.remove(name) != null;
+            }
+            return false;
         }
 
         public void setRetValue(T value) {
@@ -619,6 +742,122 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 if (this.valueListeners.isEmpty()) {
                     this.valueListeners = null;
                 }
+            }
+        }
+
+        private void cancelProcessInternal() {
+            if (scheduledFuture != null) {
+                if (scheduledFuture.isCancelled() || scheduledFuture.isDone() || scheduledFuture.cancel(true)) {
+                    processFinished();
+                }
+            }
+        }
+
+        private void processFinished() {
+            stopped = true;
+            if (!showOnUI || hideOnUIAfterCancel) {
+                EntityContextBGPImpl.this.schedulers.remove(name);
+            }
+        }
+    }
+
+    @Getter
+    public static class ProcessContextImpl implements ProcessContext {
+
+        private final Date creationTime = new Date();
+        public @Nullable ThrowingConsumer<ProcessContext, Exception> startedHandler;
+        public @Nullable ThrowingBiConsumer<Exception, Integer, Exception> finishHandler;
+        public Process process;
+        public ThreadContext<Void> threadContext;
+        public Consumer<String> inputConsumer;
+        public Consumer<String> errorConsumer;
+        private String name;
+        private StreamGobbler streamGobbler;
+
+        @Override
+        public boolean isStopped() {
+            return process == null || !process.isAlive();
+        }
+
+        @Override
+        @SneakyThrows
+        public void cancel(boolean sendSignal) {
+            cancelProcess(sendSignal, false);
+        }
+
+        private void cancelProcess(boolean sendSignal, boolean shutdownHook) throws InterruptedException, IOException {
+            if (process != null) {
+                if (sendSignal) {
+                    if (SystemUtils.IS_OS_WINDOWS) {
+                        WinProcess p = new WinProcess(process);
+                        log.info("Sending Ctrl-C to process: {}. Result: {}", name, p.sendCtrlC());
+                        Thread.sleep(1000);
+                        log.info("Killing process tree: {}", name);
+                        p.killRecursively();
+                    } else {
+                        StreamGobbler.streamAndStop(Runtime.getRuntime().exec("kill -SIGINT " + process.pid()), 200, 500);
+                    }
+                }
+
+                if (streamGobbler != null && !shutdownHook) {
+                    this.streamGobbler.stopStream(1000, 5000);
+                }
+                process.destroy();
+            }
+        }
+
+        public void run(@NotNull String command) throws Exception {
+            log.info("[{}]: Starting process command: '{}'", name, command);
+            process = Runtime.getRuntime().exec(command);
+            executeOnExitImpl(() -> cancelProcess(true, true));
+            if (startedHandler != null) {
+                try {
+                    startedHandler.accept(this);
+                } catch (Exception ex) {
+                    log.error("[{}]: Error during run process start handler. Err: {}", name, CommonUtils.getErrorMessage(ex));
+                    throw ex;
+                }
+            }
+
+            if (errorConsumer != null || inputConsumer != null) {
+                if (errorConsumer == null) {
+                    errorConsumer = s -> {
+                    };
+                }
+                if (inputConsumer == null) {
+                    inputConsumer = s -> {
+                    };
+                }
+                streamGobbler = new StreamGobbler(name, inputConsumer, errorConsumer);
+                streamGobbler.stream(process);
+            }
+
+            log.info("[{}]: wait process to finish.", name);
+            Thread.sleep(1000);
+            int responseCode = process.waitFor();
+            Thread.sleep(1000);
+            executeFinishHandler(null, responseCode);
+        }
+
+        public void onError(Exception ex) {
+            executeFinishHandler(ex, -1);
+        }
+
+        private void executeFinishHandler(Exception ex, int exitCode) {
+            if (ex != null) {
+                log.error("Process '{}' finished with error StatusCode: {}. Err: {}", name, exitCode, CommonUtils.getErrorMessage(ex));
+            } else {
+                log.info("Process '{}' finished with StatusCode: {}", name, exitCode);
+            }
+            if (finishHandler != null) {
+                try {
+                    finishHandler.accept(ex, exitCode);
+                } catch (Exception fex) {
+                    log.error("Error occurred during finish process: {}", name, fex);
+                }
+            }
+            if (streamGobbler != null) {
+                this.streamGobbler.stopStream(100, 1000);
             }
         }
     }

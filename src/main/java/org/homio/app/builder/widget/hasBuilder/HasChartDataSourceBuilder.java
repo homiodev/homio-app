@@ -1,8 +1,8 @@
 package org.homio.app.builder.widget.hasBuilder;
 
-import org.homio.bundle.api.EntityContextWidget.HasChartDataSource;
-import org.homio.bundle.api.entity.BaseEntity;
-import org.homio.bundle.api.entity.widget.AggregationType;
+import org.homio.api.EntityContextWidget.HasChartDataSource;
+import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.widget.AggregationType;
 
 public interface HasChartDataSourceBuilder<T extends BaseEntity & org.homio.app.model.entity.widget.impl.chart.HasChartDataSource, R>
     extends HasChartDataSource<R> {

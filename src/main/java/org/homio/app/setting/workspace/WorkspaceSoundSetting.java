@@ -1,12 +1,13 @@
 package org.homio.app.setting.workspace;
 
+import org.homio.api.setting.SettingPluginBoolean;
 import org.homio.app.setting.CoreSettingPlugin;
-import org.homio.bundle.api.setting.SettingPluginBoolean;
+import org.jetbrains.annotations.NotNull;
 
 public class WorkspaceSoundSetting implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
-    public GroupKey getGroupKey() {
+    public @NotNull GroupKey getGroupKey() {
         return GroupKey.workspace;
     }
 

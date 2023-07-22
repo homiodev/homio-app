@@ -14,8 +14,8 @@ import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.bundle.api.workspace.BroadcastLock;
-import org.homio.bundle.api.workspace.WorkspaceBlock;
+import org.homio.api.workspace.BroadcastLock;
+import org.homio.api.workspace.WorkspaceBlock;
 
 @Log4j2
 public class BroadcastLockImpl implements BroadcastLock {
@@ -37,7 +37,7 @@ public class BroadcastLockImpl implements BroadcastLock {
             this.valueCheck = o -> true;
         } else if (this.expectedValue instanceof Pattern) {
             this.valueCheck =
-                    o -> ((Pattern) this.expectedValue).matcher(Objects.toString(value)).matches();
+                o -> ((Pattern) this.expectedValue).matcher(Objects.toString(value)).matches();
         } else {
             this.valueCheck = o -> Objects.equals(o, this.expectedValue);
         }
