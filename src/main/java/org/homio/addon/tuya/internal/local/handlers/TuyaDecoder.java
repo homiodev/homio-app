@@ -71,8 +71,8 @@ public class TuyaDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    public void decode(({}) ChannelHandlerContext ctx, ({}) ByteBuf in,
-            ({}) List<Object> out) throws Exception {
+    public void decode(ChannelHandlerContext ctx, ByteBuf in,
+            List<Object> out) throws Exception {
         if (in.readableBytes() < 24) {
             // minimum packet size is 16 bytes header + 8 bytes suffix
             return;
@@ -84,8 +84,8 @@ public class TuyaDecoder extends ByteToMessageDecoder {
         inCopy.readBytes(bytes);
         inCopy.release();
 
-        if (logger.isTraceEnabled()) {
-            logger.trace("{}{}: Received encoded '{}'", deviceId,
+        if (log.isTraceEnabled()) {
+            log.trace("{}{}: Received encoded '{}'", deviceId,
                     Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), HexUtils.bytesToHex(bytes));
         }
 
@@ -98,7 +98,7 @@ public class TuyaDecoder extends ByteToMessageDecoder {
         //
         if (buffer.limit() < payloadLength + 16) {
             // there are less bytes than needed, exit early
-            logger.trace("Did not receive enough bytes from '{}', exiting early", deviceId);
+            log.trace("Did not receive enough bytes from '{}', exiting early", deviceId);
             return;
         } else {
             // we have enough bytes, skip them from the input buffer and proceed processing
@@ -126,7 +126,7 @@ public class TuyaDecoder extends ByteToMessageDecoder {
             buffer.get(expectedHmac);
             byte[] calculatedHmac = CryptoUtil.hmac(fullMessage, keyStore.getSessionKey());
             if (!Arrays.equals(expectedHmac, calculatedHmac)) {
-                logger.warn("{}{}: Checksum failed for message: calculated {}, found {}", deviceId,
+                log.warn("{}{}: Checksum failed for message: calculated {}, found {}", deviceId,
                         Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
                         calculatedHmac != null ? HexUtils.bytesToHex(calculatedHmac) : "<null>",
                         HexUtils.bytesToHex(expectedHmac));
@@ -137,7 +137,7 @@ public class TuyaDecoder extends ByteToMessageDecoder {
             // header + payload without suffix and checksum
             int calculatedCrc = CryptoUtil.calculateChecksum(bytes, 0, 16 + payloadLength - 8);
             if (calculatedCrc != crc) {
-                logger.warn("{}{}: Checksum failed for message: calculated {}, found {}", deviceId,
+                log.warn("{}{}: Checksum failed for message: calculated {}, found {}", deviceId,
                         Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), calculatedCrc, crc);
                 return;
             }
@@ -145,7 +145,7 @@ public class TuyaDecoder extends ByteToMessageDecoder {
 
         int suffix = buffer.getInt();
         if (prefix != 0x000055aa || suffix != 0x0000aa55) {
-            logger.warn("{}{}: Decoding failed: Prefix or suffix invalid.", deviceId,
+            log.warn("{}{}: Decoding failed: Prefix or suffix invalid.", deviceId,
                     Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
             return;
         }
@@ -176,8 +176,8 @@ public class TuyaDecoder extends ByteToMessageDecoder {
                     decodedMessage = Arrays.copyOfRange(decodedMessage, 15, decodedMessage.length);
                 }
             }
-            if (logger.isTraceEnabled()) {
-                logger.trace("{}{}: Decoded raw payload: {}", deviceId,
+            if (log.isTraceEnabled()) {
+                log.trace("{}{}: Decoded raw payload: {}", deviceId,
                         Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
                         HexUtils.bytesToHex(decodedMessage));
             }
@@ -188,7 +188,7 @@ public class TuyaDecoder extends ByteToMessageDecoder {
                     // "json obj data unvalid" would also result in a JSONSyntaxException but is a known error when
                     // DP_QUERY is not supported by the device. Using a CONTROL message with null values is a known
                     // workaround, cf. https://github.com/codetheweb/tuyapi/blob/master/index.js#L156
-                    logger.info("{}{}: DP_QUERY not supported. Trying to request with CONTROL.", deviceId,
+                    log.info("{}{}: DP_QUERY not supported. Trying to request with CONTROL.", deviceId,
                             Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
                     m = new MessageWrapper<>(DP_QUERY_NOT_SUPPORTED, Map.of());
                 } else if (commandType == STATUS || commandType == DP_QUERY) {
@@ -201,13 +201,13 @@ public class TuyaDecoder extends ByteToMessageDecoder {
                     m = new MessageWrapper<>(commandType, decodedMessage);
                 }
             } catch (JsonSyntaxException e) {
-                logger.warn("{}{} failed to parse JSON: {}", deviceId,
+                log.warn("{}{} failed to parse JSON: {}", deviceId,
                         Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), e.getMessage());
                 return;
             }
         }
 
-        logger.debug("{}{}: Received {}", deviceId, Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), m);
+        log.debug("{}{}: Received {}", deviceId, Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), m);
         out.add(m);
     }
 }

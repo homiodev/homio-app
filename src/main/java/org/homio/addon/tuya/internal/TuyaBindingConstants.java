@@ -66,7 +66,7 @@ public class TuyaBindingConstants {
     private static Map<String, Map<String, SchemaDp>> getSchemas() {
         InputStream resource = Thread.currentThread().getContextClassLoader().getResourceAsStream("schema.json");
         if (resource == null) {
-            LOGGER.warn("Could not read resource file 'schema.json', discovery might fail");
+            log.warn("Could not read resource file 'schema.json', discovery might fail");
             return Map.of();
         }
 
@@ -76,7 +76,7 @@ public class TuyaBindingConstants {
             Type schemaType = TypeToken.getParameterized(Map.class, String.class, schemaListType).getType();
             return Objects.requireNonNull(gson.fromJson(reader, schemaType));
         } catch (IOException e) {
-            LOGGER.warn("Failed to read 'schema.json', discovery might fail");
+            log.warn("Failed to read 'schema.json', discovery might fail");
             return Map.of();
         }
     }

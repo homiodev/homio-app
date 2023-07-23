@@ -38,23 +38,23 @@ public class UserEventHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void userEventTriggered(({}) ChannelHandlerContext ctx, ({}) Object evt) {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         if (evt instanceof DisposeEvent) {
-            logger.debug("{}{}: Received DisposeEvent, closing channel", deviceId,
+            log.debug("{}{}: Received DisposeEvent, closing channel", deviceId,
                     Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
             ctx.close();
         }
     }
 
     @Override
-    public void exceptionCaught(({}) ChannelHandlerContext ctx, ({}) Throwable cause)
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
             throws Exception {
         if (cause instanceof IOException) {
-            logger.debug("{}{}: IOException caught, closing channel.", deviceId,
+            log.debug("{}{}: IOException caught, closing channel.", deviceId,
                     Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), cause);
-            logger.debug("IOException caught: ", cause);
+            log.debug("IOException caught: ", cause);
         } else {
-            logger.warn("{}{}: {} caught, closing the channel", deviceId,
+            log.warn("{}{}: {} caught, closing the channel", deviceId,
                     Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), cause.getClass(), cause);
         }
         ctx.close();

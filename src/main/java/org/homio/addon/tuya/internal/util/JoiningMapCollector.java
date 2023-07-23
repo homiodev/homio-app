@@ -64,7 +64,7 @@ public class JoiningMapCollector implements Collector<Map.Entry<String, String>,
     }
 
     @Override
-    public ({}) Set<Characteristics> characteristics() {
+    public Set<Characteristics> characteristics() {
         return Set.of();
     }
 

@@ -31,7 +31,7 @@ public class DatagramToByteBufDecoder extends MessageToMessageDecoder<DatagramPa
 
     @Override
     protected void decode(@Nullable ChannelHandlerContext ctx, DatagramPacket msg,
-            ({}) List<Object> out) throws Exception {
+            List<Object> out) throws Exception {
         out.add(msg.content().copy());
     }
 }

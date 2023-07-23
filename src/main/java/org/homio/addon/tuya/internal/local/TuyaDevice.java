@@ -1,43 +1,15 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.local;
 
-import static org.smarthomej.binding.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_HEARTBEAT_INTERVAL;
-import static org.smarthomej.binding.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_TIMEOUT;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.CONTROL;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.CONTROL_NEW;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.DP_QUERY;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.DP_REFRESH;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.SESS_KEY_NEG_START;
-import static org.smarthomej.binding.tuya.internal.local.ProtocolVersion.V3_4;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
-
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.smarthomej.binding.tuya.internal.local.handlers.HeartbeatHandler;
-import org.smarthomej.binding.tuya.internal.local.handlers.TuyaDecoder;
-import org.smarthomej.binding.tuya.internal.local.handlers.TuyaEncoder;
-import org.smarthomej.binding.tuya.internal.local.handlers.TuyaMessageHandler;
-import org.smarthomej.binding.tuya.internal.local.handlers.UserEventHandler;
-import org.smarthomej.binding.tuya.internal.util.CryptoUtil;
+import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_HEARTBEAT_INTERVAL;
+import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_TIMEOUT;
+import static org.homio.addon.tuya.internal.local.CommandType.CONTROL;
+import static org.homio.addon.tuya.internal.local.CommandType.CONTROL_NEW;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_REFRESH;
+import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_START;
+import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
 
 import com.google.gson.Gson;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -49,15 +21,25 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
+import org.homio.addon.tuya.internal.local.handlers.HeartbeatHandler;
+import org.homio.addon.tuya.internal.local.handlers.TuyaDecoder;
+import org.homio.addon.tuya.internal.local.handlers.TuyaEncoder;
+import org.homio.addon.tuya.internal.local.handlers.TuyaMessageHandler;
+import org.homio.addon.tuya.internal.local.handlers.UserEventHandler;
+import org.homio.addon.tuya.internal.util.CryptoUtil;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The {@link TuyaDevice} handles the device connection
- *
- * @author Jan N. Klug - Initial contribution
  */
-
+@Log4j2
 public class TuyaDevice implements ChannelFutureListener {
-    private final Logger logger = LoggerFactory.getLogger(TuyaDevice.class);
 
     private final Bootstrap bootstrap = new Bootstrap();
     private final DeviceStatusListener deviceStatusListener;
@@ -115,7 +97,7 @@ public class TuyaDevice implements ChannelFutureListener {
         if (channel != null) {
             channel.writeAndFlush(m);
         } else {
-            logger.warn("{}: Setting {} failed. Device is not connected.", deviceId, command);
+            log.warn("{}: Setting {} failed. Device is not connected.", deviceId, command);
         }
     }
 
@@ -125,7 +107,7 @@ public class TuyaDevice implements ChannelFutureListener {
         if (channel != null) {
             channel.writeAndFlush(m);
         } else {
-            logger.warn("{}: Querying status failed. Device is not connected.", deviceId);
+            log.warn("{}: Querying status failed. Device is not connected.", deviceId);
         }
     }
 
@@ -135,7 +117,7 @@ public class TuyaDevice implements ChannelFutureListener {
         if (channel != null) {
             channel.writeAndFlush(m);
         } else {
-            logger.warn("{}: Refreshing status failed. Device is not connected.", deviceId);
+            log.warn("{}: Refreshing status failed. Device is not connected.", deviceId);
         }
     }
 
@@ -144,7 +126,7 @@ public class TuyaDevice implements ChannelFutureListener {
     }
 
     @Override
-    public void operationComplete(({}) ChannelFuture channelFuture) throws Exception {
+    public void operationComplete(ChannelFuture channelFuture) throws Exception {
         if (channelFuture.isSuccess()) {
             Channel channel = channelFuture.channel();
             this.channel = channel;
@@ -157,7 +139,7 @@ public class TuyaDevice implements ChannelFutureListener {
                 requestStatus();
             }
         } else {
-            logger.debug("{}{}: Failed to connect: {}", deviceId,
+            log.debug("{}{}: Failed to connect: {}", deviceId,
                     Objects.requireNonNullElse(channelFuture.channel().remoteAddress(), ""),
                     channelFuture.cause().getMessage());
             this.channel = null;
@@ -165,8 +147,10 @@ public class TuyaDevice implements ChannelFutureListener {
         }
     }
 
+    @Getter
     public static class KeyStore {
         private final byte[] deviceKey;
+        @Setter
         private byte[] sessionKey;
         private byte[] random;
 
@@ -179,22 +163,6 @@ public class TuyaDevice implements ChannelFutureListener {
         public void reset() {
             this.sessionKey = this.deviceKey;
             this.random = CryptoUtil.generateRandom(16).clone();
-        }
-
-        public byte[] getDeviceKey() {
-            return sessionKey;
-        }
-
-        public byte[] getSessionKey() {
-            return sessionKey;
-        }
-
-        public void setSessionKey(byte[] sessionKey) {
-            this.sessionKey = sessionKey;
-        }
-
-        public byte[] getRandom() {
-            return random;
         }
     }
 }

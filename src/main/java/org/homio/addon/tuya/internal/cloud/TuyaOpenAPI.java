@@ -1,20 +1,13 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.cloud;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.Builder;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -22,39 +15,23 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
-
+import org.homio.addon.tuya.internal.cloud.dto.CommandRequest;
+import org.homio.addon.tuya.internal.cloud.dto.DeviceListInfo;
+import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
+import org.homio.addon.tuya.internal.cloud.dto.FactoryInformation;
+import org.homio.addon.tuya.internal.cloud.dto.Login;
+import org.homio.addon.tuya.internal.cloud.dto.ResultResponse;
+import org.homio.addon.tuya.internal.cloud.dto.Token;
+import org.homio.addon.tuya.internal.config.ProjectConfiguration;
+import org.homio.addon.tuya.internal.util.CryptoUtil;
+import org.homio.addon.tuya.internal.util.JoiningMapCollector;
 import org.jetbrains.annotations.Nullable;
-import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.ContentProvider;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.client.util.StringContentProvider;
-import org.eclipse.jetty.http.HttpField;
-import org.eclipse.jetty.http.HttpMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smarthomej.binding.tuya.internal.cloud.dto.CommandRequest;
-import org.smarthomej.binding.tuya.internal.cloud.dto.DeviceListInfo;
-import org.smarthomej.binding.tuya.internal.cloud.dto.DeviceSchema;
-import org.smarthomej.binding.tuya.internal.cloud.dto.FactoryInformation;
-import org.smarthomej.binding.tuya.internal.cloud.dto.Login;
-import org.smarthomej.binding.tuya.internal.cloud.dto.ResultResponse;
-import org.smarthomej.binding.tuya.internal.cloud.dto.Token;
-import org.smarthomej.binding.tuya.internal.config.ProjectConfiguration;
-import org.smarthomej.binding.tuya.internal.util.CryptoUtil;
-import org.smarthomej.binding.tuya.internal.util.JoiningMapCollector;
-
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 /**
  * The {@link TuyaOpenAPI} is an implementation of the Tuya OpenApi specification
- *
- * @author Jan N. Klug - Initial contribution
  */
-
 public class TuyaOpenAPI {
     private final Logger logger = LoggerFactory.getLogger(TuyaOpenAPI.class);
     private final ScheduledExecutorService scheduler;
@@ -85,12 +62,12 @@ public class TuyaOpenAPI {
 
     private void refreshToken() {
         if (System.currentTimeMillis() > token.expireTimestamp) {
-            logger.warn("Cannot refresh token after expiry. Trying to re-login.");
+            log.warn("Cannot refresh token after expiry. Trying to re-login.");
             login();
         } else {
             stopRefreshTokenJob();
-            request(HttpMethod.GET, "/v1.0/token/" + token.refreshToken, Map.of(), null).exceptionally(t -> "")
-                    .thenAccept(this::processTokenResponse);
+            request("/v1.0/token/" + token.refreshToken, Map.of(), null).exceptionally(t -> "")
+                                                                        .thenAccept(this::processTokenResponse);
         }
     }
 
@@ -98,7 +75,7 @@ public class TuyaOpenAPI {
         Login login = Login.fromProjectConfiguration(config);
 
         stopRefreshTokenJob();
-        request(HttpMethod.POST, "/v1.0/iot-01/associated-users/actions/authorized-login", Map.of(), login)
+        request("/v1.0/iot-01/associated-users/actions/authorized-login", Map.of(), login)
                 .exceptionally(t -> "").thenApply(this::processTokenResponse);
     }
 
@@ -129,7 +106,7 @@ public class TuyaOpenAPI {
             Token token = result.result;
             if (token != null) {
                 token.expireTimestamp = result.timestamp + token.expire * 1000;
-                logger.debug("Got token: {}", token);
+                log.debug("Got token: {}", token);
                 this.token = token;
                 callback.tuyaOpenApiStatus(true);
                 refreshTokenJob = scheduler.schedule(this::refreshToken, token.expire - 60, TimeUnit.SECONDS);
@@ -137,7 +114,7 @@ public class TuyaOpenAPI {
             }
         }
 
-        logger.warn("Request failed: {}, no token received", result);
+        log.warn("Request failed: {}, no token received", result);
         this.token = new Token();
         callback.tuyaOpenApiStatus(false);
         return CompletableFuture.failedFuture(new ConnectionException("Failed to get token."));
@@ -145,27 +122,27 @@ public class TuyaOpenAPI {
 
     public CompletableFuture<List<FactoryInformation>> getFactoryInformation(List<String> deviceIds) {
         Map<String, String> params = Map.of("device_ids", String.join(",", deviceIds));
-        return request(HttpMethod.GET, "/v1.0/iot-03/devices/factory-infos", params, null).thenCompose(
-                s -> processResponse(s, TypeToken.getParameterized(List.class, FactoryInformation.class).getType()));
+        return request("/v1.0/iot-03/devices/factory-infos", params, null).thenCompose(
+            s -> processResponse(s, TypeToken.getParameterized(List.class, FactoryInformation.class).getType()));
     }
 
     public CompletableFuture<List<DeviceListInfo>> getDeviceList(int page) {
         Map<String, String> params = Map.of(//
-                "from", "", //
-                "page_no", String.valueOf(page), //
-                "page_size", "100");
-        return request(HttpMethod.GET, "/v1.0/users/" + token.uid + "/devices", params, null).thenCompose(
-                s -> processResponse(s, TypeToken.getParameterized(List.class, DeviceListInfo.class).getType()));
+            "from", "", //
+            "page_no", String.valueOf(page), //
+            "page_size", "100");
+        return request("/v1.0/users/" + token.uid + "/devices", params, null).thenCompose(
+            s -> processResponse(s, TypeToken.getParameterized(List.class, DeviceListInfo.class).getType()));
     }
 
     public CompletableFuture<DeviceSchema> getDeviceSchema(String deviceId) {
-        return request(HttpMethod.GET, "/v1.1/devices/" + deviceId + "/specifications", Map.of(), null)
-                .thenCompose(s -> processResponse(s, DeviceSchema.class));
+        return request("/v1.1/devices/" + deviceId + "/specifications", Map.of(), null)
+            .thenCompose(s -> processResponse(s, DeviceSchema.class));
     }
 
     public CompletableFuture<Boolean> sendCommand(String deviceId, CommandRequest command) {
-        return request(HttpMethod.POST, "/v1.0/iot-03/devices/" + deviceId + "/commands", Map.of(), command)
-                .thenCompose(s -> processResponse(s, Boolean.class));
+        return request("/v1.0/iot-03/devices/" + deviceId + "/commands", Map.of(), command)
+            .thenCompose(s -> processResponse(s, Boolean.class));
     }
 
     private <T> CompletableFuture<T> processResponse(String contentString, Type type) {
@@ -175,7 +152,7 @@ public class TuyaOpenAPI {
             return CompletableFuture.completedFuture(resultResponse.result);
         } else {
             if (resultResponse.code >= 1010 && resultResponse.code <= 1013) {
-                logger.warn("Server reported invalid token. This should never happen. Trying to re-login.");
+                log.warn("Server reported invalid token. This should never happen. Trying to re-login.");
                 callback.tuyaOpenApiStatus(false);
                 return CompletableFuture.failedFuture(new ConnectionException(resultResponse.msg));
             }
@@ -183,61 +160,72 @@ public class TuyaOpenAPI {
         }
     }
 
-    private CompletableFuture<String> request(HttpMethod method, String path, Map<String, String> params,
-            @Nullable Object body) {
-        CompletableFuture<String> future = new CompletableFuture<>();
+    private CompletableFuture<String> request(String path, Map<String, String> params,
+        @Nullable Object body) {
         long now = System.currentTimeMillis();
 
-        String sign = signRequest(method, path, Map.of("client_id", config.accessId), List.of("client_id"), params,
-                body, null, now);
+        String sign = signRequest(path, Map.of("client_id", config.accessId), List.of("client_id"), params,
+            body, null, now);
         Map<String, String> headers = Map.of( //
-                "client_id", config.accessId, //
-                "t", Long.toString(now), //
-                "Signature-Headers", "client_id", //
-                "sign", sign, //
-                "sign_method", "HMAC-SHA256", //
-                "access_token", this.token.accessToken);
+            "client_id", config.accessId, //
+            "t", Long.toString(now), //
+            "Signature-Headers", "client_id", //
+            "sign", sign, //
+            "sign_method", "HMAC-SHA256", //
+            "access_token", this.token.accessToken);
 
         String fullUrl = config.dataCenter + signUrl(path, params);
-        Request request = httpClient.newRequest(URI.create(fullUrl));
-        request.method(method);
-        headers.forEach(request::header);
+        Builder builder = HttpRequest.newBuilder().uri(URI.create(fullUrl));
+//        HttpRequest request = builder.uri(URI.create(fullUrl)).build();
+
+        headers.forEach(builder::header);
         if (body != null) {
-            request.content(new StringContentProvider(gson.toJson(body)));
-            request.header("Content-Type", "application/json");
+            builder.POST(HttpRequest.BodyPublishers.ofString(gson.toJson(body)));
+            builder.header("Content-Type", "application/json");
+        } else {
+            builder.GET();
         }
+        HttpRequest request = builder.build();
 
-        if (logger.isTraceEnabled()) {
-            logger.trace("Sending to '{}': {}", fullUrl, requestToLogString(request));
+        if (log.isTraceEnabled()) {
+            log.trace("Sending to '{}': {}", fullUrl, requestToLogString(request));
         }
-
-        request.send(new TuyaContentListener(future));
+        CompletableFuture<String> future = new CompletableFuture<>();
+        HttpClient.newBuilder().build().sendAsync(request, BodyHandlers.ofString())
+                  .thenAccept(response -> {
+                      String content = response.body();
+                      if (response.statusCode() >= 200 && response.statusCode() <= 207) {
+                          if (content != null) {
+                              future.complete(content);
+                          } else {
+                              future.completeExceptionally(new ConnectionException("Content is null."));
+                          }
+                      } else {
+                          log.debug("Requesting '{}' (method='{}', content='{}') failed: {} {}", request.uri(),
+                              request.method(), body, response.statusCode(), content);
+                      }
+                  });
         return future;
     }
 
-    // used for testing only
-    void setToken(Token token) {
-        this.token = token;
-    }
-
     // package private to allow tests
-    String signRequest(HttpMethod method, String path, Map<String, String> headers, List<String> signHeaders,
-            Map<String, String> params, @Nullable Object body, @Nullable String nonce, long now) {
-        String stringToSign = stringToSign(method, path, headers, signHeaders, params, body);
+    String signRequest(String path, Map<String, String> headers, List<String> signHeaders,
+        Map<String, String> params, @Nullable Object body, @Nullable String nonce, long now) {
+        String stringToSign = stringToSign(path, headers, signHeaders, params, body);
         String tokenToUse = path.startsWith("/v1.0/token") ? "" : this.token.accessToken;
         String fullStringToSign = this.config.accessId + tokenToUse + now + (nonce == null ? "" : nonce) + stringToSign;
 
         return CryptoUtil.hmacSha256(fullStringToSign, config.accessSecret);
     }
 
-    private String stringToSign(HttpMethod method, String path, Map<String, String> headers, List<String> signHeaders,
-            Map<String, String> params, @Nullable Object body) {
+    private String stringToSign(String path, Map<String, String> headers, List<String> signHeaders,
+        Map<String, String> params, @Nullable Object body) {
         String bodyString = CryptoUtil.sha256(body != null ? gson.toJson(body) : "");
         String headerString = headers.entrySet().stream().filter(e -> signHeaders.contains(e.getKey()))
-                .sorted(Map.Entry.comparingByKey()).collect(JoiningMapCollector.joining(":", "\n"));
+                                     .sorted(Map.Entry.comparingByKey()).collect(JoiningMapCollector.joining(":", "\n"));
         String urlString = signUrl(path, params);
         // add extra \n after header string -> TUYAs documentation is wrong
-        return method.asString() + "\n" + bodyString + "\n" + headerString + "\n\n" + urlString;
+        return (body == null ? "GET" : "POST") + "\n" + bodyString + "\n" + headerString + "\n\n" + urlString;
     }
 
     private String signUrl(String path, Map<String, String> params) {
@@ -251,19 +239,20 @@ public class TuyaOpenAPI {
     }
 
     /**
-     * create a log string from a {@link Request}
+     * create a log string from a {@link HttpRequest}
      *
      * @param request the request to log
      * @return the string representing the request
      */
-    private String requestToLogString(Request request) {
-        ContentProvider contentProvider = request.getContent();
+    private String requestToLogString(HttpRequest request) {
+       /* ContentProvider contentProvider = request.getContent();
         String contentString = contentProvider == null ? "null"
                 : StreamSupport.stream(contentProvider.spliterator(), false)
                         .map(b -> StandardCharsets.UTF_8.decode(b).toString()).collect(Collectors.joining(", "));
 
         return "Method = {" + request.getMethod() + "}, Headers = {"
                 + request.getHeaders().stream().map(HttpField::toString).collect(Collectors.joining(", "))
-                + "}, Content = {" + contentString + "}";
+                + "}, Content = {" + contentString + "}";*/
+        return request.toString();
     }
 }

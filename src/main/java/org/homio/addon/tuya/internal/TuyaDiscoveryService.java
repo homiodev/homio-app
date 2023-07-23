@@ -63,7 +63,7 @@ public class TuyaDiscoveryService extends AbstractDiscoveryService implements Th
     private final Gson gson = new Gson();
 
     private @Nullable ProjectHandler bridgeHandler;
-    private ({}) Storage<String> storage;
+    private Storage<String> storage;
     private @Nullable ScheduledFuture<?> discoveryJob;
 
     public TuyaDiscoveryService() {
@@ -74,13 +74,13 @@ public class TuyaDiscoveryService extends AbstractDiscoveryService implements Th
     protected void startScan() {
         ProjectHandler bridgeHandler = this.bridgeHandler;
         if (bridgeHandler == null) {
-            logger.warn("Could not start discovery, bridge handler not set");
+            log.warn("Could not start discovery, bridge handler not set");
             return;
         }
 
         TuyaOpenAPI api = bridgeHandler.getApi();
         if (!api.isConnected()) {
-            logger.debug("Tried to start scan but API for bridge '{}' is not connected.",
+            log.debug("Tried to start scan but API for bridge '{}' is not connected.",
                     bridgeHandler.getThing().getUID());
             return;
         }

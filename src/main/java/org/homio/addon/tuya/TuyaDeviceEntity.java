@@ -2,12 +2,11 @@ package org.homio.addon.tuya;
 
 import jakarta.persistence.Entity;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.homio.addon.tuya.internal.local.ProtocolVersion;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.types.MiscEntity;
-import org.homio.api.model.OptionModel.KeyValueEnum;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldSlider;
@@ -53,7 +52,7 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
 
     @UIField(order = 6)
     public ProtocolVersion getProtocolVersion() {
-        return getJsonDataEnum("pv", ProtocolVersion.P34);
+        return getJsonDataEnum("pv", ProtocolVersion.V3_4);
     }
 
     public void setProtocolVersion(ProtocolVersion value) {
@@ -78,24 +77,5 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
     @Override
     public @NotNull String getEntityPrefix() {
         return PREFIX;
-    }
-
-    @RequiredArgsConstructor
-    public enum ProtocolVersion implements KeyValueEnum {
-        P31("3.1"),
-        P33("3.3"),
-        P34("3.4");
-
-        private final String value;
-
-        @Override
-        public String getKey() {
-            return value;
-        }
-
-        @Override
-        public String getValue() {
-            return name();
-        }
     }
 }

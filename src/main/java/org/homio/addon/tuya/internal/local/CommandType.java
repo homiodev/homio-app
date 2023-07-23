@@ -1,27 +1,13 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.local;
 
 import java.util.Arrays;
-
-
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * The {@link CommandType} maps the numeric command types to an enum
- *
- * @author Jan N. Klug - Initial contribution
  */
-
+@RequiredArgsConstructor
 public enum CommandType {
     UDP(0),
     AP_CONFIG(1),
@@ -60,16 +46,9 @@ public enum CommandType {
     LAN_SET_GW_CHANNEL(252),
     DP_QUERY_NOT_SUPPORTED(-1); // this is an internal value
 
+    @Getter
     private final int code;
-
-    CommandType(int code) {
-        this.code = code;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
+    
     public static CommandType fromCode(int code) {
         return Arrays.stream(values()).filter(t -> t.code == code).findAny()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown code " + code));

@@ -1,28 +1,13 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.cloud.dto;
 
-
-
 import com.google.gson.annotations.SerializedName;
+import lombok.ToString;
 
 /**
  * The {@link Token} encapsulates the Access Tokens
- *
- * @author Jan N. Klug - Initial contribution
  */
 
-@SuppressWarnings("unused")
+@ToString
 public class Token {
     @SerializedName("access_token")
     public final String accessToken;
@@ -43,11 +28,5 @@ public class Token {
         this.refreshToken = refreshToken;
         this.uid = uid;
         this.expire = expire;
-    }
-
-    @Override
-    public String toString() {
-        return "Token{accessToken='" + accessToken + "', refreshToken='" + refreshToken + "', uid='" + uid
-                + "', expire=" + expire + "', expireTimestamp=" + expireTimestamp + "}";
     }
 }

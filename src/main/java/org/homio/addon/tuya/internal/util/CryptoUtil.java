@@ -1,5 +1,7 @@
 package org.homio.addon.tuya.internal.util;
 
+import static com.sshtools.common.util.Utils.bytesToHex;
+
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -99,7 +101,7 @@ public class CryptoUtil {
             digest.update(data.getBytes(StandardCharsets.UTF_8));
             return bytesToHex(digest.digest()).toLowerCase();
         } catch (NoSuchAlgorithmException e) {
-            LOGGER.warn("Algorithm SHA-256 not found. This should never happen. Check your Java setup.");
+            log.warn("Algorithm SHA-256 not found. This should never happen. Check your Java setup.");
         }
         return "";
     }
@@ -116,7 +118,7 @@ public class CryptoUtil {
             digest.update(data.getBytes(StandardCharsets.UTF_8));
             return bytesToHex(digest.digest()).toLowerCase();
         } catch (NoSuchAlgorithmException e) {
-            LOGGER.warn("Algorithm MD5 not found. This should never happen. Check your Java setup.");
+            log.warn("Algorithm MD5 not found. This should never happen. Check your Java setup.");
         }
         return "";
     }
@@ -166,7 +168,7 @@ public class CryptoUtil {
             return new String(decoded);
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException
                  | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e) {
-            LOGGER.warn("Decryption of MQ failed: {}", e.getMessage());
+            log.warn("Decryption of MQ failed: {}", e.getMessage());
         }
 
         return null;
@@ -196,7 +198,7 @@ public class CryptoUtil {
             return decrypted;
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException
                  | BadPaddingException e) {
-            LOGGER.warn("Decryption of MQ failed: {}", e.getMessage());
+            log.warn("Decryption of MQ failed: {}", e.getMessage());
         }
 
         return null;
@@ -218,7 +220,7 @@ public class CryptoUtil {
             return cipher.doFinal(data);
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException
                  | BadPaddingException e) {
-            LOGGER.warn("Encryption of MQ failed: {}", e.getMessage());
+            log.warn("Encryption of MQ failed: {}", e.getMessage());
         }
 
         return null;
@@ -232,7 +234,7 @@ public class CryptoUtil {
 
             return sha256_HMAC.doFinal(data);
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            LOGGER.warn("Creating HMAC hash failed: {}", e.getMessage());
+            log.warn("Creating HMAC hash failed: {}", e.getMessage());
         }
 
         return null;
@@ -265,14 +267,5 @@ public class CryptoUtil {
         }
 
         return CryptoUtil.encryptAesEcb(sessionKey, deviceKey, false);
-    }
-
-    public static String bytesToHex(byte[] bytes) {
-        StringBuilder hexString = new StringBuilder();
-        for (byte b : bytes) {
-            String hex = String.format("%02x", b);
-            hexString.append(hex);
-        }
-        return hexString.toString();
     }
 }

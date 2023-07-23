@@ -1,80 +1,51 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.local.handlers;
 
-import static org.smarthomej.binding.tuya.internal.local.CommandType.DP_QUERY;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.DP_QUERY_NEW;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.DP_REFRESH;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.HEART_BEAT;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.SESS_KEY_NEG_FINISH;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.SESS_KEY_NEG_START;
-import static org.smarthomej.binding.tuya.internal.local.ProtocolVersion.V3_3;
-import static org.smarthomej.binding.tuya.internal.local.ProtocolVersion.V3_4;
+import static com.sshtools.common.util.Utils.bytesToHex;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY_NEW;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_REFRESH;
+import static org.homio.addon.tuya.internal.local.CommandType.HEART_BEAT;
+import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_FINISH;
+import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_START;
+import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_3;
+import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
 
+import com.google.gson.Gson;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.MessageToByteEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-
-
-import org.jose4j.base64url.Base64;
-import org.openhab.core.util.HexUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.smarthomej.binding.tuya.internal.local.CommandType;
-import org.smarthomej.binding.tuya.internal.local.MessageWrapper;
-import org.smarthomej.binding.tuya.internal.local.ProtocolVersion;
-import org.smarthomej.binding.tuya.internal.local.TuyaDevice;
-import org.smarthomej.binding.tuya.internal.util.CryptoUtil;
-
-import com.google.gson.Gson;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.homio.addon.tuya.internal.local.CommandType;
+import org.homio.addon.tuya.internal.local.MessageWrapper;
+import org.homio.addon.tuya.internal.local.ProtocolVersion;
+import org.homio.addon.tuya.internal.local.TuyaDevice;
+import org.homio.addon.tuya.internal.util.CryptoUtil;
 
 /**
- * The {@link TuyaEncoder} is a Netty Encoder for encoding Tuya Local messages
- *
- * Parts of this code are inspired by the TuyAPI project (see notice file)
- *
- * @author Jan N. Klug - Initial contribution
+ * The {@link TuyaEncoder} is a Netty Encoder for encoding Tuya Local messages Parts of this code are inspired by the TuyAPI project (see notice file)
  */
-
+@Log4j2
+@RequiredArgsConstructor
 public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
-    private final Logger logger = LoggerFactory.getLogger(TuyaEncoder.class);
 
+    private final Gson gson;
+    private final String deviceId;
     private final TuyaDevice.KeyStore keyStore;
     private final ProtocolVersion version;
-    private final String deviceId;
-    private final Gson gson;
 
     private int sequenceNo = 0;
 
-    public TuyaEncoder(Gson gson, String deviceId, TuyaDevice.KeyStore keyStore, ProtocolVersion version) {
-        this.gson = gson;
-        this.deviceId = deviceId;
-        this.keyStore = keyStore;
-        this.version = version;
-    }
-
     @Override
-    @SuppressWarnings("unchecked")
-    public void encode(({}) ChannelHandlerContext ctx, MessageWrapper<?> msg,
-            ({}) ByteBuf out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, MessageWrapper<?> msg, ByteBuf out) {
         byte[] payloadBytes;
 
         // prepare payload
@@ -101,21 +72,21 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
                 }
             }
 
-            logger.debug("{}{}: Sending {}, payload {}", deviceId,
+            log.debug("{}{}: Sending {}, payload {}", deviceId,
                     Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), msg.commandType, payload);
 
             String json = gson.toJson(payload);
             payloadBytes = json.getBytes(StandardCharsets.UTF_8);
         } else if (msg.content instanceof byte[]) {
             byte[] contentBytes = Objects.requireNonNull((byte[]) msg.content);
-            if (logger.isDebugEnabled()) {
-                logger.debug("{}{}: Sending payload {}", deviceId,
-                        Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
-                        HexUtils.bytesToHex(contentBytes));
+            if (log.isDebugEnabled()) {
+                log.debug("{}{}: Sending payload {}", deviceId,
+                    Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
+                    bytesToHex(contentBytes));
             }
             payloadBytes = contentBytes.clone();
         } else {
-            logger.warn("Can't determine payload type for '{}', discarding.", msg.content);
+            log.warn("Can't determine payload type for '{}', discarding.", msg.content);
             return;
         }
 
@@ -123,13 +94,13 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
                 : encodePre34(msg.commandType, payloadBytes);
 
         bufferOptional.ifPresentOrElse(buffer -> {
-            if (logger.isTraceEnabled()) {
-                logger.trace("{}{}: Sending encoded '{}'", deviceId, ctx.channel().remoteAddress(),
-                        HexUtils.bytesToHex(buffer));
+            if (log.isTraceEnabled()) {
+                log.trace("{}{}: Sending encoded '{}'", deviceId, ctx.channel().remoteAddress(),
+                    bytesToHex(buffer));
             }
 
             out.writeBytes(buffer);
-        }, () -> logger.debug("{}{}: Encoding returned an empty buffer", deviceId, ctx.channel().remoteAddress()));
+        }, () -> log.debug("{}{}: Encoding returned an empty buffer", deviceId, ctx.channel().remoteAddress()));
     }
 
     private Optional<byte[]> encodePre34(CommandType commandType, byte[] payload) {
@@ -141,7 +112,7 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
                 return Optional.empty();
             }
 
-            if (commandType != DP_QUERY && commandType != CommandType.DP_REFRESH) {
+            if (commandType != DP_QUERY && commandType != DP_REFRESH) {
                 // Add 3.3 header
                 ByteBuffer buffer = ByteBuffer.allocate(payloadBytes.length + 15);
                 buffer.put("3.3".getBytes(StandardCharsets.UTF_8));
@@ -155,9 +126,9 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
             if (encryptedPayload == null) {
                 return Optional.empty();
             }
-            String payloadStr = Base64.encode(encryptedPayload);
+            String payloadStr = Base64.getEncoder().encodeToString(encryptedPayload);
             String hash = CryptoUtil.md5(
-                    "data=" + payloadStr + "||lpv=" + version.getString() + "||" + new String(keyStore.getDeviceKey()));
+                "data=" + payloadStr + "||lpv=" + version.getString() + "||" + new String(keyStore.getDeviceKey()));
 
             // Create byte buffer from hex data
             payloadBytes = (version + hash.substring(8, 24) + payloadStr).getBytes(StandardCharsets.UTF_8);

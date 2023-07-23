@@ -116,7 +116,7 @@ public class TuyaDeviceHandler extends BaseThingHandler implements DeviceInfoSub
 
     @Override
     public void processDeviceStatus(Map<Integer, Object> deviceStatus) {
-        logger.trace("'{}' received status message '{}'", thing.getUID(), deviceStatus);
+        log.trace("'{}' received status message '{}'", thing.getUID(), deviceStatus);
 
         if (deviceStatus.isEmpty()) {
             // if status is empty -> need to use control method to request device status
@@ -144,7 +144,7 @@ public class TuyaDeviceHandler extends BaseThingHandler implements DeviceInfoSub
             ChannelTypeUID channelTypeUID = channelIdToChannelTypeUID.get(channelId);
 
             if (configuration == null || channelTypeUID == null) {
-                logger.warn("Could not find configuration or type for channel '{}' in thing '{}'", channelId,
+                log.warn("Could not find configuration or type for channel '{}' in thing '{}'", channelId,
                         thing.getUID());
                 return;
             }
@@ -175,20 +175,20 @@ public class TuyaDeviceHandler extends BaseThingHandler implements DeviceInfoSub
                 updateState(channelId, OnOffType.from((boolean) value));
                 return;
             }
-            logger.warn("Could not update channel '{}' of thing '{}' with value '{}'. Datatype incompatible.",
+            log.warn("Could not update channel '{}' of thing '{}' with value '{}'. Datatype incompatible.",
                     channelId, getThing().getUID(), value);
         } else {
             // try additional channelDps, only OnOffType
             List<String> channelIds = dp2ToChannelId.get(dp);
             if (channelIds == null) {
-                logger.debug("Could not find channel for dp '{}' in thing '{}'", dp, thing.getUID());
+                log.debug("Could not find channel for dp '{}' in thing '{}'", dp, thing.getUID());
             } else {
                 if (Boolean.class.isAssignableFrom(value.getClass())) {
                     OnOffType state = OnOffType.from((boolean) value);
                     channelIds.forEach(ch -> updateState(ch, state));
                     return;
                 }
-                logger.warn("Could not update channel '{}' of thing '{}' with value {}. Datatype incompatible.",
+                log.warn("Could not update channel '{}' of thing '{}' with value {}. Datatype incompatible.",
                         channelIds, getThing().getUID(), value);
             }
         }
@@ -224,7 +224,7 @@ public class TuyaDeviceHandler extends BaseThingHandler implements DeviceInfoSub
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
         if (getThing().getStatus() != ThingStatus.ONLINE) {
-            logger.warn("Channel '{}' received a command but device is not ONLINE. Discarding command.", channelUID);
+            log.warn("Channel '{}' received a command but device is not ONLINE. Discarding command.", channelUID);
             return;
         }
 
@@ -233,7 +233,7 @@ public class TuyaDeviceHandler extends BaseThingHandler implements DeviceInfoSub
         ChannelTypeUID channelTypeUID = channelIdToChannelTypeUID.get(channelUID.getId());
         ChannelConfiguration configuration = channelIdToConfiguration.get(channelUID.getId());
         if (channelTypeUID == null || configuration == null) {
-            logger.warn("Could not determine channel type or configuration for channel '{}'. Discarding command.",
+            log.warn("Could not determine channel type or configuration for channel '{}'. Discarding command.",
                     channelUID);
             return;
         }
@@ -251,7 +251,7 @@ public class TuyaDeviceHandler extends BaseThingHandler implements DeviceInfoSub
             } else if (command instanceof PercentType) {
                 State oldState = channelStateCache.get(channelUID.getId());
                 if (!(oldState instanceof HSBType)) {
-                    logger.debug("Discarding command '{}' to channel '{}', cannot determine old state", command,
+                    log.debug("Discarding command '{}' to channel '{}', cannot determine old state", command,
                             channelUID);
                     return;
                 }
@@ -372,7 +372,7 @@ public class TuyaDeviceHandler extends BaseThingHandler implements DeviceInfoSub
 
     @Override
     public void deviceInfoChanged(DeviceInfo deviceInfo) {
-        logger.info("Configuring IP address '{}' for thing '{}'.", deviceInfo, thing.getUID());
+        log.info("Configuring IP address '{}' for thing '{}'.", deviceInfo, thing.getUID());
 
         TuyaDevice tuyaDevice = this.tuyaDevice;
         if (tuyaDevice != null) {
@@ -390,7 +390,7 @@ public class TuyaDeviceHandler extends BaseThingHandler implements DeviceInfoSub
         ThingHandlerCallback callback = getCallback();
 
         if (callback == null) {
-            logger.warn("Thing callback not found. Cannot auto-detect thing '{}' channels.", thingUID);
+            log.warn("Thing callback not found. Cannot auto-detect thing '{}' channels.", thingUID);
             return;
         }
 
@@ -466,7 +466,7 @@ public class TuyaDeviceHandler extends BaseThingHandler implements DeviceInfoSub
         ChannelTypeUID channelTypeUID = channel.getChannelTypeUID();
 
         if (channelTypeUID == null) {
-            logger.warn("Could not determine ChannelTypeUID for '{}'", channel.getUID());
+            log.warn("Could not determine ChannelTypeUID for '{}'", channel.getUID());
             return;
         }
 

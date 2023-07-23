@@ -45,24 +45,24 @@ public class HeartbeatHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void userEventTriggered(({}) ChannelHandlerContext ctx, ({}) Object evt)
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
             throws Exception {
         if (evt instanceof IdleStateEvent) {
             IdleStateEvent e = (IdleStateEvent) evt;
             if (IdleState.READER_IDLE.equals(e.state())) {
-                logger.warn("{}{}: Did not receive a message from for {} seconds. Connection seems to be dead.",
+                log.warn("{}{}: Did not receive a message from for {} seconds. Connection seems to be dead.",
                         deviceId, Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
                         TCP_CONNECTION_TIMEOUT);
                 ctx.close();
             } else if (IdleState.WRITER_IDLE.equals(e.state())) {
                 heartBeatMissed++;
                 if (heartBeatMissed > TCP_CONNECTION_MAXIMUM_MISSED_HEARTBEATS) {
-                    logger.warn("{}{}: Missed more than {} heartbeat responses. Connection seems to be dead.", deviceId,
+                    log.warn("{}{}: Missed more than {} heartbeat responses. Connection seems to be dead.", deviceId,
                             Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
                             TCP_CONNECTION_MAXIMUM_MISSED_HEARTBEATS);
                     ctx.close();
                 } else {
-                    logger.trace("{}{}: Sending ping", deviceId,
+                    log.trace("{}{}: Sending ping", deviceId,
                             Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
                     ctx.channel().writeAndFlush(new MessageWrapper<>(CommandType.HEART_BEAT, Map.of("dps", "")));
                 }
@@ -73,12 +73,12 @@ public class HeartbeatHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRead(({}) ChannelHandlerContext ctx, ({}) Object msg)
+    public void channelRead(ChannelHandlerContext ctx, Object msg)
             throws Exception {
         if (msg instanceof MessageWrapper<?>) {
             MessageWrapper<?> m = (MessageWrapper<?>) msg;
             if (CommandType.HEART_BEAT.equals(m.commandType)) {
-                logger.trace("{}{}: Received pong", deviceId,
+                log.trace("{}{}: Received pong", deviceId,
                         Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
                 heartBeatMissed = 0;
                 // do not forward HEART_BEAT messages
