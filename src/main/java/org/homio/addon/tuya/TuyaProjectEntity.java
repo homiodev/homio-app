@@ -1,19 +1,18 @@
 package org.homio.addon.tuya;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-
 import jakarta.persistence.Entity;
-import java.util.List;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.homio.addon.tuya.service.TuyaProjectService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.types.MiscEntity;
+import org.homio.api.model.OptionModel.KeyValueEnum;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
-import org.homio.api.ui.field.UIFieldChipsOptions;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.util.Lang;
@@ -24,16 +23,17 @@ import org.jetbrains.annotations.NotNull;
 @Setter
 @Entity
 @Accessors(chain = true)
-@UISidebarChildren(icon = "fas fa-diagram-project", color = "#0088CC")
+@UISidebarChildren(icon = "fas fa-diagram-project", color = "#0088CC", allowCreateItem = false)
 public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     implements EntityService<TuyaProjectService, TuyaProjectEntity>,
     HasStatusAndMsg<TuyaProjectEntity> {
 
     public static final String PREFIX = "tuyap_";
+    public static final String DEFAULT_ENTITY_ID = PREFIX + "primary";
 
     @UIField(order = 1, hideInEdit = true, hideOnEmpty = true, fullWidth = true, bg = "#334842C2", type = UIFieldType.HTML)
     public String getDescription() {
-        if (isEmpty(getUser()) || isEmpty(getPassword()) || isEmpty(getAccessSecret()) || isEmpty(getAccessSecret()) || isEmpty(getCountryCode())) {
+        if (!isValid()) {
             return Lang.getServerMessage("tuyaprj.description");
         }
         return null;
@@ -71,8 +71,8 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
 
     @UIField(order = 4, required = true, inlineEditWhenEmpty = true)
     @UIFieldGroup("AUTH")
-    public String getAccessSecret() {
-        return getJsonData("accessSecret");
+    public SecureString getAccessSecret() {
+        return getJsonSecure("accessSecret");
     }
 
     public void setAccessSecret(String value) {
@@ -81,11 +81,14 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
 
     @UIField(order = 5, required = true, inlineEditWhenEmpty = true)
     @UIFieldGroup("AUTH")
-    public String getCountryCode() {
-        return getJsonData("cc");
+    public Integer getCountryCode() {
+        if (getJsonData().has("cc")) {
+            getJsonData().getInt("cc");
+        }
+        return null;
     }
 
-    public void setCountryCode(String value) {
+    public void setCountryCode(Integer value) {
         setJsonData("cc", value);
     }
 
@@ -99,21 +102,13 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
         setJsonData("schema", value);
     }
 
-    @UIField(order = 7, type = UIFieldType.Chips)
-    @UIFieldChipsOptions(values = {
-        "https://openapi.tuyacn.com:China",
-        "https://openapi.tuyaus.com:Western America",
-        "https://openapi-ueaz.tuyaus.com:Eastern America (Azure/MS)",
-        "https://openapi.tuyaeu.com:Central Europe",
-        "https://openapi-weaz.tuyaeu.com:Western Europe (Azure/MS)",
-        "https://openapi.tuyain.com:India",
-    })
+    @UIField(order = 7)
     @UIFieldGroup("AUTH")
-    public List<String> getDataCenter() {
-        return getJsonDataList("dataCenter");
+    public DataCenter getDataCenter() {
+        return getJsonDataEnum("dataCenter", DataCenter.CentralEurope);
     }
 
-    public void setDataCenter(String value) {
+    public void setDataCenter(DataCenter value) {
         setJsonData("dataCenter", value);
     }
 
@@ -139,5 +134,33 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
 
     public enum ProjectSchema {
         tuyaSmart, smartLife
+    }
+
+    public boolean isValid() {
+        return !getUser().isEmpty()
+            && !getPassword().asString().isEmpty()
+            && !getAccessId().isEmpty()
+            && !getAccessSecret().asString().isEmpty()
+            && getCountryCode() != null
+            && getCountryCode() != 0;
+    }
+
+    @RequiredArgsConstructor
+    public enum DataCenter implements KeyValueEnum {
+        China("China", "https://openapi.tuyacn.com"),
+        WesternAmerica("Western America", "https://openapi.tuyaus.com"),
+        EasternAmerica("Eastern America (Azure/MS)", "https://openapi-ueaz.tuyaus.com"),
+        CentralEurope("Central Europe", "https://openapi.tuyaeu.com"),
+        WesternEurope("Western Europe (Azure/MS)", "https://openapi-weaz.tuyaeu.com"),
+        India("China", "https://openapi.tuyain.com");
+
+        private final String title;
+        @Getter
+        private final String url;
+
+        @Override
+        public String getValue() {
+            return title;
+        }
     }
 }

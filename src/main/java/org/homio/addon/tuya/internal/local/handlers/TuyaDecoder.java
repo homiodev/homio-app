@@ -1,62 +1,41 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.local.handlers;
 
-import static org.smarthomej.binding.tuya.internal.local.CommandType.BROADCAST_LPV34;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.DP_QUERY;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.DP_QUERY_NOT_SUPPORTED;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.STATUS;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.UDP;
-import static org.smarthomej.binding.tuya.internal.local.CommandType.UDP_NEW;
-import static org.smarthomej.binding.tuya.internal.local.ProtocolVersion.V3_3;
-import static org.smarthomej.binding.tuya.internal.local.ProtocolVersion.V3_4;
+import static com.sshtools.common.util.Utils.bytesToHex;
+import static org.homio.addon.tuya.internal.local.CommandType.BROADCAST_LPV34;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY_NOT_SUPPORTED;
+import static org.homio.addon.tuya.internal.local.CommandType.STATUS;
+import static org.homio.addon.tuya.internal.local.CommandType.UDP;
+import static org.homio.addon.tuya.internal.local.CommandType.UDP_NEW;
+import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_3;
+import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-
-import org.openhab.core.util.HexUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.smarthomej.binding.tuya.internal.local.CommandType;
-import org.smarthomej.binding.tuya.internal.local.MessageWrapper;
-import org.smarthomej.binding.tuya.internal.local.ProtocolVersion;
-import org.smarthomej.binding.tuya.internal.local.TuyaDevice;
-import org.smarthomej.binding.tuya.internal.local.dto.DiscoveryMessage;
-import org.smarthomej.binding.tuya.internal.local.dto.TcpStatusPayload;
-import org.smarthomej.binding.tuya.internal.util.CryptoUtil;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
+import lombok.extern.log4j.Log4j2;
+import org.homio.addon.tuya.internal.local.CommandType;
+import org.homio.addon.tuya.internal.local.MessageWrapper;
+import org.homio.addon.tuya.internal.local.ProtocolVersion;
+import org.homio.addon.tuya.internal.local.TuyaDevice;
+import org.homio.addon.tuya.internal.local.dto.DiscoveryMessage;
+import org.homio.addon.tuya.internal.local.dto.TcpStatusPayload;
+import org.homio.addon.tuya.internal.util.CryptoUtil;
 
 /**
  * The {@link TuyaDecoder} is a Netty Decoder for encoding Tuya Local messages
- *
  * Parts of this code are inspired by the TuyAPI project (see notice file)
- *
- * @author Jan N. Klug - Initial contribution
  */
-
+@Log4j2
 public class TuyaDecoder extends ByteToMessageDecoder {
-    private final Logger logger = LoggerFactory.getLogger(TuyaDecoder.class);
 
     private final TuyaDevice.KeyStore keyStore;
     private final ProtocolVersion version;
@@ -72,7 +51,7 @@ public class TuyaDecoder extends ByteToMessageDecoder {
 
     @Override
     public void decode(ChannelHandlerContext ctx, ByteBuf in,
-            List<Object> out) throws Exception {
+            List<Object> out) {
         if (in.readableBytes() < 24) {
             // minimum packet size is 16 bytes header + 8 bytes suffix
             return;
@@ -86,7 +65,7 @@ public class TuyaDecoder extends ByteToMessageDecoder {
 
         if (log.isTraceEnabled()) {
             log.trace("{}{}: Received encoded '{}'", deviceId,
-                    Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), HexUtils.bytesToHex(bytes));
+                Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), bytesToHex(bytes));
         }
 
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
@@ -127,9 +106,8 @@ public class TuyaDecoder extends ByteToMessageDecoder {
             byte[] calculatedHmac = CryptoUtil.hmac(fullMessage, keyStore.getSessionKey());
             if (!Arrays.equals(expectedHmac, calculatedHmac)) {
                 log.warn("{}{}: Checksum failed for message: calculated {}, found {}", deviceId,
-                        Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
-                        calculatedHmac != null ? HexUtils.bytesToHex(calculatedHmac) : "<null>",
-                        HexUtils.bytesToHex(expectedHmac));
+                    Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
+                    calculatedHmac != null ? bytesToHex(calculatedHmac) : "<null>", bytesToHex(expectedHmac));
                 return;
             }
         } else {
@@ -178,8 +156,8 @@ public class TuyaDecoder extends ByteToMessageDecoder {
             }
             if (log.isTraceEnabled()) {
                 log.trace("{}{}: Decoded raw payload: {}", deviceId,
-                        Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
-                        HexUtils.bytesToHex(decodedMessage));
+                    Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
+                    bytesToHex(decodedMessage));
             }
 
             try {

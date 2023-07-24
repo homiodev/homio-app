@@ -1,48 +1,27 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Objects;
-
-
-import org.openhab.core.thing.ThingTypeUID;
-import org.openhab.core.thing.type.ChannelTypeUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.smarthomej.binding.tuya.internal.util.SchemaDp;
-
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import lombok.extern.log4j.Log4j2;
+import org.homio.addon.tuya.internal.util.SchemaDp;
 
 /**
- * The {@link TuyaBindingConstants} class defines common constants, which are
- * used across the whole binding.
- *
- * @author Jan N. Klug - Initial contribution
+ * The {@link TuyaBindingConstants} class defines common constants, which are used across the whole binding.
  */
-
+@Log4j2
 public class TuyaBindingConstants {
-    private static final Logger LOGGER = LoggerFactory.getLogger(TuyaBindingConstants.class);
+
     private static final String BINDING_ID = "tuya";
 
     // List of all Thing Type UIDs
-    public static final ThingTypeUID THING_TYPE_PROJECT = new ThingTypeUID(BINDING_ID, "project");
-    public static final ThingTypeUID THING_TYPE_TUYA_DEVICE = new ThingTypeUID(BINDING_ID, "tuyaDevice");
+    //public static final ThingTypeUID THING_TYPE_PROJECT = new ThingTypeUID(BINDING_ID, "project");
+    // public static final ThingTypeUID THING_TYPE_TUYA_DEVICE = new ThingTypeUID(BINDING_ID, "tuyaDevice");
 
     public static final String PROPERTY_CATEGORY = "category";
     public static final String PROPERTY_MAC = "mac";
@@ -51,11 +30,11 @@ public class TuyaBindingConstants {
     public static final String CONFIG_DEVICE_ID = "deviceId";
     public static final String CONFIG_PRODUCT_ID = "productId";
 
-    public static final ChannelTypeUID CHANNEL_TYPE_UID_COLOR = new ChannelTypeUID(BINDING_ID, "color");
+   /* public static final ChannelTypeUID CHANNEL_TYPE_UID_COLOR = new ChannelTypeUID(BINDING_ID, "color");
     public static final ChannelTypeUID CHANNEL_TYPE_UID_DIMMER = new ChannelTypeUID(BINDING_ID, "dimmer");
     public static final ChannelTypeUID CHANNEL_TYPE_UID_NUMBER = new ChannelTypeUID(BINDING_ID, "number");
     public static final ChannelTypeUID CHANNEL_TYPE_UID_STRING = new ChannelTypeUID(BINDING_ID, "string");
-    public static final ChannelTypeUID CHANNEL_TYPE_UID_SWITCH = new ChannelTypeUID(BINDING_ID, "switch");
+    public static final ChannelTypeUID CHANNEL_TYPE_UID_SWITCH = new ChannelTypeUID(BINDING_ID, "switch");*/
 
     public static final int TCP_CONNECTION_HEARTBEAT_INTERVAL = 10; // in s
     public static final int TCP_CONNECTION_TIMEOUT = 60; // in s;

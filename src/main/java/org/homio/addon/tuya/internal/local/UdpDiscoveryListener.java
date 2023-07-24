@@ -2,15 +2,6 @@ package org.homio.addon.tuya.internal.local;
 
 import static com.sshtools.common.util.Utils.hexToBytes;
 
-import java.util.HashMap;
-import java.util.Map;
-import org.homio.addon.tuya.internal.local.dto.DeviceInfo;
-import org.homio.addon.tuya.internal.local.handlers.DatagramToByteBufDecoder;
-import org.homio.addon.tuya.internal.local.handlers.TuyaDecoder;
-import org.homio.addon.tuya.internal.local.handlers.UserEventHandler;
-import org.homio.addon.tuya.internal.util.CryptoUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -22,14 +13,22 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import java.util.HashMap;
+import java.util.Map;
+import lombok.extern.log4j.Log4j2;
+import org.homio.addon.tuya.internal.local.dto.DeviceInfo;
+import org.homio.addon.tuya.internal.local.handlers.DatagramToByteBufDecoder;
+import org.homio.addon.tuya.internal.local.handlers.DiscoveryMessageHandler;
+import org.homio.addon.tuya.internal.local.handlers.TuyaDecoder;
+import org.homio.addon.tuya.internal.local.handlers.UserEventHandler;
+import org.homio.addon.tuya.internal.util.CryptoUtil;
 
 /**
  * The {@link UdpDiscoveryListener} handles UDP device discovery message
  */
+@Log4j2
 public class UdpDiscoveryListener implements ChannelFutureListener {
     private static final byte[] TUYA_UDP_KEY = hexToBytes(CryptoUtil.md5("yGAdlopoPVldABfn"));
-
-    private final Logger logger = LoggerFactory.getLogger(UdpDiscoveryListener.class);
 
     private final Gson gson = new Gson();
 
@@ -52,7 +51,7 @@ public class UdpDiscoveryListener implements ChannelFutureListener {
             b.group(group).channel(NioDatagramChannel.class).option(ChannelOption.SO_BROADCAST, true)
                     .handler(new ChannelInitializer<DatagramChannel>() {
                         @Override
-                        protected void initChannel(DatagramChannel ch) throws Exception {
+                        protected void initChannel(DatagramChannel ch) {
                             ChannelPipeline pipeline = ch.pipeline();
                             pipeline.addLast("udpDecoder", new DatagramToByteBufDecoder());
                             pipeline.addLast("messageDecoder", new TuyaDecoder(gson, "udpListener",
@@ -102,7 +101,7 @@ public class UdpDiscoveryListener implements ChannelFutureListener {
     }
 
     @Override
-    public void operationComplete(ChannelFuture channelFuture) throws Exception {
+    public void operationComplete(ChannelFuture channelFuture) {
         if (!channelFuture.isSuccess() && !deactivate) {
             // if we are not disposing, restart listener after an error
             deactivate();

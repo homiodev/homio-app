@@ -76,7 +76,7 @@ public class EntityContextVarImpl implements EntityContextVar {
                 }
             });
 
-        entityContext.bgp().builder("var-backup").delay(Duration.ofSeconds(60)).interval(Duration.ofSeconds(60))
+        entityContext.bgp().builder("var-backup").intervalWithDelay(Duration.ofSeconds(60))
                      .cancelOnError(false).execute(this::backupVariables);
     }
 

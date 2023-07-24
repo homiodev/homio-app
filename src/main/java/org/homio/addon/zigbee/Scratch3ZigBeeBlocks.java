@@ -14,8 +14,8 @@ import org.homio.api.EntityContextBGP.ThreadContext;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.entity.zigbee.ZigBeeBaseCoordinatorEntity;
 import org.homio.api.entity.zigbee.ZigBeeDeviceBaseEntity;
-import org.homio.api.entity.zigbee.ZigBeeProperty;
 import org.homio.api.exception.ProhibitedExecution;
+import org.homio.api.model.DeviceProperty;
 import org.homio.api.model.Status;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
@@ -147,14 +147,14 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
             });
     }
 
-    private ZigBeeProperty getZigBeeProperty(WorkspaceBlock workspaceBlock, ServerMenuBlock deviceMenu, ServerMenuBlock propertyMenu) {
+    private DeviceProperty getZigBeeProperty(WorkspaceBlock workspaceBlock, ServerMenuBlock deviceMenu, ServerMenuBlock propertyMenu) {
         String propertyID = workspaceBlock.getMenuValue("PROPERTY", propertyMenu);
         return getZigBeeProperty(workspaceBlock, deviceMenu, propertyID);
     }
 
     private void whenValueChangeTo(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleNext(next -> {
-            ZigBeeProperty property = getDeviceProperty(workspaceBlock);
+            DeviceProperty property = getDeviceProperty(workspaceBlock);
             String value = workspaceBlock.getInputString(VALUE);
             if (StringUtils.isEmpty(value)) {
                 workspaceBlock.logErrorAndThrow("Value must be not empty");
@@ -180,7 +180,7 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
             if (secondsToWait < 1) {
                 workspaceBlock.logErrorAndThrow("Duration must be greater than 1 seconds. Value: {}", secondsToWait);
             }
-            ZigBeeProperty property = getDeviceProperty(workspaceBlock);
+            DeviceProperty property = getDeviceProperty(workspaceBlock);
             BroadcastLock eventOccurredLock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock);
 
             // add listener on target property for any changes and wake up lock
@@ -201,7 +201,7 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
 
     private void whenValueChange(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleNext(next -> {
-            ZigBeeProperty property = getDeviceProperty(workspaceBlock);
+            DeviceProperty property = getDeviceProperty(workspaceBlock);
             BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock);
 
             property.addChangeListener(workspaceBlock.getId(), state -> lock.signalAll());
@@ -218,14 +218,14 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
      * return zigbee coordinator's device property. Return null if coordinator not ready
      */
     @NotNull
-    private ZigBeeProperty getDeviceProperty(WorkspaceBlock workspaceBlock) {
+    private DeviceProperty getDeviceProperty(WorkspaceBlock workspaceBlock) {
         return getZigBeeProperty(workspaceBlock, deviceMenu, propertyMenu);
     }
 
     @NotNull
-    private ZigBeeProperty getZigBeeProperty(WorkspaceBlock workspaceBlock, ServerMenuBlock deviceMenu, String propertyID) {
+    private DeviceProperty getZigBeeProperty(WorkspaceBlock workspaceBlock, ServerMenuBlock deviceMenu, String propertyID) {
         String ieeeAddress = workspaceBlock.getMenuValue("DEVICE", deviceMenu);
-        ZigBeeProperty property = getZigBeeProperty(ieeeAddress, propertyID);
+        DeviceProperty property = getZigBeeProperty(ieeeAddress, propertyID);
 
         if (property == null) {
             // wait for property to be online at most 10 minutes
@@ -244,7 +244,7 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
     }
 
     @Nullable
-    private ZigBeeProperty getZigBeeProperty(String ieeeAddress, String propertyID) {
+    private DeviceProperty getZigBeeProperty(String ieeeAddress, String propertyID) {
         for (ZigBeeBaseCoordinatorEntity coordinator : getZigBeeCoordinators()) {
             ZigBeeDeviceBaseEntity zigBeeDevice = coordinator.getZigBeeDevice(ieeeAddress);
             if (zigBeeDevice != null) {

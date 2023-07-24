@@ -1,54 +1,32 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.local.handlers;
 
-import java.util.Map;
-import java.util.Objects;
-
-
-import org.smarthomej.binding.tuya.internal.local.CommandType;
-import org.smarthomej.binding.tuya.internal.local.DeviceInfoSubscriber;
-import org.smarthomej.binding.tuya.internal.local.MessageWrapper;
-import org.smarthomej.binding.tuya.internal.local.dto.DeviceInfo;
-import org.smarthomej.binding.tuya.internal.local.dto.DiscoveryMessage;
+import static org.homio.addon.tuya.internal.local.CommandType.BROADCAST_LPV34;
+import static org.homio.addon.tuya.internal.local.CommandType.UDP;
+import static org.homio.addon.tuya.internal.local.CommandType.UDP_NEW;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import java.util.Map;
+import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.homio.addon.tuya.internal.local.DeviceInfoSubscriber;
+import org.homio.addon.tuya.internal.local.MessageWrapper;
+import org.homio.addon.tuya.internal.local.dto.DeviceInfo;
+import org.homio.addon.tuya.internal.local.dto.DiscoveryMessage;
 
 /**
  * The {@link DiscoveryMessageHandler} is used for handling UDP discovery messages
- *
- * @author Jan N. Klug - Initial contribution
  */
-
+@RequiredArgsConstructor
 public class DiscoveryMessageHandler extends ChannelDuplexHandler {
     private final Map<String, DeviceInfo> deviceInfos;
     private final Map<String, DeviceInfoSubscriber> deviceListeners;
 
-    public DiscoveryMessageHandler(Map<String, DeviceInfo> deviceInfos,
-            Map<String, DeviceInfoSubscriber> deviceListeners) {
-        this.deviceInfos = deviceInfos;
-        this.deviceListeners = deviceListeners;
-    }
-
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg)
-            throws Exception {
-        if (msg instanceof MessageWrapper<?>) {
-            MessageWrapper<?> messageWrapper = (MessageWrapper<?>) msg;
-            if ((messageWrapper.commandType == CommandType.UDP_NEW || messageWrapper.commandType == CommandType.UDP
-                    || messageWrapper.commandType == CommandType.BROADCAST_LPV34)) {
-                DiscoveryMessage discoveryMessage = (DiscoveryMessage) Objects.requireNonNull(messageWrapper.content);
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof MessageWrapper<?> mw) {
+            if ((mw.commandType == UDP_NEW || mw.commandType == UDP || mw.commandType == BROADCAST_LPV34)) {
+                DiscoveryMessage discoveryMessage = (DiscoveryMessage) Objects.requireNonNull(mw.content);
                 DeviceInfo deviceInfo = new DeviceInfo(discoveryMessage.ip, discoveryMessage.version);
                 if (!deviceInfo.equals(deviceInfos.put(discoveryMessage.deviceId, deviceInfo))) {
                     DeviceInfoSubscriber subscriber = deviceListeners.get(discoveryMessage.deviceId);

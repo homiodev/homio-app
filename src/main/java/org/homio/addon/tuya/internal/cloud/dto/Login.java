@@ -1,7 +1,7 @@
 package org.homio.addon.tuya.internal.cloud.dto;
 
 import com.google.gson.annotations.SerializedName;
-import org.homio.addon.tuya.internal.config.ProjectConfiguration;
+import org.homio.addon.tuya.TuyaProjectEntity;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
 
 public class Login {
@@ -20,7 +20,8 @@ public class Login {
         this.schema = schema;
     }
 
-    public static Login fromProjectConfiguration(ProjectConfiguration config) {
-        return new Login(config.username, config.password, config.countryCode, config.schema);
+    public static Login fromProjectConfiguration(TuyaProjectEntity config) {
+        return new Login(config.getUser(), config.getPassword().asString(),
+            config.getCountryCode(), config.getProjectSchema().name());
     }
 }

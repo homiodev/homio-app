@@ -1,37 +1,18 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.local.handlers;
-
-import java.util.List;
-
-
-import org.jetbrains.annotations.Nullable;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import java.util.List;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The {@link DatagramToByteBufDecoder} is a Netty Decoder for UDP messages
- *
- * @author Jan N. Klug - Initial contribution
  */
-
 public class DatagramToByteBufDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     @Override
-    protected void decode(@Nullable ChannelHandlerContext ctx, DatagramPacket msg,
-            List<Object> out) throws Exception {
+    protected void decode(@Nullable ChannelHandlerContext ctx, DatagramPacket msg, List<Object> out) {
         out.add(msg.content().copy());
     }
 }

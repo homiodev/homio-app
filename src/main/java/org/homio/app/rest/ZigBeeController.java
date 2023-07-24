@@ -14,8 +14,8 @@ import org.homio.api.EntityContext;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.entity.zigbee.ZigBeeBaseCoordinatorEntity;
 import org.homio.api.entity.zigbee.ZigBeeDeviceBaseEntity;
-import org.homio.api.entity.zigbee.ZigBeeProperty;
-import org.homio.api.entity.zigbee.ZigBeeProperty.PropertyType;
+import org.homio.api.model.DeviceProperty;
+import org.homio.api.model.DeviceProperty.PropertyType;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.jetbrains.annotations.NotNull;
@@ -61,23 +61,23 @@ public class ZigBeeController {
         return getZigBeeCoordinators().stream()
                                       .map(c -> c.getZigBeeDevice(ieeeAddress))
                                       .filter(Objects::nonNull)
-                                      .flatMap(d -> ((Map<String, ZigBeeProperty>) d.getProperties()).values().stream())
+                                      .flatMap(d -> ((Map<String, DeviceProperty>) d.getProperties()).values().stream())
                                       .filter(buildPropertyAccessFilter(access))
                                       .filter(buildFilterByType(type))
                                       .map(this::createOptionModel)
                                       .collect(Collectors.toList());
     }
 
-    private @NotNull Predicate<? super ZigBeeProperty> buildPropertyAccessFilter(@NotNull String access) {
+    private @NotNull Predicate<? super DeviceProperty> buildPropertyAccessFilter(@NotNull String access) {
         return switch (access) {
-            case "read" -> ZigBeeProperty::isReadable;
-            case "write" -> ZigBeeProperty::isWritable;
+            case "read" -> DeviceProperty::isReadable;
+            case "write" -> DeviceProperty::isWritable;
             default -> zigBeeProperty -> true;
         };
     }
 
-    private @NotNull Predicate<? super ZigBeeProperty> buildFilterByType(@NotNull String type) {
-        return (Predicate<ZigBeeProperty>) zigBeeProperty -> switch (type) {
+    private @NotNull Predicate<? super DeviceProperty> buildFilterByType(@NotNull String type) {
+        return (Predicate<DeviceProperty>) zigBeeProperty -> switch (type) {
             case "bool" -> zigBeeProperty.getPropertyType() == PropertyType.bool;
             case "number" -> zigBeeProperty.getPropertyType() == PropertyType.number;
             case "string" -> zigBeeProperty.getPropertyType() == PropertyType.string;
@@ -88,14 +88,14 @@ public class ZigBeeController {
     private @NotNull Predicate<ZigBeeDeviceBaseEntity> buildDeviceAccessFilter(@NotNull String access, @NotNull String type) {
         return switch (access) {
             case "read" -> device -> device.getProperties().values().stream()
-                                           .anyMatch(p -> ((ZigBeeProperty) p).isReadable() && filterByType((ZigBeeProperty) p, type));
+                                           .anyMatch(p -> ((DeviceProperty) p).isReadable() && filterByType((DeviceProperty) p, type));
             case "write" -> device -> device.getProperties().values().stream()
-                                            .anyMatch(p -> ((ZigBeeProperty) p).isWritable() && filterByType((ZigBeeProperty) p, type));
+                                            .anyMatch(p -> ((DeviceProperty) p).isWritable() && filterByType((DeviceProperty) p, type));
             default -> device -> true;
         };
     }
 
-    private boolean filterByType(@NotNull ZigBeeProperty zigBeeProperty, @NotNull String type) {
+    private boolean filterByType(@NotNull DeviceProperty zigBeeProperty, @NotNull String type) {
         return switch (type) {
             case "bool" -> zigBeeProperty.getPropertyType() == PropertyType.bool;
             case "number" -> zigBeeProperty.getPropertyType() == PropertyType.number;
@@ -128,7 +128,7 @@ public class ZigBeeController {
                             .collect(Collectors.toList());
     }
 
-    private @NotNull OptionModel createOptionModel(@NotNull ZigBeeProperty property) {
+    private @NotNull OptionModel createOptionModel(@NotNull DeviceProperty property) {
         return OptionModel.of(property.getKey(), property.getName(false))
                           .setDescription(property.getDescription())
                           .setIcon(property.getIcon().getIcon())

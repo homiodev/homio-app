@@ -430,7 +430,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         } else {
             ScheduleBuilder<Void> scheduleBuilder = builder("file-watchdog" + file);
             final AtomicLong lastModified = new AtomicLong(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis());
-            fileWatchDog = scheduleBuilder.delay(Duration.ofSeconds(10)).interval(Duration.ofSeconds(10))
+            fileWatchDog = scheduleBuilder.intervalWithDelay(Duration.ofSeconds(10))
                                           .execute(context -> {
                                               checkFileModifiedAndFireHandler(file, lastModified, (ThreadContextImpl) context);
                                               return null;

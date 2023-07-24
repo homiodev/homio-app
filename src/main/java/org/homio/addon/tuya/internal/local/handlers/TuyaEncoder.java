@@ -1,6 +1,7 @@
 package org.homio.addon.tuya.internal.local.handlers;
 
 import static com.sshtools.common.util.Utils.bytesToHex;
+import static org.homio.addon.tuya.internal.local.CommandType.CONTROL;
 import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY;
 import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY_NEW;
 import static org.homio.addon.tuya.internal.local.CommandType.DP_REFRESH;
@@ -120,7 +121,7 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
                 buffer.put(payloadBytes);
                 payloadBytes = buffer.array();
             }
-        } else if (CommandType.CONTROL.equals(commandType)) {
+        } else if (CONTROL.equals(commandType)) {
             // Protocol 3.1 and below, only encrypt data if necessary
             byte[] encryptedPayload = CryptoUtil.encryptAesEcb(payloadBytes, keyStore.getDeviceKey(), true);
             if (encryptedPayload == null) {

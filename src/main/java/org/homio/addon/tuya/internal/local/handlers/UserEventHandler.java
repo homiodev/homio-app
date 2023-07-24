@@ -1,21 +1,10 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.local.handlers;
 
 import java.io.IOException;
 import java.util.Objects;
 
 
+import lombok.extern.log4j.Log4j2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,13 +13,9 @@ import io.netty.channel.ChannelHandlerContext;
 
 /**
  * The {@link UserEventHandler} is a Netty handler for events (used for closing the connection)
- *
- * @author Jan N. Klug - Initial contribution
  */
-
+@Log4j2
 public class UserEventHandler extends ChannelDuplexHandler {
-    private final Logger logger = LoggerFactory.getLogger(UserEventHandler.class);
-
     private final String deviceId;
 
     public UserEventHandler(String deviceId) {

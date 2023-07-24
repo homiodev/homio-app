@@ -61,7 +61,7 @@ public class TuyaDevice implements ChannelFutureListener {
         bootstrap.option(ChannelOption.TCP_NODELAY, true).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             @Override
-            protected void initChannel(SocketChannel ch) throws Exception {
+            protected void initChannel(SocketChannel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("idleStateHandler",
                         new IdleStateHandler(TCP_CONNECTION_TIMEOUT, TCP_CONNECTION_HEARTBEAT_INTERVAL, 0));
@@ -126,7 +126,7 @@ public class TuyaDevice implements ChannelFutureListener {
     }
 
     @Override
-    public void operationComplete(ChannelFuture channelFuture) throws Exception {
+    public void operationComplete(ChannelFuture channelFuture) {
         if (channelFuture.isSuccess()) {
             Channel channel = channelFuture.channel();
             this.channel = channel;

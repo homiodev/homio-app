@@ -87,8 +87,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         entityContext
             .bgp()
             .builder("drop-outdated-dynamicContext")
-            .delay(Duration.ofHours(1))
-            .interval(Duration.ofHours(1))
+            .intervalWithDelay(Duration.ofHours(1))
             .execute(() ->
                 this.dynamicUpdateRegisters.values().removeIf(v -> TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - v.timeout) > 1));
 

@@ -19,20 +19,16 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The {@link CryptoUtil} is a support class for encrypting/decrypting messages
  * <p>
  * Parts of this code are inspired by the TuyAPI project (see notice file)
- *
- * @author Jan N. Klug - Initial contribution
  */
+@Log4j2
 public class CryptoUtil {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(CryptoUtil.class);
 
     private static final int[] CRC_32_TABLE = {0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
         0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988, 0x09b64c2b, 0x7eb17cbd, 0xe7b82d07,

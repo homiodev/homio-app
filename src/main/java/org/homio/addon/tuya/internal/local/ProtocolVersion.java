@@ -2,6 +2,7 @@ package org.homio.addon.tuya.internal.local;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import lombok.Getter;
 import org.homio.api.model.OptionModel.KeyValueEnum;
 
 /**
@@ -12,6 +13,7 @@ public enum ProtocolVersion implements KeyValueEnum {
     V3_3("3.3"),
     V3_4("3.4");
 
+    @Getter
     private final String versionString;
 
     ProtocolVersion(String versionString) {

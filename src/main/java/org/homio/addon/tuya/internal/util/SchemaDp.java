@@ -1,33 +1,15 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
-package org.smarthomej.binding.tuya.internal.util;
+package org.homio.addon.tuya.internal.util;
 
+import com.google.gson.Gson;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-
+import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
 import org.jetbrains.annotations.Nullable;
-import org.smarthomej.binding.tuya.internal.cloud.dto.DeviceSchema;
-
-import com.google.gson.Gson;
 
 /**
  * The {@link SchemaDp} is a wrapper for the information of a single datapoint
- *
- * @author Jan N. Klug - Initial contribution
  */
-
 public class SchemaDp {
     private static final Map<String, String> REMOTE_LOCAL_TYPE_MAP = Map.of( //
             "Boolean", "bool", //
@@ -38,8 +20,8 @@ public class SchemaDp {
     public int id = 0;
     public String code = "";
     public String type = "";
-    public @Nullable Double min;
-    public @Nullable Double max;
+    public double min;
+    public double max;
     public @Nullable List<String> range;
 
     public static SchemaDp fromRemoteSchema(Gson gson, DeviceSchema.Description function) {

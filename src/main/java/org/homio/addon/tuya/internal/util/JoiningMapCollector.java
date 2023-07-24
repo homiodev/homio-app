@@ -1,15 +1,3 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.util;
 
 import java.util.ArrayList;
@@ -21,24 +9,16 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
-
-
+import lombok.RequiredArgsConstructor;
 
 /**
  * The {@link JoiningMapCollector} allows joining all entries of a {@link java.util.stream.Stream<Map.Entry>} with or
  * without delimiters
- *
- * @author Jan N. Klug - Initial contribution
  */
-
+@RequiredArgsConstructor
 public class JoiningMapCollector implements Collector<Map.Entry<String, String>, List<String>, String> {
     private final String valueDelimiter;
     private final String entryDelimiter;
-
-    private JoiningMapCollector(String valueDelimiter, String entryDelimiter) {
-        this.valueDelimiter = valueDelimiter;
-        this.entryDelimiter = entryDelimiter;
-    }
 
     @Override
     public Supplier<List<String>> supplier() {

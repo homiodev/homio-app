@@ -24,7 +24,7 @@ public class InternetAvailabilityBgpService {
         ScheduleBuilder<Boolean> builder = entityContextBGP.builder("internet-test");
         Duration interval = entityContext.setting().getEnvRequire("interval-internet-test", Duration.class, Duration.ofSeconds(10), true);
         ScheduleBuilder<Boolean> internetAccessBuilder = builder
-            .interval(interval).delay(interval).interval(interval)
+            .intervalWithDelay(interval)
             .valueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
                 if (isInternetUp != isInternetWasUp) {
                     internetUp.set(isInternetUp);

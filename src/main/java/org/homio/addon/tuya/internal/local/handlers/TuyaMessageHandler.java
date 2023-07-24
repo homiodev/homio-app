@@ -1,78 +1,53 @@
-/**
- * Copyright (c) 2021-2023 Contributors to the SmartHome/J project
- *
- * See the NOTICE file(s) distributed with this work for additional
- * information.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0
- *
- * SPDX-License-Identifier: EPL-2.0
- */
 package org.homio.addon.tuya.internal.local.handlers;
 
 import static com.sshtools.common.util.Utils.bytesToHex;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY_NOT_SUPPORTED;
+import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_FINISH;
+import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_RESPONSE;
+import static org.homio.addon.tuya.internal.local.CommandType.STATUS;
 
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
-
-
-import org.openhab.core.util.HexUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.smarthomej.binding.tuya.internal.local.CommandType;
-import org.smarthomej.binding.tuya.internal.local.DeviceStatusListener;
-import org.smarthomej.binding.tuya.internal.local.MessageWrapper;
-import org.smarthomej.binding.tuya.internal.local.TuyaDevice;
-import org.smarthomej.binding.tuya.internal.local.dto.TcpStatusPayload;
-import org.smarthomej.binding.tuya.internal.util.CryptoUtil;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import org.homio.addon.tuya.internal.local.DeviceStatusListener;
+import org.homio.addon.tuya.internal.local.MessageWrapper;
+import org.homio.addon.tuya.internal.local.TuyaDevice;
+import org.homio.addon.tuya.internal.local.dto.TcpStatusPayload;
+import org.homio.addon.tuya.internal.util.CryptoUtil;
 
 /**
  * The {@link TuyaMessageHandler} is a Netty channel handler
- *
- * @author Jan N. Klug - Initial contribution
  */
-
+@Log4j2
+@RequiredArgsConstructor
 public class TuyaMessageHandler extends ChannelDuplexHandler {
-    private final Logger logger = LoggerFactory.getLogger(TuyaMessageHandler.class);
-
     private final String deviceId;
-    private final DeviceStatusListener deviceStatusListener;
     private final TuyaDevice.KeyStore keyStore;
-
-    public TuyaMessageHandler(String deviceId, TuyaDevice.KeyStore keyStore,
-            DeviceStatusListener deviceStatusListener) {
-        this.deviceId = deviceId;
-        this.keyStore = keyStore;
-        this.deviceStatusListener = deviceStatusListener;
-    }
+    private final DeviceStatusListener deviceStatusListener;
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) {
         log.debug("{}{}: Connection established.", deviceId,
                 Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
         deviceStatusListener.connectionStatus(true);
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         log.debug("{}{}: Connection terminated.", deviceId,
                 Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
         deviceStatusListener.connectionStatus(false);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public void channelRead(ChannelHandlerContext ctx, Object msg)
-            throws Exception {
-        if (msg instanceof MessageWrapper<?>) {
-            MessageWrapper<?> m = (MessageWrapper<?>) msg;
-            if (m.commandType == CommandType.DP_QUERY || m.commandType == CommandType.STATUS) {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof MessageWrapper<?> m) {
+            if (m.commandType == DP_QUERY || m.commandType == STATUS) {
                 Map<Integer, Object> stateMap = null;
                 if (m.content instanceof TcpStatusPayload) {
                     TcpStatusPayload payload = (TcpStatusPayload) Objects.requireNonNull(m.content);
@@ -82,9 +57,9 @@ public class TuyaMessageHandler extends ChannelDuplexHandler {
                 if (stateMap != null && !stateMap.isEmpty()) {
                     deviceStatusListener.processDeviceStatus(stateMap);
                 }
-            } else if (m.commandType == CommandType.DP_QUERY_NOT_SUPPORTED) {
+            } else if (m.commandType == DP_QUERY_NOT_SUPPORTED) {
                 deviceStatusListener.processDeviceStatus(Map.of());
-            } else if (m.commandType == CommandType.SESS_KEY_NEG_RESPONSE) {
+            } else if (m.commandType == SESS_KEY_NEG_RESPONSE) {
                 byte[] localKeyHmac = CryptoUtil.hmac(keyStore.getRandom(), keyStore.getDeviceKey());
                 byte[] localKeyExpectedHmac = Arrays.copyOfRange((byte[]) m.content, 16, 16 + 32);
 
@@ -93,13 +68,13 @@ public class TuyaMessageHandler extends ChannelDuplexHandler {
                             "{}{}: Session key negotiation failed during Hmac validation: calculated {}, expected {}",
                             deviceId, Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
                             localKeyHmac != null ? bytesToHex(localKeyHmac) : "<null>",
-                            HexUtils.bytesToHex(localKeyExpectedHmac));
+                            bytesToHex(localKeyExpectedHmac));
                     return;
                 }
 
                 byte[] remoteKey = Arrays.copyOf((byte[]) m.content, 16);
                 byte[] remoteKeyHmac = CryptoUtil.hmac(remoteKey, keyStore.getDeviceKey());
-                MessageWrapper<?> response = new MessageWrapper<>(CommandType.SESS_KEY_NEG_FINISH, remoteKeyHmac);
+                MessageWrapper<?> response = new MessageWrapper<>(SESS_KEY_NEG_FINISH, remoteKeyHmac);
 
                 ctx.channel().writeAndFlush(response);
 

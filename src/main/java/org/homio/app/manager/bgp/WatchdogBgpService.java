@@ -21,8 +21,7 @@ public class WatchdogBgpService {
 
     public WatchdogBgpService(EntityContextBGPImpl entityContextBGP) {
         entityContextBGP.builder("watchdog")
-                        .interval(Duration.ofMinutes(1))
-                        .delay(Duration.ofMinutes(1))
+                        .intervalWithDelay(Duration.ofMinutes(1))
                         .execute(this::runWatchDogService);
     }
 

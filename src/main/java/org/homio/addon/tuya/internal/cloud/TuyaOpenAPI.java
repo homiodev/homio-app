@@ -8,13 +8,15 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
+import org.homio.addon.tuya.TuyaProjectEntity;
 import org.homio.addon.tuya.internal.cloud.dto.CommandRequest;
 import org.homio.addon.tuya.internal.cloud.dto.DeviceListInfo;
 import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
@@ -22,39 +24,30 @@ import org.homio.addon.tuya.internal.cloud.dto.FactoryInformation;
 import org.homio.addon.tuya.internal.cloud.dto.Login;
 import org.homio.addon.tuya.internal.cloud.dto.ResultResponse;
 import org.homio.addon.tuya.internal.cloud.dto.Token;
-import org.homio.addon.tuya.internal.config.ProjectConfiguration;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
 import org.homio.addon.tuya.internal.util.JoiningMapCollector;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP;
+import org.homio.api.EntityContextBGP.ThreadContext;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The {@link TuyaOpenAPI} is an implementation of the Tuya OpenApi specification
  */
+@Log4j2
+@RequiredArgsConstructor
 public class TuyaOpenAPI {
-    private final Logger logger = LoggerFactory.getLogger(TuyaOpenAPI.class);
-    private final ScheduledExecutorService scheduler;
-    private ProjectConfiguration config = new ProjectConfiguration();
-    private final HttpClient httpClient;
 
-    private final ApiStatusCallback callback;
-    private final Gson gson;
+    @Setter
+    private TuyaProjectEntity config;
 
+    private final Gson gson = new Gson();
     private Token token = new Token();
-    private @Nullable ScheduledFuture<?> refreshTokenJob;
 
-    public TuyaOpenAPI(ApiStatusCallback callback, ScheduledExecutorService scheduler, Gson gson,
-            HttpClient httpClient) {
-        this.callback = callback;
-        this.gson = gson;
-        this.httpClient = httpClient;
-        this.scheduler = scheduler;
-    }
+    private final ApiStatusCallback tuyaOpenApiStatusCallback;
+    private final EntityContext entityContext;
 
-    public void setConfiguration(ProjectConfiguration configuration) {
-        this.config = configuration;
-    }
+    private @Nullable ThreadContext<Void> refreshTokenJob;
 
     public boolean isConnected() {
         return !token.accessToken.isEmpty() && System.currentTimeMillis() < token.expireTimestamp;
@@ -85,9 +78,7 @@ public class TuyaOpenAPI {
     }
 
     private void stopRefreshTokenJob() {
-        ScheduledFuture<?> refreshTokenJob = this.refreshTokenJob;
-        if (refreshTokenJob != null) {
-            refreshTokenJob.cancel(true);
+        if (EntityContextBGP.cancel(this.refreshTokenJob)) {
             this.refreshTokenJob = null;
         }
     }
@@ -95,7 +86,7 @@ public class TuyaOpenAPI {
     private CompletableFuture<Void> processTokenResponse(String contentString) {
         if (contentString.isEmpty()) {
             this.token = new Token();
-            callback.tuyaOpenApiStatus(false);
+            tuyaOpenApiStatusCallback.tuyaOpenApiStatus(false);
             return CompletableFuture.failedFuture(new ConnectionException("Failed to get token."));
         }
 
@@ -108,15 +99,17 @@ public class TuyaOpenAPI {
                 token.expireTimestamp = result.timestamp + token.expire * 1000;
                 log.debug("Got token: {}", token);
                 this.token = token;
-                callback.tuyaOpenApiStatus(true);
-                refreshTokenJob = scheduler.schedule(this::refreshToken, token.expire - 60, TimeUnit.SECONDS);
+                tuyaOpenApiStatusCallback.tuyaOpenApiStatus(true);
+                this.refreshTokenJob = entityContext.bgp().builder("tuya-refresh-token")
+                                                    .delay(Duration.ofSeconds(token.expire - 60))
+                                                    .execute(this::refreshToken);
                 return CompletableFuture.completedFuture(null);
             }
         }
 
         log.warn("Request failed: {}, no token received", result);
         this.token = new Token();
-        callback.tuyaOpenApiStatus(false);
+        tuyaOpenApiStatusCallback.tuyaOpenApiStatus(false);
         return CompletableFuture.failedFuture(new ConnectionException("Failed to get token."));
     }
 
@@ -153,7 +146,7 @@ public class TuyaOpenAPI {
         } else {
             if (resultResponse.code >= 1010 && resultResponse.code <= 1013) {
                 log.warn("Server reported invalid token. This should never happen. Trying to re-login.");
-                callback.tuyaOpenApiStatus(false);
+                tuyaOpenApiStatusCallback.tuyaOpenApiStatus(false);
                 return CompletableFuture.failedFuture(new ConnectionException(resultResponse.msg));
             }
             return CompletableFuture.failedFuture(new IllegalStateException(resultResponse.msg));
@@ -164,17 +157,19 @@ public class TuyaOpenAPI {
         @Nullable Object body) {
         long now = System.currentTimeMillis();
 
-        String sign = signRequest(path, Map.of("client_id", config.accessId), List.of("client_id"), params,
+        String sign = signRequest(path,
+            Map.of("client_id", config.getAccessId()),
+            List.of("client_id"), params,
             body, null, now);
         Map<String, String> headers = Map.of( //
-            "client_id", config.accessId, //
+            "client_id", config.getAccessId(), //
             "t", Long.toString(now), //
             "Signature-Headers", "client_id", //
             "sign", sign, //
             "sign_method", "HMAC-SHA256", //
             "access_token", this.token.accessToken);
 
-        String fullUrl = config.dataCenter + signUrl(path, params);
+        String fullUrl = config.getDataCenter().getUrl() + signUrl(path, params);
         Builder builder = HttpRequest.newBuilder().uri(URI.create(fullUrl));
 //        HttpRequest request = builder.uri(URI.create(fullUrl)).build();
 
@@ -213,9 +208,9 @@ public class TuyaOpenAPI {
         Map<String, String> params, @Nullable Object body, @Nullable String nonce, long now) {
         String stringToSign = stringToSign(path, headers, signHeaders, params, body);
         String tokenToUse = path.startsWith("/v1.0/token") ? "" : this.token.accessToken;
-        String fullStringToSign = this.config.accessId + tokenToUse + now + (nonce == null ? "" : nonce) + stringToSign;
+        String fullStringToSign = this.config.getAccessId() + tokenToUse + now + (nonce == null ? "" : nonce) + stringToSign;
 
-        return CryptoUtil.hmacSha256(fullStringToSign, config.accessSecret);
+        return CryptoUtil.hmacSha256(fullStringToSign, config.getAccessSecret().asString());
     }
 
     private String stringToSign(String path, Map<String, String> headers, List<String> signHeaders,
