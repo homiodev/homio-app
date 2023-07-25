@@ -3,13 +3,11 @@ package org.homio.addon.tuya.internal.util;
 import static com.sshtools.common.util.Utils.bytesToHex;
 
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Random;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -17,7 +15,6 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.Nullable;
@@ -59,7 +56,6 @@ public class CryptoUtil {
         0x3e6e77db, 0xaed16a4a, 0xd9d65adc, 0x40df0b66, 0x37d83bf0, 0xa9bcae53, 0xdebb9ec5, 0x47b2cf7f, 0x30b5ffe9,
         0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693, 0x54de5729, 0x23d967bf, 0xb3667a2e,
         0xc4614ab8, 0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d};
-    private static final int GCM_TAG_LENGTH = 16;
 
     private static final Random SECURE_RNG = new SecureRandom();
 
@@ -86,23 +82,6 @@ public class CryptoUtil {
     }
 
     /**
-     * Calculate an SHA-256 hash of the input data
-     *
-     * @param data input data as String
-     * @return the resulting SHA-256 hash as hexadecimal String
-     */
-    public static String sha256(String data) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update(data.getBytes(StandardCharsets.UTF_8));
-            return HexUtils.bytesToHex(digest.digest()).toLowerCase();
-        } catch (NoSuchAlgorithmException e) {
-            log.warn("Algorithm SHA-256 not found. This should never happen. Check your Java setup.");
-        }
-        return "";
-    }
-
-    /**
      * Calculate a MD5 hash of the input data
      *
      * @param data input data as String
@@ -112,62 +91,11 @@ public class CryptoUtil {
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
             digest.update(data.getBytes(StandardCharsets.UTF_8));
-            return HexUtils.bytesToHex(digest.digest()).toLowerCase();
+            return bytesToHex(digest.digest()).toLowerCase();
         } catch (NoSuchAlgorithmException e) {
             log.warn("Algorithm MD5 not found. This should never happen. Check your Java setup.");
         }
         return "";
-    }
-
-    /**
-     * Calculate an SHA-256 MAC of the input data with a given secret
-     *
-     * @param data   input data as String
-     * @param secret the secret to be used
-     * @return the resulting MAC as hexadecimal String
-     */
-    public static String hmacSha256(String data, String secret) {
-        try {
-            Mac sha256HMAC = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-            sha256HMAC.init(secretKey);
-
-            return HexUtils.bytesToHex(sha256HMAC.doFinal(data.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            //
-        }
-        return "";
-    }
-
-    /**
-     * Decrypt an AES-GCM encoded message
-     *
-     * @param msg      the message as Base64 encoded string
-     * @param password the password as string
-     * @param t        the timestamp of the message (used as AAD)
-     * @return the decrypted message as String (or null if decryption failed)
-     */
-    public static @Nullable String decryptAesGcm(String msg, String password, long t) {
-        try {
-            byte[] rawBuffer = Base64.getDecoder().decode(msg);
-            // first four bytes are IV length
-            int ivLength = rawBuffer[0] << 24 | (rawBuffer[1] & 0xFF) << 16 | (rawBuffer[2] & 0xFF) << 8
-                | (rawBuffer[3] & 0xFF);
-            // data length is full length without IV length and IV
-            int dataLength = rawBuffer.length - 4 - ivLength;
-            SecretKey secretKey = new SecretKeySpec(password.getBytes(StandardCharsets.UTF_8), 8, 16, "AES");
-            final Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, rawBuffer, 4, ivLength);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, parameterSpec);
-            cipher.updateAAD(Long.toString(t).getBytes(StandardCharsets.UTF_8));
-            byte[] decoded = cipher.doFinal(rawBuffer, 4 + ivLength, dataLength);
-            return new String(decoded);
-        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException
-                 | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e) {
-            log.warn("Decryption of MQ failed: {}", e.getMessage());
-        }
-
-        return null;
     }
 
     /**

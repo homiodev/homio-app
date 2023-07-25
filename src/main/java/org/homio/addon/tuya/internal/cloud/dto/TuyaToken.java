@@ -4,11 +4,11 @@ import com.google.gson.annotations.SerializedName;
 import lombok.ToString;
 
 /**
- * The {@link Token} encapsulates the Access Tokens
+ * The {@link TuyaToken} encapsulates the Access Tokens
  */
 
 @ToString
-public class Token {
+public class TuyaToken {
     @SerializedName("access_token")
     public final String accessToken;
     @SerializedName("refresh_token")
@@ -19,11 +19,11 @@ public class Token {
 
     public transient long expireTimestamp = 0;
 
-    public Token() {
+    public TuyaToken() {
         this("", "", "", 0);
     }
 
-    public Token(String accessToken, String refreshToken, String uid, long expire) {
+    public TuyaToken(String accessToken, String refreshToken, String uid, long expire) {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.uid = uid;

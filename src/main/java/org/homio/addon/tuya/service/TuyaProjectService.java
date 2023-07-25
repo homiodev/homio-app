@@ -88,7 +88,7 @@ public class TuyaProjectService implements ServiceInstance<TuyaProjectEntity> {
     private void scheduleRefreshTokenJob() {
         this.refreshTokenJob =
             entityContext.bgp().builder("tuya-refresh-token")
-                         .delay(Duration.ofSeconds(api.getToken().expire - 60))
+                         .delay(Duration.ofSeconds(api.getTuyaToken().expire - 60))
                          .execute(() -> {
                              if (!api.refreshToken()) {
                                  scheduleConnectJob();
