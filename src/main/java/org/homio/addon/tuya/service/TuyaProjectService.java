@@ -53,20 +53,15 @@ public class TuyaProjectService implements ServiceInstance<TuyaProjectEntity> {
 
     public void initialize() {
         try {
+            entity.setStatusOnline();
             if (!api.isConnected()) {
                 api.login();
             }
-            if (entity.getStatus().isOnline()) {
-                return;
-            }
             if (!entity.isValid()) {
                 entity.setStatus(Status.ERROR, "Not valid configuration");
-                return;
             }
-
-            api.setProjectEntity(entity);
-            entity.setStatus(Status.UNKNOWN);
         } catch (Exception ex) {
+            entity.setStatusError(ex);
             log.error("Error during initialize tuya project: {}", CommonUtils.getErrorMessage(ex));
         }
     }

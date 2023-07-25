@@ -22,8 +22,6 @@ import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -36,9 +34,11 @@ import org.homio.addon.tuya.internal.cloud.dto.ResultResponse;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaTokenDTO;
 import org.homio.addon.tuya.internal.util.JoiningMapCollector;
+import org.homio.api.EntityContext;
 import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.model.Status;
 import org.homio.api.util.CommonUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
@@ -52,15 +52,17 @@ public class TuyaOpenAPI {
     private static final String NONE_STRING = "";
     private static final String EMPTY_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
-    @Setter
-    private TuyaProjectEntity projectEntity;
+    private final @NotNull TuyaProjectEntity projectEntity;
 
-    private final Gson gson = new Gson();
-    @Getter
-    private TuyaTokenDTO tuyaToken = new TuyaTokenDTO();
+    private final @NotNull Gson gson = new Gson();
+    private @NotNull TuyaTokenDTO token = new TuyaTokenDTO();
+
+    public TuyaOpenAPI(EntityContext entityContext) {
+        this.projectEntity = TuyaProjectEntity.ensureEntityExists(entityContext);
+    }
 
     public boolean isConnected() {
-        return !tuyaToken.accessToken.isEmpty() && System.currentTimeMillis() < tuyaToken.expireTimestamp;
+        return !token.accessToken.isEmpty() && System.currentTimeMillis() < token.expireTimestamp;
     }
 
     public synchronized void login() throws Exception {
@@ -78,11 +80,11 @@ public class TuyaOpenAPI {
                 if (tuyaToken != null) {
                     tuyaToken.expireTimestamp = result.timestamp + tuyaToken.expire * 1000;
                     log.debug("[{}]: Got token: {}", projectEntity.getEntityID(), tuyaToken);
-                    this.tuyaToken = tuyaToken;
+                    this.token = tuyaToken;
                 }
             } else {
                 log.warn("[{}]: Request failed: {}, no token received", projectEntity.getEntityID(), result);
-                this.tuyaToken = new TuyaTokenDTO();
+                this.token = new TuyaTokenDTO();
                 projectEntity.setStatus(Status.ERROR, result.code + ": " + result.msg);
                 throw new IllegalStateException("Request failed: %s, no token received".formatted(result));
             }
@@ -111,7 +113,7 @@ public class TuyaOpenAPI {
             "from", "", //
             "page_no", String.valueOf(page), //
             "page_size", "100");
-        String response = request("/v1.0/users/" + tuyaToken.uid + "/devices", params, null);
+        String response = request("/v1.0/users/" + token.uid + "/devices", params, null);
         return processResponse(response, TypeToken.getParameterized(List.class, TuyaDeviceDTO.class).getType(), projectEntity);
     }
 
@@ -151,7 +153,7 @@ public class TuyaOpenAPI {
         Map<String, String> signatureHeaders = new HashMap<>();
 
         String stringToSign = stringToSign(urlString, body, signatureHeaders);
-        String sign = sign(projectEntity.getAccessID(), projectEntity.getAccessSecret().asString(), t, this.tuyaToken.accessToken, NONE_STRING, stringToSign);
+        String sign = sign(projectEntity.getAccessID(), projectEntity.getAccessSecret().asString(), t, this.token.accessToken, NONE_STRING, stringToSign);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("client_id", projectEntity.getAccessID());
@@ -162,8 +164,8 @@ public class TuyaOpenAPI {
         headers.put("nonce", "");
         headers.put("sign_method", "HMAC-SHA256");
 
-        if (StringUtils.isNotEmpty(this.tuyaToken.accessToken)) {
-            headers.put("access_token", this.tuyaToken.accessToken);
+        if (StringUtils.isNotEmpty(this.token.accessToken)) {
+            headers.put("access_token", this.token.accessToken);
         }
 
         String fullUrl = projectEntity.getDataCenter().getUrl() + buildUrl(path, params);
