@@ -1,9 +1,7 @@
 package org.homio.addon.tuya.service;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.homio.addon.tuya.service.TuyaDiscoveryService.updateTuyaDeviceEntity;
 
-import com.google.gson.Gson;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import java.time.Duration;
@@ -43,7 +41,6 @@ import org.jetbrains.annotations.Nullable;
 @Log4j2
 public class TuyaDeviceService implements ServiceInstance<TuyaDeviceEntity>, DeviceInfoSubscriber, DeviceStatusListener {
 
-    private static final Gson gson = new Gson();
     private static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
     private static final UdpDiscoveryListener udpDiscoveryListener = new UdpDiscoveryListener(eventLoopGroup);
     private long entityCode;
@@ -71,7 +68,7 @@ public class TuyaDeviceService implements ServiceInstance<TuyaDeviceEntity>, Dev
 
     @Override
     public void processDeviceStatus(Map<Integer, Object> deviceStatus) {
-        log.trace("'{}' received status message '{}'", entity.getTitle(), deviceStatus);
+        log.debug("[{}]: received status message '{}'", entity.getEntityID(), deviceStatus);
 
         if (deviceStatus.isEmpty()) {
             // if status is empty -> need to use control method to request device status
@@ -113,34 +110,41 @@ public class TuyaDeviceService implements ServiceInstance<TuyaDeviceEntity>, Dev
         this.dispose();
     }
 
-    private void processPropertyStatus(Integer dp, Object rawValue) {
-        TuyaDeviceProperty property = properties.values().stream().filter(p -> p.getDp() == dp).findAny().orElse(null);
-        if (property != null) {
-            Pair<Long, Object> pair = statusCache.get(dp);
-            if (pair == null || Duration.ofMillis(System.currentTimeMillis() - pair.getKey()).getSeconds() > 10) {
-                // skip update if the property is off!
-                return;
-            }
-
-            if (!property.getStateHandler().apply(rawValue)) {
-                log.warn("Could not update property '{}' with value '{}'. Datatype incompatible.",
-                    property.getIeeeAddress(), rawValue);
-            }
-        } else {
-            // try additional propertyDps, only OnOffType
-            List<TuyaDeviceProperty> propertyIds = properties.values().stream().filter(p -> p.getDp2() == dp).toList();
-            if (propertyIds.isEmpty()) {
-                log.debug("Could not find property for dp '{}' in thing '{}'", dp, entity.getTitle());
-            } else {
-                if (Boolean.class.isAssignableFrom(rawValue.getClass())) {
-                    for (TuyaDeviceProperty propertyId : propertyIds) {
-                        propertyId.getStateHandler().apply(rawValue);
-                    }
+    @SneakyThrows
+    public void initialize() {
+        this.dispose(); // stop all before initialize
+        if (StringUtils.isNotEmpty(entity.getIeeeAddress()) && StringUtils.isEmpty(entity.getLocalKey())) {
+            entity.setStatus(Status.INITIALIZE);
+            entityContext.bgp().builder("tuya-init-" + entity.getEntityID())
+                         .delay(Duration.ofSeconds(1))
+                         .onError(e -> entity.setStatus(Status.ERROR, CommonUtils.getErrorMessage(e)))
+                         .execute(this::tryFetchDeviceInfo);
+            return;
+        }
+        try {
+            // check if we have properties and add them if available
+            if (properties == null || properties.isEmpty()) {
+                // stored schemas are usually more complete
+                List<SchemaDp> schemaDps = entity.getSchemaDps();
+                if (!schemaDps.isEmpty()) {
+                    // fallback to retrieved schema
+                    addProperties(schemaDps);
+                } else {
+                    entity.setStatus(Status.OFFLINE, "Device has no properties");
                     return;
                 }
-                log.warn("Could not update property '{}' with value {}. Datatype incompatible.",
-                    propertyIds, rawValue);
             }
+
+            if (!entity.getIp().isBlank()) {
+                deviceInfoChanged(new DeviceInfo(entity.getIp(), entity.getProtocolVersion().getVersionString()));
+            } else {
+                entity.setStatus(Status.WAITING, "Waiting for IP address");
+                udpDiscoveryListener.registerListener(entity.getIeeeAddress(), this);
+            }
+
+            disposing = false;
+        } catch (Exception ex) {
+            log.error("[{}]: Error during initialize tuya device: {}", entity.getEntityID(), CommonUtils.getErrorMessage(ex));
         }
     }
 
@@ -175,7 +179,7 @@ public class TuyaDeviceService implements ServiceInstance<TuyaDeviceEntity>, Dev
     /*@Override
     public void handleCommand(ChannelUID channelUID, Command command) {
         if (getThing().getStatus() != ThingStatus.ONLINE) {
-            log.warn("Channel '{}' received a command but device is not ONLINE. Discarding command.", channelUID);
+            log.warn("[{}]: Channel '{}' received a command but device is not ONLINE. Discarding command.", entity.getEntityID(), channelUID);
             return;
         }
 
@@ -184,8 +188,8 @@ public class TuyaDeviceService implements ServiceInstance<TuyaDeviceEntity>, Dev
         ChannelTypeUID channelTypeUID = channelIdToChannelTypeUID.get(channelUID.getId());
         ChannelConfiguration configuration = channelIdToConfiguration.get(channelUID.getId());
         if (channelTypeUID == null || configuration == null) {
-            log.warn("Could not determine channel type or configuration for channel '{}'. Discarding command.",
-                    channelUID);
+            log.warn("[{}]: Could not determine channel type or configuration for channel '{}'. Discarding command.",
+                    entity.getEntityID(), channelUID);
             return;
         }
 
@@ -202,8 +206,8 @@ public class TuyaDeviceService implements ServiceInstance<TuyaDeviceEntity>, Dev
             } else if (command instanceof PercentType) {
                 State oldState = channelStateCache.get(channelUID.getId());
                 if (!(oldState instanceof HSBType)) {
-                    log.debug("Discarding command '{}' to channel '{}', cannot determine old state", command,
-                            channelUID);
+                    log.debug("[{}]: Discarding command '{}' to channel '{}', cannot determine old state", entity.getEntityID(),
+                        command, channelUID);
                     return;
                 }
                 HSBType newState = new HSBType(((HSBType) oldState).getHue(), ((HSBType) oldState).getSaturation(),
@@ -278,42 +282,18 @@ public class TuyaDeviceService implements ServiceInstance<TuyaDeviceEntity>, Dev
         }
     }
 
-    @SneakyThrows
-    public void initialize() {
-        this.dispose(); // stop all before initialize
-        if (StringUtils.isNotEmpty(entity.getIeeeAddress()) && StringUtils.isEmpty(entity.getLocalKey())) {
-            entity.setStatus(Status.INITIALIZE);
-            entityContext.bgp().builder("tuya-init-" + entity.getEntityID())
-                         .delay(Duration.ofSeconds(1))
-                         .onError(e -> entity.setStatus(Status.ERROR, CommonUtils.getErrorMessage(e)))
-                         .execute(this::tryFetchDeviceInfo);
-            return;
-        }
-        try {
-            // check if we have properties and add them if available
-            if (properties == null || properties.isEmpty()) {
-                // stored schemas are usually more complete
-                List<SchemaDp> schemaDps = entity.getSchemaDps();
-                if (!schemaDps.isEmpty()) {
-                    // fallback to retrieved schema
-                    addProperties(schemaDps);
-                } else {
-                    entity.setStatus(Status.OFFLINE, "Device has no properties");
-                    return;
-                }
-            }
+    @Override
+    public void deviceInfoChanged(DeviceInfo deviceInfo) {
+        log.info("[{}]: Configuring IP address '{}' for thing '{}'.", entity.getEntityID(), deviceInfo, entity.getTitle());
 
-            if (!entity.getIp().isBlank()) {
-                deviceInfoChanged(new DeviceInfo(entity.getIp(), entity.getProtocolVersion().getVersionString()));
-            } else {
-                entity.setStatus(Status.WAITING, "Waiting for IP address");
-                udpDiscoveryListener.registerListener(entity.getIeeeAddress(), this);
-            }
-
-            disposing = false;
-        } catch (Exception ex) {
-            log.error("Error during initialize tuya device: {}", CommonUtils.getErrorMessage(ex));
+        TuyaDeviceCommunicator tuyaDeviceCommunicator = this.tuyaDeviceCommunicator;
+        if (tuyaDeviceCommunicator != null) {
+            tuyaDeviceCommunicator.dispose();
         }
+        entity.setStatus(Status.UNKNOWN);
+
+        this.tuyaDeviceCommunicator = new TuyaDeviceCommunicator(this, eventLoopGroup,
+            deviceInfo.ip(), deviceInfo.protocolVersion(), entity);
     }
 
     @SneakyThrows
@@ -330,18 +310,35 @@ public class TuyaDeviceService implements ServiceInstance<TuyaDeviceEntity>, Dev
         }
     }
 
-    @Override
-    public void deviceInfoChanged(DeviceInfo deviceInfo) {
-        log.info("Configuring IP address '{}' for thing '{}'.", deviceInfo, entity.getTitle());
+    private void processPropertyStatus(Integer dp, Object rawValue) {
+        TuyaDeviceProperty property = properties.values().stream().filter(p -> p.getDp() == dp).findAny().orElse(null);
+        if (property != null) {
+            Pair<Long, Object> pair = statusCache.get(dp);
+            if (pair == null || Duration.ofMillis(System.currentTimeMillis() - pair.getKey()).getSeconds() > 10) {
+                // skip update if the property is off!
+                return;
+            }
 
-        TuyaDeviceCommunicator tuyaDeviceCommunicator = this.tuyaDeviceCommunicator;
-        if (tuyaDeviceCommunicator != null) {
-            tuyaDeviceCommunicator.dispose();
+            if (!property.getStateHandler().apply(rawValue)) {
+                log.warn("[{}]: Could not update property '{}' with value '{}'. Datatype incompatible.",
+                    entity.getEntityID(), property.getIeeeAddress(), rawValue);
+            }
+        } else {
+            // try additional propertyDps, only OnOffType
+            List<TuyaDeviceProperty> propertyIds = properties.values().stream().filter(p -> p.getDp2() == dp).toList();
+            if (propertyIds.isEmpty()) {
+                log.debug("[{}]: Could not find property for dp '{}' in thing '{}'", entity.getEntityID(), dp, entity.getTitle());
+            } else {
+                if (Boolean.class.isAssignableFrom(rawValue.getClass())) {
+                    for (TuyaDeviceProperty propertyId : propertyIds) {
+                        propertyId.getStateHandler().apply(rawValue);
+                    }
+                    return;
+                }
+                log.warn("[{}]: Could not update property '{}' with value {}. Datatype incompatible.",
+                    entity.getEntityID(), propertyIds, rawValue);
+            }
         }
-        entity.setStatus(Status.UNKNOWN);
-
-        this.tuyaDeviceCommunicator = new TuyaDeviceCommunicator(gson, this, eventLoopGroup, entity.getIeeeAddress(),
-            entity.getLocalKey().getBytes(UTF_8), deviceInfo.ip(), deviceInfo.protocolVersion(), entity);
     }
 
     private void addProperties(List<SchemaDp> schemaDps) {

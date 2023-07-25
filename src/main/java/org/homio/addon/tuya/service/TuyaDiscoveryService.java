@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class TuyaDiscoveryService implements ItemDiscoverySupport {
 
-    private static final Gson gson = new Gson();
+    public static final Gson gson = new Gson();
     private final EntityContext entityContext;
 
     @Override

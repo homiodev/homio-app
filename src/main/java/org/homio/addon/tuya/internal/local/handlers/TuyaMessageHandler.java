@@ -7,13 +7,13 @@ import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_FINIS
 import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_RESPONSE;
 import static org.homio.addon.tuya.internal.local.CommandType.STATUS;
 
+import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerContext;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandlerContext;
 import org.homio.addon.tuya.internal.local.DeviceStatusListener;
 import org.homio.addon.tuya.internal.local.MessageWrapper;
 import org.homio.addon.tuya.internal.local.TuyaDeviceCommunicator;
@@ -26,21 +26,23 @@ import org.homio.addon.tuya.internal.util.CryptoUtil;
 @Log4j2
 @RequiredArgsConstructor
 public class TuyaMessageHandler extends ChannelDuplexHandler {
+
     private final String deviceId;
+    private final String entityID;
     private final TuyaDeviceCommunicator.KeyStore keyStore;
     private final DeviceStatusListener deviceStatusListener;
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        log.debug("{}{}: Connection established.", deviceId,
-                Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
+        log.debug("[{}]: {}{}: Connection established.", entityID, deviceId,
+            Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
         deviceStatusListener.connectionStatus(true);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        log.debug("{}{}: Connection terminated.", deviceId,
-                Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
+        log.debug("[{}]: {}{}: Connection terminated.", entityID, deviceId,
+            Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
         deviceStatusListener.connectionStatus(false);
     }
 
@@ -65,10 +67,10 @@ public class TuyaMessageHandler extends ChannelDuplexHandler {
 
                 if (!Arrays.equals(localKeyHmac, localKeyExpectedHmac)) {
                     log.warn(
-                            "{}{}: Session key negotiation failed during Hmac validation: calculated {}, expected {}",
-                            deviceId, Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
-                            localKeyHmac != null ? bytesToHex(localKeyHmac) : "<null>",
-                            bytesToHex(localKeyExpectedHmac));
+                        "[{}]: {}{}: Session key negotiation failed during Hmac validation: calculated {}, expected {}",
+                        entityID, deviceId, Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
+                        localKeyHmac != null ? bytesToHex(localKeyHmac) : "<null>",
+                        bytesToHex(localKeyExpectedHmac));
                     return;
                 }
 
@@ -81,8 +83,9 @@ public class TuyaMessageHandler extends ChannelDuplexHandler {
                 byte[] sessionKey = CryptoUtil.generateSessionKey(keyStore.getRandom(), remoteKey,
                         keyStore.getDeviceKey());
                 if (sessionKey == null) {
-                    log.warn("{}{}: Session key negotiation failed because session key is null.", deviceId,
-                            Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
+                    log.warn("[{}]: {}{}: Session key negotiation failed because session key is null.",
+                        entityID, deviceId,
+                        Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
                     return;
                 }
                 keyStore.setSessionKey(sessionKey);

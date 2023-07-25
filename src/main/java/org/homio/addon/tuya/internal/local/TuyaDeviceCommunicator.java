@@ -1,5 +1,6 @@
 package org.homio.addon.tuya.internal.local;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_HEARTBEAT_INTERVAL;
 import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_TIMEOUT;
 import static org.homio.addon.tuya.internal.local.CommandType.CONTROL;
@@ -9,7 +10,6 @@ import static org.homio.addon.tuya.internal.local.CommandType.DP_REFRESH;
 import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_START;
 import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
 
-import com.google.gson.Gson;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -53,11 +53,11 @@ public class TuyaDeviceCommunicator implements ChannelFutureListener {
     private final KeyStore keyStore;
     private @Nullable Channel channel;
 
-    public TuyaDeviceCommunicator(Gson gson, DeviceStatusListener deviceStatusListener, EventLoopGroup eventLoopGroup,
-        String deviceId, byte[] deviceKey, String address, String protocolVersion, TuyaDeviceEntity entity) {
+    public TuyaDeviceCommunicator(DeviceStatusListener deviceStatusListener, EventLoopGroup eventLoopGroup,
+        String address, String protocolVersion, TuyaDeviceEntity entity) {
         this.address = address;
-        this.deviceId = deviceId;
-        this.keyStore = new KeyStore(deviceKey);
+        this.deviceId = entity.getIeeeAddress();
+        this.keyStore = new KeyStore(entity.getLocalKey().getBytes(UTF_8));
         this.deviceStatusListener = deviceStatusListener;
         this.protocolVersion = ProtocolVersion.fromString(protocolVersion);
         this.entity = entity;
@@ -68,14 +68,14 @@ public class TuyaDeviceCommunicator implements ChannelFutureListener {
             protected void initChannel(SocketChannel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("idleStateHandler",
-                        new IdleStateHandler(TCP_CONNECTION_TIMEOUT, TCP_CONNECTION_HEARTBEAT_INTERVAL, 0));
+                    new IdleStateHandler(TCP_CONNECTION_TIMEOUT, TCP_CONNECTION_HEARTBEAT_INTERVAL, 0));
                 pipeline.addLast("messageEncoder",
-                        new TuyaEncoder(gson, deviceId, keyStore, TuyaDeviceCommunicator.this.protocolVersion));
+                    new TuyaEncoder(deviceId, entity.getEntityID(), keyStore, TuyaDeviceCommunicator.this.protocolVersion));
                 pipeline.addLast("messageDecoder",
-                        new TuyaDecoder(gson, deviceId, keyStore, TuyaDeviceCommunicator.this.protocolVersion));
-                pipeline.addLast("heartbeatHandler", new HeartbeatHandler(deviceId));
-                pipeline.addLast("deviceHandler", new TuyaMessageHandler(deviceId, keyStore, deviceStatusListener));
-                pipeline.addLast("userEventHandler", new UserEventHandler(deviceId));
+                    new TuyaDecoder(deviceId, entity.getEntityID(), keyStore, TuyaDeviceCommunicator.this.protocolVersion));
+                pipeline.addLast("heartbeatHandler", new HeartbeatHandler(deviceId, entity.getEntityID()));
+                pipeline.addLast("deviceHandler", new TuyaMessageHandler(deviceId, entity.getEntityID(), keyStore, deviceStatusListener));
+                pipeline.addLast("userEventHandler", new UserEventHandler(deviceId, entity.getEntityID()));
             }
         });
         connect();
@@ -94,7 +94,8 @@ public class TuyaDeviceCommunicator implements ChannelFutureListener {
         if (channel != null) {
             channel.writeAndFlush(m);
         } else {
-            log.warn("{}: Setting {} failed. Device is not connected.", deviceId, command);
+            log.warn("[{}]: {}: Setting {} failed. Device is not connected.",
+                entity.getEntityID(), deviceId, command);
         }
     }
 
@@ -104,7 +105,7 @@ public class TuyaDeviceCommunicator implements ChannelFutureListener {
         if (channel != null) {
             channel.writeAndFlush(m);
         } else {
-            log.warn("{}: Querying status failed. Device is not connected.", deviceId);
+            log.warn("[{}]: {}: Querying status failed. Device is not connected.", entity.getEntityID(), deviceId);
         }
     }
 
@@ -114,7 +115,8 @@ public class TuyaDeviceCommunicator implements ChannelFutureListener {
         if (channel != null) {
             channel.writeAndFlush(m);
         } else {
-            log.warn("{}: Refreshing status failed. Device is not connected.", deviceId);
+            log.warn("[{}]: {}: Refreshing status failed. Device is not connected.",
+                entity.getEntityID(), deviceId);
         }
     }
 
@@ -140,7 +142,7 @@ public class TuyaDeviceCommunicator implements ChannelFutureListener {
                 requestStatus();
             }
         } else {
-            log.warn("{}{}: Failed to connect: {}", deviceId,
+            log.warn("[{}]: {}{}: Failed to connect: {}", entity.getEntityID(), deviceId,
                 Objects.requireNonNullElse(channelFuture.channel().remoteAddress(), ""),
                 channelFuture.cause().getMessage());
             this.channel = null;

@@ -36,7 +36,7 @@ import org.homio.addon.tuya.internal.cloud.dto.ResultResponse;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaTokenDTO;
 import org.homio.addon.tuya.internal.util.JoiningMapCollector;
-import org.homio.api.entity.HasStatusAndMsg;
+import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.model.Status;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.Nullable;
@@ -77,17 +77,17 @@ public class TuyaOpenAPI {
                 TuyaTokenDTO tuyaToken = result.result;
                 if (tuyaToken != null) {
                     tuyaToken.expireTimestamp = result.timestamp + tuyaToken.expire * 1000;
-                    log.debug("Got token: {}", tuyaToken);
+                    log.debug("[{}]: Got token: {}", projectEntity.getEntityID(), tuyaToken);
                     this.tuyaToken = tuyaToken;
                 }
             } else {
-                log.warn("Request failed: {}, no token received", result);
+                log.warn("[{}]: Request failed: {}, no token received", projectEntity.getEntityID(), result);
                 this.tuyaToken = new TuyaTokenDTO();
                 projectEntity.setStatus(Status.ERROR, result.code + ": " + result.msg);
                 throw new IllegalStateException("Request failed: %s, no token received".formatted(result));
             }
         } catch (Exception ex) {
-            log.error("Error during login: {}", CommonUtils.getErrorMessage(ex));
+            log.error("[{}]: Error during login: {}", projectEntity.getEntityID(), CommonUtils.getErrorMessage(ex));
             throw ex;
         }
     }
@@ -127,18 +127,18 @@ public class TuyaOpenAPI {
         return processResponse(response, Boolean.class, entity);
     }
 
-    private <T> T processResponse(String contentString, Type type, HasStatusAndMsg entityStatus) throws ConnectionException {
+    private <T> T processResponse(String contentString, Type type, DeviceBaseEntity entity) throws ConnectionException {
         Type responseType = TypeToken.getParameterized(ResultResponse.class, type).getType();
         ResultResponse<T> resultResponse = Objects.requireNonNull(gson.fromJson(contentString, responseType));
         if (resultResponse.success) {
             return resultResponse.result;
         } else {
             if (resultResponse.code >= 1010 && resultResponse.code <= 1013) {
-                log.warn("Server reported invalid token. This should never happen. Trying to re-login.");
-                entityStatus.setStatus(Status.ERROR, resultResponse.code + ":Server reported invalid token");
+                log.warn("[{}]: Server reported invalid token. This should never happen. Trying to re-login.", entity.getEntityID());
+                entity.setStatus(Status.ERROR, resultResponse.code + ":Server reported invalid token");
                 throw new ConnectionException(resultResponse.msg);
             } else {
-                entityStatus.setStatus(Status.ERROR, "%s:%s".formatted(resultResponse.code, resultResponse.msg));
+                entity.setStatus(Status.ERROR, "%s:%s".formatted(resultResponse.code, resultResponse.msg));
             }
             throw new IllegalStateException(resultResponse.msg);
         }

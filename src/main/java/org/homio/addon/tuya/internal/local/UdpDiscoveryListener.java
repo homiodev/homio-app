@@ -2,7 +2,6 @@ package org.homio.addon.tuya.internal.local;
 
 import static com.sshtools.common.util.Utils.hexToBytes;
 
-import com.google.gson.Gson;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -30,8 +29,6 @@ import org.homio.addon.tuya.internal.util.CryptoUtil;
 public class UdpDiscoveryListener implements ChannelFutureListener {
     private static final byte[] TUYA_UDP_KEY = hexToBytes(CryptoUtil.md5("yGAdlopoPVldABfn"));
 
-    private final Gson gson = new Gson();
-
     private final Map<String, DeviceInfo> deviceInfos = new HashMap<>();
     private final Map<String, DeviceInfoSubscriber> deviceListeners = new HashMap<>();
 
@@ -54,8 +51,8 @@ public class UdpDiscoveryListener implements ChannelFutureListener {
                         protected void initChannel(DatagramChannel ch) {
                             ChannelPipeline pipeline = ch.pipeline();
                             pipeline.addLast("udpDecoder", new DatagramToByteBufDecoder());
-                            pipeline.addLast("messageDecoder", new TuyaDecoder(gson, "udpListener",
-                                    new TuyaDeviceCommunicator.KeyStore(TUYA_UDP_KEY), ProtocolVersion.V3_1));
+                            pipeline.addLast("messageDecoder", new TuyaDecoder("udpListener",
+                                new TuyaDeviceCommunicator.KeyStore(TUYA_UDP_KEY), ProtocolVersion.V3_1));
                             pipeline.addLast("discoveryHandler",
                                     new DiscoveryMessageHandler(deviceInfos, deviceListeners));
                             pipeline.addLast("userEventHandler", new UserEventHandler("udpListener"));

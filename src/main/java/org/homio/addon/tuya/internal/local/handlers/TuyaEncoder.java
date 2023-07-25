@@ -10,8 +10,8 @@ import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_FINIS
 import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_START;
 import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_3;
 import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
+import static org.homio.addon.tuya.service.TuyaDiscoveryService.gson;
 
-import com.google.gson.Gson;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -38,8 +38,8 @@ import org.homio.addon.tuya.internal.util.CryptoUtil;
 @RequiredArgsConstructor
 public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
 
-    private final Gson gson;
     private final String deviceId;
+    private final String entityID;
     private final TuyaDeviceCommunicator.KeyStore keyStore;
     private final ProtocolVersion version;
 
@@ -73,21 +73,21 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
                 }
             }
 
-            log.debug("{}{}: Sending {}, payload {}", deviceId,
-                    Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), msg.commandType, payload);
+            log.debug("[{}]: {}{}: Sending {}, payload {}", entityID, deviceId,
+                Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), msg.commandType, payload);
 
             String json = gson.toJson(payload);
             payloadBytes = json.getBytes(StandardCharsets.UTF_8);
         } else if (msg.content instanceof byte[]) {
             byte[] contentBytes = Objects.requireNonNull((byte[]) msg.content);
             if (log.isDebugEnabled()) {
-                log.debug("{}{}: Sending payload {}", deviceId,
+                log.debug("[{}]: {}{}: Sending payload {}", entityID, deviceId,
                     Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
                     bytesToHex(contentBytes));
             }
             payloadBytes = contentBytes.clone();
         } else {
-            log.warn("Can't determine payload type for '{}', discarding.", msg.content);
+            log.warn("[{}]: Can't determine payload type for '{}', discarding.", entityID, msg.content);
             return;
         }
 
@@ -96,12 +96,13 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
 
         bufferOptional.ifPresentOrElse(buffer -> {
             if (log.isTraceEnabled()) {
-                log.trace("{}{}: Sending encoded '{}'", deviceId, ctx.channel().remoteAddress(),
+                log.trace("[{}]: {}{}: Sending encoded '{}'", entityID, deviceId, ctx.channel().remoteAddress(),
                     bytesToHex(buffer));
             }
 
             out.writeBytes(buffer);
-        }, () -> log.debug("{}{}: Encoding returned an empty buffer", deviceId, ctx.channel().remoteAddress()));
+        }, () -> log.debug("[{}]: {}{}: Encoding returned an empty buffer",
+            entityID, deviceId, ctx.channel().remoteAddress()));
     }
 
     private Optional<byte[]> encodePre34(CommandType commandType, byte[] payload) {
