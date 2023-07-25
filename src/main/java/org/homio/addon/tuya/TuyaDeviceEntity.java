@@ -89,8 +89,8 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
     }
 
     @UIField(order = 100)
-    public String getCategory(String category) {
-        return getJsonData("cg", category);
+    public String getCategory() {
+        return getJsonData("cg");
     }
 
     public void setCategory(String category) {
@@ -98,8 +98,8 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
     }
 
     @UIField(order = 110)
-    public String getMac(String category) {
-        return getJsonData("mac", category);
+    public String getMac() {
+        return getJsonData("mac");
     }
 
     public void setMac(String category) {
@@ -107,8 +107,8 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
     }
 
     @UIField(order = 120)
-    public String getProductId(String category) {
-        return getJsonData("pid", category);
+    public String getProductId() {
+        return getJsonData("pid");
     }
 
     public void setProductId(String category) {

@@ -2,13 +2,14 @@ package org.homio.addon.hardware;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
-import org.homio.api.state.ObjectType;
+import org.homio.api.state.JsonType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.homio.api.workspace.BroadcastLock;
@@ -17,6 +18,7 @@ import org.homio.api.workspace.scratch.MenuBlock;
 import org.homio.api.workspace.scratch.Scratch3Block;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -33,6 +35,7 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
 
     private final Scratch3Block ipGeoLocationReporter;
     private final Scratch3Block cityGeoLocationReporter;
+    private final Scratch3Block countryInfoReporter;
 
     public Scratch3HardwareBlocks(
         EntityContext entityContext, NetworkHardwareRepository networkHardwareRepository) {
@@ -50,12 +53,16 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
         });
 
         this.cityGeoLocationReporter =
-            blockReporter(100, "city_geo_location", "City geo [CITY] | json", this::fireGetCityGeoLocationReporter,
-                block -> block.addArgument("CITY", "unknown city"));
+            blockReporter(100, "city_geo_location", "City geo [VALUE]", this::fireGetCityGeoLocationReporter,
+                block -> block.addArgument(VALUE, "unknown city"));
 
         this.ipGeoLocationReporter =
-            blockReporter(200, "ip_geo_location", "IP geo [IP] | json", this::fireGetIPGeoLocation,
-                block -> block.addArgument("IP", "127.0.0.1"));
+            blockReporter(200, "ip_geo_location", "IP geo [VALUE]", this::fireGetIPGeoLocation,
+                block -> block.addArgument(VALUE, "127.0.0.1"));
+
+        this.countryInfoReporter =
+            blockReporter(300, "country_info", "Country info [VALUE]", this::fireGetCountryInformation,
+                block -> block.addArgument(VALUE, "127.0.0.1"));
 
         blockHat(300, "setting_hat", "Setting [SETTING] changed to [VALUE]", this::fireSettingChangeHatEvent,
             block -> {
@@ -67,9 +74,12 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
             block -> block.addArgument(EVENT, this.hardwareEventsMenu));
 
         entityContext.event().runOnceOnInternetUp("scratch3-hardware", () -> {
-            this.ipGeoLocationReporter.addArgument("IP", fireGetByIP(null).stringValue());
+            String ipAddress = networkHardwareRepository.getOuterIpAddress();
+            this.ipGeoLocationReporter.addArgument(VALUE, ipAddress);
+            JsonNode ipGeo = networkHardwareRepository.getIpGeoLocation(ipAddress);
             this.cityGeoLocationReporter.addArgument(
-                "CITY", networkHardwareRepository.getIpGeoLocation(networkHardwareRepository.getOuterIpAddress()).getCity());
+                VALUE, ipGeo.path("city").asText());
+            this.countryInfoReporter.addArgument(VALUE, ipAddress);
         });
     }
 
@@ -103,14 +113,20 @@ public class Scratch3HardwareBlocks extends Scratch3ExtensionBlocks {
     }
 
     private State fireGetIPGeoLocation(WorkspaceBlock workspaceBlock) {
-        return new ObjectType(
+        return new JsonType(
             this.networkHardwareRepository.getIpGeoLocation(
-                workspaceBlock.getInputString("IP")));
+                workspaceBlock.getInputString(VALUE)));
     }
 
     private State fireGetCityGeoLocationReporter(WorkspaceBlock workspaceBlock) {
-        return new ObjectType(
-            this.networkHardwareRepository.findCityGeolocation(
-                workspaceBlock.getInputString("CITY")));
+        return new JsonType(
+            this.networkHardwareRepository.getCityGeolocation(
+                workspaceBlock.getInputString(VALUE)));
+    }
+
+    private State fireGetCountryInformation(@NotNull WorkspaceBlock workspaceBlock) {
+        return new JsonType(
+            this.networkHardwareRepository.getCountryInformation(
+                workspaceBlock.getInputString(VALUE)));
     }
 }

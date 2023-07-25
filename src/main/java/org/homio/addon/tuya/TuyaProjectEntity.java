@@ -33,13 +33,10 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
 
     @UIField(order = 1, hideInEdit = true, hideOnEmpty = true, fullWidth = true, bg = "#334842C2", type = UIFieldType.HTML)
     public String getDescription() {
-        if (!isValid()) {
-            return Lang.getServerMessage("tuyaprj.description");
-        }
-        return null;
+        return Lang.getServerMessage("tuyaprj.description");
     }
 
-    @UIField(order = 1, required = true, inlineEditWhenEmpty = true)
+    @UIField(order = 1, required = true, inlineEditWhenEmpty = true, descriptionLabel = "tuyaUser")
     @UIFieldGroup(value = "AUTH", order = 10, borderColor = "#9C1A9C")
     public String getUser() {
         return getJsonData("user");
@@ -49,7 +46,7 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
         setJsonData("user", value);
     }
 
-    @UIField(order = 2, required = true, inlineEditWhenEmpty = true)
+    @UIField(order = 2, required = true, inlineEditWhenEmpty = true, descriptionLabel = "tuyaPassword")
     @UIFieldGroup("AUTH")
     public SecureString getPassword() {
         return getJsonSecure("pwd");
@@ -59,17 +56,17 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
         setJsonData("pwd", value);
     }
 
-    @UIField(order = 3, required = true, inlineEditWhenEmpty = true)
+    @UIField(order = 3, required = true, inlineEditWhenEmpty = true, descriptionLabel = "tuyaAccessID")
     @UIFieldGroup("AUTH")
-    public String getAccessId() {
+    public String getAccessID() {
         return getJsonData("accessId");
     }
 
-    public void setAccessId(String value) {
+    public void setAccessID(String value) {
         setJsonData("accessId", value);
     }
 
-    @UIField(order = 4, required = true, inlineEditWhenEmpty = true)
+    @UIField(order = 4, required = true, inlineEditWhenEmpty = true, descriptionLabel = "tuyaAccessSecret")
     @UIFieldGroup("AUTH")
     public SecureString getAccessSecret() {
         return getJsonSecure("accessSecret");
@@ -79,20 +76,21 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
         setJsonData("accessSecret", value);
     }
 
-    @UIField(order = 5, required = true, inlineEditWhenEmpty = true)
+    @UIField(order = 5, required = true, inlineEditWhenEmpty = true, descriptionLabel = "tuyaCountryCode")
     @UIFieldGroup("AUTH")
     public Integer getCountryCode() {
         if (getJsonData().has("cc")) {
-            getJsonData().getInt("cc");
+            return getJsonData().getInt("cc");
         }
         return null;
     }
 
-    public void setCountryCode(Integer value) {
+    public TuyaProjectEntity setCountryCode(Integer value) {
         setJsonData("cc", value);
+        return this;
     }
 
-    @UIField(order = 6)
+    @UIField(order = 6, descriptionLabel = "tuyaProjectSchema")
     @UIFieldGroup("AUTH")
     public ProjectSchema getProjectSchema() {
         return getJsonDataEnum("schema", ProjectSchema.smartLife);
@@ -102,7 +100,7 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
         setJsonData("schema", value);
     }
 
-    @UIField(order = 7)
+    @UIField(order = 7, descriptionLabel = "tuyaDataCenter")
     @UIFieldGroup("AUTH")
     public DataCenter getDataCenter() {
         return getJsonDataEnum("dataCenter", DataCenter.CentralEurope);
@@ -139,10 +137,14 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     public boolean isValid() {
         return !getUser().isEmpty()
             && !getPassword().asString().isEmpty()
-            && !getAccessId().isEmpty()
+            && !getAccessID().isEmpty()
             && !getAccessSecret().asString().isEmpty()
             && getCountryCode() != null
             && getCountryCode() != 0;
+    }
+
+    public long getDeepHashCode() {
+        return getJsonDataHashCode("user", "pwd", "accessId", "accessSecret", "cc");
     }
 
     @RequiredArgsConstructor

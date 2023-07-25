@@ -95,7 +95,7 @@ public class CryptoUtil {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             digest.update(data.getBytes(StandardCharsets.UTF_8));
-            return bytesToHex(digest.digest()).toLowerCase();
+            return HexUtils.bytesToHex(digest.digest()).toLowerCase();
         } catch (NoSuchAlgorithmException e) {
             log.warn("Algorithm SHA-256 not found. This should never happen. Check your Java setup.");
         }
@@ -112,7 +112,7 @@ public class CryptoUtil {
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
             digest.update(data.getBytes(StandardCharsets.UTF_8));
-            return bytesToHex(digest.digest()).toLowerCase();
+            return HexUtils.bytesToHex(digest.digest()).toLowerCase();
         } catch (NoSuchAlgorithmException e) {
             log.warn("Algorithm MD5 not found. This should never happen. Check your Java setup.");
         }
@@ -132,7 +132,7 @@ public class CryptoUtil {
             SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             sha256HMAC.init(secretKey);
 
-            return bytesToHex(sha256HMAC.doFinal(data.getBytes(StandardCharsets.UTF_8)));
+            return HexUtils.bytesToHex(sha256HMAC.doFinal(data.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             //
         }

@@ -164,6 +164,11 @@ public class EntityContextEventImpl implements EntityContextEvent {
     }
 
     @Override
+    public boolean isInternetUp() {
+        return entityContext.bgp().getInternetAvailabilityService().getInternetUp().get();
+    }
+
+    @Override
     public <T extends BaseEntityIdentifier> EntityContextEvent addEntityUpdateListener(String entityID, String key, Consumer<T> listener) {
         this.entityUpdateListeners.idListeners.putIfAbsent(entityID, new HashMap<>());
         this.entityUpdateListeners.idListeners.get(entityID).put(key, listener);

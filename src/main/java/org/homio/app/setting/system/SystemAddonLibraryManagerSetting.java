@@ -197,7 +197,7 @@ public class SystemAddonLibraryManagerSetting
     private static byte[] getIcon(Path icon) throws IOException {
         byte[] rawIcon;
         if (!Files.exists(icon)) {
-            URL resource = CommonUtils.class.getClassLoader().getResource("image/no-image.png");
+            URL resource = CommonUtils.class.getClassLoader().getResource("images/no-image.png");
             rawIcon = IOUtils.toByteArray(Objects.requireNonNull(resource));
         } else {
             rawIcon = Files.readAllBytes(icon);

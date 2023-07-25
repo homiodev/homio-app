@@ -3,6 +3,7 @@ package org.homio.app.manager.bgp;
 import com.pivovarit.function.ThrowingRunnable;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
@@ -15,6 +16,7 @@ import org.homio.app.utils.InternalUtil;
 @Log4j2
 public class InternetAvailabilityBgpService {
 
+    @Getter
     private final AtomicBoolean internetUp = new AtomicBoolean(false);
     private final EntityContext entityContext;
     private ThreadContext<Boolean> internetThreadContext;

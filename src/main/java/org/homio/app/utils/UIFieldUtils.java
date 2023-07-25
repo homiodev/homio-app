@@ -300,6 +300,7 @@ public class UIFieldUtils {
             }
         }
 
+        putIfNonEmpty(jsonTypeMetadata, "helpLabel", field.descriptionLabel());
         putIfTrue(jsonTypeMetadata, "fw", field.fullWidth());
         putIfTrue(jsonTypeMetadata, "showLabelInFw", field.hideLabelInFullWidth());
         putIfNonEmpty(jsonTypeMetadata, "bg", field.bg());
@@ -1028,7 +1029,12 @@ public class UIFieldUtils {
                     break;
                 }
             }
-            this.name = getDeclaredAnnotation(UIField.class).name();
+            UIField uiField = getDeclaredAnnotation(UIField.class);
+            if (uiField == null) {
+                throw new IllegalStateException("Unable to fetch @UIField annotations from method: " + fieldMethod.getName()
+                    + " of class: " + fieldMethod.getDeclaringClass().getSimpleName());
+            }
+            this.name = uiField.name();
             this.methodName = InternalUtil.getMethodShortName(fieldMethod);
         }
 

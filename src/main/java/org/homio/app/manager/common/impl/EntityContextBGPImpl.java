@@ -231,9 +231,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                 } else {
                     context.postponeScheduleHandler = scheduleHandler;
                     cancelThread(context.name);
-                    schedulers.put(context.name, context);
-
                 }
+                schedulers.put(context.name, context);
                 return context;
             }
 

@@ -2,6 +2,7 @@ package org.homio.addon.tuya.internal.cloud.dto;
 
 
 import com.google.gson.annotations.SerializedName;
+import lombok.Getter;
 import lombok.ToString;
 import org.jetbrains.annotations.Nullable;
 

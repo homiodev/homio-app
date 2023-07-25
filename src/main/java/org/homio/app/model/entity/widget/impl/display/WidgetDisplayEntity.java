@@ -153,7 +153,7 @@ public class WidgetDisplayEntity
     public void configure(@NotNull List<EntityUIMetaData> result) {
         for (EntityUIMetaData entityUIMetaData : result) {
             ObjectNode meta = OBJECT_MAPPER.readValue(entityUIMetaData.getTypeMetaData(), ObjectNode.class);
-            if (meta.path("group").asText("").startsWith("GROUP.CHART")) {
+            if (meta.path("group").asText().startsWith("GROUP.CHART")) {
                 meta.put("tab", "CHART");
                 entityUIMetaData.setTypeMetaData(OBJECT_MAPPER.writeValueAsString(meta));
             }

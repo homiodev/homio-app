@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName;
 import org.homio.addon.tuya.TuyaProjectEntity;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
 
-public class Login {
+public class LoginRequest {
 
     public String username;
     public String password;
@@ -13,15 +13,15 @@ public class Login {
     public Integer countryCode;
     public String schema;
 
-    public Login(String username, String password, Integer countryCode, String schema) {
+    public LoginRequest(String username, String password, Integer countryCode, String schema) {
         this.username = username;
         this.password = CryptoUtil.md5(password);
         this.countryCode = countryCode;
         this.schema = schema;
     }
 
-    public static Login fromProjectConfiguration(TuyaProjectEntity config) {
-        return new Login(config.getUser(), config.getPassword().asString(),
+    public static LoginRequest fromProjectConfiguration(TuyaProjectEntity config) {
+        return new LoginRequest(config.getUser(), config.getPassword().asString(),
             config.getCountryCode(), config.getProjectSchema().name());
     }
 }
