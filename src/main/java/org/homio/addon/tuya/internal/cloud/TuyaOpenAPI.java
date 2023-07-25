@@ -7,11 +7,11 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.Builder;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,135 +27,134 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
+import org.homio.addon.tuya.TuyaDeviceEntity;
 import org.homio.addon.tuya.TuyaProjectEntity;
 import org.homio.addon.tuya.internal.cloud.dto.CommandRequest;
-import org.homio.addon.tuya.internal.cloud.dto.DeviceListInfo;
 import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
 import org.homio.addon.tuya.internal.cloud.dto.FactoryInformation;
 import org.homio.addon.tuya.internal.cloud.dto.ResultResponse;
-import org.homio.addon.tuya.internal.cloud.dto.TuyaToken;
+import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
+import org.homio.addon.tuya.internal.cloud.dto.TuyaTokenDTO;
 import org.homio.addon.tuya.internal.util.JoiningMapCollector;
+import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.model.Status;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.stereotype.Service;
 
 /**
  * The {@link TuyaOpenAPI} is an implementation of the Tuya OpenApi specification
  */
 @Log4j2
+@Service
 public class TuyaOpenAPI {
 
     private static final String NONE_STRING = "";
     private static final String EMPTY_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
     @Setter
-    private TuyaProjectEntity config;
+    private TuyaProjectEntity projectEntity;
 
     private final Gson gson = new Gson();
     @Getter
-    private TuyaToken tuyaToken = new TuyaToken();
+    private TuyaTokenDTO tuyaToken = new TuyaTokenDTO();
 
     public boolean isConnected() {
         return !tuyaToken.accessToken.isEmpty() && System.currentTimeMillis() < tuyaToken.expireTimestamp;
     }
 
-    public boolean refreshToken() {
-        try {
-            if (System.currentTimeMillis() > tuyaToken.expireTimestamp) {
-                log.error("Cannot refresh token after expiry. Trying to re-login.");
-                return false;
-            } else {
-                String result = request("/v1.0/token/" + tuyaToken.refreshToken, Map.of(), null).get();
-                return processTokenResponse(result);
-            }
-        } catch (Exception ex) {
-            log.error("Error during refresh token: {}", CommonUtils.getErrorMessage(ex));
-            return false;
+    public synchronized void login() throws Exception {
+        if (isConnected()) {
+            return;
         }
-    }
-
-    public boolean login() {
         try {
-            String response = request("/v1.0/token?grant_type=1", Map.of(), null).get();
-            return processTokenResponse(response);
+            String response = request("/v1.0/token?grant_type=1", Map.of(), null);
+            Type type = TypeToken.getParameterized(ResultResponse.class, TuyaTokenDTO.class).getType();
+            ResultResponse<TuyaTokenDTO> result = Objects.requireNonNull(gson.fromJson(response, type));
+
+            if (result.success) {
+                projectEntity.setStatus(Status.ONLINE);
+                TuyaTokenDTO tuyaToken = result.result;
+                if (tuyaToken != null) {
+                    tuyaToken.expireTimestamp = result.timestamp + tuyaToken.expire * 1000;
+                    log.debug("Got token: {}", tuyaToken);
+                    this.tuyaToken = tuyaToken;
+                }
+            } else {
+                log.warn("Request failed: {}, no token received", result);
+                this.tuyaToken = new TuyaTokenDTO();
+                projectEntity.setStatus(Status.ERROR, result.code + ": " + result.msg);
+                throw new IllegalStateException("Request failed: %s, no token received".formatted(result));
+            }
         } catch (Exception ex) {
             log.error("Error during login: {}", CommonUtils.getErrorMessage(ex));
-            return false;
+            throw ex;
         }
     }
 
-    private boolean processTokenResponse(String contentString) {
-        Type type = TypeToken.getParameterized(ResultResponse.class, TuyaToken.class).getType();
-        ResultResponse<TuyaToken> result = Objects.requireNonNull(gson.fromJson(contentString, type));
-
-        if (result.success) {
-            config.setStatus(Status.ONLINE);
-            TuyaToken tuyaToken = result.result;
-            if (tuyaToken != null) {
-                tuyaToken.expireTimestamp = result.timestamp + tuyaToken.expire * 1000;
-                log.debug("Got token: {}", tuyaToken);
-                this.tuyaToken = tuyaToken;
-                return true;
-            }
-        } else {
-            log.warn("Request failed: {}, no token received", result);
-            this.tuyaToken = new TuyaToken();
-            config.setStatus(Status.ERROR, result.code + ": " + result.msg);
-        }
-        return false;
+    public TuyaDeviceDTO getDevice(String deviceID, TuyaDeviceEntity entity) throws Exception {
+        login();
+        String response = request("/v1.1/iot-03/devices/" + deviceID, Map.of(), null);
+        return processResponse(response, TuyaDeviceDTO.class, entity);
     }
 
-    public CompletableFuture<List<FactoryInformation>> getFactoryInformation(List<String> deviceIds) {
+    public List<FactoryInformation> getFactoryInformation(List<String> deviceIds, TuyaDeviceEntity entity) throws Exception {
+        login();
         Map<String, String> params = Map.of("device_ids", String.join(",", deviceIds));
-        return request("/v1.0/iot-03/devices/factory-infos", params, null).thenCompose(
-            s -> processResponse(s, TypeToken.getParameterized(List.class, FactoryInformation.class).getType()));
+        String response = request("/v1.0/iot-03/devices/factory-infos", params, null);
+        return processResponse(response, TypeToken.getParameterized(List.class, FactoryInformation.class).getType(), entity);
     }
 
-    public CompletableFuture<List<DeviceListInfo>> getDeviceList(int page) {
+    public List<TuyaDeviceDTO> getDeviceList(int page) throws Exception {
+        login();
         Map<String, String> params = Map.of(//
             "from", "", //
             "page_no", String.valueOf(page), //
             "page_size", "100");
-        return request("/v1.0/users/" + tuyaToken.uid + "/devices", params, null).thenCompose(
-            s -> processResponse(s, TypeToken.getParameterized(List.class, DeviceListInfo.class).getType()));
+        String response = request("/v1.0/users/" + tuyaToken.uid + "/devices", params, null);
+        return processResponse(response, TypeToken.getParameterized(List.class, TuyaDeviceDTO.class).getType(), projectEntity);
     }
 
-    public CompletableFuture<DeviceSchema> getDeviceSchema(String deviceId) {
-        return request("/v1.1/devices/" + deviceId + "/specifications", Map.of(), null)
-            .thenCompose(s -> processResponse(s, DeviceSchema.class));
+    public CompletableFuture<DeviceSchema> getDeviceSchema(String deviceId, TuyaDeviceEntity entity) throws Exception {
+        login();
+        String response = request("/v1.1/devices/" + deviceId + "/specifications", Map.of(), null);
+        return processResponse(response, DeviceSchema.class, entity);
     }
 
-    public CompletableFuture<Boolean> sendCommand(String deviceId, CommandRequest command) {
-        return request("/v1.0/iot-03/devices/" + deviceId + "/commands", Map.of(), gson.toJson(command))
-            .thenCompose(s -> processResponse(s, Boolean.class));
+    public CompletableFuture<Boolean> sendCommand(String deviceId, CommandRequest command, TuyaDeviceEntity entity) throws Exception {
+        login();
+        String response = request("/v1.0/iot-03/devices/" + deviceId + "/commands", Map.of(), gson.toJson(command));
+        return processResponse(response, Boolean.class, entity);
     }
 
-    private <T> CompletableFuture<T> processResponse(String contentString, Type type) {
+    private <T> T processResponse(String contentString, Type type, HasStatusAndMsg entityStatus) throws ConnectionException {
         Type responseType = TypeToken.getParameterized(ResultResponse.class, type).getType();
         ResultResponse<T> resultResponse = Objects.requireNonNull(gson.fromJson(contentString, responseType));
         if (resultResponse.success) {
-            return CompletableFuture.completedFuture(resultResponse.result);
+            return resultResponse.result;
         } else {
             if (resultResponse.code >= 1010 && resultResponse.code <= 1013) {
                 log.warn("Server reported invalid token. This should never happen. Trying to re-login.");
-                config.setStatus(Status.ERROR, "Server reported invalid token");
-                return CompletableFuture.failedFuture(new ConnectionException(resultResponse.msg));
+                entityStatus.setStatus(Status.ERROR, resultResponse.code + ":Server reported invalid token");
+                throw new ConnectionException(resultResponse.msg);
+            } else {
+                entityStatus.setStatus(Status.ERROR, "%s:%s".formatted(resultResponse.code, resultResponse.msg));
             }
-            return CompletableFuture.failedFuture(new IllegalStateException(resultResponse.msg));
+            throw new IllegalStateException(resultResponse.msg);
         }
     }
 
-    private CompletableFuture<String> request(String path, Map<String, String> params,
-        @Nullable String body) {
+    private String request(String path, Map<String, String> params,
+        @Nullable String body) throws Exception {
         String urlString = buildUrl(path, params);
         String t = Long.toString(System.currentTimeMillis());
         Map<String, String> signatureHeaders = new HashMap<>();
 
         String stringToSign = stringToSign(urlString, body, signatureHeaders);
-        String sign = sign(config.getAccessID(), config.getAccessSecret().asString(), t, this.tuyaToken.accessToken, NONE_STRING, stringToSign);
+        String sign = sign(projectEntity.getAccessID(), projectEntity.getAccessSecret().asString(), t, this.tuyaToken.accessToken, NONE_STRING, stringToSign);
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("client_id", config.getAccessID());
+        headers.put("client_id", projectEntity.getAccessID());
         headers.put("t", t);
         headers.put("Signature-Headers", String.join(":", signatureHeaders.keySet()));
         headers.put("sign", sign);
@@ -167,7 +166,7 @@ public class TuyaOpenAPI {
             headers.put("access_token", this.tuyaToken.accessToken);
         }
 
-        String fullUrl = config.getDataCenter().getUrl() + buildUrl(path, params);
+        String fullUrl = projectEntity.getDataCenter().getUrl() + buildUrl(path, params);
         Builder builder = HttpRequest.newBuilder().uri(URI.create(fullUrl));
 
         headers.forEach(builder::header);
@@ -182,22 +181,19 @@ public class TuyaOpenAPI {
         if (log.isDebugEnabled()) {
             log.debug("Sending to '{}': {}", fullUrl, requestToLogString(request));
         }
-        CompletableFuture<String> future = new CompletableFuture<>();
-        HttpClient.newBuilder().build().sendAsync(request, BodyHandlers.ofString())
-                  .thenAccept(response -> {
-                      String content = response.body();
-                      if (response.statusCode() >= 200 && response.statusCode() <= 207) {
-                          if (content != null) {
-                              future.complete(content);
-                          } else {
-                              future.completeExceptionally(new ConnectionException("Content is null."));
-                          }
-                      } else {
-                          log.debug("Requesting '{}' (method='{}', content='{}') failed: {} {}", request.uri(),
-                              request.method(), body, response.statusCode(), content);
-                      }
-                  });
-        return future;
+        HttpResponse<String> response = HttpClient.newBuilder().build().send(request, BodyHandlers.ofString());
+        String content = response.body();
+        if (response.statusCode() >= 200 && response.statusCode() <= 207) {
+            if (content != null) {
+                return content;
+            } else {
+                throw new ConnectionException("Content is null.");
+            }
+        } else {
+            log.debug("Requesting '{}' (method='{}', content='{}') failed: {} {}", request.uri(),
+                request.method(), body, response.statusCode(), content);
+            throw new ConnectionException("Request failed " + content);
+        }
     }
 
     private static String sign(String accessId, String secret, String t, String accessToken, String nonce, String stringToSign) {
@@ -211,7 +207,7 @@ public class TuyaOpenAPI {
             sb.append(nonce);
         }
         sb.append(stringToSign);
-        System.out.println(sb);
+        log.debug(sb);
         return Sha256Util.sha256HMAC(sb.toString(), secret);
     }
 
@@ -289,18 +285,14 @@ public class TuyaOpenAPI {
             return stringBuffer.toString();
         }
 
+        @SneakyThrows
         public static String sha256HMAC(String content, String secret) {
-            Mac sha256HMAC = null;
-            try {
-                sha256HMAC = Mac.getInstance("HmacSHA256");
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            }
+            Mac sha256HMAC = Mac.getInstance("HmacSHA256");
             SecretKey secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             try {
                 sha256HMAC.init(secretKey);
-            } catch (InvalidKeyException e) {
-                e.printStackTrace();
+            } catch (InvalidKeyException ex) {
+                log.error("Error sha256HMAC", ex);
             }
             byte[] digest = sha256HMAC.doFinal(content.getBytes(StandardCharsets.UTF_8));
             return new HexBinaryAdapter().marshal(digest).toUpperCase();

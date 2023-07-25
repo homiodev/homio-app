@@ -28,7 +28,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.local.CommandType;
 import org.homio.addon.tuya.internal.local.MessageWrapper;
 import org.homio.addon.tuya.internal.local.ProtocolVersion;
-import org.homio.addon.tuya.internal.local.TuyaDevice;
+import org.homio.addon.tuya.internal.local.TuyaDeviceCommunicator;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
 
 /**
@@ -40,7 +40,7 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
 
     private final Gson gson;
     private final String deviceId;
-    private final TuyaDevice.KeyStore keyStore;
+    private final TuyaDeviceCommunicator.KeyStore keyStore;
     private final ProtocolVersion version;
 
     private int sequenceNo = 0;

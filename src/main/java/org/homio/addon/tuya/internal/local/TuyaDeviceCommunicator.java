@@ -27,19 +27,21 @@ import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.homio.addon.tuya.TuyaDeviceEntity;
 import org.homio.addon.tuya.internal.local.handlers.HeartbeatHandler;
 import org.homio.addon.tuya.internal.local.handlers.TuyaDecoder;
 import org.homio.addon.tuya.internal.local.handlers.TuyaEncoder;
 import org.homio.addon.tuya.internal.local.handlers.TuyaMessageHandler;
 import org.homio.addon.tuya.internal.local.handlers.UserEventHandler;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
+import org.homio.api.model.Status;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The {@link TuyaDevice} handles the device connection
+ * The {@link TuyaDeviceCommunicator} handles the device connection
  */
 @Log4j2
-public class TuyaDevice implements ChannelFutureListener {
+public class TuyaDeviceCommunicator implements ChannelFutureListener {
 
     private final Bootstrap bootstrap = new Bootstrap();
     private final DeviceStatusListener deviceStatusListener;
@@ -47,16 +49,18 @@ public class TuyaDevice implements ChannelFutureListener {
 
     private final String address;
     private final ProtocolVersion protocolVersion;
+    private final TuyaDeviceEntity entity;
     private final KeyStore keyStore;
     private @Nullable Channel channel;
 
-    public TuyaDevice(Gson gson, DeviceStatusListener deviceStatusListener, EventLoopGroup eventLoopGroup,
-            String deviceId, byte[] deviceKey, String address, String protocolVersion) {
+    public TuyaDeviceCommunicator(Gson gson, DeviceStatusListener deviceStatusListener, EventLoopGroup eventLoopGroup,
+        String deviceId, byte[] deviceKey, String address, String protocolVersion, TuyaDeviceEntity entity) {
         this.address = address;
         this.deviceId = deviceId;
         this.keyStore = new KeyStore(deviceKey);
         this.deviceStatusListener = deviceStatusListener;
         this.protocolVersion = ProtocolVersion.fromString(protocolVersion);
+        this.entity = entity;
         bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class);
         bootstrap.option(ChannelOption.TCP_NODELAY, true).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
@@ -66,9 +70,9 @@ public class TuyaDevice implements ChannelFutureListener {
                 pipeline.addLast("idleStateHandler",
                         new IdleStateHandler(TCP_CONNECTION_TIMEOUT, TCP_CONNECTION_HEARTBEAT_INTERVAL, 0));
                 pipeline.addLast("messageEncoder",
-                        new TuyaEncoder(gson, deviceId, keyStore, TuyaDevice.this.protocolVersion));
+                        new TuyaEncoder(gson, deviceId, keyStore, TuyaDeviceCommunicator.this.protocolVersion));
                 pipeline.addLast("messageDecoder",
-                        new TuyaDecoder(gson, deviceId, keyStore, TuyaDevice.this.protocolVersion));
+                        new TuyaDecoder(gson, deviceId, keyStore, TuyaDeviceCommunicator.this.protocolVersion));
                 pipeline.addLast("heartbeatHandler", new HeartbeatHandler(deviceId));
                 pipeline.addLast("deviceHandler", new TuyaMessageHandler(deviceId, keyStore, deviceStatusListener));
                 pipeline.addLast("userEventHandler", new UserEventHandler(deviceId));
@@ -78,16 +82,9 @@ public class TuyaDevice implements ChannelFutureListener {
     }
 
     public void connect() {
+        entity.setStatus(Status.INITIALIZE);
         keyStore.reset(); // reset session key
         bootstrap.connect(address, 6668).addListener(this);
-    }
-
-    private void disconnect() {
-        Channel channel = this.channel;
-        if (channel != null) { // if channel == null we are not connected anyway
-            channel.pipeline().fireUserEventTriggered(new UserEventHandler.DisposeEvent());
-            this.channel = null;
-        }
     }
 
     public void set(Map<Integer, @Nullable Object> command) {
@@ -122,7 +119,11 @@ public class TuyaDevice implements ChannelFutureListener {
     }
 
     public void dispose() {
-        disconnect();
+        Channel channel = this.channel;
+        if (channel != null) { // if channel == null we are not connected anyway
+            channel.pipeline().fireUserEventTriggered(new UserEventHandler.DisposeEvent());
+            this.channel = null;
+        }
     }
 
     @Override
@@ -139,9 +140,9 @@ public class TuyaDevice implements ChannelFutureListener {
                 requestStatus();
             }
         } else {
-            log.debug("{}{}: Failed to connect: {}", deviceId,
-                    Objects.requireNonNullElse(channelFuture.channel().remoteAddress(), ""),
-                    channelFuture.cause().getMessage());
+            log.warn("{}{}: Failed to connect: {}", deviceId,
+                Objects.requireNonNullElse(channelFuture.channel().remoteAddress(), ""),
+                channelFuture.cause().getMessage());
             this.channel = null;
             deviceStatusListener.connectionStatus(false);
         }

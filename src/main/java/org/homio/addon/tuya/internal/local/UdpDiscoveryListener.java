@@ -55,7 +55,7 @@ public class UdpDiscoveryListener implements ChannelFutureListener {
                             ChannelPipeline pipeline = ch.pipeline();
                             pipeline.addLast("udpDecoder", new DatagramToByteBufDecoder());
                             pipeline.addLast("messageDecoder", new TuyaDecoder(gson, "udpListener",
-                                    new TuyaDevice.KeyStore(TUYA_UDP_KEY), ProtocolVersion.V3_1));
+                                    new TuyaDeviceCommunicator.KeyStore(TUYA_UDP_KEY), ProtocolVersion.V3_1));
                             pipeline.addLast("discoveryHandler",
                                     new DiscoveryMessageHandler(deviceInfos, deviceListeners));
                             pipeline.addLast("userEventHandler", new UserEventHandler("udpListener"));

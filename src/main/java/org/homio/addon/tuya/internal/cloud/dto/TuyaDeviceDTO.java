@@ -5,7 +5,7 @@ import java.util.List;
 import lombok.ToString;
 
 @ToString
-public class DeviceListInfo {
+public class TuyaDeviceDTO {
 
     public String id = "";
     public String uuid = "";

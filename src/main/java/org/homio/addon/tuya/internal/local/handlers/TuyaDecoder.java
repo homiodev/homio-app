@@ -25,7 +25,7 @@ import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.local.CommandType;
 import org.homio.addon.tuya.internal.local.MessageWrapper;
 import org.homio.addon.tuya.internal.local.ProtocolVersion;
-import org.homio.addon.tuya.internal.local.TuyaDevice;
+import org.homio.addon.tuya.internal.local.TuyaDeviceCommunicator;
 import org.homio.addon.tuya.internal.local.dto.DiscoveryMessage;
 import org.homio.addon.tuya.internal.local.dto.TcpStatusPayload;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
@@ -37,12 +37,12 @@ import org.homio.addon.tuya.internal.util.CryptoUtil;
 @Log4j2
 public class TuyaDecoder extends ByteToMessageDecoder {
 
-    private final TuyaDevice.KeyStore keyStore;
+    private final TuyaDeviceCommunicator.KeyStore keyStore;
     private final ProtocolVersion version;
     private final Gson gson;
     private final String deviceId;
 
-    public TuyaDecoder(Gson gson, String deviceId, TuyaDevice.KeyStore keyStore, ProtocolVersion version) {
+    public TuyaDecoder(Gson gson, String deviceId, TuyaDeviceCommunicator.KeyStore keyStore, ProtocolVersion version) {
         this.gson = gson;
         this.keyStore = keyStore;
         this.version = version;

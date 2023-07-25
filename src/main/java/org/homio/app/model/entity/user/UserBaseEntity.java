@@ -83,7 +83,7 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         if (value == null || value.length() < 6) {
             throw new IllegalArgumentException("USER.PASSWORD_TOO_SHORT");
         }
-        setJsonData("pwd", value);
+        setJsonDataSecure("pwd", value);
     }
 
     @JsonIgnore

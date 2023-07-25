@@ -109,7 +109,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     public void setPassword(String value) {
-        setJsonData("pwd", value);
+        setJsonDataSecure("pwd", value);
     }
 
     @UIField(order = 3)

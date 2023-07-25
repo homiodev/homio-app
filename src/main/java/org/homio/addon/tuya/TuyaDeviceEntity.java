@@ -14,13 +14,18 @@ import org.homio.addon.tuya.internal.local.ProtocolVersion;
 import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.addon.tuya.service.TuyaDeviceService;
 import org.homio.api.EntityContext;
+import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.MiscEntity;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.service.EntityService;
+import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Getter
 @Setter
@@ -28,20 +33,17 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 @UISidebarChildren(icon = "fas fa-gamepad", color = "#0088CC")
 public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
-    implements EntityService<TuyaDeviceService, TuyaDeviceEntity> {
+    implements EntityService<TuyaDeviceService, TuyaDeviceEntity>, HasEntityLog {
 
     public static final String PREFIX = "tuyad_";
 
-    @UIField(order = 30, required = true, inlineEditWhenEmpty = true)
-    public String getDeviceID() {
-        return getJsonData("deviceID");
+    @Override
+    @UIField(order = 30, required = true, inlineEditWhenEmpty = true, label = "deviceID")
+    public @Nullable String getIeeeAddress() {
+        return super.getIeeeAddress();
     }
 
-    public void setDeviceID(String value) {
-        setJsonData("deviceID", value);
-    }
-
-    @UIField(order = 35, required = true, inlineEditWhenEmpty = true)
+    @UIField(order = 35)
     public String getLocalKey() {
         return getJsonData("localKey");
     }
@@ -50,7 +52,7 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
         setJsonData("localKey", value);
     }
 
-    @UIField(order = 40, required = true, disableEdit = true, type = UIFieldType.IpAddress)
+    @UIField(order = 40, type = UIFieldType.IpAddress)
     public String getIp() {
         return getJsonData("ip");
     }
@@ -134,6 +136,22 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
     @SneakyThrows
     public @NotNull List<SchemaDp> getSchemaDps() {
         String schema = getJsonData("schema", "");
-        return schema.isEmpty() ? List.of() : OBJECT_MAPPER.readValue(schema, new TypeReference<>() {});
+        return schema != null && schema.isEmpty() ?
+            List.of() : OBJECT_MAPPER.readValue(schema, new TypeReference<>() {});
+    }
+
+    public long getDeepHashCode() {
+        return getJsonDataHashCode(getIeeeAddress(), "localKey", "pv", "pi", "cg", "mac", "pid");
+    }
+
+    @UIContextMenuAction(value = "TUYA.FETCH_DEVICE_INFO", icon = "fas fa-barcode", iconColor = Color.PRIMARY_COLOR)
+    public ActionResponseModel fetchDeviceInfo(EntityContext entityContext) {
+        getService().tryFetchDeviceInfo();
+        return ActionResponseModel.success();
+    }
+
+    @Override
+    public void logBuilder(EntityLogBuilder entityLogBuilder) {
+        entityLogBuilder.addTopicFilterByEntityID("org.homio");
     }
 }

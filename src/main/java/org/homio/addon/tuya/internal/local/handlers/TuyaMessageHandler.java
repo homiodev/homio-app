@@ -16,7 +16,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import org.homio.addon.tuya.internal.local.DeviceStatusListener;
 import org.homio.addon.tuya.internal.local.MessageWrapper;
-import org.homio.addon.tuya.internal.local.TuyaDevice;
+import org.homio.addon.tuya.internal.local.TuyaDeviceCommunicator;
 import org.homio.addon.tuya.internal.local.dto.TcpStatusPayload;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
 
@@ -27,7 +27,7 @@ import org.homio.addon.tuya.internal.util.CryptoUtil;
 @RequiredArgsConstructor
 public class TuyaMessageHandler extends ChannelDuplexHandler {
     private final String deviceId;
-    private final TuyaDevice.KeyStore keyStore;
+    private final TuyaDeviceCommunicator.KeyStore keyStore;
     private final DeviceStatusListener deviceStatusListener;
 
     @Override

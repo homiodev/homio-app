@@ -1,23 +1,30 @@
 package org.homio.addon.tuya;
 
 import jakarta.persistence.Entity;
+import java.util.Objects;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.homio.addon.tuya.service.TuyaDiscoveryService;
 import org.homio.addon.tuya.service.TuyaProjectService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.types.MiscEntity;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.OptionModel.KeyValueEnum;
+import org.homio.api.model.Status;
 import org.homio.api.service.EntityService;
+import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldType;
+import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.util.Lang;
 import org.homio.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Getter
 @Setter
@@ -31,9 +38,23 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     public static final String PREFIX = "tuyap_";
     public static final String DEFAULT_ENTITY_ID = PREFIX + "primary";
 
+    @Override
+    public TuyaProjectEntity setStatus(@Nullable Status status, @Nullable String msg) {
+        boolean reloadItem = !getStatus().equals(status) || (status == Status.ERROR && !Objects.equals(getStatusMessage(), msg));
+        super.setStatus(status, msg);
+        if (reloadItem) {
+            getEntityContext().ui().updateItem(this);
+        }
+        return this;
+    }
+
     @UIField(order = 1, hideInEdit = true, hideOnEmpty = true, fullWidth = true, bg = "#334842C2", type = UIFieldType.HTML)
     public String getDescription() {
-        return Lang.getServerMessage("tuyaprj.description");
+        String message = getStatusMessage();
+        if (message != null && message.contains(":")) {
+            return Lang.getServerMessage("TUYA.DESCRIPTION_" + message.split(":")[0]);
+        }
+        return Lang.getServerMessage("TUYA.DESCRIPTION");
     }
 
     @UIField(order = 1, required = true, inlineEditWhenEmpty = true, descriptionLabel = "tuyaUser")
@@ -53,7 +74,7 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     }
 
     public void setPassword(String value) {
-        setJsonData("pwd", value);
+        setJsonDataSecure("pwd", value);
     }
 
     @UIField(order = 3, required = true, inlineEditWhenEmpty = true, descriptionLabel = "tuyaAccessID")
@@ -73,7 +94,7 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     }
 
     public void setAccessSecret(String value) {
-        setJsonData("accessSecret", value);
+        setJsonDataSecure("accessSecret", value);
     }
 
     @UIField(order = 5, required = true, inlineEditWhenEmpty = true, descriptionLabel = "tuyaCountryCode")
@@ -164,5 +185,14 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
         public String getValue() {
             return title;
         }
+    }
+
+    @UIContextMenuAction(value = "TUYA.SCAN_DEVICES", icon = "fas fa-barcode", iconColor = Color.PRIMARY_COLOR)
+    public ActionResponseModel scanDevices(EntityContext entityContext) {
+        entityContext.bgp().runWithProgress("tuya-scan-devices").execute(progressBar -> {
+            entityContext.getBean(TuyaDiscoveryService.class)
+                         .scan(entityContext, progressBar, null);
+        });
+        return ActionResponseModel.fired();
     }
 }
