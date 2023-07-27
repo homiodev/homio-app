@@ -2,6 +2,7 @@ package org.homio.app.ssh;
 
 import static org.homio.api.ui.field.action.UIActionInput.Type.text;
 import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 import static org.homio.app.ssh.SshGenericEntity.execDeletePrivateKey;
 import static org.homio.app.ssh.SshGenericEntity.execUploadPrivateKey;
 import static org.homio.app.ssh.SshGenericEntity.updateSSHData;
@@ -41,14 +42,11 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog
     /*, HasDynamicContextMenuActions*/ {
 
-    public static final String PREFIX = "sshcloud_";
-    private static final String DEFAULT_CLOUD_ENTITY_ID = PREFIX + "primary";
-
     public static SshCloudEntity ensureEntityExists(EntityContextImpl entityContext) {
-        SshCloudEntity entity = entityContext.getEntity(DEFAULT_CLOUD_ENTITY_ID);
+        SshCloudEntity entity = entityContext.getEntity(SshCloudEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             entity = new SshCloudEntity()
-                .setEntityID(DEFAULT_CLOUD_ENTITY_ID)
+                .setEntityID(PRIMARY_DEVICE)
                 .setName("Homio cloud")
                 .setHostname("homio.org")
                 .setProvider(DataSourceUtil.buildBeanSource(SshTunnelCloudProviderService.class))
@@ -186,8 +184,8 @@ public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getDevicePrefix() {
+        return "ssh-cloud";
     }
 
     @Override

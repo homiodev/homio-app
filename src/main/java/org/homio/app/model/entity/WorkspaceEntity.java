@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 public final class WorkspaceEntity extends BaseEntity<WorkspaceEntity> {
 
-    public static final String PREFIX = "ws_";
+    public static final String PREFIX = "space_";
 
     @Column(length = 10_485_760)
     private String content;

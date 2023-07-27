@@ -9,17 +9,11 @@ import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.ui.field.selection.UIFieldEntityByClassSelection;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.impl.chart.HasChartDataSource;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineChartEntity>
     implements HasChartDataSource {
-
-    public static final String PREFIX = "wgslcs_";
-
-    @Override
-    public String getEntityPrefix() {
-        return PREFIX;
-    }
 
     @Override
     public String getDefaultName() {
@@ -38,5 +32,10 @@ public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineCh
     @Override
     protected void beforePersist() {
         HasChartDataSource.randomColor(this);
+    }
+
+    @Override
+    protected String getSeriesPrefix() {
+        return "line";
     }
 }

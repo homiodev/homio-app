@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.AddonEntrypoint;
+import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.OptionModel;
@@ -60,7 +61,7 @@ public class SettingController implements ContextRefreshed {
     private Map<Class<? extends SettingPlugin<?>>, SettingEntity> transientSettings;
 
     @Override
-    public void onContextRefresh() {
+    public void onContextRefresh(EntityContext entityContext) {
         this.transientSettings = new HashMap<>();
         for (SettingPlugin<?> settingPlugin : EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {

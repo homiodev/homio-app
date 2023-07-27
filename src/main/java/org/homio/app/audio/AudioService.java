@@ -40,10 +40,10 @@ public class AudioService implements ContextRefreshed {
     private Map<String, AudioSink> audioSinks = Collections.emptyMap();
 
     @Override
-    public void onContextRefresh() {
-        this.audioSinks = entityContext.getBeansOfTypeWithBeanName(AudioSink.class);
-        this.audioSources = entityContext.getBeansOfTypeWithBeanName(AudioSource.class);
-        this.selfContainedAudioContainers = entityContext.getBeansOfTypeWithBeanName(SelfContainedAudioSourceContainer.class);
+    public void onContextRefresh(EntityContext entityContext) {
+        this.audioSinks = this.entityContext.getBeansOfTypeWithBeanName(AudioSink.class);
+        this.audioSources = this.entityContext.getBeansOfTypeWithBeanName(AudioSource.class);
+        this.selfContainedAudioContainers = this.entityContext.getBeansOfTypeWithBeanName(SelfContainedAudioSourceContainer.class);
     }
 
     public Collection<SelfContainedAudioSourceContainer> getAudioSourceContainers() {

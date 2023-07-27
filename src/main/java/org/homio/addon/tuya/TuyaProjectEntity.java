@@ -2,6 +2,7 @@ package org.homio.addon.tuya;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.Entity;
+import java.time.Duration;
 import java.util.Objects;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -37,9 +38,6 @@ import org.jetbrains.annotations.Nullable;
 public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     implements EntityService<TuyaProjectService, TuyaProjectEntity>,
     HasStatusAndMsg<TuyaProjectEntity> {
-
-    public static final String PREFIX = "tuyap_";
-    public static final String DEFAULT_ENTITY_ID = PREFIX + "primary";
 
     @Override
     public TuyaProjectEntity setStatus(@Nullable Status status, @Nullable String msg) {
@@ -140,8 +138,8 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getDevicePrefix() {
+        return "tuya-project";
     }
 
     @Override
@@ -197,46 +195,5 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
                          .scan(entityContext, progressBar, null);
         });
         return ActionResponseModel.fired();
-    }
-
-    public static @NotNull TuyaProjectEntity ensureEntityExists(EntityContext entityContext) {
-        TuyaProjectEntity entity = entityContext.getEntity(TuyaProjectEntity.DEFAULT_ENTITY_ID);
-        if (entity == null) {
-            entity = new TuyaProjectEntity()
-                .setEntityID(TuyaProjectEntity.DEFAULT_ENTITY_ID)
-                .setName("Tuya primary project");
-            entity.setJsonData("dis_del", true);
-            if (entityContext.event().isInternetUp()) {
-                entity.setCountryCode(getCountryCode(entityContext));
-            } else {
-                scheduleUpdateTuyaProjectOnInternetUp(entityContext);
-            }
-            entityContext.save(entity);
-        } else if (entity.getCountryCode() == null) {
-            scheduleUpdateTuyaProjectOnInternetUp(entityContext);
-        }
-        return entity;
-    }
-
-    private static void scheduleUpdateTuyaProjectOnInternetUp(EntityContext entityContext) {
-        entityContext.event().runOnceOnInternetUp("create-tuya-project", () -> {
-            Integer countryCode = getCountryCode(entityContext);
-            if (countryCode != null) {
-                TuyaProjectEntity projectEntity = entityContext.getEntityRequire(TuyaProjectEntity.DEFAULT_ENTITY_ID);
-                entityContext.save(projectEntity.setCountryCode(countryCode));
-            }
-        });
-    }
-
-    private static Integer getCountryCode(EntityContext entityContext) {
-        NetworkHardwareRepository networkHardwareRepository = entityContext.getBean(NetworkHardwareRepository.class);
-        String ipAddress = networkHardwareRepository.getOuterIpAddress();
-        JsonNode ipGeoLocation = networkHardwareRepository.getIpGeoLocation(ipAddress);
-        String country = ipGeoLocation.path("country").asText();
-        if (StringUtils.isNotEmpty(country)) {
-            JsonNode countryInfo = networkHardwareRepository.getCountryInformation(country);
-            return countryInfo.withArray("callingCodes").path(0).asInt();
-        }
-        return null;
     }
 }

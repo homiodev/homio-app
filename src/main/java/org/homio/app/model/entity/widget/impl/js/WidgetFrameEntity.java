@@ -21,8 +21,6 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 public class WidgetFrameEntity extends WidgetBaseEntity<WidgetFrameEntity> implements HasJsonData {
 
-    public static final String PREFIX = "wgtfrm_";
-
     @Transient private String javaScriptResponse;
 
     @Transient private String javaScriptErrorResponse;
@@ -63,8 +61,8 @@ public class WidgetFrameEntity extends WidgetBaseEntity<WidgetFrameEntity> imple
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "frame";
     }
 
     @Override

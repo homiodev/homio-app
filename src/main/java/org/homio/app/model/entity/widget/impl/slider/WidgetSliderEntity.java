@@ -17,8 +17,6 @@ public class WidgetSliderEntity
     extends WidgetBaseEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity>
     implements HasLayout, HasSourceServerUpdates, HasName, HasPadding {
 
-    public static final String PREFIX = "wgtsl_";
-
     @UIField(order = 1)
     @UIFieldGroup(value = "NAME", order = 3)
     @UIFieldOptionFontSize
@@ -54,8 +52,8 @@ public class WidgetSliderEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "slider";
     }
 
     public void setVertical(Boolean value) {

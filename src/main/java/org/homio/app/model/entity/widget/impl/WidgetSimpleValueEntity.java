@@ -27,8 +27,6 @@ public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueE
     HasValueConverter,
     HasSourceServerUpdates {
 
-    public static final String PREFIX = "wgtvs_";
-
     @Override
     public @NotNull String getImage() {
         return "";
@@ -40,8 +38,8 @@ public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueE
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "sim-value";
     }
 
     @Override

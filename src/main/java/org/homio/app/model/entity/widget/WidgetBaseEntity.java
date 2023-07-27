@@ -44,6 +44,15 @@ import org.jetbrains.annotations.NotNull;
 public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity<T>
     implements HasPosition<WidgetBaseEntity>, HasStyle, HasJsonData {
 
+    private static final String PREFIX = "widget_";
+
+    @Override
+    public final @NotNull String getEntityPrefix() {
+        return PREFIX + getWidgetPrefix() + "_";
+    }
+
+    protected abstract @NotNull String getWidgetPrefix();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnore
     private WidgetTabEntity widgetTabEntity;

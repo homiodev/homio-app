@@ -18,16 +18,14 @@ public class WidgetLineChartEntity
     extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
     implements HasLineChartBehaviour, HasHorizontalLine, HasAxis {
 
-    public static final String LINE_CHART_WIDGET_PREFIX = "wgtlc_";
-
     @Override
     public @NotNull String getImage() {
         return "fas fa-chart-line";
     }
 
     @Override
-    public String getEntityPrefix() {
-        return WidgetLineChartEntity.LINE_CHART_WIDGET_PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "line";
     }
 
     @UIField(order = 0, hideInView = true, hideInEdit = true)

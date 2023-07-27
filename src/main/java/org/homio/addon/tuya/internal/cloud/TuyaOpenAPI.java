@@ -17,7 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -34,7 +33,6 @@ import org.homio.addon.tuya.internal.cloud.dto.ResultResponse;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaTokenDTO;
 import org.homio.addon.tuya.internal.util.JoiningMapCollector;
-import org.homio.api.EntityContext;
 import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.model.Status;
 import org.homio.api.util.CommonUtils;
@@ -49,16 +47,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class TuyaOpenAPI {
 
+    public static final @NotNull Gson gson = new Gson();
     private static final String NONE_STRING = "";
     private static final String EMPTY_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
-    private final @NotNull TuyaProjectEntity projectEntity;
+    private static TuyaProjectEntity projectEntity;
 
-    private final @NotNull Gson gson = new Gson();
     private @NotNull TuyaTokenDTO token = new TuyaTokenDTO();
 
-    public TuyaOpenAPI(EntityContext entityContext) {
-        this.projectEntity = TuyaProjectEntity.ensureEntityExists(entityContext);
+    public static void setProjectEntity(@NotNull TuyaProjectEntity projectEntity) {
+        TuyaOpenAPI.projectEntity = projectEntity;
     }
 
     public boolean isConnected() {
@@ -66,6 +64,7 @@ public class TuyaOpenAPI {
     }
 
     public synchronized void login() throws Exception {
+        assertApiReady();
         if (isConnected()) {
             return;
         }
@@ -94,6 +93,12 @@ public class TuyaOpenAPI {
         }
     }
 
+    private static void assertApiReady() {
+        if (projectEntity == null) {
+            throw new IllegalStateException("Tuya api not ready yet");
+        }
+    }
+
     public TuyaDeviceDTO getDevice(String deviceID, TuyaDeviceEntity entity) throws Exception {
         login();
         String response = request("/v1.1/iot-03/devices/" + deviceID, Map.of(), null);
@@ -117,13 +122,13 @@ public class TuyaOpenAPI {
         return processResponse(response, TypeToken.getParameterized(List.class, TuyaDeviceDTO.class).getType(), projectEntity);
     }
 
-    public CompletableFuture<DeviceSchema> getDeviceSchema(String deviceId, TuyaDeviceEntity entity) throws Exception {
+    public DeviceSchema getDeviceSchema(String deviceId, TuyaDeviceEntity entity) throws Exception {
         login();
         String response = request("/v1.1/devices/" + deviceId + "/specifications", Map.of(), null);
         return processResponse(response, DeviceSchema.class, entity);
     }
 
-    public CompletableFuture<Boolean> sendCommand(String deviceId, CommandRequest command, TuyaDeviceEntity entity) throws Exception {
+    public Boolean sendCommand(String deviceId, CommandRequest command, TuyaDeviceEntity entity) throws Exception {
         login();
         String response = request("/v1.0/iot-03/devices/" + deviceId + "/commands", Map.of(), gson.toJson(command));
         return processResponse(response, Boolean.class, entity);
@@ -148,6 +153,7 @@ public class TuyaOpenAPI {
 
     private String request(String path, Map<String, String> params,
         @Nullable String body) throws Exception {
+        assertApiReady();
         String urlString = buildUrl(path, params);
         String t = Long.toString(System.currentTimeMillis());
         Map<String, String> signatureHeaders = new HashMap<>();

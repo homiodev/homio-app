@@ -30,6 +30,15 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
 
     private int priority;
 
+    private static final String PREFIX = "series_";
+
+    @Override
+    public final @NotNull String getEntityPrefix() {
+        return PREFIX + getSeriesPrefix() + "_";
+    }
+
+    protected abstract String getSeriesPrefix();
+
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, targetEntity = WidgetBaseEntityAndSeries.class)
     private T widgetEntity;

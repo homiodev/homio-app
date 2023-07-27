@@ -21,8 +21,6 @@ import com.sshtools.common.ssh.components.SshKeyPair;
 import jakarta.persistence.Entity;
 import java.util.Collections;
 import java.util.Objects;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
@@ -52,8 +50,6 @@ import org.json.JSONObject;
 @UISidebarChildren(icon = "fas fa-terminal", color = "#0088CC")
 public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWebSocketService>
     implements BaseFileSystemEntity<SshGenericEntity, SshGenericFileSystem> {
-
-    public static final String PREFIX = "sshraw_";
 
     @Override
     public void configureOptionModel(OptionModel optionModel) {
@@ -335,18 +331,13 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
     }
 
     @Override
-    public boolean requireTestServiceInBackground() {
-        return true;
-    }
-
-    @Override
     public String getDefaultName() {
         return "Generic SSH";
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getDevicePrefix() {
+        return "ssh-generic";
     }
 
     @Override
@@ -391,9 +382,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     @Override
     public @Nullable GenericWebSocketService createService(@NotNull EntityContext entityContext) {
-        GenericWebSocketService service = new GenericWebSocketService(entityContext.getBean(SSHServerEndpoint.class));
-        service.entityUpdated(this);
-        return service;
+        return new GenericWebSocketService(entityContext, this, entityContext.getBean(SSHServerEndpoint.class));
     }
 
     private long getDeepHashCode() {
@@ -404,27 +393,22 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         SHA1, SHA256, SHA512
     }
 
-    @RequiredArgsConstructor
-    public static class GenericWebSocketService implements SshProviderService<SshGenericEntity> {
+    public static class GenericWebSocketService extends EntityService.ServiceInstance<SshGenericEntity> implements SshProviderService<SshGenericEntity> {
 
         private final SSHServerEndpoint sshServerEndpoint;
 
-        @Getter
-        private SshGenericEntity entity;
-        private long snapshotCode = 0;
-
-        @Override
-        public boolean entityUpdated(@NotNull EntityService entity) {
-            SshGenericEntity model = (SshGenericEntity) entity;
-            long code = model.getDeepHashCode();
-            boolean requireTestService = this.entity == null || code != snapshotCode;
-            this.entity = model;
-            this.snapshotCode = code;
-            return requireTestService;
+        public GenericWebSocketService(EntityContext entityContext, SshGenericEntity entity, SSHServerEndpoint sshServerEndpoint) {
+            super(entityContext, entity);
+            this.sshServerEndpoint = sshServerEndpoint;
         }
 
         @Override
-        public boolean testService() {
+        protected void initialize() {
+            testServiceWithSetStatus();
+        }
+
+        @Override
+        public void testService() {
             try (SshClient sshClient = entity.createSshClient()) {
                 if (!sshClient.isConnected()) {
                     throw new IllegalStateException("SSH not connected");
@@ -434,7 +418,11 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            return true;
+        }
+
+        @Override
+        protected long getEntityHashCode(SshGenericEntity entity) {
+            return entity.getDeepHashCode();
         }
 
         @Override

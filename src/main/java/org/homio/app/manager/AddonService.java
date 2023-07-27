@@ -48,12 +48,12 @@ public class AddonService implements ContextCreated, ContextRefreshed {
 
     @Override
     public void onContextCreated(EntityContextImpl entityContext) throws Exception {
-        onContextRefresh();
+        onContextRefresh(entityContext);
     }
 
     @Override
-    public void onContextRefresh() throws Exception {
-        this.allAddonEntrypoint = entityContext.getBeansOfType(AddonEntrypoint.class);
+    public void onContextRefresh(EntityContext entityContext) throws Exception {
+        this.allAddonEntrypoint = this.entityContext.getBeansOfType(AddonEntrypoint.class);
         this.addonMap = allAddonEntrypoint.stream().collect(Collectors.toMap(AddonEntrypoint::getAddonID, s -> s));
         this.addonColorMap = new HashMap<>();
 

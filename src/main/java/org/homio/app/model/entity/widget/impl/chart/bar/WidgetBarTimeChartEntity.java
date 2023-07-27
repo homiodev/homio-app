@@ -17,8 +17,6 @@ public class WidgetBarTimeChartEntity
     extends ChartBaseEntity<WidgetBarTimeChartEntity, WidgetBarTimeChartSeriesEntity>
     implements HasChartTimePeriod, HasMinMaxChartValue, HasHorizontalLine, HasAxis {
 
-    public static final String PREFIX = "wgtbtc_";
-
     @UIField(order = 40)
     @UIFieldGroup("CHART_AXIS")
     public String getAxisLabel() {
@@ -59,8 +57,8 @@ public class WidgetBarTimeChartEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "bar-time";
     }
 
     @Override

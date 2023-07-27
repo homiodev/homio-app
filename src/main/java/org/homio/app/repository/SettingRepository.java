@@ -35,11 +35,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
     implements ContextRefreshed {
 
     private static final Map<String, String> settingToAddonMap = new HashMap<>();
-    private final EntityContext entityContext;
 
-    public SettingRepository(EntityContext entityContext) {
+    public SettingRepository() {
         super(SettingEntity.class);
-        this.entityContext = entityContext;
     }
 
     public static Collection<OptionModel> getOptions(SettingPluginOptions<?> plugin, EntityContext entityContext, JSONObject param) {
@@ -134,7 +132,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
     }
 
     @Override
-    public void onContextRefresh() {
+    public void onContextRefresh(EntityContext entityContext) {
         for (SettingPlugin settingPlugin : EntityContextSettingImpl.settingPluginsBy(p -> !p.transientState())) {
             SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
             if (settingEntity == null) {

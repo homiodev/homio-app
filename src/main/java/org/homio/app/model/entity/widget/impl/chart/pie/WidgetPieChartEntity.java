@@ -15,8 +15,6 @@ public class WidgetPieChartEntity
     extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity>
     implements HasChartTimePeriod {
 
-    public static final String PREFIX = "wgtpc_";
-
     @UIField(order = 52)
     @UIFieldSlider(min = 1, max = 4)
     public int getBorderWidth() {
@@ -34,8 +32,8 @@ public class WidgetPieChartEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "pie";
     }
 
     @Override

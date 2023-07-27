@@ -1,7 +1,7 @@
 create table if not exists device_base_entity
 (
     dtype         varchar(31)  not null,
-    entityid      varchar(64)  not null,
+    entityid      varchar(128)  not null,
     creation_time timestamp(6) not null,
     name          varchar(255),
     update_time   timestamp(6) not null,
@@ -15,18 +15,18 @@ create table if not exists device_base_entity
 create index if not exists dc
     on device_base_entity (update_time);
 
-create table if not exists pin_base_entity
+create table if not exists property_base_entity
 (
-    entityid       varchar(64)  not null,
+    entityid       varchar(128)  not null,
     creation_time  timestamp(6) not null,
     name           varchar(255),
     update_time    timestamp(6) not null,
     version        integer,
-    address        integer      not null,
+    address        integer,
     description    varchar(255),
-    json_data      varchar(1000),
-    position       integer      not null,
-    owner_entityid varchar(64),
+    json_data      varchar(10000),
+    position       integer,
+    owner_entityid varchar(128),
     primary key (entityid),
     constraint fk6dajs8tto3r6wtd64cv932u2g
         foreign key (owner_entityid) references device_base_entity
@@ -34,7 +34,7 @@ create table if not exists pin_base_entity
 
 create table if not exists script_entity
 (
-    entityid               varchar(64)  not null,
+    entityid               varchar(128)  not null,
     creation_time          timestamp(6) not null,
     name                   varchar(255),
     update_time            timestamp(6) not null,
@@ -52,7 +52,7 @@ create table if not exists script_entity
 
 create table if not exists setting_entity
 (
-    entityid      varchar(64)  not null,
+    entityid      varchar(128)  not null,
     creation_time timestamp(6) not null,
     name          varchar(255),
     update_time   timestamp(6) not null,
@@ -76,7 +76,7 @@ create index if not exists vc
 
 create table if not exists widget_tab_entity
 (
-    entityid      varchar(64)  not null,
+    entityid      varchar(128)  not null,
     creation_time timestamp(6) not null,
     name          varchar(255),
     update_time   timestamp(6) not null,
@@ -87,13 +87,13 @@ create table if not exists widget_tab_entity
 create table if not exists widget_base_entity
 (
     dtype                      varchar(31)  not null,
-    entityid                   varchar(64)  not null,
+    entityid                   varchar(128)  not null,
     creation_time              timestamp(6) not null,
     name                       varchar(255),
     update_time                timestamp(6) not null,
     version                    integer,
     json_data                  varchar(65535),
-    widget_tab_entity_entityid varchar(64),
+    widget_tab_entity_entityid varchar(128),
     primary key (entityid),
     constraint fklulpcwxpv8623qoph51b3i5d6
         foreign key (widget_tab_entity_entityid) references widget_tab_entity
@@ -102,14 +102,14 @@ create table if not exists widget_base_entity
 create table if not exists widget_series_entity
 (
     dtype                  varchar(31)  not null,
-    entityid               varchar(64)  not null,
+    entityid               varchar(128)  not null,
     creation_time          timestamp(6) not null,
     name                   varchar(255),
     update_time            timestamp(6) not null,
     version                integer,
     json_data              varchar(65535),
     priority               integer      not null,
-    widget_entity_entityid varchar(64),
+    widget_entity_entityid varchar(128),
     primary key (entityid),
     constraint fkt9ob3e4d6lewp7wmcqdb57its
         foreign key (widget_entity_entityid) references widget_base_entity
@@ -117,7 +117,7 @@ create table if not exists widget_series_entity
 
 create table if not exists workspace_entity
 (
-    entityid      varchar(64)  not null,
+    entityid      varchar(128)  not null,
     creation_time timestamp(6) not null,
     name          varchar(255),
     update_time   timestamp(6) not null,
@@ -128,7 +128,7 @@ create table if not exists workspace_entity
 
 create table if not exists workspace_group
 (
-    entityid        varchar(64)  not null,
+    entityid        varchar(128)  not null,
     creation_time   timestamp(6) not null,
     name            varchar(255) not null,
     update_time     timestamp(6) not null,
@@ -140,7 +140,7 @@ create table if not exists workspace_group
     icon_color      varchar(255),
     json_data       varchar(1000),
     locked          boolean      not null,
-    parent_entityid varchar(64),
+    parent_entityid varchar(128),
     primary key (entityid),
     constraint uk_i4c44wwkkvfr1nqk4qob5wc9u
         unique (group_id),
@@ -150,7 +150,7 @@ create table if not exists workspace_group
 
 create table if not exists workspace_variable
 (
-    entityid                 varchar(64)  not null,
+    entityid                 varchar(128)  not null,
     creation_time            timestamp(6) not null,
     name                     varchar(255),
     update_time              timestamp(6) not null,
@@ -166,7 +166,7 @@ create table if not exists workspace_variable
     restriction              varchar(255),
     unit                     varchar(255),
     variable_id              varchar(255) not null,
-    workspace_group_entityid varchar(64),
+    workspace_group_entityid varchar(128),
     primary key (entityid),
     constraint uk_ed7bugig9d8vnui1nll862fcx
         unique (variable_id),

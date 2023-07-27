@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 public class AllDeviceRepository extends AbstractRepository<DeviceBaseEntity> {
 
     public AllDeviceRepository() {
-        super(DeviceBaseEntity.class);
+        super(DeviceBaseEntity.class, "dvc_");
     }
 
     @Override

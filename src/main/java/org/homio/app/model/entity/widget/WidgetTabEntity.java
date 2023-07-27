@@ -18,7 +18,7 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
 
-    public static final String PREFIX = "wtab_";
+    public static final String PREFIX = "tab_";
     public static final String GENERAL_WIDGET_TAB_NAME = PREFIX + "main";
     @Getter
     @JsonIgnore

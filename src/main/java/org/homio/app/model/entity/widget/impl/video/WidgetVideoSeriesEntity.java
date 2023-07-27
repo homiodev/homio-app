@@ -14,14 +14,11 @@ import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.ui.field.selection.UIFieldTreeNodeSelection;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
-import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 @Entity
 public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntity>
     implements HasSingleValueDataSource {
-
-    public static final String PREFIX = "wgsvids_";
 
     @UIField(order = 11)
     public boolean isAutoPlay() {
@@ -125,8 +122,8 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "video";
     }
 
     @Override

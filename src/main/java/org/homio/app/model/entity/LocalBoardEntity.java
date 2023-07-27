@@ -1,5 +1,7 @@
 package org.homio.app.model.entity;
 
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import java.util.Set;
@@ -27,9 +29,6 @@ import org.jetbrains.annotations.NotNull;
 public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity>
     implements BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
 
-    public static final String PREFIX = "cbe_";
-    public static final String DEFAULT_DEVICE_ENTITY_ID = PREFIX + "primary";
-
     @Override
     public String getDefaultName() {
         return "Local device";
@@ -42,11 +41,6 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
 
     public void setFileSystemRoot(String value) {
         setJsonData("fs_root", value);
-    }
-
-    @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
     }
 
     @Override
@@ -92,8 +86,8 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     @Override
     @JsonIgnore
     @UIFieldIgnore
-    public Status getStatus() {
-        return null;
+    public @NotNull Status getStatus() {
+        return Status.OFFLINE;
     }
 
     @Override
@@ -102,14 +96,19 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     }
 
     @Override
+    protected @NotNull String getDevicePrefix() {
+        return "board";
+    }
+
+    @Override
     public boolean isDisableEdit() {
         return true;
     }
 
     public static void ensureDeviceExists(EntityContext entityContext) {
-        if (entityContext.getEntity(DEFAULT_DEVICE_ENTITY_ID) == null) {
+        if (entityContext.getEntity(LocalBoardEntity.class, PRIMARY_DEVICE) == null) {
             log.info("Save default compute board device");
-            entityContext.save(new LocalBoardEntity().setEntityID(DEFAULT_DEVICE_ENTITY_ID));
+            entityContext.save(new LocalBoardEntity().setEntityID(PRIMARY_DEVICE));
         }
     }
 

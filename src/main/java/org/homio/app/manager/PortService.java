@@ -13,6 +13,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.homio.api.EntityContext;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginOptions;
@@ -40,7 +41,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
     private List<SettingPluginOptions<SerialPort>> portSettingPlugins;
 
     @Override
-    public void onContextRefresh() {
+    public void onContextRefresh(EntityContext entityContext) {
         listenPortAvailability();
     }
 

@@ -47,7 +47,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createLayoutWidget(@NotNull String entityID, @NotNull Consumer<LayoutWidgetBuilder> widgetBuilder) {
-        WidgetLayoutEntity widget = createStubWidget(entityID, new WidgetLayoutEntity(), WidgetLayoutEntity.PREFIX);
+        WidgetLayoutEntity widget = createStubWidget(entityID, new WidgetLayoutEntity());
         LayoutBuilderImpl builder = new LayoutBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
         entityContext.save(builder.getWidget());
@@ -55,7 +55,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createDisplayWidget(@NotNull String entityID, @NotNull Consumer<DisplayWidgetBuilder> widgetBuilder) {
-        WidgetDisplayEntity widget = createStubWidget(entityID, new WidgetDisplayEntity(), WidgetDisplayEntity.PREFIX);
+        WidgetDisplayEntity widget = createStubWidget(entityID, new WidgetDisplayEntity());
         DisplayBuilderImpl builder = new DisplayBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
         WidgetDisplayEntity savedWidget = entityContext.save(builder.getWidget());
@@ -67,7 +67,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createSimpleValueWidget(@NotNull String entityID, @NotNull Consumer<SimpleValueWidgetBuilder> widgetBuilder) {
-        WidgetSimpleValueEntity widget = createStubWidget(entityID, new WidgetSimpleValueEntity(), WidgetSimpleValueEntity.PREFIX);
+        WidgetSimpleValueEntity widget = createStubWidget(entityID, new WidgetSimpleValueEntity());
         SimpleValueBuilderImpl builder = new SimpleValueBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
         entityContext.save(builder.getWidget());
@@ -75,7 +75,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createToggleWidget(@NotNull String entityID, @NotNull Consumer<ToggleWidgetBuilder> widgetBuilder) {
-        WidgetToggleEntity widget = createStubWidget(entityID, new WidgetToggleEntity(), WidgetToggleEntity.PREFIX);
+        WidgetToggleEntity widget = createStubWidget(entityID, new WidgetToggleEntity());
         ToggleBuilderImpl builder = new ToggleBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
         WidgetToggleEntity savedWidget = entityContext.save(builder.getWidget());
@@ -87,7 +87,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createSimpleToggleWidget(@NotNull String entityID, @NotNull Consumer<SimpleToggleWidgetBuilder> widgetBuilder) {
-        WidgetSimpleToggleEntity widget = createStubWidget(entityID, new WidgetSimpleToggleEntity(), WidgetSimpleToggleEntity.PREFIX);
+        WidgetSimpleToggleEntity widget = createStubWidget(entityID, new WidgetSimpleToggleEntity());
         SimpleToggleBuilderImpl builder = new SimpleToggleBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
         entityContext.save(builder.getWidget());
@@ -95,7 +95,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createSliderWidget(@NotNull String entityID, @NotNull Consumer<SliderWidgetBuilder> widgetBuilder) {
-        WidgetSliderEntity widget = createStubWidget(entityID, new WidgetSliderEntity(), WidgetSliderEntity.PREFIX);
+        WidgetSliderEntity widget = createStubWidget(entityID, new WidgetSliderEntity());
         SliderBuilderImpl builder = new SliderBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
         WidgetSliderEntity savedWidget = entityContext.save(builder.getWidget());
@@ -107,7 +107,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createSimpleColorWidget(@NotNull String entityID, @NotNull Consumer<SimpleColorWidgetBuilder> widgetBuilder) {
-        WidgetSimpleColorEntity widget = createStubWidget(entityID, new WidgetSimpleColorEntity(), WidgetSimpleColorEntity.PREFIX);
+        WidgetSimpleColorEntity widget = createStubWidget(entityID, new WidgetSimpleColorEntity());
         SimpleColorBuilderImpl builder = new SimpleColorBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
         entityContext.save(builder.getWidget());
@@ -118,7 +118,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
         @NotNull String entityID,
         @NotNull Consumer<ColorWidgetBuilder> widgetBuilder) {
 
-        WidgetColorEntity widget = createStubWidget(entityID, new WidgetColorEntity(), WidgetColorEntity.PREFIX);
+        WidgetColorEntity widget = createStubWidget(entityID, new WidgetColorEntity());
         ColorWidgetBuilderImpl builder = new ColorWidgetBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
         entityContext.save(builder.getWidget());
@@ -126,7 +126,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createBarTimeChartWidget(@NotNull String entityID, @NotNull Consumer<BarTimeChartBuilder> widgetBuilder) {
-        WidgetBarTimeChartEntity widget = createStubWidget(entityID, new WidgetBarTimeChartEntity(), WidgetBarTimeChartEntity.PREFIX);
+        WidgetBarTimeChartEntity widget = createStubWidget(entityID, new WidgetBarTimeChartEntity());
         BarTimeChartBuilderImpl builder = new BarTimeChartBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
         WidgetBarTimeChartEntity savedWidget = entityContext.save(builder.getWidget());
@@ -140,7 +140,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
     public void createLineChartWidget(
         @NotNull String entityID,
         @NotNull Consumer<LineChartBuilder> widgetBuilder) {
-        WidgetLineChartEntity widget = createStubWidget(entityID, new WidgetLineChartEntity(), WidgetLineChartEntity.LINE_CHART_WIDGET_PREFIX);
+        WidgetLineChartEntity widget = createStubWidget(entityID, new WidgetLineChartEntity());
         LineChartBuilderImpl builder = new LineChartBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
         WidgetLineChartEntity savedWidget = entityContext.save(builder.getWidget());
@@ -161,8 +161,8 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
     }
 
     @SuppressWarnings("rawtypes")
-    private <T extends WidgetBaseEntity> T createStubWidget(@NotNull String entityID, T widget, String prefix) {
-        entityID = ensureWidgetNotExists(entityID, prefix);
+    private <T extends WidgetBaseEntity> T createStubWidget(@NotNull String entityID, T widget) {
+        entityID = ensureWidgetNotExists(entityID, widget.getEntityPrefix());
 
         WidgetTabEntity generalTabEntity = entityContext.getEntity(GENERAL_WIDGET_TAB_NAME);
         widget.setEntityID(entityID);

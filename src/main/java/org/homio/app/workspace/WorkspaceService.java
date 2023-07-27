@@ -85,10 +85,10 @@ public class WorkspaceService implements ContextRefreshed {
     private Map<String, Scratch3ExtensionBlocks> scratch3Blocks;
 
     @Override
-    public void onContextRefresh() {
-        scratch3Blocks = entityContext.getBeansOfType(Scratch3ExtensionBlocks.class).stream()
-                                      .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
-        workspaceEventListeners = entityContext.getBeansOfType(WorkspaceEventListener.class);
+    public void onContextRefresh(EntityContext entityContext) {
+        scratch3Blocks = this.entityContext.getBeansOfType(Scratch3ExtensionBlocks.class).stream()
+                                           .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
+        workspaceEventListeners = this.entityContext.getBeansOfType(WorkspaceEventListener.class);
 
         loadExtensions();
         loadWorkspace();

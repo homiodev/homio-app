@@ -19,8 +19,6 @@ public class WidgetToggleEntity
     extends WidgetBaseEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
     implements HasLayout, HasPadding, HasSourceServerUpdates, HasName {
 
-    public static final String PREFIX = "wgttg_";
-
     @UIField(order = 1)
     @UIFieldGroup(value = "NAME", order = 3)
     @UIFieldOptionFontSize
@@ -62,8 +60,8 @@ public class WidgetToggleEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "toggle";
     }
 
     @Override

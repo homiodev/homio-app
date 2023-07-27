@@ -14,8 +14,6 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChartEntity>
     implements HasSingleValueDataSource {
 
-    public static final String PREFIX = "wgsbcs_";
-
     @UIField(order = 50, isRevert = true)
     @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
     @UIFieldColorPicker
@@ -40,8 +38,8 @@ public class WidgetBarChartSeriesEntity extends WidgetSeriesEntity<WidgetBarChar
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "bar";
     }
 
     @Override

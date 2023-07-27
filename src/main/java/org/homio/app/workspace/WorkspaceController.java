@@ -49,6 +49,7 @@ public class WorkspaceController {
     private final EntityContextImpl entityContext;
     private final AddonService addonService;
     private final WorkspaceService workspaceService;
+    private final WorkspaceRepository workspaceRepository;
 
     @GetMapping("/extension")
     public List<Scratch3ExtensionImpl> getExtensions() {
@@ -240,7 +241,7 @@ public class WorkspaceController {
         if (!WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(entity.getName())
             && !WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(option.getKey())) {
 
-            WorkspaceEntity newEntity = entityContext.getEntityByName(option.getKey(), WorkspaceEntity.class);
+            WorkspaceEntity newEntity = workspaceRepository.getByName(option.getKey());
 
             if (newEntity == null) {
                 entityContext.save(entity.setName(option.getKey()));

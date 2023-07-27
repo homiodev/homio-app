@@ -14,10 +14,10 @@ import org.homio.api.EntityContext;
 import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.entity.zigbee.ZigBeeBaseCoordinatorEntity;
 import org.homio.api.entity.zigbee.ZigBeeDeviceBaseEntity;
-import org.homio.api.model.DeviceProperty;
-import org.homio.api.model.DeviceProperty.PropertyType;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
+import org.homio.api.model.endpoint.DeviceEndpoint;
+import org.homio.api.model.endpoint.DeviceEndpoint.EndpointType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,9 +34,9 @@ public class ZigBeeController {
 
     private final EntityContext entityContext;
 
-    @GetMapping("/device/{propertyName}")
-    public @NotNull Collection<OptionModel> getDevicesWithProperty(@PathVariable("propertyName") @NotNull String propertyName) {
-        return getDevices(device -> device.getProperty(propertyName) != null);
+    @GetMapping("/device/{endpoint}")
+    public @NotNull Collection<OptionModel> getDevicesWithProperty(@PathVariable("endpoint") @NotNull String endpoint) {
+        return getDevices(device -> device.getDeviceEndpoint(endpoint) != null);
     }
 
     @GetMapping("/device")
@@ -47,9 +47,9 @@ public class ZigBeeController {
     }
 
     /**
-     * Get all properties for specific device by ieeeAddress
+     * Get all endpoints for specific device by ieeeAddress
      */
-    @GetMapping("/property")
+    @GetMapping("/endpoints")
     public @NotNull Collection<OptionModel> getProperties(
         @RequestParam(value = "deviceMenu", required = false) @Nullable String ieeeAddress0,
         @RequestParam(value = "deviceReadMenu", required = false) @Nullable String ieeeAddress1,
@@ -61,45 +61,45 @@ public class ZigBeeController {
         return getZigBeeCoordinators().stream()
                                       .map(c -> c.getZigBeeDevice(ieeeAddress))
                                       .filter(Objects::nonNull)
-                                      .flatMap(d -> ((Map<String, DeviceProperty>) d.getProperties()).values().stream())
+                                      .flatMap(d -> ((Map<String, DeviceEndpoint>) d.getEndpoints()).values().stream())
                                       .filter(buildPropertyAccessFilter(access))
                                       .filter(buildFilterByType(type))
                                       .map(this::createOptionModel)
                                       .collect(Collectors.toList());
     }
 
-    private @NotNull Predicate<? super DeviceProperty> buildPropertyAccessFilter(@NotNull String access) {
+    private @NotNull Predicate<? super DeviceEndpoint> buildPropertyAccessFilter(@NotNull String access) {
         return switch (access) {
-            case "read" -> DeviceProperty::isReadable;
-            case "write" -> DeviceProperty::isWritable;
+            case "read" -> DeviceEndpoint::isReadable;
+            case "write" -> DeviceEndpoint::isWritable;
             default -> zigBeeProperty -> true;
         };
     }
 
-    private @NotNull Predicate<? super DeviceProperty> buildFilterByType(@NotNull String type) {
-        return (Predicate<DeviceProperty>) zigBeeProperty -> switch (type) {
-            case "bool" -> zigBeeProperty.getPropertyType() == PropertyType.bool;
-            case "number" -> zigBeeProperty.getPropertyType() == PropertyType.number;
-            case "string" -> zigBeeProperty.getPropertyType() == PropertyType.string;
+    private @NotNull Predicate<? super DeviceEndpoint> buildFilterByType(@NotNull String type) {
+        return (Predicate<DeviceEndpoint>) zigBeeProperty -> switch (type) {
+            case "bool" -> zigBeeProperty.getEndpointType() == EndpointType.bool;
+            case "number" -> zigBeeProperty.getEndpointType() == EndpointType.number;
+            case "string" -> zigBeeProperty.getEndpointType() == EndpointType.string;
             default -> true;
         };
     }
 
     private @NotNull Predicate<ZigBeeDeviceBaseEntity> buildDeviceAccessFilter(@NotNull String access, @NotNull String type) {
         return switch (access) {
-            case "read" -> device -> device.getProperties().values().stream()
-                                           .anyMatch(p -> ((DeviceProperty) p).isReadable() && filterByType((DeviceProperty) p, type));
-            case "write" -> device -> device.getProperties().values().stream()
-                                            .anyMatch(p -> ((DeviceProperty) p).isWritable() && filterByType((DeviceProperty) p, type));
+            case "read" -> device -> device.getDeviceEndpoints().values().stream()
+                                           .anyMatch(dv -> dv.isReadable() && filterByType(dv, type));
+            case "write" -> device -> device.getDeviceEndpoints().values().stream()
+                                            .anyMatch(dv -> dv.isWritable() && filterByType(dv, type));
             default -> device -> true;
         };
     }
 
-    private boolean filterByType(@NotNull DeviceProperty zigBeeProperty, @NotNull String type) {
+    private boolean filterByType(@NotNull DeviceEndpoint zigBeeProperty, @NotNull String type) {
         return switch (type) {
-            case "bool" -> zigBeeProperty.getPropertyType() == PropertyType.bool;
-            case "number" -> zigBeeProperty.getPropertyType() == PropertyType.number;
-            case "string" -> zigBeeProperty.getPropertyType() == PropertyType.string;
+            case "bool" -> zigBeeProperty.getEndpointType() == EndpointType.bool;
+            case "number" -> zigBeeProperty.getEndpointType() == EndpointType.number;
+            case "string" -> zigBeeProperty.getEndpointType() == EndpointType.string;
             default -> true;
         };
     }
@@ -111,7 +111,7 @@ public class ZigBeeController {
             for (ZigBeeDeviceBaseEntity zigBeeDevice : devices) {
                 if (deviceFilter.test(zigBeeDevice)) {
                     Icon icon = Objects.requireNonNull(zigBeeDevice.getEntityIcon());
-                    list.add(OptionModel.of(zigBeeDevice.getIeeeAddress(), zigBeeDevice.getDeviceFullName())
+                    list.add(OptionModel.of(Objects.requireNonNull(zigBeeDevice.getIeeeAddress()), zigBeeDevice.getDeviceFullName())
                                         .setDescription(zigBeeDevice.getDescription())
                                         .setIcon(icon.getIcon())
                                         .setColor(icon.getColor()));
@@ -128,10 +128,10 @@ public class ZigBeeController {
                             .collect(Collectors.toList());
     }
 
-    private @NotNull OptionModel createOptionModel(@NotNull DeviceProperty property) {
-        return OptionModel.of(property.getKey(), property.getName(false))
-                          .setDescription(property.getDescription())
-                          .setIcon(property.getIcon().getIcon())
-                          .setColor(property.getIcon().getColor());
+    private @NotNull OptionModel createOptionModel(@NotNull DeviceEndpoint endpoint) {
+        return OptionModel.of(endpoint.getKey(), endpoint.getName(false))
+                          .setDescription(endpoint.getDescription())
+                          .setIcon(endpoint.getIcon().getIcon())
+                          .setColor(endpoint.getIcon().getColor());
     }
 }

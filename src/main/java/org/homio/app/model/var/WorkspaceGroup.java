@@ -71,7 +71,7 @@ import org.json.JSONObject;
 public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     implements HasJsonData, SelectionParent {
 
-    public static final String PREFIX = "wg_";
+    public static final String PREFIX = "group_";
 
     @UIField(order = 12, inlineEditWhenEmpty = true)
     private String description;

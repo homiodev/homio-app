@@ -4,6 +4,7 @@ import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import jakarta.persistence.EntityManagerFactory;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,7 +19,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -37,7 +37,6 @@ import org.homio.api.EntityContextMedia;
 import org.homio.api.EntityContextStorage;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.DeviceBaseEntity;
-import org.homio.api.entity.DisableCacheEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
@@ -86,6 +85,8 @@ import org.homio.app.repository.AbstractRepository;
 import org.homio.app.repository.SettingRepository;
 import org.homio.app.repository.VariableDataRepository;
 import org.homio.app.repository.device.AllDeviceRepository;
+import org.homio.app.repository.widget.WidgetRepository;
+import org.homio.app.repository.widget.WidgetSeriesRepository;
 import org.homio.app.rest.ConsoleController;
 import org.homio.app.rest.FileSystemController;
 import org.homio.app.rest.ItemController;
@@ -106,10 +107,6 @@ import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.homio.hquery.hardware.other.MachineHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.aop.framework.Advised;
-import org.springframework.aop.support.AopUtils;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
@@ -127,7 +124,7 @@ public class EntityContextImpl implements EntityContext {
     private static final Set<Class<? extends ContextCreated>> BEAN_CONTEXT_CREATED = new LinkedHashSet<>();
     private static final Set<Class<? extends ContextRefreshed>> BEAN_CONTEXT_REFRESH = new LinkedHashSet<>();
     private static final long START_TIME = System.currentTimeMillis();
-    public static Map<String, AbstractRepository> repositories = new HashMap<>();
+    private static AllDeviceRepository allDeviceRepository;
     public static Map<String, Class<? extends EntityFieldMetadata>> uiFieldClasses;
     public static Map<String, AbstractRepository> repositoriesByPrefix;
 
@@ -174,15 +171,22 @@ public class EntityContextImpl implements EntityContext {
     private final ClassFinder classFinder;
     @Getter private final CacheService cacheService;
     @Getter private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
-    private EntityManager entityManager;
+    private final EntityManager entityManager;
+    private final WidgetRepository widgetRepository;
+    private final WidgetSeriesRepository widgetSeriesRepository;
     private boolean showEntityState;
     private ApplicationContext applicationContext;
-    private AllDeviceRepository allDeviceRepository;
     private WorkspaceService workspaceService;
-    private TransactionManagerContext transactionManagerContext;
+    private final TransactionManagerContext transactionManagerContext;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public EntityContextImpl(
+        TransactionManagerContext transactionManagerContext,
+        List<AbstractRepository> repositories,
+        AllDeviceRepository allDeviceRepository,
+        WidgetRepository widgetRepository,
+        WidgetSeriesRepository widgetSeriesRepository,
+        EntityManager entityManager,
         ClassFinder classFinder,
         CacheService cacheService,
         ThreadPoolTaskScheduler taskScheduler,
@@ -194,6 +198,16 @@ public class EntityContextImpl implements EntityContext {
         FfmpegHardwareRepository ffmpegHardwareRepository) {
         this.classFinder = classFinder;
         this.cacheService = cacheService;
+        this.entityManager = entityManager;
+        this.widgetRepository = widgetRepository;
+        this.widgetSeriesRepository = widgetSeriesRepository;
+        this.transactionManagerContext = transactionManagerContext;
+
+        EntityContextImpl.allDeviceRepository = allDeviceRepository;
+        EntityContextImpl.repositoriesByPrefix =
+            repositories.stream()
+                        .filter(r -> !r.getClass().equals(AllDeviceRepository.class))
+                        .collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
 
         this.entityContextSetting = new EntityContextSettingImpl(this, environment, classFinder);
         this.entityContextUI = new EntityContextUIImpl(this, messagingTemplate);
@@ -218,12 +232,8 @@ public class EntityContextImpl implements EntityContext {
         this.applicationContext = applicationContext;
         MACHINE_IP_ADDRESS = applicationContext.getBean(NetworkHardwareRepository.class).getIPAddress();
 
-        this.allDeviceRepository = this.applicationContext.getBean(AllDeviceRepository.class);
-        this.transactionManagerContext = applicationContext.getBean(TransactionManagerContext.class);
         this.workspaceService = applicationContext.getBean(WorkspaceService.class);
-        this.entityManager = applicationContext.getBean(EntityManager.class);
 
-        repositories.putAll(applicationContext.getBeansOfType(AbstractRepository.class));
         rebuildRepositoryByPrefixMap();
 
         entityContextEvent.onContextCreated();
@@ -346,12 +356,13 @@ public class EntityContextImpl implements EntityContext {
         return baseEntity;
     }
 
-    public Optional<AbstractRepository> getRepository(@NotNull String entityID) {
-        return entityManager.getRepositoryByEntityID(entityID);
-    }
-
-    public @NotNull AbstractRepository getRepository(@NotNull Class<? extends BaseEntity> entityClass) {
-        return classFinder.getRepositoryByClass(entityClass);
+    public static AbstractRepository getRepository(@NotNull String entityIdOrPrefix) {
+        for (AbstractRepository repository : EntityContextImpl.repositoriesByPrefix.values()) {
+            if (repository.isMatch(entityIdOrPrefix)) {
+                return repository;
+            }
+        }
+        return allDeviceRepository;
     }
 
     @Override
@@ -403,9 +414,8 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public <T extends BaseEntity> @NotNull T save(T entity, boolean fireNotifyListeners) {
-        AbstractRepository foundRepo = classFinder.getRepositoryByClass(entity.getClass());
-        final AbstractRepository repository = foundRepo == null && entity instanceof DeviceBaseEntity ? allDeviceRepository : foundRepo;
+    public <T extends BaseEntity> @NotNull T save(@NotNull T entity, boolean fireNotifyListeners) {
+        AbstractRepository repository = getRepository(entity.getEntityPrefix());
         EntityContextEventImpl.EntityListener entityUpdateListeners = this.event().getEntityUpdateListeners();
 
         String entityID = entity.getEntityID();
@@ -421,7 +431,7 @@ public class EntityContextImpl implements EntityContext {
 
         if (fireNotifyListeners) {
             if (oldEntity == null) {
-                runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners, this.event().getEntityCreateListeners());
+                runUpdateNotifyListeners(updatedEntity, null, entityUpdateListeners, this.event().getEntityCreateListeners());
             } else {
                 runUpdateNotifyListeners(updatedEntity, oldEntity, entityUpdateListeners);
             }
@@ -449,8 +459,9 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public BaseEntity<? extends BaseEntity> delete(@NotNull String entityId) {
-        BaseEntity<? extends BaseEntity> deletedEntity = entityManager.delete(entityId);
+    public BaseEntity<? extends BaseEntity> delete(@NotNull String entityID) {
+        AbstractRepository repository = getRepository(entityID);
+        BaseEntity deletedEntity = repository.deleteByEntityID(entityID);
         cacheService.clearCache();
         runUpdateNotifyListeners(null, deletedEntity, this.event().getEntityRemoveListeners());
         return deletedEntity;
@@ -458,11 +469,6 @@ public class EntityContextImpl implements EntityContext {
 
     public AbstractRepository<? extends BaseEntity> getRepositoryByPrefix(@NotNull String repositoryPrefix) {
         return repositoriesByPrefix.get(repositoryPrefix);
-    }
-
-    @Override
-    public <T extends BaseEntity> T getEntityByName(@NotNull String name, @NotNull Class<T> entityClass) {
-        return classFinder.getRepositoryByClass(entityClass).getByName(name);
     }
 
     @Override
@@ -559,7 +565,7 @@ public class EntityContextImpl implements EntityContext {
         BaseEntity newEntity = copyEntityItem(entity);
         BaseEntity<?> saved = save(newEntity, false);
 
-        // copy children if current entity is layout(it may contains children)
+        // copy children if current entity is layout(it may contain children)
         if (entity instanceof WidgetLayoutEntity) {
             for (BaseEntity baseEntity : findAll(WidgetBaseEntity.class)) {
                 if (baseEntity instanceof HasPosition<?> positionEntity) {
@@ -636,20 +642,12 @@ public class EntityContextImpl implements EntityContext {
         uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class)
                                     .stream()
                                     .collect(Collectors.toMap(Class::getSimpleName, s -> s));
-        Map<String, AbstractRepository> localRepositoriesByPrefix = new HashMap<>();
-        for (Class<? extends EntityFieldMetadata> metaEntity : uiFieldClasses.values()) {
-            if (BaseEntity.class.isAssignableFrom(metaEntity)) {
-                Class<? extends BaseEntity> baseEntity = (Class<? extends BaseEntity>) metaEntity;
-                localRepositoriesByPrefix.put(CommonUtils.newInstance(baseEntity).getEntityPrefix(), getRepository(baseEntity));
-            }
-        }
-        repositoriesByPrefix = localRepositoriesByPrefix;
     }
 
     @SneakyThrows
     public void fireRefreshBeans() {
         for (Class<? extends ContextRefreshed> beanUpdateClass : BEAN_CONTEXT_REFRESH) {
-            applicationContext.getBean(beanUpdateClass).onContextRefresh();
+            applicationContext.getBean(beanUpdateClass).onContextRefresh(this);
         }
     }
 
@@ -713,9 +711,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private void putToCache(BaseEntity entity, Map<String, Object[]> changeFields) {
-        AbstractRepository repository;
-        repository = classFinder.getRepositoryByClass(entity.getClass());
-        cacheService.putToCache(repository, entity, changeFields);
+        cacheService.putToCache(getRepository(entity.getEntityPrefix()), entity, changeFields);
     }
 
     private <T extends HasEntityIdentifier> void runUpdateNotifyListeners(@Nullable T updatedEntity, T oldEntity,
@@ -731,27 +727,31 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private <T extends BaseEntity> List<T> findAllByRepository(Class<BaseEntity> clazz) {
-        if (clazz.isAnnotationPresent(DisableCacheEntity.class)) {
-            return getRepository(clazz).listAll();
+        AbstractRepository repository;
+        if (Modifier.isAbstract(clazz.getModifiers())) {
+            if (DeviceBaseEntity.class.isAssignableFrom(clazz)) {
+                repository = allDeviceRepository;
+            } else if (WidgetBaseEntity.class.isAssignableFrom(clazz)) {
+                repository = widgetRepository;
+            } else if (WidgetSeriesEntity.class.isAssignableFrom(clazz)) {
+                repository = widgetSeriesRepository;
+            } else {
+                throw new IllegalStateException("Unable to find repository for class: " + clazz.getSimpleName());
+            }
+
+        } else {
+            repository = getRepository(CommonUtils.newInstance(clazz).getEntityPrefix());
         }
-        return entityManager.getEntityIDsByEntityClassFullName(clazz).stream().map(entityID -> {
+        if (!repository.isUseCache()) {
+            return repository.listAll();
+        }
+        return entityManager.getEntityIDsByEntityClassFullName(clazz, repository).stream().map(entityID -> {
             T entity = entityManager.getEntityWithFetchLazy(entityID);
             if (entity != null) {
                 entity.afterFetch(this);
             }
             return entity;
         }).filter(Objects::nonNull).collect(Collectors.toList());
-    }
-
-    private Object getTargetObject(Object proxy) throws BeansException {
-        if (AopUtils.isJdkDynamicProxy(proxy)) {
-            try {
-                return ((Advised) proxy).getTargetSource().getTarget();
-            } catch (Exception e) {
-                throw new FatalBeanException("Error getting target of JDK proxy", e);
-            }
-        }
-        return proxy;
     }
 
     @AllArgsConstructor

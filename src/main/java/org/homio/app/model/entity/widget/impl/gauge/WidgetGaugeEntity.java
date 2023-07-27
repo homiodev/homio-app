@@ -32,8 +32,6 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     HasValueTemplate,
     HasSourceServerUpdates {
 
-    public static final String PREFIX = "wgtgg_";
-
     @UIField(order = 1)
     @UIFieldGroup("UI")
     public GaugeType getDisplayType() {
@@ -215,8 +213,8 @@ public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "gauge";
     }
 
     @Override

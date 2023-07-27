@@ -1,5 +1,7 @@
 package org.homio.app.model.entity.user;
 
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 import jakarta.persistence.Entity;
 import java.util.List;
 import org.homio.api.ui.UISidebarChildren;
@@ -10,22 +12,19 @@ import org.jetbrains.annotations.NotNull;
 @UISidebarChildren(icon = "fas fa-chalkboard-user", color = "#B5094E", allowCreateItem = false)
 public final class UserAdminEntity extends UserBaseEntity<UserAdminEntity> {
 
-    public static final String PREFIX = "ua_";
-    public static final String ENTITY_ID = PREFIX + "primary";
-
     @Override
     public boolean isDisableDelete() {
         return true;
     }
 
     @Override
-    public @NotNull UserType getUserType() {
-        return UserType.ADMIN;
+    protected @NotNull String getDevicePrefix() {
+        return "user-admin";
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    public @NotNull UserType getUserType() {
+        return UserType.ADMIN;
     }
 
     @Override
@@ -36,7 +35,7 @@ public final class UserAdminEntity extends UserBaseEntity<UserAdminEntity> {
     public static void ensureUserExists(EntityContextImpl entityContext) {
         List<UserAdminEntity> users = entityContext.findAll(UserAdminEntity.class);
         if (users.isEmpty()) {
-            entityContext.save(new UserAdminEntity().setEntityID(ENTITY_ID));
+            entityContext.save(new UserAdminEntity().setEntityID(PRIMARY_DEVICE));
         }
     }
 }

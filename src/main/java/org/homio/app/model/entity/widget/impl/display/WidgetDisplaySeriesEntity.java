@@ -12,14 +12,11 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueAggregatedData
 import org.homio.app.model.entity.widget.attributes.HasStyle;
 import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
-import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayEntity>
     implements HasSingleValueAggregatedDataSource, HasIcon, HasValueTemplate,
     HasName, HasStyle, HasValueConverter {
-
-    public static final String PREFIX = "wgsdps_";
 
     @UIField(order = 1, isRevert = true)
     @UIFieldGroup("UI")
@@ -39,8 +36,8 @@ public class WidgetDisplaySeriesEntity extends WidgetSeriesEntity<WidgetDisplayE
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "display";
     }
 
     @Override

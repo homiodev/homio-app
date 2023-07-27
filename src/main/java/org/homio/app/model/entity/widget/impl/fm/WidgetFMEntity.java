@@ -21,7 +21,10 @@ import org.jetbrains.annotations.NotNull;
 public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, WidgetFMSeriesEntity>
     implements HasDynamicContextMenuActions, HasLayout, HasSourceServerUpdates {
 
-    public static final String PREFIX = "wgtfm_";
+    @Override
+    protected @NotNull String getWidgetPrefix() {
+        return "fm";
+    }
 
     @Override
     public WidgetGroup getGroup() {
@@ -31,11 +34,6 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     @Override
     public @NotNull String getImage() {
         return "fas fa-folder-tree";
-    }
-
-    @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
     }
 
     @Override

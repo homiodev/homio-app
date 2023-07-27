@@ -44,7 +44,6 @@ import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextEvent;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.BaseEntityIdentifier;
-import org.homio.api.entity.PinBaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -380,11 +379,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
             if (serviceOptional.isPresent()) {
                 try {
                     EntityService.ServiceInstance service = (ServiceInstance) serviceOptional.get();
-                    if (service.entityUpdated((EntityService) entity)) {
-                        if (service.testService()) {
-                            ((EntityService<?, ?>) entity).setStatusOnline();
-                        }
-                    }
+                    service.entityUpdated((EntityService) entity);
                 } catch (Exception ex) {
                     ((EntityService<?, ?>) entity).setStatusError(ex);
                 }
@@ -409,13 +404,11 @@ public class EntityContextEventImpl implements EntityContextEvent {
     public enum EntityUpdateAction {
         Insert((context, entity) -> {
             postInsertUpdate(context, entity, true);
-            if (entity instanceof BaseEntity && !(entity instanceof PinBaseEntity)) {
+            if (entity instanceof BaseEntity) {
                 context.ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", ((BaseEntity<?>) entity).getEntityID()));
             }
         }),
-        Update((context, entity) -> {
-            postInsertUpdate(context, entity, false);
-        }),
+        Update((context, entity) -> postInsertUpdate(context, entity, false)),
         Delete((context, entity) -> {
             if (entity instanceof BaseEntity) {
                 // execute in separate thread

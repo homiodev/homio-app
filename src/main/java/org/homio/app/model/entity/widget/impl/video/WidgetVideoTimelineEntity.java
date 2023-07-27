@@ -17,8 +17,6 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimelineEntity> {
 
-    public static final String PREFIX = "wtvtl_";
-
     @Override
     public WidgetGroup getGroup() {
         return WidgetGroup.Media;
@@ -66,8 +64,8 @@ public class WidgetVideoTimelineEntity extends WidgetBaseEntity<WidgetVideoTimel
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "video-time";
     }
 
     @Override

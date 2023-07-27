@@ -15,8 +15,8 @@ import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.entity.zigbee.ZigBeeBaseCoordinatorEntity;
 import org.homio.api.entity.zigbee.ZigBeeDeviceBaseEntity;
 import org.homio.api.exception.ProhibitedExecution;
-import org.homio.api.model.DeviceProperty;
 import org.homio.api.model.Status;
+import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
@@ -34,127 +34,129 @@ import org.springframework.stereotype.Component;
 @Component
 public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
 
+    private final String ENDPOINT = "ENDPOINT";
+
     public static final String ZIGBEE__BASE_URL = "rest/zigbee/";
     public static final String ZIGBEE_CLUSTER_ID_URL = ZIGBEE__BASE_URL + "zcl/";
     public static final String ZIGBEE_CLUSTER_NAME_URL = ZIGBEE__BASE_URL + "clusterName/";
     public static final String ZIGBEE_MODEL_URL = ZIGBEE__BASE_URL + "model/";
     public static final String ZIGBEE_ALARM_URL = ZIGBEE__BASE_URL + "alarm";
-    private static final String DEVICE = "Device";
     private final ServerMenuBlock deviceMenu;
     private final ServerMenuBlock deviceReadMenu;
     private final ServerMenuBlock deviceWriteMenu;
-    private final ServerMenuBlock propertyMenu;
+    private final ServerMenuBlock endpointMenu;
     private final ServerMenuBlock temperatureDeviceMenu;
     private final ServerMenuBlock humidityDeviceMenu;
-    private final ServerMenuBlock readPropertyMenu;
-    private final ServerMenuBlock writePropertyMenu;
+    private final ServerMenuBlock readEndpointMenu;
+    private final ServerMenuBlock writeEndpointMenu;
     private final StaticMenuBlock<OnOff> onOffMenu;
     private final ServerMenuBlock deviceWriteBoolMenu;
-    private final ServerMenuBlock writeBoolPropertyMenu;
+    private final ServerMenuBlock writeBoolEndpointMenu;
+    private final String DEVICE = "DEVICE";
 
     public Scratch3ZigBeeBlocks(EntityContext entityContext, Z2MEntrypoint z2MEntrypoint) {
         super("#6d4747", entityContext, z2MEntrypoint, null);
 
         this.onOffMenu = menuStatic("onOffMenu", OnOff.class, OnOff.off);
-        this.deviceMenu = menuServer("deviceMenu", ZIGBEE__BASE_URL + "device", DEVICE, "-");
-        this.deviceReadMenu = menuServer("deviceReadMenu", ZIGBEE__BASE_URL + "device?access=read", DEVICE, "-");
-        this.deviceWriteBoolMenu = menuServer("deviceWriteBoolMenu", ZIGBEE__BASE_URL + "device?access=write&type=bool", DEVICE, "-");
-        this.deviceWriteMenu = menuServer("deviceWriteMenu", ZIGBEE__BASE_URL + "device?access=write", DEVICE, "-");
-        this.temperatureDeviceMenu = menuServer("temperatureDeviceMenu", ZIGBEE__BASE_URL + "device/temperature", DEVICE, "-");
-        this.humidityDeviceMenu = menuServer("humidityDeviceMenu", ZIGBEE__BASE_URL + "device/humidity", DEVICE, "-");
-        this.propertyMenu = menuServer("propertyMenu", ZIGBEE__BASE_URL + "property", "Property", "-")
+        this.deviceMenu = menuServer("deviceMenu", ZIGBEE__BASE_URL + "device", "Device", "-");
+        this.deviceReadMenu = menuServer("deviceReadMenu", ZIGBEE__BASE_URL + "device?access=read", "Device", "-");
+        this.deviceWriteBoolMenu = menuServer("deviceWriteBoolMenu", ZIGBEE__BASE_URL + "device?access=write&type=bool", "Device", "-");
+        this.deviceWriteMenu = menuServer("deviceWriteMenu", ZIGBEE__BASE_URL + "device?access=write", "Device", "-");
+        this.temperatureDeviceMenu = menuServer("temperatureDeviceMenu", ZIGBEE__BASE_URL + "device/temperature", "Device", "-");
+        this.humidityDeviceMenu = menuServer("humidityDeviceMenu", ZIGBEE__BASE_URL + "device/humidity", "Device", "-");
+        this.endpointMenu = menuServer("endpointMenu", ZIGBEE__BASE_URL + "endpoints", "Endpoint", "-")
             .setDependency(this.deviceMenu);
-        this.readPropertyMenu = menuServer("readPropertyMenu", ZIGBEE__BASE_URL + "property?access=read", "Property", "-")
+        this.readEndpointMenu = menuServer("readEndpointMenu", ZIGBEE__BASE_URL + "endpoints?access=read", "Endpoint", "-")
             .setDependency(this.deviceReadMenu);
-        this.writePropertyMenu = menuServer("writePropertyMenu", ZIGBEE__BASE_URL + "property?access=write", "Property", "-")
+        this.writeEndpointMenu = menuServer("writeEndpointMenu", ZIGBEE__BASE_URL + "endpoints?access=write", "Endpoint", "-")
             .setDependency(this.deviceWriteMenu);
-        this.writeBoolPropertyMenu = menuServer("writeBoolPropertyMenu", ZIGBEE__BASE_URL + "property?access=write&type=bool", "Property", "-")
+        this.writeBoolEndpointMenu = menuServer("writeBoolEndpointMenu", ZIGBEE__BASE_URL + "endpoints?access=write&type=bool", "Endpoint", "-")
             .setDependency(this.deviceWriteMenu);
         // reporter blocks
-        blockReporter(50, "time_since_last_event", "time since last event [PROPERTY] of [DEVICE]",
+        blockReporter(50, "time_since_last_event", "time since last event [ENDPOINT] of [DEVICE]",
             workspaceBlock -> {
                 Duration timeSinceLastEvent = getDeviceProperty(workspaceBlock).getTimeSinceLastEvent();
                 return new DecimalType(timeSinceLastEvent.toSeconds()).setUnit("sec");
             }, block -> {
-                block.addArgument("PROPERTY", this.propertyMenu);
-                block.addArgument("DEVICE", this.deviceMenu);
+                block.addArgument(ENDPOINT, this.endpointMenu);
+                block.addArgument(DEVICE, this.deviceMenu);
                 block.appendSpace();
             });
 
-        blockReporter(51, "value", "[PROPERTY] value of [DEVICE]", this::getDevicePropertyState, block -> {
-            block.addArgument("PROPERTY", this.propertyMenu);
-            block.addArgument("DEVICE", this.deviceMenu);
+        blockReporter(51, "value", "[ENDPOINT] value of [DEVICE]", this::getDevicePropertyState, block -> {
+            block.addArgument(ENDPOINT, this.endpointMenu);
+            block.addArgument(DEVICE, this.deviceMenu);
             block.overrideColor("#84185c");
         });
 
         blockReporter(52, "temperature", "temperature [DEVICE]",
             workspaceBlock -> getZigBeeProperty(workspaceBlock, deviceMenu, "temperature").getLastValue(),
             block -> {
-                block.addArgument("DEVICE", this.temperatureDeviceMenu);
+                block.addArgument(DEVICE, this.temperatureDeviceMenu);
                 block.overrideColor("#307596");
             });
 
         blockReporter(53, "humidity", "humidity [DEVICE]",
             workspaceBlock -> getZigBeeProperty(workspaceBlock, deviceMenu, "humidity").getLastValue(),
             block -> {
-                block.addArgument("DEVICE", humidityDeviceMenu);
+                block.addArgument(DEVICE, humidityDeviceMenu);
                 block.overrideColor("#3B8774");
             });
 
         // command blocks
-        blockCommand(80, "read_property", "Read [PROPERTY] value of [DEVICE]", workspaceBlock ->
-                getZigBeeProperty(workspaceBlock, deviceReadMenu, readPropertyMenu).readValue(),
+        blockCommand(80, "read_property", "Read [ENDPOINT] value of [DEVICE]", workspaceBlock ->
+                getZigBeeProperty(workspaceBlock, deviceReadMenu, readEndpointMenu).readValue(),
             block -> {
-                block.addArgument("PROPERTY", readPropertyMenu);
-                block.addArgument("DEVICE", deviceReadMenu);
+                block.addArgument(ENDPOINT, readEndpointMenu);
+                block.addArgument(DEVICE, deviceReadMenu);
             });
 
-        blockCommand(81, "write_property", "Write [PROPERTY] value [VALUE] of [DEVICE]", workspaceBlock -> {
+        blockCommand(81, "write_property", "Write [ENDPOINT] value [VALUE] of [DEVICE]", workspaceBlock -> {
             Object value = workspaceBlock.getInput(VALUE, true);
-            getZigBeeProperty(workspaceBlock, deviceWriteMenu, writePropertyMenu).writeValue(State.of(value));
+            getZigBeeProperty(workspaceBlock, deviceWriteMenu, writeEndpointMenu).writeValue(State.of(value));
         }, block -> {
-            block.addArgument("PROPERTY", writePropertyMenu);
-            block.addArgument("DEVICE", deviceWriteMenu);
+            block.addArgument(ENDPOINT, writeEndpointMenu);
+            block.addArgument(DEVICE, deviceWriteMenu);
             block.addArgument(VALUE, "-");
         });
 
-        blockCommand(81, "write_bool", "Set [PROPERTY] [VALUE] of [DEVICE]", workspaceBlock -> {
+        blockCommand(81, "write_bool", "Set [ENDPOINT] [VALUE] of [DEVICE]", workspaceBlock -> {
             OnOff value = workspaceBlock.getMenuValue(VALUE, this.onOffMenu);
-            getZigBeeProperty(workspaceBlock, deviceWriteBoolMenu, writeBoolPropertyMenu).writeValue(OnOffType.of(value == OnOff.on));
+            getZigBeeProperty(workspaceBlock, deviceWriteBoolMenu, writeBoolEndpointMenu).writeValue(OnOffType.of(value == OnOff.on));
         }, block -> {
-            block.addArgument("PROPERTY", writeBoolPropertyMenu);
-            block.addArgument("DEVICE", deviceWriteBoolMenu);
+            block.addArgument(ENDPOINT, writeBoolEndpointMenu);
+            block.addArgument(DEVICE, deviceWriteBoolMenu);
             block.addArgument(VALUE, onOffMenu);
         });
 
         // hat blocks
-        blockHat(90, "when_value_change", "When [PROPERTY] of [DEVICE] changed", this::whenValueChange, block -> {
-            block.addArgument("PROPERTY", propertyMenu);
-            block.addArgument("DEVICE", deviceMenu);
+        blockHat(90, "when_value_change", "When [ENDPOINT] of [DEVICE] changed", this::whenValueChange, block -> {
+            block.addArgument(ENDPOINT, endpointMenu);
+            block.addArgument(DEVICE, deviceMenu);
         });
 
-        blockHat(91, "when_value_change_to", "When [PROPERTY] of [DEVICE] changed to [VALUE]", this::whenValueChangeTo, block -> {
-            block.addArgument("PROPERTY", propertyMenu);
-            block.addArgument("DEVICE", deviceMenu);
+        blockHat(91, "when_value_change_to", "When [ENDPOINT] of [DEVICE] changed to [VALUE]", this::whenValueChangeTo, block -> {
+            block.addArgument(ENDPOINT, endpointMenu);
+            block.addArgument(DEVICE, deviceMenu);
             block.addArgument(VALUE, "-");
         });
 
-        blockHat(92, "when_no_value_change", "No changes [PROPERTY] of [DEVICE] during [DURATION]sec.",
+        blockHat(92, "when_no_value_change", "No changes [ENDPOINT] of [DEVICE] during [DURATION]sec.",
             this::whenNoValueChangeSince, block -> {
-                block.addArgument("PROPERTY", propertyMenu);
-                block.addArgument("DEVICE", deviceMenu);
+                block.addArgument(ENDPOINT, endpointMenu);
+                block.addArgument(DEVICE, deviceMenu);
                 block.addArgument("DURATION", 60);
             });
     }
 
-    private DeviceProperty getZigBeeProperty(WorkspaceBlock workspaceBlock, ServerMenuBlock deviceMenu, ServerMenuBlock propertyMenu) {
-        String propertyID = workspaceBlock.getMenuValue("PROPERTY", propertyMenu);
+    private DeviceEndpoint getZigBeeProperty(WorkspaceBlock workspaceBlock, ServerMenuBlock deviceMenu, ServerMenuBlock propertyMenu) {
+        String propertyID = workspaceBlock.getMenuValue(ENDPOINT, propertyMenu);
         return getZigBeeProperty(workspaceBlock, deviceMenu, propertyID);
     }
 
     private void whenValueChangeTo(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleNext(next -> {
-            DeviceProperty property = getDeviceProperty(workspaceBlock);
+            DeviceEndpoint property = getDeviceProperty(workspaceBlock);
             String value = workspaceBlock.getInputString(VALUE);
             if (StringUtils.isEmpty(value)) {
                 workspaceBlock.logErrorAndThrow("Value must be not empty");
@@ -180,7 +182,7 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
             if (secondsToWait < 1) {
                 workspaceBlock.logErrorAndThrow("Duration must be greater than 1 seconds. Value: {}", secondsToWait);
             }
-            DeviceProperty property = getDeviceProperty(workspaceBlock);
+            DeviceEndpoint property = getDeviceProperty(workspaceBlock);
             BroadcastLock eventOccurredLock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock);
 
             // add listener on target property for any changes and wake up lock
@@ -201,7 +203,7 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
 
     private void whenValueChange(WorkspaceBlock workspaceBlock) {
         workspaceBlock.handleNext(next -> {
-            DeviceProperty property = getDeviceProperty(workspaceBlock);
+            DeviceEndpoint property = getDeviceProperty(workspaceBlock);
             BroadcastLock lock = workspaceBlock.getBroadcastLockManager().getOrCreateLock(workspaceBlock);
 
             property.addChangeListener(workspaceBlock.getId(), state -> lock.signalAll());
@@ -218,14 +220,14 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
      * return zigbee coordinator's device property. Return null if coordinator not ready
      */
     @NotNull
-    private DeviceProperty getDeviceProperty(WorkspaceBlock workspaceBlock) {
-        return getZigBeeProperty(workspaceBlock, deviceMenu, propertyMenu);
+    private DeviceEndpoint getDeviceProperty(WorkspaceBlock workspaceBlock) {
+        return getZigBeeProperty(workspaceBlock, deviceMenu, endpointMenu);
     }
 
     @NotNull
-    private DeviceProperty getZigBeeProperty(WorkspaceBlock workspaceBlock, ServerMenuBlock deviceMenu, String propertyID) {
-        String ieeeAddress = workspaceBlock.getMenuValue("DEVICE", deviceMenu);
-        DeviceProperty property = getZigBeeProperty(ieeeAddress, propertyID);
+    private DeviceEndpoint getZigBeeProperty(WorkspaceBlock workspaceBlock, ServerMenuBlock deviceMenu, String propertyID) {
+        String ieeeAddress = workspaceBlock.getMenuValue(DEVICE, deviceMenu);
+        DeviceEndpoint property = getZigBeeProperty(ieeeAddress, propertyID);
 
         if (property == null) {
             // wait for property to be online at most 10 minutes
@@ -244,11 +246,11 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
     }
 
     @Nullable
-    private DeviceProperty getZigBeeProperty(String ieeeAddress, String propertyID) {
+    private DeviceEndpoint getZigBeeProperty(String ieeeAddress, String propertyID) {
         for (ZigBeeBaseCoordinatorEntity coordinator : getZigBeeCoordinators()) {
             ZigBeeDeviceBaseEntity zigBeeDevice = coordinator.getZigBeeDevice(ieeeAddress);
             if (zigBeeDevice != null) {
-                return zigBeeDevice.getProperty(propertyID);
+                return zigBeeDevice.getDeviceEndpoint(propertyID);
             }
         }
         return null;

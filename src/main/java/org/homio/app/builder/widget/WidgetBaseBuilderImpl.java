@@ -80,7 +80,7 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
 
     @Override
     public @NotNull T attachToLayout(@NotNull String layoutEntityID, int rowNum, int columnNum) {
-        WidgetLayoutEntity entity = entityContext.getEntity(WidgetLayoutEntity.PREFIX + layoutEntityID);
+        WidgetLayoutEntity entity = entityContext.getEntity(WidgetLayoutEntity.class, layoutEntityID);
         if (entity == null) {
             throw new IllegalArgumentException("Unable to find layout: " + layoutEntityID);
         }

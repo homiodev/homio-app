@@ -8,62 +8,41 @@ import org.homio.addon.tuya.TuyaProjectEntity;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
 import org.homio.api.EntityContext;
-import org.homio.api.model.Status;
 import org.homio.api.service.EntityService.ServiceInstance;
-import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 
 @Log4j2
 @Getter
-public class TuyaProjectService implements ServiceInstance<TuyaProjectEntity> {
+public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
 
-    private final EntityContext entityContext;
     private final TuyaOpenAPI api;
-    private long entityCode;
-
-    @Getter
-    private @NotNull TuyaProjectEntity entity;
 
     @SneakyThrows
     public TuyaProjectService(@NotNull EntityContext entityContext, @NotNull TuyaProjectEntity entity) {
-        this.entityContext = entityContext;
-        this.entity = entity;
-        this.entityCode = entity.getDeepHashCode();
+        super(entityContext, entity);
         this.api = entityContext.getBean(TuyaOpenAPI.class);
         initialize();
     }
 
-    @Override
-    public boolean entityUpdated(@NotNull TuyaProjectEntity newEntity) {
-        long newEntityCode = newEntity.getDeepHashCode();
-        boolean requireReinitialize = entityCode != newEntityCode;
-        entityCode = newEntityCode;
-        entity = newEntity;
-
-        if (requireReinitialize) {
-            initialize();
-        }
-        return false;
-    }
-
-    @Override
-    public boolean testService() {
-        return false;
-    }
-
     public void initialize() {
-        try {
-            entity.setStatusOnline();
-            if (!api.isConnected()) {
-                api.login();
-            }
-            if (!entity.isValid()) {
-                entity.setStatus(Status.ERROR, "Not valid configuration");
-            }
-        } catch (Exception ex) {
-            entity.setStatusError(ex);
-            log.error("Error during initialize tuya project: {}", CommonUtils.getErrorMessage(ex));
+        testServiceWithSetStatus();
+    }
+
+    @Override
+    @SneakyThrows
+    protected void testService() {
+        entity.setStatusOnline();
+        if (!entity.isValid()) {
+            throw new IllegalStateException("Not valid configuration");
         }
+        if (!api.isConnected()) {
+            api.login();
+        }
+    }
+
+    @Override
+    protected long getEntityHashCode(TuyaProjectEntity entity) {
+        return entity.getDeepHashCode();
     }
 
     @Override

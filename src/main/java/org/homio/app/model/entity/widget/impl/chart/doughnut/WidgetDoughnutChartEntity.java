@@ -22,8 +22,6 @@ public class WidgetDoughnutChartEntity
     extends ChartBaseEntity<WidgetDoughnutChartEntity, WidgetDoughnutChartSeriesEntity>
     implements HasSingleValueDataSource, HasChartTimePeriod, HasValueConverter, HasValueTemplate {
 
-    public static final String PREFIX = "wgtpc_";
-
     //   @UIField(order = 3)
 
     // TODO:??????????/
@@ -64,8 +62,8 @@ public class WidgetDoughnutChartEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "doughnut";
     }
 
     @Override

@@ -17,8 +17,6 @@ import org.jetbrains.annotations.NotNull;
 public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggleEntity>
     implements HasSourceServerUpdates, HasSingleValueDataSource, HasToggle, HasAlign, HasPadding {
 
-    public static final String PREFIX = "wgtstgl_";
-
     @Override
     public boolean isVisible() {
         return false;
@@ -30,8 +28,8 @@ public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggl
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "sim-toggle";
     }
 
     @Override

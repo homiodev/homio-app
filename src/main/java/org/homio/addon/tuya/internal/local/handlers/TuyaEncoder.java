@@ -1,6 +1,7 @@
 package org.homio.addon.tuya.internal.local.handlers;
 
 import static com.sshtools.common.util.Utils.bytesToHex;
+import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
 import static org.homio.addon.tuya.internal.local.CommandType.CONTROL;
 import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY;
 import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY_NEW;
@@ -10,7 +11,6 @@ import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_FINIS
 import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_START;
 import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_3;
 import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
-import static org.homio.addon.tuya.service.TuyaDiscoveryService.gson;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;

@@ -1,5 +1,7 @@
 package org.homio.addon.tuya.internal;
 
+import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
@@ -50,7 +52,6 @@ public class TuyaBindingConstants {
         }
 
         try (InputStreamReader reader = new InputStreamReader(resource)) {
-            Gson gson = new Gson();
             Type schemaListType = TypeToken.getParameterized(Map.class, String.class, SchemaDp.class).getType();
             Type schemaType = TypeToken.getParameterized(Map.class, String.class, schemaListType).getType();
             return Objects.requireNonNull(gson.fromJson(reader, schemaType));

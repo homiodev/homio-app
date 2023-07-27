@@ -63,6 +63,7 @@ import org.homio.app.model.entity.widget.impl.video.WidgetVideoEntity;
 import org.homio.app.model.entity.widget.impl.video.WidgetVideoSeriesEntity;
 import org.homio.app.model.entity.widget.impl.video.sourceResolver.WidgetVideoSourceResolver;
 import org.homio.app.model.rest.WidgetDataRequest;
+import org.homio.app.repository.widget.WidgetTabRepository;
 import org.homio.app.rest.widget.WidgetChartsController.SingleValueData;
 import org.homio.app.utils.JavaScriptBuilderImpl;
 import org.json.JSONObject;
@@ -88,13 +89,20 @@ public class WidgetController {
     private final WidgetService widgetService;
     private final List<WidgetVideoSourceResolver> videoSourceResolvers;
     private final TimeSeriesUtil timeSeriesUtil;
+    private final WidgetTabRepository widgetTabRepository;
 
-    public WidgetController(ObjectMapper objectMapper, EntityContextImpl entityContext, ScriptService scriptService, WidgetService widgetService,
-        List<WidgetVideoSourceResolver> videoSourceResolvers) {
+    public WidgetController(
+        ObjectMapper objectMapper,
+        EntityContextImpl entityContext,
+        ScriptService scriptService,
+        WidgetService widgetService,
+        List<WidgetVideoSourceResolver> videoSourceResolvers,
+        WidgetTabRepository widgetTabRepository) {
         this.objectMapper = objectMapper;
         this.entityContext = entityContext;
         this.scriptService = scriptService;
         this.widgetService = widgetService;
+        this.widgetTabRepository = widgetTabRepository;
         this.videoSourceResolvers = videoSourceResolvers;
         this.timeSeriesUtil = new TimeSeriesUtil(entityContext);
     }
@@ -409,7 +417,7 @@ public class WidgetController {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void renameWidgetTab(@PathVariable("tabId") String tabId, @PathVariable("name") String name) {
         WidgetTabEntity entity = getWidgetTabEntity(tabId);
-        WidgetTabEntity newEntity = entityContext.getEntityByName(name, WidgetTabEntity.class);
+        WidgetTabEntity newEntity = widgetTabRepository.getByName(name);
 
         if (newEntity == null) {
             entityContext.save(entity.setName(name));

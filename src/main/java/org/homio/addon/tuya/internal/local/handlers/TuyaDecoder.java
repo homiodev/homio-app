@@ -1,6 +1,7 @@
 package org.homio.addon.tuya.internal.local.handlers;
 
 import static com.sshtools.common.util.Utils.bytesToHex;
+import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
 import static org.homio.addon.tuya.internal.local.CommandType.BROADCAST_LPV34;
 import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY;
 import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY_NOT_SUPPORTED;
@@ -9,7 +10,6 @@ import static org.homio.addon.tuya.internal.local.CommandType.UDP;
 import static org.homio.addon.tuya.internal.local.CommandType.UDP_NEW;
 import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_3;
 import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
-import static org.homio.addon.tuya.service.TuyaDiscoveryService.gson;
 
 import com.google.gson.JsonSyntaxException;
 import io.netty.buffer.ByteBuf;

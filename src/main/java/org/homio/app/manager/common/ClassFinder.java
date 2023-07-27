@@ -8,11 +8,9 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.HomioClassLoader;
-import org.homio.app.repository.AbstractRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -111,50 +109,6 @@ public class ClassFinder {
         }
 
         return foundClasses;
-    }
-
-    @Cacheable(REPOSITORY_BY_CLAZZ)
-    public <T extends BaseEntity, R extends AbstractRepository<T>> R getRepositoryByClass(Class<T> clazz) {
-        List<R> potentialRepository = new ArrayList<>();
-
-        for (AbstractRepository abstractRepository : EntityContextImpl.repositories.values()) {
-            if (abstractRepository.getEntityClass().equals(clazz)) {
-                return (R) abstractRepository;
-            }
-            if (abstractRepository.getEntityClass().isAssignableFrom(clazz)) {
-                potentialRepository.add((R) abstractRepository);
-            }
-        }
-        if (!potentialRepository.isEmpty()) {
-            if (potentialRepository.size() == 1) {
-                return potentialRepository.get(0);
-            }
-            // find most child repository
-            R bestPotentialRepository = null;
-            int lowestLevel = 100;
-            for (R r : potentialRepository) {
-                Class entityClass = clazz;
-                // get level
-                int level = 0;
-                while (entityClass != null) {
-                    if (entityClass.equals(r.getEntityClass())) {
-                        if (lowestLevel > level) {
-                            lowestLevel = level;
-                            bestPotentialRepository = r;
-                        }
-                        break;
-                    } else {
-                        level++;
-                        entityClass = entityClass.getSuperclass();
-                    }
-                }
-            }
-            if (bestPotentialRepository != null) {
-                return bestPotentialRepository;
-            }
-        }
-
-        throw new ServerException("Unable find repository for entity class: " + clazz);
     }
 
     public  <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation) {

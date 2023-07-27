@@ -73,7 +73,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     HasGetStatusValue,
     HasSetStatusValue {
 
-    public static final String PREFIX = "wgv_";
+    public static final String PREFIX = "var_";
 
     @UIField(order = 12, color = "#7A7A7A")
     @UIFieldDisableEditOnCondition("return context.getParent('locked')")

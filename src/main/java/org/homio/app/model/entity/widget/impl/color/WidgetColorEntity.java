@@ -41,8 +41,6 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     HasSourceServerUpdates,
     HasDynamicParameterFields {
 
-    public static final String PREFIX = "wgtclr_";
-
     @UIField(order = 1)
     @UIFieldGroup(value = "NAME", order = 3)
     @UIFieldOptionFontSize
@@ -65,8 +63,8 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "color";
     }
 
     @Override

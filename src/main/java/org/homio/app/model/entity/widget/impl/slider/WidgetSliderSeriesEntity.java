@@ -30,8 +30,6 @@ public class WidgetSliderSeriesEntity
     HasPadding,
     HasTextConverter {
 
-    public static final String PREFIX = "wgssls_";
-
     @UIField(order = 1, isRevert = true)
     @UIFieldGroup(value = "SLIDER", order = 2, borderColor = "#6AA427")
     @UIFieldColorPicker(allowThreshold = true)
@@ -79,8 +77,8 @@ public class WidgetSliderSeriesEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "slider";
     }
 
     @Override

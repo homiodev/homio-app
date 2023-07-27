@@ -20,6 +20,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.val;
+import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginEditor;
 import org.homio.api.console.ConsolePluginTable;
@@ -72,13 +73,13 @@ public class ConsoleController implements ContextRefreshed {
     private static final Map<String, SshSession<?>> sessions = new HashMap<>();
 
     @Override
-    public void onContextRefresh() {
+    public void onContextRefresh(EntityContext entityContext) {
         EntityContextUIImpl.consolePluginsMap.clear();
 
         logs = new ArrayList<>();
         for (String tab : logService.getTabs()) {
             logs.add(new ConsoleTab(tab, ConsolePlugin.RenderType.lines, null));
-            logsConsolePluginsMap.put(tab, new LogsConsolePlugin(entityContext, logService, tab));
+            logsConsolePluginsMap.put(tab, new LogsConsolePlugin(this.entityContext, logService, tab));
         }
 
         List<ConsolePlugin> consolePlugins = new ArrayList<>(this.entityContext.getBeansOfType(ConsolePlugin.class));

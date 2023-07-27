@@ -17,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJsEntity>*/ implements HasJsonData {
 
-    public static final String PREFIX = "wgtjjs_";
+    public static final String PREFIX = "widget_js_";
 
     @Transient private String javaScriptResponse;
 

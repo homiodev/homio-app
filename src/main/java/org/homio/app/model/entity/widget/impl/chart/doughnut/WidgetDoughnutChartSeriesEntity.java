@@ -15,8 +15,6 @@ import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDoughnutChartEntity>
     implements HasSingleValueDataSource, HasValueConverter {
 
-    public static final String PREFIX = "wgspcs_";
-
     @UIField(order = 20, isRevert = true)
     @UIFieldGroup("CHART_UI")
     @UIFieldColorPicker
@@ -42,8 +40,8 @@ public class WidgetDoughnutChartSeriesEntity extends WidgetSeriesEntity<WidgetDo
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "doughnut";
     }
 
     @Override

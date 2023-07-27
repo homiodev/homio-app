@@ -17,16 +17,14 @@ import org.jetbrains.annotations.NotNull;
 public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
     implements HasLayout {
 
-    public static final String PREFIX = "wgtcmp_";
-
     @Override
     public @NotNull String getImage() {
         return "fas fa-layer-group";
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "layout";
     }
 
     @UIField(order = 35, showInContextMenu = true, icon = "fas fa-table")

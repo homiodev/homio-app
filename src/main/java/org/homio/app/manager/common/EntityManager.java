@@ -3,37 +3,30 @@ package org.homio.app.manager.common;
 import static org.homio.app.manager.CacheService.CACHE_CLASS_BY_TYPE;
 import static org.homio.app.manager.CacheService.ENTITY_IDS_BY_CLASS_NAME;
 import static org.homio.app.manager.CacheService.ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI;
-import static org.homio.app.manager.CacheService.REPOSITORY_BY_ENTITY_ID;
 
 import jakarta.persistence.Entity;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.app.repository.AbstractRepository;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
 @Log4j2
 @Component
-@RequiredArgsConstructor
 public class EntityManager {
-
-    private final ClassFinder classFinder;
 
     @Cacheable(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI)
     public <T extends BaseEntity> T getEntityWithFetchLazy(String entityID) {
-        return (T)
-            getRepositoryByEntityID(entityID)
-                .map(r -> r.getByEntityIDWithFetchLazy(entityID, false))
-                .orElse(null);
+        AbstractRepository repository = EntityContextImpl.getRepository(entityID);
+        return (T) repository.getByEntityIDWithFetchLazy(entityID, false);
     }
 
     @Cacheable(CACHE_CLASS_BY_TYPE)
@@ -49,51 +42,24 @@ public class EntityManager {
         return null;
     }
 
-    public BaseEntity<? extends BaseEntity> delete(String entityID) {
-        return getRepositoryByEntityID(entityID)
-            .map(r -> r.deleteByEntityID(entityID))
-            .orElse(null);
-    }
-
-    @Cacheable(REPOSITORY_BY_ENTITY_ID)
-    public Optional<AbstractRepository> getRepositoryByEntityID(String entityID) {
-        if (entityID != null) {
-            for (AbstractRepository abstractRepository : EntityContextImpl.repositories.values()) {
-                if (abstractRepository.isMatch(entityID)) {
-                    return Optional.of(abstractRepository);
-                }
-            }
-        }
-        // in case if entity has no 1-1 repository then try to find base repository if possible
-        for (Map.Entry<String, AbstractRepository> entry : EntityContextImpl.repositoriesByPrefix.entrySet()) {
-            if (entityID.startsWith(entry.getKey())) {
-                return Optional.of(entry.getValue());
-            }
-        }
-        return Optional.empty();
-    }
-
     @SneakyThrows
     @Cacheable(ENTITY_IDS_BY_CLASS_NAME)
-    public Set<String> getEntityIDsByEntityClassFullName(Class<BaseEntity> entityClass) {
-        List<BaseEntity> list;
+    public @NotNull Set<String> getEntityIDsByEntityClassFullName(Class<BaseEntity> entityClass, AbstractRepository repository) {
         Predicate<BaseEntity> filter = baseEntity -> true;
-        AbstractRepository<BaseEntity> repositoryByClass = classFinder.getRepositoryByClass(entityClass);
 
         // in case we not found repository, but found potential repository - we should filter
-        if (!repositoryByClass.getEntityClass().equals(entityClass)) {
+        if (!repository.getEntityClass().equals(entityClass)) {
             filter = baseEntity -> entityClass.isAssignableFrom(baseEntity.getClass());
         }
 
-        list = repositoryByClass.listAll();
+        List<BaseEntity> list = repository.listAll();
         return list.stream()
                    .filter(filter)
                    .map(BaseEntity::getEntityID)
                    .collect(Collectors.toSet());
     }
 
-    <T extends BaseEntity> T getEntityNoCache(String entityID) {
-        return (T)
-            getRepositoryByEntityID(entityID).map(r -> r.getByEntityID(entityID)).orElse(null);
+    <T extends BaseEntity> @Nullable T getEntityNoCache(String entityID) {
+        return (T) EntityContextImpl.getRepository(entityID).getByEntityID(entityID);
     }
 }

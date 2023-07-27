@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import org.hibernate.mapping.PersistentClass;
 import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.ui.UISidebarChildren;
+import org.jetbrains.annotations.NotNull;
 
 @Entity
 @DiscriminatorValue(PersistentClass.NOT_NULL_DISCRIMINATOR_MAPPING)
@@ -12,8 +13,8 @@ import org.homio.api.ui.UISidebarChildren;
 public class DeviceFallbackEntity extends DeviceBaseEntity<DeviceFallbackEntity> {
 
     @Override
-    public String getEntityPrefix() {
-        return "misc_fallback";
+    protected @NotNull String getDevicePrefix() {
+        return "fallback";
     }
 
     @Override

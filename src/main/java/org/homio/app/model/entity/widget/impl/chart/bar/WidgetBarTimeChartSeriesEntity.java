@@ -18,13 +18,6 @@ import org.homio.app.rest.widget.TimeSeriesContext;
 public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBarTimeChartEntity>
     implements HasChartDataSource {
 
-    public static final String PREFIX = "wgsbtcs_";
-
-    @Override
-    public String getEntityPrefix() {
-        return PREFIX;
-    }
-
     @Override
     public ChartDataset buildTargetDataset(TimeSeriesContext item) {
         WidgetBarTimeChartSeriesEntity seriesEntity =
@@ -54,5 +47,10 @@ public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBar
     @Override
     protected void beforePersist() {
         HasChartDataSource.randomColor(this);
+    }
+
+    @Override
+    protected String getSeriesPrefix() {
+        return "bar-time";
     }
 }

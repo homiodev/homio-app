@@ -47,8 +47,6 @@ public class WidgetDisplayEntity
     HasSourceServerUpdates,
     ConfigureFieldsService {
 
-    public static final String PREFIX = "wgtdp_";
-
     @UIField(order = 1)
     @UIFieldGroup(value = "NAME", order = 3)
     @UIFieldOptionFontSize
@@ -62,8 +60,8 @@ public class WidgetDisplayEntity
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "display";
     }
 
     @UIField(order = 50, isRevert = true)

@@ -10,16 +10,14 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 public class WidgetTextEntity extends WidgetBaseEntity<WidgetTextEntity> {
 
-    public static final String PREFIX = "wgttht_";
-
     @Override
     public @NotNull String getImage() {
         return "fas fa-file-text";
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "text";
     }
 
     @Override

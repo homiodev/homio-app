@@ -4,7 +4,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.api.ui.field.selection.UIFieldTreeNodeSelection.LOCAL_FS;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
-import static org.homio.app.model.entity.LocalBoardEntity.DEFAULT_DEVICE_ENTITY_ID;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 import static org.homio.app.model.entity.user.UserBaseEntity.FILE_MANAGER_RESOURCE_AUTHORIZE;
 
 import java.io.File;
@@ -27,6 +27,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.io.FileUtils;
+import org.homio.api.EntityContext;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeConfiguration;
@@ -76,13 +77,13 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
                 }
             });
 
-        LocalBoardEntity LocalBoardEntity = this.entityContext.getEntityRequire(DEFAULT_DEVICE_ENTITY_ID);
+        LocalBoardEntity LocalBoardEntity = this.entityContext.getEntityRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
         localFileSystem = LocalBoardEntity.getFileSystem(this.entityContext);
     }
 
     @Override
-    public void onContextRefresh() {
-        findAllFileSystems(entityContext);
+    public void onContextRefresh(EntityContext entityContext) {
+        findAllFileSystems(this.entityContext);
     }
 
     @PostMapping("")

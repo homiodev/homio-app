@@ -1,7 +1,7 @@
 package org.homio.addon.tuya;
 
 import java.math.BigDecimal;
-import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -11,36 +11,50 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.util.ConversionUtil;
 import org.homio.addon.tuya.internal.util.SchemaDp;
-import org.homio.api.model.DeviceProperty;
+import org.homio.api.EntityContext;
+import org.homio.api.EntityContextVar.VariableMetaBuilder;
+import org.homio.api.EntityContextVar.VariableType;
+import org.homio.api.model.BaseDeviceProperty;
 import org.homio.api.model.Icon;
+import org.homio.api.model.endpoint.DeviceEndpoint.EndpointType;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
-import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Log4j2
 @Getter
-public final class TuyaDeviceProperty implements DeviceProperty {
+public final class TuyaDeviceProperty extends BaseDeviceProperty {
 
     private static final List<String> COLOUR_CHANNEL_CODES = List.of("colour_data");
     private static final List<String> DIMMER_CHANNEL_CODES = List.of("bright_value", "bright_value_1", "bright_value_2",
         "temp_value");
 
     private final int dp;
-    private final SchemaDp schemaDp;
-    private final PropertyType propertyType;
-    private final TuyaPropertyType tuyaPropertyType;
+    private final @NotNull TuyaDeviceEntity entity;
+    private final @NotNull SchemaDp schemaDp;
     private final @NotNull Function<Object, Boolean> stateHandler;
-    @Setter
-    private State state;
+    private TuyaPropertyType tuyaPropertyType;
     @Setter
     private int dp2 = -1;
 
-    public TuyaDeviceProperty(SchemaDp schemaDp) {
+    public TuyaDeviceProperty(@NotNull SchemaDp schemaDp, @NotNull EntityContext entityContext, @NotNull TuyaDeviceEntity entity) {
+        super(new Icon("fa fa-fw fa-cross", "#FF00FF"));
         this.schemaDp = schemaDp;
         this.dp = schemaDp.id;
+        this.entity = entity;
+        this.entityID = schemaDp.code + "_" + schemaDp.id;
+
+        init(schemaDp.code + "_" + schemaDp.id,
+            entity.getEntityID(),
+            entity,
+            entityContext,
+            null,
+            true,
+            true,
+            schemaDp.code,
+            Objects.requireNonNull(entity.getIeeeAddress()));
 
         if (schemaDp.range != null && !schemaDp.range.isEmpty()) {
             /*List<CommandOption> commandOptions = toCommandOptionList(
@@ -48,37 +62,34 @@ public final class TuyaDeviceProperty implements DeviceProperty {
             dynamicCommandDescriptionProvider.setCommandOptions(channel.getUID(), commandOptions);*/
         }
 
+        this.stateHandler = buildStateHandler();
+    }
+
+    @Override
+    protected EndpointType buildPropertyType() {
         if (COLOUR_CHANNEL_CODES.contains(schemaDp.code)) {
-            propertyType = PropertyType.string;
             tuyaPropertyType = TuyaPropertyType.color;
+            return EndpointType.string;
         } else if (DIMMER_CHANNEL_CODES.contains(schemaDp.code)) {
-            propertyType = PropertyType.number;
             tuyaPropertyType = TuyaPropertyType.dimmer;
+            return EndpointType.number;
             // has min-max
         } else if ("bool".equals(schemaDp.type)) {
-            propertyType = PropertyType.bool;
             tuyaPropertyType = TuyaPropertyType.bool;
+            return EndpointType.bool;
         } else if ("enum".equals(schemaDp.type)) {
-            propertyType = PropertyType.string;
             tuyaPropertyType = TuyaPropertyType.string;
-            List<String> range = Objects.requireNonNullElse(schemaDp.range, List.of());
-            //configuration.put("range", String.join(",", range));
+            return EndpointType.select;
         } else if ("string".equals(schemaDp.type)) {
-            propertyType = PropertyType.string;
             tuyaPropertyType = TuyaPropertyType.string;
+            return EndpointType.string;
         } else if ("value".equals(schemaDp.type)) {
-            propertyType = PropertyType.number;
             tuyaPropertyType = TuyaPropertyType.number;
-            /*configuration.put("min", schemaDp.min);
-            configuration.put("max", schemaDp.max);*/
+            return EndpointType.number;
         } else {
-            propertyType = PropertyType.string;
             tuyaPropertyType = TuyaPropertyType.string;
-            // e.g. type "raw", add empty channel
-            System.out.println("Unknown");
-            /*return Map.entry("", ChannelBuilder.create(channelUID).build());*/
+            return EndpointType.string;
         }
-        this.stateHandler = buildStateHandler();
     }
 
     private Function<Object, Boolean> buildStateHandler() {
@@ -86,7 +97,7 @@ public final class TuyaDeviceProperty implements DeviceProperty {
             case bool -> {
                 return rawValue -> {
                     if (Boolean.class.isAssignableFrom(rawValue.getClass())) {
-                        setState(OnOffType.of((boolean) rawValue));
+                        setValue(OnOffType.of((boolean) rawValue));
                         return true;
                     }
                     return false;
@@ -95,7 +106,7 @@ public final class TuyaDeviceProperty implements DeviceProperty {
             case number -> {
                 return rawValue -> {
                     if (Double.class.isAssignableFrom(rawValue.getClass())) {
-                        setState(new DecimalType((Double) rawValue));
+                        setValue(new DecimalType((Double) rawValue));
                         return true;
                     }
                     return false;
@@ -104,7 +115,7 @@ public final class TuyaDeviceProperty implements DeviceProperty {
             case color -> {
                 return rawValue -> {
                     if (rawValue instanceof String) {
-                        setState(new StringType(ConversionUtil.hexColorDecode((String) rawValue)));
+                        setValue(new StringType(ConversionUtil.hexColorDecode((String) rawValue)));
                         return true;
                     }
                     return false;
@@ -116,11 +127,11 @@ public final class TuyaDeviceProperty implements DeviceProperty {
                     if (Double.class.isAssignableFrom(rawValue.getClass())) {
                         double value = (double) rawValue;
                         if (value <= 0) {
-                            setState(DecimalType.ZERO);
-                        } else if (value >= getMax()) {
-                            setState(DecimalType.HUNDRED);
+                            setValue(DecimalType.ZERO);
+                        } else if (value >= schemaDp.max) {
+                            setValue(DecimalType.HUNDRED);
                         } else {
-                            setState(new DecimalType(new BigDecimal(100.0 * value / (getMax() - 0))));
+                            setValue(new DecimalType(new BigDecimal(100.0 * value / (schemaDp.max - 0))));
                         }
                         return true;
                     }
@@ -130,7 +141,7 @@ public final class TuyaDeviceProperty implements DeviceProperty {
             default -> {
                 return rawValue -> {
                     if (rawValue instanceof String) {
-                        setState(new StringType((String) rawValue));
+                        setValue(new StringType((String) rawValue));
                         return true;
                     }
                     return false;
@@ -140,85 +151,59 @@ public final class TuyaDeviceProperty implements DeviceProperty {
     }
 
     @Override
-    public @NotNull String getKey() {
-        return "key";
-    }
-
-    @Override
     public @NotNull String getName(boolean shortFormat) {
         return "name";
     }
 
     @Override
     public @Nullable String getDescription() {
-        return null;
-    }
-
-    @Override
-    public @NotNull Icon getIcon() {
-        return new Icon();
-    }
-
-    @Override
-    public @Nullable String getUnit() {
-        return null;
-    }
-
-    @Override
-    public @NotNull String getVariableID() {
-        return "var";
-    }
-
-    @Override
-    public @NotNull String getEntityID() {
-        return "eid";
-    }
-
-    @Override
-    public @NotNull String getIeeeAddress() {
-        return schemaDp.code;
-    }
-
-    @Override
-    public @NotNull State getLastValue() {
-        return State.of(0);
-    }
-
-    @Override
-    public @NotNull Duration getTimeSinceLastEvent() {
-        return Duration.ofSeconds(1);
-    }
-
-    @Override
-    public boolean isWritable() {
-        return false;
-    }
-
-    @Override
-    public boolean isReadable() {
-        return false;
-    }
-
-    @Override
-    public void addChangeListener(@Nullable String id, @Nullable Consumer<State> changeListener) {
-
-    }
-
-    @Override
-    public void removeChangeListener(@Nullable String id) {
-
-    }
-
-    @Override
-    public @NotNull PropertyType getPropertyType() {
-        return PropertyType.string;
-    }
-
-    public double getMax() {
-        return schemaDp.max;
+        return "${tuya.%s~%s}".formatted(schemaDp.code, schemaDp.code);
     }
 
     public enum TuyaPropertyType {
         bool, number, string, color, dimmer
+    }
+
+    @Override
+    protected Consumer<VariableMetaBuilder> getVariableMetaBuilder() {
+        return builder -> {
+            builder.setDescription(getVariableDescription()).setReadOnly(!isWritable()).setColor(getIcon().getColor());
+            List<String> attributes = new ArrayList<>();
+            if (schemaDp.max > 0) {
+                attributes.add("min:" + schemaDp.min);
+                attributes.add("max:" + schemaDp.max);
+            }
+            if (schemaDp.range != null) {
+                attributes.add("range:" + String.join(";", schemaDp.range));
+            }
+            builder.setAttributes(attributes);
+        };
+    }
+
+    private String getVariableDescription() {
+        List<String> description = new ArrayList<>();
+        description.add(getDescription());
+        if (schemaDp.range != null) {
+            description.add("(range:%s)".formatted(String.join(";", schemaDp.range)));
+        }
+        if (schemaDp.max > 0) {
+            description.add("(min-max:%S...%s)".formatted(schemaDp.min, schemaDp.max));
+        }
+        return String.join(" ", description);
+    }
+
+    @Override
+    protected @NotNull VariableType getVariableType() {
+        switch (tuyaPropertyType) {
+            case bool -> {
+                return VariableType.Bool;
+            }
+            case number -> {
+                return VariableType.Float;
+            }
+            default -> {
+                return VariableType.Any;
+            }
+        }
     }
 }

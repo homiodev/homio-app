@@ -11,8 +11,6 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 public class WidgetFMSeriesEntity extends WidgetSeriesEntity<WidgetFMEntity>
     implements HasSingleValueDataSource {
 
-    public static final String PREFIX = "wgsfms_";
-
     @Override
     @UIField(order = 14, required = true)
     @UIFieldTreeNodeSelection(
@@ -25,8 +23,8 @@ public class WidgetFMSeriesEntity extends WidgetSeriesEntity<WidgetFMEntity>
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "fm";
     }
 
     @Override

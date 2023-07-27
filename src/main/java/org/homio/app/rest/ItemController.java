@@ -181,7 +181,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @Override
-    public void onContextRefresh() {
+    public void onContextRefresh(EntityContext entityContext) {
         List<Class<? extends BaseEntity>> baseEntityClasses = classFinder.getClassesWithParent(BaseEntity.class);
         this.baseEntitySimpleClasses = baseEntityClasses.stream().collect(Collectors.toMap(Class::getSimpleName, s -> s));
 
@@ -410,8 +410,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 return Collections.emptyList();
             }
         }
-        Optional<AbstractRepository> repositoryOpt = entityContext.getRepository(entity.getEntityID());
-        AbstractRepository repository = repositoryOpt.orElseThrow();
+        AbstractRepository repository = EntityContextImpl.getRepository(entity.getEntityID());
         Collection<BaseEntity> usages = getUsages(entityID, repository);
         return usages.stream().map(Object::toString).collect(Collectors.toList());
     }

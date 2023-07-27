@@ -4,6 +4,7 @@ import java.util.List;
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.repository.AbstractRepository;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Repository;
 
 @Log4j2
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Repository;
 public class WidgetRepository extends AbstractRepository<WidgetBaseEntity> {
 
     public WidgetRepository() {
-        super(WidgetBaseEntity.class);
+        super(WidgetBaseEntity.class, "widget_");
     }
 
     @Override
@@ -20,7 +21,7 @@ public class WidgetRepository extends AbstractRepository<WidgetBaseEntity> {
     }
 
     @Override
-    public List listAll() {
+    public @NotNull List listAll() {
         return super.listAll();
     }
 }

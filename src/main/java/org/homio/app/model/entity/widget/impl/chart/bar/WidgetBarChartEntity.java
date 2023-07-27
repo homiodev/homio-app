@@ -17,8 +17,6 @@ public class WidgetBarChartEntity
     extends ChartBaseEntity<WidgetBarChartEntity, WidgetBarChartSeriesEntity>
     implements HasChartTimePeriod, HasHorizontalLine, HasMinMaxChartValue, HasAxis {
 
-    public static final String PREFIX = "wgtbc_";
-
     @UIField(order = 10)
     @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")
     public BarChartType getDisplayType() {
@@ -60,8 +58,8 @@ public class WidgetBarChartEntity
     }
 
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "bar";
     }
 
     @Override

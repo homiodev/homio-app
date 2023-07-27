@@ -24,8 +24,6 @@ import org.jetbrains.annotations.NotNull;
 public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorEntity>
     implements HasSourceServerUpdates, HasAlign, HasSingleValueDataSource, HasSetSingleValueDataSource {
 
-    public static final String PREFIX = "wgtsclr_";
-
     @Override
     public boolean isVisible() {
         return false;
@@ -37,8 +35,8 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
     }
 
     @Override
-    public @NotNull String getEntityPrefix() {
-        return PREFIX;
+    protected @NotNull String getWidgetPrefix() {
+        return "scolor";
     }
 
     @Override

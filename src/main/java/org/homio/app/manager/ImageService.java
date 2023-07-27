@@ -1,6 +1,6 @@
 package org.homio.app.manager;
 
-import static org.homio.app.model.entity.LocalBoardEntity.DEFAULT_DEVICE_ENTITY_ID;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -30,7 +30,7 @@ public class ImageService {
     public ResponseEntity<InputStreamResource> getImage(String entityID) {
         Path filePath = CommonUtils.getImagePath().resolve(entityID);
         if (!Files.exists(filePath)) {
-            LocalBoardEntity LocalBoardEntity = this.entityContext.getEntityRequire(DEFAULT_DEVICE_ENTITY_ID);
+            LocalBoardEntity LocalBoardEntity = this.entityContext.getEntityRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
             filePath = Paths.get(LocalBoardEntity.getFileSystemRoot(), entityID);
         }
         if (Files.exists(filePath)) {

@@ -11,11 +11,9 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEntity>
     implements HasSingleValueDataSource, HasIcon, HasName, HasToggle {
 
-    public static final String PREFIX = "wgttgs_";
-
     @Override
-    public String getEntityPrefix() {
-        return PREFIX;
+    protected String getSeriesPrefix() {
+        return "toggle";
     }
 
     @Override

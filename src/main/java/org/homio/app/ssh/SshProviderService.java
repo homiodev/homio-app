@@ -5,10 +5,9 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.homio.api.service.EntityService;
 import org.jetbrains.annotations.Nullable;
 
-public interface SshProviderService<T extends SshBaseEntity> extends EntityService.ServiceInstance {
+public interface SshProviderService<T extends SshBaseEntity> {
 
     /**
      * Open ssh session

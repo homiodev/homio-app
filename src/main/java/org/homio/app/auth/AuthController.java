@@ -1,6 +1,7 @@
 package org.homio.app.auth;
 
 import static java.lang.String.format;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import jakarta.ws.rs.BadRequestException;
 import lombok.Getter;
@@ -39,7 +40,7 @@ public class AuthController {
     @GetMapping("/status")
     public StatusResponse getStatus(UsernamePasswordAuthenticationToken user) {
         if (user == null) {
-            UserAdminEntity userAdminEntity = entityContext.getEntityRequire(UserAdminEntity.ENTITY_ID);
+            UserAdminEntity userAdminEntity = entityContext.getEntityRequire(UserAdminEntity.class, PRIMARY_DEVICE);
             if (StringUtils.isBlank(userAdminEntity.getEmail())) {
                 return new StatusResponse(402, null);
             }
@@ -59,7 +60,7 @@ public class AuthController {
         credentials.validate();
         UserBaseEntity.log.info("Registering <{}>", credentials.getEmail());
         try {
-            UserAdminEntity userAdminEntity = entityContext.getEntityRequire(UserAdminEntity.ENTITY_ID);
+            UserAdminEntity userAdminEntity = entityContext.getEntityRequire(UserAdminEntity.class, PRIMARY_DEVICE);
             if (StringUtils.isNotBlank(userAdminEntity.getEmail())) {
                 throw new IllegalStateException("Unable to register second primary user");
             }
