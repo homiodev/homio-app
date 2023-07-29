@@ -64,7 +64,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     private final @NotNull Map<String, TuyaDeviceEndpoint> endpoints = new ConcurrentHashMap<>();
     private @Nullable ThreadContext<Void> pollingJob;
     private @Nullable ThreadContext<Void> reconnectFuture;
-    private @NotNull List<SchemaDp> schemaDps = List.of();
+    private @NotNull Map<String, SchemaDp> schemaDps = Map.of();
     private List<ConfigDeviceDefinition> models;
 
     public TuyaDeviceService(EntityContext entityContext, TuyaDeviceEntity entity) {
@@ -133,8 +133,8 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                 this.schemaDps = entity.getSchema();
                 if (!schemaDps.isEmpty()) {
                     // fallback to retrieved schema
-                    for (SchemaDp schemaDp : schemaDps) {
-                        endpoints.put(schemaDp.code, new TuyaDeviceEndpoint(schemaDp, entityContext, entity));
+                    for (Entry<String, SchemaDp> entry : schemaDps.entrySet()) {
+                        endpoints.put(entry.getKey(), new TuyaDeviceEndpoint(entry.getValue(), entityContext, entity));
                     }
                 } else {
                     entity.setStatus(Status.OFFLINE, "No endpoints found");
@@ -278,7 +278,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
 
     public @NotNull List<ConfigDeviceDefinition> findDevices() {
         if (this.models == null) {
-            Set<String> endpoints = schemaDps.stream().map(s -> s.code).collect(Collectors.toSet());
+            Set<String> endpoints = schemaDps.values().stream().map(s -> s.code).collect(Collectors.toSet());
             this.models = CONFIG_DEVICE_SERVICE.findDeviceDefinitionModels(entity.getModel(), endpoints);
         }
         return this.models;

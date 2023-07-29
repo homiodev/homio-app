@@ -2,6 +2,7 @@ package org.homio.addon.tuya;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.gson.reflect.TypeToken;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,11 +33,15 @@ import org.homio.api.widget.template.WidgetDefinition;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
 import static org.homio.addon.tuya.service.TuyaDeviceService.CONFIG_DEVICE_SERVICE;
 import static org.homio.api.ui.field.UIFieldType.HTML;
 import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
@@ -48,6 +53,8 @@ import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 @UISidebarChildren(icon = "fas fa-gamepad", color = "#0088CC")
 public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
         implements DeviceBaseEntity.HasEndpointsDevice, EntityService<TuyaDeviceService, TuyaDeviceEntity>, HasEntityLog {
+
+    private static final Map<String, Map<String, SchemaDp>> SCHEMAS = readSchemaFromFile();
 
     @Override
     public @NotNull Map<String, DeviceEndpoint> getDeviceEndpoints() {
@@ -201,10 +208,19 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
 
     @JsonIgnore
     @SneakyThrows
-    public @NotNull List<SchemaDp> getSchema() {
-        String schema = getJsonData("schema", "");
-        return schema != null && schema.isEmpty() ?
-            List.of() : OBJECT_MAPPER.readValue(schema, new TypeReference<>() {});
+    public @NotNull Map<String, SchemaDp> getSchema() {
+        Map<String, SchemaDp> schema = SCHEMAS.get(getProductId());
+        if (schema == null) {
+            String rawSchema = getJsonDataRequire("schema", "");
+            if (rawSchema.isEmpty()) {
+                schema = Map.of();
+            } else {
+                List<SchemaDp> o = OBJECT_MAPPER.readValue(rawSchema, new TypeReference<>() {
+                });
+                schema = o.stream().collect(Collectors.toMap(i -> i.code, i -> i));
+            }
+        }
+        return schema;
     }
 
     public long getDeepHashCode() {
@@ -237,5 +253,18 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
     @Override
     public @NotNull TuyaDeviceService createService(@NotNull EntityContext entityContext) {
         return new TuyaDeviceService(entityContext, this);
+    }
+
+    @SneakyThrows
+    private static Map<String, Map<String, SchemaDp>> readSchemaFromFile() {
+        InputStream resource = TuyaDeviceEntity.class.getClassLoader().getResourceAsStream("tuya-schema.json");
+        if (resource == null) {
+            throw new IllegalStateException("Unable to find 'tuya-schema.json' file");
+        }
+        try (InputStreamReader reader = new InputStreamReader(resource)) {
+            Type schemaListType = TypeToken.getParameterized(Map.class, String.class, SchemaDp.class).getType();
+            Type schemaType = TypeToken.getParameterized(Map.class, String.class, schemaListType).getType();
+            return Objects.requireNonNull(gson.fromJson(reader, schemaType));
+        }
     }
 }
