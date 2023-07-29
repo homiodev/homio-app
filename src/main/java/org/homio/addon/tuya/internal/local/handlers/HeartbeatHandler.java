@@ -55,7 +55,7 @@ public class HeartbeatHandler extends ChannelDuplexHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof MessageWrapper<?> m) {
-            if (HEART_BEAT.equals(m.commandType)) {
+            if (HEART_BEAT.equals(m.commandType())) {
                 log.debug("[{}]: {}{}: Received pong", entityID, deviceId,
                     Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
                 heartBeatMissed = 0;

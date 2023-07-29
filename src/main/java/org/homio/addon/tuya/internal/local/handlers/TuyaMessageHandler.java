@@ -49,21 +49,21 @@ public class TuyaMessageHandler extends ChannelDuplexHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof MessageWrapper<?> m) {
-            if (m.commandType == DP_QUERY || m.commandType == STATUS) {
+            if (m.commandType() == DP_QUERY || m.commandType() == STATUS) {
                 Map<Integer, Object> stateMap = null;
-                if (m.content instanceof TcpStatusPayload) {
-                    TcpStatusPayload payload = (TcpStatusPayload) Objects.requireNonNull(m.content);
+                if (m.content() instanceof TcpStatusPayload) {
+                    TcpStatusPayload payload = (TcpStatusPayload) Objects.requireNonNull(m.content());
                     stateMap = payload.protocol == 4 ? payload.data.dps : payload.dps;
                 }
 
                 if (stateMap != null && !stateMap.isEmpty()) {
                     deviceStatusListener.processDeviceStatus(stateMap);
                 }
-            } else if (m.commandType == DP_QUERY_NOT_SUPPORTED) {
+            } else if (m.commandType() == DP_QUERY_NOT_SUPPORTED) {
                 deviceStatusListener.processDeviceStatus(Map.of());
-            } else if (m.commandType == SESS_KEY_NEG_RESPONSE) {
+            } else if (m.commandType() == SESS_KEY_NEG_RESPONSE) {
                 byte[] localKeyHmac = CryptoUtil.hmac(keyStore.getRandom(), keyStore.getDeviceKey());
-                byte[] localKeyExpectedHmac = Arrays.copyOfRange((byte[]) m.content, 16, 16 + 32);
+                byte[] localKeyExpectedHmac = Arrays.copyOfRange((byte[]) m.content(), 16, 16 + 32);
 
                 if (!Arrays.equals(localKeyHmac, localKeyExpectedHmac)) {
                     log.warn(
@@ -74,7 +74,7 @@ public class TuyaMessageHandler extends ChannelDuplexHandler {
                     return;
                 }
 
-                byte[] remoteKey = Arrays.copyOf((byte[]) m.content, 16);
+                byte[] remoteKey = Arrays.copyOf((byte[]) m.content(), 16);
                 byte[] remoteKeyHmac = CryptoUtil.hmac(remoteKey, keyStore.getDeviceKey());
                 MessageWrapper<?> response = new MessageWrapper<>(SESS_KEY_NEG_FINISH, remoteKeyHmac);
 

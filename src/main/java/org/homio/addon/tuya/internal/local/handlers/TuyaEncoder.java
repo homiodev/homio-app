@@ -50,8 +50,8 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
         byte[] payloadBytes;
 
         // prepare payload
-        if (msg.content == null || msg.content instanceof Map<?, ?>) {
-            Map<String, Object> content = (Map<String, Object>) msg.content;
+        if (msg.content() == null || msg.content() instanceof Map<?, ?>) {
+            Map<String, Object> content = (Map<String, Object>) msg.content();
             Map<String, Object> payload = new HashMap<>();
             if (version == V3_4) {
                 payload.put("protocol", 5);
@@ -74,12 +74,12 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
             }
 
             log.debug("[{}]: {}{}: Sending {}, payload {}", entityID, deviceId,
-                Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), msg.commandType, payload);
+                Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""), msg.commandType(), payload);
 
             String json = gson.toJson(payload);
             payloadBytes = json.getBytes(StandardCharsets.UTF_8);
-        } else if (msg.content instanceof byte[]) {
-            byte[] contentBytes = Objects.requireNonNull((byte[]) msg.content);
+        } else if (msg.content() instanceof byte[]) {
+            byte[] contentBytes = Objects.requireNonNull((byte[]) msg.content());
             if (log.isDebugEnabled()) {
                 log.debug("[{}]: {}{}: Sending payload {}", entityID, deviceId,
                     Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
@@ -87,12 +87,12 @@ public class TuyaEncoder extends MessageToByteEncoder<MessageWrapper<?>> {
             }
             payloadBytes = contentBytes.clone();
         } else {
-            log.warn("[{}]: Can't determine payload type for '{}', discarding.", entityID, msg.content);
+            log.warn("[{}]: Can't determine payload type for '{}', discarding.", entityID, msg.content());
             return;
         }
 
-        Optional<byte[]> bufferOptional = version == V3_4 ? encode34(msg.commandType, payloadBytes)
-                : encodePre34(msg.commandType, payloadBytes);
+        Optional<byte[]> bufferOptional = version == V3_4 ? encode34(msg.commandType(), payloadBytes)
+                : encodePre34(msg.commandType(), payloadBytes);
 
         bufferOptional.ifPresentOrElse(buffer -> {
             if (log.isTraceEnabled()) {

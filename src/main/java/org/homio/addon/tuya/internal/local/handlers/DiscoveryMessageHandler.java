@@ -25,8 +25,8 @@ public class DiscoveryMessageHandler extends ChannelDuplexHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof MessageWrapper<?> mw) {
-            if ((mw.commandType == UDP_NEW || mw.commandType == UDP || mw.commandType == BROADCAST_LPV34)) {
-                DiscoveryMessage discoveryMessage = (DiscoveryMessage) Objects.requireNonNull(mw.content);
+            if ((mw.commandType() == UDP_NEW || mw.commandType() == UDP || mw.commandType() == BROADCAST_LPV34)) {
+                DiscoveryMessage discoveryMessage = (DiscoveryMessage) Objects.requireNonNull(mw.content());
                 DeviceInfo deviceInfo = new DeviceInfo(discoveryMessage.ip, discoveryMessage.version);
                 if (!deviceInfo.equals(deviceInfos.put(discoveryMessage.deviceId, deviceInfo))) {
                     DeviceInfoSubscriber subscriber = deviceListeners.get(discoveryMessage.deviceId);
