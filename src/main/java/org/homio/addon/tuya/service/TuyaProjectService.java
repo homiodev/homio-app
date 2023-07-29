@@ -23,7 +23,11 @@ public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
     public TuyaProjectService(@NotNull EntityContext entityContext, @NotNull TuyaProjectEntity entity) {
         super(entityContext, entity);
         this.api = entityContext.getBean(TuyaOpenAPI.class);
-        initialize();
+        entityContext.event().runOnceOnInternetUp("tuya-project-init", () -> {
+            if (!entity.getStatus().isOnline()) {
+                initialize();
+            }
+        });
     }
 
     public void initialize() {

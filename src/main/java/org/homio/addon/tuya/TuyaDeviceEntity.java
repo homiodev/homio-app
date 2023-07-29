@@ -93,7 +93,7 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
         setJsonData("uuid", value);
     }
 
-    @UIField(order = 35)
+    @UIField(order = 35, semiRequired = true)
     public String getLocalKey() {
         return getJsonData("localKey");
     }
@@ -102,7 +102,7 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
         setJsonData("localKey", value);
     }
 
-    @UIField(order = 40, type = UIFieldType.IpAddress)
+    @UIField(order = 40, type = UIFieldType.IpAddress, semiRequired = true, inlineEditWhenEmpty = true)
     public String getIp() {
         return getJsonData("ip");
     }
@@ -201,7 +201,7 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
 
     @JsonIgnore
     @SneakyThrows
-    public @NotNull List<SchemaDp> getSchemaDps() {
+    public @NotNull List<SchemaDp> getSchema() {
         String schema = getJsonData("schema", "");
         return schema != null && schema.isEmpty() ?
             List.of() : OBJECT_MAPPER.readValue(schema, new TypeReference<>() {});

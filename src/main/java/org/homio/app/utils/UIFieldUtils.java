@@ -265,6 +265,7 @@ public class UIFieldUtils {
         entityUIMetaData.setInlineEdit(nullIfFalse(field.inlineEdit()));
         entityUIMetaData.setCopyButton(nullIfFalse(field.copyButton()));
         entityUIMetaData.setInlineEditWhenEmpty(nullIfFalse(field.inlineEditWhenEmpty()));
+        entityUIMetaData.setSemiRequired(nullIfFalse(field.semiRequired()));
         entityUIMetaData.setHideOnEmpty(nullIfFalse(field.hideOnEmpty()));
 
         entityUIMetaData.setHideInEdit(nullIfFalse(field.hideInEdit()));

@@ -1,9 +1,6 @@
 package org.homio.addon.tuya;
 
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-
 import com.fasterxml.jackson.databind.JsonNode;
-import java.net.URL;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
@@ -13,6 +10,10 @@ import org.homio.api.EntityContext;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
+
+import java.net.URL;
+
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @Service
 @RequiredArgsConstructor
@@ -26,12 +27,7 @@ public class TuyaEntrypoint implements AddonEntrypoint {
 
     @Override
     public void init() {
-        TuyaProjectEntity tuyaProjectEntity = ensureEntityExists(entityContext);
-        TuyaOpenAPI.setProjectEntity(tuyaProjectEntity);
-        tuyaProjectEntity.getService().initialize();
-        for (TuyaDeviceEntity entity : entityContext.findAll(TuyaDeviceEntity.class)) {
-            entity.getService().initialize();
-        }
+        TuyaOpenAPI.setProjectEntity(ensureEntityExists(entityContext));
     }
 
     @Override

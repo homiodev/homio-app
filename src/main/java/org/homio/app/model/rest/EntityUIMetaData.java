@@ -24,6 +24,7 @@ public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
     private int order;
     private String navLink;
     private Boolean required;
+    private Boolean semiRequired;
     private Boolean inlineEdit;
     private Boolean copyButton;
     private Boolean inlineEditWhenEmpty;

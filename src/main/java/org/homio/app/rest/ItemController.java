@@ -288,7 +288,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         BaseEntity entity = entityContext.getEntityRequire(entityID);
         if (isNotEmpty(sourceID)) {
             if (!(entity instanceof HasEntitySourceLog)) {
-                throw new IllegalStateException("Entity: " + entityID + " not implement HasEntitySourceLog interface");
+                    throw new IllegalStateException("Entity: " + entityID + " not implement HasEntitySourceLog interface");
             }
             return new ResponseEntity<>(
                 outputStream -> {

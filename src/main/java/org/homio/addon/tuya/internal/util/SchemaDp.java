@@ -1,11 +1,12 @@
 package org.homio.addon.tuya.internal.util;
 
 import com.google.gson.Gson;
+import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * The {@link SchemaDp} is a wrapper for the information of a single datapoint
@@ -17,7 +18,8 @@ public class SchemaDp {
             "Integer", "value", //
             "Json", "string");
 
-    public int id = 0;
+    public int dp;
+    public int dp2;
     public String code = "";
     public String type = "";
     public double min;
@@ -27,7 +29,7 @@ public class SchemaDp {
     public static SchemaDp fromRemoteSchema(Gson gson, DeviceSchema.Description function) {
         SchemaDp schemaDp = new SchemaDp();
         schemaDp.code = function.code.replace("_v2", "");
-        schemaDp.id = function.dp_id;
+        schemaDp.dp = function.dp_id;
         schemaDp.type = REMOTE_LOCAL_TYPE_MAP.getOrDefault(function.type, "raw"); // fallback to raw
 
         if ("enum".equalsIgnoreCase(schemaDp.type) && function.values.contains("range")) {

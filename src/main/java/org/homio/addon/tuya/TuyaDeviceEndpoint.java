@@ -1,7 +1,6 @@
 package org.homio.addon.tuya;
 
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.api.EntityContext;
@@ -36,12 +35,11 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
 
     @Getter
     private final int dp;
+    @Getter
+    private final int dp2;
     private final @NotNull SchemaDp schemaDp;
     private final @NotNull Function<Object, Boolean> processEndpointStatusHandler;
     private TuyaEndpointType tuyaEndpointType;
-    @Setter
-    @Getter
-    private int dp2 = -1;
     @Getter
     private boolean oldColorMode = false; // for color endpoint only
 
@@ -51,7 +49,8 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
             @NotNull TuyaDeviceEntity device) {
         super(new Icon("fa fa-fw fa-tablet-screen-button", "#3894B5"));
         this.schemaDp = schemaDp;
-        this.dp = schemaDp.id;
+        this.dp = schemaDp.dp;
+        this.dp2 = schemaDp.dp2;
 
         init(
                 schemaDp.code,
@@ -238,6 +237,11 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
             }
             builder.setAttributes(attributes);
         };
+    }
+
+    @Override
+    public @NotNull List<String> getSelectValues() {
+        return schemaDp.range == null ? List.of() : schemaDp.range;
     }
 
     private String getVariableDescription() {

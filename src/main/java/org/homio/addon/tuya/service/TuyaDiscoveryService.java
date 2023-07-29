@@ -16,10 +16,7 @@ import org.homio.api.service.scan.ItemDiscoverySupport;
 import org.homio.hquery.ProgressBar;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
@@ -109,12 +106,42 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
         List<SchemaDp> schemaDps = new ArrayList<>();
         schema.functions.forEach(description -> addUniqueSchemaDp(description, schemaDps));
         schema.status.forEach(description -> addUniqueSchemaDp(description, schemaDps));
+        filterAndConfigureSchema(schemaDps);
         entity.setSchema(schemaDps);
     }
 
+    private static void filterAndConfigureSchema(List<SchemaDp> schemaDps) {
+        Map<String, SchemaDp> schemaCode2Schema = schemaDps.stream().collect(Collectors.toMap(s -> s.code, s -> s));
+        List<String> endpointSuffixes = List.of("", "_1", "_2");
+        List<String> switchEndpoints = List.of("switch_led", "led_switch");
+        for (String suffix : endpointSuffixes) {
+            for (String endpoint : switchEndpoints) {
+                SchemaDp switchEndpoint = schemaCode2Schema.get(endpoint + suffix);
+                if (switchEndpoint != null) {
+                    // remove switch endpoint if brightness or color is present and add to dp2 instead
+                    SchemaDp colourEndpoint = schemaCode2Schema.get("colour_data" + suffix);
+                    SchemaDp brightEndpoint = schemaCode2Schema.get("bright_value" + suffix);
+                    boolean remove = false;
+
+                    if (colourEndpoint != null) {
+                        colourEndpoint.dp2 = switchEndpoint.dp;
+                        remove = true;
+                    }
+                    if (brightEndpoint != null) {
+                        brightEndpoint.dp2 = switchEndpoint.dp;
+                        remove = true;
+                    }
+
+                    if (remove) {
+                        schemaCode2Schema.remove(endpoint + suffix);
+                    }
+                }
+            }
+        }
+    }
+
     private static void addUniqueSchemaDp(DeviceSchema.Description description, List<SchemaDp> schemaDps) {
-        if (description.dp_id == 0 || schemaDps.stream().anyMatch(schemaDp -> schemaDp.id == description.dp_id)) {
-            // dp is missing or already present, skip it
+        if (description.dp_id == 0 || isSchemaAlreadyPresent(description, schemaDps)) {
             return;
         }
         // some devices report the same function code for different dps
@@ -126,5 +153,9 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
         }
 
         schemaDps.add(SchemaDp.fromRemoteSchema(gson, description));
+    }
+
+    private static boolean isSchemaAlreadyPresent(DeviceSchema.Description description, List<SchemaDp> schemaDps) {
+        return schemaDps.stream().anyMatch(schemaDp -> schemaDp.dp == description.dp_id);
     }
 }
