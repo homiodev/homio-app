@@ -1,11 +1,12 @@
 package org.homio.addon.tuya.internal.local;
 
-import java.util.Arrays;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Arrays;
+
 /**
- * The {@link CommandType} maps the numeric command types to an enum
+ * Maps the numeric command types to an enum
  */
 @RequiredArgsConstructor
 public enum CommandType {
@@ -48,7 +49,7 @@ public enum CommandType {
 
     @Getter
     private final int code;
-    
+
     public static CommandType fromCode(int code) {
         return Arrays.stream(values()).filter(t -> t.code == code).findAny()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown code " + code));

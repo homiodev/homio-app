@@ -1,20 +1,20 @@
 package org.homio.addon.tuya.internal;
 
-import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
-
-import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import lombok.extern.log4j.Log4j2;
+import org.homio.addon.tuya.internal.util.SchemaDp;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Objects;
-import lombok.extern.log4j.Log4j2;
-import org.homio.addon.tuya.internal.util.SchemaDp;
+
+import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
 
 /**
- * The {@link TuyaBindingConstants} class defines common constants, which are used across the whole binding.
+ * Class defines common constants, which are used across the whole binding.
  */
 @Log4j2
 public class TuyaBindingConstants {

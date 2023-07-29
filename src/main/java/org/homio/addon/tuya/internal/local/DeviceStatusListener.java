@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 
 /**
- * The {@link DeviceStatusListener} encapsulates device status data
+ * Encapsulates device status data
  */
 public interface DeviceStatusListener {
     void processDeviceStatus(@Nullable String cid, @NotNull Map<Integer, Object> deviceStatus);

@@ -3,7 +3,7 @@ package org.homio.addon.tuya.internal.cloud.dto;
 import lombok.ToString;
 
 /**
- * The {@link StatusInfo} encapsulates device status data
+ * Encapsulates device status data
  */
 @ToString
 public class StatusInfo {

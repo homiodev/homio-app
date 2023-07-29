@@ -26,7 +26,7 @@ import static org.homio.addon.tuya.internal.local.CommandType.*;
 import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
 
 /**
- * The {@link TuyaDeviceCommunicator} handles the device connection
+ * Handles the device connection
  */
 @Log4j2
 public class TuyaDeviceCommunicator implements ChannelFutureListener {

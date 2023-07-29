@@ -1,7 +1,10 @@
 package org.homio.addon.tuya.internal.util;
 
-import static com.sshtools.common.util.Utils.bytesToHex;
+import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.Nullable;
 
+import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -9,18 +12,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Random;
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.Mac;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.Nullable;
+
+import static com.sshtools.common.util.Utils.bytesToHex;
 
 /**
- * The {@link CryptoUtil} is a support class for encrypting/decrypting messages
+ * Support class for encrypting/decrypting messages
  * <p>
  * Parts of this code are inspired by the TuyAPI project (see notice file)
  */

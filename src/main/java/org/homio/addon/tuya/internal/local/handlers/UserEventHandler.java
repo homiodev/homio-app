@@ -2,13 +2,14 @@ package org.homio.addon.tuya.internal.local.handlers;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import java.io.IOException;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
+import java.io.IOException;
+import java.util.Objects;
+
 /**
- * The {@link UserEventHandler} is a Netty handler for events (used for closing the connection)
+ * Netty handler for events (used for closing the connection)
  */
 @Log4j2
 @RequiredArgsConstructor

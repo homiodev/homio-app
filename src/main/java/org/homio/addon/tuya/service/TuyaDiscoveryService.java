@@ -23,7 +23,7 @@ import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 /**
- * The {@link TuyaDiscoveryService} implements the discovery service for Tuya devices from the cloud
+ * Implements the discovery service for Tuya devices from the cloud
  */
 @Log4j2
 @Service

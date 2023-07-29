@@ -4,9 +4,8 @@ import com.google.gson.annotations.SerializedName;
 import lombok.ToString;
 
 /**
- * The {@link TuyaTokenDTO} encapsulates the Access Tokens
+ * Encapsulates the Access Tokens
  */
-
 @ToString
 public class TuyaTokenDTO {
     @SerializedName("access_token")

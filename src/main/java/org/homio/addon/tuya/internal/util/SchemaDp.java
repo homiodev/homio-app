@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * The {@link SchemaDp} is a wrapper for the information of a single datapoint
+ * Wrapper for the information of a single datapoint
  */
 public class SchemaDp {
     private static final Map<String, String> REMOTE_LOCAL_TYPE_MAP = Map.of( //

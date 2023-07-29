@@ -1,12 +1,13 @@
 package org.homio.addon.tuya.internal.local;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import lombok.Getter;
 import org.homio.api.model.OptionModel.KeyValueEnum;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
 /**
- * The {@link ProtocolVersion} maps the protocol version String to
+ * Maps the protocol version String to
  */
 public enum ProtocolVersion implements KeyValueEnum {
     V3_1("3.1"),

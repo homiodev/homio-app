@@ -1,28 +1,8 @@
 package org.homio.addon.tuya.internal.local.handlers;
 
-import static com.sshtools.common.util.Utils.bytesToHex;
-import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
-import static org.homio.addon.tuya.internal.local.CommandType.CONTROL;
-import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY;
-import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY_NEW;
-import static org.homio.addon.tuya.internal.local.CommandType.DP_REFRESH;
-import static org.homio.addon.tuya.internal.local.CommandType.HEART_BEAT;
-import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_FINISH;
-import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_START;
-import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_3;
-import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.local.CommandType;
@@ -31,8 +11,18 @@ import org.homio.addon.tuya.internal.local.ProtocolVersion;
 import org.homio.addon.tuya.internal.local.TuyaDeviceCommunicator;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+
+import static com.sshtools.common.util.Utils.bytesToHex;
+import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
+import static org.homio.addon.tuya.internal.local.CommandType.*;
+import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_3;
+import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
+
 /**
- * The {@link TuyaEncoder} is a Netty Encoder for encoding Tuya Local messages Parts of this code are inspired by the TuyAPI project (see notice file)
+ * Netty Encoder for encoding Tuya Local messages Parts of this code are inspired by the TuyAPI project (see notice file)
  */
 @Log4j2
 @RequiredArgsConstructor

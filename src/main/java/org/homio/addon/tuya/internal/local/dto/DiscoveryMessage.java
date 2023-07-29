@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName;
 import lombok.ToString;
 
 /**
- * The {@link DiscoveryMessage} represents the UDP discovery messages sent by Tuya devices
+ * Represents the UDP discovery messages sent by Tuya devices
  */
 @ToString
 public class DiscoveryMessage {

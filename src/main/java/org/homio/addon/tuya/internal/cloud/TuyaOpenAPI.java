@@ -33,7 +33,7 @@ import java.security.MessageDigest;
 import java.util.*;
 
 /**
- * The {@link TuyaOpenAPI} is an implementation of the Tuya OpenApi specification
+ * Implementation of the Tuya OpenApi specification
  */
 @Log4j2
 @Service

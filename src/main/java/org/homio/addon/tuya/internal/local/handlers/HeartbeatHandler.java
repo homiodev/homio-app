@@ -1,21 +1,22 @@
 package org.homio.addon.tuya.internal.local.handlers;
 
-import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_MAXIMUM_MISSED_HEARTBEATS;
-import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_TIMEOUT;
-import static org.homio.addon.tuya.internal.local.CommandType.HEART_BEAT;
-
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
-import java.util.Map;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.local.MessageWrapper;
 
+import java.util.Map;
+import java.util.Objects;
+
+import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_MAXIMUM_MISSED_HEARTBEATS;
+import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_TIMEOUT;
+import static org.homio.addon.tuya.internal.local.CommandType.HEART_BEAT;
+
 /**
- * The {@link HeartbeatHandler} is responsible for sending and receiving heartbeat messages
+ * Responsible for sending and receiving heartbeat messages
  */
 @Log4j2
 @RequiredArgsConstructor

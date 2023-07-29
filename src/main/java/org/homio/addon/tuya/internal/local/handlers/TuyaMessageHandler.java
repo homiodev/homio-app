@@ -1,17 +1,7 @@
 package org.homio.addon.tuya.internal.local.handlers;
 
-import static com.sshtools.common.util.Utils.bytesToHex;
-import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY;
-import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY_NOT_SUPPORTED;
-import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_FINISH;
-import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_RESPONSE;
-import static org.homio.addon.tuya.internal.local.CommandType.STATUS;
-
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.local.DeviceStatusListener;
@@ -20,8 +10,15 @@ import org.homio.addon.tuya.internal.local.TuyaDeviceCommunicator;
 import org.homio.addon.tuya.internal.local.dto.TcpStatusPayload;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
+
+import static com.sshtools.common.util.Utils.bytesToHex;
+import static org.homio.addon.tuya.internal.local.CommandType.*;
+
 /**
- * The {@link TuyaMessageHandler} is a Netty channel handler
+ * Netty channel handler
  */
 @Log4j2
 @RequiredArgsConstructor

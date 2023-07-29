@@ -24,7 +24,7 @@ import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_3;
 import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
 
 /**
- * The {@link TuyaDecoder} is a Netty Decoder for encoding Tuya Local messages Parts of this code are inspired by the TuyAPI project (see notice file)
+ * Netty Decoder for encoding Tuya Local messages Parts of this code are inspired by the TuyAPI project (see notice file)
  */
 @Log4j2
 @RequiredArgsConstructor

@@ -1,5 +1,7 @@
 package org.homio.addon.tuya.internal.util;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -9,10 +11,9 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
-import lombok.RequiredArgsConstructor;
 
 /**
- * The {@link JoiningMapCollector} allows joining all entries of a {@link java.util.stream.Stream<Map.Entry>} with or
+ * Allows joining all entries of a {@link java.util.stream.Stream<Map.Entry>} with or
  * without delimiters
  */
 @RequiredArgsConstructor

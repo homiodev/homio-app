@@ -18,7 +18,7 @@ import java.util.Map;
 import static com.sshtools.common.util.Utils.hexToBytes;
 
 /**
- * The {@link UdpDiscoveryListener} handles UDP device discovery message
+ * Handles UDP device discovery message
  */
 @Log4j2
 public class UdpDiscoveryListener implements ChannelFutureListener {

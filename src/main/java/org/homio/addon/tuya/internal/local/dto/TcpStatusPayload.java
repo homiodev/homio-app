@@ -1,10 +1,11 @@
 package org.homio.addon.tuya.internal.local.dto;
 
-import java.util.Map;
 import lombok.ToString;
 
+import java.util.Map;
+
 /**
- * The {@link TcpStatusPayload} encapsulates the payload of a TCP status message
+ * Encapsulates the payload of a TCP status message
  */
 @ToString
 public class TcpStatusPayload {

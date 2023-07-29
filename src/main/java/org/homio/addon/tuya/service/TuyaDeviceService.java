@@ -43,7 +43,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.addon.tuya.service.TuyaDiscoveryService.updateTuyaDeviceEntity;
 
 /**
- * The {@link TuyaDeviceService} handles commands and state updates
+ * Handles commands and state updates
  */
 @Log4j2
 public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> implements DeviceInfoSubscriber, DeviceStatusListener {
