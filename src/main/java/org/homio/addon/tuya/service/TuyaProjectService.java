@@ -2,7 +2,6 @@ package org.homio.addon.tuya.service;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.TuyaProjectEntity;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
@@ -14,10 +13,9 @@ import org.jetbrains.annotations.NotNull;
 import java.time.Duration;
 import java.util.List;
 
-@Log4j2
-@Getter
 public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
 
+    @Getter
     private final TuyaOpenAPI api;
 
     @SneakyThrows

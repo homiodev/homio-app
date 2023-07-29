@@ -9,6 +9,7 @@ import org.homio.addon.tuya.service.TuyaDiscoveryService;
 import org.homio.addon.tuya.service.TuyaProjectService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.HasStatusAndMsg;
+import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.MiscEntity;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.OptionModel.KeyValueEnum;
@@ -34,7 +35,7 @@ import java.util.Objects;
 @UISidebarChildren(icon = "fas fa-diagram-project", color = "#0088CC", allowCreateItem = false)
 public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
         implements EntityService<TuyaProjectService, TuyaProjectEntity>,
-        HasStatusAndMsg<TuyaProjectEntity> {
+        HasStatusAndMsg<TuyaProjectEntity>, HasEntityLog {
 
     @Override
     public TuyaProjectEntity setStatus(@Nullable Status status, @Nullable String msg) {
@@ -147,6 +148,11 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     @Override
     public @NotNull TuyaProjectService createService(@NotNull EntityContext entityContext) {
         return new TuyaProjectService(entityContext, this);
+    }
+
+    @Override
+    public void logBuilder(@NotNull EntityLogBuilder entityLogBuilder) {
+        entityLogBuilder.addTopicFilterByEntityID("org.homio");
     }
 
     public enum ProjectSchema {

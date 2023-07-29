@@ -1,7 +1,5 @@
 package org.homio.addon.tuya.service;
 
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -14,7 +12,6 @@ import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
 import org.homio.addon.tuya.internal.local.DeviceInfoSubscriber;
 import org.homio.addon.tuya.internal.local.DeviceStatusListener;
 import org.homio.addon.tuya.internal.local.TuyaDeviceCommunicator;
-import org.homio.addon.tuya.internal.local.UdpDiscoveryListener;
 import org.homio.addon.tuya.internal.local.dto.DeviceInfo;
 import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.api.EntityContext;
@@ -40,6 +37,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.ObjectUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.addon.tuya.TuyaEntrypoint.eventLoopGroup;
+import static org.homio.addon.tuya.TuyaEntrypoint.udpDiscoveryListener;
 import static org.homio.addon.tuya.service.TuyaDiscoveryService.updateTuyaDeviceEntity;
 
 /**
@@ -50,9 +49,6 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
 
     public static final ConfigDeviceDefinitionService CONFIG_DEVICE_SERVICE =
             new ConfigDeviceDefinitionService("tuya-devices.json");
-
-    private static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
-    private static final UdpDiscoveryListener udpDiscoveryListener = new UdpDiscoveryListener(eventLoopGroup);
 
     private @Nullable TuyaDeviceCommunicator tuyaDeviceCommunicator;
 
@@ -263,11 +259,6 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                         entity.getEntityID(), dp2Endpoints, rawValue);
             }
         }
-    }
-
-    public static void destroyAll() {
-        udpDiscoveryListener.deactivate();
-        eventLoopGroup.shutdownGracefully();
     }
 
     public void send(@NotNull Map<Integer, @Nullable Object> commands) {

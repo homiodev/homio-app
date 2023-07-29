@@ -1,10 +1,12 @@
 package org.homio.addon.tuya;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
-import org.homio.addon.tuya.service.TuyaDeviceService;
+import org.homio.addon.tuya.internal.local.UdpDiscoveryListener;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
@@ -19,6 +21,10 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 @RequiredArgsConstructor
 public class TuyaEntrypoint implements AddonEntrypoint {
 
+    public static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+
+    public static final UdpDiscoveryListener udpDiscoveryListener = new UdpDiscoveryListener(eventLoopGroup);
+
     private final EntityContext entityContext;
 
     public URL getAddonImageURL() {
@@ -27,12 +33,15 @@ public class TuyaEntrypoint implements AddonEntrypoint {
 
     @Override
     public void init() {
-        TuyaOpenAPI.setProjectEntity(ensureEntityExists(entityContext));
+        TuyaProjectEntity tuyaProjectEntity = ensureEntityExists(entityContext);
+        TuyaOpenAPI.setProjectEntity(tuyaProjectEntity);
+        udpDiscoveryListener.setProjectEntityID(tuyaProjectEntity.getEntityID());
     }
 
     @Override
     public void destroy() {
-        TuyaDeviceService.destroyAll();
+        udpDiscoveryListener.deactivate();
+        eventLoopGroup.shutdownGracefully();
     }
 
     public @NotNull TuyaProjectEntity ensureEntityExists(EntityContext entityContext) {

@@ -1,5 +1,7 @@
 package org.homio.addon.tuya.service;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -9,6 +11,7 @@ import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
 import org.homio.addon.tuya.internal.cloud.dto.FactoryInformation;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
+import org.homio.addon.tuya.internal.local.UdpDiscoveryListener;
 import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.api.EntityContext;
 import org.homio.api.service.scan.BaseItemsDiscovery.DeviceScannerResult;
@@ -47,7 +50,7 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
             TuyaOpenAPI api = tuyaProjectService.getApi();
             if (!api.isConnected()) {
                 log.warn("Tried to start scan but API for bridge '{}' is not connected.",
-                    tuyaProjectService.getEntity().getTitle());
+                        tuyaProjectService.getEntity().getTitle());
             } else {
                 processDeviceResponse(List.of(), tuyaProjectService, 0, result, existedDevices);
             }
@@ -60,8 +63,12 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
     }
 
     @SneakyThrows
-    private void processDeviceResponse(List<TuyaDeviceDTO> deviceList,
-        TuyaProjectService tuyaProjectService, int page, DeviceScannerResult result, Set<String> existedDevices) {
+    private void processDeviceResponse(
+            List<TuyaDeviceDTO> deviceList,
+            TuyaProjectService tuyaProjectService,
+            int page,
+            DeviceScannerResult result,
+            Set<String> existedDevices) {
         deviceList.forEach(device -> processDevice(device, tuyaProjectService.getApi(), result, existedDevices));
         if (page == 0 || deviceList.size() == 100) {
             int nextPage = page + 1;
