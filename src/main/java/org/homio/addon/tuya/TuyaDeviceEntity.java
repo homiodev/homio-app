@@ -114,8 +114,9 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
         return getJsonData("ip");
     }
 
-    public void setIp(String value) {
+    public TuyaDeviceEntity setIp(String value) {
         setJsonData("ip", value);
+        return this;
     }
 
     @UIField(order = 45)

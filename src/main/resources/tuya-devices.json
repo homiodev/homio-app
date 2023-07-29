@@ -3,5 +3,121 @@
   "devices": [
   ],
   "endpoints": [
+    {
+      "dp": "1",
+      "order": 1,
+      "name": "switch_1",
+      "icon": "fas fa-star-half-stroke",
+      "iconColor": "#56AB26"
+    },
+    {
+      "dp": "9",
+      "name": "countdown_1",
+      "icon": "fas fa-circle-down",
+      "iconColor": "#27608C"
+    },
+    {
+      "dp": "17",
+      "name": "add_ele",
+      "icon": "fas fa-plug-circle-bolt",
+      "iconColor": "#A69A2D"
+    },
+    {
+      "dp": "18",
+      "name": "cur_current",
+      "icon": "fas fa-bolt",
+      "iconColor": "#9357EF"
+    },
+    {
+      "dp": "19",
+      "name": "cur_power",
+      "icon": "fa-plug-circle-bolt",
+      "iconColor": "#9357EF"
+    },
+    {
+      "dp": "20",
+      "name": "cur_voltage",
+      "icon": "fas fa-truck-ramp-box",
+      "iconColor": "#299974"
+    },
+    {
+      "dp": "21",
+      "name": "test_bit",
+      "icon": "fa-vials",
+      "iconColor": "#A095F7"
+    },
+    {
+      "dp": "22",
+      "name": "voltage_coe",
+      "icon": "fas fa-cash-register",
+      "iconColor": "#B06C51"
+    },
+    {
+      "dp": "23",
+      "name": "electric_coe",
+      "icon": "fas fa-dice-d20",
+      "iconColor": "#5172B0"
+    },
+    {
+      "dp": "24",
+      "name": "power_coe",
+      "icon": "fas fa-tower-observation",
+      "iconColor": "#563AB0"
+    },
+    {
+      "dp": "25",
+      "name": "electricity_coe",
+      "icon": "fas fa-gopuram",
+      "iconColor": "#A82F9E"
+    },
+    {
+      "dp": "26",
+      "order": 10,
+      "name": "fault",
+      "icon": "fa-plug-circle-exclamation",
+      "iconColor": "#DD5F24"
+    },
+    {
+      "dp": "38",
+      "name": "relay_status",
+      "icon": "fas fa-shuffle",
+      "iconColor": "#538273"
+    },
+    {
+      "dp": "39",
+      "name": "overcharge_switch",
+      "icon": "fas fa-charging-station",
+      "iconColor": "#AB2200"
+    },
+    {
+      "dp": "40",
+      "name": "light_mode",
+      "icon": "fas fa-stopwatch",
+      "iconColor": "#618750"
+    },
+    {
+      "dp": "41",
+      "name": "child_lock",
+      "icon": "fas fa-lock",
+      "iconColor": "#AB2631"
+    },
+    {
+      "dp": "42",
+      "name": "cycle_time",
+      "icon": "fas fa-stopwatch-20",
+      "iconColor": "#7C2D9C"
+    },
+    {
+      "dp": "43",
+      "name": "random_time",
+      "icon": "fas fa-truck-ramp-box",
+      "iconColor": "#95A346"
+    },
+    {
+      "dp": "44",
+      "name": "switch_inching",
+      "icon": "fas fa-truck-ramp-box",
+      "iconColor": "#299974"
+    }
   ]
 }

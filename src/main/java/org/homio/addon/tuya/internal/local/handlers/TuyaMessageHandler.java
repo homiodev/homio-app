@@ -31,14 +31,14 @@ public class TuyaMessageHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        log.debug("[{}]: {}{}: Connection established.", entityID, deviceId,
+        log.info("[{}]: {}{}: Connection established.", entityID, deviceId,
             Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
         deviceStatusListener.onConnected();
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        log.debug("[{}]: {}{}: Connection terminated.", entityID, deviceId,
+        log.warn("[{}]: {}{}: Connection terminated.", entityID, deviceId,
             Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
         deviceStatusListener.onDisconnected("Connection terminated");
     }

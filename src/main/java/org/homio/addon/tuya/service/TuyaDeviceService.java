@@ -208,10 +208,13 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
         if (tuyaDeviceCommunicator != null) {
             tuyaDeviceCommunicator.dispose();
         }
-        entity.setStatus(Status.UNKNOWN);
+        if (!deviceInfo.ip().equals(entity.getIp())) {
+            entityContext.save(entity.setIp(deviceInfo.ip()));
+        }
+        entity.setStatus(Status.WAITING);
 
         this.tuyaDeviceCommunicator = new TuyaDeviceCommunicator(this, eventLoopGroup,
-            deviceInfo.ip(), deviceInfo.protocolVersion(), entity);
+                deviceInfo.ip(), deviceInfo.protocolVersion(), entity);
     }
 
     @SneakyThrows
