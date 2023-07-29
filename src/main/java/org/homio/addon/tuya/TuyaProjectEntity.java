@@ -1,14 +1,10 @@
 package org.homio.addon.tuya;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.Entity;
-import java.time.Duration;
-import java.util.Objects;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.tuya.service.TuyaDiscoveryService;
 import org.homio.addon.tuya.service.TuyaProjectService;
 import org.homio.api.EntityContext;
@@ -26,9 +22,10 @@ import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.util.Lang;
 import org.homio.api.util.SecureString;
-import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 @Getter
 @Setter
@@ -36,8 +33,8 @@ import org.jetbrains.annotations.Nullable;
 @Accessors(chain = true)
 @UISidebarChildren(icon = "fas fa-diagram-project", color = "#0088CC", allowCreateItem = false)
 public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
-    implements EntityService<TuyaProjectService, TuyaProjectEntity>,
-    HasStatusAndMsg<TuyaProjectEntity> {
+        implements EntityService<TuyaProjectService, TuyaProjectEntity>,
+        HasStatusAndMsg<TuyaProjectEntity> {
 
     @Override
     public TuyaProjectEntity setStatus(@Nullable Status status, @Nullable String msg) {

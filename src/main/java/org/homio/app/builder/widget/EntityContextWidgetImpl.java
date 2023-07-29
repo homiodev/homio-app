@@ -1,14 +1,21 @@
 package org.homio.app.builder.widget;
 
-import static org.homio.app.model.entity.widget.WidgetTabEntity.GENERAL_WIDGET_TAB_NAME;
-
-import java.util.List;
-import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
+import org.homio.api.EntityContext;
 import org.homio.api.EntityContextWidget;
+import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
+import org.homio.api.model.endpoint.DeviceEndpoint;
+import org.homio.api.ui.UI;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.action.v1.layout.UIFlexLayoutBuilder;
+import org.homio.api.widget.template.TemplateWidgetBuilder;
+import org.homio.api.widget.template.WidgetDefinition;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.widget.WidgetBaseEntity;
 import org.homio.app.model.entity.widget.WidgetTabEntity;
@@ -28,16 +35,84 @@ import org.homio.app.model.entity.widget.impl.toggle.WidgetSimpleToggleEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleEntity;
 import org.homio.app.model.entity.widget.impl.toggle.WidgetToggleSeriesEntity;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONObject;
+
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import static org.homio.app.model.entity.widget.WidgetTabEntity.GENERAL_WIDGET_TAB_NAME;
 
 @Log4j2
 @RequiredArgsConstructor
 public class EntityContextWidgetImpl implements EntityContextWidget {
 
-    @Getter private final EntityContextImpl entityContext;
+    @Getter
+    private final EntityContextImpl entityContext;
 
-    @Override
-    public @NotNull List<OptionModel> getDashboardTabs() {
-        return OptionModel.entityList(entityContext.findAll(WidgetTabEntity.class));
+    @NotNull
+    private static ActionResponseModel fireCreateTemplateWidget(DeviceBaseEntity.@NotNull HasEndpointsDevice entity, WidgetDefinition widgetDefinition, TemplateWidgetBuilder widgetBuilder, EntityContext entityContext, JSONObject params) {
+        String tab = params.getString("selection.dashboard_tab");
+        val includeEndpoints = widgetDefinition.getEndpoints(entity).stream()
+                .filter(pd -> params.getBoolean(pd.getEndpointEntityID()))
+                .collect(Collectors.toList());
+        List<WidgetDefinition.Requests> requests = widgetDefinition.getRequests();
+        if (requests != null) {
+            for (WidgetDefinition.Requests request : requests) {
+                Object value = params.get(request.getName());
+                WidgetDefinition.replaceField(request.getTarget(), value, widgetDefinition);
+            }
+        }
+
+        widgetBuilder.buildWidget(new TemplateWidgetBuilder.WidgetRequest(entityContext, entity, tab, widgetDefinition, includeEndpoints));
+        return ActionResponseModel.success();
+    }
+
+    private static void addPropertyDefinitions(
+            @NotNull WidgetDefinition widgetDefinition,
+            @NotNull UIFlexLayoutBuilder flex,
+            @NotNull DeviceBaseEntity.HasEndpointsDevice entity) {
+        val existedProperties = widgetDefinition.getEndpoints(entity);
+        if (existedProperties.isEmpty()) {
+            return;
+        }
+
+        flex.addFlex("properties", propertyBuilder -> {
+            propertyBuilder.setBorderArea("Endpoints").setBorderColor(UI.Color.BLUE);
+            for (DeviceEndpoint propertyDefinition : existedProperties) {
+                propertyBuilder.addCheckbox(propertyDefinition.getEndpointEntityID(), true, null)
+                        .setTitle(propertyDefinition.getName(false));
+            }
+        });
+    }
+
+    private static void addRequests(@NotNull WidgetDefinition widgetDefinition,
+                                    @NotNull UIFlexLayoutBuilder flex,
+                                    @NotNull DeviceBaseEntity.HasEndpointsDevice entity) {
+        List<WidgetDefinition.Requests> requests = widgetDefinition.getRequests();
+        if (requests != null) {
+            flex.addFlex("inputs", builder -> {
+                builder.setBorderArea("Inputs").setBorderColor(UI.Color.GREEN);
+                for (WidgetDefinition.Requests request : requests) {
+                    if (request.getType() == WidgetDefinition.Requests.RequestType.number) {
+                        builder.addNumberInput(request.getName(), Float.parseFloat(request.getValue()),
+                                request.getMin(), request.getMax(), null).setTitle(request.getTitle());
+                    }
+                }
+            });
+        }
+        val existedProperties = widgetDefinition.getEndpoints(entity);
+        if (existedProperties.isEmpty()) {
+            return;
+        }
+
+        flex.addFlex("properties", propertyBuilder -> {
+            propertyBuilder.setBorderArea("Endpoints").setBorderColor(UI.Color.BLUE);
+            for (DeviceEndpoint propertyDefinition : existedProperties) {
+                propertyBuilder.addCheckbox(propertyDefinition.getEndpointEntityID(), true, null)
+                        .setTitle(propertyDefinition.getName(false));
+            }
+        });
     }
 
     @Override
@@ -168,5 +243,40 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
         widget.setEntityID(entityID);
         widget.setWidgetTabEntity(generalTabEntity);
         return widget;
+    }
+
+    @Override
+    public void createTemplateWidgetActions(
+            @NotNull UIInputBuilder uiInputBuilder,
+            @NotNull DeviceBaseEntity.HasEndpointsDevice entity,
+            @NotNull List<WidgetDefinition> widgets) {
+        for (WidgetDefinition widgetDefinition : widgets) {
+            WidgetDefinition.WidgetType type = widgetDefinition.getType();
+            TemplateWidgetBuilder widgetBuilder = TemplateWidgetBuilder.WIDGETS.get(type);
+            if (widgetBuilder == null) {
+                throw new IllegalStateException("Widget creation not implemented for type: " + type);
+            }
+            Icon icon = new Icon(widgetDefinition.getIcon(), UI.Color.random());
+            String title = "WIDGET.CREATE_" + widgetDefinition.getName();
+            uiInputBuilder
+                    .addOpenDialogSelectableButton(title, icon, null,
+                            (entityContext, params) ->
+                                    fireCreateTemplateWidget(entity, widgetDefinition, widgetBuilder, entityContext, params))
+                    .editDialog(dialogBuilder -> {
+                        dialogBuilder.setTitle(title, icon);
+                        dialogBuilder.addFlex("main", flex -> {
+                            flex.addSelectBox("selection.dashboard_tab", null)
+                                    .setSelected(getEntityContext().widget().getDashboardDefaultID())
+                                    .addOptions(getEntityContext().widget().getDashboardTabs());
+                            addPropertyDefinitions(widgetDefinition, flex, entity);
+                            addRequests(widgetDefinition, flex, entity);
+                        });
+                    });
+        }
+    }
+
+    @Override
+    public @NotNull List<OptionModel> getDashboardTabs() {
+        return OptionModel.entityList(entityContext.findAll(WidgetTabEntity.class));
     }
 }

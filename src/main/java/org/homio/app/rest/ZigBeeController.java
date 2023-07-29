@@ -1,13 +1,5 @@
 package org.homio.app.rest;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
@@ -20,11 +12,16 @@ import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint.EndpointType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 @Log4j2
 @RestController
@@ -35,7 +32,7 @@ public class ZigBeeController {
     private final EntityContext entityContext;
 
     @GetMapping("/device/{endpoint}")
-    public @NotNull Collection<OptionModel> getDevicesWithProperty(@PathVariable("endpoint") @NotNull String endpoint) {
+    public @NotNull Collection<OptionModel> getDevicesWithEndpoint(@PathVariable("endpoint") @NotNull String endpoint) {
         return getDevices(device -> device.getDeviceEndpoint(endpoint) != null);
     }
 
@@ -50,37 +47,37 @@ public class ZigBeeController {
      * Get all endpoints for specific device by ieeeAddress
      */
     @GetMapping("/endpoints")
-    public @NotNull Collection<OptionModel> getProperties(
-        @RequestParam(value = "deviceMenu", required = false) @Nullable String ieeeAddress0,
-        @RequestParam(value = "deviceReadMenu", required = false) @Nullable String ieeeAddress1,
-        @RequestParam(value = "deviceWriteMenu", required = false) @Nullable String ieeeAddress2,
-        @RequestParam(value = "deviceWriteBoolMenu", required = false) @Nullable String ieeeAddress3,
-        @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
-        @RequestParam(value = "type", defaultValue = "any") @NotNull String type) {
+    public @NotNull Collection<OptionModel> getEndpoints(
+            @RequestParam(value = "deviceMenu", required = false) @Nullable String ieeeAddress0,
+            @RequestParam(value = "deviceReadMenu", required = false) @Nullable String ieeeAddress1,
+            @RequestParam(value = "deviceWriteMenu", required = false) @Nullable String ieeeAddress2,
+            @RequestParam(value = "deviceWriteBoolMenu", required = false) @Nullable String ieeeAddress3,
+            @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
+            @RequestParam(value = "type", defaultValue = "any") @NotNull String type) {
         String ieeeAddress = defaultIfEmpty(ieeeAddress0, defaultIfEmpty(ieeeAddress1, defaultIfEmpty(ieeeAddress2, ieeeAddress3)));
         return getZigBeeCoordinators().stream()
-                                      .map(c -> c.getZigBeeDevice(ieeeAddress))
-                                      .filter(Objects::nonNull)
-                                      .flatMap(d -> ((Map<String, DeviceEndpoint>) d.getEndpoints()).values().stream())
-                                      .filter(buildPropertyAccessFilter(access))
-                                      .filter(buildFilterByType(type))
-                                      .map(this::createOptionModel)
-                                      .collect(Collectors.toList());
+                .map(c -> c.getZigBeeDevice(ieeeAddress))
+                .filter(Objects::nonNull)
+                .flatMap(d -> ((Map<String, DeviceEndpoint>) d.getEndpoints()).values().stream())
+                .filter(buildEndpointAccessFilter(access))
+                .filter(buildFilterByType(type))
+                .map(this::createOptionModel)
+                .collect(Collectors.toList());
     }
 
-    private @NotNull Predicate<? super DeviceEndpoint> buildPropertyAccessFilter(@NotNull String access) {
+    private @NotNull Predicate<? super DeviceEndpoint> buildEndpointAccessFilter(@NotNull String access) {
         return switch (access) {
             case "read" -> DeviceEndpoint::isReadable;
             case "write" -> DeviceEndpoint::isWritable;
-            default -> zigBeeProperty -> true;
+            default -> endpoint -> true;
         };
     }
 
     private @NotNull Predicate<? super DeviceEndpoint> buildFilterByType(@NotNull String type) {
-        return (Predicate<DeviceEndpoint>) zigBeeProperty -> switch (type) {
-            case "bool" -> zigBeeProperty.getEndpointType() == EndpointType.bool;
-            case "number" -> zigBeeProperty.getEndpointType() == EndpointType.number;
-            case "string" -> zigBeeProperty.getEndpointType() == EndpointType.string;
+        return (Predicate<DeviceEndpoint>) endpoint -> switch (type) {
+            case "bool" -> endpoint.getEndpointType() == EndpointType.bool;
+            case "number" -> endpoint.getEndpointType() == EndpointType.number;
+            case "string" -> endpoint.getEndpointType() == EndpointType.string;
             default -> true;
         };
     }
@@ -95,11 +92,11 @@ public class ZigBeeController {
         };
     }
 
-    private boolean filterByType(@NotNull DeviceEndpoint zigBeeProperty, @NotNull String type) {
+    private boolean filterByType(@NotNull DeviceEndpoint endpoint, @NotNull String type) {
         return switch (type) {
-            case "bool" -> zigBeeProperty.getEndpointType() == EndpointType.bool;
-            case "number" -> zigBeeProperty.getEndpointType() == EndpointType.number;
-            case "string" -> zigBeeProperty.getEndpointType() == EndpointType.string;
+            case "bool" -> endpoint.getEndpointType() == EndpointType.bool;
+            case "number" -> endpoint.getEndpointType() == EndpointType.number;
+            case "string" -> endpoint.getEndpointType() == EndpointType.string;
             default -> true;
         };
     }
@@ -129,9 +126,9 @@ public class ZigBeeController {
     }
 
     private @NotNull OptionModel createOptionModel(@NotNull DeviceEndpoint endpoint) {
-        return OptionModel.of(endpoint.getKey(), endpoint.getName(false))
-                          .setDescription(endpoint.getDescription())
-                          .setIcon(endpoint.getIcon().getIcon())
-                          .setColor(endpoint.getIcon().getColor());
+        return OptionModel.of(endpoint.getEndpointEntityID(), endpoint.getName(false))
+                .setDescription(endpoint.getDescription())
+                .setIcon(endpoint.getIcon().getIcon())
+                .setColor(endpoint.getIcon().getColor());
     }
 }

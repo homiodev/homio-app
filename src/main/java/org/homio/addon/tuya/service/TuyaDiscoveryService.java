@@ -1,13 +1,5 @@
 package org.homio.addon.tuya.service;
 
-import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -23,6 +15,15 @@ import org.homio.api.service.scan.BaseItemsDiscovery.DeviceScannerResult;
 import org.homio.api.service.scan.ItemDiscoverySupport;
 import org.homio.hquery.ProgressBar;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 /**
  * The {@link TuyaDiscoveryService} implements the discovery service for Tuya devices from the cloud
@@ -87,19 +88,22 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
     public static void updateTuyaDeviceEntity(TuyaDeviceDTO device, TuyaOpenAPI api, TuyaDeviceEntity entity) {
         List<FactoryInformation> infoList = api.getFactoryInformation(List.of(device.id), entity);
         String deviceMac = infoList.stream()
-                                   .filter(fi -> fi.id.equals(device.id))
-                                   .findAny()
-                                   .map(fi -> fi.mac)
-                                   .orElse("");
+                .filter(fi -> fi.id.equals(device.id))
+                .findAny()
+                .map(fi -> fi.mac)
+                .orElse("");
 
         entity.setCategory(device.category);
         entity.setMac(Objects.requireNonNull(deviceMac).replaceAll("(..)(?!$)", "$1:"));
         entity.setLocalKey(device.localKey);
         entity.setName(device.productName);
         entity.setIeeeAddress(device.id);
-        entity.setJsonData("uuid", device.uuid);
-        entity.setJsonData("model", device.model);
+        entity.setUuid(device.uuid);
+        entity.setModel(device.model);
         entity.setProductId(device.productId);
+        entity.setSubDevice(device.subDevice);
+        entity.setOwnerID(device.ownerId);
+        entity.setIcon(device.icon);
 
         DeviceSchema schema = api.getDeviceSchema(device.id, entity);
         List<SchemaDp> schemaDps = new ArrayList<>();

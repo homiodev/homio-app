@@ -1,14 +1,8 @@
 package org.homio.addon.tuya;
 
-import static org.homio.api.ui.field.UIFieldType.HTML;
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.persistence.Entity;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -16,27 +10,36 @@ import lombok.experimental.Accessors;
 import org.homio.addon.tuya.internal.local.ProtocolVersion;
 import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.addon.tuya.service.TuyaDeviceService;
-import org.homio.addon.z2m.util.ApplianceModel;
-import org.homio.addon.z2m.util.ZigBeeUtil;
 import org.homio.api.EntityContext;
+import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.MiscEntity;
 import org.homio.api.model.ActionResponseModel;
-import org.homio.api.model.DeviceEndpoint;
+import org.homio.api.model.device.ConfigDeviceDefinition;
+import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
+import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldSlider;
-import org.homio.api.ui.field.UIFieldTitleRef;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.api.ui.field.action.v1.UIInputEntity;
-import org.homio.api.ui.field.inline.UIFieldInlineEntities;
-import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
+import org.homio.api.ui.field.color.UIFieldColorBgRef;
+import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
+import org.homio.api.widget.template.WidgetDefinition;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import static org.homio.addon.tuya.service.TuyaDeviceService.CONFIG_DEVICE_SERVICE;
+import static org.homio.api.ui.field.UIFieldType.HTML;
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 
 @Getter
 @Setter
@@ -44,12 +47,50 @@ import org.jetbrains.annotations.Nullable;
 @Accessors(chain = true)
 @UISidebarChildren(icon = "fas fa-gamepad", color = "#0088CC")
 public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
-    implements EntityService<TuyaDeviceService, TuyaDeviceEntity>, HasEntityLog {
+        implements DeviceBaseEntity.HasEndpointsDevice, EntityService<TuyaDeviceService, TuyaDeviceEntity>, HasEntityLog {
+
+    @Override
+    public @NotNull Map<String, DeviceEndpoint> getDeviceEndpoints() {
+        return getService().getEndpoints()
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    @UIField(order = 1, hideOnEmpty = true, fullWidth = true, color = "#89AA50", type = HTML)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldColorBgRef(value = "statusColor", animate = true)
+    @UIFieldGroup(value = "NAME", order = 1, borderColor = "#CDD649")
+    public String getDescription() {
+        return "some doc";
+    }
 
     @Override
     @UIField(order = 30, required = true, inlineEditWhenEmpty = true, label = "deviceID")
     public @Nullable String getIeeeAddress() {
         return super.getIeeeAddress();
+    }
+
+    @UIField(order = 3)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("NAME")
+    public @NotNull String getModel() {
+        return getJsonDataRequire("model", "tuya_unknown");
+    }
+
+    public void setModel(String value) {
+        setJsonData("model", value);
+    }
+
+    @UIField(order = 4)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("NAME")
+    public String getUuid() {
+        return getJsonData("uuid");
+    }
+
+    public void setUuid(String value) {
+        setJsonData("uuid", value);
     }
 
     @UIField(order = 35)
@@ -126,14 +167,31 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
         setJsonData("pid", category);
     }
 
-    @Override
-    public @NotNull Class<TuyaDeviceService> getEntityServiceItemClass() {
-        return TuyaDeviceService.class;
+    @UIField(order = 300)
+    public boolean isSubDevice() {
+        return getJsonData("sb", false);
     }
 
-    @Override
-    public @NotNull TuyaDeviceService createService(@NotNull EntityContext entityContext) {
-        return new TuyaDeviceService(entityContext, this);
+    public void setSubDevice(boolean value) {
+        setJsonData("sb", value);
+    }
+
+    @UIField(order = 400)
+    public String getIcon() {
+        return getJsonData("icon");
+    }
+
+    public void setIcon(String value) {
+        setJsonData("icon", value);
+    }
+
+    @UIField(order = 500, hideOnEmpty = true)
+    public String getOwnerID() {
+        return getJsonData("oid");
+    }
+
+    public void setOwnerID(String ownerId) {
+        setJsonData("oid", ownerId);
     }
 
     @SneakyThrows
@@ -164,71 +222,20 @@ public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
         entityLogBuilder.addTopicFilterByEntityID("org.homio");
     }
 
-    @UIField(order = 9999)
-    @UIFieldInlineEntities(bg = "#27FF0005")
-    public List<TuyaPropertyEntity> getEndpointClusters() {
-        return getService().getProperties().values().stream()
-                            .filter(DeviceEndpoint::isVisible)
-                            .map(property -> new TuyaPropertyEntity(property, this))
-                            .sorted()
-                            .collect(Collectors.toList());
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+        @NotNull List<ConfigDeviceDefinition> configDeviceDefinitions = getService().findDevices();
+        List<WidgetDefinition> widgetDefinitions = CONFIG_DEVICE_SERVICE.getDeviceWidgets(configDeviceDefinitions);
+        getEntityContext().widget().createTemplateWidgetActions(uiInputBuilder, this, widgetDefinitions);
     }
 
-    @Getter
-    public static class TuyaPropertyEntity implements Comparable<TuyaPropertyEntity> {
+    @Override
+    public @NotNull Class<TuyaDeviceService> getEntityServiceItemClass() {
+        return TuyaDeviceService.class;
+    }
 
-        private String entityID;
-
-        @UIField(order = 2, type = HTML)
-        private String title;
-
-        @JsonIgnore
-        private TuyaDeviceEntity entity;
-
-        private String valueTitle;
-
-        @JsonIgnore
-        private int order;
-
-        public TuyaPropertyEntity(TuyaDeviceProperty property, TuyaDeviceEntity entity) {
-            this.entity = entity;
-            this.entityID = property.getIeeeAddress();
-            this.order = property.getSchemaDp().id;
-            String variableID = property.getVariableID();
-            if (variableID != null) {
-                String varSource = property.getEntityContext().var().buildDataSource(variableID, false);
-                this.title =
-                    ("<div class=\"inline-2row_d\"><div class=\"clickable history-link\" data-hl=\"%s\" style=\"color:%s;\"><i class=\"mr-1 "
-                        + "%s\"></i>%s</div><span>%s</div></div>").formatted(
-                        varSource, property.getIcon().getColor(), property.getIcon().getIcon(),
-                        property.getName(false), property.getDescription());
-            } else {
-                this.title =
-                    "<div class=\"inline-2row_d\"><div style=\"color:%s;\"><i class=\"mr-1 %s\"></i>%s</div><span>%s</div></div>".formatted(
-                        property.getIcon().getColor(), property.getIcon().getIcon(), property.getName(false), property.getDescription());
-            }
-            this.property = property;
-            this.valueTitle = property.getValue().toString();
-            if (ApplianceModel.ENUM_TYPE.equals(property.getExpose().getType())) {
-                this.valueTitle = "Values: " + String.join(", ", getProperty().getExpose().getValues());
-            }
-            this.order = deviceService.getConfigService().getPropertyOrder(property.getExpose().getName());
-        }
-
-        @UIField(order = 4, style = "margin-left: auto; margin-right: 8px;")
-        @UIFieldInlineEntityWidth(30)
-        @UIFieldTitleRef("valueTitle")
-        public UIInputEntity getValue() {
-            return buildAction().buildAll().iterator().next();
-        }
-
-        @Override
-        public int compareTo(@NotNull TuyaDeviceEntity.TuyaPropertyEntity o) {
-            return Integer.compare(this.order, o.order);
-        }
-
-        private @NotNull UIInputBuilder buildAction() {
-            return ZigBeeUtil.buildZigbeeActions(property, entityID);
-        }
+    @Override
+    public @NotNull TuyaDeviceService createService(@NotNull EntityContext entityContext) {
+        return new TuyaDeviceService(entityContext, this);
     }
 }

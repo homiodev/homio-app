@@ -1,6 +1,5 @@
 package org.homio.addon.tuya.service;
 
-import java.util.List;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -8,8 +7,11 @@ import org.homio.addon.tuya.TuyaProjectEntity;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
 import org.homio.api.EntityContext;
+import org.homio.api.model.Status;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
 
 @Log4j2
 @Getter
@@ -25,13 +27,13 @@ public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
     }
 
     public void initialize() {
+        entity.setStatus(Status.INITIALIZE);
         testServiceWithSetStatus();
     }
 
     @Override
     @SneakyThrows
     protected void testService() {
-        entity.setStatusOnline();
         if (!entity.isValid()) {
             throw new IllegalStateException("Not valid configuration");
         }
