@@ -11,6 +11,7 @@ import org.homio.api.model.Status;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Duration;
 import java.util.List;
 
 @Log4j2
@@ -23,16 +24,28 @@ public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
     public TuyaProjectService(@NotNull EntityContext entityContext, @NotNull TuyaProjectEntity entity) {
         super(entityContext, entity);
         this.api = entityContext.getBean(TuyaOpenAPI.class);
-        entityContext.event().runOnceOnInternetUp("tuya-project-init", () -> {
-            if (!entity.getStatus().isOnline()) {
-                initialize();
-            }
-        });
+        scheduleInitialize();
     }
 
     public void initialize() {
         entity.setStatus(Status.INITIALIZE);
-        testServiceWithSetStatus();
+        try {
+            testService();
+            entity.setStatusOnline();
+        } catch (TuyaOpenAPI.TuyaApiNotReadyException te) {
+            scheduleInitialize();
+        } catch (Exception ex) {
+            entity.setStatusError(ex);
+        }
+    }
+
+    private void scheduleInitialize() {
+        entityContext.event().runOnceOnInternetUp("tuya-project-init", () -> {
+            if (!entity.getStatus().isOnline()) {
+                entityContext.bgp().builder("init-tuya-project-service").delay(Duration.ofSeconds(5))
+                        .execute(this::initialize);
+            }
+        });
     }
 
     @Override

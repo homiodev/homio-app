@@ -12,6 +12,7 @@ public class TcpStatusPayload {
     public String devId = "";
     public String gwId = "";
     public String uid = "";
+    public String cid = "";
     public long t = 0;
     public Map<Integer, Object> dps = Map.of();
     public Data data = new Data();

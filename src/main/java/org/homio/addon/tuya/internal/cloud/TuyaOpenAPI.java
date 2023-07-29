@@ -2,6 +2,24 @@ package org.homio.addon.tuya.internal.cloud;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
+import org.homio.addon.tuya.TuyaDeviceEntity;
+import org.homio.addon.tuya.TuyaProjectEntity;
+import org.homio.addon.tuya.internal.cloud.dto.*;
+import org.homio.addon.tuya.internal.util.JoiningMapCollector;
+import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.model.Status;
+import org.homio.api.util.CommonUtils;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -12,33 +30,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
-import lombok.SneakyThrows;
-import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
-import org.homio.addon.tuya.TuyaDeviceEntity;
-import org.homio.addon.tuya.TuyaProjectEntity;
-import org.homio.addon.tuya.internal.cloud.dto.CommandRequest;
-import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
-import org.homio.addon.tuya.internal.cloud.dto.FactoryInformation;
-import org.homio.addon.tuya.internal.cloud.dto.ResultResponse;
-import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
-import org.homio.addon.tuya.internal.cloud.dto.TuyaTokenDTO;
-import org.homio.addon.tuya.internal.util.JoiningMapCollector;
-import org.homio.api.entity.DeviceBaseEntity;
-import org.homio.api.model.Status;
-import org.homio.api.util.CommonUtils;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.springframework.stereotype.Service;
+import java.util.*;
 
 /**
  * The {@link TuyaOpenAPI} is an implementation of the Tuya OpenApi specification
@@ -95,7 +87,7 @@ public class TuyaOpenAPI {
 
     private static void assertApiReady() {
         if (projectEntity == null) {
-            throw new IllegalStateException("Tuya api not ready yet");
+            throw new TuyaApiNotReadyException();
         }
     }
 
@@ -104,6 +96,14 @@ public class TuyaOpenAPI {
         String response = request("/v1.1/iot-03/devices/" + deviceID, Map.of(), null);
         return processResponse(response, TuyaDeviceDTO.class, entity);
     }
+
+    @SneakyThrows
+    public List<TuyaSubDeviceInfoDTO> getSubDevices(String deviceID, TuyaDeviceEntity entity) {
+        login();
+        String response = request("/v1.0/devices/" + deviceID + "/sub-devices", Map.of(), null);
+        return processResponse(response, TypeToken.getParameterized(List.class, TuyaSubDeviceInfoDTO.class).getType(), entity);
+    }
+
 
     public List<FactoryInformation> getFactoryInformation(List<String> deviceIds, TuyaDeviceEntity entity) throws Exception {
         login();
@@ -304,6 +304,13 @@ public class TuyaOpenAPI {
             }
             byte[] digest = sha256HMAC.doFinal(content.getBytes(StandardCharsets.UTF_8));
             return new HexBinaryAdapter().marshal(digest).toUpperCase();
+        }
+    }
+
+    public static class TuyaApiNotReadyException extends IllegalStateException {
+        @Override
+        public String getMessage() {
+            return "Tuya api not ready yet";
         }
     }
 }

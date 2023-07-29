@@ -130,11 +130,12 @@ public class TuyaDeviceCommunicator implements ChannelFutureListener {
                 requestStatus();
             }
         } else {
+            String message = Objects.requireNonNullElse(channelFuture.cause().getMessage(), "");
             log.warn("[{}]: {}{}: Failed to connect: {}", entity.getEntityID(), deviceId,
                 Objects.requireNonNullElse(channelFuture.channel().remoteAddress(), ""),
                 channelFuture.cause().getMessage());
             this.channel = null;
-            deviceStatusListener.connectionStatus(false);
+            deviceStatusListener.onDisconnected(message);
         }
     }
 

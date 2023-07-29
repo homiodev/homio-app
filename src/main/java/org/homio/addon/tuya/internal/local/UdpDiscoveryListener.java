@@ -1,19 +1,9 @@
 package org.homio.addon.tuya.internal.local;
 
-import static com.sshtools.common.util.Utils.hexToBytes;
-
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import java.util.HashMap;
-import java.util.Map;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.local.dto.DeviceInfo;
 import org.homio.addon.tuya.internal.local.handlers.DatagramToByteBufDecoder;
@@ -21,6 +11,11 @@ import org.homio.addon.tuya.internal.local.handlers.DiscoveryMessageHandler;
 import org.homio.addon.tuya.internal.local.handlers.TuyaDecoder;
 import org.homio.addon.tuya.internal.local.handlers.UserEventHandler;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.sshtools.common.util.Utils.hexToBytes;
 
 /**
  * The {@link UdpDiscoveryListener} handles UDP device discovery message
@@ -92,9 +87,7 @@ public class UdpDiscoveryListener implements ChannelFutureListener {
     }
 
     public void unregisterListener(DeviceInfoSubscriber deviceInfoSubscriber) {
-        if (!deviceListeners.entrySet().removeIf(e -> deviceInfoSubscriber.equals(e.getValue()))) {
-            log.warn("Tried to unregister a listener for '{}' but no registration found.", deviceInfoSubscriber);
-        }
+        deviceListeners.entrySet().removeIf(e -> deviceInfoSubscriber.equals(e.getValue()));
     }
 
     @Override
