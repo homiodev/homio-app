@@ -202,6 +202,17 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
+    public void execute(ThrowingRunnable<Exception> runnable) {
+        taskScheduler.execute(() -> {
+            try {
+                runnable.run();
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+    }
+
+    @Override
     public <T> @NotNull ScheduleBuilder<T> builder(@NotNull String name) {
         ThreadContextImpl<T> context = new ThreadContextImpl<>();
         context.name = name;

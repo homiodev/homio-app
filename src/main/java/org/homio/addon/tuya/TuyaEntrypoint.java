@@ -34,7 +34,6 @@ public class TuyaEntrypoint implements AddonEntrypoint {
 
     @Override
     public void init() {
-        entityContext.var().createGroup("tuya", "Tuya", true, new Icon("fas fa-fish-fins", "#D68C38"));
         TuyaProjectEntity tuyaProjectEntity = ensureEntityExists(entityContext);
         TuyaOpenAPI.setProjectEntity(tuyaProjectEntity);
         udpDiscoveryListener.setProjectEntityID(tuyaProjectEntity.getEntityID());

@@ -76,7 +76,7 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
         }
         if (page == 0 || deviceList.size() == 100) {
             int nextPage = page + 1;
-            List<TuyaDeviceDTO> nextDeviceList = tuyaProjectService.getAllDevices(nextPage);
+            List<TuyaDeviceDTO> nextDeviceList = tuyaProjectService.getApi().getDeviceList(nextPage);
             processDeviceResponse(nextDeviceList, tuyaProjectService, nextPage, deviceHandler);
         }
     }

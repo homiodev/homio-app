@@ -1,18 +1,10 @@
 package org.homio.app.ssh;
 
 import jakarta.persistence.Entity;
-import java.net.URI;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.model.OptionModel;
-import org.homio.api.service.EntityService;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.util.CommonUtils;
@@ -21,6 +13,14 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.net.URI;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Entity
 @UISidebarChildren(icon = "fas fa-draw-polygon", color = "#CC0092")
@@ -58,13 +58,13 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
 
     @Override
     public @Nullable RawWebSocketService createService(@NotNull EntityContext entityContext) {
-        return new RawWebSocketService(entityContext, this);
+        return new RawWebSocketService(entityContext);
     }
 
     public static class RawWebSocketService extends ServiceInstance<SshRawWebSocketEntity> implements SshProviderService<SshRawWebSocketEntity> {
 
-        public RawWebSocketService(EntityContext entityContext, SshRawWebSocketEntity entity) {
-            super(entityContext, entity);
+        public RawWebSocketService(EntityContext entityContext) {
+            super(entityContext);
         }
 
         @Override

@@ -1,5 +1,16 @@
 package org.homio.addon.tuya;
 
+import static org.homio.addon.tuya.service.TuyaDeviceService.CONFIG_DEVICE_SERVICE;
+import static org.homio.api.util.CommonUtils.splitNameToReadableFormat;
+
+import java.awt.Color;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.util.SchemaDp;
@@ -8,26 +19,16 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar.VariableMetaBuilder;
 import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.model.Icon;
+import org.homio.api.model.device.ConfigDeviceEndpoint;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
+import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder.InfoType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.awt.*;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
-import static org.homio.addon.tuya.service.TuyaDeviceService.CONFIG_DEVICE_SERVICE;
-import static org.homio.api.util.CommonUtils.splitNameToReadableFormat;
 
 @SuppressWarnings("CommentedOutCode")
 @Log4j2
@@ -48,24 +49,28 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
     private boolean oldColorMode = false; // for color endpoint only
 
     public TuyaDeviceEndpoint(
-            @NotNull SchemaDp schemaDp,
-            @NotNull EntityContext entityContext,
-            @NotNull TuyaDeviceEntity device) {
-        super(new Icon("fa fa-fw fa-tablet-screen-button", "#3894B5"));
+        @NotNull SchemaDp schemaDp,
+        @NotNull EntityContext entityContext,
+        @NotNull TuyaDeviceEntity device,
+        @Nullable ConfigDeviceEndpoint configEndpoint) {
+        super(new Icon(
+            "fa fa-fw " + (configEndpoint == null ? "fa-tablet-screen-button" : configEndpoint.getIcon()),
+            configEndpoint == null ? "#3894B5" : configEndpoint.getIconColor())
+        );
         this.schemaDp = schemaDp;
         this.dp = schemaDp.dp;
         this.dp2 = schemaDp.dp2;
 
         init(
-                schemaDp.code,
-                device,
-                entityContext,
-                null,
-                true,
-                true,
-                schemaDp.code,
-                0,
-                calcEndpointType());
+            schemaDp.code,
+            device,
+            entityContext,
+            null,
+            true,
+            true,
+            schemaDp.code,
+            CONFIG_DEVICE_SERVICE.getEndpointOrder(schemaDp.code),
+            calcEndpointType());
 
         if (CONFIG_DEVICE_SERVICE.isEndpointHasVariable(schemaDp.code)) {
             getOrCreateVariable();
@@ -110,7 +115,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
 
     @Override
     public @NotNull String getName(boolean shortFormat) {
-        String l1Name = endpointEntityID;
+        String l1Name = getEndpointEntityID();
         String name = splitNameToReadableFormat(l1Name);
         return shortFormat ? name : "${tuyae.%s~%s}".formatted(l1Name, name);
     }
@@ -123,13 +128,15 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
     @Override
     public @NotNull UIInputBuilder createUIInputBuilder() {
         UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
+        TuyaDeviceEntity device = getDevice();
+        State value = getValue();
 
         if (isWritable()) {
             switch (tuyaEndpointType) {
                 case bool -> {
-                    uiInputBuilder.addCheckbox(getEntityID(), value.boolValue(), (entityContext, params) -> {
+                    uiInputBuilder.addCheckbox(getEntityID(), getValue().boolValue(), (entityContext, params) -> {
                         setValue(OnOffType.of(params.getBoolean("value")));
-                        device.getService().send(Map.of(dp, value.boolValue()));
+                        device.getService().send(Map.of(dp, getValue().boolValue()));
                         return null;
                     });
                     return uiInputBuilder;
@@ -223,9 +230,9 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                 }
             }
         }
-        if (unit != null) {
+        if (getUnit() != null) {
             uiInputBuilder.addInfo("%s <small class=\"text-muted\">%s</small>"
-                    .formatted(value.stringValue(), unit), InfoType.HTML);
+                .formatted(value.stringValue(), getUnit()), InfoType.HTML);
         }
         assembleUIAction(uiInputBuilder);
         return uiInputBuilder;

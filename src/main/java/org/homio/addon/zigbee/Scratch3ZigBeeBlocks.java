@@ -36,11 +36,7 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
 
     private final String ENDPOINT = "ENDPOINT";
 
-    public static final String ZIGBEE__BASE_URL = "rest/zigbee/";
-    public static final String ZIGBEE_CLUSTER_ID_URL = ZIGBEE__BASE_URL + "zcl/";
-    public static final String ZIGBEE_CLUSTER_NAME_URL = ZIGBEE__BASE_URL + "clusterName/";
-    public static final String ZIGBEE_MODEL_URL = ZIGBEE__BASE_URL + "model/";
-    public static final String ZIGBEE_ALARM_URL = ZIGBEE__BASE_URL + "alarm";
+    public static final String DEVICE__BASE_URL = "rest/device/";
     private final ServerMenuBlock deviceMenu;
     private final ServerMenuBlock deviceReadMenu;
     private final ServerMenuBlock deviceWriteMenu;
@@ -58,19 +54,19 @@ public class Scratch3ZigBeeBlocks extends Scratch3ExtensionBlocks {
         super("#6d4747", entityContext, z2MEntrypoint, null);
 
         this.onOffMenu = menuStatic("onOffMenu", OnOff.class, OnOff.off);
-        this.deviceMenu = menuServer("deviceMenu", ZIGBEE__BASE_URL + "device", "Device", "-");
-        this.deviceReadMenu = menuServer("deviceReadMenu", ZIGBEE__BASE_URL + "device?access=read", "Device", "-");
-        this.deviceWriteBoolMenu = menuServer("deviceWriteBoolMenu", ZIGBEE__BASE_URL + "device?access=write&type=bool", "Device", "-");
-        this.deviceWriteMenu = menuServer("deviceWriteMenu", ZIGBEE__BASE_URL + "device?access=write", "Device", "-");
-        this.temperatureDeviceMenu = menuServer("temperatureDeviceMenu", ZIGBEE__BASE_URL + "device/temperature", "Device", "-");
-        this.humidityDeviceMenu = menuServer("humidityDeviceMenu", ZIGBEE__BASE_URL + "device/humidity", "Device", "-");
-        this.endpointMenu = menuServer("endpointMenu", ZIGBEE__BASE_URL + "endpoints", "Endpoint", "-")
+        this.deviceMenu = menuServer("deviceMenu", DEVICE__BASE_URL + "device", "Device", "-");
+        this.deviceReadMenu = menuServer("deviceReadMenu", DEVICE__BASE_URL + "device?access=read", "Device", "-");
+        this.deviceWriteBoolMenu = menuServer("deviceWriteBoolMenu", DEVICE__BASE_URL + "device?access=write&type=bool", "Device", "-");
+        this.deviceWriteMenu = menuServer("deviceWriteMenu", DEVICE__BASE_URL + "device?access=write", "Device", "-");
+        this.temperatureDeviceMenu = menuServer("temperatureDeviceMenu", DEVICE__BASE_URL + "device/temperature", "Device", "-");
+        this.humidityDeviceMenu = menuServer("humidityDeviceMenu", DEVICE__BASE_URL + "device/humidity", "Device", "-");
+        this.endpointMenu = menuServer("endpointMenu", DEVICE__BASE_URL + "endpoints", "Endpoint", "-")
             .setDependency(this.deviceMenu);
-        this.readEndpointMenu = menuServer("readEndpointMenu", ZIGBEE__BASE_URL + "endpoints?access=read", "Endpoint", "-")
+        this.readEndpointMenu = menuServer("readEndpointMenu", DEVICE__BASE_URL + "endpoints?access=read", "Endpoint", "-")
             .setDependency(this.deviceReadMenu);
-        this.writeEndpointMenu = menuServer("writeEndpointMenu", ZIGBEE__BASE_URL + "endpoints?access=write", "Endpoint", "-")
+        this.writeEndpointMenu = menuServer("writeEndpointMenu", DEVICE__BASE_URL + "endpoints?access=write", "Endpoint", "-")
             .setDependency(this.deviceWriteMenu);
-        this.writeBoolEndpointMenu = menuServer("writeBoolEndpointMenu", ZIGBEE__BASE_URL + "endpoints?access=write&type=bool", "Endpoint", "-")
+        this.writeBoolEndpointMenu = menuServer("writeBoolEndpointMenu", DEVICE__BASE_URL + "endpoints?access=write&type=bool", "Endpoint", "-")
             .setDependency(this.deviceWriteMenu);
         // reporter blocks
         blockReporter(50, "time_since_last_event", "time since last event [ENDPOINT] of [DEVICE]",

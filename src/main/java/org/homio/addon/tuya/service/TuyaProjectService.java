@@ -4,14 +4,12 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import org.homio.addon.tuya.TuyaProjectEntity;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
-import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
 import org.homio.api.EntityContext;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
-import java.util.List;
 
 public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
 
@@ -19,10 +17,9 @@ public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
     private final TuyaOpenAPI api;
 
     @SneakyThrows
-    public TuyaProjectService(@NotNull EntityContext entityContext, @NotNull TuyaProjectEntity entity) {
-        super(entityContext, entity);
+    public TuyaProjectService(@NotNull EntityContext entityContext) {
+        super(entityContext);
         this.api = entityContext.getBean(TuyaOpenAPI.class);
-        scheduleInitialize();
     }
 
     public void initialize() {
@@ -64,9 +61,5 @@ public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
 
     @Override
     public void destroy() throws Exception {
-    }
-
-    public List<TuyaDeviceDTO> getAllDevices(int page) throws Exception {
-        return api.getDeviceList(page);
     }
 }

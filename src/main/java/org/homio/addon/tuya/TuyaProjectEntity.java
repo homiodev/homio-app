@@ -128,7 +128,7 @@ public final class TuyaProjectEntity extends MicroControllerBaseEntity<TuyaProje
 
     @Override
     public @NotNull TuyaProjectService createService(@NotNull EntityContext entityContext) {
-        return new TuyaProjectService(entityContext, this);
+        return new TuyaProjectService(entityContext);
     }
 
     @Override

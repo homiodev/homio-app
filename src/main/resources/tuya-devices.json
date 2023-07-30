@@ -7,7 +7,7 @@
       "dp": "1",
       "order": 1,
       "name": "switch_1",
-      "icon": "fas fa-star-half-stroke",
+      "icon": "fa-star-half-stroke",
       "iconColor": "#56AB26"
     },
     {
@@ -16,7 +16,7 @@
       "name": "countdown_1",
       "unit": "s",
       "stateless": true,
-      "icon": "fas fa-circle-down",
+      "icon": "fa-circle-down",
       "iconColor": "#27608C"
     },
     {
@@ -24,7 +24,7 @@
       "name": "add_ele",
       "unit": "kwh",
       "stateless": true,
-      "icon": "fas fa-plug-circle-bolt",
+      "icon": "fa-plug-circle-bolt",
       "iconColor": "#A69A2D"
     },
     {
@@ -32,7 +32,7 @@
       "order": 10,
       "name": "cur_current",
       "unit": "mA",
-      "icon": "fas fa-bolt",
+      "icon": "fa-bolt",
       "iconColor": "#9357EF"
     },
     {
@@ -48,7 +48,7 @@
       "order": 12,
       "name": "cur_voltage",
       "unit": "V",
-      "icon": "fas fa-truck-ramp-box",
+      "icon": "fa-truck-ramp-box",
       "iconColor": "#299974"
     },
     {
@@ -62,28 +62,28 @@
       "dp": "22",
       "name": "voltage_coe",
       "stateless": true,
-      "icon": "fas fa-cash-register",
+      "icon": "fa-cash-register",
       "iconColor": "#B06C51"
     },
     {
       "dp": "23",
       "name": "electric_coe",
       "stateless": true,
-      "icon": "fas fa-dice-d20",
+      "icon": "fa-dice-d20",
       "iconColor": "#5172B0"
     },
     {
       "dp": "24",
       "name": "power_coe",
       "stateless": true,
-      "icon": "fas fa-tower-observation",
+      "icon": "fa-tower-observation",
       "iconColor": "#563AB0"
     },
     {
       "dp": "25",
       "name": "electricity_coe",
       "stateless": true,
-      "icon": "fas fa-gopuram",
+      "icon": "fa-gopuram",
       "iconColor": "#A82F9E"
     },
     {
@@ -96,48 +96,49 @@
     {
       "dp": "38",
       "name": "relay_status",
-      "icon": "fas fa-shuffle",
+      "stateless": true,
+      "icon": "fa-shuffle",
       "iconColor": "#538273"
     },
     {
       "dp": "39",
       "name": "overcharge_switch",
-      "icon": "fas fa-charging-station",
+      "icon": "fa-charging-station",
       "iconColor": "#AB2200"
     },
     {
       "dp": "40",
       "name": "light_mode",
       "stateless": true,
-      "icon": "fas fa-stopwatch",
+      "icon": "fa-stopwatch",
       "iconColor": "#618750"
     },
     {
       "dp": "41",
       "name": "child_lock",
       "stateless": true,
-      "icon": "fas fa-lock",
+      "icon": "fa-lock",
       "iconColor": "#AB2631"
     },
     {
       "dp": "42",
       "name": "cycle_time",
       "stateless": true,
-      "icon": "fas fa-stopwatch-20",
+      "icon": "fa-stopwatch-20",
       "iconColor": "#7C2D9C"
     },
     {
       "dp": "43",
       "name": "random_time",
       "stateless": true,
-      "icon": "fas fa-truck-ramp-box",
+      "icon": "fa-truck-ramp-box",
       "iconColor": "#95A346"
     },
     {
       "dp": "44",
       "name": "switch_inching",
       "stateless": true,
-      "icon": "fas fa-truck-ramp-box",
+      "icon": "fa-truck-ramp-box",
       "iconColor": "#299974"
     }
   ]

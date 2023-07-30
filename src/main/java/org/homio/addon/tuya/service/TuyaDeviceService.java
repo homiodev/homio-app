@@ -1,5 +1,22 @@
 package org.homio.addon.tuya.service;
 
+import static java.util.Objects.requireNonNull;
+import static org.apache.commons.lang3.ObjectUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.addon.tuya.TuyaEntrypoint.eventLoopGroup;
+import static org.homio.addon.tuya.TuyaEntrypoint.udpDiscoveryListener;
+import static org.homio.addon.tuya.service.TuyaDiscoveryService.updateTuyaDeviceEntity;
+
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -21,28 +38,12 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
+import org.homio.api.model.device.ConfigDeviceEndpoint;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.api.ui.UI;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
-
-import static org.apache.commons.lang3.ObjectUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.homio.addon.tuya.TuyaEntrypoint.eventLoopGroup;
-import static org.homio.addon.tuya.TuyaEntrypoint.udpDiscoveryListener;
-import static org.homio.addon.tuya.service.TuyaDiscoveryService.updateTuyaDeviceEntity;
 
 /**
  * Handles commands and state updates
@@ -66,9 +67,8 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     private @NotNull Map<String, SchemaDp> schemaDps = Map.of();
     private List<ConfigDeviceDefinition> models;
 
-    public TuyaDeviceService(EntityContext entityContext, TuyaDeviceEntity entity) {
-        super(entityContext, entity);
-        this.initialize();
+    public TuyaDeviceService(EntityContext entityContext) {
+        super(entityContext);
     }
 
     @Override
@@ -137,7 +137,8 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                         if (CONFIG_DEVICE_SERVICE.isIgnoreEndpoint(entry.getKey())) {
                             log.info("[{}]: ({}): Skip endpoint: {}", entityID, entity.getTitle(), entry.getKey());
                         } else {
-                            endpoints.put(entry.getKey(), new TuyaDeviceEndpoint(entry.getValue(), entityContext, entity));
+                            ConfigDeviceEndpoint endpoint = CONFIG_DEVICE_SERVICE.getDeviceEndpoints().get(entry.getKey());
+                            endpoints.put(entry.getKey(), new TuyaDeviceEndpoint(entry.getValue(), entityContext, entity, endpoint));
                         }
                     }
                 } else {
@@ -162,12 +163,12 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
 
     private void createOrUpdateDeviceGroup() {
         Icon icon = new Icon(
-                CONFIG_DEVICE_SERVICE.getDeviceIcon(findDevices(), "fas fa-server"),
-                CONFIG_DEVICE_SERVICE.getDeviceIconColor(findDevices(), UI.Color.random())
+            CONFIG_DEVICE_SERVICE.getDeviceIcon(findDevices(), "fas fa-server"),
+            CONFIG_DEVICE_SERVICE.getDeviceIconColor(findDevices(), UI.Color.random())
         );
         entityContext.var().createGroup("tuya", "Tuya", true, new Icon("fas fa-fish-fins", "#D68C38"));
-        entityContext.var().createGroup("tuya", entityID, getDeviceFullName(), true,
-                icon, getGroupDescription());
+        entityContext.var().createGroup("tuya", requireNonNull(entity.getIeeeAddress()), getDeviceFullName(), true,
+            icon, getGroupDescription());
     }
 
     public String getGroupDescription() {
@@ -274,7 +275,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
 
             if (!endpoint.processEndpointStatus(rawValue)) {
                 log.warn("[{}]: Could not update endpoint '{}' with value '{}'. Datatype incompatible.",
-                        entity.getEntityID(), endpoint.getDeviceEntityID(), rawValue);
+                    entity.getEntityID(), endpoint.getDeviceID(), rawValue);
             }
         } else {
             List<TuyaDeviceEndpoint> dp2Endpoints = endpoints.values().stream().filter(p -> p.getDp2() == dp).toList();

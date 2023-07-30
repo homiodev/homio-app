@@ -19,7 +19,6 @@ import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UI.Color;
-import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -253,7 +252,7 @@ public final class TuyaDeviceEntity extends DeviceBaseEntity<TuyaDeviceEntity>
 
     @Override
     public @NotNull TuyaDeviceService createService(@NotNull EntityContext entityContext) {
-        return new TuyaDeviceService(entityContext, this);
+        return new TuyaDeviceService(entityContext);
     }
 
     @SneakyThrows
