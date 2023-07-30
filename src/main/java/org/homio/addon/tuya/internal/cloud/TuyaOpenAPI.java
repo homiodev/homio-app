@@ -1,5 +1,6 @@
 package org.homio.addon.tuya.internal.cloud;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import lombok.SneakyThrows;
@@ -32,6 +33,8 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.util.*;
 
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+
 /**
  * Implementation of the Tuya OpenApi specification
  */
@@ -55,7 +58,7 @@ public class TuyaOpenAPI {
         return !token.accessToken.isEmpty() && System.currentTimeMillis() < token.expireTimestamp;
     }
 
-    public synchronized void login() throws Exception {
+    public synchronized void login() {
         assertApiReady();
         if (isConnected()) {
             return;
@@ -91,50 +94,49 @@ public class TuyaOpenAPI {
         }
     }
 
-    public TuyaDeviceDTO getDevice(String deviceID, TuyaDeviceEntity entity) throws Exception {
-        login();
+    public TuyaDeviceDTO getDevice(String deviceID, TuyaDeviceEntity entity) {
         String response = request("/v1.1/iot-03/devices/" + deviceID, Map.of(), null);
         return processResponse(response, TuyaDeviceDTO.class, entity);
     }
 
-    @SneakyThrows
     public List<TuyaSubDeviceInfoDTO> getSubDevices(String deviceID, TuyaDeviceEntity entity) {
-        login();
         String response = request("/v1.0/devices/" + deviceID + "/sub-devices", Map.of(), null);
         return processResponse(response, TypeToken.getParameterized(List.class, TuyaSubDeviceInfoDTO.class).getType(), entity);
     }
 
+    @SneakyThrows
+    public Object getUserInfo() {
+        String response = request("/v1.0/users/" + projectEntity.getAppUID() + "/infos", Map.of(), null);
+        return OBJECT_MAPPER.readValue(response, ObjectNode.class);
+    }
 
-    public List<FactoryInformation> getFactoryInformation(List<String> deviceIds, TuyaDeviceEntity entity) throws Exception {
-        login();
+    public List<FactoryInformation> getFactoryInformation(List<String> deviceIds, TuyaDeviceEntity entity) {
         Map<String, String> params = Map.of("device_ids", String.join(",", deviceIds));
         String response = request("/v1.0/iot-03/devices/factory-infos", params, null);
         return processResponse(response, TypeToken.getParameterized(List.class, FactoryInformation.class).getType(), entity);
     }
 
-    public List<TuyaDeviceDTO> getDeviceList(int page) throws Exception {
-        login();
+    public List<TuyaDeviceDTO> getDeviceList(int page) {
         Map<String, String> params = Map.of(
                 "from", "",
                 "page_no", String.valueOf(page),
                 "page_size", "100");
-        String response = request("/v1.0/users/" + projectEntity.getTuyaUserUID() + "/devices", params, null);
+        String response = request("/v1.0/users/" + projectEntity.getAppUID() + "/devices", params, null);
         return processResponse(response, TypeToken.getParameterized(List.class, TuyaDeviceDTO.class).getType(), projectEntity);
     }
 
-    public DeviceSchema getDeviceSchema(String deviceId, TuyaDeviceEntity entity) throws Exception {
-        login();
+    public DeviceSchema getDeviceSchema(String deviceId, TuyaDeviceEntity entity) {
         String response = request("/v1.1/devices/" + deviceId + "/specifications", Map.of(), null);
         return processResponse(response, DeviceSchema.class, entity);
     }
 
-    public Boolean sendCommand(String deviceId, CommandRequest command, TuyaDeviceEntity entity) throws Exception {
-        login();
+    public Boolean sendCommand(String deviceId, CommandRequest command, TuyaDeviceEntity entity) {
         String response = request("/v1.0/iot-03/devices/" + deviceId + "/commands", Map.of(), gson.toJson(command));
         return processResponse(response, Boolean.class, entity);
     }
 
-    private <T> T processResponse(String contentString, Type type, DeviceBaseEntity entity) throws ConnectionException {
+    @SneakyThrows
+    private <T> T processResponse(@NotNull String contentString, @NotNull Type type, @NotNull DeviceBaseEntity entity) {
         Type responseType = TypeToken.getParameterized(ResultResponse.class, type).getType();
         ResultResponse<T> resultResponse = Objects.requireNonNull(gson.fromJson(contentString, responseType));
         if (resultResponse.success) {
@@ -151,9 +153,11 @@ public class TuyaOpenAPI {
         }
     }
 
-    private String request(String path, Map<String, String> params,
-        @Nullable String body) throws Exception {
-        assertApiReady();
+    @SneakyThrows
+    private String request(String path, Map<String, String> params, @Nullable String body) {
+        if(!path.contains("/token")) {
+            login();
+        }
         String urlString = buildUrl(path, params);
         String t = Long.toString(System.currentTimeMillis());
         Map<String, String> signatureHeaders = new HashMap<>();

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.service.TuyaDiscoveryService;
 import org.homio.addon.tuya.service.TuyaProjectService;
 import org.homio.api.EntityContext;
@@ -56,14 +57,14 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
         return Lang.getServerMessage("TUYA.DESCRIPTION");
     }
 
-    @UIField(order = 1, required = true, inlineEditWhenEmpty = true)
+    @UIField(order = 1, required = true, inlineEditWhenEmpty = true, descriptionLabel = "tuyaAppUID")
     @UIFieldGroup(value = "AUTH", order = 10, borderColor = "#9C1A9C")
-    public String getTuyaUserUID() {
-        return getJsonData("user");
+    public String getAppUID() {
+        return getJsonData("appUID");
     }
 
-    public void setTuyaUserUID(String value) {
-        setJsonData("user", value);
+    public void setAppUID(String value) {
+        setJsonData("appUID", value);
     }
 
     @UIField(order = 4, required = true, inlineEditWhenEmpty = true, descriptionLabel = "tuyaAccessID")
@@ -136,7 +137,7 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     }
 
     public boolean isValid() {
-        return !getTuyaUserUID().isEmpty()
+        return !getAppUID().isEmpty()
                 && !getAccessID().isEmpty()
                 && !getAccessSecret().asString().isEmpty()
                 && getCountryCode() != null
@@ -144,7 +145,7 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     }
 
     public long getDeepHashCode() {
-        return getJsonDataHashCode("user", "pwd", "accessId", "accessSecret", "cc");
+        return getJsonDataHashCode("appUID", "accessId", "accessSecret", "cc");
     }
 
     @RequiredArgsConstructor
@@ -170,8 +171,20 @@ public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
     public ActionResponseModel scanDevices(EntityContext entityContext) {
         entityContext.bgp().runWithProgress("tuya-scan-devices").execute(progressBar -> {
             entityContext.getBean(TuyaDiscoveryService.class)
-                         .scan(entityContext, progressBar, null);
+                    .scan(entityContext, progressBar, null);
         });
         return ActionResponseModel.fired();
+    }
+
+    @UIContextMenuAction(value = "TUYA.GET_DEVICE_LIST", icon = "fas fa-tape")
+    public ActionResponseModel getDevicesList(EntityContext entityContext) {
+        return ActionResponseModel.showJson("Tuya device list",
+                entityContext.getBean(TuyaDiscoveryService.class).getDeviceList(entityContext));
+    }
+
+    @UIContextMenuAction(value = "TUYA.GET_USER_INFO", icon = "fas fa-tape")
+    public ActionResponseModel getUserInfo(EntityContext entityContext) {
+        return ActionResponseModel.showJson("Tuya device list",
+                entityContext.getBean(TuyaOpenAPI.class).getUserInfo());
     }
 }

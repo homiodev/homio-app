@@ -1,8 +1,5 @@
 package org.homio.addon.tuya.service;
 
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.TuyaDeviceEntity;
@@ -11,7 +8,6 @@ import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
 import org.homio.addon.tuya.internal.cloud.dto.FactoryInformation;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
-import org.homio.addon.tuya.internal.local.UdpDiscoveryListener;
 import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.api.EntityContext;
 import org.homio.api.service.scan.BaseItemsDiscovery.DeviceScannerResult;
@@ -30,10 +26,7 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
  */
 @Log4j2
 @Service
-@RequiredArgsConstructor
 public class TuyaDiscoveryService implements ItemDiscoverySupport {
-
-    private final EntityContext entityContext;
 
     @Override
     public String getName() {
@@ -46,8 +39,17 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
         Set<String> existedDevices = entityContext.findAll(TuyaDeviceEntity.class).stream().map(TuyaDeviceEntity::getIeeeAddress).collect(Collectors.toSet());
         try {
             TuyaProjectEntity tuyaProjectEntity = entityContext.getEntityRequire(TuyaProjectEntity.class, PRIMARY_DEVICE);
-            TuyaProjectService tuyaProjectService = tuyaProjectEntity.getService();
-            processDeviceResponse(List.of(), tuyaProjectService, 0, result, existedDevices);
+            DeviceHandler deviceHandler = device -> {
+                if (!existedDevices.contains(device.id)) {
+                    TuyaDeviceEntity entity = new TuyaDeviceEntity().setEntityID(device.id);
+                    updateTuyaDeviceEntity(device, tuyaProjectEntity.getService().getApi(), entity);
+                    entityContext.save(entity);
+                    result.getNewCount().incrementAndGet();
+                } else {
+                    result.getExistedCount().incrementAndGet();
+                }
+            };
+            processDeviceResponse(List.of(), tuyaProjectEntity.getService(), 0, deviceHandler);
         } catch (Exception ex) {
             log.error("Error scan tuya devices", ex);
             entityContext.ui().sendErrorMessage(ex);
@@ -56,29 +58,26 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
         return result;
     }
 
+    public List<TuyaDeviceDTO> getDeviceList(EntityContext entityContext) {
+        List<TuyaDeviceDTO> list = new ArrayList<>();
+        TuyaProjectEntity entity = entityContext.getEntityRequire(TuyaProjectEntity.class, PRIMARY_DEVICE);
+        processDeviceResponse(List.of(), entity.getService(), 0, list::add);
+        return list;
+    }
+
     @SneakyThrows
     private void processDeviceResponse(
             List<TuyaDeviceDTO> deviceList,
             TuyaProjectService tuyaProjectService,
             int page,
-            DeviceScannerResult result,
-            Set<String> existedDevices) {
-        deviceList.forEach(device -> processDevice(device, tuyaProjectService.getApi(), result, existedDevices));
+            DeviceHandler deviceHandler) {
+        for (TuyaDeviceDTO device : deviceList) {
+            deviceHandler.handle(device);
+        }
         if (page == 0 || deviceList.size() == 100) {
             int nextPage = page + 1;
             List<TuyaDeviceDTO> nextDeviceList = tuyaProjectService.getAllDevices(nextPage);
-            processDeviceResponse(nextDeviceList, tuyaProjectService, nextPage, result, existedDevices);
-        }
-    }
-
-    private void processDevice(TuyaDeviceDTO device, TuyaOpenAPI api, DeviceScannerResult result, Set<String> existedDevices) {
-        if (!existedDevices.contains(device.id)) {
-            TuyaDeviceEntity entity = new TuyaDeviceEntity().setEntityID(device.id);
-            updateTuyaDeviceEntity(device, api, entity);
-            entityContext.save(entity);
-            result.getNewCount().incrementAndGet();
-        } else {
-            result.getExistedCount().incrementAndGet();
+            processDeviceResponse(nextDeviceList, tuyaProjectService, nextPage, deviceHandler);
         }
     }
 
@@ -158,5 +157,10 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
 
     private static boolean isSchemaAlreadyPresent(DeviceSchema.Description description, List<SchemaDp> schemaDps) {
         return schemaDps.stream().anyMatch(schemaDp -> schemaDp.dp == description.dp_id);
+    }
+
+    public interface DeviceHandler {
+
+        void handle(TuyaDeviceDTO device);
     }
 }
