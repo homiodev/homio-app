@@ -47,13 +47,7 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
         try {
             TuyaProjectEntity tuyaProjectEntity = entityContext.getEntityRequire(TuyaProjectEntity.class, PRIMARY_DEVICE);
             TuyaProjectService tuyaProjectService = tuyaProjectEntity.getService();
-            TuyaOpenAPI api = tuyaProjectService.getApi();
-            if (!api.isConnected()) {
-                log.warn("Tried to start scan but API for bridge '{}' is not connected.",
-                        tuyaProjectService.getEntity().getTitle());
-            } else {
-                processDeviceResponse(List.of(), tuyaProjectService, 0, result, existedDevices);
-            }
+            processDeviceResponse(List.of(), tuyaProjectService, 0, result, existedDevices);
         } catch (Exception ex) {
             log.error("Error scan tuya devices", ex);
             entityContext.ui().sendErrorMessage(ex);

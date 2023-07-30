@@ -114,11 +114,11 @@ public class TuyaOpenAPI {
 
     public List<TuyaDeviceDTO> getDeviceList(int page) throws Exception {
         login();
-        Map<String, String> params = Map.of(//
-            "from", "", //
-            "page_no", String.valueOf(page), //
-            "page_size", "100");
-        String response = request("/v1.0/users/" + token.uid + "/devices", params, null);
+        Map<String, String> params = Map.of(
+                "from", "",
+                "page_no", String.valueOf(page),
+                "page_size", "100");
+        String response = request("/v1.0/users/" + projectEntity.getTuyaUserUID() + "/devices", params, null);
         return processResponse(response, TypeToken.getParameterized(List.class, TuyaDeviceDTO.class).getType(), projectEntity);
     }
 

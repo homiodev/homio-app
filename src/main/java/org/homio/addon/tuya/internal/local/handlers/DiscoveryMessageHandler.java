@@ -35,8 +35,6 @@ public class DiscoveryMessageHandler extends ChannelDuplexHandler {
                     }
                 }
             }
-        } else {
-            System.out.println("What");
         }
     }
 }

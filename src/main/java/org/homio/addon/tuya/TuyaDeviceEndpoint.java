@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static org.homio.api.util.CommonUtils.splitNameToReadableFormat;
+
 @SuppressWarnings("CommentedOutCode")
 @Log4j2
 public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
@@ -102,12 +104,14 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
 
     @Override
     public @NotNull String getName(boolean shortFormat) {
-        return "name";
+        String l1Name = endpointEntityID;
+        String name = splitNameToReadableFormat(l1Name);
+        return shortFormat ? name : "${tuyae.name.%s~%s}".formatted(l1Name, name);
     }
 
     @Override
     public @Nullable String getDescription() {
-        return "${tuya.%s~%s}".formatted(schemaDp.code, schemaDp.code);
+        return "${tuyad.%s~%s}".formatted(schemaDp.code, schemaDp.code);
     }
 
     @Override
@@ -135,10 +139,12 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                 }
                 case string -> {
                     // not implemented
-                    uiInputBuilder.addTextInput(getEntityID(), value.stringValue(), false);
-                    //commandRequest.put(configuration.dp, command.toString());
-                    log.error("[{}]: Tuya write handler not implemented for endpoint: {}. Type: {}",
-                            getDeviceEntityID(), getEndpointEntityID(), tuyaEndpointType);
+                    if(!value.stringValue().equals("N/A")) {
+                        uiInputBuilder.addTextInput(getEntityID(), value.stringValue(), false);
+                        //commandRequest.put(configuration.dp, command.toString());
+                        log.error("[{}]: Tuya write handler not implemented for endpoint: {}. Type: {}",
+                                getDeviceEntityID(), getEndpointEntityID(), tuyaEndpointType);
+                    }
                 }
                 case color -> {
                     if (dp2 != 0) {
