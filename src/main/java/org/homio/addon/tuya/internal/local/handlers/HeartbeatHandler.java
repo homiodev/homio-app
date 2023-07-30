@@ -11,9 +11,9 @@ import org.homio.addon.tuya.internal.local.MessageWrapper;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_MAXIMUM_MISSED_HEARTBEATS;
-import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_TIMEOUT;
 import static org.homio.addon.tuya.internal.local.CommandType.HEART_BEAT;
+import static org.homio.addon.tuya.internal.local.TuyaDeviceCommunicator.TCP_CONNECTION_MAXIMUM_MISSED_HEARTBEATS;
+import static org.homio.addon.tuya.internal.local.TuyaDeviceCommunicator.TCP_CONNECTION_TIMEOUT;
 
 /**
  * Responsible for sending and receiving heartbeat messages
@@ -39,12 +39,12 @@ public class HeartbeatHandler extends ChannelDuplexHandler {
                 heartBeatMissed++;
                 if (heartBeatMissed > TCP_CONNECTION_MAXIMUM_MISSED_HEARTBEATS) {
                     log.warn("[{}]: {}{}: Missed more than {} heartbeat responses. Connection seems to be dead.",
-                        entityID, deviceId, Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
-                        TCP_CONNECTION_MAXIMUM_MISSED_HEARTBEATS);
+                            entityID, deviceId, Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""),
+                            TCP_CONNECTION_MAXIMUM_MISSED_HEARTBEATS);
                     ctx.close();
                 } else {
                     log.debug("[{}]: {}{}: Sending ping", entityID, deviceId,
-                        Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
+                            Objects.requireNonNullElse(ctx.channel().remoteAddress(), ""));
                     ctx.channel().writeAndFlush(new MessageWrapper<>(HEART_BEAT, Map.of("dps", "")));
                 }
             }

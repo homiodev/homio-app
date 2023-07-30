@@ -1,19 +1,6 @@
 package org.homio.app.manager.common.impl;
 
-import static java.lang.String.format;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
-
 import com.pivovarit.function.ThrowingConsumer;
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -39,6 +26,20 @@ import org.homio.app.model.var.WorkspaceVariableMessage;
 import org.homio.app.repository.VariableDataRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -448,8 +449,13 @@ public class EntityContextVarImpl implements EntityContextVar {
         @NotNull Consumer<WorkspaceGroup> additionalHandler) {
         WorkspaceGroup entity = entityContext.getEntity(WorkspaceGroup.PREFIX + groupId);
         if (entity == null) {
-            WorkspaceGroup workspaceGroup = new WorkspaceGroup().setGroupId(groupId).setLocked(locked).setName(groupName)
-                                                                .setIcon(icon.getIcon()).setIconColor(icon.getColor()).setDescription(description);
+            WorkspaceGroup workspaceGroup = new WorkspaceGroup()
+                    .setGroupId(groupId)
+                    .setLocked(locked)
+                    .setName(groupName)
+                    .setIcon(icon.getIcon())
+                    .setIconColor(icon.getColor())
+                    .setDescription(description);
             additionalHandler.accept(workspaceGroup);
             entityContext.save(workspaceGroup);
             return true;

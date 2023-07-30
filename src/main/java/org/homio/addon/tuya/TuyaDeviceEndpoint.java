@@ -3,6 +3,7 @@ package org.homio.addon.tuya;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.util.SchemaDp;
+import org.homio.addon.z2m.service.Z2MDeviceService;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar.VariableMetaBuilder;
 import org.homio.api.EntityContextVar.VariableType;
@@ -25,6 +26,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static org.homio.addon.tuya.service.TuyaDeviceService.CONFIG_DEVICE_SERVICE;
 import static org.homio.api.util.CommonUtils.splitNameToReadableFormat;
 
 @SuppressWarnings("CommentedOutCode")
@@ -64,6 +66,10 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                 schemaDp.code,
                 0,
                 calcEndpointType());
+
+        if (CONFIG_DEVICE_SERVICE.isEndpointHasVariable(schemaDp.code)) {
+            getOrCreateVariable();
+        }
         this.processEndpointStatusHandler = buildProcessEndpointStatusHandler();
     }
 
@@ -106,7 +112,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
     public @NotNull String getName(boolean shortFormat) {
         String l1Name = endpointEntityID;
         String name = splitNameToReadableFormat(l1Name);
-        return shortFormat ? name : "${tuyae.name.%s~%s}".formatted(l1Name, name);
+        return shortFormat ? name : "${tuyae.%s~%s}".formatted(l1Name, name);
     }
 
     @Override
@@ -396,6 +402,11 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                 };
             }
         }
+    }
+
+    @Override
+    public boolean isVisible() {
+        return !Z2MDeviceService.CONFIG_DEVICE_SERVICE.isHideEndpoint(schemaDp.code);
     }
 
     public enum TuyaEndpointType {

@@ -11,7 +11,7 @@ import org.homio.addon.tuya.service.TuyaProjectService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.log.HasEntityLog;
-import org.homio.api.entity.types.MiscEntity;
+import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.OptionModel.KeyValueEnum;
 import org.homio.api.model.Status;
@@ -34,7 +34,7 @@ import java.util.Objects;
 @Entity
 @Accessors(chain = true)
 @UISidebarChildren(icon = "fas fa-diagram-project", color = "#0088CC", allowCreateItem = false)
-public final class TuyaProjectEntity extends MiscEntity<TuyaProjectEntity>
+public final class TuyaProjectEntity extends MicroControllerBaseEntity<TuyaProjectEntity>
         implements EntityService<TuyaProjectService, TuyaProjectEntity>,
         HasStatusAndMsg<TuyaProjectEntity>, HasEntityLog {
 

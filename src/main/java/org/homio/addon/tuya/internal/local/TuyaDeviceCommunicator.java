@@ -20,8 +20,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_HEARTBEAT_INTERVAL;
-import static org.homio.addon.tuya.internal.TuyaBindingConstants.TCP_CONNECTION_TIMEOUT;
 import static org.homio.addon.tuya.internal.local.CommandType.*;
 import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
 
@@ -30,6 +28,10 @@ import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
  */
 @Log4j2
 public class TuyaDeviceCommunicator implements ChannelFutureListener {
+
+    private static final int TCP_CONNECTION_HEARTBEAT_INTERVAL = 10; // in s
+    public static final int TCP_CONNECTION_TIMEOUT = 60; // in s;
+    public static final int TCP_CONNECTION_MAXIMUM_MISSED_HEARTBEATS = 3;
 
     private final Bootstrap bootstrap = new Bootstrap();
     private final DeviceStatusListener deviceStatusListener;

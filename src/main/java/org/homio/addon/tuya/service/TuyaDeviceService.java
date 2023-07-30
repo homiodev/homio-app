@@ -17,10 +17,12 @@ import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.api.ui.UI;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -36,6 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.ObjectUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.addon.tuya.TuyaEntrypoint.eventLoopGroup;
 import static org.homio.addon.tuya.TuyaEntrypoint.udpDiscoveryListener;
@@ -69,7 +72,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     }
 
     @Override
-    public void processDeviceStatus(String cid, Map<Integer, Object> deviceStatus) {
+    public void processDeviceStatus(String cid, @NotNull Map<Integer, Object> deviceStatus) {
         log.debug("[{}]: received status message '{}'", entity.getEntityID(), deviceStatus);
 
         if (deviceStatus.isEmpty()) {
@@ -116,6 +119,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     @SneakyThrows
     public void initialize() {
         this.destroy(); // stop all before initialize
+        createOrUpdateDeviceGroup();
         try {
             if (StringUtils.isEmpty(entity.getIeeeAddress())) {
                 throw new IllegalArgumentException("Empty device id");
@@ -130,7 +134,11 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                 if (!schemaDps.isEmpty()) {
                     // fallback to retrieved schema
                     for (Entry<String, SchemaDp> entry : schemaDps.entrySet()) {
-                        endpoints.put(entry.getKey(), new TuyaDeviceEndpoint(entry.getValue(), entityContext, entity));
+                        if (CONFIG_DEVICE_SERVICE.isIgnoreEndpoint(entry.getKey())) {
+                            log.info("[{}]: ({}): Skip endpoint: {}", entityID, entity.getTitle(), entry.getKey());
+                        } else {
+                            endpoints.put(entry.getKey(), new TuyaDeviceEndpoint(entry.getValue(), entityContext, entity));
+                        }
                     }
                 } else {
                     entity.setStatus(Status.OFFLINE, "No endpoints found");
@@ -150,6 +158,27 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
             entity.setStatusError(ex);
             log.error("[{}]: Error during initialize tuya device: {}", entity.getEntityID(), CommonUtils.getErrorMessage(ex));
         }
+    }
+
+    private void createOrUpdateDeviceGroup() {
+        Icon icon = new Icon(
+                CONFIG_DEVICE_SERVICE.getDeviceIcon(findDevices(), "fas fa-server"),
+                CONFIG_DEVICE_SERVICE.getDeviceIconColor(findDevices(), UI.Color.random())
+        );
+        entityContext.var().createGroup("tuya", "Tuya", true, new Icon("fas fa-fish-fins", "#D68C38"));
+        entityContext.var().createGroup("tuya", entityID, getDeviceFullName(), true,
+                icon, getGroupDescription());
+    }
+
+    public String getGroupDescription() {
+        return "${%s} [%s]".formatted(entity.getTitle(), entity.getIeeeAddress());
+    }
+
+    private String getDeviceFullName() {
+        return "%s(%s) [${%s}]".formatted(
+                entity.getTitle(),
+                entity.getIeeeAddress(),
+                defaultIfEmpty(entity.getPlace(), "place_not_set"));
     }
 
     private void fetchDeviceInfo() {

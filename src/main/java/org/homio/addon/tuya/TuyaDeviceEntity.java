@@ -14,13 +14,13 @@ import org.homio.addon.tuya.service.TuyaDeviceService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
-import org.homio.api.entity.types.MiscEntity;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
+import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldSlider;
@@ -50,8 +50,8 @@ import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 @Setter
 @Entity
 @Accessors(chain = true)
-@UISidebarChildren(icon = "fas fa-gamepad", color = "#0088CC")
-public final class TuyaDeviceEntity extends MiscEntity<TuyaDeviceEntity>
+@UISidebarMenu(icon = "fas fa-fish-fins", order = 150, bg = "#D68C38", allowCreateNewItems = true, overridePath = "tuya")
+public final class TuyaDeviceEntity extends DeviceBaseEntity<TuyaDeviceEntity>
         implements DeviceBaseEntity.HasEndpointsDevice, EntityService<TuyaDeviceService, TuyaDeviceEntity>, HasEntityLog {
 
     private static final Map<String, Map<String, SchemaDp>> SCHEMAS = readSchemaFromFile();

@@ -9,6 +9,7 @@ import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.local.UdpDiscoveryListener;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
+import org.homio.api.model.Icon;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class TuyaEntrypoint implements AddonEntrypoint {
 
     @Override
     public void init() {
+        entityContext.var().createGroup("tuya", "Tuya", true, new Icon("fas fa-fish-fins", "#D68C38"));
         TuyaProjectEntity tuyaProjectEntity = ensureEntityExists(entityContext);
         TuyaOpenAPI.setProjectEntity(tuyaProjectEntity);
         udpDiscoveryListener.setProjectEntityID(tuyaProjectEntity.getEntityID());
