@@ -1,10 +1,15 @@
 package org.homio.addon.tuya;
 
 import jakarta.persistence.Entity;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.service.TuyaDiscoveryService;
 import org.homio.addon.tuya.service.TuyaProjectService;
@@ -20,14 +25,16 @@ import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldLinkToEntity;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.color.UIFieldColorRef;
+import org.homio.api.ui.field.inline.UIFieldInlineEntities;
+import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.util.Lang;
 import org.homio.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Objects;
 
 @Getter
 @Setter
@@ -35,11 +42,21 @@ import java.util.Objects;
 @Accessors(chain = true)
 @UISidebarChildren(icon = "fas fa-diagram-project", color = "#0088CC", allowCreateItem = false)
 public final class TuyaProjectEntity extends MicroControllerBaseEntity<TuyaProjectEntity>
-        implements EntityService<TuyaProjectService, TuyaProjectEntity>,
-        HasStatusAndMsg<TuyaProjectEntity>, HasEntityLog {
+    implements EntityService<TuyaProjectService, TuyaProjectEntity>,
+    HasStatusAndMsg<TuyaProjectEntity>, HasEntityLog {
+
+    @UIField(order = 9999, disableEdit = true, hideInEdit = true)
+    @UIFieldInlineEntities(bg = "#27FF000D")
+    public List<TuyaDeviceInlineEntity> getCoordinatorDevices() {
+        return getEntityContext().findAll(TuyaDeviceEntity.class)
+                                 .stream()
+                                 .sorted()
+                                 .map(TuyaDeviceInlineEntity::new)
+                                 .collect(Collectors.toList());
+    }
 
     @Override
-    public TuyaProjectEntity setStatus(@Nullable Status status, @Nullable String msg) {
+    public @NotNull TuyaProjectEntity setStatus(@Nullable Status status, @Nullable String msg) {
         boolean reloadItem = !getStatus().equals(status) || (status == Status.ERROR && !Objects.equals(getStatusMessage(), msg));
         super.setStatus(status, msg);
         if (reloadItem) {
@@ -179,12 +196,42 @@ public final class TuyaProjectEntity extends MicroControllerBaseEntity<TuyaProje
     @UIContextMenuAction(value = "TUYA.GET_DEVICE_LIST", icon = "fas fa-tape")
     public ActionResponseModel getDevicesList(EntityContext entityContext) {
         return ActionResponseModel.showJson("Tuya device list",
-                entityContext.getBean(TuyaDiscoveryService.class).getDeviceList(entityContext));
+            entityContext.getBean(TuyaDiscoveryService.class).getDeviceList(entityContext));
     }
 
     @UIContextMenuAction(value = "TUYA.GET_USER_INFO", icon = "fas fa-tape")
     public ActionResponseModel getUserInfo(EntityContext entityContext) {
         return ActionResponseModel.showJson("Tuya device list",
-                entityContext.getBean(TuyaOpenAPI.class).getUserInfo());
+            entityContext.getBean(TuyaOpenAPI.class).getUserInfo());
+    }
+
+    @Getter
+    @NoArgsConstructor
+    private static class TuyaDeviceInlineEntity {
+
+        @UIField(order = 1)
+        @UIFieldInlineEntityWidth(35)
+        @UIFieldLinkToEntity(TuyaDeviceEntity.class)
+        private String ieeeAddress;
+
+        @UIField(order = 2)
+        @UIFieldColorRef("color")
+        private String name;
+
+        @UIField(order = 4)
+        @UIFieldInlineEntityWidth(10)
+        private int endpointsCount;
+
+        private String color;
+
+        public TuyaDeviceInlineEntity(TuyaDeviceEntity entity) {
+            color = entity.getStatus().getColor();
+            name = entity.getName();
+            if (StringUtils.isEmpty(name) || name.equalsIgnoreCase(entity.getIeeeAddress())) {
+                name = entity.getDescription();
+            }
+            ieeeAddress = entity.getEntityID() + "~~~" + entity.getIeeeAddress();
+            endpointsCount = entity.getService().getEndpoints().size();
+        }
     }
 }

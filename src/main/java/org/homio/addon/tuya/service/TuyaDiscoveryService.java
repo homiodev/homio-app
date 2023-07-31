@@ -1,11 +1,21 @@
 package org.homio.addon.tuya.service;
 
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.TuyaDeviceEntity;
 import org.homio.addon.tuya.TuyaProjectEntity;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
+import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema.Description;
 import org.homio.addon.tuya.internal.cloud.dto.FactoryInformation;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
 import org.homio.addon.tuya.internal.util.SchemaDp;
@@ -14,12 +24,6 @@ import org.homio.api.service.scan.BaseItemsDiscovery.DeviceScannerResult;
 import org.homio.api.service.scan.ItemDiscoverySupport;
 import org.homio.hquery.ProgressBar;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 /**
  * Implements the discovery service for Tuya devices from the cloud
@@ -103,11 +107,12 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
         entity.setIcon(device.icon);
 
         DeviceSchema schema = api.getDeviceSchema(device.id, entity);
-        List<SchemaDp> schemaDps = new ArrayList<>();
-        schema.functions.forEach(description -> addUniqueSchemaDp(description, schemaDps));
-        schema.status.forEach(description -> addUniqueSchemaDp(description, schemaDps));
-        filterAndConfigureSchema(schemaDps);
-        entity.setSchema(schemaDps);
+        Map<Integer, SchemaDp> schemaDps = new HashMap<>();
+        schema.functions.forEach(description -> addUniqueSchemaDp(description, schemaDps).writable = true);
+        schema.status.forEach(description -> addUniqueSchemaDp(description, schemaDps).readable = true);
+        List<SchemaDp> dps = new ArrayList<>(schemaDps.values());
+        filterAndConfigureSchema(dps);
+        entity.setSchema(dps);
     }
 
     private static void filterAndConfigureSchema(List<SchemaDp> schemaDps) {
@@ -140,23 +145,22 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
         }
     }
 
-    private static void addUniqueSchemaDp(DeviceSchema.Description description, List<SchemaDp> schemaDps) {
-        if (description.dp_id == 0 || isSchemaAlreadyPresent(description, schemaDps)) {
-            return;
+    private static SchemaDp addUniqueSchemaDp(Description description, Map<Integer, SchemaDp> schemaMap) {
+        SchemaDp schemaDp = schemaMap.get(description.dp_id);
+        if (description.dp_id == 0 || schemaDp != null) {
+            return schemaDp;
         }
         // some devices report the same function code for different dps
         // we add an index only if this is the case
         String originalCode = description.code;
         int index = 1;
-        while (schemaDps.stream().anyMatch(schemaDp -> schemaDp.code.equals(description.code))) {
+        while (schemaMap.values().stream().anyMatch(sdp -> sdp.code.equals(description.code))) {
             description.code = originalCode + "_" + index;
         }
 
-        schemaDps.add(SchemaDp.fromRemoteSchema(gson, description));
-    }
-
-    private static boolean isSchemaAlreadyPresent(DeviceSchema.Description description, List<SchemaDp> schemaDps) {
-        return schemaDps.stream().anyMatch(schemaDp -> schemaDp.dp == description.dp_id);
+        schemaDp = SchemaDp.fromRemoteSchema(description);
+        schemaMap.put(description.dp_id, schemaDp);
+        return schemaDp;
     }
 
     public interface DeviceHandler {

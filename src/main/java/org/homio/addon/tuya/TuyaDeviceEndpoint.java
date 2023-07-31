@@ -43,7 +43,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
     @Getter
     private final int dp;
     @Getter
-    private final int dp2;
+    private final @Nullable Integer dp2;
     private final @NotNull SchemaDp schemaDp;
     private final @NotNull Function<Object, Boolean> processEndpointStatusHandler;
     private TuyaEndpointType tuyaEndpointType;
@@ -67,9 +67,9 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
             schemaDp.code,
             device,
             entityContext,
-            null,
-            true,
-            true,
+            CONFIG_DEVICE_SERVICE.getUnit(schemaDp.code, schemaDp.unit),
+            Boolean.TRUE.equals(schemaDp.readable),
+            Boolean.TRUE.equals(schemaDp.writable),
             schemaDp.code,
             CONFIG_DEVICE_SERVICE.getEndpointOrder(schemaDp.code),
             calcEndpointType());
@@ -144,7 +144,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                     return uiInputBuilder;
                 }
                 case number -> {
-                    uiInputBuilder.addSlider(getEntityID(), value.floatValue(0), (float) schemaDp.min, (float) schemaDp.max,
+                    uiInputBuilder.addSlider(getEntityID(), value.floatValue(0), floatValue(schemaDp.min), floatValue(schemaDp.max),
                         (entityContext, params) -> {
                             setValue(new DecimalType(params.getInt("value")));
                             device.getService().send(Map.of(dp, value.intValue()));
@@ -174,7 +174,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                     }
                 }
                 case color -> {
-                    if (dp2 != 0) {
+                    if (dp2 != null) {
                         uiInputBuilder.addCheckbox(getEntityID(), value.boolValue(), (entityContext, params) -> {
                             setValue(OnOffType.of(params.getBoolean("value")));
                             device.getService().send(Map.of(dp2, value.boolValue()));
@@ -189,7 +189,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                         if (workModeConfig != null) {
                             commandRequest.put(workModeConfig.dp, "colour");
                         } */
-                        if (dp2 != 0) {
+                        if (dp2 != null) {
                             commandRequest.put(dp2, hexColorToBrightness(value.stringValue()) > 0.0);
                         }
                         device.getService().send(commandRequest);
@@ -215,7 +215,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                     }*/
                 }
                 case dimmer -> {
-                    if (dp2 != 0) {
+                    if (dp2 != null) {
                         uiInputBuilder.addCheckbox(getEntityID(), value.boolValue(), (entityContext, params) -> {
                             setValue(OnOffType.of(params.getBoolean("value")));
                             device.getService().send(Map.of(dp2, value.boolValue()));
@@ -225,13 +225,13 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                     uiInputBuilder.addSlider(getEntityID(), value.floatValue(0), 0F, 100F,
                             (entityContext, params) -> {
                                 Map<Integer, Object> commandRequest = new HashMap<>();
-                                int brightness = (int) Math.round(params.getInt("value") * schemaDp.max / 100.0);
+                                int brightness = (int) Math.round(params.getInt("value") * floatValue(schemaDp.max) / 100.0);
                                 setValue(new DecimalType(brightness));
-                                if (brightness >= schemaDp.min) {
+                                if (brightness >= floatValue(schemaDp.min)) {
                                     commandRequest.put(dp, value);
                                 }
-                                if (dp2 != 0) {
-                                    commandRequest.put(dp2, brightness >= schemaDp.min);
+                                if (dp2 != null) {
+                                    commandRequest.put(dp2, brightness >= floatValue(schemaDp.min));
                                 }
                                 /* ChannelConfiguration workModeConfig = channelIdToConfiguration.get("work_mode");
                                 if (workModeConfig != null) {
@@ -261,7 +261,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
         return builder -> {
             builder.setDescription(getVariableDescription()).setReadOnly(!isWritable()).setColor(getIcon().getColor());
             List<String> attributes = new ArrayList<>();
-            if (schemaDp.max > 0) {
+            if (floatValue(schemaDp.max) > 0) {
                 attributes.add("min:" + schemaDp.min);
                 attributes.add("max:" + schemaDp.max);
             }
@@ -283,7 +283,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
         if (schemaDp.range != null) {
             description.add("(range:%s)".formatted(String.join(";", schemaDp.range)));
         }
-        if (schemaDp.max > 0) {
+        if (floatValue(schemaDp.max) > 0) {
             description.add("(min-max:%S...%s)".formatted(schemaDp.min, schemaDp.max));
         }
         return String.join(" ", description);
@@ -414,10 +414,10 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                         double value = (double) rawValue;
                         if (value <= 0) {
                             setValue(DecimalType.ZERO);
-                        } else if (value >= schemaDp.max) {
+                        } else if (value >= floatValue(schemaDp.max)) {
                             setValue(DecimalType.HUNDRED);
                         } else {
-                            setValue(new DecimalType(new BigDecimal(100.0 * value / (schemaDp.max - 0))));
+                            setValue(new DecimalType(new BigDecimal(100.0 * value / (floatValue(schemaDp.max) - 0))));
                         }
                         return true;
                     }
@@ -443,5 +443,9 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
 
     public enum TuyaEndpointType {
         bool, number, string, color, dimmer, select
+    }
+
+    private float floatValue(Float value) {
+        return value == null ? 0 : value;
     }
 }

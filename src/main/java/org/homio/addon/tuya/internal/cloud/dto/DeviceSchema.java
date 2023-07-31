@@ -18,19 +18,4 @@ public class DeviceSchema {
         public String type = "";
         public String values = "";
     }
-
-    public static class EnumRange {
-
-        public List<String> range = List.of();
-    }
-
-    public static class NumericRange {
-
-        public double min = Double.MIN_VALUE;
-        public double max = Double.MAX_VALUE;
-    }
-
-    public boolean hasFunction(String fcn) {
-        return functions.stream().anyMatch(f -> fcn.equals(f.code));
-    }
 }

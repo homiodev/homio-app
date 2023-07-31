@@ -70,7 +70,7 @@ public final class TuyaDeviceEntity extends DeviceBaseEntity<TuyaDeviceEntity>
     @UIFieldColorBgRef(value = "statusColor", animate = true)
     @UIFieldGroup(value = "NAME", order = 1, borderColor = "#CDD649")
     public String getDescription() {
-        return "some doc";
+        return null;
     }
 
     @Override
@@ -79,10 +79,13 @@ public final class TuyaDeviceEntity extends DeviceBaseEntity<TuyaDeviceEntity>
         return super.getIeeeAddress();
     }
 
-    @UIField(order = 3)
+    @UIField(order = 3, hideOnEmpty = true)
     @UIFieldShowOnCondition("return !context.get('compactMode')")
     @UIFieldGroup("NAME")
-    @JsonIgnore(false)
+    public String getDeviceModel() {
+        return getModel();
+    }
+
     public @NotNull String getModel() {
         return getJsonDataRequire("model", "tuya_unknown");
     }
