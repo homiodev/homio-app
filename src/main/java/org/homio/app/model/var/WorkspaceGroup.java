@@ -197,13 +197,13 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     }
 
     @UIContextMenuAction(value = "CLEAR_BACKUP", icon = "fas fa-database", inputs = {
-        @UIActionInput(name = "keep_days", type = Type.number, value = "-1", min = -1, max = 365),
-        @UIActionInput(name = "keep_count", type = Type.number, value = "-1", min = -1, max = 100_000)
+        @UIActionInput(name = "KEEP_DAYS", type = Type.number, value = "-1", min = -1, max = 365),
+        @UIActionInput(name = "KEEP_COUNT", type = Type.number, value = "-1", min = -1, max = 100_000)
     })
     public ActionResponseModel clearBackup(EntityContext entityContext, JSONObject params) {
         val repository = entityContext.getBean(VariableDataRepository.class);
-        int days = params.optInt("keep_days", -1);
-        int count = params.optInt("keep_count", -1);
+        int days = params.optInt("KEEP_DAYS", -1);
+        int count = params.optInt("KEEP_COUNT", -1);
         if (days == 0 || count == 0) {
             return clearBackupResponse(clearAll(repository));
         }

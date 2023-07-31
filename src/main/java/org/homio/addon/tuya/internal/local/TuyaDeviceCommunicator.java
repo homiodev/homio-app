@@ -1,27 +1,41 @@
 package org.homio.addon.tuya.internal.local;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.homio.addon.tuya.internal.local.CommandType.CONTROL;
+import static org.homio.addon.tuya.internal.local.CommandType.CONTROL_NEW;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_QUERY;
+import static org.homio.addon.tuya.internal.local.CommandType.DP_REFRESH;
+import static org.homio.addon.tuya.internal.local.CommandType.SESS_KEY_NEG_START;
+import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
+
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.TuyaDeviceEntity;
-import org.homio.addon.tuya.internal.local.handlers.*;
+import org.homio.addon.tuya.internal.local.handlers.HeartbeatHandler;
+import org.homio.addon.tuya.internal.local.handlers.TuyaDecoder;
+import org.homio.addon.tuya.internal.local.handlers.TuyaEncoder;
+import org.homio.addon.tuya.internal.local.handlers.TuyaMessageHandler;
+import org.homio.addon.tuya.internal.local.handlers.UserEventHandler;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Status;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.homio.addon.tuya.internal.local.CommandType.*;
-import static org.homio.addon.tuya.internal.local.ProtocolVersion.V3_4;
 
 /**
  * Handles the device connection
@@ -77,15 +91,17 @@ public class TuyaDeviceCommunicator implements ChannelFutureListener {
         bootstrap.connect(address, 6668).addListener(this);
     }
 
-    public void set(@NotNull Map<Integer, @Nullable Object> command) {
+    public ActionResponseModel sendCommand(@NotNull Map<Integer, @Nullable Object> command) {
         CommandType commandType = (protocolVersion == V3_4) ? CONTROL_NEW : CONTROL;
         MessageWrapper<?> m = new MessageWrapper<>(commandType, Map.of("dps", command));
         Channel channel = this.channel;
         if (channel != null) {
             channel.writeAndFlush(m);
+            return ActionResponseModel.fired();
         } else {
             log.warn("[{}]: {}: Setting {} failed. Device is not connected.",
-                    entity.getEntityID(), deviceId, command);
+                entity.getEntityID(), deviceId, command);
+            return ActionResponseModel.showWarn("Device offline");
         }
     }
 

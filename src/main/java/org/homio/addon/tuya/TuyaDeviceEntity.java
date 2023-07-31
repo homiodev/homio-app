@@ -1,9 +1,22 @@
 package org.homio.addon.tuya;
 
+import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
+import static org.homio.addon.tuya.service.TuyaDeviceService.CONFIG_DEVICE_SERVICE;
+import static org.homio.api.ui.field.UIFieldType.HTML;
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.gson.reflect.TypeToken;
 import jakarta.persistence.Entity;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -32,19 +45,6 @@ import org.homio.api.widget.template.WidgetDefinition;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Type;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
-import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
-import static org.homio.addon.tuya.service.TuyaDeviceService.CONFIG_DEVICE_SERVICE;
-import static org.homio.api.ui.field.UIFieldType.HTML;
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
-
 @Getter
 @Setter
 @Entity
@@ -57,10 +57,12 @@ public final class TuyaDeviceEntity extends DeviceBaseEntity<TuyaDeviceEntity>
 
     @Override
     public @NotNull Map<String, DeviceEndpoint> getDeviceEndpoints() {
-        return getService().getEndpoints()
-                .entrySet()
-                .stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        return optService().map(service ->
+            service.getEndpoints()
+                   .entrySet()
+                   .stream()
+                   .collect(Collectors.toMap(Entry::getKey, entry ->
+                       (DeviceEndpoint) entry.getValue()))).orElse(Map.of());
     }
 
     @UIField(order = 1, hideOnEmpty = true, fullWidth = true, color = "#89AA50", type = HTML)
@@ -80,6 +82,7 @@ public final class TuyaDeviceEntity extends DeviceBaseEntity<TuyaDeviceEntity>
     @UIField(order = 3)
     @UIFieldShowOnCondition("return !context.get('compactMode')")
     @UIFieldGroup("NAME")
+    @JsonIgnore(false)
     public @NotNull String getModel() {
         return getJsonDataRequire("model", "tuya_unknown");
     }

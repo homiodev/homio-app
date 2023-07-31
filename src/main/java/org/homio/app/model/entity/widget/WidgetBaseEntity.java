@@ -190,7 +190,7 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
         if (!isSatisfyPosition(matrix, getXb(), getYb(), getBw(), getBh(), hBlockCount, vBlockCount)) {
             Pair<Integer, Integer> freePosition = findMatrixFreePosition(matrix, getBw(), getBh(), hBlockCount, vBlockCount);
             if (freePosition == null) {
-                throw new IllegalStateException("widget.no_free_position");
+                throw new IllegalStateException("W.ERROR.NO_WIDGET_FREE_POSITION");
             }
             setXb(freePosition.getKey());
             setYb(freePosition.getValue());

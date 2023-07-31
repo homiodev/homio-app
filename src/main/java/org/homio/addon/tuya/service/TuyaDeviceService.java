@@ -83,7 +83,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
 
             TuyaDeviceCommunicator tuyaDeviceCommunicator = this.tuyaDeviceCommunicator;
             if (tuyaDeviceCommunicator != null) {
-                tuyaDeviceCommunicator.set(commandRequest);
+                tuyaDeviceCommunicator.sendCommand(commandRequest);
             }
         } else {
             // addSingleExpiringCache
@@ -107,11 +107,8 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
             // unregister listener only if IP is not fixed
             udpDiscoveryListener.unregisterListener(this);
         }
-        TuyaDeviceCommunicator tuyaDeviceCommunicator = this.tuyaDeviceCommunicator;
-        if (tuyaDeviceCommunicator != null) {
-            tuyaDeviceCommunicator.dispose();
-            this.tuyaDeviceCommunicator = null;
-        }
+        disposeCommunicator();
+        tuyaDeviceCommunicator = null;
         disposing.set(false);
     }
 
@@ -203,7 +200,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
 
     @Override
     public void onDisconnected(@NotNull String message) {
-        entity.setStatus(Status.OFFLINE);
+        entity.setStatus(Status.ERROR, message);
         if (EntityContextBGP.cancel(pollingJob)) {
             pollingJob = null;
         }
@@ -234,17 +231,21 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     public void deviceInfoChanged(DeviceInfo deviceInfo) {
         log.info("[{}]: Configuring IP address '{}' for thing '{}'.", entity.getEntityID(), deviceInfo, entity.getTitle());
 
+        disposeCommunicator();
+        if (!deviceInfo.ip().equals(entity.getIp())) {
+            entityContext.save(entity.setIp(deviceInfo.ip()));
+        }
+        entity.setStatus(Status.WAITING, null);
+
+        this.tuyaDeviceCommunicator = new TuyaDeviceCommunicator(this, eventLoopGroup,
+            deviceInfo.ip(), deviceInfo.protocolVersion(), entity);
+    }
+
+    private void disposeCommunicator() {
         TuyaDeviceCommunicator tuyaDeviceCommunicator = this.tuyaDeviceCommunicator;
         if (tuyaDeviceCommunicator != null) {
             tuyaDeviceCommunicator.dispose();
         }
-        if (!deviceInfo.ip().equals(entity.getIp())) {
-            entityContext.save(entity.setIp(deviceInfo.ip()));
-        }
-        entity.setStatus(Status.WAITING);
-
-        this.tuyaDeviceCommunicator = new TuyaDeviceCommunicator(this, eventLoopGroup,
-                deviceInfo.ip(), deviceInfo.protocolVersion(), entity);
     }
 
     @SneakyThrows
@@ -297,7 +298,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     public void send(@NotNull Map<Integer, @Nullable Object> commands) {
         TuyaDeviceCommunicator tuyaDeviceCommunicator = this.tuyaDeviceCommunicator;
         if (tuyaDeviceCommunicator != null) {
-            tuyaDeviceCommunicator.set(commands);
+            tuyaDeviceCommunicator.sendCommand(commands);
         }
     }
 

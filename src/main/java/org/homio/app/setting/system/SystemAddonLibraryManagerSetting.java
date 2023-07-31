@@ -72,12 +72,15 @@ public class SystemAddonLibraryManagerSetting
      * Remove packages if no versions available. Also remove versions that not match app major version
      */
     private void filterMatchPackages(EntityContext entityContext, Collection<PackageModel> allPackageModels) {
+        int appVersion = entityContext.setting().getApplicationMajorVersion();
+        if (appVersion == 0) {
+            return;
+        }
         allPackageModels.removeIf(packageModel -> {
             if (packageModel.getVersions() == null) {
                 return true;
             } else {
-                packageModel.getVersions().removeIf(packageVersion ->
-                    !AddonContext.validVersion(packageVersion, entityContext.setting().getApplicationMajorVersion()));
+                packageModel.getVersions().removeIf(packageVersion -> !AddonContext.validVersion(packageVersion, appVersion));
                 return packageModel.getVersions().isEmpty();
             }
         });

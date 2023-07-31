@@ -1,12 +1,12 @@
-package org.homio.app.setting;
+package org.homio.addon.tuya;
 
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.types.MicroControllerBaseEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.setting.SettingPluginButton;
+import org.jetbrains.annotations.NotNull;
 
-public class ScanMicroControllersSetting implements SettingPluginButton {
+public class ScanTuyaDevicesSetting implements SettingPluginButton {
 
     @Override
     public int order() {
@@ -14,13 +14,13 @@ public class ScanMicroControllersSetting implements SettingPluginButton {
     }
 
     @Override
-    public Icon getIcon() {
-        return new Icon("fas fa-qrcode", "#7482D0");
+    public @NotNull Icon getIcon() {
+        return new Icon("fas fa-qrcode", "#ED3E58");
     }
 
     @Override
     public String getConfirmMsg() {
-        return "TITLE.SCAN_CONTROLLERS";
+        return "TUYA.SCAN_DEVICES";
     }
 
     @Override
@@ -30,6 +30,6 @@ public class ScanMicroControllersSetting implements SettingPluginButton {
 
     @Override
     public Class<? extends BaseEntity> availableForEntity() {
-        return MicroControllerBaseEntity.class;
+        return TuyaDeviceEntity.class;
     }
 }

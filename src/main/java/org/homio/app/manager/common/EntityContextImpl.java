@@ -45,7 +45,7 @@ import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.repository.GitHubProject;
 import org.homio.api.service.scan.BeansItemsDiscovery;
-import org.homio.api.service.scan.MicroControllerScanner;
+import org.homio.api.service.scan.ItemDiscoverySupport;
 import org.homio.api.service.scan.VideoStreamScanner;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
@@ -92,7 +92,7 @@ import org.homio.app.rest.FileSystemController;
 import org.homio.app.rest.ItemController;
 import org.homio.app.rest.SettingController;
 import org.homio.app.service.cloud.CloudService;
-import org.homio.app.setting.ScanMicroControllersSetting;
+import org.homio.app.setting.ScanDevicesSetting;
 import org.homio.app.setting.ScanVideoStreamSourcesSetting;
 import org.homio.app.setting.system.SystemClearCacheButtonSetting;
 import org.homio.app.setting.system.SystemShowEntityStateSetting;
@@ -272,8 +272,8 @@ public class EntityContextImpl implements EntityContext {
             ui().sendSuccessMessage("Cache has been cleared successfully");
         });
         setting().listenValue(SystemSoftRestartButtonSetting.class, "soft-restart", () -> SystemSoftRestartButtonSetting.restart(this));
-        setting().listenValue(ScanMicroControllersSetting.class, "scan-micro-controllers", () ->
-            ui().handleResponse(new BeansItemsDiscovery(MicroControllerScanner.class).handleAction(this, null)));
+        setting().listenValue(ScanDevicesSetting.class, "scan-devices", () ->
+            ui().handleResponse(new BeansItemsDiscovery(ItemDiscoverySupport.class).handleAction(this, null)));
         setting().listenValue(ScanVideoStreamSourcesSetting.class, "scan-video-sources", () ->
             ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
 

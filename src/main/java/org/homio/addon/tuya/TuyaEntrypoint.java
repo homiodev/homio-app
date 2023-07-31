@@ -1,22 +1,20 @@
 package org.homio.addon.tuya;
 
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import java.net.URL;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.local.UdpDiscoveryListener;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
-import org.homio.api.model.Icon;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
-
-import java.net.URL;
-
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +33,10 @@ public class TuyaEntrypoint implements AddonEntrypoint {
     @Override
     public void init() {
         TuyaProjectEntity tuyaProjectEntity = ensureEntityExists(entityContext);
+        entityContext.setting().listenValue(ScanTuyaDevicesSetting.class, "scan-tuya", () -> {
+            tuyaProjectEntity.scanDevices(entityContext);
+        });
+
         TuyaOpenAPI.setProjectEntity(tuyaProjectEntity);
         udpDiscoveryListener.setProjectEntityID(tuyaProjectEntity.getEntityID());
     }

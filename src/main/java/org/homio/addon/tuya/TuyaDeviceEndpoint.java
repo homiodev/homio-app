@@ -20,6 +20,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar.VariableMetaBuilder;
 import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.model.Icon;
+import org.homio.api.model.OptionModel;
 import org.homio.api.model.device.ConfigDeviceEndpoint;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
 import org.homio.api.state.DecimalType;
@@ -144,20 +145,32 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                 }
                 case number -> {
                     uiInputBuilder.addSlider(getEntityID(), value.floatValue(0), (float) schemaDp.min, (float) schemaDp.max,
-                            (entityContext, params) -> {
-                                setValue(new DecimalType(params.getInt("value")));
-                                device.getService().send(Map.of(dp, value.intValue()));
-                                return null;
-                            });
+                        (entityContext, params) -> {
+                            setValue(new DecimalType(params.getInt("value")));
+                            device.getService().send(Map.of(dp, value.intValue()));
+                            return null;
+                        });
+                    return uiInputBuilder;
+                }
+                case select -> {
+                    uiInputBuilder
+                        .addSelectBox(getEntityID(), (entityContext, params) -> {
+                            setValue(new StringType(params.getString("value")));
+                            device.getService().send(Map.of(dp, value.stringValue()));
+                            return null;
+                        })
+                        .addOptions(OptionModel.list(getSelectValues()))
+                        .setPlaceholder("-----------")
+                        .setSelected(getValue().toString());
                     return uiInputBuilder;
                 }
                 case string -> {
                     // not implemented
-                    if(!value.stringValue().equals("N/A")) {
+                    if (!value.stringValue().equals("N/A")) {
                         uiInputBuilder.addTextInput(getEntityID(), value.stringValue(), false);
                         //commandRequest.put(configuration.dp, command.toString());
                         log.error("[{}]: Tuya write handler not implemented for endpoint: {}. Type: {}",
-                                getDeviceEntityID(), getEndpointEntityID(), tuyaEndpointType);
+                            getDeviceEntityID(), getEndpointEntityID(), tuyaEndpointType);
                     }
                 }
                 case color -> {
@@ -282,8 +295,14 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
             case bool -> {
                 return VariableType.Bool;
             }
-            case number -> {
+            case dimmer, number -> {
                 return VariableType.Float;
+            }
+            case select -> {
+                return VariableType.Enum;
+            }
+            case color -> {
+                return VariableType.Color;
             }
             default -> {
                 return VariableType.Any;
@@ -308,7 +327,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
             tuyaEndpointType = TuyaEndpointType.bool;
             return EndpointType.bool;
         } else if ("enum".equals(schemaDp.type)) {
-            tuyaEndpointType = TuyaEndpointType.string;
+            tuyaEndpointType = TuyaEndpointType.select;
             return EndpointType.select;
         } else if ("string".equals(schemaDp.type)) {
             tuyaEndpointType = TuyaEndpointType.string;
@@ -423,6 +442,6 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
     }
 
     public enum TuyaEndpointType {
-        bool, number, string, color, dimmer
+        bool, number, string, color, dimmer, select
     }
 }
