@@ -2,6 +2,7 @@ package org.homio.app.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Transient;
@@ -18,7 +19,10 @@ import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
+import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.model.JSON;
 import org.homio.api.model.Status;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.MonacoLanguage;
@@ -33,9 +37,16 @@ import org.springframework.core.env.Environment;
 @UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
                overridePath = "scripts")
 @Accessors(chain = true)
-public class ScriptEntity extends BaseEntity<ScriptEntity> {
+public class ScriptEntity extends BaseEntity<ScriptEntity> implements HasJsonData {
 
     public static final String PREFIX = "script_";
+
+    @Getter
+    @Setter
+    @Column(length = 10_000)
+    @Convert(converter = JSONConverter.class)
+    @NotNull
+    private JSON jsonData = new JSON();
 
     @Getter
     @Setter

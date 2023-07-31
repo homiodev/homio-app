@@ -1,5 +1,6 @@
 package org.homio.addon.tuya;
 
+import static java.util.Objects.requireNonNull;
 import static org.homio.addon.tuya.service.TuyaDeviceService.CONFIG_DEVICE_SERVICE;
 import static org.homio.api.util.CommonUtils.splitNameToReadableFormat;
 
@@ -288,6 +289,11 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                 return VariableType.Any;
             }
         }
+    }
+
+    @Override
+    protected @NotNull List<String> getVariableEnumValues() {
+        return requireNonNull(schemaDp.range);
     }
 
     private EndpointType calcEndpointType() {

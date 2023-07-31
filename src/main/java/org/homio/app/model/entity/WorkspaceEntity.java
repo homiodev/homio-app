@@ -1,28 +1,34 @@
 package org.homio.app.model.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasJsonData;
+import org.homio.api.model.JSON;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter
 @Entity
 @Accessors(chain = true)
-public final class WorkspaceEntity extends BaseEntity<WorkspaceEntity> {
+public final class WorkspaceEntity extends BaseEntity<WorkspaceEntity> implements HasJsonData {
 
     public static final String PREFIX = "space_";
 
     @Column(length = 10_485_760)
     private String content;
 
-    @Override
-    public int compareTo(@NotNull BaseEntity o) {
-        return this.getCreationTime().compareTo(o.getCreationTime());
-    }
+    @Getter
+    @Setter
+    @Column(length = 10_000)
+    @Convert(converter = JSONConverter.class)
+    @NotNull
+    private JSON jsonData = new JSON();
 
     @Override
     public String getDefaultName() {

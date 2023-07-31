@@ -43,6 +43,7 @@ create table if not exists script_entity
     error                  varchar(1000),
     java_script            varchar(65535),
     java_script_parameters varchar(65535),
+    json_data              varchar(10000),
     repeat_interval        integer      not null,
     status                 smallint     not null,
     primary key (entityid),
@@ -81,6 +82,7 @@ create table if not exists widget_tab_entity
     name          varchar(255),
     update_time   timestamp(6) not null,
     version       integer,
+    json_data     varchar(10000),
     primary key (entityid)
 );
 
@@ -123,6 +125,7 @@ create table if not exists workspace_entity
     update_time   timestamp(6) not null,
     version       integer,
     content       varchar(10485760),
+    json_data     varchar(10000),
     primary key (entityid)
 );
 

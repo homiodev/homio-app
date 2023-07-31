@@ -1,6 +1,8 @@
 package org.homio.app.model.entity.widget;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
@@ -8,15 +10,18 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 import org.homio.api.EntityContext;
+import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.HasOrder;
 import org.homio.api.exception.ServerException;
+import org.homio.api.model.JSON;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter
 @Entity
-public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
+public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> implements HasOrder {
 
     public static final String PREFIX = "tab_";
     public static final String GENERAL_WIDGET_TAB_NAME = PREFIX + "main";
@@ -24,6 +29,18 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
     @JsonIgnore
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "widgetTabEntity")
     private Set<WidgetBaseEntity> widgetBaseEntities;
+
+    @Getter
+    @Setter
+    @Column(length = 10_000)
+    @Convert(converter = JSONConverter.class)
+    @NotNull
+    private JSON jsonData = new JSON();
+
+    @Override
+    public boolean enableUiOrdering() {
+        return true;
+    }
 
     public static void ensureMainTabExists(EntityContextImpl entityContext) {
         if (entityContext.getEntity(GENERAL_WIDGET_TAB_NAME) == null) {
@@ -33,7 +50,7 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
 
     @Override
     public int compareTo(@NotNull BaseEntity o) {
-        return this.getCreationTime().compareTo(o.getCreationTime());
+        return super.compareTo(o);
     }
 
     @Override
@@ -47,14 +64,14 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> {
     }
 
     @Override
-    public void beforeDelete(EntityContext entityContext) {
+    public void beforeDelete(@NotNull EntityContext entityContext) {
         if (!widgetBaseEntities.isEmpty()) {
             throw new ServerException("ERROR.REMOVE_NON_EMPTY_TAB");
         }
     }
 
     @Override
-    public String getEntityPrefix() {
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 
