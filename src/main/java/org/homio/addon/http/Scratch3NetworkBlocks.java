@@ -115,19 +115,33 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
     }
 
     private void onUdpEventHandler(WorkspaceBlock workspaceBlock) {
-        WorkspaceBlock substack = workspaceBlock.getNext();
-        if (substack != null) {
-            workspaceBlock.handleAndRelease(() ->
-                    entityContext.event().listenUdp(
-                        workspaceBlock.getId(),
-                        workspaceBlock.getInputString("HOST"),
-                        workspaceBlock.getInputInteger("PORT"),
-                        (datagramPacket, output) -> {
-                            workspaceBlock.setValue(new StringType(output));
-                            substack.getNext().handle();
-                        }),
-                () -> entityContext.event().stopListenUdp(workspaceBlock.getId()));
+        workspaceBlock.handleNextOptional(substack -> {
+            String host = workspaceBlock.getInputString("HOST");
+            Integer port = workspaceBlock.getInputInteger("PORT");
+            try (DatagramSocket socket = getDatagramSocket(host, port)) {
+                DatagramPacket datagramPacket = new DatagramPacket(new byte[1024], 1024);
+                while (!Thread.currentThread().isInterrupted()) {
+                    socket.receive(datagramPacket);
+                    byte[] data = datagramPacket.getData();
+                    String text = new String(data, 0, datagramPacket.getLength());
+                    workspaceBlock.setValue(new StringType(text));
+                    substack.handle();
+                }
+                workspaceBlock.logWarn("Finish listen udp: {}", port);
+            }
+        });
+    }
+
+    @NotNull
+    private static DatagramSocket getDatagramSocket(String host, Integer port) throws SocketException {
+        DatagramSocket socket;
+        if (StringUtils.isEmpty(host) || host.equals("255.255.255.255") || host.equals("0.0.0.0")) {
+            socket = new DatagramSocket(port);
+        } else {
+            socket = new DatagramSocket();
+            socket.bind(new InetSocketAddress(host, port));
         }
+        return socket;
     }
 
     @SneakyThrows

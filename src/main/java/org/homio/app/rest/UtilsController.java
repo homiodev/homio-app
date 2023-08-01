@@ -148,7 +148,7 @@ public class UtilsController {
             BiConsumer<BaseEntity, OptionModel> configurator = null;
             if (!entry.getKey().equals(ZigBeeDeviceBaseEntity.class.getSimpleName())) {
                 configurator = (entity, optionModel) -> optionModel
-                    .setTitle(format("${selection.%s}: %s", entity.getClass().getSimpleName(), entity.getTitle()));
+                    .setTitle(format("${SELECTION.%s}: %s", entity.getClass().getSimpleName(), entity.getTitle()));
             }
             parent.setChildren(OptionModel.entityList(entry.getValue(), configurator));
         }

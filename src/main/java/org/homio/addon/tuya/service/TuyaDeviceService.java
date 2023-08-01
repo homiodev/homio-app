@@ -17,7 +17,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -36,6 +35,7 @@ import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextBGP.ThreadContext;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.model.device.ConfigDeviceDefinition;
@@ -57,8 +57,6 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
             new ConfigDeviceDefinitionService("tuya-devices.json");
 
     private @NotNull Optional<TuyaDeviceCommunicator> tuyaDeviceCommunicator = Optional.empty();
-
-    private final AtomicBoolean disposing = new AtomicBoolean(false);
 
     private final Map<Integer, Pair<Long, Object>> statusCache = new ConcurrentHashMap<>();
 
@@ -95,26 +93,25 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
 
     @Override
     public void destroy() throws Exception {
-        disposing.set(true);
+        closeAll();
+        udpDiscoveryListener.unregisterListener(entity.getIeeeAddress());
+    }
+
+    private void closeAll() {
+        tuyaDeviceCommunicator.ifPresent(TuyaDeviceCommunicator::dispose);
+        tuyaDeviceCommunicator = Optional.empty();
         if (EntityContextBGP.cancel(reconnectFuture)) {
             reconnectFuture = null;
         }
         if (EntityContextBGP.cancel(pollingJob)) {
             pollingJob = null;
         }
-        if (entity.getIp().isEmpty()) {
-            // unregister listener only if IP is not fixed
-            udpDiscoveryListener.unregisterListener(this);
-        }
-        tuyaDeviceCommunicator.ifPresent(TuyaDeviceCommunicator::dispose);
-        tuyaDeviceCommunicator = Optional.empty();
-        disposing.set(false);
     }
 
     @Override
     @SneakyThrows
     public void initialize() {
-        this.destroy(); // stop all before initialize
+        this.closeAll(); // stop all before initialize
         createOrUpdateDeviceGroup();
         try {
             if (StringUtils.isEmpty(entity.getIeeeAddress())) {
@@ -149,8 +146,6 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                 entity.setStatus(Status.WAITING, "Waiting for IP address");
                 udpDiscoveryListener.registerListener(entity.getIeeeAddress(), this);
             }
-
-            disposing.set(false);
         } catch (Exception ex) {
             entity.setStatusError(ex);
             log.error("[{}]: Error during initialize tuya device: {}", entity.getEntityID(), CommonUtils.getErrorMessage(ex));
@@ -207,7 +202,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
             ThreadContext<Void> reconnectFuture = this.reconnectFuture;
             // only re-connect if a device is present, we are not disposing the thing and either the reconnectFuture is
             // empty or already done
-            if (!disposing.get() && (reconnectFuture == null || reconnectFuture.isStopped())) {
+            if (reconnectFuture == null || reconnectFuture.isStopped()) {
                 this.reconnectFuture = entityContext.bgp().builder("tuya-device-connect-%s".formatted(entity.getEntityID()))
                                                     .delay(Duration.ofSeconds(5))
                                                     .execute(communicator::connect);
@@ -250,8 +245,9 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
         try {
             TuyaDeviceDTO tuyaDevice = api.getDevice(entity.getIeeeAddress(), entity);
             log.info("[{}]: Fetched device {} info successfully", entity.getEntityID(), entity);
-            updateTuyaDeviceEntity(tuyaDevice, api, entity);
-            entityContext.save(entity);
+            if (updateTuyaDeviceEntity(tuyaDevice, api, entity)) {
+                entityContext.save(entity);
+            }
 
         } catch (Exception ex) {
             log.error("[{}]: Error fetched device {} info", entity.getEntityID(), entity);
@@ -284,18 +280,18 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                     return;
                 }
                 log.warn("[{}]: Could not update endpoint '{}' with value {}. Datatype incompatible.",
-                        entity.getEntityID(), dp2Endpoints, rawValue);
+                    entity.getEntityID(), dp2Endpoints, rawValue);
             }
         }
     }
 
-    public void send(@NotNull Map<Integer, @Nullable Object> commands) {
-        tuyaDeviceCommunicator.ifPresent(communicator -> communicator.sendCommand(commands));
+    public ActionResponseModel send(@NotNull Map<Integer, @Nullable Object> commands) {
+        return tuyaDeviceCommunicator.map(communicator -> communicator.sendCommand(commands)).orElse(null);
     }
 
     public @NotNull List<ConfigDeviceDefinition> findDevices() {
         if (this.models == null) {
-            Set<String> endpoints = schemaDps.values().stream().map(s -> s.code).collect(Collectors.toSet());
+            Set<String> endpoints = schemaDps.values().stream().map(SchemaDp::getCode).collect(Collectors.toSet());
             this.models = CONFIG_DEVICE_SERVICE.findDeviceDefinitionModels(entity.getModel(), endpoints);
         }
         return this.models;

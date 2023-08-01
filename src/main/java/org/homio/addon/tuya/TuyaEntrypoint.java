@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import java.net.URL;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.local.UdpDiscoveryListener;
@@ -16,13 +18,14 @@ import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class TuyaEntrypoint implements AddonEntrypoint {
 
     public static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
-    public static final UdpDiscoveryListener udpDiscoveryListener = new UdpDiscoveryListener(eventLoopGroup);
+    public static final @NotNull UdpDiscoveryListener udpDiscoveryListener = new UdpDiscoveryListener(eventLoopGroup);
 
     private final EntityContext entityContext;
 
@@ -33,9 +36,22 @@ public class TuyaEntrypoint implements AddonEntrypoint {
     @Override
     public void init() {
         TuyaProjectEntity tuyaProjectEntity = ensureEntityExists(entityContext);
-        entityContext.setting().listenValue(ScanTuyaDevicesSetting.class, "scan-tuya", () -> {
-            tuyaProjectEntity.scanDevices(entityContext);
-        });
+        udpDiscoveryListener.setProjectEntityID(tuyaProjectEntity.getEntityID());
+        try {
+            udpDiscoveryListener.activate();
+        } catch (Exception ex) {
+            tuyaProjectEntity.setUdpMessage("Unable to start tuya udp discovery");
+            log.error("Unable to start tuya udp discovery", ex);
+            entityContext.bgp().builder("tuya-udp-restart")
+                         .interval(Duration.ofSeconds(60))
+                         .execute(context -> {
+                             udpDiscoveryListener.activate();
+                             context.cancel();
+                             return null;
+                         });
+        }
+        entityContext.setting().listenValue(ScanTuyaDevicesSetting.class, "scan-tuya", () ->
+            tuyaProjectEntity.scanDevices(entityContext));
 
         TuyaOpenAPI.setProjectEntity(tuyaProjectEntity);
         udpDiscoveryListener.setProjectEntityID(tuyaProjectEntity.getEntityID());
@@ -43,6 +59,7 @@ public class TuyaEntrypoint implements AddonEntrypoint {
 
     @Override
     public void destroy() {
+        log.warn("Destroy tuya entrypoint");
         udpDiscoveryListener.deactivate();
         eventLoopGroup.shutdownGracefully();
     }

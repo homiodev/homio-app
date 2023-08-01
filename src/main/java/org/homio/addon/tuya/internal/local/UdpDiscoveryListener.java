@@ -1,9 +1,20 @@
 package org.homio.addon.tuya.internal.local;
 
+import static com.sshtools.common.util.Utils.hexToBytes;
+
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.local.dto.DeviceInfo;
@@ -12,22 +23,19 @@ import org.homio.addon.tuya.internal.local.handlers.DiscoveryMessageHandler;
 import org.homio.addon.tuya.internal.local.handlers.TuyaDecoder;
 import org.homio.addon.tuya.internal.local.handlers.UserEventHandler;
 import org.homio.addon.tuya.internal.util.CryptoUtil;
-import org.jetbrains.annotations.NotNull;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import static com.sshtools.common.util.Utils.hexToBytes;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Handles UDP device discovery message
  */
 @Log4j2
+@RequiredArgsConstructor
 public class UdpDiscoveryListener implements ChannelFutureListener {
+
     private static final byte[] TUYA_UDP_KEY = hexToBytes(CryptoUtil.md5("yGAdlopoPVldABfn"));
 
-    private final Map<String, DeviceInfo> deviceInfos = new HashMap<>();
-    private final Map<String, DeviceInfoSubscriber> deviceListeners = new HashMap<>();
+    private final Map<String, DeviceInfo> deviceInfos = new ConcurrentHashMap<>();
+    private final Map<String, DeviceInfoSubscriber> deviceListeners = new ConcurrentHashMap<>();
 
     private Channel encryptedChannel;
     private Channel rawChannel;
@@ -37,28 +45,23 @@ public class UdpDiscoveryListener implements ChannelFutureListener {
     @Setter
     private String projectEntityID;
 
-    public UdpDiscoveryListener(@NotNull EventLoopGroup group) {
-        this.group = group;
-        activate();
-    }
-
-    private void activate() {
+    public void activate() {
         try {
             log.info("[{}]: Activate udp device ip address discovery", projectEntityID);
             Bootstrap b = new Bootstrap();
             b.group(group).channel(NioDatagramChannel.class).option(ChannelOption.SO_BROADCAST, true)
-                    .handler(new ChannelInitializer<DatagramChannel>() {
-                        @Override
-                        protected void initChannel(DatagramChannel ch) {
-                            ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast("udpDecoder", new DatagramToByteBufDecoder());
-                            pipeline.addLast("messageDecoder", new TuyaDecoder("udpListener", "",
-                                    new TuyaDeviceCommunicator.KeyStore(TUYA_UDP_KEY), ProtocolVersion.V3_1));
-                            pipeline.addLast("discoveryHandler",
-                                    new DiscoveryMessageHandler(deviceInfos, deviceListeners));
-                            pipeline.addLast("userEventHandler", new UserEventHandler("udpListener", ""));
-                        }
-                    });
+             .handler(new ChannelInitializer<DatagramChannel>() {
+                 @Override
+                 protected void initChannel(DatagramChannel ch) {
+                     ChannelPipeline pipeline = ch.pipeline();
+                     pipeline.addLast("udpDecoder", new DatagramToByteBufDecoder());
+                     pipeline.addLast("messageDecoder", new TuyaDecoder("udpListener", "",
+                         new TuyaDeviceCommunicator.KeyStore(TUYA_UDP_KEY), ProtocolVersion.V3_1));
+                     pipeline.addLast("discoveryHandler",
+                         new DiscoveryMessageHandler(deviceInfos, deviceListeners));
+                     pipeline.addLast("userEventHandler", new UserEventHandler("udpListener", ""));
+                 }
+             });
 
             ChannelFuture futureEncrypted = b.bind(6667).addListener(this).sync();
             encryptedChannel = futureEncrypted.channel();
@@ -93,8 +96,11 @@ public class UdpDiscoveryListener implements ChannelFutureListener {
         }
     }
 
-    public void unregisterListener(DeviceInfoSubscriber deviceInfoSubscriber) {
-        deviceListeners.entrySet().removeIf(e -> deviceInfoSubscriber.equals(e.getValue()));
+    public void unregisterListener(@Nullable String deviceId) {
+        if (deviceId != null) {
+            deviceListeners.remove(deviceId);
+            deviceInfos.remove(deviceId);
+        }
     }
 
     @Override

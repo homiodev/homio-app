@@ -101,7 +101,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
     @Override
     public void updateNotificationBlock(@Nullable Exception ex) {
         // login if no private key found
-        String name = format("Cloud: ${selection.%s}", StringUtils.uncapitalize(getClass().getSimpleName()));
+        String name = format("Cloud: ${SELECTION.%s}", StringUtils.uncapitalize(getClass().getSimpleName()));
         entityContext.ui().addNotificationBlock("cloud", name, new Icon("fas fa-cloud", "#5C7DAC"), builder -> {
             builder.setStatus(entity.getStatus()).linkToEntity(entity);
             if (!entity.getStatus().isOnline()) {

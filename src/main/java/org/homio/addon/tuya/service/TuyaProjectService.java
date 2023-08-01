@@ -1,5 +1,6 @@
 package org.homio.addon.tuya.service;
 
+import java.time.Duration;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.homio.addon.tuya.TuyaProjectEntity;
@@ -8,8 +9,6 @@ import org.homio.api.EntityContext;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.jetbrains.annotations.NotNull;
-
-import java.time.Duration;
 
 public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
 
@@ -27,6 +26,8 @@ public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
         try {
             testService();
             entity.setStatusOnline();
+            // fire device discovery
+            entityContext.getBean(TuyaDiscoveryService.class).scan(entityContext, null, null);
         } catch (TuyaOpenAPI.TuyaApiNotReadyException te) {
             scheduleInitialize();
         } catch (Exception ex) {

@@ -65,11 +65,15 @@ public final class TuyaDeviceEntity extends DeviceBaseEntity<TuyaDeviceEntity>
                        (DeviceEndpoint) entry.getValue()))).orElse(Map.of());
     }
 
-    @UIField(order = 1, hideOnEmpty = true, fullWidth = true, color = "#89AA50", type = HTML)
+    @UIField(order = 1, hideOnEmpty = true, fullWidth = true, color = "#89AA50", type = HTML, hideInEdit = true)
     @UIFieldShowOnCondition("return !context.get('compactMode')")
     @UIFieldColorBgRef(value = "statusColor", animate = true)
-    @UIFieldGroup(value = "NAME", order = 1, borderColor = "#CDD649")
+    @UIFieldGroup(value = "NAME", order = 1)
     public String getDescription() {
+        String message = getStatusMessage();
+        if (message != null && message.contains("Failed to connect")) {
+            return "TUYA.CONNECT_ISSUE";
+        }
         return null;
     }
 
@@ -223,14 +227,14 @@ public final class TuyaDeviceEntity extends DeviceBaseEntity<TuyaDeviceEntity>
             } else {
                 List<SchemaDp> o = OBJECT_MAPPER.readValue(rawSchema, new TypeReference<>() {
                 });
-                schema = o.stream().collect(Collectors.toMap(i -> i.code, i -> i));
+                schema = o.stream().collect(Collectors.toMap(SchemaDp::getCode, i -> i));
             }
         }
         return schema;
     }
 
     public long getDeepHashCode() {
-        return Objects.hashCode(getIeeeAddress()) + getJsonDataHashCode("localKey", "pv", "pi", "cg", "mac", "pid");
+        return Objects.hashCode(getIeeeAddress()) + getJsonDataHashCode("localKey", "pv", "pi", "cg", "mac", "pid", "ip");
     }
 
     @UIContextMenuAction(value = "TUYA.FETCH_DEVICE_INFO", icon = "fas fa-barcode", iconColor = Color.PRIMARY_COLOR)

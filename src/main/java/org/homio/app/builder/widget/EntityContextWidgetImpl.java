@@ -52,7 +52,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @NotNull
     private static ActionResponseModel fireCreateTemplateWidget(DeviceBaseEntity.@NotNull HasEndpointsDevice entity, WidgetDefinition widgetDefinition, TemplateWidgetBuilder widgetBuilder, EntityContext entityContext, JSONObject params) {
-        String tab = params.getString("selection.dashboard_tab");
+        String tab = params.getString("SELECTION.DASHBOARD_TAB");
         val includeEndpoints = widgetDefinition.getEndpoints(entity).stream()
                 .filter(pd -> params.getBoolean(pd.getEndpointEntityID()))
                 .collect(Collectors.toList());
@@ -265,7 +265,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
                     .editDialog(dialogBuilder -> {
                         dialogBuilder.setTitle(title, icon);
                         dialogBuilder.addFlex("main", flex -> {
-                            flex.addSelectBox("selection.dashboard_tab", null)
+                            flex.addSelectBox("SELECTION.DASHBOARD_TAB", null)
                                     .setSelected(getEntityContext().widget().getDashboardDefaultID())
                                     .addOptions(getEntityContext().widget().getDashboardTabs());
                             addPropertyDefinitions(widgetDefinition, flex, entity);

@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -126,6 +127,7 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.core.annotation.AnnotationUtils;
 
+@Log4j2
 public class UIFieldUtils {
 
     public static @NotNull JSONObject buildDynamicParameterMetadata(@NotNull Object requestedEntity, @Nullable Class<?> sourceClassType) {
@@ -1032,8 +1034,10 @@ public class UIFieldUtils {
             }
             UIField uiField = getDeclaredAnnotation(UIField.class);
             if (uiField == null) {
-                throw new IllegalStateException("Unable to fetch @UIField annotations from method: " + fieldMethod.getName()
-                    + " of class: " + fieldMethod.getDeclaringClass().getSimpleName());
+                String message = "Unable to fetch @UIField annotations from method: " + fieldMethod.getName()
+                    + " of class: " + fieldMethod.getDeclaringClass().getSimpleName();
+                log.error(message);
+                throw new IllegalStateException(message);
             }
             this.name = uiField.name();
             this.methodName = InternalUtil.getMethodShortName(fieldMethod);

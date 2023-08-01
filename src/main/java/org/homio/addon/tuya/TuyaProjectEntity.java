@@ -1,5 +1,8 @@
 package org.homio.addon.tuya;
 
+import static org.homio.api.EntityContextSetting.getMemValue;
+import static org.homio.api.EntityContextSetting.setMemValue;
+
 import jakarta.persistence.Entity;
 import java.util.List;
 import java.util.Objects;
@@ -131,6 +134,15 @@ public final class TuyaProjectEntity extends MicroControllerBaseEntity<TuyaProje
     @Override
     public String getDefaultName() {
         return "Tuya project";
+    }
+
+    @UIField(order = 10, hideOnEmpty = true, color = Color.RED)
+    public String getUdpMessage() {
+        return getMemValue(this, "udp", null);
+    }
+
+    public void setUdpMessage(String value) {
+        setMemValue(this, "udp", "udp", value);
     }
 
     @Override

@@ -166,8 +166,7 @@ public class TuyaDeviceCommunicator implements ChannelFutureListener {
 
         public KeyStore(byte[] deviceKey) {
             this.deviceKey = deviceKey;
-            this.sessionKey = deviceKey;
-            this.random = CryptoUtil.generateRandom(16).clone();
+            this.reset();
         }
 
         public void reset() {

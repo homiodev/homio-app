@@ -1,5 +1,8 @@
 package org.homio.addon.tuya.service;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import java.util.ArrayList;
@@ -7,7 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -40,14 +43,16 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
     @Override
     public DeviceScannerResult scan(EntityContext entityContext, ProgressBar progressBar, String headerConfirmButtonKey) {
         DeviceScannerResult result = new DeviceScannerResult();
-        Set<String> existedDevices = entityContext.findAll(TuyaDeviceEntity.class).stream().map(TuyaDeviceEntity::getIeeeAddress).collect(Collectors.toSet());
+        Map<String, TuyaDeviceEntity> existedDevices =
+            entityContext.findAll(TuyaDeviceEntity.class)
+                         .stream()
+                         .collect(Collectors.toMap(TuyaDeviceEntity::getIeeeAddress, t -> t));
         try {
             TuyaProjectEntity tuyaProjectEntity = entityContext.getEntityRequire(TuyaProjectEntity.class, PRIMARY_DEVICE);
-            DeviceHandler deviceHandler = device -> {
-                if (!existedDevices.contains(device.id)) {
-                    TuyaDeviceEntity entity = new TuyaDeviceEntity().setEntityID(device.id);
-                    updateTuyaDeviceEntity(device, tuyaProjectEntity.getService().getApi(), entity);
-                    entityContext.save(entity);
+            Consumer<TuyaDeviceDTO> deviceHandler = device -> {
+                TuyaDeviceEntity deviceEntity = existedDevices.getOrDefault(device.id, new TuyaDeviceEntity());
+                if (updateTuyaDeviceEntity(device, tuyaProjectEntity.getService().getApi(), deviceEntity)) {
+                    entityContext.save(deviceEntity);
                     result.getNewCount().incrementAndGet();
                 } else {
                     result.getExistedCount().incrementAndGet();
@@ -71,12 +76,12 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
 
     @SneakyThrows
     private void processDeviceResponse(
-            List<TuyaDeviceDTO> deviceList,
-            TuyaProjectService tuyaProjectService,
-            int page,
-            DeviceHandler deviceHandler) {
+        List<TuyaDeviceDTO> deviceList,
+        TuyaProjectService tuyaProjectService,
+        int page,
+        Consumer<TuyaDeviceDTO> deviceHandler) {
         for (TuyaDeviceDTO device : deviceList) {
-            deviceHandler.handle(device);
+            deviceHandler.accept(device);
         }
         if (page == 0 || deviceList.size() == 100) {
             int nextPage = page + 1;
@@ -86,37 +91,76 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
     }
 
     @SneakyThrows
-    public static void updateTuyaDeviceEntity(TuyaDeviceDTO device, TuyaOpenAPI api, TuyaDeviceEntity entity) {
+    public static boolean updateTuyaDeviceEntity(TuyaDeviceDTO device, TuyaOpenAPI api, TuyaDeviceEntity entity) {
         List<FactoryInformation> infoList = api.getFactoryInformation(List.of(device.id), entity);
         String deviceMac = infoList.stream()
-                .filter(fi -> fi.id.equals(device.id))
-                .findAny()
-                .map(fi -> fi.mac)
-                .orElse("");
+                                   .filter(fi -> fi.id.equals(device.id))
+                                   .findAny()
+                                   .map(fi -> fi.mac)
+                                   .orElse("")
+                                   .replaceAll("(..)(?!$)", "$1:");
 
-        entity.setCategory(device.category);
-        entity.setMac(Objects.requireNonNull(deviceMac).replaceAll("(..)(?!$)", "$1:"));
-        entity.setLocalKey(device.localKey);
-        entity.setName(device.productName);
-        entity.setIeeeAddress(device.id);
-        entity.setUuid(device.uuid);
-        entity.setModel(device.model);
-        entity.setProductId(device.productId);
+        boolean updated = false;
+        if (!entity.getCategory().equals(device.category)) {
+            entity.setCategory(device.category);
+            updated = true;
+        }
+        if (!entity.getMac().equals(deviceMac)) {
+            entity.setMac(deviceMac);
+            updated = true;
+        }
+        if (!entity.getLocalKey().equals(device.localKey)) {
+            entity.setLocalKey(device.localKey);
+            updated = true;
+        }
+        if (isEmpty(entity.getName()) && isNotEmpty(device.productName)) {
+            entity.setName(device.productName);
+            updated = true;
+        }
+        if (!Objects.equals(entity.getIeeeAddress(), device.id)) {
+            entity.setIeeeAddress(device.id);
+            updated = true;
+        }
+        if (!entity.getUuid().equals(device.uuid)) {
+            entity.setUuid(device.uuid);
+            updated = true;
+        }
+        if (!entity.getModel().equals(device.model)) {
+            entity.setModel(device.model);
+            updated = true;
+        }
+        if (!entity.getProductId().equals(device.productId)) {
+            entity.setProductId(device.productId);
+            updated = true;
+        }
         entity.setSubDevice(device.subDevice);
-        entity.setOwnerID(device.ownerId);
-        entity.setIcon(device.icon);
+        if (!entity.getOwnerID().equals(device.ownerId)) {
+            entity.setOwnerID(device.ownerId);
+            updated = true;
+        }
+        if (!entity.getIcon().equals(device.icon)) {
+            entity.setIcon(device.icon);
+            updated = true;
+        }
 
         DeviceSchema schema = api.getDeviceSchema(device.id, entity);
         Map<Integer, SchemaDp> schemaDps = new HashMap<>();
-        schema.functions.forEach(description -> addUniqueSchemaDp(description, schemaDps).writable = true);
-        schema.status.forEach(description -> addUniqueSchemaDp(description, schemaDps).readable = true);
+        schema.functions.stream().filter(f -> f.dp_id != 0)
+                        .forEach(description -> addUniqueSchemaDp(description, schemaDps).setWritable(true));
+        schema.status.stream().filter(f -> f.dp_id != 0)
+                     .forEach(description -> addUniqueSchemaDp(description, schemaDps).setReadable(true));
         List<SchemaDp> dps = new ArrayList<>(schemaDps.values());
         filterAndConfigureSchema(dps);
-        entity.setSchema(dps);
+
+        if (!OBJECT_MAPPER.writeValueAsString(entity.getSchema()).equals(OBJECT_MAPPER.writeValueAsString(dps))) {
+            entity.setSchema(dps);
+            updated = true;
+        }
+        return updated;
     }
 
     private static void filterAndConfigureSchema(List<SchemaDp> schemaDps) {
-        Map<String, SchemaDp> schemaCode2Schema = schemaDps.stream().collect(Collectors.toMap(s -> s.code, s -> s));
+        Map<String, SchemaDp> schemaCode2Schema = schemaDps.stream().collect(Collectors.toMap(SchemaDp::getCode, s -> s));
         List<String> endpointSuffixes = List.of("", "_1", "_2");
         List<String> switchEndpoints = List.of("switch_led", "led_switch");
         for (String suffix : endpointSuffixes) {
@@ -129,11 +173,11 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
                     boolean remove = false;
 
                     if (colourEndpoint != null) {
-                        colourEndpoint.dp2 = switchEndpoint.dp;
+                        colourEndpoint.setDp2(switchEndpoint.dp);
                         remove = true;
                     }
                     if (brightEndpoint != null) {
-                        brightEndpoint.dp2 = switchEndpoint.dp;
+                        brightEndpoint.setDp2(switchEndpoint.dp);
                         remove = true;
                     }
 
@@ -147,24 +191,21 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
 
     private static SchemaDp addUniqueSchemaDp(Description description, Map<Integer, SchemaDp> schemaMap) {
         SchemaDp schemaDp = schemaMap.get(description.dp_id);
-        if (description.dp_id == 0 || schemaDp != null) {
+        if (schemaDp != null) {
+            schemaDp.mergeMeta(description.values);
             return schemaDp;
-        }
-        // some devices report the same function code for different dps
-        // we add an index only if this is the case
-        String originalCode = description.code;
-        int index = 1;
-        while (schemaMap.values().stream().anyMatch(sdp -> sdp.code.equals(description.code))) {
-            description.code = originalCode + "_" + index;
-        }
+        } else {
+            // some devices report the same function code for different dps
+            // we add an index only if this is the case
+            String originalCode = description.code;
+            int index = 1;
+            while (schemaMap.values().stream().anyMatch(sdp -> sdp.getCode().equals(description.code))) {
+                description.code = originalCode + "_" + index;
+            }
 
-        schemaDp = SchemaDp.fromRemoteSchema(description);
-        schemaMap.put(description.dp_id, schemaDp);
+            schemaDp = SchemaDp.parse(description);
+            schemaMap.put(description.dp_id, schemaDp);
+        }
         return schemaDp;
-    }
-
-    public interface DeviceHandler {
-
-        void handle(TuyaDeviceDTO device);
     }
 }
