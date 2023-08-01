@@ -4,16 +4,13 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Files;
-import java.util.Collections;
 import java.util.Properties;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppConfig;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
-import org.homio.app.utils.HardwareUtils;
 import org.homio.hquery.EnableHQuery;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -33,8 +30,6 @@ public class HomioApplication implements WebMvcConfigurer {
 
     @SneakyThrows
     public static void main(String[] args) throws IOException {
-        // copy resources from jars
-        copyResources();
         log.info("Run homio-app v.{}", HomioApplication.class.getPackage().getImplementationVersion());
         setProperty("server.port", "port", "9111");
         setDatabaseProperties();
@@ -96,13 +91,5 @@ public class HomioApplication implements WebMvcConfigurer {
         if (key != null) {
             System.setProperty(key, value);
         }
-    }
-
-    private static void copyResources() throws IOException {
-        log.info("Copying resources");
-        for (URL resource : Collections.list(HomioApplication.class.getClassLoader().getResources("external_files.7z"))) {
-            HardwareUtils.copyResources(resource);
-        }
-        log.info("Copying resources done");
     }
 }

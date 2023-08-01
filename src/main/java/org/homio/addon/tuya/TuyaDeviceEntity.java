@@ -25,10 +25,11 @@ import org.homio.addon.tuya.internal.local.ProtocolVersion;
 import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.addon.tuya.service.TuyaDeviceService;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.entity.DeviceEndpointsBaseEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.device.ConfigDeviceDefinition;
+import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
 import org.homio.api.ui.UI.Color;
@@ -50,8 +51,8 @@ import org.jetbrains.annotations.Nullable;
 @Entity
 @Accessors(chain = true)
 @UISidebarMenu(icon = "fas fa-fish-fins", order = 150, bg = "#D68C38", allowCreateNewItems = true, overridePath = "tuya")
-public final class TuyaDeviceEntity extends DeviceBaseEntity<TuyaDeviceEntity>
-        implements DeviceBaseEntity.HasEndpointsDevice, EntityService<TuyaDeviceService, TuyaDeviceEntity>, HasEntityLog {
+public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
+    implements EntityService<TuyaDeviceService, DeviceEndpointsBaseEntity>, HasEntityLog {
 
     private static final Map<String, Map<String, SchemaDp>> SCHEMAS = readSchemaFromFile();
 
@@ -92,6 +93,16 @@ public final class TuyaDeviceEntity extends DeviceBaseEntity<TuyaDeviceEntity>
 
     public @NotNull String getModel() {
         return getJsonDataRequire("model", "tuya_unknown");
+    }
+
+    @Override
+    public @NotNull ConfigDeviceDefinitionService getConfigDeviceDefinitionService() {
+        return TuyaDeviceService.CONFIG_DEVICE_SERVICE;
+    }
+
+    @Override
+    public @NotNull List<ConfigDeviceDefinition> findMatchDeviceConfigurations() {
+        return getService().findDevices();
     }
 
     public void setModel(String value) {

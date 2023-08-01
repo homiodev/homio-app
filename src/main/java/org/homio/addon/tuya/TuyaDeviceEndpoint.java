@@ -10,13 +10,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.util.SchemaDp;
-import org.homio.addon.z2m.service.Z2MDeviceService;
-import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar.VariableMetaBuilder;
 import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.model.Icon;
@@ -45,14 +42,13 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
     @Getter
     private final @Nullable Integer dp2;
     private final @NotNull SchemaDp schemaDp;
-    private final @NotNull Function<Object, Boolean> writeHandler;
+    private final @NotNull WriteHandler writeHandler;
     private TuyaEndpointType tuyaEndpointType;
     @Getter
     private boolean oldColorMode = false; // for color endpoint only
 
     public TuyaDeviceEndpoint(
         @NotNull SchemaDp schemaDp,
-        @NotNull EntityContext entityContext,
         @NotNull TuyaDeviceEntity device,
         @Nullable ConfigDeviceEndpoint configEndpoint) {
         super(new Icon(
@@ -64,20 +60,16 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
         this.dp2 = schemaDp.getDp2();
 
         init(
+            CONFIG_DEVICE_SERVICE,
             schemaDp.getCode(),
             device,
-            entityContext,
-            CONFIG_DEVICE_SERVICE.getUnit(schemaDp.getCode(), schemaDp.getUnit()),
+            device.getService().getEntityContext(),
+            schemaDp.getUnit(),
             Boolean.TRUE.equals(schemaDp.getReadable()),
             Boolean.TRUE.equals(schemaDp.getWritable()),
             schemaDp.getCode(),
-            CONFIG_DEVICE_SERVICE.getEndpointOrder(configEndpoint, schemaDp.getCode()),
             evaluateEndpointType());
-
-        if (CONFIG_DEVICE_SERVICE.isEndpointHasVariable(schemaDp.getCode())) {
-            getOrCreateVariable();
-        }
-        this.writeHandler = createWriteHandler();
+        this.writeHandler = createExternalWriteHandler();
     }
 
     private static int hexColorToBrightness(String hexColor) {
@@ -137,7 +129,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
             switch (tuyaEndpointType) {
                 case bool -> {
                     uiInputBuilder.addCheckbox(getEntityID(), getValue().boolValue(), (entityContext, params) -> {
-                        setValue(OnOffType.of(params.getBoolean("value")));
+                        setValue(OnOffType.of(params.getBoolean("value")), false);
                         return device.getService().send(Map.of(dp, getValue().boolValue()));
                     });
                     return uiInputBuilder;
@@ -145,7 +137,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                 case number -> {
                     uiInputBuilder.addSlider(getEntityID(), value.floatValue(0), schemaDp.getMin(), schemaDp.getMax(),
                         (entityContext, params) -> {
-                            setValue(new DecimalType(params.getInt("value")));
+                            setValue(new DecimalType(params.getInt("value")), false);
                             return device.getService().send(Map.of(dp, value.intValue()));
                         });
                     return uiInputBuilder;
@@ -153,7 +145,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                 case select -> {
                     uiInputBuilder
                         .addSelectBox(getEntityID(), (entityContext, params) -> {
-                            setValue(new StringType(params.getString("value")));
+                            setValue(new StringType(params.getString("value")), false);
                             return device.getService().send(Map.of(dp, value.stringValue()));
                         })
                         .addOptions(OptionModel.list(getSelectValues()))
@@ -173,13 +165,13 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                 case color -> {
                     if (dp2 != null) {
                         uiInputBuilder.addCheckbox(getEntityID(), value.boolValue(), (entityContext, params) -> {
-                            setValue(OnOffType.of(params.getBoolean("value")));
+                            setValue(OnOffType.of(params.getBoolean("value")), false);
                             return device.getService().send(Map.of(dp2, value.boolValue()));
                         });
                     }
                     uiInputBuilder.addColorPicker(getEntityID(), value.stringValue(), (entityContext, params) -> {
                         Map<Integer, Object> commandRequest = new HashMap<>();
-                        setValue(new StringType(params.getString("value")));
+                        setValue(new StringType(params.getString("value")), false);
                         commandRequest.put(dp, hexColorEncode(value.stringValue()));
                         /* ChannelConfiguration workModeConfig = channelIdToConfiguration.get("work_mode");
                         if (workModeConfig != null) {
@@ -212,7 +204,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                 case dimmer -> {
                     if (dp2 != null) {
                         uiInputBuilder.addCheckbox(getEntityID(), value.boolValue(), (entityContext, params) -> {
-                            setValue(OnOffType.of(params.getBoolean("value")));
+                            setValue(OnOffType.of(params.getBoolean("value")), false);
                             return device.getService().send(Map.of(dp2, value.boolValue()));
                         });
                     }
@@ -220,7 +212,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                             (entityContext, params) -> {
                                 Map<Integer, Object> commandRequest = new HashMap<>();
                                 int brightness = (int) Math.round(params.getInt("value") * schemaDp.getMax() / 100.0);
-                                setValue(new DecimalType(brightness));
+                                setValue(new DecimalType(brightness), false);
                                 if (brightness >= schemaDp.getMin()) {
                                     commandRequest.put(dp, value);
                                 }
@@ -245,8 +237,8 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
         return uiInputBuilder;
     }
 
-    public boolean writeValue(Object rawValue) {
-        return writeHandler.apply(rawValue);
+    public boolean writeValue(Object rawValue, boolean externalUpdate) {
+        return writeHandler.write(rawValue, externalUpdate);
     }
 
     @Override
@@ -355,31 +347,31 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                     (int) (hsb.getBrightness().doubleValue() * 2.55));
         }
     }*/
-    private Function<Object, Boolean> createWriteHandler() {
+    private WriteHandler createExternalWriteHandler() {
         switch (tuyaEndpointType) {
             case bool -> {
-                return rawValue -> {
+                return (rawValue, eu) -> {
                     if (Boolean.class.isAssignableFrom(rawValue.getClass())) {
-                        setValue(OnOffType.of((boolean) rawValue));
+                        setValue(OnOffType.of((boolean) rawValue), eu);
                         return true;
                     }
                     return false;
                 };
             }
             case number -> {
-                return rawValue -> {
+                return (rawValue, eu) -> {
                     if (Number.class.isAssignableFrom(rawValue.getClass())) {
-                        setValue(new DecimalType((Number) rawValue));
+                        setValue(new DecimalType((Number) rawValue), eu);
                         return true;
                     }
                     return false;
                 };
             }
             case color -> {
-                return rawValue -> {
+                return (rawValue, eu) -> {
                     if (rawValue instanceof String) {
                         oldColorMode = ((String) rawValue).length() == 14;
-                        setValue(new StringType(hexColorDecode((String) rawValue)));
+                        setValue(new StringType(hexColorDecode((String) rawValue)), eu);
                         return true;
                     }
                     return false;
@@ -387,15 +379,15 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
             }
             case dimmer -> {
                 // brightness
-                return rawValue -> {
+                return (rawValue, eu) -> {
                     if (Double.class.isAssignableFrom(rawValue.getClass())) {
                         double value = (double) rawValue;
                         if (value <= 0) {
-                            setValue(DecimalType.ZERO);
+                            setValue(DecimalType.ZERO, eu);
                         } else if (value >= schemaDp.getMax()) {
-                            setValue(DecimalType.HUNDRED);
+                            setValue(DecimalType.HUNDRED, eu);
                         } else {
-                            setValue(new DecimalType(new BigDecimal(100.0 * value / (schemaDp.getMax() - 0))));
+                            setValue(new DecimalType(new BigDecimal(100.0 * value / (schemaDp.getMax() - 0))), eu);
                         }
                         return true;
                     }
@@ -403,9 +395,10 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                 };
             }
             default -> {
-                return rawValue -> {
+                // select, string
+                return (rawValue, eu) -> {
                     if (rawValue instanceof String) {
-                        setValue(new StringType((String) rawValue));
+                        setValue(new StringType((String) rawValue), eu);
                         return true;
                     }
                     return false;
@@ -415,8 +408,8 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
     }
 
     @Override
-    public boolean isVisible() {
-        return !Z2MDeviceService.CONFIG_DEVICE_SERVICE.isHideEndpoint(schemaDp.getCode());
+    public @NotNull List<String> getHiddenEndpoints() {
+        return List.of();
     }
 
     @RequiredArgsConstructor
@@ -430,8 +423,8 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
         private final EndpointType endpointType;
     }
 
-    @Override
-    public String toString() {
-        return "Code: " + schemaDp.getCode() + ". Order: " + getOrder();
+    private interface WriteHandler {
+
+        boolean write(Object value, boolean externalUpdate);
     }
 }
