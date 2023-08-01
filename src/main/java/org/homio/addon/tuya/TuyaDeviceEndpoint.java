@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.addon.z2m.service.Z2MDeviceService;
@@ -33,18 +34,18 @@ import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("CommentedOutCode")
 @Log4j2
-public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
+public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
 
     private static final List<String> COLOUR_CHANNEL_CODES = List.of("colour_data");
     private static final List<String> DIMMER_CHANNEL_CODES = List.of("bright_value", "bright_value_1", "bright_value_2",
-            "temp_value");
+        "temp_value");
 
     @Getter
     private final int dp;
     @Getter
     private final @Nullable Integer dp2;
     private final @NotNull SchemaDp schemaDp;
-    private final @NotNull Function<Object, Boolean> processEndpointStatusHandler;
+    private final @NotNull Function<Object, Boolean> writeHandler;
     private TuyaEndpointType tuyaEndpointType;
     @Getter
     private boolean oldColorMode = false; // for color endpoint only
@@ -70,13 +71,13 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
             Boolean.TRUE.equals(schemaDp.getReadable()),
             Boolean.TRUE.equals(schemaDp.getWritable()),
             schemaDp.getCode(),
-            CONFIG_DEVICE_SERVICE.getEndpointOrder(schemaDp.getCode()),
-            calcEndpointType());
+            CONFIG_DEVICE_SERVICE.getEndpointOrder(configEndpoint, schemaDp.getCode()),
+            evaluateEndpointType());
 
         if (CONFIG_DEVICE_SERVICE.isEndpointHasVariable(schemaDp.getCode())) {
             getOrCreateVariable();
         }
-        this.processEndpointStatusHandler = buildProcessEndpointStatusHandler();
+        this.writeHandler = createWriteHandler();
     }
 
     private static int hexColorToBrightness(String hexColor) {
@@ -244,8 +245,8 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
         return uiInputBuilder;
     }
 
-    public boolean processEndpointStatus(Object rawValue) {
-        return processEndpointStatusHandler.apply(rawValue);
+    public boolean writeValue(Object rawValue) {
+        return writeHandler.apply(rawValue);
     }
 
     @Override
@@ -307,30 +308,15 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
         return schemaDp.getRange();
     }
 
-    private EndpointType calcEndpointType() {
+    private EndpointType evaluateEndpointType() {
         if (COLOUR_CHANNEL_CODES.contains(schemaDp.getCode())) {
             tuyaEndpointType = TuyaEndpointType.color;
-            return EndpointType.string;
         } else if (DIMMER_CHANNEL_CODES.contains(schemaDp.getCode())) {
             tuyaEndpointType = TuyaEndpointType.dimmer;
-            return EndpointType.number;
-            // has min-max
-        } else if ("bool".equals(schemaDp.getType())) {
-            tuyaEndpointType = TuyaEndpointType.bool;
-            return EndpointType.bool;
-        } else if ("enum".equals(schemaDp.getType())) {
-            tuyaEndpointType = TuyaEndpointType.select;
-            return EndpointType.select;
-        } else if ("string".equals(schemaDp.getType())) {
-            tuyaEndpointType = TuyaEndpointType.string;
-            return EndpointType.string;
-        } else if ("value".equals(schemaDp.getType())) {
-            tuyaEndpointType = TuyaEndpointType.number;
-            return EndpointType.number;
         } else {
-            tuyaEndpointType = TuyaEndpointType.string;
-            return EndpointType.string;
+            tuyaEndpointType = schemaDp.getType();
         }
+        return tuyaEndpointType.endpointType;
     }
 
     private String hexColorEncode(String hexColor) {
@@ -369,7 +355,7 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
                     (int) (hsb.getBrightness().doubleValue() * 2.55));
         }
     }*/
-    private Function<Object, Boolean> buildProcessEndpointStatusHandler() {
+    private Function<Object, Boolean> createWriteHandler() {
         switch (tuyaEndpointType) {
             case bool -> {
                 return rawValue -> {
@@ -382,8 +368,8 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
             }
             case number -> {
                 return rawValue -> {
-                    if (Double.class.isAssignableFrom(rawValue.getClass())) {
-                        setValue(new DecimalType((Double) rawValue));
+                    if (Number.class.isAssignableFrom(rawValue.getClass())) {
+                        setValue(new DecimalType((Number) rawValue));
                         return true;
                     }
                     return false;
@@ -433,7 +419,19 @@ public final class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntit
         return !Z2MDeviceService.CONFIG_DEVICE_SERVICE.isHideEndpoint(schemaDp.getCode());
     }
 
+    @RequiredArgsConstructor
     public enum TuyaEndpointType {
-        bool, number, string, color, dimmer, select
+        bool(EndpointType.bool),
+        number(EndpointType.number),
+        string(EndpointType.string),
+        color(EndpointType.string),
+        dimmer(EndpointType.number),
+        select(EndpointType.select);
+        private final EndpointType endpointType;
+    }
+
+    @Override
+    public String toString() {
+        return "Code: " + schemaDp.getCode() + ". Order: " + getOrder();
     }
 }

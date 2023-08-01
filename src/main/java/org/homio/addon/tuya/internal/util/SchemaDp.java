@@ -12,6 +12,8 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
+import org.homio.addon.tuya.TuyaDeviceEndpoint.TuyaEndpointType;
 import org.homio.addon.tuya.internal.cloud.dto.DeviceSchema;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,21 +22,23 @@ import org.jetbrains.annotations.Nullable;
  * Wrapper for the information of a single datapoint
  */
 @Getter
+@Setter
+@Accessors(chain = true)
 public class SchemaDp {
 
-    private static final Map<String, String> REMOTE_LOCAL_TYPE_MAP = Map.of( //
-        "Boolean", "bool", //
-        "Enum", "enum", //
-        "Integer", "value", //
-        "Json", "string");
+    private static final Map<String, TuyaEndpointType> REMOTE_LOCAL_TYPE_MAP = Map.of(
+        "Boolean", TuyaEndpointType.bool,
+        "Enum", TuyaEndpointType.select,
+        "Integer", TuyaEndpointType.number,
+        "Json", TuyaEndpointType.string);
 
     public int dp;
-    private @NotNull String type = "";
+    private @NotNull TuyaEndpointType type = TuyaEndpointType.string;
     private @NotNull String code = "";
 
-    private @Setter @Nullable Integer dp2;
-    private @Setter @Nullable Boolean writable;
-    private @Setter @Nullable Boolean readable;
+    private @Nullable Integer dp2;
+    private @Nullable Boolean writable;
+    private @Nullable Boolean readable;
     private @NotNull ObjectNode meta = OBJECT_MAPPER.createObjectNode();
 
     @JsonIgnore
@@ -90,7 +94,7 @@ public class SchemaDp {
         SchemaDp schemaDp = new SchemaDp();
         schemaDp.code = description.code.replace("_v2", "");
         schemaDp.dp = description.dp_id;
-        schemaDp.type = REMOTE_LOCAL_TYPE_MAP.getOrDefault(description.type, "raw"); // fallback to raw
+        schemaDp.type = REMOTE_LOCAL_TYPE_MAP.getOrDefault(description.type, TuyaEndpointType.string);
         schemaDp.meta = OBJECT_MAPPER.readValue(description.values, ObjectNode.class);
         return schemaDp;
     }

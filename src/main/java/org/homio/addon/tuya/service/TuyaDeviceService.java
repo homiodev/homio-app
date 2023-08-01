@@ -7,6 +7,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.addon.tuya.TuyaEntrypoint.eventLoopGroup;
 import static org.homio.addon.tuya.TuyaEntrypoint.udpDiscoveryListener;
 import static org.homio.addon.tuya.service.TuyaDiscoveryService.updateTuyaDeviceEntity;
+import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_LAST_SEEN;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -22,8 +23,8 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.homio.addon.tuya.TuyaDeviceEndpoint;
+import org.homio.addon.tuya.TuyaDeviceEndpoint.TuyaEndpointType;
 import org.homio.addon.tuya.TuyaDeviceEntity;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
@@ -43,6 +44,7 @@ import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.model.device.ConfigDeviceEndpoint;
 import org.homio.api.service.EntityService.ServiceInstance;
 import org.homio.api.ui.UI;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -53,12 +55,14 @@ import org.jetbrains.annotations.Nullable;
 @Log4j2
 public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> implements DeviceInfoSubscriber, DeviceStatusListener {
 
+    private static final SchemaDp LAST_SEEN_SCHEMA_DP = new SchemaDp()
+        .setCode(ENDPOINT_LAST_SEEN)
+        .setType(TuyaEndpointType.number);
+
     public static final ConfigDeviceDefinitionService CONFIG_DEVICE_SERVICE =
-            new ConfigDeviceDefinitionService("tuya-devices.json");
+        new ConfigDeviceDefinitionService("tuya-devices.json");
 
     private @NotNull Optional<TuyaDeviceCommunicator> tuyaDeviceCommunicator = Optional.empty();
-
-    private final Map<Integer, Pair<Long, Object>> statusCache = new ConcurrentHashMap<>();
 
     @Getter
     private final @NotNull Map<String, TuyaDeviceEndpoint> endpoints = new ConcurrentHashMap<>();
@@ -83,10 +87,6 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
 
             tuyaDeviceCommunicator.ifPresent(c -> c.sendCommand(commandRequest));
         } else {
-            // addSingleExpiringCache
-            for (Entry<Integer, Object> entry : deviceStatus.entrySet()) {
-                statusCache.put(entry.getKey(), Pair.of(System.currentTimeMillis(), entry.getValue()));
-            }
             deviceStatus.forEach(this::processEndpointStatus);
         }
     }
@@ -134,6 +134,15 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                             endpoints.put(entry.getKey(), new TuyaDeviceEndpoint(entry.getValue(), entityContext, entity, endpoint));
                         }
                     }
+                    ConfigDeviceEndpoint endpoint = CONFIG_DEVICE_SERVICE.getDeviceEndpoints().get(ENDPOINT_LAST_SEEN);
+                    TuyaDeviceEndpoint lastSeenEndpoint = new TuyaDeviceEndpoint(LAST_SEEN_SCHEMA_DP, entityContext, entity, endpoint) {
+                        @Override
+                        public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
+                            uiInputBuilder.addDuration(getValue().longValue(), null);
+                        }
+                    };
+                    lastSeenEndpoint.writeValue(System.currentTimeMillis());
+                    endpoints.put(ENDPOINT_LAST_SEEN, lastSeenEndpoint);
                 } else {
                     entity.setStatus(Status.OFFLINE, "No endpoints found");
                     return;
@@ -258,13 +267,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     private void processEndpointStatus(Integer dp, Object rawValue) {
         TuyaDeviceEndpoint endpoint = endpoints.values().stream().filter(p -> p.getDp() == dp).findAny().orElse(null);
         if (endpoint != null) {
-            Pair<Long, Object> pair = statusCache.get(dp);
-            if (pair == null || Duration.ofMillis(System.currentTimeMillis() - pair.getKey()).getSeconds() > 10) {
-                // skip update if the endpoint is off!
-                return;
-            }
-
-            if (!endpoint.processEndpointStatus(rawValue)) {
+            if (!endpoint.writeValue(rawValue)) {
                 log.warn("[{}]: Could not update endpoint '{}' with value '{}'. Datatype incompatible.",
                     entity.getEntityID(), endpoint.getDeviceID(), rawValue);
             }
@@ -275,7 +278,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
             } else {
                 if (Boolean.class.isAssignableFrom(rawValue.getClass())) {
                     for (TuyaDeviceEndpoint dp2Endpoint : dp2Endpoints) {
-                        dp2Endpoint.processEndpointStatus(rawValue);
+                        dp2Endpoint.writeValue(rawValue);
                     }
                     return;
                 }
@@ -283,6 +286,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                     entity.getEntityID(), dp2Endpoints, rawValue);
             }
         }
+        endpoints.get(ENDPOINT_LAST_SEEN).writeValue(System.currentTimeMillis());
     }
 
     public ActionResponseModel send(@NotNull Map<Integer, @Nullable Object> commands) {

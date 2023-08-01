@@ -103,7 +103,7 @@
     {
       "dp": "39",
       "name": "overcharge_switch",
-      "icon": "fa-charging-station",
+      "icon": "fa-person-booth",
       "iconColor": "#AB2200"
     },
     {
@@ -140,6 +140,12 @@
       "stateless": true,
       "icon": "fa-truck-ramp-box",
       "iconColor": "#299974"
+    },
+    {
+      "name": "last_seen",
+      "icon": "fa-eye",
+      "iconColor": "#2D9C2C",
+      "order": 100
     }
   ]
 }

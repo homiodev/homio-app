@@ -3,6 +3,7 @@ package org.homio.addon.tuya;
 import static org.homio.api.EntityContextSetting.getMemValue;
 import static org.homio.api.EntityContextSetting.setMemValue;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import java.util.List;
 import java.util.Objects;
@@ -28,6 +29,7 @@ import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldIgnore;
 import org.homio.api.ui.field.UIFieldLinkToEntity;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
@@ -215,6 +217,18 @@ public final class TuyaProjectEntity extends MicroControllerBaseEntity<TuyaProje
     public ActionResponseModel getUserInfo(EntityContext entityContext) {
         return ActionResponseModel.showJson("Tuya device list",
             entityContext.getBean(TuyaOpenAPI.class).getUserInfo());
+    }
+
+    @Override
+    @JsonIgnore
+    @UIFieldIgnore
+    public @Nullable String getPlace() {
+        return null;
+    }
+
+    @Override
+    public boolean isDisableDelete() {
+        return true;
     }
 
     @Getter

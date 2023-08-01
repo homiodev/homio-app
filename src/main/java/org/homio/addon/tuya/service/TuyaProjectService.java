@@ -22,6 +22,7 @@ public class TuyaProjectService extends ServiceInstance<TuyaProjectEntity> {
     }
 
     public void initialize() {
+        TuyaOpenAPI.setProjectEntity(entity);
         entity.setStatus(Status.INITIALIZE);
         try {
             testService();
