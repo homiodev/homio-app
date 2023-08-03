@@ -1,7 +1,5 @@
 package org.homio.addon.tuya.service;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
@@ -9,7 +7,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
@@ -100,48 +97,7 @@ public class TuyaDiscoveryService implements ItemDiscoverySupport {
                                    .orElse("")
                                    .replaceAll("(..)(?!$)", "$1:");
 
-        boolean updated = false;
-        if (!entity.getCategory().equals(device.category)) {
-            entity.setCategory(device.category);
-            updated = true;
-        }
-        if (!entity.getMac().equals(deviceMac)) {
-            entity.setMac(deviceMac);
-            updated = true;
-        }
-        if (!entity.getLocalKey().equals(device.localKey)) {
-            entity.setLocalKey(device.localKey);
-            updated = true;
-        }
-        if (isEmpty(entity.getName()) && isNotEmpty(device.productName)) {
-            entity.setName(device.productName);
-            updated = true;
-        }
-        if (!Objects.equals(entity.getIeeeAddress(), device.id)) {
-            entity.setIeeeAddress(device.id);
-            updated = true;
-        }
-        if (!entity.getUuid().equals(device.uuid)) {
-            entity.setUuid(device.uuid);
-            updated = true;
-        }
-        if (!entity.getModel().equals(device.model)) {
-            entity.setModel(device.model);
-            updated = true;
-        }
-        if (!entity.getProductId().equals(device.productId)) {
-            entity.setProductId(device.productId);
-            updated = true;
-        }
-        entity.setSubDevice(device.subDevice);
-        if (!entity.getOwnerID().equals(device.ownerId)) {
-            entity.setOwnerID(device.ownerId);
-            updated = true;
-        }
-        if (!entity.getIcon().equals(device.icon)) {
-            entity.setIcon(device.icon);
-            updated = true;
-        }
+        boolean updated = entity.tryUpdateDeviceEntity(device, deviceMac);
 
         DeviceSchema schema = api.getDeviceSchema(device.id, entity);
         Map<Integer, SchemaDp> schemaDps = new HashMap<>();

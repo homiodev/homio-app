@@ -1,6 +1,19 @@
 package org.homio.app.manager.common.impl;
 
+import static java.lang.String.format;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
+
 import com.pivovarit.function.ThrowingConsumer;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -26,20 +39,6 @@ import org.homio.app.model.var.WorkspaceVariableMessage;
 import org.homio.app.repository.VariableDataRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 @Log4j2
 @RequiredArgsConstructor
@@ -212,7 +211,8 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @Override
-    public boolean setVariableIcon(@NotNull String variableId, @NotNull Icon icon) {
+    public boolean updateVariableIcon(@NotNull String variableId, @Nullable Icon icon) {
+        if (icon == null) {return false;}
         WorkspaceVariable workspaceVariable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
         if (workspaceVariable != null
             && (!Objects.equals(workspaceVariable.getIcon(), icon.getIcon())
@@ -221,19 +221,6 @@ public class EntityContextVarImpl implements EntityContextVar {
             return true;
         }
         return false;
-    }
-
-    @Override
-    public @NotNull String createVariable(@NotNull String groupId, @Nullable String variableId, @NotNull String variableName,
-        @NotNull VariableType variableType, @Nullable Consumer<VariableMetaBuilder> builder) {
-        return createVariableInternal(groupId, variableId, variableName, variableType, builder, wv -> {});
-    }
-
-    @Override
-    public @NotNull String createEnumVariable(@NotNull String groupId, @Nullable String variableId, @NotNull String variableName, @NotNull List<String> values,
-        @Nullable Consumer<VariableMetaBuilder> builder) {
-        return createVariableInternal(groupId, variableId, variableName, VariableType.Enum, builder, wv ->
-            wv.setJsonData("options", String.join("~~~", values)));
     }
 
     @Override
@@ -356,39 +343,24 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
     }
 
-    private String createVariableInternal(
+    @Override
+    public @NotNull String createVariable(
         @NotNull String groupId,
         @Nullable String variableId,
         @NotNull String variableName,
         @NotNull VariableType variableType,
-        @Nullable Consumer<VariableMetaBuilder> builder,
-        @NotNull Consumer<WorkspaceVariable> beforeSaveHandler) {
+        @Nullable Consumer<VariableMetaBuilder> builder) {
         WorkspaceVariable entity = variableId == null ? null : entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
-
-        VariableMetaBuilderImpl metaBuilder = new VariableMetaBuilderImpl();
-        if (builder != null) {
-            builder.accept(metaBuilder);
-        }
 
         if (entity == null) {
             WorkspaceGroup groupEntity = entityContext.getEntity(WorkspaceGroup.PREFIX + groupId);
             if (groupEntity == null) {
                 throw new IllegalArgumentException("Variable group with id: " + groupId + " not exists");
             }
-            String varId = Objects.toString(variableId, String.valueOf(System.currentTimeMillis()));
-            entity = new WorkspaceVariable(varId, variableName, groupEntity, variableType, metaBuilder.description, metaBuilder.color,
-                metaBuilder.readOnly, metaBuilder.unit);
-            entity.setAttributes(metaBuilder.attributes);
-            beforeSaveHandler.accept(entity);
-            entity = entityContext.save(entity);
-            beforeSaveHandler.accept(entity);
-        } else if (!Objects.equals(entity.getName(), variableName)
-            || !Objects.equals(entity.getDescription(), metaBuilder.description)
-            || !Objects.equals(entity.getColor(), metaBuilder.color)) {
-            entity = entityContext.save(entity.setName(variableName)
-                                              .setColor(metaBuilder.color)
-                                              .setDescription(metaBuilder.description)
-                                              .setAttributes(metaBuilder.getAttributes()));
+            entity = new WorkspaceVariable(groupEntity);
+        }
+        if (entity.tryUpdateVariable(variableId, variableName, builder, variableType)) {
+            entityContext.save(entity);
         }
         return entity.getVariableId();
     }
@@ -495,41 +467,59 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     @Getter
-    private static class VariableMetaBuilderImpl implements VariableMetaBuilder {
+    @RequiredArgsConstructor
+    public static class VariableMetaBuilderImpl implements VariableMetaBuilder {
 
-        private boolean readOnly;
-        private String description;
-        private String color;
-        private String unit;
-        private List<String> attributes;
+        private final WorkspaceVariable entity;
 
         @Override
         public @NotNull VariableMetaBuilder setReadOnly(boolean value) {
-            this.readOnly = value;
+            entity.setReadOnly(value);
             return this;
         }
 
         @Override
         public @NotNull VariableMetaBuilder setColor(String value) {
-            this.color = value;
+            entity.setColor(value);
+            return this;
+        }
+
+        @Override
+        public @NotNull VariableMetaBuilder setPersistent(boolean value) {
+            entity.setBackup(value);
             return this;
         }
 
         @Override
         public @NotNull VariableMetaBuilder setDescription(String value) {
-            this.description = value;
+            entity.setDescription(value);
             return this;
         }
 
         @Override
         public @NotNull VariableMetaBuilder setUnit(String value) {
-            this.unit = value;
+            entity.setUnit(value);
+            return this;
+        }
+
+        @Override
+        public @NotNull VariableMetaBuilder setIcon(@Nullable Icon value) {
+            if (value != null) {
+                entity.setIcon(value.getIcon());
+                entity.setIconColor(value.getColor());
+            }
             return this;
         }
 
         @Override
         public @NotNull VariableMetaBuilder setAttributes(List<String> attributes) {
-            this.attributes = attributes;
+            entity.setAttributes(attributes);
+            return this;
+        }
+
+        @Override
+        public @NotNull VariableMetaBuilder setValues(List<String> values) {
+            entity.setJsonData("options", String.join("~~~", values));
             return this;
         }
     }

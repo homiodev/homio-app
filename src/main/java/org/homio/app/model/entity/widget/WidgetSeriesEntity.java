@@ -59,4 +59,9 @@ public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
         }
         return super.compareTo(o);
     }
+
+    @Override
+    protected int getChildEntityHashCode() {
+        return 0;
+    }
 }

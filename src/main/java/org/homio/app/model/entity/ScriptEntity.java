@@ -146,6 +146,11 @@ public class ScriptEntity extends BaseEntity<ScriptEntity> implements HasJsonDat
         return "Script";
     }
 
+    @Override
+    protected int getChildEntityHashCode() {
+        return 0;
+    }
+
     @SneakyThrows
     private String detectReplaceableValues(
         JSONObject params, Compilable engine, String formattedJavaScript) {

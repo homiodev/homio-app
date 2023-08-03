@@ -122,7 +122,12 @@ public class SettingEntity extends BaseEntity<SettingEntity> {
     }
 
     @Override
-    public String getEntityPrefix() {
+    protected int getChildEntityHashCode() {
+        return 0;
+    }
+
+    @Override
+    public @NotNull String getEntityPrefix() {
         return PREFIX;
     }
 

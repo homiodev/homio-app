@@ -3,8 +3,8 @@
   "devices": [
     {
       "name": "Relay/Switch",
-      "exposes": [
-        "switch_1"
+      "endpoints": [
+        "switch_.*"
       ],
       "icon": "fas fa-plug",
       "iconColor": "#85C240",
@@ -28,6 +28,7 @@
       "dp": 1,
       "order": 1,
       "name": "switch_1",
+      "persistent": true,
       "icon": "fa-star-half-stroke",
       "iconColor": "#56AB26"
     },
@@ -53,6 +54,7 @@
       "order": 10,
       "name": "cur_current",
       "unit": "mA",
+      "persistent": true,
       "icon": "fa-bolt",
       "iconColor": "#9357EF"
     },
@@ -61,6 +63,7 @@
       "order": 11,
       "name": "cur_power",
       "unit": "W",
+      "persistent": true,
       "icon": "fa-plug-circle-bolt",
       "iconColor": "#9357EF"
     },
@@ -69,6 +72,7 @@
       "order": 12,
       "name": "cur_voltage",
       "unit": "V",
+      "persistent": true,
       "icon": "fa-truck-ramp-box",
       "iconColor": "#299974"
     },
@@ -138,6 +142,7 @@
       "dp": 41,
       "name": "child_lock",
       "stateless": true,
+      "persistent": true,
       "icon": "fa-lock",
       "iconColor": "#AB2631"
     },

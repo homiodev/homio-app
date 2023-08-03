@@ -54,6 +54,11 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> implement
     }
 
     @Override
+    protected int getChildEntityHashCode() {
+        return 0;
+    }
+
+    @Override
     public String getDefaultName() {
         return null;
     }

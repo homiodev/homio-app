@@ -187,6 +187,16 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     }
 
     @Override
+    protected int getChildEntityHashCode() {
+        int result = description != null ? description.hashCode() : 0;
+        result = 31 * result + (groupId != null ? groupId.hashCode() : 0);
+        result = 31 * result + (icon != null ? icon.hashCode() : 0);
+        result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
+        result = 31 * result + jsonData.hashCode();
+        return result;
+    }
+
+    @Override
     public boolean isDisableDelete() {
         return locked || this.groupId.equals("broadcasts");
     }
@@ -212,7 +222,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         } else if (count > 0) {
             return clearBackupResponse(clearByCount(count, repository));
         }
-        return ActionResponseModel.showWarn("WRONG_ARGUMENTS");
+        return ActionResponseModel.showWarn("W.ERROR.WRONG_ARGUMENTS");
     }
 
     @Override

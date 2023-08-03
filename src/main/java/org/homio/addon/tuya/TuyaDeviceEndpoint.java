@@ -157,10 +157,9 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                 case string -> {
                     // not implemented
                     if (!value.stringValue().equals("N/A")) {
-                        uiInputBuilder.addTextInput(getEntityID(), value.stringValue(), false);
-                        //commandRequest.put(configuration.dp, command.toString());
-                        log.error("[{}]: Tuya write handler not implemented for endpoint: {}. Type: {}",
-                            getDeviceEntityID(), getEndpointEntityID(), tuyaEndpointType);
+                        uiInputBuilder.addTextInput(getEntityID(), value.stringValue(), false)
+                                      .setApplyButton(true);
+                        return uiInputBuilder;
                     }
                 }
                 case color -> {

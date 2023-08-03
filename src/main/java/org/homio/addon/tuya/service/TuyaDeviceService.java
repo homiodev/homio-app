@@ -156,6 +156,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                 setEntityStatus(Status.WAITING, "Waiting for IP address");
                 udpDiscoveryListener.registerListener(entity.getIeeeAddress(), this);
             }
+            scheduleRefreshDeviceStatus();
         } catch (Exception ex) {
             setEntityStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
             log.error("[{}]: Error during initialize tuya device: {}", entity.getEntityID(), CommonUtils.getErrorMessage(ex));
@@ -198,8 +199,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     }
 
     private boolean isRequireFetchDeviceInfoFromCloud() {
-        return isNotEmpty(entity.getIeeeAddress()) &&
-                (isEmpty(entity.getLocalKey()) || !entity.getJsonData().has("schema"));
+        return isNotEmpty(entity.getIeeeAddress()) && (isEmpty(entity.getLocalKey()) || !entity.getJsonData().has("schema"));
     }
 
     @Override
@@ -213,33 +213,13 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
         if (EntityContextBGP.cancel(pollingJob)) {
             pollingJob = null;
         }
-        tuyaDeviceCommunicator.ifPresent(communicator -> {
-            ThreadContext<Void> reconnectFuture = this.reconnectFuture;
-            // only re-connect if a device is present, we are not disposing the thing and either the reconnectFuture is
-            // empty or already done
-            if (reconnectFuture == null || reconnectFuture.isStopped()) {
-                int interval = entityContext.setting().getEnvRequire("tuya-reconnect-timeout", int.class, 30, true);
-                this.reconnectFuture = entityContext.bgp().builder("tuya-device-connect-%s".formatted(entity.getEntityID()))
-                                                    .delay(Duration.ofSeconds(interval))
-                                                    .execute(() -> {
-                                                        setEntityStatus(Status.INITIALIZE, null);
-                                                        communicator.connect();
-                                                    });
-            }
-        });
+        scheduleReconnect();
     }
 
     @Override
     public void onConnected() {
         setEntityStatus(Status.ONLINE, null);
-        int pollingInterval = entity.getPollingInterval();
-        tuyaDeviceCommunicator.ifPresent(communicator -> {
-            if (pollingInterval > 0) {
-                pollingJob = entityContext.bgp().builder("tuya-device-pull-%s".formatted(entity.getEntityID()))
-                                          .intervalWithDelay(Duration.ofSeconds(pollingInterval))
-                                          .execute(communicator::refreshStatus);
-            }
-        });
+        scheduleRefreshDeviceStatus();
     }
 
     @Override
@@ -304,11 +284,11 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     }
 
     public @NotNull List<ConfigDeviceDefinition> findDevices() {
-        if (this.models == null) {
+        if (this.models == null && !schemaDps.isEmpty()) {
             Set<String> endpoints = schemaDps.values().stream().map(SchemaDp::getCode).collect(Collectors.toSet());
-            this.models = CONFIG_DEVICE_SERVICE.findDeviceDefinitionModels(entity.getModel(), endpoints);
+            return CONFIG_DEVICE_SERVICE.findDeviceDefinitionModels(entity.getModel(), endpoints);
         }
-        return this.models;
+        return List.of();
     }
 
     private void addDeviceStatusEndpoint() {
@@ -339,5 +319,34 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
         };
         tuyaDeviceEndpoint.writeValue(System.currentTimeMillis(), false);
         endpoints.put(schemaDp.getCode(), tuyaDeviceEndpoint);
+    }
+
+    private void scheduleRefreshDeviceStatus() {
+        if (entity.getStatus().isOnline()) {
+            // request all statuses
+            tuyaDeviceCommunicator.ifPresent(TuyaDeviceCommunicator::requestStatus);
+
+            tuyaDeviceCommunicator.ifPresent(communicator -> {
+                pollingJob = entityContext.bgp().builder("tuya-device-pull-%s".formatted(entity.getEntityID()))
+                                          .intervalWithDelay(Duration.ofSeconds(entity.getPollingInterval()))
+                                          .execute(communicator::refreshStatus);
+            });
+        }
+    }
+
+    private void scheduleReconnect() {
+        tuyaDeviceCommunicator.ifPresent(communicator -> {
+            ThreadContext<Void> reconnectFuture = this.reconnectFuture;
+            // only re-connect if a device is present, we are not disposing the thing and either the reconnectFuture is
+            // empty or already done
+            if (reconnectFuture == null || reconnectFuture.isStopped()) {
+                this.reconnectFuture = entityContext.bgp().builder("tuya-device-connect-%s".formatted(entity.getEntityID()))
+                                                    .delay(Duration.ofSeconds(entity.getReconnectInterval()))
+                                                    .execute(() -> {
+                                                        setEntityStatus(Status.INITIALIZE, null);
+                                                        communicator.connect();
+                                                    });
+            }
+        });
     }
 }

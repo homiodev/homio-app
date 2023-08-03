@@ -22,6 +22,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
+import org.homio.addon.tuya.internal.cloud.dto.TuyaDeviceDTO;
 import org.homio.addon.tuya.internal.local.ProtocolVersion;
 import org.homio.addon.tuya.internal.util.SchemaDp;
 import org.homio.addon.tuya.service.TuyaDeviceService;
@@ -37,6 +38,7 @@ import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
+import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
@@ -134,8 +136,21 @@ public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
     @UIField(order = 2, isRevert = true)
     @UIFieldShowOnCondition("return !context.get('compactMode')")
     @UIFieldGroup("CONNECTION")
+    @UIFieldSlider(min = 10, max = 300, header = "s")
     public int getPollingInterval() {
-        return getJsonData("pi", 0);
+        return getJsonData("pi", 30);
+    }
+
+    @UIField(order = 3, isRevert = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("CONNECTION")
+    @UIFieldSlider(min = 10, max = 300, header = "s")
+    public int getReconnectInterval() {
+        return getJsonData("ri", 30);
+    }
+
+    public void setReconnectInterval(int value) {
+        setJsonData("ri", value);
     }
 
     public void setPollingInterval(int value) {
@@ -252,6 +267,22 @@ public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
         return "Generic Tuya Device";
     }
 
+    public boolean tryUpdateDeviceEntity(TuyaDeviceDTO device, String deviceMac) {
+        int hashCode = getEntityHashCode();
+        setCategory(device.category);
+        setMac(deviceMac);
+        setLocalKey(device.localKey);
+        setName(device.productName);
+        setIeeeAddress(device.id);
+        setUuid(device.uuid);
+        setModel(device.model);
+        setProductId(device.productId);
+        setSubDevice(device.subDevice);
+        setOwnerID(device.ownerId);
+        setIcon(device.icon);
+        return hashCode != getEntityHashCode();
+    }
+
     @Override
     protected @NotNull String getDevicePrefix() {
         return "tuya-device";
@@ -284,7 +315,7 @@ public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
     }
 
     public long getDeepHashCode() {
-        return Objects.hashCode(getIeeeAddress()) + getJsonDataHashCode("localKey", "pv", "pi", "cg", "mac", "pid", "ip");
+        return Objects.hashCode(getIeeeAddress()) + getJsonDataHashCode("localKey", "pv", "pi", "ri", "cg", "mac", "pid", "ip");
     }
 
     @UIContextMenuAction(value = "TUYA.FETCH_DEVICE_INFO", icon = "fas fa-barcode", iconColor = Color.PRIMARY_COLOR)

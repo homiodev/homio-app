@@ -43,6 +43,13 @@ public final class WorkspaceEntity extends BaseEntity<WorkspaceEntity> implement
     }
 
     @Override
+    protected int getChildEntityHashCode() {
+        int result = content != null ? content.hashCode() : 0;
+        result = 31 * result + jsonData.hashCode();
+        return result;
+    }
+
+    @Override
     public @NotNull String getEntityPrefix() {
         return PREFIX;
     }

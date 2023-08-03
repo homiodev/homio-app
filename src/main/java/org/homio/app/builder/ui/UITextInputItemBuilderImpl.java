@@ -17,6 +17,8 @@ public class UITextInputItemBuilderImpl
     private final List<String> validators = new ArrayList<>();
     @Setter
     private boolean required;
+    @Setter
+    private boolean applyButton;
 
     public UITextInputItemBuilderImpl(String entityID, int order, String defaultValue, InputType inputType) {
         super(UIItemType.Input, entityID, order, null);

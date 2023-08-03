@@ -270,8 +270,7 @@ public class WorkspaceController {
     private WorkspaceVariable createOrRenameVariable(WorkspaceGroup workspaceGroup, String variableId, String variableName) {
         WorkspaceVariable workspaceVariable = entityContext.getEntity(WorkspaceVariable.PREFIX + variableId);
         if (workspaceVariable == null) {
-            return entityContext.save(new WorkspaceVariable(variableId, variableName, workspaceGroup, VariableType.Any,
-                null, null, false, null));
+            return entityContext.save(new WorkspaceVariable(variableId, variableName, workspaceGroup, VariableType.Any));
         } else if (!Objects.equals(variableName, workspaceVariable.getName())) {
             return entityContext.save(workspaceVariable.setName(variableName));
         }

@@ -16,6 +16,7 @@ import jakarta.persistence.ManyToOne;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import lombok.Getter;
@@ -24,6 +25,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar;
+import org.homio.api.EntityContextVar.VariableMetaBuilder;
 import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
@@ -50,6 +52,7 @@ import org.homio.api.ui.field.inline.UIFieldInlineEntityWidth;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
+import org.homio.app.manager.common.impl.EntityContextVarImpl.VariableMetaBuilderImpl;
 import org.homio.app.repository.VariableDataRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -123,15 +126,14 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     @Convert(converter = JSONConverter.class)
     private JSON jsonData = new JSON();
 
-    public WorkspaceVariable(@NotNull String variableId, @NotNull String variableName, @NotNull WorkspaceGroup workspaceGroup,
-        @NotNull VariableType variableType, @Nullable String description, @Nullable String color, boolean readOnly, @Nullable String unit) {
+    public WorkspaceVariable(@NotNull WorkspaceGroup workspaceGroup) {
+        this.workspaceGroup = workspaceGroup;
+    }
+
+    public WorkspaceVariable(String variableId, String variableName, WorkspaceGroup workspaceGroup, VariableType variableType) {
         this.variableId = variableId;
-        this.readOnly = readOnly;
         this.workspaceGroup = workspaceGroup;
         this.restriction = variableType;
-        this.color = color;
-        this.description = description;
-        this.unit = unit;
         this.setName(variableName);
         this.setEntityID(variableId);
     }
@@ -325,9 +327,43 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
         return this;
     }
 
+    public boolean tryUpdateVariable(
+        String variableId,
+        String variableName,
+        Consumer<VariableMetaBuilder> builder,
+        VariableType variableType) {
+        int entityHashCode = getEntityHashCode();
+        String varId = Objects.toString(variableId, String.valueOf(System.currentTimeMillis()));
+        this.setName(variableName);
+        this.restriction = variableType;
+        this.setEntityID(varId);
+        this.variableId = varId;
+        this.restriction = variableType;
+        if (builder != null) {
+            builder.accept(new VariableMetaBuilderImpl(this));
+        }
+        return entityHashCode != getEntityHashCode();
+    }
+
     @Override
     protected void beforePersist() {
         setVariableId(defaultIfEmpty(variableId, "" + System.currentTimeMillis()));
         setEntityID(this.getVariableId());
+    }
+
+    @Override
+    public int getChildEntityHashCode() {
+        int result = description != null ? description.hashCode() : 0;
+        result = 31 * result + (restriction != null ? restriction.hashCode() : 0);
+        result = 31 * result + quota;
+        result = 31 * result + (readOnly ? 1 : 0);
+        result = 31 * result + (backup ? 1 : 0);
+        result = 31 * result + (variableId != null ? variableId.hashCode() : 0);
+        result = 31 * result + (color != null ? color.hashCode() : 0);
+        result = 31 * result + (icon != null ? icon.hashCode() : 0);
+        result = 31 * result + (iconColor != null ? iconColor.hashCode() : 0);
+        result = 31 * result + (unit != null ? unit.hashCode() : 0);
+        result = 31 * result + jsonData.hashCode();
+        return result;
     }
 }

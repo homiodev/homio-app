@@ -95,36 +95,6 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
 
     public abstract @NotNull String getImage();
 
-    /*protected boolean invalidateWrongEntity(EntityContext entityContext, Object item) {
-        boolean updated = false;
-        if (item instanceof HasSingleValueDataSource) {
-            HasSingleValueDataSource source = (HasSingleValueDataSource) item;
-            String valueDataSource = source.getValueDataSource();
-            if (isNotEmpty(valueDataSource) && isEntityNotExists(entityContext, valueDataSource)) {
-                updated = true;
-                source.setValueDataSource(null);
-            }
-
-            if (isNotEmpty(source.getSetValueDataSource()) && isEntityNotExists(entityContext, source.getSetValueDataSource())) {
-                updated = true;
-                source.setSetValueDataSource(null);
-            }
-        }
-        if (item instanceof HasChartDataSource) {
-            HasChartDataSource source = (HasChartDataSource) item;
-            if (isNotEmpty(source.getChartDataSource()) && isEntityNotExists(entityContext, source.getChartDataSource())) {
-                updated = true;
-                ((HasChartDataSource) item).setChartDataSource(null);
-            }
-        }
-        return updated;
-    }*/
-
-  /*  private boolean isEntityNotExists(EntityContext entityContext, String source) {
-        DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, source);
-        return dsContext.getSource() == null;
-    }*/
-
     @UIField(order = 21, isRevert = true)
     @UIFieldGroup("UI")
     @UIFieldColorPicker(allowThreshold = true, pulseColorCondition = true, thresholdSource = true)
@@ -232,5 +202,10 @@ public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseE
                 }
             }
         }
+    }
+
+    @Override
+    protected int getChildEntityHashCode() {
+        return 0;
     }
 }
