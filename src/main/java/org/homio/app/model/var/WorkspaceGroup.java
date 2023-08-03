@@ -52,7 +52,7 @@ import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.UIFieldClickToEdit;
 import org.homio.app.model.UIHideEntityIfFieldNotNull;
-import org.homio.app.repository.VariableDataRepository;
+import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
@@ -211,7 +211,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         @UIActionInput(name = "KEEP_COUNT", type = Type.number, value = "-1", min = -1, max = 100_000)
     })
     public ActionResponseModel clearBackup(EntityContext entityContext, JSONObject params) {
-        val repository = entityContext.getBean(VariableDataRepository.class);
+        val repository = entityContext.getBean(VariableBackupRepository.class);
         int days = params.optInt("KEEP_DAYS", -1);
         int count = params.optInt("KEEP_COUNT", -1);
         if (days == 0 || count == 0) {
@@ -241,19 +241,19 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
         return ActionResponseModel.showWarn("W.ERROR.NO_VARIABLES_TO_DELETE");
     }
 
-    private int clearAll(VariableDataRepository repository) {
+    private int clearAll(VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
                                  .map(v -> repository.delete(v.getVariableId()))
                                  .mapToInt(i -> i).sum();
     }
 
-    private int clearByCount(int count, VariableDataRepository repository) {
+    private int clearByCount(int count, VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
                                  .map(v -> repository.deleteButKeepCount(v.getVariableId(), count))
                                  .mapToInt(i -> i).sum();
     }
 
-    private int clearByDays(int days, VariableDataRepository repository) {
+    private int clearByDays(int days, VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
                                  .map(v -> repository.deleteButKeepDays(v.getVariableId(), days))
                                  .mapToInt(i -> i).sum();

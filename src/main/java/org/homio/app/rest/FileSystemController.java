@@ -142,11 +142,11 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
                 }
             } catch (Exception ignore) {
             }
-            return CommonUtils.inputStreamToResource(inputStream, mediaType);
+            return CommonUtils.inputStreamToResource(inputStream, mediaType, null);
         } else {
             Path zipFile = archiveSource(request.sourceFs, "zip", request.sourceFileIds, "downloadContent", null, null);
             return CommonUtils.inputStreamToResource(
-                Files.newInputStream(zipFile), new MediaType("application", "zip"));
+                Files.newInputStream(zipFile), new MediaType("application", "zip"), null);
         }
     }
 

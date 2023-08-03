@@ -43,10 +43,9 @@ import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.OptionModel;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.audio.AudioService;
-import org.homio.app.config.cacheControl.CacheControl;
-import org.homio.app.config.cacheControl.CachePolicy;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.ImageService;
+import org.homio.app.manager.ImageService.ImageResponse;
 import org.homio.app.video.ffmpeg.FfmpegHardwareRepository;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -67,6 +66,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.WebRequest;
 
 @Log4j2
 @RestController
@@ -206,28 +206,49 @@ public class MediaController {
         return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).contentType(mediaType).body(region);
     }
 
+    @SneakyThrows
     @GetMapping("/audio/{streamID}/play")
-    public void playAudioFile(@PathVariable String streamID, HttpServletResponse resp)
-        throws IOException {
+    public void playAudioFile(@PathVariable String streamID, HttpServletResponse resp) {
         audioService.playRequested(streamID, resp);
     }
 
     @GetMapping("/image/{entityID}")
-    public ResponseEntity<InputStreamResource> getImage(@PathVariable String entityID) {
-        return imageService.getImage(entityID);
+    public ResponseEntity<InputStreamResource> getImage(WebRequest webRequest, @PathVariable String entityID) {
+        String eTag = String.valueOf(entityID.hashCode());
+        if (webRequest.checkNotModified(eTag)) {
+            return null;
+        }
+        return toResponse(imageService.getImage(entityID), eTag);
     }
 
-    @GetMapping("/image/{addonID}/{baseEntityType:.+}")
-    @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
-    public ResponseEntity<InputStreamResource> getAddonImage(
-        @PathVariable("addonID") String addonID,
-        @PathVariable String baseEntityType) {
-        AddonEntrypoint addonEntrypoint = addonService.getAddon(addonID);
-        InputStream stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("images/" + baseEntityType);
-        if (stream == null) {
-            throw new NotFoundException("Unable to find image <" + baseEntityType + "> of addon: " + addonID);
+    @GetMapping("/workspace/extension/{addonID}.png")
+    public ResponseEntity<InputStreamResource> getExtensionImage(WebRequest webRequest, @PathVariable("addonID") String addonID) {
+        String eTag = String.valueOf(addonID.hashCode());
+        if (webRequest.checkNotModified(eTag)) {
+            return null;
         }
-        return CommonUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
+        AddonEntrypoint addonEntrypoint = addonService.getAddon(addonID);
+        InputStream stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("extensions/" + addonEntrypoint.getAddonID() + ".png");
+        if (stream == null) {
+            stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("images/image.png");
+        }
+        if (stream == null) {
+            throw new NotFoundException("Unable to find workspace extension addon image for addon: " + addonID);
+        }
+        return toResponse(new ImageResponse(stream, MediaType.IMAGE_PNG), eTag);
+    }
+
+    @SneakyThrows
+    @GetMapping("/image/{addonID}/{imageID:.+}")
+    public ResponseEntity<InputStreamResource> getAddonImage(
+        WebRequest webRequest,
+        @PathVariable("addonID") String addonID,
+        @PathVariable String imageID) {
+        String eTag = String.valueOf((addonID + imageID).hashCode());
+        if (webRequest.checkNotModified(eTag)) {
+            return null;
+        }
+        return toResponse(imageService.getAddonImage(addonID, imageID), eTag);
     }
 
     @GetMapping("/audioSource")
@@ -316,6 +337,15 @@ public class MediaController {
             // long rangeLength = Math.min(1024 * 1024, contentLength);
             return new ResourceRegion(video, 0, contentLength);
         }
+    }
+
+    private ResponseEntity<InputStreamResource> toResponse(ImageResponse response, String eTag) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(new MediaType("image", "jpeg"));
+        headers.add("Cache-Control", "max-age=31536000, public");
+        headers.add("ETag", eTag);
+        headers.add("Last-Modified", new Date(System.currentTimeMillis()).toString());
+        return CommonUtils.inputStreamToResource(response.stream(), response.mediaType(), headers);
     }
 
     @Getter

@@ -1,9 +1,10 @@
-package org.homio.app.repository;
+package org.homio.app.repository.generator;
 
 import java.util.UUID;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.id.IdentifierGenerator;
 import org.homio.api.entity.BaseEntity;
+import org.homio.app.model.var.VariableBackup;
 
 public class HomioIdGenerator implements IdentifierGenerator {
 
@@ -17,13 +18,9 @@ public class HomioIdGenerator implements IdentifierGenerator {
 
             }
             return entityID;
+        } else if (object instanceof VariableBackup) {
+
         }
         return UUID.randomUUID().toString();
     }
-
-   /* @Override
-    public Object generate(SharedSessionContractImplementor session, Object owner, Object currentValue, EventType eventType) {
-        UUID.randomUUID();
-        return super.generate(session, owner, currentValue, eventType);
-    }*/
 }

@@ -24,8 +24,8 @@ public class VariableBackup {
 
     private String value;
 
-    public VariableBackup(String variableId, WorkspaceVariableMessage message) {
-        this.id = Math.toIntExact(System.currentTimeMillis() % 1000000000);
+    public VariableBackup(Integer id, String variableId, WorkspaceVariableMessage message) {
+        this.id = id;
         this.vid = variableId;
         this.created = message.getCreated();
         this.value = message.getValue().toString();

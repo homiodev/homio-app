@@ -53,7 +53,7 @@ import org.homio.api.ui.field.selection.UIFieldSelectionParent;
 import org.homio.api.ui.field.selection.UIFieldSelectionParent.SelectionParent;
 import org.homio.app.manager.common.impl.EntityContextVarImpl;
 import org.homio.app.manager.common.impl.EntityContextVarImpl.VariableMetaBuilderImpl;
-import org.homio.app.repository.VariableDataRepository;
+import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -139,7 +139,7 @@ public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
     }
 
     public int getBackupStorageCount() {
-        return backup ? getEntityContext().getBean(VariableDataRepository.class).count(variableId) : 0;
+        return backup ? getEntityContext().getBean(VariableBackupRepository.class).count(variableId) : 0;
     }
 
     @Override

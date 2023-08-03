@@ -58,19 +58,6 @@ public class WorkspaceController {
         return extensions;
     }
 
-    @GetMapping("/extension/{addonID}.png")
-    public ResponseEntity<InputStreamResource> getExtensionImage(@PathVariable("addonID") String addonID) {
-        AddonEntrypoint addonEntrypoint = addonService.getAddon(addonID);
-        InputStream stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("extensions/" + addonEntrypoint.getAddonID() + ".png");
-        if (stream == null) {
-            stream = addonEntrypoint.getClass().getClassLoader().getResourceAsStream("images/image.png");
-        }
-        if (stream == null) {
-            throw new NotFoundException("Unable to find workspace extension addon image for addon: " + addonID);
-        }
-        return CommonUtils.inputStreamToResource(stream, MediaType.IMAGE_PNG);
-    }
-
     @GetMapping("/{entityID}")
     public String getWorkspace(@PathVariable("entityID") String entityID) {
         WorkspaceEntity workspaceEntity = entityContext.getEntity(entityID);

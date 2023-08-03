@@ -36,7 +36,7 @@ import org.homio.app.model.var.VariableBackup;
 import org.homio.app.model.var.WorkspaceGroup;
 import org.homio.app.model.var.WorkspaceVariable;
 import org.homio.app.model.var.WorkspaceVariableMessage;
-import org.homio.app.repository.VariableDataRepository;
+import org.homio.app.repository.VariableBackupRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,7 +46,7 @@ public class EntityContextVarImpl implements EntityContextVar {
 
     public static final Map<String, VariableContext> globalVarStorageMap = new ConcurrentHashMap<>();
     @Getter private final EntityContextImpl entityContext;
-    private final VariableDataRepository variableDataRepository;
+    private final VariableBackupRepository variableBackupRepository;
     private final ReentrantLock createContextLock = new ReentrantLock();
 
     public static void createBroadcastGroup(EntityContext entityContext) {
@@ -72,7 +72,7 @@ public class EntityContextVarImpl implements EntityContextVar {
                 VariableContext context = globalVarStorageMap.remove(workspaceVariable.getVariableId());
                 context.storageService.deleteAll();
                 if (context.groupVariable.isBackup()) {
-                    variableDataRepository.delete(context.groupVariable.getVariableId());
+                    variableBackupRepository.delete(context.groupVariable.getVariableId());
                 }
             });
 
@@ -81,7 +81,7 @@ public class EntityContextVarImpl implements EntityContextVar {
     }
 
     public int backupCount(String variableID) {
-        return variableDataRepository.count(getVariableId(variableID));
+        return variableBackupRepository.count(getVariableId(variableID));
     }
 
     @Override
@@ -296,7 +296,7 @@ public class EntityContextVarImpl implements EntityContextVar {
                 long nextTime = System.currentTimeMillis();
                 List<WorkspaceVariableMessage> values = context.storageService.findAllSince(context.lastBackupTimestamp);
                 if (!values.isEmpty()) {
-                    variableDataRepository.save(context.groupVariable.getVariableId(), values);
+                    variableBackupRepository.save(context.groupVariable.getVariableId(), values);
                 }
                 context.lastBackupTimestamp = nextTime;
             }
@@ -396,14 +396,16 @@ public class EntityContextVarImpl implements EntityContextVar {
         globalVarStorageMap.put(variableId, context);
 
         if (context.groupVariable.isBackup()) {
-            List<VariableBackup> backupData = variableDataRepository.findAll(
+            List<VariableBackup> backupData = variableBackupRepository.findAll(
                 context.groupVariable.getVariableId(),
                 context.groupVariable.getQuota());
             var messages = backupData.stream()
                                      .map(bd -> WorkspaceVariableMessage.of(bd,
                                          tryConvertValueToRestrictionTypeFormat(bd.getValue(), context)))
                                      .sorted().collect(Collectors.toList());
-            service.save(messages);
+            if (!messages.isEmpty()) {
+                service.save(messages);
+            }
         }
 
         return context;

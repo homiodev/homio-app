@@ -2,6 +2,7 @@ package org.homio.addon.tuya;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
 import static org.homio.addon.tuya.service.TuyaDeviceService.CONFIG_DEVICE_SERVICE;
 import static org.homio.api.ui.field.UIFieldType.HTML;
@@ -234,11 +235,6 @@ public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
         setJsonData("sb", value);
     }
 
-    @JsonIgnore
-    public String getIcon() {
-        return getJsonData("icon");
-    }
-
     public void setIcon(String value) {
         setJsonData("icon", value);
     }
@@ -258,10 +254,6 @@ public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
         return getService().findDevices();
     }
 
-    public void setModel(String value) {
-        setJsonData("model", value);
-    }
-
     @Override
     public String getDefaultName() {
         return "Generic Tuya Device";
@@ -272,14 +264,17 @@ public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
         setCategory(device.category);
         setMac(deviceMac);
         setLocalKey(device.localKey);
-        setName(device.productName);
+        setName(device.name);
         setIeeeAddress(device.id);
         setUuid(device.uuid);
-        setModel(device.model);
+        setDeviceModel(device.model);
         setProductId(device.productId);
         setSubDevice(device.subDevice);
         setOwnerID(device.ownerId);
         setIcon(device.icon);
+        if (isNotEmpty(device.productId)) {
+            setImageIdentifier(device.productId + ".png");
+        }
         return hashCode != getEntityHashCode();
     }
 
@@ -357,5 +352,13 @@ public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
             Type schemaType = TypeToken.getParameterized(Map.class, String.class, schemaListType).getType();
             return Objects.requireNonNull(gson.fromJson(reader, schemaType));
         }
+    }
+
+    @Override
+    public @Nullable String getFallbackImageIdentifier() {
+        if (getJsonData().has("icon")) {
+            return "https://images.tuyacn.com/%s".formatted(getJsonData("icon"));
+        }
+        return null;
     }
 }

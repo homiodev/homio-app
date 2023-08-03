@@ -2,17 +2,30 @@ package org.homio.app.repository;
 
 import java.time.LocalDate;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.model.var.VariableBackup;
 import org.homio.app.model.var.WorkspaceVariableMessage;
 import org.springframework.stereotype.Repository;
 
 @Repository
-@RequiredArgsConstructor
-public class VariableDataRepository {
+public class VariableBackupRepository {
 
     private final TransactionManagerContext tmc;
+    private final AtomicInteger nextId;
+
+    public VariableBackupRepository(TransactionManagerContext tmc) {
+        this.tmc = tmc;
+        this.nextId = new AtomicInteger(getMaxId());
+    }
+
+    public Integer getMaxId() {
+        String jql = "select max(id) from VariableBackup";
+        return tmc.executeWithoutTransaction(em -> {
+            Object result = em.createQuery(jql).getSingleResult();
+            return result == null ? 0 : ((Number) result).intValue();
+        });
+    }
 
     public List<VariableBackup> findAll(String variableId, int limit) {
         String jql = "select vd from VariableBackup as vd where vd.vid = :vid order by vd.created desc";
@@ -33,7 +46,7 @@ public class VariableDataRepository {
     public void save(String variableId, List<WorkspaceVariableMessage> values) {
         tmc.executeInTransaction(em -> {
             for (WorkspaceVariableMessage message : values) {
-                em.persist(new VariableBackup(variableId, message));
+                em.persist(new VariableBackup(nextId.incrementAndGet(), variableId, message));
             }
         });
     }

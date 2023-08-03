@@ -156,7 +156,6 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                 setEntityStatus(Status.WAITING, "Waiting for IP address");
                 udpDiscoveryListener.registerListener(entity.getIeeeAddress(), this);
             }
-            scheduleRefreshDeviceStatus();
         } catch (Exception ex) {
             setEntityStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
             log.error("[{}]: Error during initialize tuya device: {}", entity.getEntityID(), CommonUtils.getErrorMessage(ex));
@@ -164,8 +163,10 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     }
 
     private void setEntityStatus(@NotNull Status status, @Nullable String message) {
-        entity.setStatus(status, message);
-        getEndpoints().get(ENDPOINT_DEVICE_STATUS).setValue(new StringType(status.toString()), true);
+        if (entity.getStatus() != status || !Objects.equals(entity.getStatusMessage(), message)) {
+            entity.setStatus(status, message);
+            getEndpoints().get(ENDPOINT_DEVICE_STATUS).setValue(new StringType(status.toString()), true);
+        }
     }
 
     private void createOrUpdateDeviceGroup() {
@@ -192,7 +193,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     private void fetchDeviceInfo() {
         setEntityStatus(Status.INITIALIZE, null);
         // delay to able Tuya api get project
-        entityContext.bgp().builder("tuya-init-" + entity.getEntityID())
+        entityContext.bgp().builder("tuya-init-" + entity.getIeeeAddress())
                      .delay(Duration.ofSeconds(1))
                      .onError(e -> setEntityStatus(Status.ERROR, CommonUtils.getErrorMessage(e)))
                      .execute(this::tryFetchDeviceInfo);
@@ -218,8 +219,10 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
 
     @Override
     public void onConnected() {
-        setEntityStatus(Status.ONLINE, null);
-        scheduleRefreshDeviceStatus();
+        if (!entity.getStatus().isOnline()) {
+            setEntityStatus(Status.ONLINE, null);
+            scheduleRefreshDeviceStatus();
+        }
     }
 
     @Override
@@ -324,10 +327,13 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     private void scheduleRefreshDeviceStatus() {
         if (entity.getStatus().isOnline()) {
             // request all statuses
-            tuyaDeviceCommunicator.ifPresent(TuyaDeviceCommunicator::requestStatus);
+            //   tuyaDeviceCommunicator.ifPresent(TuyaDeviceCommunicator::requestStatus);
 
             tuyaDeviceCommunicator.ifPresent(communicator -> {
-                pollingJob = entityContext.bgp().builder("tuya-device-pull-%s".formatted(entity.getEntityID()))
+                entityContext.bgp().builder("tuya-pull-all-%s".formatted(entity.getIeeeAddress()))
+                             .delay(Duration.ofSeconds(5))
+                             .execute(communicator::requestStatus);
+                pollingJob = entityContext.bgp().builder("tuya-pull-%s".formatted(entity.getIeeeAddress()))
                                           .intervalWithDelay(Duration.ofSeconds(entity.getPollingInterval()))
                                           .execute(communicator::refreshStatus);
             });
@@ -340,12 +346,15 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
             // only re-connect if a device is present, we are not disposing the thing and either the reconnectFuture is
             // empty or already done
             if (reconnectFuture == null || reconnectFuture.isStopped()) {
-                this.reconnectFuture = entityContext.bgp().builder("tuya-device-connect-%s".formatted(entity.getEntityID()))
-                                                    .delay(Duration.ofSeconds(entity.getReconnectInterval()))
-                                                    .execute(() -> {
-                                                        setEntityStatus(Status.INITIALIZE, null);
-                                                        communicator.connect();
-                                                    });
+                this.reconnectFuture =
+                    entityContext.bgp().builder("tuya-connect-%s".formatted(entity.getIeeeAddress()))
+                                 .delay(Duration.ofSeconds(entity.getReconnectInterval()))
+                                 .execute(() -> {
+                                     if (!entity.getStatus().isOnline()) {
+                                         setEntityStatus(Status.INITIALIZE, null);
+                                         communicator.connect();
+                                     }
+                                 });
             }
         });
     }

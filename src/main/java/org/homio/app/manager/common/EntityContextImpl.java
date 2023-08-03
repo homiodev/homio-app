@@ -83,7 +83,7 @@ import org.homio.app.model.entity.widget.attributes.HasPosition;
 import org.homio.app.model.entity.widget.impl.WidgetLayoutEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.homio.app.repository.SettingRepository;
-import org.homio.app.repository.VariableDataRepository;
+import org.homio.app.repository.VariableBackupRepository;
 import org.homio.app.repository.device.AllDeviceRepository;
 import org.homio.app.repository.widget.WidgetRepository;
 import org.homio.app.repository.widget.WidgetSeriesRepository;
@@ -192,7 +192,7 @@ public class EntityContextImpl implements EntityContext {
         ThreadPoolTaskScheduler taskScheduler,
         SimpMessagingTemplate messagingTemplate,
         ConfigurableEnvironment environment,
-        VariableDataRepository variableDataRepository,
+        VariableBackupRepository variableBackupRepository,
         EntityManagerFactory entityManagerFactory,
         MachineHardwareRepository machineHardwareRepository,
         FfmpegHardwareRepository ffmpegHardwareRepository) {
@@ -216,7 +216,7 @@ public class EntityContextImpl implements EntityContext {
         this.entityContextInstall = new EntityContextInstallImpl(this);
         this.entityContextWidget = new EntityContextWidgetImpl(this);
         this.entityContextStorageImpl = new EntityContextStorageImpl(this);
-        this.entityContextVar = new EntityContextVarImpl(this, variableDataRepository);
+        this.entityContextVar = new EntityContextVarImpl(this, variableBackupRepository);
         this.entityContextMedia = new EntityContextMediaImpl(this, ffmpegHardwareRepository);
         this.entityContextHardware = new EntityContextHardwareImpl(this, machineHardwareRepository);
         this.entityContextService = new EntityContextServiceImpl(this);

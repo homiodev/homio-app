@@ -20,6 +20,7 @@ import org.homio.app.model.entity.SettingEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.WebRequest;
 
 @RestController
 @RequestMapping("/rest/route")
@@ -42,7 +43,7 @@ public class RouteController {
     }
 
     @GetMapping("/bootstrap")
-    public BootstrapContext getBootstrap() {
+    public BootstrapContext getBootstrap(WebRequest webRequest) {
         BootstrapContext context = new BootstrapContext();
         context.routes = getRoutes();
         context.menu = getMenu();
@@ -50,6 +51,10 @@ public class RouteController {
         context.settings = settingController.getSettings();
         context.notifications = ((EntityContextUIImpl) entityContext.ui()).getNotifications();
 
+        String eTag = String.valueOf(context.hashCode());
+        if (webRequest.checkNotModified(eTag)) {
+            return null;
+        }
         return context;
     }
 
@@ -61,7 +66,7 @@ public class RouteController {
         }
 
         for (List<SidebarMenuItem> sidebarMenuItems : sidebarMenus.values()) {
-            sidebarMenuItems.sort(Comparator.comparingInt(SidebarMenuItem::getOrder));
+            sidebarMenuItems.sort(Comparator.comparingInt(SidebarMenuItem::order));
         }
 
         return sidebarMenus;
@@ -110,14 +115,7 @@ public class RouteController {
     }
 
     @Getter
-    @RequiredArgsConstructor
-    public static class SidebarMenuItem {
-
-        private final String href;
-        private final String icon;
-        private final String bg;
-        private final String label;
-        private final int order;
+    public record SidebarMenuItem(String href, String icon, String bg, String label, int order) {
 
         static SidebarMenuItem fromAnnotation(Class<?> clazz, UISidebarMenu uiSidebarMenu) {
             return new SidebarMenuItem(
