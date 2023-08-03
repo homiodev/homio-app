@@ -114,7 +114,6 @@ public class RouteController {
         public EntityContextUIImpl.NotificationResponse notifications;
     }
 
-    @Getter
     public record SidebarMenuItem(String href, String icon, String bg, String label, int order) {
 
         static SidebarMenuItem fromAnnotation(Class<?> clazz, UISidebarMenu uiSidebarMenu) {
