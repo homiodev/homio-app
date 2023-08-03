@@ -3,10 +3,12 @@ package org.homio.app.model.rest;
 import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter
+@Accessors(chain = true)
 public class EntityUIMetaData implements Comparable<EntityUIMetaData> {
 
     private String label;

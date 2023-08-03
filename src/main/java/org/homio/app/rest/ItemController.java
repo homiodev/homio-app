@@ -645,7 +645,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 String[] addonAndClassName = subType.split(":");
                 Object subClassObject = entityContext.getAddon()
                                                      .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]);
-                List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false);
+                List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false,
+                    null);
                 // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json                    // parameter)
                 for (EntityUIMetaData data : subTypeFieldMetadata) {
                     data.setTypeMetaData(new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());

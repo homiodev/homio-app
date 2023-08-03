@@ -12,6 +12,8 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.tuya.internal.cloud.TuyaOpenAPI;
 import org.homio.addon.tuya.internal.local.UdpDiscoveryListener;
+import org.homio.addon.z2m.model.Z2MDeviceEntity;
+import org.homio.addon.z2m.setting.ZigBeeEntityCompactModeSetting;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
@@ -35,6 +37,8 @@ public class TuyaEntrypoint implements AddonEntrypoint {
 
     @Override
     public void init() {
+        entityContext.setting().listenValue(TuyaEntityCompactModeSetting.class, "tuya-compact-mode",
+            (value) -> entityContext.ui().updateItems(TuyaDeviceEntity.class));
         TuyaProjectEntity tuyaProjectEntity = ensureEntityExists(entityContext);
         udpDiscoveryListener.setProjectEntityID(tuyaProjectEntity.getEntityID());
         try {

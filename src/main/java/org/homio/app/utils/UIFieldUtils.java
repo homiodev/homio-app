@@ -47,6 +47,7 @@ import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
+import org.homio.api.model.endpoint.DeviceEndpointUI;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
@@ -189,15 +190,29 @@ public class UIFieldUtils {
         if (instance == null) {
             throw new NotFoundException("Unable to find empty constructor for class: " + entityClassByType.getName());
         }
-        List<EntityUIMetaData> result = fillEntityUIMetadataList(instance, entityUIMetaDataSet, entityContext, false);
+        List<EntityUIMetaData> result = fillEntityUIMetadataList(instance, entityUIMetaDataSet, entityContext, false, null);
         if (instance instanceof ConfigureFieldsService configurator) {
             configurator.configure(result);
         }
         return result;
     }
 
-    public static List<EntityUIMetaData> fillEntityUIMetadataList(Object instance, Set<EntityUIMetaData> entityUIMetaDataSet,
-        EntityContext entityContext, boolean fullDisableEdit) {
+    public static List<EntityUIMetaData> fillEntityUIMetadataList(
+        @NotNull Object instance,
+        @NotNull Set<EntityUIMetaData> entityUIMetaDataSet,
+        @NotNull EntityContext entityContext,
+        boolean fullDisableEdit,
+        @Nullable EntityUIMetaData entityUIMetaData) {
+
+        if (instance instanceof DeviceEndpointUI) {
+            // special case for device endpoints
+            EntityUIMetaData deMetadata = new EntityUIMetaData().setEntityName("endpoints").setType("Endpoint");
+            if (entityUIMetaData != null) {
+                deMetadata.setEntityName(entityUIMetaData.getEntityName());
+            }
+            return List.of(deMetadata);
+        }
+
         Map<String, List<Method>> fieldNameToGettersMap = new HashMap<>();
 
         List<Class<?>> classes = getAllSuperclassesAndInterfaces(instance.getClass());
@@ -825,8 +840,11 @@ public class UIFieldUtils {
             }
             Object childClassInstance = CommonUtils.newInstance((Class) inlineType);
             boolean fullDisableEdit = fieldContext.getUIField().disableEdit();
-            jsonTypeMetadata.set("inlineTypeFields",
-                OBJECT_MAPPER.valueToTree(UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext, fullDisableEdit)));
+            JsonNode inlineTypeFields = OBJECT_MAPPER.valueToTree(
+                UIFieldUtils.fillEntityUIMetadataList(childClassInstance, new HashSet<>(), entityContext, fullDisableEdit, entityUIMetaData));
+            if (!inlineTypeFields.isEmpty()) {
+                jsonTypeMetadata.set("inlineTypeFields", inlineTypeFields);
+            }
         }
     }
 

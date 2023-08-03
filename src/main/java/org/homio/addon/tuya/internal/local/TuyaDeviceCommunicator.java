@@ -86,7 +86,6 @@ public class TuyaDeviceCommunicator implements ChannelFutureListener {
     }
 
     public void connect() {
-        entity.setStatus(Status.INITIALIZE);
         keyStore.reset(); // reset session key
         bootstrap.connect(address, 6668).addListener(this);
     }

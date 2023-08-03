@@ -45,9 +45,11 @@ import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.model.device.ConfigDeviceEndpoint;
 import org.homio.api.service.EntityService.ServiceInstance;
+import org.homio.api.state.DecimalType;
 import org.homio.api.state.StringType;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder.InfoType;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -118,9 +120,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
         createOrUpdateDeviceGroup();
         try {
             if (endpoints.isEmpty()) {
-                SchemaDp schemaDp = new SchemaDp().setCode(ENDPOINT_DEVICE_STATUS).setType(TuyaEndpointType.select)
-                                                  .setRange(Stream.of(Status.values()).map(Enum::name).collect(Collectors.toList()));
-                addInternalEndpoint(schemaDp, Status.UNKNOWN.toString());
+                addDeviceStatusEndpoint();
             }
             if (StringUtils.isEmpty(entity.getIeeeAddress())) {
                 setEntityStatus(Status.ERROR, "Empty device id");
@@ -143,9 +143,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
                             endpoints.put(entry.getKey(), new TuyaDeviceEndpoint(entry.getValue(), entity, endpoint));
                         }
                     }
-
-                    SchemaDp schemaDp = new SchemaDp().setCode(ENDPOINT_LAST_SEEN).setType(TuyaEndpointType.number);
-                    addInternalEndpoint(schemaDp, System.currentTimeMillis());
+                    addLastSeenEndpoint();
                 } else {
                     setEntityStatus(Status.OFFLINE, "No endpoints found");
                     return;
@@ -220,9 +218,13 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
             // only re-connect if a device is present, we are not disposing the thing and either the reconnectFuture is
             // empty or already done
             if (reconnectFuture == null || reconnectFuture.isStopped()) {
+                int interval = entityContext.setting().getEnvRequire("tuya-reconnect-timeout", int.class, 30, true);
                 this.reconnectFuture = entityContext.bgp().builder("tuya-device-connect-%s".formatted(entity.getEntityID()))
-                                                    .delay(Duration.ofSeconds(5))
-                                                    .execute(communicator::connect);
+                                                    .delay(Duration.ofSeconds(interval))
+                                                    .execute(() -> {
+                                                        setEntityStatus(Status.INITIALIZE, null);
+                                                        communicator.connect();
+                                                    });
             }
         });
     }
@@ -273,6 +275,7 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
     }
 
     private void externalUpdate(Integer dp, Object rawValue) {
+        endpoints.get(ENDPOINT_LAST_SEEN).setValue(new DecimalType(System.currentTimeMillis()), true);
         TuyaDeviceEndpoint endpoint = endpoints.values().stream().filter(p -> p.getDp() == dp).findAny().orElse(null);
         if (endpoint != null) {
             if (!endpoint.writeValue(rawValue, true)) {
@@ -308,16 +311,33 @@ public class TuyaDeviceService extends ServiceInstance<TuyaDeviceEntity> impleme
         return this.models;
     }
 
-    private void addInternalEndpoint(SchemaDp schemaDp, Object value) {
-        schemaDp.setDp(0);
+    private void addDeviceStatusEndpoint() {
+        SchemaDp schemaDp = new SchemaDp().setDp(0).setCode(ENDPOINT_DEVICE_STATUS).setType(TuyaEndpointType.select)
+                                          .setRange(Stream.of(Status.values()).map(Enum::name).collect(Collectors.toList()));
         ConfigDeviceEndpoint endpoint = CONFIG_DEVICE_SERVICE.getDeviceEndpoints().get(schemaDp.getCode());
         TuyaDeviceEndpoint tuyaDeviceEndpoint = new TuyaDeviceEndpoint(schemaDp, entity, endpoint) {
+            @Override
+            public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
+                Status status = Status.valueOf(getValue().stringValue());
+                uiInputBuilder.addInfo(status.name(), InfoType.Text).setColor(status.getColor());
+                super.assembleUIAction(uiInputBuilder);
+            }
+        };
+        tuyaDeviceEndpoint.writeValue(Status.UNKNOWN.toString(), false);
+        endpoints.put(schemaDp.getCode(), tuyaDeviceEndpoint);
+    }
+
+    private void addLastSeenEndpoint() {
+        SchemaDp schemaDp = new SchemaDp().setDp(0).setCode(ENDPOINT_LAST_SEEN).setType(TuyaEndpointType.number);
+        ConfigDeviceEndpoint endpoint = CONFIG_DEVICE_SERVICE.getDeviceEndpoints().get(schemaDp.getCode());
+        TuyaDeviceEndpoint tuyaDeviceEndpoint = new TuyaDeviceEndpoint(schemaDp, entity, endpoint) {
+
             @Override
             public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
                 uiInputBuilder.addDuration(getValue().longValue(), null);
             }
         };
-        tuyaDeviceEndpoint.writeValue(value, false);
+        tuyaDeviceEndpoint.writeValue(System.currentTimeMillis(), false);
         endpoints.put(schemaDp.getCode(), tuyaDeviceEndpoint);
     }
 }

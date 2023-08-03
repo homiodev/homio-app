@@ -1,6 +1,27 @@
 {
   "version": "1",
   "devices": [
+    {
+      "name": "Relay/Switch",
+      "exposes": [
+        "switch_1"
+      ],
+      "icon": "fas fa-plug",
+      "iconColor": "#85C240",
+      "widgets": [
+        {
+          "type": "compose",
+          "name": "RELAY",
+          "icon": "fas fa-toggle-on",
+          "compose": [
+            {
+              "type": "toggle",
+              "autoDiscovery": true
+            }
+          ]
+        }
+      ]
+    }
   ],
   "endpoints": [
     {

@@ -1,5 +1,7 @@
 package org.homio.addon.tuya;
 
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.homio.addon.tuya.internal.cloud.TuyaOpenAPI.gson;
 import static org.homio.addon.tuya.service.TuyaDeviceService.CONFIG_DEVICE_SERVICE;
 import static org.homio.api.ui.field.UIFieldType.HTML;
@@ -14,7 +16,6 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -36,7 +37,6 @@ import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
-import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
@@ -50,26 +50,37 @@ import org.jetbrains.annotations.Nullable;
 @Setter
 @Entity
 @Accessors(chain = true)
-@UISidebarMenu(icon = "fas fa-fish-fins", order = 150, bg = "#D68C38", allowCreateNewItems = true, overridePath = "tuya")
+@UISidebarMenu(icon = "fac fa-bitfocus",
+               order = 150,
+               bg = "#D68C38",
+               allowCreateNewItems = true,
+               overridePath = "tuya",
+               filter = {"*:fas fa-filter:#8DBA73", "status:fas fa-heart-crack:#C452C4"},
+               sort = {
+                   "name~#FF9800:fas fa-arrow-up-a-z:fas fa-arrow-down-z-a",
+                   "updated~#7EAD28:fas fa-clock-rotate-left:fas fa-clock-rotate-left fa-flip-horizontal",
+                   "status~#7EAD28:fas fa-turn-up:fas fa-turn-down",
+                   "place~#9C27B0:fas fa-location-dot:fas fa-location-dot fa-rotate-180"
+               })
 public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
     implements EntityService<TuyaDeviceService, DeviceEndpointsBaseEntity>, HasEntityLog {
 
     private static final Map<String, Map<String, SchemaDp>> SCHEMAS = readSchemaFromFile();
 
     @Override
-    public @NotNull Map<String, DeviceEndpoint> getDeviceEndpoints() {
-        return optService().map(service ->
-            service.getEndpoints()
-                   .entrySet()
-                   .stream()
-                   .collect(Collectors.toMap(Entry::getKey, entry ->
-                       (DeviceEndpoint) entry.getValue()))).orElse(Map.of());
+    public String getCompactDescriptionImpl() {
+        String ip = getIp();
+        return (isEmpty(ip) ? "" : "[" + ip + "] ") + defaultIfEmpty(getDescription(), getName());
+    }
+
+    @Override
+    public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
+        return optService().map(TuyaDeviceService::getEndpoints).orElse(Map.of());
     }
 
     @UIField(order = 1, hideOnEmpty = true, fullWidth = true, color = "#89AA50", type = HTML, hideInEdit = true)
     @UIFieldShowOnCondition("return !context.get('compactMode')")
     @UIFieldColorBgRef(value = "statusColor", animate = true)
-    @UIFieldGroup(value = "NAME", order = 1)
     public String getDescription() {
         String message = getStatusMessage();
         if (message != null && message.contains("Failed to connect")) {
@@ -79,20 +90,147 @@ public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
     }
 
     @Override
-    @UIField(order = 30, required = true, inlineEditWhenEmpty = true, label = "deviceID")
+    @UIField(order = 20, required = true, inlineEditWhenEmpty = true, label = "deviceID")
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("GENERAL")
     public @Nullable String getIeeeAddress() {
         return super.getIeeeAddress();
     }
 
-    @UIField(order = 3, hideOnEmpty = true)
+    @UIField(order = 22, semiRequired = true)
     @UIFieldShowOnCondition("return !context.get('compactMode')")
-    @UIFieldGroup("NAME")
+    @UIFieldGroup("GENERAL")
+    public String getLocalKey() {
+        return getJsonData("localKey");
+    }
+
+    public void setLocalKey(String value) {
+        setJsonData("localKey", value);
+    }
+
+    @UIField(order = 33, type = UIFieldType.IpAddress, semiRequired = true, inlineEditWhenEmpty = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("GENERAL")
+    public String getIp() {
+        return getJsonData("ip");
+    }
+
+    public TuyaDeviceEntity setIp(String value) {
+        setJsonData("ip", value);
+        return this;
+    }
+
+    @UIField(order = 1, isRevert = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup(value = "CONNECTION", order = 5, borderColor = "#3880B0")
+    public ProtocolVersion getProtocolVersion() {
+        return getJsonDataEnum("pv", ProtocolVersion.V3_4);
+    }
+
+    public void setProtocolVersion(ProtocolVersion value) {
+        setJsonData("pv", value);
+    }
+
+    @UIField(order = 2, isRevert = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("CONNECTION")
+    public int getPollingInterval() {
+        return getJsonData("pi", 0);
+    }
+
+    public void setPollingInterval(int value) {
+        setJsonData("pi", value);
+    }
+
+    @UIField(order = 1, hideOnEmpty = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup(value = "DEVICE", order = 8, borderColor = "#7331AD")
     public String getDeviceModel() {
         return getModel();
     }
 
-    public @NotNull String getModel() {
-        return getJsonDataRequire("model", "tuya_unknown");
+    public void setDeviceModel(String value) {
+        setJsonData("model", value);
+    }
+
+    @UIField(order = 2, hideInEdit = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("DEVICE")
+    public String getUuid() {
+        return getJsonData("uuid");
+    }
+
+    public void setUuid(String value) {
+        setJsonData("uuid", value);
+    }
+
+    @UIField(order = 3, hideInEdit = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("DEVICE")
+    public String getMac() {
+        return getJsonData("mac");
+    }
+
+    public void setMac(String category) {
+        setJsonData("mac", category);
+    }
+
+    @UIField(order = 4, hideInEdit = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("DEVICE")
+    public String getProductId() {
+        return getJsonData("pid");
+    }
+
+    public void setProductId(String category) {
+        setJsonData("pid", category);
+    }
+
+    @UIField(order = 5, hideInEdit = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("DEVICE")
+    public String getCategory() {
+        return getJsonData("cg");
+    }
+
+    public void setCategory(String category) {
+        setJsonData("cg", category);
+    }
+
+    @UIField(order = 6, hideOnEmpty = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("DEVICE")
+    public String getOwnerID() {
+        return getJsonData("oid");
+    }
+
+    public void setOwnerID(String ownerId) {
+        setJsonData("oid", ownerId);
+    }
+
+    @UIField(order = 7, hideInEdit = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldGroup("DEVICE")
+    public boolean isSubDevice() {
+        return getJsonData("sb", false);
+    }
+
+    public void setSubDevice(boolean value) {
+        setJsonData("sb", value);
+    }
+
+    @JsonIgnore
+    public String getIcon() {
+        return getJsonData("icon");
+    }
+
+    public void setIcon(String value) {
+        setJsonData("icon", value);
+    }
+
+    @Override
+    public @Nullable String getModel() {
+        return getJsonData("model");
     }
 
     @Override
@@ -109,55 +247,6 @@ public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
         setJsonData("model", value);
     }
 
-    @UIField(order = 4)
-    @UIFieldShowOnCondition("return !context.get('compactMode')")
-    @UIFieldGroup("NAME")
-    public String getUuid() {
-        return getJsonData("uuid");
-    }
-
-    public void setUuid(String value) {
-        setJsonData("uuid", value);
-    }
-
-    @UIField(order = 35, semiRequired = true)
-    public String getLocalKey() {
-        return getJsonData("localKey");
-    }
-
-    public void setLocalKey(String value) {
-        setJsonData("localKey", value);
-    }
-
-    @UIField(order = 40, type = UIFieldType.IpAddress, semiRequired = true, inlineEditWhenEmpty = true)
-    public String getIp() {
-        return getJsonData("ip");
-    }
-
-    public TuyaDeviceEntity setIp(String value) {
-        setJsonData("ip", value);
-        return this;
-    }
-
-    @UIField(order = 45)
-    public ProtocolVersion getProtocolVersion() {
-        return getJsonDataEnum("pv", ProtocolVersion.V3_4);
-    }
-
-    public void setProtocolVersion(ProtocolVersion value) {
-        setJsonData("pv", value);
-    }
-
-    @UIField(order = 50, isRevert = true)
-    @UIFieldSlider(min = 10, max = 60, header = "s", extraValue = "0")
-    public int getPollingInterval() {
-        return getJsonData("pi", 0);
-    }
-
-    public void setPollingInterval(int value) {
-        setJsonData("pi", value);
-    }
-
     @Override
     public String getDefaultName() {
         return "Generic Tuya Device";
@@ -168,63 +257,13 @@ public final class TuyaDeviceEntity extends DeviceEndpointsBaseEntity
         return "tuya-device";
     }
 
-    @UIField(order = 100)
-    public String getCategory() {
-        return getJsonData("cg");
-    }
-
-    public void setCategory(String category) {
-        setJsonData("cg", category);
-    }
-
-    @UIField(order = 110)
-    public String getMac() {
-        return getJsonData("mac");
-    }
-
-    public void setMac(String category) {
-        setJsonData("mac", category);
-    }
-
-    @UIField(order = 120)
-    public String getProductId() {
-        return getJsonData("pid");
-    }
-
-    public void setProductId(String category) {
-        setJsonData("pid", category);
-    }
-
-    @UIField(order = 300)
-    public boolean isSubDevice() {
-        return getJsonData("sb", false);
-    }
-
-    public void setSubDevice(boolean value) {
-        setJsonData("sb", value);
-    }
-
-    @UIField(order = 400)
-    public String getIcon() {
-        return getJsonData("icon");
-    }
-
-    public void setIcon(String value) {
-        setJsonData("icon", value);
-    }
-
-    @UIField(order = 500, hideOnEmpty = true)
-    public String getOwnerID() {
-        return getJsonData("oid");
-    }
-
-    public void setOwnerID(String ownerId) {
-        setJsonData("oid", ownerId);
-    }
-
     @SneakyThrows
     public void setSchema(List<SchemaDp> schemaDps) {
         setJsonData("schema", OBJECT_MAPPER.writeValueAsString(schemaDps));
+    }
+
+    public boolean isCompactMode() {
+        return getEntityContext().setting().getValue(TuyaEntityCompactModeSetting.class);
     }
 
     @JsonIgnore

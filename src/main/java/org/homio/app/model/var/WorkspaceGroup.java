@@ -137,7 +137,7 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     }
 
     @UIField(order = 9999, hideInEdit = true)
-    @UIFieldInlineEntities(bg = "#1E5E611F", noContentTitle = "NO_VARIABLES")
+    @UIFieldInlineEntities(bg = "#1E5E611F", noContentTitle = "W.ERROR.NO_VARIABLES")
     public List<WorkspaceVariableEntity> getWorkspaceVariableEntities() {
         List<WorkspaceVariableEntity> list = new ArrayList<>();
         if (childrenGroups != null) {

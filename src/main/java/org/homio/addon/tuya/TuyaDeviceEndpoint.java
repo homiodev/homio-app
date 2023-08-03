@@ -120,7 +120,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
     }
 
     @Override
-    public @NotNull UIInputBuilder createUIInputBuilder() {
+    public @NotNull UIInputBuilder createActionBuilder() {
         UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
         TuyaDeviceEntity device = getDevice();
         State value = getValue();
@@ -131,7 +131,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                     uiInputBuilder.addCheckbox(getEntityID(), getValue().boolValue(), (entityContext, params) -> {
                         setValue(OnOffType.of(params.getBoolean("value")), false);
                         return device.getService().send(Map.of(dp, getValue().boolValue()));
-                    });
+                    }).setDisabled(!device.getStatus().isOnline());
                     return uiInputBuilder;
                 }
                 case number -> {
@@ -139,7 +139,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                         (entityContext, params) -> {
                             setValue(new DecimalType(params.getInt("value")), false);
                             return device.getService().send(Map.of(dp, value.intValue()));
-                        });
+                        }).setDisabled(!device.getStatus().isOnline());
                     return uiInputBuilder;
                 }
                 case select -> {
@@ -150,7 +150,8 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                         })
                         .addOptions(OptionModel.list(getSelectValues()))
                         .setPlaceholder("-----------")
-                        .setSelected(getValue().toString());
+                        .setSelected(getValue().toString())
+                        .setDisabled(!device.getStatus().isOnline());
                     return uiInputBuilder;
                 }
                 case string -> {
@@ -167,7 +168,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                         uiInputBuilder.addCheckbox(getEntityID(), value.boolValue(), (entityContext, params) -> {
                             setValue(OnOffType.of(params.getBoolean("value")), false);
                             return device.getService().send(Map.of(dp2, value.boolValue()));
-                        });
+                        }).setDisabled(!device.getStatus().isOnline());
                     }
                     uiInputBuilder.addColorPicker(getEntityID(), value.stringValue(), (entityContext, params) -> {
                         Map<Integer, Object> commandRequest = new HashMap<>();
@@ -181,7 +182,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                             commandRequest.put(dp2, hexColorToBrightness(value.stringValue()) > 0.0);
                         }
                         return device.getService().send(commandRequest);
-                    });
+                    }).setDisabled(!device.getStatus().isOnline());
                     /* if (command instanceof PercentType) {
                         State oldState = channelStateCache.get(channelUID.getId());
                         if (!(oldState instanceof HSBType)) {
@@ -206,7 +207,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                         uiInputBuilder.addCheckbox(getEntityID(), value.boolValue(), (entityContext, params) -> {
                             setValue(OnOffType.of(params.getBoolean("value")), false);
                             return device.getService().send(Map.of(dp2, value.boolValue()));
-                        });
+                        }).setDisabled(!device.getStatus().isOnline());
                     }
                     uiInputBuilder.addSlider(getEntityID(), value.floatValue(0), 0F, 100F,
                             (entityContext, params) -> {
@@ -224,7 +225,7 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
                                     commandRequest.put(workModeConfig.dp, "white");
                                 }*/
                                 return device.getService().send(commandRequest);
-                            });
+                            }).setDisabled(!device.getStatus().isOnline());
                     return uiInputBuilder;
                 }
             }
@@ -232,8 +233,9 @@ public class TuyaDeviceEndpoint extends BaseDeviceEndpoint<TuyaDeviceEntity> {
         if (getUnit() != null) {
             uiInputBuilder.addInfo("%s <small class=\"text-muted\">%s</small>"
                 .formatted(value.stringValue(), getUnit()), InfoType.HTML);
+        } else {
+            assembleUIAction(uiInputBuilder);
         }
-        assembleUIAction(uiInputBuilder);
         return uiInputBuilder;
     }
 
