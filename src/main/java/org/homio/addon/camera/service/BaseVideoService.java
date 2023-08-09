@@ -168,7 +168,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             videoConnectionJob = entityContext.bgp().builder("poll-video-connection-" + entityID)
                                               .interval(Duration.ofSeconds(60)).execute(this::pollingVideoConnection);
             entity.setStatusOnline();
-            updateNotificationBlock();
+            entityUpdated();
         } catch (Exception ex) {
             disposeAndSetStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
         }
@@ -215,6 +215,11 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         if (entity.isStart()) {
             entityContext.save(entity.setStart(false), false);
         }
+        entityUpdated();
+    }
+
+    private void entityUpdated() {
+        entityContext.ui().updateItem(entity);
         updateNotificationBlock();
     }
 

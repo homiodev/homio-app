@@ -144,7 +144,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     public OnvifCameraService(EntityContext entityContext, OnvifCameraEntity entity) {
         super(entity, entityContext);
 
-        onvifDeviceState = new OnvifDeviceState(entity.getEntityID());
+        onvifDeviceState = new OnvifDeviceState(entity.getEntityID(), () -> entityContext.ui().updateItem(entity));
 
         onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
             entity.getServerPort(), entity.getUser(), entity.getPassword().asString());
@@ -668,6 +668,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     protected void initialize() {
         onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
             entity.getServerPort(), entity.getUser(), entity.getPassword().asString());
+        super.initialize();
         // change camera name if possible
         tryChangeCameraName();
     }
