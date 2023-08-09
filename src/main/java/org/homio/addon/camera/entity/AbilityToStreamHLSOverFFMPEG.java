@@ -2,7 +2,6 @@ package org.homio.addon.camera.entity;
 
 import java.util.List;
 import org.homio.api.entity.HasJsonData;
-import org.homio.api.entity.RestartHandlerOnChange;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldType;
@@ -11,7 +10,6 @@ public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
 
     @UIField(order = 1000, hideInView = true, type = UIFieldType.Chips)
     @UIFieldGroup("HLS_GROUP")
-    @RestartHandlerOnChange
     default List<String> getExtraOptions() {
         return getJsonDataList("extraOpts");
     }
@@ -22,7 +20,6 @@ public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
 
     @UIField(order = 320, hideInView = true)
     @UIFieldGroup("HLS_GROUP")
-    @RestartHandlerOnChange
     default int getHlsListSize() {
         return getJsonData("hlsListSize", 5);
     }
@@ -33,7 +30,6 @@ public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
     }
 
     @UIField(order = 400, hideInView = true)
-    @RestartHandlerOnChange
     @UIFieldGroup("HLS_GROUP")
     default String getVideoCodec() {
         return getJsonData("vcodec", "copy");
@@ -45,7 +41,6 @@ public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
     }
 
     @UIField(order = 410, hideInView = true)
-    @RestartHandlerOnChange
     @UIFieldGroup("HLS_GROUP")
     default String getAudioCodec() {
         return getJsonData("acodec", "aac");
@@ -57,7 +52,6 @@ public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
     }
 
     @UIField(order = 320, hideInView = true)
-    @RestartHandlerOnChange
     @UIFieldGroup("HLS_GROUP")
     default String getHlsScale() {
         return getJsonData("hls_scale");

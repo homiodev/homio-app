@@ -8,7 +8,7 @@ import org.homio.addon.camera.service.OnvifCameraService;
 /**
  * responsible for handling commands for generic onvif thing types.
  */
-@CameraBrandHandler(name = "Onvif")
+@CameraBrandHandler("Onvif")
 public class OnvifBrandHandler extends BaseOnvifCameraBrandHandler {
 
   public OnvifBrandHandler(OnvifCameraService service) {

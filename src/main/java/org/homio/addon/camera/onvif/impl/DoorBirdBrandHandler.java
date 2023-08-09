@@ -15,7 +15,7 @@ import org.homio.api.state.OnOffType;
  * responsible for handling commands, which are sent to one of the channels.
  */
 @Log4j2
-@CameraBrandHandler(name = "DoorBird")
+@CameraBrandHandler("DoorBird")
 public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
 
   public DoorBirdBrandHandler(OnvifCameraService service) {
@@ -61,12 +61,12 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
 
   @Override
   public void initialize(EntityContext entityContext) {
-    OnvifCameraService onvifCameraHandler = getService();
-    if (StringUtils.isEmpty(onvifCameraHandler.getMjpegUri())) {
-      onvifCameraHandler.setMjpegUri("/bha-api/video.cgi");
+    OnvifCameraService service = getService();
+    if (StringUtils.isEmpty(service.getMjpegUri())) {
+      service.setMjpegUri("/bha-api/video.cgi");
     }
-    if (StringUtils.isEmpty(onvifCameraHandler.getSnapshotUri())) {
-      onvifCameraHandler.setSnapshotUri("/bha-api/image.cgi");
+    if (StringUtils.isEmpty(service.getSnapshotUri())) {
+      service.setSnapshotUri("/bha-api/image.cgi");
     }
   }
 

@@ -94,30 +94,21 @@ import org.jetbrains.annotations.Nullable;
 @Log4j2
 public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, OnvifCameraService> {
 
-    @NotNull
-    private static final Map<String, CameraBrandHandlerDescription> cameraBrands = new ConcurrentHashMap<>();
+    private static @NotNull final Map<String, CameraBrandHandlerDescription> cameraBrands = new ConcurrentHashMap<>();
     // ChannelGroup is thread safe
-    @NotNull
-    public final ChannelGroup mjpegChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    public final @NotNull ChannelGroup mjpegChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     @Getter
-    @NotNull
-    private final BaseOnvifCameraBrandHandler brandHandler;
+    private final @NotNull BaseOnvifCameraBrandHandler brandHandler;
     // private GroupTracker groupTracker;
-    @NotNull
-    private final ChannelGroup snapshotMjpegChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    private final @NotNull ChannelGroup snapshotMjpegChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
-    @NotNull
-    private final ChannelGroup autoSnapshotMjpegChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    private final @NotNull ChannelGroup autoSnapshotMjpegChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
-    @NotNull
-    private final ChannelGroup openChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-    @NotNull
-    private final EventLoopGroup mainEventLoopGroup = new NioEventLoopGroup();
+    private final @NotNull ChannelGroup openChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    private final @NotNull EventLoopGroup mainEventLoopGroup = new NioEventLoopGroup();
     @Getter
-    @NotNull
-    private final OnvifDeviceState onvifDeviceState;
-    @NotNull
-    public Map<String, ChannelTracking> channelTrackingMap = new ConcurrentHashMap<>();
+    private final @NotNull OnvifDeviceState onvifDeviceState;
+    public @NotNull Map<String, ChannelTracking> channelTrackingMap = new ConcurrentHashMap<>();
     public boolean useDigestAuth = false;
     @Setter
     @Getter
@@ -127,24 +118,23 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Getter
     private String snapshotUri;
     private boolean streamingAutoFps = false;
-    private EntityContextBGP.ThreadContext<Void> snapshotJob;
     private Bootstrap mainBootstrap;
-    @NotNull
-    private FullHttpRequest putRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("PUT"), "");
+    private @NotNull FullHttpRequest putRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("PUT"), "");
     // basicAuth MUST remain private as it holds the cameraEntity.getPassword()
-    @NotNull
-    private FullHttpRequest postRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("POST"), "");
+    private @NotNull FullHttpRequest postRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("POST"), "");
     private String basicAuth = "";
-    @NotNull
-    private Object firstStreamedMsg = new Object();
+    private @NotNull Object firstStreamedMsg = new Object();
     private boolean streamingSnapshotMjpeg = false;
     private boolean updateAutoFps = false;
-    private EntityContextBGP.ThreadContext<Void> pullConfigSchedule;
+
+    private EntityContextBGP.ThreadContext<Void> snapshotJob;
+    private EntityContextBGP.ThreadContext<Void> pullConfigJob;
 
     public OnvifCameraService(EntityContext entityContext, OnvifCameraEntity entity) {
         super(entity, entityContext);
 
-        onvifDeviceState = new OnvifDeviceState(entity.getEntityID(), () -> entityContext.ui().updateItem(entity));
+        onvifDeviceState = new OnvifDeviceState(entity.getEntityID());
+        onvifDeviceState.setUpdateListener(() -> entityContext.ui().updateItem(entity));
 
         onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
             entity.getServerPort(), entity.getUser(), entity.getPassword().asString());
@@ -309,12 +299,10 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                     socketChannel.pipeline().addLast(new IdleStateHandler(18, 0, 0));
                     socketChannel.pipeline().addLast(new HttpClientCodec());
                     socketChannel.pipeline().addLast(IpCameraBindingConstants.AUTH_HANDLER,
-                        new MyNettyAuthHandler(entity.getUser(),
-                            entity.getPassword().asString(), OnvifCameraService.this));
+                        new MyNettyAuthHandler(entity, OnvifCameraService.this));
                     socketChannel.pipeline().addLast(IpCameraBindingConstants.COMMON_HANDLER, new CommonCameraHandler());
 
-                    String handlerName = OnvifCameraService.getCameraBrands(entityContext).get(entity.getCameraType()).getHandlerName();
-                    socketChannel.pipeline().addLast(handlerName, brandHandler.asBootstrapHandler());
+                    socketChannel.pipeline().addLast(brandHandler.getClass().getSimpleName(), brandHandler.asBootstrapHandler());
                 }
             });
         }
@@ -765,7 +753,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         if (streamingAutoFps) {
             updateAutoFps = true;
             if (!snapshotPolling && isEmpty(snapshotUri)) {
-                // Dont need to poll if creating from RTSP stream with FFmpeg or we are polling at full rate already.
+                // Don't need to poll if creating from RTSP stream with FFmpeg or we are polling at full rate already.
                 sendHttpGET(snapshotUri);
             }
         } else if (!isEmpty(snapshotUri) && !snapshotPolling) {// we need to check camera is still online.
@@ -793,8 +781,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
         brandHandler.initialize(entityContext);
 
-        pullConfigSchedule = entityContext.bgp().builder("Camera " + entity.getEntityID() + " run per minute")
-                                          .delay(Duration.ofSeconds(30)).interval(Duration.ofSeconds(60)).execute(() -> {
+        pullConfigJob = entityContext.bgp().builder("Camera " + entity.getEntityID() + " run per minute")
+                                     .delay(Duration.ofSeconds(30)).interval(Duration.ofSeconds(60)).execute(() -> {
                 try {
                     onvifDeviceState.runOncePerMinute();
                     brandHandler.runOncePerMinute(entityContext);
@@ -824,8 +812,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         snapshotPolling = false;
         onvifDeviceState.dispose();
 
-        if (pullConfigSchedule != null) {
-            pullConfigSchedule.cancel();
+        if (pullConfigJob != null) {
+            pullConfigJob.cancel();
         }
 
         if (snapshotJob != null) {
@@ -1063,9 +1051,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                             }
                             // Foscam needs this as will other cameras with chunks//
                             if (isChunked && bytesAlreadyReceived != 0) {
-                                log.debug("[{}]: Reply is chunked.", getEntityID());
                                 reply = incomingMessage;
-                                super.channelRead(ctx, reply);
                             }
                         }
                     }
@@ -1073,7 +1059,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                     // Foscam cameras need this
                     if (!contentType.contains("image/jp") && bytesAlreadyReceived != 0) {
                         reply = incomingMessage;
-                        log.debug("[{}]: Packet back from camera is {}", getEntityID(), incomingMessage);
+                        log.trace("[{}]: Packet back from camera is {}", getEntityID(), incomingMessage);
                         super.channelRead(ctx, reply);
                     }
                 }

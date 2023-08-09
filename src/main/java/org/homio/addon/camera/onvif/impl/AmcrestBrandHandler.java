@@ -25,7 +25,7 @@ import org.homio.api.state.State;
  * responsible for handling commands, which are sent to one of the channels.
  */
 @Log4j2
-@CameraBrandHandler(name = "Amcrest", handlerName = "amcrestHandler")
+@CameraBrandHandler("Amcrest")
 public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasAudioAlarm,
     BrandCameraHasMotionAlarm {
 

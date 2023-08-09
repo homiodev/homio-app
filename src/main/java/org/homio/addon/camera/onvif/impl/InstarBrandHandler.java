@@ -24,7 +24,7 @@ import org.homio.api.state.StringType;
  * responsible for handling commands, which are sent to one of the channels.
  */
 @Log4j2
-@CameraBrandHandler(name = "Instar", handlerName = "instarHandler")
+@CameraBrandHandler("Instar")
 public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasAudioAlarm {
 
     private String requestUrl = "Empty";

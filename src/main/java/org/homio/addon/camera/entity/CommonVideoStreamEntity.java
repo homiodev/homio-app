@@ -68,6 +68,7 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
     @Override
     public long getVideoParametersHashCode() {
         return super.getVideoParametersHashCode() +
-            (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode());
+            (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode()) +
+            getJsonDataHashCode("extraOpts", "hlsListSize", "vcodec", "acodec", "hls_scale");
     }
 }

@@ -131,6 +131,7 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
   public long getVideoParametersHashCode() {
     return super.getVideoParametersHashCode() +
         (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode()) +
-        getJsonDataHashCode("asource", "stream", "streamPort");
+        getJsonDataHashCode("asource", "stream", "streamPort",
+            "extraOpts", "hlsListSize", "vcodec", "acodec", "hls_scale");
   }
 }

@@ -83,7 +83,6 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
   }
 
   public void pollCameraRunnable() {
-
   }
 
   public void initialize(EntityContext entityContext) {

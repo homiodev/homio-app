@@ -7,8 +7,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Random;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.model.Status;
+import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.api.model.Status;
 
 /**
  * responsible for handling the basic and digest auths
@@ -25,10 +26,10 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
   private String nonce = "", opaque = "", qop = "";
   private String realm = "";
 
-  public MyNettyAuthHandler(String user, String pass, OnvifCameraService service) {
+  public MyNettyAuthHandler(OnvifCameraEntity entity, OnvifCameraService service) {
     this.service = service;
-    username = user;
-    password = pass;
+    username = entity.getUser();
+    password = entity.getPassword().asString();
   }
 
   public void setURL(String method, String url) {

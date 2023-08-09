@@ -9,7 +9,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface CameraBrandHandler {
 
-  String handlerName() default "";
-
-  String name();
+    String value();
 }

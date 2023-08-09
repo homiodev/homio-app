@@ -23,11 +23,7 @@ public class CameraBrandHandlerDescription {
   }
 
   public String getName() {
-    return cameraBrandHandler.name();
-  }
-
-  public String getHandlerName() {
-    return cameraBrandHandler.handlerName();
+    return cameraBrandHandler.value();
   }
 
   @SneakyThrows

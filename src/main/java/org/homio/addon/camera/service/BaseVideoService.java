@@ -228,7 +228,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         if (pollVideoJob == null && isHandlerInitialized) {
             disposeVideoConnectionJob();
             pollVideoJob = entityContext.bgp().builder("poll-video-runnable-" + entityID)
-                                        .interval(Duration.ofSeconds(8)).execute(this::pollVideoRunnable);
+                                        .intervalWithDelay(Duration.ofSeconds(8)).execute(this::pollVideoRunnable);
         }
     }
 
@@ -514,7 +514,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
         long timePassed = System.currentTimeMillis() - lastAnswerFromVideo;
         if (timePassed > 1200000) { // more than 2 min passed
-            disposeAndSetStatus(Status.OFFLINE, "Passed more that 2 min without answer from video");
+            disposeAndSetStatus(Status.OFFLINE, "More that 2 min without answer from source");
         } else if (timePassed > 30000) {
             startSnapshot();
         }

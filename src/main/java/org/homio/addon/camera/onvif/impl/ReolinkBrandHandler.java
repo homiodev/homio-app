@@ -60,7 +60,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestTemplate;
 
-@CameraBrandHandler(name = "Reolink")
+@CameraBrandHandler("Reolink")
 public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     BrandCameraHasMotionAlarm, VideoPlaybackStorage {
 
@@ -428,7 +428,25 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @Override
     public void initialize(EntityContext entityContext) {
+        /*OnvifCameraService service = getService();
+        if (StringUtils.isEmpty(service.getSnapshotUri())) {
+            service.setSnapshotUri("/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=openHAB%token=".formatted(
+                service.getEntity().getNvrChannel(), token));
+        }*/
         runOncePerMinute(entityContext);
+    }
+
+    @Override
+    public void pollCameraRunnable() {
+       /* OnvifCameraService service = getService();
+        if (getEntity().getNvrChannel() > 0) {
+            service.sendHttpGET("/api.cgi?cmd=GetAiState&channel=" + getEntity().getNvrChannel() + "&user="
+                + getEntity().getUser() + "&password=" + getEntity().getPassword().asString());
+            service.sendHttpGET("/api.cgi?cmd=GetMdState&channel=" + getEntity().getNvrChannel() + "&user="
+                + getEntity().getUser() + "&password=" + getEntity().getPassword().asString());
+            return false;
+        }
+        return true;*/
     }
 
     @Override
@@ -445,25 +463,21 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             for (Root objectNode : roots) {
                 String cmd = objectNode.cmd;
                 switch (cmd) {
-                    case "GetOsd":
+                    case "GetOsd" -> {
                         setAttribute("Osd", new JsonType(objectNode.value.osd));
                         setAttribute("OsdRange", new JsonType(objectNode.range.path("Osd")));
-                        break;
-                    case "GetEnc":
+                    }
+                    case "GetEnc" -> {
                         setAttribute("Enc", new JsonType(objectNode.value.enc));
                         setAttribute("EncRange", new JsonType(objectNode.range.path("Enc")));
-                        break;
-                    case "GetImage":
-                        setAttribute("Img", new JsonType(objectNode.value.image));
-                        break;
-                    case "GetIsp":
+                    }
+                    case "GetImage" -> setAttribute("Img", new JsonType(objectNode.value.image));
+                    case "GetIsp" -> {
                         setAttribute("Isp", new JsonType(objectNode.value.isp));
                         setAttribute("IspRange", new JsonType(objectNode.range.path("Isp")));
-                        break;
-                    case "GetIrLights":
-                        setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED,
-                            OnOffType.of("Auto".equals(objectNode.value.irLights.path("state").asText())));
-                        break;
+                    }
+                    case "GetIrLights" -> setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED,
+                        OnOffType.of("Auto".equals(objectNode.value.irLights.path("state").asText())));
                 }
             }
         }
@@ -585,7 +599,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @Getter
     public static class ChannelParam {
 
-        private int channel = 0;
+        private final int channel = 0;
     }
 
     @Getter
