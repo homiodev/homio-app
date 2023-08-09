@@ -685,16 +685,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity> {
     }
 
     @Override
-    public void afterInitialize() {
-        updateNotificationBlock();
-    }
-
-    @Override
-    public void afterDispose() {
-        updateNotificationBlock();
-    }
-
-    public void updateNotificationBlock() {
+    protected void updateNotificationBlock() {
         CameraEntrypoint.updateCamera(entityContext, getEntity(),
             () -> {
                 val brand = getCameraBrands(entityContext).get(getEntity().getCameraType());

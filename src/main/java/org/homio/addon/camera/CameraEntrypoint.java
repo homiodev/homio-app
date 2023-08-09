@@ -36,18 +36,14 @@ public class CameraEntrypoint implements AddonEntrypoint {
             entityContext.getBean(OnvifCameraHttpScanner.class).executeScan(entityContext, null, null, true);
         });
 
-        for (BaseVideoEntity cameraEntity : entityContext.findAll(BaseVideoEntity.class)) {
+       /* TODO: for (BaseVideoEntity cameraEntity : entityContext.findAll(BaseVideoEntity.class)) {
             cameraEntity.getService().startOrStopService(cameraEntity);
-        }
+        }*/
 
         entityContext.setting().listenValueAndGet(CameraAutorunIntervalSetting.class, "cam-autorun", interval -> {
             entityContext.bgp().builder("camera-schedule").cancelOnError(false)
                          .interval(Duration.ofMinutes(interval))
                          .execute(this::fireStartCamera);
-        });
-
-        entityContext.event().addEntityUpdateListener(BaseVideoEntity.class, "video", entity -> {
-            entity.getService().startOrStopService(entity);
         });
     }
 

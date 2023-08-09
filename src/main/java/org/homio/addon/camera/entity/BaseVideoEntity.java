@@ -13,7 +13,6 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.RestartHandlerOnChange;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
@@ -150,7 +149,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     @UIField(order = 250, hideInView = true)
     @UIFieldNumber(min = 1025, max = 65535)
-    @RestartHandlerOnChange
     @UIFieldGroup("GENERAL")
     public Integer getServerPort() {
         return getJsonData("serverPort", 9000);
@@ -202,7 +200,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @UIField(order = 125, hideInView = true, type = UIFieldType.Chips)
-    @RestartHandlerOnChange
     @UIFieldGroup(value = "FFMPEG", order = 70, borderColor = "#3BAD4A")
     public List<String> getGifOutOptions() {
         return getJsonDataList("gifOutOptions");
@@ -213,7 +210,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @UIField(order = 130, hideInView = true, type = UIFieldType.Chips)
-    @RestartHandlerOnChange
     @UIFieldGroup("FFMPEG")
     public List<String> getMjpegOutOptions() {
         return getJsonDataList("mjpegOutOptions");
@@ -224,7 +220,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @UIField(order = 135, hideInView = true, type = UIFieldType.Chips)
-    @RestartHandlerOnChange
     @UIFieldGroup("FFMPEG")
     public List<String> getSnapshotOutOptions() {
         return getJsonDataList("imgOutOptions");
@@ -240,7 +235,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @UIField(order = 140, hideInView = true, type = UIFieldType.Chips)
-    @RestartHandlerOnChange
     @UIFieldGroup("FFMPEG")
     public List<String> getMotionOptions() {
         return getJsonDataList("motionOptions");
@@ -283,7 +277,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @UIField(order = 50, hideInView = true, type = UIFieldType.Chips)
-    @RestartHandlerOnChange
     @UIFieldGroup("STREAMING")
     public List<String> getMp4OutOptions() {
         return getJsonDataList("mp4OutOptions");
@@ -358,5 +351,10 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
             entity.fireUpdateSnapshot(entityContext, params);
             return null;
         }
+    }
+
+    public long getVideoParametersHashCode() {
+        return getJsonDataHashCode("serverPort", "gifOutOptions", "mjpegOutOptions", "imgOutOptions",
+            "motionOptions", "mp4OutOptions");
     }
 }

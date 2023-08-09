@@ -6,7 +6,6 @@ import java.util.Objects;
 import java.util.Set;
 import org.homio.addon.camera.service.UsbCameraService;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.RestartHandlerOnChange;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -25,7 +24,6 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
 
     @Override
     @UIField(order = 5, label = "usb")
-    @RestartHandlerOnChange
     public String getIeeeAddress() {
         return super.getIeeeAddress();
     }
@@ -39,7 +37,6 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
   @UIField(order = 25, type = UIFieldType.TextSelectBoxDynamic)
   @UIFieldSelection(SelectAudioSource.class)
   @UIFieldSelectValueOnEmpty(label = "selection.audioSource")
-  @RestartHandlerOnChange
   public String getAudioSource() {
     return getJsonData("asource");
   }
@@ -49,7 +46,6 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
   }
 
   @UIField(order = 100, hideInView = true, type = UIFieldType.Chips)
-  @RestartHandlerOnChange
   public List<String> getStreamOptions() {
     return getJsonDataList("stream");
   }
@@ -59,7 +55,6 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
   }
 
   @UIField(order = 90, hideInView = true)
-  @RestartHandlerOnChange
   public int getStreamStartPort() {
     return getJsonData("streamPort", 35001);
   }
@@ -127,8 +122,15 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
 
     @Override
     public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
-        Set<String> audioDevices = parameters.getEntityContext().media().getAudioDevices();
-        return OptionModel.list(audioDevices);
+      Set<String> audioDevices = parameters.getEntityContext().media().getAudioDevices();
+      return OptionModel.list(audioDevices);
     }
+  }
+
+  @Override
+  public long getVideoParametersHashCode() {
+    return super.getVideoParametersHashCode() +
+        (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode()) +
+        getJsonDataHashCode("asource", "stream", "streamPort");
   }
 }

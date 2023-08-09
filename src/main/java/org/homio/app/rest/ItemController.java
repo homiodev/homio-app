@@ -353,6 +353,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         try {
             BaseEntity<?> entity = entityContext.getEntityRequire(entityID);
             request.params.put("files", files);
+            for (String key : request.params.keySet().stream().filter(k -> k.startsWith("field.")).toList()) {
+                request.params.put(key.substring("field.".length()), request.params.get(key));
+            }
             return executeAction(request, entity, entity);
         } catch (Exception ex) {
             log.error("Error while execute action: {}", CommonUtils.getErrorMessage(ex));

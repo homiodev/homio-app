@@ -64,16 +64,7 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
     }
 
     @Override
-    public void afterInitialize() {
-        updateNotificationBlock();
-    }
-
-    @Override
-    public void afterDispose() {
-        updateNotificationBlock();
-    }
-
-    public void updateNotificationBlock() {
+    protected void updateNotificationBlock() {
         CameraEntrypoint.updateCamera(entityContext, getEntity(),
             null,
             new Icon("fas fa-users-viewfinder", "#669618"),

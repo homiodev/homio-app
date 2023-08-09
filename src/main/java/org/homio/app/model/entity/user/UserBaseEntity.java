@@ -151,18 +151,18 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
                               Color.RED), null, this::changePassword)
                           .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
                               if (this.getUserType() == UserType.ADMIN) {
-                                  flex.addTextInput("field.currentPassword", "", true);
+                                  flex.addTextInput("currentPassword", "", true);
                               }
-                              flex.addTextInput("field.newPassword", "", true);
-                              flex.addTextInput("field.repeatNewPassword", "", true);
+                              flex.addTextInput("newPassword", "", true);
+                              flex.addTextInput("repeatNewPassword", "", true);
                           }));
             uiInputBuilder.addOpenDialogSelectableButton("CHANGE_EMAIL", new Icon("fas fa-at",
                               Color.PRIMARY_COLOR), null, this::changeEmail)
                           .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
                               if (this.getUserType() == UserType.ADMIN) {
-                                  flex.addTextInput("field.currentPassword", "", true);
+                                  flex.addTextInput("currentPassword", "", true);
                               }
-                              flex.addTextInput("field.email", "", true);
+                              flex.addTextInput("email", "", true);
                           }));
         }
     }

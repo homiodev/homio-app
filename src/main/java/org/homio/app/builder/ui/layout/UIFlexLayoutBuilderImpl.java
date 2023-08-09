@@ -41,7 +41,7 @@ public class UIFlexLayoutBuilderImpl extends UIBaseLayoutBuilderImpl
 
     @Override
     public UIFlexLayoutBuilder setTitle(String title, @Nullable String titleColor) {
-        this.title = title;
+        this.title = "CONTEXT.ACTION." + title;
         this.titleColor = titleColor;
         return this;
     }

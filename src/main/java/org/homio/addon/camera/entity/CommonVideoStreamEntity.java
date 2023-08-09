@@ -7,7 +7,6 @@ import lombok.experimental.Accessors;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.addon.camera.service.CommonVideoService;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.RestartHandlerOnChange;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.field.UIField;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +20,6 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
 
     @Override
     @UIField(order = 5, label = "url", inlineEdit = true, required = true)
-    @RestartHandlerOnChange
     public String getIeeeAddress() {
         return super.getIeeeAddress();
     }
@@ -65,5 +63,11 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
     @Override
     public CommonVideoService createService(@NotNull EntityContext entityContext) {
         return new CommonVideoService(entityContext, this);
+    }
+
+    @Override
+    public long getVideoParametersHashCode() {
+        return super.getVideoParametersHashCode() +
+            (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode());
     }
 }

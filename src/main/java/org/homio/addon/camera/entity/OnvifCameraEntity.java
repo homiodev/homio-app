@@ -16,7 +16,6 @@ import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.RestartHandlerOnChange;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
@@ -48,7 +47,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     implements HasDynamicContextMenuActions, VideoPlaybackStorage, HasEntityLog {
 
     @UIField(order = 16)
-    @RestartHandlerOnChange
     @UIFieldSelection(SelectCameraBrand.class)
     public String getCameraType() {
         return getJsonData("cameraType", CameraBrandHandlerDescription.DEFAULT_BRAND.getID());
@@ -85,7 +83,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 15, type = UIFieldType.IpAddress)
-    @RestartHandlerOnChange
     public String getIp() {
         return getJsonData("ip");
     }
@@ -97,7 +94,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
 
     @UIFieldPort
     @UIField(order = 35)
-    @RestartHandlerOnChange
     public int getOnvifPort() {
         return getJsonData("onvifPort", 8000);
     }
@@ -109,7 +105,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
 
     @UIFieldPort
     @UIField(order = 36, hideInView = true)
-    @RestartHandlerOnChange
     public int getRestPort() {
         return getJsonData("restPort", 80);
     }
@@ -119,7 +114,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 55, hideInView = true)
-    @RestartHandlerOnChange
     public int getOnvifMediaProfile() {
         return getJsonData("onvifMediaProfile", 0);
     }
@@ -129,25 +123,21 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 45, hideInView = true, label = "cameraUsername")
-    @RestartHandlerOnChange
     public String getUser() {
         return super.getUser();
     }
 
     @UIField(order = 50, hideInView = true, label = "cameraPassword")
-    @RestartHandlerOnChange
     public SecureString getPassword() {
         return super.getPassword();
     }
 
     @UIField(order = 80, hideInView = true)
-    @RestartHandlerOnChange
     public String getAlarmInputUrl() {
         return super.getAlarmInputUrl();
     }
 
     @UIField(order = 70, hideInView = true)
-    @RestartHandlerOnChange
     public int getNvrChannel() {
         return getJsonData("nvrChannel", 0);
     }
@@ -157,7 +147,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 75, hideInView = true)
-    @RestartHandlerOnChange
     public String getSnapshotUrl() {
         String snapshotUrl = getJsonData("snapshotUrl");
         OnvifCameraService service = optService().orElse(null);
@@ -173,7 +162,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 85, hideInView = true)
-    @RestartHandlerOnChange
     public String getCustomMotionAlarmUrl() {
         return getJsonData("customMotionAlarmUrl", "");
     }
@@ -183,7 +171,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 90, hideInView = true)
-    @RestartHandlerOnChange
     public String getCustomAudioAlarmUrl() {
         return getJsonData("customAudioAlarmUrl", "");
     }
@@ -193,7 +180,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 95, hideInView = true)
-    @RestartHandlerOnChange
     public String getMjpegUrl() {
         return getJsonData("mjpegUrl", "ffmpeg");
     }
@@ -203,7 +189,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 100, hideInView = true)
-    @RestartHandlerOnChange
     public String getFfmpegInput() {
         return getJsonData("ffmpegInput", "");
     }
@@ -213,7 +198,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 105, hideInView = true)
-    @RestartHandlerOnChange
     public String getFfmpegInputOptions() {
         return getJsonData("ffmpegInputOptions", "");
     }
@@ -304,7 +288,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
                     (entityContext, params) -> {
 
                         String user = params.getString("user");
-                        String password = params.getString("pwd");
+                        String password = params.getString("password");
                         OnvifCameraEntity entity = entityContext.getEntityRequire(getEntityID());
                         OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
                         onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), 0, user, password);
@@ -314,6 +298,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
                             entity.setPassword(password);
                             entity.setName(onvifDeviceState.getInitialDevices().getName());
                             entity.setIeeeAddress(onvifDeviceState.getIEEEAddress());
+                            entity.setStart(true);
 
                             entityContext.save(entity);
                             entityContext.ui()
@@ -324,10 +309,10 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
                         }
                         return null;
                     }).editDialog(dialogBuilder -> {
-                    dialogBuilder.setTitle("", new Icon("fas fa-sign-in-alt"));
+                    dialogBuilder.setTitle("AUTHENTICATE", new Icon("fas fa-sign-in-alt"));
                     dialogBuilder.addFlex("main", flex -> {
                         flex.addTextInput("user", getUser(), true);
-                        flex.addTextInput("pwd", getPassword().asString(), false);
+                        flex.addTextInput("password", getPassword().asString(), false);
                     });
                 });
             }
@@ -385,5 +370,14 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         public List<OptionModel> loadOptions(DynamicOptionLoaderParameters parameters) {
             return OptionModel.list(OnvifCameraService.getCameraBrands(parameters.getEntityContext()).keySet());
         }
+    }
+
+    @Override
+    public long getVideoParametersHashCode() {
+        return super.getVideoParametersHashCode() +
+            getJsonDataHashCode("cameraType", "ip", "onvifPort", "restPort",
+                "onvifMediaProfile", "user", "pwd", "alarmInputUrl", "nvrChannel", "snapshotUrl",
+                "customMotionAlarmUrl", "customAudioAlarmUrl", "mjpegUrl", "ffmpegInput",
+                "ffmpegInputOptions");
     }
 }

@@ -143,7 +143,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Override
     public UITextInputItemBuilder addInput(@NotNull String name, String defaultValue, InputType inputType, boolean required) {
-        return addEntity(new UITextInputItemBuilderImpl(name, getNextOrder(), defaultValue, inputType)
+        return addEntity(new UITextInputItemBuilderImpl("field." + name, getNextOrder(), defaultValue, inputType)
             .setRequired(required));
     }
 
@@ -159,12 +159,12 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Override
     public UISelectBoxItemBuilder addSelectBox(@NotNull String name, UIActionHandler action, int order) {
-        return addEntity(new UISelectBoxItemBuilderImpl(name, order, action));
+        return addEntity(new UISelectBoxItemBuilderImpl("field." + name, order, action));
     }
 
     @Override
     public UICheckboxItemBuilder addCheckbox(@NotNull String name, boolean value, UIActionHandler action, int order) {
-        return addEntity(new UICheckboxItemBuilderImpl(name, order, action, value));
+        return addEntity(new UICheckboxItemBuilderImpl("field." + name, order, action, value));
     }
 
     @Override
@@ -176,13 +176,13 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     public UISliderItemBuilder addSlider(@NotNull String name, Float value, Float min, Float max, UIActionHandler action,
         UISliderItemBuilder.SliderType sliderType, int order) {
         return addEntity(
-            new UISliderItemBuilderImpl(name, order, action, value, min, max)
+            new UISliderItemBuilderImpl("field." + name, order, action, value, min, max)
                 .setSliderType(sliderType));
     }
 
     @Override
     public UIButtonItemBuilder addButton(@NotNull String name, Icon icon, UIActionHandler action, int order) {
-        return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, name, icon, order, action));
+        return addEntity(new UIButtonItemBuilderImpl(UIItemType.Button, "field." + name, icon, order, action));
     }
 
     @Override
@@ -201,7 +201,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Override
     public UIColorPickerItemBuilder addColorPicker(@NotNull String name, String color, UIActionHandler action) {
-        return addEntity(new UIColorPickerBuilderImpl(name, getNextOrder(), color, action));
+        return addEntity(new UIColorPickerBuilderImpl("field." + name, getNextOrder(), color, action));
     }
 
     @Override

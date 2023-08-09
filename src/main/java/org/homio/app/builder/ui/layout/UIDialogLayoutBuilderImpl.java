@@ -63,7 +63,7 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
     @Override
     public UIDialogLayoutBuilder setTitle(@NotNull String title, Icon icon) {
-        this.title = title;
+        this.title = "CONTEXT.ACTION." + title;
         this.icon = Icon.iconOrDefault(icon, null);
         this.iconColor = Icon.colorOrDefault(icon, null);
         return this;

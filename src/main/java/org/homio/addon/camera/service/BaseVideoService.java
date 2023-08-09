@@ -67,13 +67,26 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.util.MimeTypeUtils;
 
-@SuppressWarnings({"unused", "unchecked"})
+@SuppressWarnings({"unused"})
 @Log4j2
 public abstract class BaseVideoService<T extends BaseVideoEntity>
     extends EntityService.ServiceInstance implements VideoActionsContext<T>,
     FFMPEGHandler {
 
+    public abstract String getRtspUri(String profile);
+
+    protected abstract void updateNotificationBlock();
+
+    protected abstract void testVideoOnline() throws Exception;
+
+    protected abstract String getFFMPEGInputOptions(@Nullable String profile);
+
+    protected abstract BaseVideoStreamServerHandler createVideoStreamServerHandler();
+
+    protected abstract void streamServerStarted();
+
     private static final Map<String, Integer> bootstrapServerPortMap = new HashMap<>();
+
     @Getter
     protected int serverPort;
     @Getter
@@ -108,7 +121,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
     private FFMPEG ffmpegMP4 = null;
     @Getter
     private T entity;
-    private T oldEntity;
     @Getter
     private boolean isHandlerInitialized = false;
     private ThreadContext<Void> videoConnectionJob;
@@ -122,9 +134,11 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
     private String mp4OutOptions;
     private String gifOutOptions;
     private String mgpegOutOptions;
+    private long videoStreamParametersHashCode;
 
     public BaseVideoService(T entity, EntityContext entityContext) {
         super(entityContext);
+        this.entity = entity;
     }
 
     public static int findFreeBootstrapServerPort() {
@@ -134,32 +148,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
         }
         return freePort.get();
     }
-
-    public void startOrStopService(T entity) {
-        this.entity = entity;
-        if (!this.entity.isStart()) {
-            // check maybe status already offline/error
-            if (this.entity.getStatus().isOnline() || isHandlerInitialized) {
-                this.disposeAndSetStatus(Status.OFFLINE, "Camera not started");
-            }
-        } else {
-            try {
-                boolean requireRestart = !isHandlerInitialized() || CommonUtils.isRequireRestartHandler(oldEntity, entity);
-                if (requireRestart) {
-                    dispose();
-                    testVideoOnline();
-                    initializeVideo();
-                }
-            } catch (BadCredentialsException ex) {
-                this.disposeAndSetStatus(Status.REQUIRE_AUTH, CommonUtils.getErrorMessage(ex));
-            } catch (Exception ex) {
-                this.disposeAndSetStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
-            }
-        }
-        this.oldEntity = entity;
-    }
-
-    public abstract String getRtspUri(String profile);
 
     @Override
     public void destroy() {
@@ -194,11 +182,35 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
     @Override
     @SneakyThrows
     protected void initialize() {
+        if (!this.entity.isStart()) {
+            // check maybe status already offline/error
+            if (this.entity.getStatus().isOnline() || isHandlerInitialized) {
+                this.disposeAndSetStatus(Status.OFFLINE, "Camera not started");
+            }
+        } else {
+            try {
+                if (isRequireRestart()) {
+                    dispose();
+                    testVideoOnline();
+                    initializeVideo();
+                }
+            } catch (BadCredentialsException ex) {
+                this.disposeAndSetStatus(Status.REQUIRE_AUTH, CommonUtils.getErrorMessage(ex));
+            } catch (Exception ex) {
+                this.disposeAndSetStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
+            }
+        }
+
         testVideoOnline();
+    }
+
+    private boolean isRequireRestart() {
+        return !isHandlerInitialized() || videoStreamParametersHashCode != entity.getVideoParametersHashCode();
     }
 
     public final void initializeVideo() {
         log.info("[{}]: Initialize video: <{}>", entityID, getEntity());
+        videoStreamParametersHashCode = entity.getVideoParametersHashCode();
         isHandlerInitialized = true;
         try {
             if (!getEntity().getEntityID().equals(entityID)) {
@@ -211,7 +223,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
             videoConnectionJob = entityContext.bgp().builder("poll-video-connection-" + entityID)
                                               .interval(Duration.ofSeconds(60)).execute(this::pollingVideoConnection);
             entity.setStatusOnline();
-            afterInitialize();
+            updateNotificationBlock();
         } catch (Exception ex) {
             disposeAndSetStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
         }
@@ -234,12 +246,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
         if (entity.isStart()) {
             entityContext.save(entity.setStart(false), false);
         }
-        this.afterDispose();
+        updateNotificationBlock();
     }
-
-    public abstract void afterInitialize();
-
-    public abstract void afterDispose();
 
     public final void bringVideoOnline() {
         lastAnswerFromVideo = System.currentTimeMillis();
@@ -484,14 +492,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
         testVideoOnline();
     }
 
-    protected abstract void testVideoOnline() throws Exception;
-
-    protected abstract String getFFMPEGInputOptions(@Nullable String profile);
-
-    protected abstract BaseVideoStreamServerHandler createVideoStreamServerHandler();
-
-    protected abstract void streamServerStarted();
-
     protected void assembleAdditionalVideoActions(UIInputBuilder uiInputBuilder) {
 
     }
@@ -584,10 +584,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
 
     protected boolean hasAudioStream() {
         return getEntity().isHasAudioStream();
-    }
-
-    protected boolean isRunning(FFMPEG ffmpeg) {
-        return ffmpeg != null && ffmpeg.getIsAlive();
     }
 
     private void dispose() {
@@ -697,7 +693,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
             fireFfmpeg(ffmpegRtspHelper, FFMPEG::stopConverting);
         }
 
-        private boolean runFFMPEGRtspAlarmThread() {
+        private void runFFMPEGRtspAlarmThread() {
             T videoStreamEntity = BaseVideoService.this.getEntity();
             String inputOptions = BaseVideoService.this.getFFMPEGInputOptions();
 
@@ -705,12 +701,12 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
                 // stop stream if threshold - 0
                 if (videoStreamEntity.getAudioThreshold() == 0 && videoStreamEntity.getMotionThreshold() == 0) {
                     ffmpegRtspHelper.stopConverting();
-                    return false;
+                    return;
                 }
                 // if values that involved in precious run same as new - just skip restarting
                 if (ffmpegRtspHelper.getIsAlive() && motionThreshold == videoStreamEntity.getMotionThreshold() &&
                     audioThreshold == videoStreamEntity.getAudioThreshold()) {
-                    return true;
+                    return;
                 }
                 ffmpegRtspHelper.stopConverting();
             }
@@ -734,7 +730,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity>
                 BaseVideoService.this.getEntity().getPassword().asString(), null);
             fireFfmpeg(ffmpegRtspHelper, FFMPEG::startConverting);
             setAttribute("FFMPEG_RTSP_ALARM", new StringType(String.join(" ", ffmpegRtspHelper.getCommandArrayList())));
-            return true;
         }
     }
 }
