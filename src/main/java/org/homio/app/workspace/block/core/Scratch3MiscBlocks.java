@@ -62,8 +62,7 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
         if (rawType == null) {
             rawType = RawType.ofPlainText("NULL");
         } else if ("text/plain".equals(rawType.getMimeType())) {
-            rawType =
-                new RawType(workspaceBlock.getInputStringRequiredWithContext(VALUE).getBytes());
+            rawType = new RawType(workspaceBlock.getInputStringRequiredWithContext(VALUE).getBytes());
         }
         ObjectNode node =
             OBJECT_MAPPER

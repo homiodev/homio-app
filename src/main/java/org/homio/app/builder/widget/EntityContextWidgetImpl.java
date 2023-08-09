@@ -1,6 +1,6 @@
 package org.homio.app.builder.widget;
 
-import static org.homio.app.model.entity.widget.WidgetTabEntity.GENERAL_WIDGET_TAB_NAME;
+import static org.homio.app.model.entity.widget.WidgetTabEntity.MAIN_TAB_ID;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -117,7 +117,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public @NotNull String getDashboardDefaultID() {
-        return GENERAL_WIDGET_TAB_NAME;
+        return MAIN_TAB_ID;
     }
 
     @Override
@@ -239,7 +239,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
     private <T extends WidgetBaseEntity> T createStubWidget(@NotNull String entityID, T widget) {
         entityID = ensureWidgetNotExists(entityID, widget.getEntityPrefix());
 
-        WidgetTabEntity generalTabEntity = entityContext.getEntity(GENERAL_WIDGET_TAB_NAME);
+        WidgetTabEntity generalTabEntity = entityContext.getEntity(MAIN_TAB_ID);
         widget.setEntityID(entityID);
         widget.setWidgetTabEntity(generalTabEntity);
         return widget;

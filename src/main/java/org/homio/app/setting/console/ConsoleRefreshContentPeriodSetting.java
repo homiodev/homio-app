@@ -34,11 +34,11 @@ public class ConsoleRefreshContentPeriodSetting
     public @NotNull Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
         return new ArrayList<>(
             Arrays.asList(
-                OptionModel.of("0", "time.NEVER"),
-                OptionModel.of("5", "time.SEC_5"),
-                OptionModel.of("10", "time.SEC_10"),
-                OptionModel.of("30", "time.SEC_30"),
-                OptionModel.of("60", "time.SEC_60")));
+                OptionModel.of("0", "TIME.NEVER"),
+                OptionModel.of("5", "TIME.SEC_5"),
+                OptionModel.of("10", "TIME.SEC_10"),
+                OptionModel.of("30", "TIME.SEC_30"),
+                OptionModel.of("60", "TIME.SEC_60")));
     }
 
     @Override

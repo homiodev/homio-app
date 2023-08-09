@@ -6,6 +6,7 @@ import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -708,7 +709,10 @@ public class EntityContextUIImpl implements EntityContextUI {
         public @NotNull NotificationBlockBuilder contextMenuActionBuilder(Consumer<UIInputBuilder> builder) {
             UIInputBuilder uiInputBuilder = entityContext.ui().inputBuilder();
             builder.accept(uiInputBuilder);
-            notificationBlock.setContextMenuActions(uiInputBuilder.buildAll());
+            if (notificationBlock.getContextMenuActions() == null) {
+                notificationBlock.setContextMenuActions(new ArrayList<>());
+            }
+            notificationBlock.getContextMenuActions().addAll(uiInputBuilder.buildAll());
             return this;
         }
 

@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextInstall;
-import org.homio.api.entity.dependency.DependencyExecutableInstaller;
+import org.homio.api.service.DependencyExecutableInstaller;
 import org.homio.app.manager.install.FfmpegInstaller;
 import org.homio.app.manager.install.MosquittoInstaller;
 import org.homio.app.manager.install.NodeJsInstaller;

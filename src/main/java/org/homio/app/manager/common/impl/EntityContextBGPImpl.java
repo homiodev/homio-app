@@ -530,9 +530,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             () -> {
                 try {
                     threadContext.runCount++;
-                    threadContext.state = "STARTED";
+                    threadContext.state = "TITLE.STARTED";
                     threadContext.setRetValue(threadContext.getCommand().apply(threadContext));
-                    threadContext.state = "FINISHED";
+                    threadContext.state = "TITLE.FINISHED";
                     if (threadContext.scheduleType == ScheduleType.SINGLE) {
                         if (threadContext.scheduledFuture == null) {
                             try {
@@ -544,11 +544,11 @@ public class EntityContextBGPImpl implements EntityContextBGP {
                     }
                 } catch (Exception ex) {
                     if (ex instanceof CancellationException) {
-                        threadContext.state = "FINISHED";
+                        threadContext.state = "TITLE.FINISHED";
                         threadContext.processFinished();
                         return;
                     }
-                    threadContext.state = "FINISHED_WITH_ERROR";
+                    threadContext.state = "W.ERROR.FINISHED_WITH_ERROR";
                     threadContext.error = CommonUtils.getErrorMessage(ex);
                     if (threadContext.throwOnError) {
                         throw new ServerException(threadContext.error);

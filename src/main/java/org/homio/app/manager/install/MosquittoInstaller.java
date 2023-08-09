@@ -10,7 +10,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
-import org.homio.api.entity.dependency.DependencyExecutableInstaller;
+import org.homio.api.service.DependencyExecutableInstaller;
 import org.homio.api.util.CommonUtils;
 import org.homio.hquery.ProgressBar;
 import org.jetbrains.annotations.NotNull;

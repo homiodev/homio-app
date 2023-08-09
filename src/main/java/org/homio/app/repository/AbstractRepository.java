@@ -5,7 +5,6 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
-import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -125,6 +124,8 @@ public class AbstractRepository<T extends BaseEntity> {
         return tmc.executeInTransaction(em -> {
             T entity = getEntity(entityID, em);
             if (entity != null) {
+                // TODO: issue: https://hibernate.atlassian.net/browse/HHH-17036
+                fetchLazy(entity, new HashSet<>(), false);
                 em.remove(entity);
                 log.warn("Entity <{}> was removed", entity);
             }

@@ -140,7 +140,7 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
     @UIFieldIgnore
     @JsonIgnore
     public Status getStatus() {
-        return null;
+        return Status.ONLINE;
     }
 
     @Override

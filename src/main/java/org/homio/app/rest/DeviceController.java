@@ -6,7 +6,7 @@ import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,11 +17,10 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.types.MicroControllerBaseEntity;
-import org.homio.api.entity.zigbee.ZigBeeBaseCoordinatorEntity;
-import org.homio.api.entity.zigbee.ZigBeeDeviceBaseEntity;
+import org.homio.api.entity.DeviceEndpointsBaseEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.endpoint.DeviceEndpoint;
@@ -97,7 +96,7 @@ public class DeviceController {
         return getDevices(device -> device.getDeviceEndpoint(endpoint) != null);
     }
 
-    @GetMapping("/")
+    @GetMapping
     public @NotNull Collection<OptionModel> getDevices(
         @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
         @RequestParam(value = "type", defaultValue = "any") @NotNull String type) {
@@ -116,14 +115,24 @@ public class DeviceController {
         @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
         @RequestParam(value = "type", defaultValue = "any") @NotNull String type) {
         String ieeeAddress = defaultIfEmpty(ieeeAddress0, defaultIfEmpty(ieeeAddress1, defaultIfEmpty(ieeeAddress2, ieeeAddress3)));
-        return getZigBeeCoordinators().stream()
-                                      .map(c -> c.getZigBeeDevice(ieeeAddress))
-                                      .filter(Objects::nonNull)
-                                      .flatMap(d -> ((Map<String, DeviceEndpoint>) d.getEndpoints()).values().stream())
-                                      .filter(buildEndpointAccessFilter(access))
-                                      .filter(buildFilterByType(type))
-                                      .map(this::createOptionModel)
-                                      .collect(Collectors.toList());
+        DeviceEndpointsBaseEntity entity = getDevice(ieeeAddress);
+        return entity == null ? List.of() :
+            entity.getDeviceEndpoints().values().stream()
+                  .filter(buildEndpointAccessFilter(access))
+                  .filter(buildFilterByType(type))
+                  .map(this::createOptionModel)
+                  .collect(Collectors.toList());
+    }
+
+    private @Nullable DeviceEndpointsBaseEntity getDevice(String ieeeAddress) {
+        if (StringUtils.isEmpty(ieeeAddress)) {
+            return null;
+        }
+        return entityContext.findAll(DeviceEndpointsBaseEntity.class)
+                            .stream()
+                            .filter(d -> ieeeAddress.equals(d.getIeeeAddress()))
+                            .findAny()
+                            .orElse(null);
     }
 
     private @NotNull Predicate<? super DeviceEndpoint> buildEndpointAccessFilter(@NotNull String access) {
@@ -143,7 +152,7 @@ public class DeviceController {
         };
     }
 
-    private @NotNull Predicate<ZigBeeDeviceBaseEntity> buildDeviceAccessFilter(@NotNull String access, @NotNull String type) {
+    private @NotNull Predicate<DeviceEndpointsBaseEntity> buildDeviceAccessFilter(@NotNull String access, @NotNull String type) {
         return switch (access) {
             case "read" -> device -> device.getDeviceEndpoints().values().stream()
                                            .anyMatch(dv -> dv.isReadable() && filterByType(dv, type));
@@ -162,28 +171,18 @@ public class DeviceController {
         };
     }
 
-    private @NotNull Collection<OptionModel> getDevices(@NotNull Predicate<ZigBeeDeviceBaseEntity> deviceFilter) {
+    private @NotNull Collection<OptionModel> getDevices(@NotNull Predicate<DeviceEndpointsBaseEntity> deviceFilter) {
         Collection<OptionModel> list = new ArrayList<>();
-        for (ZigBeeBaseCoordinatorEntity coordinator : getZigBeeCoordinators()) {
-            Collection<ZigBeeDeviceBaseEntity> devices = coordinator.getZigBeeDevices();
-            for (ZigBeeDeviceBaseEntity zigBeeDevice : devices) {
-                if (deviceFilter.test(zigBeeDevice)) {
-                    Icon icon = Objects.requireNonNull(zigBeeDevice.getEntityIcon());
-                    list.add(OptionModel.of(Objects.requireNonNull(zigBeeDevice.getIeeeAddress()), zigBeeDevice.getDeviceFullName())
-                                        .setDescription(zigBeeDevice.getDescription())
-                                        .setIcon(icon.getIcon())
-                                        .setColor(icon.getColor()));
-                }
+        for (DeviceEndpointsBaseEntity deviceEntity : entityContext.findAll(DeviceEndpointsBaseEntity.class)) {
+            if (deviceFilter.test(deviceEntity)) {
+                Icon icon = deviceEntity.getEntityIcon();
+                list.add(OptionModel.of(Objects.requireNonNull(deviceEntity.getIeeeAddress()), deviceEntity.getDeviceFullName())
+                                    .setDescription(deviceEntity.getDescription())
+                                    .setIcon(icon.getIcon())
+                                    .setColor(icon.getColor()));
             }
         }
         return list;
-    }
-
-    private @NotNull Collection<ZigBeeBaseCoordinatorEntity> getZigBeeCoordinators() {
-        return entityContext.findAll(MicroControllerBaseEntity.class)
-                            .stream().filter(m -> m instanceof ZigBeeBaseCoordinatorEntity)
-                            .map(d -> (ZigBeeBaseCoordinatorEntity) d)
-                            .collect(Collectors.toList());
     }
 
     private @NotNull OptionModel createOptionModel(@NotNull DeviceEndpoint endpoint) {

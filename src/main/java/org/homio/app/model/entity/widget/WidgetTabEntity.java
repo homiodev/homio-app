@@ -14,7 +14,9 @@ import org.homio.api.converter.JSONConverter;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.HasOrder;
 import org.homio.api.exception.ServerException;
+import org.homio.api.model.Icon;
 import org.homio.api.model.JSON;
+import org.homio.api.util.Lang;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.jetbrains.annotations.NotNull;
 
@@ -24,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
 public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> implements HasOrder {
 
     public static final String PREFIX = "tab_";
-    public static final String GENERAL_WIDGET_TAB_NAME = PREFIX + "main";
+    public static final String MAIN_TAB_ID = PREFIX + "main";
     @Getter
     @JsonIgnore
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "widgetTabEntity")
@@ -43,14 +45,26 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> implement
     }
 
     public static void ensureMainTabExists(EntityContextImpl entityContext) {
-        if (entityContext.getEntity(GENERAL_WIDGET_TAB_NAME) == null) {
-            entityContext.save(new WidgetTabEntity().setEntityID(GENERAL_WIDGET_TAB_NAME).setName("MainTab"));
+        if (entityContext.getEntity(MAIN_TAB_ID) == null) {
+            String name = Lang.getServerMessage("MAIN_TAB_NAME");
+            WidgetTabEntity mainTab = new WidgetTabEntity().setEntityID(MAIN_TAB_ID).setName(name);
+            mainTab.setOrder(0);
+            entityContext.save(mainTab);
         }
     }
 
     @Override
     public int compareTo(@NotNull BaseEntity o) {
         return super.compareTo(o);
+    }
+
+    public Icon getIcon() {
+        return getJsonData("icon", Icon.class);
+    }
+
+    public WidgetTabEntity setIcon(Icon icon) {
+        setJsonDataObject("icon", icon);
+        return this;
     }
 
     @Override
@@ -65,13 +79,16 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> implement
 
     @Override
     public boolean isDisableDelete() {
-        return this.getEntityID().equals(GENERAL_WIDGET_TAB_NAME);
+        return this.getEntityID().equals(MAIN_TAB_ID);
     }
 
     @Override
     public void beforeDelete(@NotNull EntityContext entityContext) {
         if (!widgetBaseEntities.isEmpty()) {
-            throw new ServerException("ERROR.REMOVE_NON_EMPTY_TAB");
+            throw new IllegalArgumentException("W.ERROR.REMOVE_NON_EMPTY_TAB");
+        }
+        if (this.getEntityID().equals(MAIN_TAB_ID)) {
+            throw new IllegalArgumentException("W.ERROR.REMOVE_MAIN_TAB");
         }
     }
 
@@ -82,7 +99,7 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> implement
 
     @Override
     protected void validate() {
-        if (getName() == null || getName().length() < 2 || getName().length() > 10) {
+        if (getName() == null || getName().length() < 2 || getName().length() > 16) {
             throw new ServerException("ERROR.WRONG_TAB_NAME");
         }
     }

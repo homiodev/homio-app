@@ -140,7 +140,7 @@ public class TimeSeriesUtil {
         DataSourceUtil.DataSourceContext dsContext = DataSourceUtil.getSource(entityContext, dataSource.getValueDataSource());
         Object source = dsContext.getSource();
         if (source == null) {
-            return (R) "BAD_SOURCE";
+            return (R) "W.ERROR.BAD_SOURCE";
         }
         String dataSourceEntityID = dataSource.getValueDataSource();
 

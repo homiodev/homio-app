@@ -22,6 +22,7 @@ import lombok.val;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
+import org.homio.api.entity.HasOrder;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
@@ -29,6 +30,7 @@ import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.fs.FileSystemProvider;
 import org.homio.api.fs.TreeNode;
+import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.ui.action.UIActionHandler;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
@@ -396,7 +398,8 @@ public class WidgetController {
     @GetMapping("/tab")
     public List<OptionModel> getWidgetTabs() {
         return entityContext.findAll(WidgetTabEntity.class).stream().sorted()
-                            .map(t -> OptionModel.of(t.getEntityID(), t.getName()))
+                            .map(t -> OptionModel.of(t.getEntityID(), t.getName())
+                                                 .setIcon(t.getIcon()))
                             .collect(Collectors.toList());
     }
 
@@ -406,10 +409,18 @@ public class WidgetController {
     public OptionModel createWidgetTab(@PathVariable("name") String name) {
         BaseEntity<?> widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
-            widgetTab = entityContext.save(new WidgetTabEntity().setEntityID(name));
+            WidgetTabEntity widgetTabEntity = new WidgetTabEntity().setEntityID(name).setName(name);
+            widgetTabEntity.setOrder(this.findHighestOrder() + 1);
+            widgetTab = entityContext.save(widgetTabEntity);
             return OptionModel.of(widgetTab.getEntityID(), widgetTab.getName());
         }
         throw new ServerException("Widget tab with same name already exists");
+    }
+
+    private Integer findHighestOrder() {
+        return entityContext.findAll(WidgetTabEntity.class)
+                            .stream().map(HasOrder::getOrder)
+                            .max(Integer::compare).orElse(0);
     }
 
     @SneakyThrows
@@ -427,11 +438,48 @@ public class WidgetController {
     @DeleteMapping("/tab/{tabId}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void deleteWidgetTab(@PathVariable("tabId") String tabId) {
-        if (WidgetTabEntity.GENERAL_WIDGET_TAB_NAME.equals(tabId)) {
-            throw new IllegalStateException("Unable to delete main tab");
-        }
         WidgetTabEntity widgetTabEntity = getWidgetTabEntity(tabId);
         entityContext.delete(widgetTabEntity);
+        // shift all higher order <<
+        for (WidgetTabEntity tabEntity : entityContext.findAll(WidgetTabEntity.class)) {
+            if (tabEntity.getOrder() > widgetTabEntity.getOrder()) {
+                tabEntity.setOrder(tabEntity.getOrder() - 1);
+                entityContext.save(tabEntity, false);
+            }
+        }
+    }
+
+    @PostMapping("/tab/{tabId}/icon")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public void changeTabIcon(@PathVariable("tabId") String tabId, @RequestBody Icon icon) {
+        WidgetTabEntity widgetTabEntity = getWidgetTabEntity(tabId);
+        Icon tabIcon = widgetTabEntity.getIcon();
+        entityContext.save(widgetTabEntity.setIcon(tabIcon == null ? icon : tabIcon.merge(icon)), false);
+    }
+
+    @PostMapping("/tab/{tabId}/move")
+    @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
+    public void moveWidgetTab(@PathVariable("tabId") String tabId, @RequestParam("left") boolean left) {
+        List<WidgetTabEntity> tabs = entityContext.findAll(WidgetTabEntity.class).stream().sorted().collect(Collectors.toList());
+        WidgetTabEntity tabToMove = tabs.stream().filter(t -> t.getEntityID().equals(tabId)).findAny().orElseThrow(
+            () -> new IllegalArgumentException("No tab: " + tabs + " found"));
+        int order = tabToMove.getOrder();
+        if (left && order > 1) {
+            shiftTab(tabs, tabToMove, order, -1);
+        } else if (!left) {
+            shiftTab(tabs, tabToMove, order, 1);
+        } else {
+            throw new IllegalStateException("Unable to move tab");
+        }
+    }
+
+    private void shiftTab(List<WidgetTabEntity> tabs, WidgetTabEntity tabToMove, int order, int shift) {
+        WidgetTabEntity replaceTab = tabs.stream().filter(t -> t.getOrder() == order + shift).findAny().orElseThrow(
+            () -> new IllegalStateException("Unable to find tab with order: " + (order + shift)));
+        tabToMove.setOrder(order + shift);
+        replaceTab.setOrder(order);
+        entityContext.save(tabToMove, false);
+        entityContext.save(replaceTab, false);
     }
 
     private void updateWidgetBeforeReturnToUI(WidgetBaseEntity<?> widget) {

@@ -13,12 +13,12 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.codehaus.plexus.util.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextVar;
 import org.homio.api.entity.widget.AggregationType;
@@ -132,7 +132,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
 
         VariableContext context = getOrCreateContext(variableId);
-        value = tryConvertValueToRestrictionTypeFormat(value, context);
+        value = context.valueConverter.apply(value);
         WorkspaceGroup workspaceGroup = context.groupVariable.getWorkspaceGroup();
         if (validateValueBeforeSave(value, context)) {
             String error = format("Validation type restriction: Unable to set value: '%s' to variable: '%s/%s' of type: '%s'", value,
@@ -303,37 +303,6 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
     }
 
-    @SneakyThrows
-    private Object tryConvertValueToRestrictionTypeFormat(Object value, VariableContext context) {
-        if (value instanceof State) {
-            switch (context.groupVariable.getRestriction()) {
-                case Bool -> value = ((State) value).boolValue();
-                case Float -> {
-                    if (value instanceof DecimalType) {
-                        value = convertBigDecimal(((DecimalType) value).getValue());
-                    } else {
-                        value = ((State) value).floatValue();
-                    }
-                }
-            }
-        }
-
-        if (!(value instanceof Boolean) && !(value instanceof Number)) {
-            String strValue = value instanceof State ? ((State) value).stringValue() : value.toString();
-            if (strValue.isEmpty()) {
-                return strValue;
-            }
-            if (StringUtils.isNumeric(strValue)) {
-                value = convertBigDecimal(new BigDecimal(strValue));
-            } else if (strValue.equalsIgnoreCase("true") || strValue.equalsIgnoreCase("false")) {
-                value = strValue.equalsIgnoreCase("true");
-            } else {
-                value = strValue;
-            }
-        }
-        return value;
-    }
-
     private Object convertBigDecimal(BigDecimal value) {
         // using unary operation will lead that return value would be always as float for some reason
         if (value.scale() == 0) {
@@ -391,7 +360,8 @@ public class EntityContextVarImpl implements EntityContextVar {
         var service = entityContext.storage().getOrCreateInMemoryService(
             WorkspaceVariableMessage.class, variable.getEntityID(), (long) variable.getQuota());
 
-        VariableContext context = new VariableContext(service);
+        VariableContext context = new VariableContext(service,
+            createValueConverter(variable.getRestriction()));
         context.groupVariable = variable;
         globalVarStorageMap.put(variableId, context);
 
@@ -400,8 +370,7 @@ public class EntityContextVarImpl implements EntityContextVar {
                 context.groupVariable.getVariableId(),
                 context.groupVariable.getQuota());
             var messages = backupData.stream()
-                                     .map(bd -> WorkspaceVariableMessage.of(bd,
-                                         tryConvertValueToRestrictionTypeFormat(bd.getValue(), context)))
+                                     .map(bd -> WorkspaceVariableMessage.of(bd, context.valueConverter.apply(bd.getValue())))
                                      .sorted().collect(Collectors.toList());
             if (!messages.isEmpty()) {
                 service.save(messages);
@@ -409,6 +378,49 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
 
         return context;
+    }
+
+    private Function<Object, Object> createValueConverter(VariableType restriction) {
+        switch (restriction) {
+            case Bool -> {
+                return value -> {
+                    if (value instanceof Boolean) {
+                        return value;
+                    }
+                    if (value instanceof State stateValue) {
+                        return stateValue.boolValue();
+                    }
+                    if (value instanceof Number valNumber) {
+                        return valNumber.floatValue();
+                    }
+                    String strValue = value.toString();
+                    if (strValue.equalsIgnoreCase("true")
+                        || strValue.equalsIgnoreCase("1")
+                        || strValue.equalsIgnoreCase("ON")) {
+                        return true;
+                    }
+                    return false;
+                };
+            }
+            case Float -> {
+                return value -> {
+                    if (value instanceof Number) {
+                        return value;
+                    }
+                    if (value instanceof State) {
+                        if (value instanceof DecimalType) {
+                            return convertBigDecimal(((DecimalType) value).getValue());
+                        } else {
+                            return ((State) value).floatValue();
+                        }
+                    }
+                    return convertBigDecimal(new BigDecimal(value.toString()));
+                };
+            }
+            default -> {
+                return Object::toString;
+            }
+        }
     }
 
     private String getVariableId(String variableId) {
@@ -455,8 +467,9 @@ public class EntityContextVarImpl implements EntityContextVar {
     @RequiredArgsConstructor
     private static class VariableContext {
 
-        private final DataStorageService<WorkspaceVariableMessage> storageService;
         public long lastBackupTimestamp = System.currentTimeMillis();
+        private final DataStorageService<WorkspaceVariableMessage> storageService;
+        private final Function<Object, Object> valueConverter;
         private WorkspaceVariable groupVariable;
         // fire every link listener in separate thread
         private ThrowingConsumer<Object, Exception> linkListener;
@@ -468,11 +481,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
     }
 
-    @Getter
-    @RequiredArgsConstructor
-    public static class VariableMetaBuilderImpl implements VariableMetaBuilder {
-
-        private final WorkspaceVariable entity;
+    public record VariableMetaBuilderImpl(WorkspaceVariable entity) implements VariableMetaBuilder {
 
         @Override
         public @NotNull VariableMetaBuilder setReadOnly(boolean value) {

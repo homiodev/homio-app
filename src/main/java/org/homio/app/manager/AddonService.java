@@ -103,7 +103,7 @@ public class AddonService implements ContextCreated, ContextRefreshed {
                     settingPlugin.installPackage(entityContext, packageRequest, progressBar),
                 ex -> packagesInProgress.remove(packageRequest.getName()));
         } else {
-            entityContext.ui().sendErrorMessage("ERROR.UPDATE_IN_PROGRESS");
+            entityContext.ui().sendErrorMessage("W.ERROR.UPDATE_IN_PROGRESS");
         }
     }
 

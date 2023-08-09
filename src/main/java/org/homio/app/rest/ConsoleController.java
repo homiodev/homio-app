@@ -24,7 +24,6 @@ import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.console.ConsolePluginEditor;
 import org.homio.api.console.ConsolePluginTable;
-import org.homio.api.console.dependency.ConsolePluginRequireZipDependency;
 import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.ActionResponseModel;
@@ -134,21 +133,6 @@ public class ConsoleController implements ContextRefreshed {
         return consolePlugin.executeAction(entityID, request.getMetadata(), request.getParams());
     }
 
-    @PostMapping("/tab/{tab}/update")
-    public void updateDependencies(@PathVariable("tab") String tab) {
-        ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
-        if (consolePlugin instanceof ConsolePluginRequireZipDependency dependency) {
-            if (dependency.requireInstallDependencies()) {
-                entityContext.bgp()
-                             .runWithProgress("install-deps-" + dependency.getClass().getSimpleName())
-                             .setErrorIfExists(new RuntimeException("DOWNLOAD_DEPENDENCIES_IN_PROGRESS"))
-                             .execute(progressBar -> {
-                                 dependency.installDependency(entityContext, progressBar);
-                             });
-            }
-        }
-    }
-
     @GetMapping("/tab/{tab}/{entityID}/{fieldName}/options")
     public Collection<OptionModel> loadSelectOptions(
         @PathVariable("tab") String tab,
@@ -219,7 +203,9 @@ public class ConsoleController implements ContextRefreshed {
         if (entity instanceof SshBaseEntity) {
             SshProviderService service = ((SshBaseEntity<?, ?>) entity).getService();
             SshSession sshSession = service.openSshSession((SshBaseEntity) entity);
-            sessions.put(sshSession.getToken(), sshSession);
+            if (sshSession != null) {
+                sessions.put(sshSession.getToken(), sshSession);
+            }
             return sshSession;
         }
         throw new IllegalArgumentException("Entity: " + entityID + " has to implement 'SshBaseEntity'");

@@ -531,7 +531,7 @@ public class UIFieldUtils {
             if (!field.inlineEdit()) {
                 throw new IllegalArgumentException("Annotate @UIFieldInlineEditConfirm without inlineEdit() is prohibited. " + fieldContext);
             }
-            jsonTypeMetadata.put("iec", fieldInlineEditConfirm.value());
+            jsonTypeMetadata.put("iec", "W.CONFIRM." + fieldInlineEditConfirm.value());
             putIfNonEmpty(jsonTypeMetadata, "iec_color", fieldInlineEditConfirm.dialogColor());
             putIfNonEmpty(jsonTypeMetadata, "iec_condition", fieldInlineEditConfirm.showCondition());
         }

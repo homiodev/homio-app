@@ -93,8 +93,8 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     @UIField(order = 30)
     @UIFieldInlineEditEntities(
         bg = "#1E5E611F",
-        addRowLabel = "CREATE_VAR",
-        noContentTitle = "NO_VARIABLES",
+        addRowLabel = "TITLE.CREATE_VAR",
+        noContentTitle = "W.ERROR.NO_VARIABLES",
         removeRowCondition = "return !context.get('locked')",
         addRowCondition = "return !context.get('locked')")
     private Set<WorkspaceVariable> workspaceVariables;
