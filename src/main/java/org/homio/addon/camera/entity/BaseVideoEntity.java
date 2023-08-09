@@ -1,5 +1,7 @@
 package org.homio.addon.camera.entity;
 
+import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.nio.file.Files;
@@ -33,7 +35,6 @@ import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.image.UIFieldImage;
-import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.jetbrains.annotations.NotNull;
@@ -118,12 +119,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         log.debug("[{}]: Recording {}.gif for {} seconds.", getEntityID(), filePath, secondsToRecord);
         service.recordGif(filePath, null, secondsToRecord);
         return ActionResponseModel.fired();
-    }
-
-    @JsonIgnore
-    public String getHlsStreamUrl() {
-        return "http://" + CommonUtils.MACHINE_IP_ADDRESS + ":" + getService().getServerPort() +
-            "/ipvideo.m3u8";
     }
 
     @UIField(order = 200, hideInEdit = true)
@@ -287,27 +282,28 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @JsonIgnore
+    public String getHlsStreamUrl() {
+        return "http://%s:%s/ipvideo.m3u8".formatted(MACHINE_IP_ADDRESS, getService().getServerPort());
+    }
+
+    @JsonIgnore
     public String getSnapshotsMjpegUrl() {
-        return "http://" + CommonUtils.MACHINE_IP_ADDRESS + ":" + getService().getServerPort() +
-            "/snapshots.mjpeg";
+        return "http://%s:%s/snapshots.mjpeg".formatted(MACHINE_IP_ADDRESS, getService().getServerPort());
     }
 
     @JsonIgnore
     public String getAutofpsMjpegUrl() {
-        return "http://" + CommonUtils.MACHINE_IP_ADDRESS + ":" + getService().getServerPort() +
-            "/autofps.mjpeg";
+        return "http://%s:%s/autofps.mjpeg".formatted(MACHINE_IP_ADDRESS, getService().getServerPort());
     }
 
     @JsonIgnore
     public String getImageUrl() {
-        return "http://" + CommonUtils.MACHINE_IP_ADDRESS + ":" + getService().getServerPort() +
-            "/ipvideo.jpg";
+        return "http://%s:%s/ipvideo.jpg".formatted(MACHINE_IP_ADDRESS, getService().getServerPort());
     }
 
     @JsonIgnore
     public String getIpVideoMjpeg() {
-        return "http://" + CommonUtils.MACHINE_IP_ADDRESS + ":" + getService().getServerPort() +
-            "/ipvideo.mjpeg";
+        return "http://%s:%s/ipvideo.mjpeg".formatted(MACHINE_IP_ADDRESS, getService().getServerPort());
     }
 
     public Set<String> getVideoSources() {

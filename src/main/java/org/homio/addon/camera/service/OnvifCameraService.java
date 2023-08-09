@@ -58,7 +58,6 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
@@ -210,11 +209,22 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    protected void initialize() {
-        onvifDeviceState.updateParameters(getEntity().getIp(), getEntity().getOnvifPort(),
-            getEntity().getServerPort(), getEntity().getUser(), getEntity().getPassword().asString());
-        // change camera name if possible
-        tryChangeCameraName();
+    public String getFFMPEGInputOptions(@Nullable String profile) {
+        String inputOptions = entity.getFfmpegInputOptions();
+        String rtspUri = getRtspUri(profile);
+        if (rtspUri.isEmpty()) {
+            log.warn("[{}]: The camera tried to use a FFmpeg feature when no valid input for FFmpeg is provided.", getEntityID());
+            return null;
+        }
+        if (rtspUri.toLowerCase().contains("rtsp")) {
+            if (inputOptions.isEmpty()) {
+                inputOptions = "-rtsp_transport tcp";
+            }
+        }
+        if (!inputOptions.contains("timeout")) {
+            inputOptions += " -timeout " + TimeUnit.SECONDS.toMicros(10);
+        }
+        return inputOptions;
     }
 
     public VideoPlaybackStorage getVideoPlaybackStorage() {
@@ -497,23 +507,23 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         }
     }
 
-    @Override
-    public String getFFMPEGInputOptions(@Nullable String profile) {
-        String inputOptions = getEntity().getFfmpegInputOptions();
-        String rtspUri = getRtspUri(profile);
-        if (rtspUri.isEmpty()) {
-            log.warn("[{}]: The camera tried to use a FFmpeg feature when no valid input for FFmpeg is provided.", getEntityID());
-            return null;
-        }
-        if (rtspUri.toLowerCase().contains("rtsp")) {
-            if (inputOptions.isEmpty()) {
-                inputOptions = "-rtsp_transport tcp";
+    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_PAN, order = 3, icon = "fas fa-expand-arrows-alt", type = UIVideoAction.ActionType.Dimmer)
+    @UICameraActionConditional(SupportPTZ.class)
+    @UICameraDimmerButton(name = "LEFT", icon = "fas fa-caret-left")
+    @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
+    @UICameraDimmerButton(name = "RIGHT", icon = "fas fa-caret-right")
+    public void setPan(String command) {
+        if ("LEFT".equals(command) || "RIGHT".equals(command)) {
+            if ("LEFT".equals(command)) {
+                onvifDeviceState.getPtzDevices().moveLeft(entity.isPtzContinuous());
+            } else {
+                onvifDeviceState.getPtzDevices().moveRight(entity.isPtzContinuous());
             }
+        } else if ("OFF".equals(command)) {
+            onvifDeviceState.getPtzDevices().stopMove();
+        } else {
+            onvifDeviceState.getPtzDevices().setAbsolutePan(Float.parseFloat(command));
         }
-        if (!inputOptions.contains("timeout")) {
-            inputOptions += " -timeout " + TimeUnit.SECONDS.toMicros(10);
-        }
-        return inputOptions;
     }
 
     @Override
@@ -583,30 +593,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentPanPercentage()));
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_PAN, order = 3, icon = "fas fa-expand-arrows-alt", type = UIVideoAction.ActionType.Dimmer)
-    @UICameraActionConditional(SupportPTZ.class)
-    @UICameraDimmerButton(name = "LEFT", icon = "fas fa-caret-left")
-    @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
-    @UICameraDimmerButton(name = "RIGHT", icon = "fas fa-caret-right")
-    public void setPan(String command) {
-        if ("LEFT".equals(command) || "RIGHT".equals(command)) {
-            if ("LEFT".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveLeft(getEntity().isPtzContinuous());
-            } else {
-                onvifDeviceState.getPtzDevices().moveRight(getEntity().isPtzContinuous());
-            }
-        } else if ("OFF".equals(command)) {
-            onvifDeviceState.getPtzDevices().stopMove();
-        } else {
-            onvifDeviceState.getPtzDevices().setAbsolutePan(Float.parseFloat(command));
-        }
-    }
-
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_TILT)
-    public DecimalType getTilt() {
-        return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentTiltPercentage()));
-    }
-
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TILT, order = 5, icon = "fas fa-sort", type = UIVideoAction.ActionType.Dimmer)
     @UICameraActionConditional(SupportPTZ.class)
     @UICameraDimmerButton(name = "UP", icon = "fas fa-caret-up")
@@ -615,9 +601,9 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     public void setTilt(String command) {
         if ("UP".equals(command) || "DOWN".equals(command)) {
             if ("UP".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveUp(getEntity().isPtzContinuous());
+                onvifDeviceState.getPtzDevices().moveUp(entity.isPtzContinuous());
             } else {
-                onvifDeviceState.getPtzDevices().moveDown(getEntity().isPtzContinuous());
+                onvifDeviceState.getPtzDevices().moveDown(entity.isPtzContinuous());
             }
         } else if ("OFF".equals(command)) {
             onvifDeviceState.getPtzDevices().stopMove();
@@ -626,9 +612,9 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         }
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ZOOM)
-    public DecimalType getZoom() {
-        return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentZoomPercentage()));
+    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_TILT)
+    public DecimalType getTilt() {
+        return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentTiltPercentage()));
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ZOOM, order = 7, icon = "fas fa-search-plus", type = UIVideoAction.ActionType.Dimmer)
@@ -639,14 +625,23 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     public void setZoom(String command) {
         if ("IN".equals(command) || "OUT".equals(command)) {
             if ("IN".equals(command)) {
-                onvifDeviceState.getPtzDevices().moveIn(getEntity().isPtzContinuous());
+                onvifDeviceState.getPtzDevices().moveIn(entity.isPtzContinuous());
             } else {
-                onvifDeviceState.getPtzDevices().moveOut(getEntity().isPtzContinuous());
+                onvifDeviceState.getPtzDevices().moveOut(entity.isPtzContinuous());
             }
         } else if ("OFF".equals(command)) {
             onvifDeviceState.getPtzDevices().stopMove();
         }
         onvifDeviceState.getPtzDevices().setAbsoluteZoom(Float.valueOf(command));
+    }
+
+    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ZOOM)
+    public DecimalType getZoom() {
+        return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentZoomPercentage()));
+    }
+
+    public String getRtspUri(@Nullable String profile) {
+        return defaultIfEmpty(entity.getFfmpegInput(), onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile));
     }
 
     @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_GOTO_PRESET)
@@ -669,8 +664,12 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return true; // Stream stopped or never started.
     }
 
-    public String getRtspUri(@Nullable String profile) {
-        return defaultIfEmpty(getEntity().getFfmpegInput(), onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile));
+    @Override
+    protected void initialize() {
+        onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
+            entity.getServerPort(), entity.getUser(), entity.getPassword().asString());
+        // change camera name if possible
+        tryChangeCameraName();
     }
 
     @Override
@@ -687,8 +686,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     protected void updateNotificationBlock() {
         CameraEntrypoint.updateCamera(entityContext, getEntity(),
             () -> {
-                val brand = getCameraBrands(entityContext).get(getEntity().getCameraType());
-                return getEntity().getIp() + ":" + getEntity().getOnvifPort() + " " + brand.getName();
+                val brand = getCameraBrands(entityContext).get(entity.getCameraType());
+                return entity.getIp() + ":" + entity.getOnvifPort() + " " + brand.getName();
             }, new Icon("fas fa-wifi", "#0E578F"),
             actionBuilder -> actionBuilder.addButton("RESTART", new Icon("fas fa-power-off"),
                 (entityContext, params) -> {
@@ -734,7 +733,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected void streamServerStarted() {
-        if (getEntity().getCameraType().equals("instar")) {
+        if (entity.getCameraType().equals("instar")) {
             log.info("[{}]: Setting up the Alarm Server settings in the camera now", getEntityID());
             sendHttpGET("/param.cgi?cmd=setmdalarm&-aname=server2&-switch=on&-interval=1&cmd=setalarmserverattr&-as_index=3&-as_server="
                 + MACHINE_IP_ADDRESS + "&-as_port=" + serverPort + "&-as_path=/instar&-as_queryattr1=&-as_queryval1=&-as_queryattr2" +
@@ -764,7 +763,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         // Snapshot should be first to keep consistent time between shots
         if (streamingAutoFps) {
             updateAutoFps = true;
-            if (!snapshotPolling && StringUtils.isEmpty(snapshotUri)) {
+            if (!snapshotPolling && isEmpty(snapshotUri)) {
                 // Dont need to poll if creating from RTSP stream with FFmpeg or we are polling at full rate already.
                 sendHttpGET(snapshotUri);
             }
@@ -873,8 +872,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     private void tryChangeCameraName() {
         if (onvifDeviceState.getInitialDevices() != null && this.isHandlerInitialized()) {
             try {
-                if (!Objects.equals(onvifDeviceState.getInitialDevices().getName(), getEntity().getName())) {
-                    onvifDeviceState.getInitialDevices().setName(getEntity().getName());
+                if (!Objects.equals(onvifDeviceState.getInitialDevices().getName(), entity.getName())) {
+                    onvifDeviceState.getInitialDevices().setName(entity.getName());
                 }
             } catch (Exception ex) {
                 log.error("[{}]: Unable to change onvif camera name: {}", getEntityID(), CommonUtils.getErrorMessage(ex));
@@ -930,7 +929,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     private void startSnapshotPolling() {
-        if (snapshotPolling || StringUtils.isEmpty(snapshotUri)) {
+        if (snapshotPolling || isEmpty(snapshotUri)) {
             return; // Already polling or creating with FFmpeg from RTSP
         }
         if (streamingSnapshotMjpeg || streamingAutoFps) {

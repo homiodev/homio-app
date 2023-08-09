@@ -167,7 +167,7 @@ public abstract class BaseVideoStreamServerHandler<S extends BaseVideoService> e
             handleChildrenHttpRequest(queryStringDecoder, ctx);
 
             switch (queryStringDecoder.path()) {
-                case "/ipvideo.m3u8":
+                case "/ipvideo.m3u8" -> {
                     if (!videoService.ffmpegHLS.getIsAlive()) {
                         if (videoService.ffmpegHLS.startConverting()) {
                             videoService.setAttribute(CHANNEL_START_STREAM, OnOffType.ON);
@@ -181,20 +181,24 @@ public abstract class BaseVideoStreamServerHandler<S extends BaseVideoService> e
                     TimeUnit.SECONDS.sleep(10);
                     sendFile(ctx, httpRequest.uri(), "application/x-mpegurl", videoService.getFfmpegHLSOutputPath());
                     return true;
-                case "/ipvideo.mpd":
+                }
+                case "/ipvideo.mpd" -> {
                     sendFile(ctx, httpRequest.uri(), "application/dash+xml", videoService.getFfmpegMP4OutputPath());
                     return true;
-                case "/ipvideo.gif":
+                }
+                case "/ipvideo.gif" -> {
                     byte[] bytes = videoService.recordGifSync(null, 5);
                     sendNettyResponse(ctx, "image/gif", bytes);
                     return true;
-                case "/ipvideo.jpg":
-                    sendSnapshotImage(ctx, "image/jpg");
+                }
+                case "/ipvideo.jpg" -> {
+                    sendSnapshotImage(ctx);
                     return true;
-                case "/snapshots.mjpeg":
+                }
+                case "/snapshots.mjpeg" -> {
                     return true;
-                case "/ipvideo0.ts":
-                default:
+                }
+                default -> {
                     if (httpRequest.uri().contains(".ts")) {
                         sendFile(ctx, queryStringDecoder.path(), "video/MP2T", videoService.getFfmpegHLSOutputPath());
                     } else if (httpRequest.uri().contains(".gif")) {
@@ -206,6 +210,7 @@ public abstract class BaseVideoStreamServerHandler<S extends BaseVideoService> e
                         sendFile(ctx, queryStringDecoder.path(), "video/mp4", videoService.getFfmpegMP4OutputPath());
                     }
                     return true;
+                }
             }
         } else if ("POST".equalsIgnoreCase(httpRequest.method().toString())) {
             if (!streamServerReceivedPostHandler(httpRequest)) {
@@ -225,10 +230,10 @@ public abstract class BaseVideoStreamServerHandler<S extends BaseVideoService> e
         return false;
     }
 
-    private void sendSnapshotImage(ChannelHandlerContext ctx, String contentType) {
+    private void sendSnapshotImage(ChannelHandlerContext ctx) {
         videoService.lockCurrentSnapshot.lock();
         try {
-            sendNettyResponse(ctx, contentType, videoService.getLatestSnapshot());
+            sendNettyResponse(ctx, "image/jpg", videoService.getLatestSnapshot());
         } finally {
             videoService.lockCurrentSnapshot.unlock();
         }
