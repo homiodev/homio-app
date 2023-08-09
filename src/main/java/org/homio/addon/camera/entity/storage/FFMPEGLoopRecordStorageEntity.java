@@ -17,7 +17,6 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
 import org.homio.api.entity.DeviceBaseEntity;
-import org.homio.api.entity.RestartHandlerOnChange;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.UIField;
@@ -34,7 +33,6 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
     private static Map<String, FFMPEG> ffmpegServices = new HashMap<>();
 
     @UIField(order = 11)
-    @RestartHandlerOnChange
     public int getSegmentTime() {
         return getJsonData("st", 300);
     }
@@ -44,7 +42,6 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
     }
 
     @UIField(order = 20)
-    @RestartHandlerOnChange
     public int getMaxSegments() {
         return getJsonData("ms", 10);
     }
@@ -54,7 +51,6 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
     }
 
     @UIField(order = 30)
-    @RestartHandlerOnChange
     public MuxerType getMuxerType() {
         return getJsonDataEnum("mt", MuxerType.segments);
     }
@@ -68,7 +64,6 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
      * Advanced settings
      */
     @UIField(order = 400, hideInView = true)
-    @RestartHandlerOnChange
     public String getVideoCodec() {
         return getJsonData("vc", "copy");
     }
@@ -79,7 +74,6 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
     }
 
     @UIField(order = 401, hideInView = true)
-    @RestartHandlerOnChange
     public String getAudioCodec() {
         return getJsonData("ac", "copy");
     }
@@ -90,7 +84,6 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
     }
 
     @UIField(order = 402, hideInView = true)
-    @RestartHandlerOnChange
     public String getSelectStream() {
         return getJsonData("map", "0");
     }
@@ -101,7 +94,6 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
     }
 
     @UIField(order = 1000, hideInView = true, type = UIFieldType.Chips)
-    @RestartHandlerOnChange
     public List<String> getExtraOptions() {
         return getJsonDataList("eo");
     }
@@ -111,7 +103,6 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
     }
 
     @UIField(order = 402, hideInView = true)
-    @RestartHandlerOnChange
     public boolean getVerbose() {
         return getJsonData("vb", false);
     }

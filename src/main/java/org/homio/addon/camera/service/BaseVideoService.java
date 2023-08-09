@@ -69,8 +69,8 @@ import org.springframework.util.MimeTypeUtils;
 
 @SuppressWarnings({"unused"})
 @Log4j2
-public abstract class BaseVideoService<T extends BaseVideoEntity>
-    extends EntityService.ServiceInstance implements VideoActionsContext<T>,
+public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extends BaseVideoService<T, S>>
+    extends EntityService.ServiceInstance<T> implements VideoActionsContext<T>,
     FFMPEGHandler {
 
     public abstract String getRtspUri(String profile);

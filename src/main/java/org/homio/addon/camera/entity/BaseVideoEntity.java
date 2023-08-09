@@ -41,7 +41,7 @@ import org.json.JSONObject;
 
 @SuppressWarnings("unused")
 @Log4j2
-public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<T>>
+public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
     extends MediaEntity<T> implements EntityService<S, T> {
 
     @UIField(order = 300, hideInView = true)

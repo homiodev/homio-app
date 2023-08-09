@@ -18,7 +18,7 @@ import org.homio.api.service.EntityService;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
 
-public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity> {
+public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity, CommonVideoService> {
 
     private VideoSourceType videoSourceType;
 
@@ -82,8 +82,8 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
     }
 
     @Override
-    protected long getEntityHashCode(EntityService ignore) {
-        String ieeeAddress = getEntity().getIeeeAddress();
+    protected long getEntityHashCode(CommonVideoStreamEntity entity) {
+        String ieeeAddress = entity.getIeeeAddress();
         return ieeeAddress == null ? 0 : ieeeAddress.hashCode();
     }
 

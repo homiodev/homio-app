@@ -21,7 +21,7 @@ import org.homio.api.service.EntityService;
 import org.homio.api.util.CommonUtils;
 
 @Log4j2
-public class UsbCameraService extends BaseVideoService<UsbCameraEntity> {
+public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCameraService> {
 
     private final List<String> outputs = new ArrayList<>();
     private FFMPEG ffmpegUsbStream;
@@ -31,8 +31,8 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity> {
     }
 
     @Override
-    protected long getEntityHashCode(EntityService entity) {
-        return getEntity().getDeepHashCode();
+    protected long getEntityHashCode(UsbCameraEntity entity) {
+        return entity.getDeepHashCode();
     }
 
     @Override

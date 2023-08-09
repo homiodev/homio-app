@@ -81,7 +81,6 @@ import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
-import org.homio.api.service.EntityService;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.ObjectType;
 import org.homio.api.state.OnOffType;
@@ -94,7 +93,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Log4j2
-public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity> {
+public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, OnvifCameraService> {
 
     @NotNull
     private static final Map<String, CameraBrandHandlerDescription> cameraBrands = new ConcurrentHashMap<>();
@@ -867,8 +866,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity> {
     }
 
     @Override
-    protected long getEntityHashCode(EntityService entity) {
-        return getEntity().getDeepHashCode();
+    protected long getEntityHashCode(OnvifCameraEntity entity) {
+        return entity.getDeepHashCode();
     }
 
     private void tryChangeCameraName() {
