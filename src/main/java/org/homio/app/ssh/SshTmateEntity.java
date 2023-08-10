@@ -54,7 +54,7 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
 
     @Override
     public @Nullable SshTmateService createService(@NotNull EntityContext entityContext) {
-        return new SshTmateService(entityContext);
+        return new SshTmateService(entityContext, this);
     }
 
     @Override
@@ -102,8 +102,8 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
         private ThreadContext<Void> tmateThread;
         private Process process;
 
-        public SshTmateService(EntityContext entityContext) {
-            super(entityContext);
+        public SshTmateService(EntityContext entityContext, SshTmateEntity entity) {
+            super(entityContext, entity, true);
         }
 
         @Override

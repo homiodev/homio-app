@@ -2,6 +2,7 @@ package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import de.onvif.soap.OnvifDeviceState;
@@ -55,6 +56,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.homio.addon.camera.CameraController;
+import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
@@ -127,6 +129,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     public OnvifCameraService(EntityContext entityContext, OnvifCameraEntity entity) {
         super(entity, entityContext);
+        camerasOpenStreams.putIfAbsent(entityID, new OpenStreamsContainer());
 
         onvifDeviceState = new OnvifDeviceState(entity.getEntityID());
         onvifDeviceState.setUpdateListener(() -> entityContext.ui().updateItem(entity));
@@ -836,7 +839,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                                     if (msg instanceof HttpMessage) {
                                         // very start of stream only
                                         mjpegContentType = contentType;
-                                        CameraController.openStreams.updateContentType(contentType, boundary);
+                                        camerasOpenStreams.get(entityID).openStreams.updateContentType(contentType, boundary);
                                     }
                                 }
                             } else if (contentType.contains("image/jp")) {
@@ -857,7 +860,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                         // multiple MJPEG stream packets come back as this.
                         byte[] chunkedFrame = new byte[content.content().readableBytes()];
                         content.content().getBytes(content.content().readerIndex(), chunkedFrame);
-                        CameraController.openStreams.queueFrame(chunkedFrame);
+                        camerasOpenStreams.get(entityID).openStreams.queueFrame(chunkedFrame);
                     } else {
 
                         // Found some cameras use Content-Type: image/jpg instead of image/jpeg

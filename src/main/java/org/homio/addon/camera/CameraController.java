@@ -36,7 +36,6 @@ import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.onvif.ver10.schema.Profile;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -137,22 +136,19 @@ public class CameraController {
         } else {
             handler.getSnapshot();
             AsyncContext asyncContext = req.startAsync(req, resp);
-            asyncContext.start(new Runnable() {
-                @Override
-                public void run() {
-                    Instant startTime = Instant.now();
-                    do {
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            return;
-                        }
-                    } // 5 sec timeout OR a new snapshot comes back from camera
-                    while (Duration.between(startTime, Instant.now()).toMillis() < 5000
-                        && Duration.between(handler.currentSnapshotTime, Instant.now()).toMillis() > 1200);
-                    sendSnapshotImage(resp, handler.getSnapshot());
-                    asyncContext.complete();
-                }
+            asyncContext.start(() -> {
+                Instant startTime = Instant.now();
+                do {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                } // 5 sec timeout OR a new snapshot comes back from camera
+                while (Duration.between(startTime, Instant.now()).toMillis() < 5000
+                    && Duration.between(handler.currentSnapshotTime, Instant.now()).toMillis() > 1200);
+                sendSnapshotImage(resp, handler.getSnapshot());
+                asyncContext.complete();
             });
         }
     }

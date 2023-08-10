@@ -58,13 +58,13 @@ public class SshRawWebSocketEntity extends SshBaseEntity<SshRawWebSocketEntity, 
 
     @Override
     public @Nullable RawWebSocketService createService(@NotNull EntityContext entityContext) {
-        return new RawWebSocketService(entityContext);
+        return new RawWebSocketService(entityContext, this);
     }
 
     public static class RawWebSocketService extends ServiceInstance<SshRawWebSocketEntity> implements SshProviderService<SshRawWebSocketEntity> {
 
-        public RawWebSocketService(EntityContext entityContext) {
-            super(entityContext);
+        public RawWebSocketService(EntityContext entityContext, SshRawWebSocketEntity entity) {
+            super(entityContext, entity, true);
         }
 
         @Override

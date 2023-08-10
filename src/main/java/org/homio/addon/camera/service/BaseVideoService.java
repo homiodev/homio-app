@@ -108,8 +108,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public Instant currentSnapshotTime = Instant.now();
 
     public BaseVideoService(T entity, EntityContext entityContext) {
-        super(entityContext);
-        this.entity = entity;
+        super(entityContext, entity, true);
     }
 
     @Override
@@ -530,18 +529,18 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     @SneakyThrows
     private byte[] fireFfmpegSync(String profile, String output, String inputArguments, String outOptions, int maxTimeout) {
+        Path path = Paths.get(output);
         try {
-            Files.createFile(Paths.get(output));
+            Files.createFile(path);
             entityContext.media().fireFfmpeg(
                 inputArguments + " " + getFFMPEGInputOptions(profile),
                 snapshotSource,
                 outOptions + " " + output,
                 maxTimeout);
-            Path path = Paths.get(output);
             return IOUtils.toByteArray(Files.newInputStream(path));
         } finally {
             try {
-                Files.delete(Paths.get(output));
+                Files.delete(path);
             } catch (IOException ex) {
                 log.error("[{}]: Unable to remove file: <{}>", getEntityID(), output, ex);
             }

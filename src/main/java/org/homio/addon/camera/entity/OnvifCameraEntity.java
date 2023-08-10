@@ -66,7 +66,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     @UIField(order = 1, hideInEdit = true, hideOnEmpty = true, fullWidth = true, bg = "#334842C2", type = UIFieldType.HTML)
     public String getDescription() {
         if (getIeeeAddress() == null) {
-            return Lang.getServerMessage("ONVIF.REQ_AUTH_DESCRIPTION");
+            return "W.ERROR.CAMERA_REQ_AUTH_DESCRIPTION";
         }
         return null;
     }
