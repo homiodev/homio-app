@@ -191,7 +191,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
 
     @UIField(order = 100, hideInView = true)
     public String getFfmpegInput() {
-        return getJsonData("ffmpegInput", "");
+        return getJsonData("ffmpegInput");
     }
 
     public void setFfmpegInput(String value) {
@@ -239,11 +239,6 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     public long getDeepHashCode() {
         return Objects.hash(getIeeeAddress(), getName()) + getJsonDataHashCode("ip", "cameraType", "onvifPort", "restPort",
             "onvifMediaProfile", "user", "pwd");
-    }
-
-    @JsonIgnore
-    public long getPollTime() {
-        return 1000;
     }
 
     @Override

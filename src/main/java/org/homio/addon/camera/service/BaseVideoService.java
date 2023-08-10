@@ -32,8 +32,6 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.homio.addon.camera.CameraController;
-import org.homio.addon.camera.OpenStreams;
 import org.homio.addon.camera.entity.AbilityToStreamHLSOverFFMPEG;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
@@ -54,6 +52,7 @@ import org.homio.api.state.StringType;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.FlowMap;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.util.MimeTypeUtils;
@@ -82,37 +81,49 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private @Getter final Map<String, State> requestAttributes = new ConcurrentHashMap<>();
     private final Map<String, Consumer<Status>> stateListeners = new HashMap<>();
     private final FFMpegRtspAlarm ffMpegRtspAlarm = new FFMpegRtspAlarm();
-    public ReentrantLock lockCurrentSnapshot = new ReentrantLock();
 
-    private @Getter byte[] latestSnapshot = new byte[0];
-    private @Getter long lastAnswerFromVideo;
-    private @Getter boolean motionDetected;
-    public FFMPEG ffmpegHLS;
-    public FFMPEG ffmpegGIF;
-    public FFMPEG ffmpegSnapshot;
-    public FFMPEG ffmpegMjpeg;
-    public FFMPEG ffmpegMP4;
-    @Getter
-    private boolean isHandlerInitialized;
-    private ThreadContext<Void> videoConnectionJob;
-    private ThreadContext<Void> pollVideoJob;
-    private ThreadContext<Void> cameraConnectionJob;
+    protected ReentrantLock lockCurrentSnapshot = new ReentrantLock();
+    protected @Getter byte[] latestSnapshot = new byte[0];
+    protected @Getter long lastAnswerFromVideo;
+    protected @Getter boolean motionDetected;
+
+    protected @Getter FFMPEG ffmpegHLS;
+    protected FFMPEG ffmpegGIF;
+    protected FFMPEG ffmpegSnapshot;
+    protected @Getter @Setter FFMPEG ffmpegMjpeg;
+    protected FFMPEG ffmpegMP4;
+
+    protected @Getter boolean isHandlerInitialized;
+
+    protected ThreadContext<Void> videoConnectionJob;
+    protected ThreadContext<Void> pollVideoJob;
+    protected ThreadContext<Void> cameraConnectionJob;
 
     // actions holder
-    private UIInputBuilder uiInputBuilder;
+    protected UIInputBuilder uiInputBuilder;
 
-    private String snapshotSource;
-    private String snapshotInputOptions;
+    protected String snapshotSource;
+    protected String snapshotInputOptions;
 
-    private String mp4OutOptions;
-    private String gifOutOptions;
+    protected String mp4OutOptions;
+    protected String gifOutOptions;
 
-    private long videoStreamParametersHashCode;
+    protected long videoStreamParametersHashCode;
 
-    public Instant lastSnapshotRequest = Instant.now();
-    public Instant currentSnapshotTime = Instant.now();
+    protected Instant lastSnapshotRequest = Instant.now();
+    protected @Getter Instant currentSnapshotTime = Instant.now();
 
-    private @Setter String overrideRtspUri;
+    private @Setter @Nullable String overrideRtspUri;
+
+    protected @Setter @Getter @NotNull String mjpegUri = "";
+    protected @Setter @Getter @NotNull String mjpegContentType = "";
+    protected @NotNull String snapshotUri = "";
+
+    protected boolean updateAutoFps = false;
+    protected @Getter boolean ffmpegSnapshotGeneration = false;
+    protected boolean snapshotPolling = false;
+    protected @Setter boolean streamingSnapshotMjpeg = false;
+    protected @Setter boolean streamingAutoFps = false;
 
     public BaseVideoService(T entity, EntityContext entityContext) {
         super(entityContext, entity, true);
@@ -480,57 +491,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
                 () -> setAttribute(CHANNEL_START_STREAM, OnOffType.OFF));
             setAttribute("FFMPEG_HLS", new StringType(String.join(" ", ffmpegHLS.getCommandArrayList())));
         }
-        tryConnecting();
-    }
-
-    protected void tryConnecting() {
-        cameraConnectionJob = entityContext.bgp().builder("cam-conn-" + entityID)
-                                           .delay(Duration.ofSeconds(4))
-                                           .interval(Duration.ofSeconds(8))
-                                           .execute(this::pollingCameraConnection);
-    }
-
-    void pollingCameraConnection() {
-        keepMjpegRunning();
-        if (thing.getThingTypeUID().getId().equals(GENERIC_THING)
-            || thing.getThingTypeUID().getId().equals(DOORBIRD_THING)) {
-            if (rtspUri.isEmpty()) {
-                logger.warn("Binding has not been supplied with a FFmpeg Input URL, so some features will not work.");
-            }
-            if (snapshotUri.isEmpty() || "ffmpeg".equals(snapshotUri)) {
-                snapshotIsFfmpeg();
-            } else {
-                ffmpegSnapshotGeneration = false;
-                updateSnapshot();
-            }
-            return;
-        }
-        if (cameraConfig.getOnvifPort() > 0 && !onvifCamera.isConnected()) {
-            logger.debug("About to connect to the IP Camera using the ONVIF PORT at IP:{}:{}", cameraConfig.getIp(),
-                cameraConfig.getOnvifPort());
-            onvifCamera.connect(thing.getThingTypeUID().getId().equals(ONVIF_THING));
-        }
-        if ("ffmpeg".equals(snapshotUri)) {
-            snapshotIsFfmpeg();
-        } else if (!snapshotUri.isEmpty()) {
-            ffmpegSnapshotGeneration = false;
-            updateSnapshot();
-        } else if (!rtspUri.isEmpty()) {
-            snapshotIsFfmpeg();
-        } else {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                "Camera failed to report a valid Snaphot and/or RTSP URL. Check user/pass is correct, or use the advanced configs to manually provide a URL.");
-        }
-    }
-
-    private void keepMjpegRunning() {
-        OpenStreams openStreams = CameraController.camerasOpenStreams.get(entityID).openStreams;
-        if (!openStreams.isEmpty()) {
-            if (!mjpegUri.isEmpty() && !"ffmpeg".equals(mjpegUri)) {
-                openStreams.queueFrame(("--" + openStreams.boundary + "\r\n\r\n").getBytes());
-            }
-            openStreams.queueFrame(getSnapshot());
-        }
     }
 
     protected String createHlsRtspUri() {
@@ -642,7 +602,35 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return String.join(" ", options);
     }
 
+    public byte[] getSnapshot() {
+        if (!entity.getStatus().isOnline()) {
+            // Single gray pixel JPG to keep streams open when the camera goes offline so they dont stop.
+            return new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+                0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, (byte) 0xff, (byte) 0xdb, 0x00, 0x43,
+                0x00, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x03, 0x03, 0x03, 0x03, 0x04,
+                0x06, 0x04, 0x04, 0x04, 0x04, 0x04, 0x08, 0x06, 0x06, 0x05, 0x06, 0x09, 0x08, 0x0a, 0x0a, 0x09,
+                0x08, 0x09, 0x09, 0x0a, 0x0c, 0x0f, 0x0c, 0x0a, 0x0b, 0x0e, 0x0b, 0x09, 0x09, 0x0d, 0x11, 0x0d,
+                0x0e, 0x0f, 0x10, 0x10, 0x11, 0x10, 0x0a, 0x0c, 0x12, 0x13, 0x12, 0x10, 0x13, 0x0f, 0x10, 0x10,
+                0x10, (byte) 0xff, (byte) 0xc9, 0x00, 0x0b, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00,
+                (byte) 0xff, (byte) 0xcc, 0x00, 0x06, 0x00, 0x10, 0x10, 0x05, (byte) 0xff, (byte) 0xda, 0x00, 0x08,
+                0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, (byte) 0xd2, (byte) 0xcf, 0x20, (byte) 0xff, (byte) 0xd9};
+        }
+        // Most cameras will return a 503 busy error if snapshot is faster than 1 second
+        long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
+        if (!snapshotPolling && !ffmpegSnapshotGeneration && lastUpdatedMs >= entity.getSnapshotPollInterval()) {
+            updateSnapshot();
+        }
+        lockCurrentSnapshot.lock();
+        try {
+            return latestSnapshot;
+        } finally {
+            lockCurrentSnapshot.unlock();
+        }
+    }
 
+    protected void updateSnapshot() {
+
+    }
 
     private class FFMpegRtspAlarm {
 

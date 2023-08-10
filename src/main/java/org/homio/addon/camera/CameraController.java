@@ -85,7 +85,7 @@ public class CameraController {
 
         OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
         OnvifCameraService service = entity.getService();
-        FFMPEG ffmpeg = service.ffmpegHLS;
+        FFMPEG ffmpeg = service.getFfmpegHLS();
         resp.setContentType("application/x-mpegURL");
         if (!ffmpeg.getIsAlive()) {
             ffmpeg.startConverting();
@@ -130,8 +130,7 @@ public class CameraController {
         OnvifCameraService handler = entity.getService();
         // Use cached image if recent. Cameras can take > 1sec to send back a reply.
         // Example an Image item/widget may have a 1 second refresh.
-        if (handler.ffmpegSnapshotGeneration
-            || Duration.between(handler.currentSnapshotTime, Instant.now()).toMillis() < 1200) {
+        if (isUseCachedImage(handler)) {
             sendSnapshotImage(resp, handler.getSnapshot());
         } else {
             handler.getSnapshot();
@@ -146,11 +145,16 @@ public class CameraController {
                     }
                 } // 5 sec timeout OR a new snapshot comes back from camera
                 while (Duration.between(startTime, Instant.now()).toMillis() < 5000
-                    && Duration.between(handler.currentSnapshotTime, Instant.now()).toMillis() > 1200);
+                    && Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() > 1200);
                 sendSnapshotImage(resp, handler.getSnapshot());
                 asyncContext.complete();
             });
         }
+    }
+
+    private static boolean isUseCachedImage(OnvifCameraService handler) {
+        return handler.isFfmpegSnapshotGeneration()
+            || Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() < 1200;
     }
 
     @SneakyThrows
@@ -160,7 +164,7 @@ public class CameraController {
         HttpServletResponse resp) {
         OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
         OnvifCameraService handler = entity.getService();
-        handler.streamingSnapshotMjpeg = true;
+        handler.setStreamingSnapshotMjpeg(true);
         handler.startSnapshotPolling();
         StreamOutput output = new StreamOutput(resp);
         OpenStreams openSnapshotStreams = getOpenStreamsContainer(entityID).openSnapshotStreams;
@@ -168,14 +172,14 @@ public class CameraController {
         do {
             try {
                 output.sendSnapshotBasedFrame(handler.getSnapshot());
-                Thread.sleep(entity.getPollTime());
+                Thread.sleep(entity.getSnapshotPollInterval());
             } catch (InterruptedException | IOException e) {
                 // Never stop streaming until IOException. Occurs when browser stops the stream.
                 openSnapshotStreams.removeStream(output);
                 log.debug("Now there are {} snapshots.mjpeg streams open.",
                     openSnapshotStreams.getNumberOfStreams());
                 if (openSnapshotStreams.isEmpty()) {
-                    handler.streamingSnapshotMjpeg = false;
+                    handler.setStreamingSnapshotMjpeg(false);
                     handler.stopSnapshotPolling();
                     log.debug("All snapshots.mjpeg streams have stopped.");
                 }
@@ -193,23 +197,25 @@ public class CameraController {
         OnvifCameraService handler = entity.getService();
         StreamOutput output;
         OpenStreams openStreams = getOpenStreamsContainer(entityID).openStreams;
+        String mjpegUri = handler.getMjpegUri();
+
         if (openStreams.isEmpty()) {
             log.debug("First stream requested, opening up stream from camera");
             handler.openCamerasStream();
-            if (handler.mjpegUri.isEmpty() || "ffmpeg".equals(handler.mjpegUri)) {
+            if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
                 output = new StreamOutput(resp);
             } else {
-                output = new StreamOutput(resp, handler.mjpegContentType);
+                output = new StreamOutput(resp, handler.getMjpegContentType());
             }
-        } else if (handler.mjpegUri.isEmpty() || "ffmpeg".equals(handler.mjpegUri)) {
+        } else if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
             output = new StreamOutput(resp);
         } else {
-            ChannelTracking tracker = handler.channelTrackingMap.get(handler.getTinyUrl(handler.mjpegUri));
+            ChannelTracking tracker = handler.channelTrackingMap.get(handler.getTinyUrl(mjpegUri));
             if (tracker == null || !tracker.getChannel().isOpen()) {
                 log.debug("Not the first stream requested but the stream from camera was closed");
                 handler.openCamerasStream();
             }
-            output = new StreamOutput(resp, handler.mjpegContentType);
+            output = new StreamOutput(resp, handler.getMjpegContentType());
         }
         openStreams.addStream(output);
         do {
@@ -221,12 +227,12 @@ public class CameraController {
                 log.debug("Now there are {} ipcamera.mjpeg streams open.", openStreams.getNumberOfStreams());
                 if (openStreams.isEmpty()) {
                     if (output.isSnapshotBased()) {
-                        fireFfmpeg(handler.ffmpegMjpeg, FFMPEG::stopConverting);
+                        fireFfmpeg(handler.getFfmpegMjpeg(), FFMPEG::stopConverting);
                         // Set reference to ffmpegMjpeg to null to prevent automatic reconnection
                         // in handler's pollCameraRunnable() check for frozen camera
-                        handler.ffmpegMjpeg = null;
+                        handler.setFfmpegMjpeg(null);
                     } else {
-                        handler.closeChannel(handler.getTinyUrl(handler.mjpegUri));
+                        handler.closeChannel(handler.getTinyUrl(mjpegUri));
                     }
                     log.debug("All ipcamera.mjpeg streams have stopped.");
                 }
@@ -243,7 +249,7 @@ public class CameraController {
         OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
         OnvifCameraService service = entity.getService();
 
-        service.streamingAutoFps = true;
+        service.setStreamingAutoFps(true);
         StreamOutput output = new StreamOutput(resp);
         OpenStreams openAutoFpsStreams = getOpenStreamsContainer(entityID).openAutoFpsStreams;
         openAutoFpsStreams.addStream(output);
@@ -264,7 +270,7 @@ public class CameraController {
                 log.debug("Now there are {} autofps.mjpeg streams open.",
                     openAutoFpsStreams.getNumberOfStreams());
                 if (openAutoFpsStreams.isEmpty()) {
-                    service.streamingAutoFps = false;
+                    service.setStreamingAutoFps(false);
                     log.debug("All autofps.mjpeg streams have stopped.");
                 }
                 return;
@@ -336,22 +342,12 @@ public class CameraController {
         response.setHeader(CONTENT_TYPE, String.valueOf(file.length()));
         response.setHeader(PRAGMA, "no-cache");
         response.setHeader(CACHE_CONTROL, "max-age=0, no-cache, no-store");
-        BufferedInputStream input = null;
-        BufferedOutputStream output = null;
-        try {
-            input = new BufferedInputStream(new FileInputStream(file), (int) file.length());
-            output = new BufferedOutputStream(response.getOutputStream(), (int) file.length());
+        try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(file), (int) file.length());
+             BufferedOutputStream output = new BufferedOutputStream(response.getOutputStream(), (int) file.length())) {
             byte[] buffer = new byte[(int) file.length()];
             int length;
             while ((length = input.read(buffer)) > 0) {
                 output.write(buffer, 0, length);
-            }
-        } finally {
-            if (output != null) {
-                output.close();
-            }
-            if (input != null) {
-                input.close();
             }
         }
     }
