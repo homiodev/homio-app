@@ -55,7 +55,6 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
-import org.homio.addon.camera.CameraController;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
@@ -96,7 +95,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Getter
     private final @NotNull BaseOnvifCameraBrandHandler brandHandler;
-    // private GroupTracker groupTracker;
 
     private final @NotNull EventLoopGroup mainEventLoopGroup = new NioEventLoopGroup(1);
     @Getter
@@ -333,7 +331,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                          if (future.isDone() && future.isSuccess()) {
                              Channel ch = future.channel();
                              openChannels.add(ch);
-                             entity.setStatusOnline();
+                             bringCameraOnline();
                              log.debug("[{}]: Sending camera: {}: http://{}:{}{}", getEntityID(), httpMethod,
                                  entity.getIp(), port, httpRequestURL);
                              channelTrackingMap.put(httpRequestURL, new ChannelTracking(ch, httpRequestURL));
@@ -614,8 +612,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    protected void pollVideoRunnable() {
-        super.pollVideoRunnable();
+    protected void pollCameraRunnable() {
+        super.pollCameraRunnable();
 
         // Snapshot should be first to keep consistent time between shots
         if (streamingAutoFps) {
@@ -630,7 +628,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         // what needs to be done every poll//
         brandHandler.pollCameraRunnable();
 
-        if (openChannels.size() > 18) {
+        if (openChannels.size() > 10) {
             log.debug("[{}]: There are {} open Channels being tracked.", getEntityID(), openChannels.size());
             cleanChannels();
         }
@@ -672,6 +670,12 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             snapshotUri = "";
         }
         setAttribute("SNAPSHOT_URI", new StringType(snapshotUri));
+    }
+
+    @Override
+    protected void tryConnecting() {
+        onvifDeviceState.getInitialDevices().getDate();
+        super.tryConnecting();
     }
 
     @Override

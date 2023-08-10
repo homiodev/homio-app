@@ -62,7 +62,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
 
             // Handle AudioMutationThreshold alarm
             if (content.contains("table.AudioDetect[0].MutationThreold=")) {
-                String value = getService().returnValueFromString(content, "table.AudioDetect[0].MutationThreold=");
+                String value = service.returnValueFromString(content, "table.AudioDetect[0].MutationThreold=");
                 setAttribute(IpCameraBindingConstants.CHANNEL_AUDIO_THRESHOLD, new DecimalType(value));
             }
 
@@ -90,17 +90,17 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_PRIVACY_MODE, order = 70, icon = "fas fa-user-secret")
     public void setEnablePrivacyMode(boolean on) {
-        getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&LeLensMask[0].Enable=" + on);
+        service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&LeLensMask[0].Enable=" + on);
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
     public void activateAlarmOutput2(boolean on) {
-        getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
+        service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
     public void activateAlarmOutput(boolean on) {
-        getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
+        service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AlarmOut[1].Mode=" + boolToInt(on));
     }
 
     @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM)
@@ -111,9 +111,9 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
     public void setEnableMotionAlarm(boolean on) {
         if (on) {
-            getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&MotionDetect[0].Enable=true&MotionDetect[0].EventHandler.Dejitter=1");
+            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&MotionDetect[0].Enable=true&MotionDetect[0].EventHandler.Dejitter=1");
         } else {
-            getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&MotionDetect[0].Enable=false");
+            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&MotionDetect[0].Enable=false");
         }
     }
 
@@ -124,15 +124,15 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM, order = 150, icon = "fas fa-grip-lines-vertical")
     public void setEnableLineCrossingAlarm(boolean on) {
-        getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + on);
+        service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&VideoAnalyseRule[0][1].Enable=" + on);
     }
 
     @Override
     public void setMotionAlarmThreshold(int threshold) {
         if (threshold > 0) {
-            getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationDetect=true&AudioDetect[0].EventHandler.Dejitter=1");
+            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationDetect=true&AudioDetect[0].EventHandler.Dejitter=1");
         } else {
-            getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationDetect=false");
+            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationDetect=false");
         }
     }
 
@@ -141,9 +141,9 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
         if (audioThreshold != this.audioThreshold) {
             this.audioThreshold = audioThreshold;
             if (this.audioThreshold > 0) {
-                getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationThreold=" + audioThreshold);
+                service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationThreold=" + audioThreshold);
             } else {
-                getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationThreold=1");
+                service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&AudioDetect[0].MutationThreold=1");
             }
         }
     }
@@ -152,7 +152,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     public void autoLED(boolean on) {
         if (on) {
             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LED, null/*UnDefType.UNDEF*/);
-            getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Auto");
+            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Auto");
         }
     }
 
@@ -166,9 +166,9 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
         return on -> {
             setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED, OnOffType.OFF);
             if (!on) {
-                getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Off");
+                service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Off");
             } else {
-                getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Manual");
+                service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Manual");
             } /*else {
                         ipCameraHandler.sendHttpGET(
                                 CM + "setConfig&Lighting[0][0].Mode=Manual&Lighting[0][0].MiddleLight[0].Light="
@@ -186,9 +186,9 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     public void textOverlay(String value) {
         String text = Helper.encodeSpecialChars(value);
         if (text.isEmpty()) {
-            getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=false");
+            service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=false");
         } else {
-            getService().sendHttpGET(
+            service.sendHttpGET(
                 IpCameraBindingConstants.CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=true&VideoWidget[0].CustomTitle[1].Text="
                     + text);
         }
@@ -196,7 +196,6 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
 
     @Override
     public void runOncePerMinute(EntityContext entityContext) {
-        OnvifCameraService service = getService();
         service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=AudioDetect[0]");
         service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=CrossLineDetection[0]");
         service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[0]");
@@ -205,7 +204,6 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     @Override
     public void pollCameraRunnable() {
         // Check for alarms, channel for NVRs appears not to work at filtering.
-        OnvifCameraService service = getService();
         if (service.streamIsStopped("/cgi-bin/eventManager.cgi?action=attach&codes=[All]")) {
             log.info("[{}]: The alarm stream was not running for camera {}, re-starting it now", entityID, getEntity().getIp());
             service.sendHttpGET("/cgi-bin/eventManager.cgi?action=attach&codes=[All]");
@@ -214,7 +212,6 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
 
     @Override
     public void initialize(EntityContext entityContext) {
-        OnvifCameraService service = getService();
         if (StringUtils.isEmpty(service.getMjpegUri())) {
             service.setMjpegUri("/cgi-bin/mjpg/video.cgi?channel=" + getEntity().getNvrChannel() + "&subtype=1");
         }
@@ -231,7 +228,6 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     private void processEvent(String content) {
         int startIndex = content.indexOf("Code=", 12) + 5;// skip --myboundary
         int endIndex = content.indexOf(";", startIndex + 1);
-        OnvifCameraService service = getService();
         try {
             String code = content.substring(startIndex, endIndex);
             startIndex = endIndex + 8;// skip ;action=

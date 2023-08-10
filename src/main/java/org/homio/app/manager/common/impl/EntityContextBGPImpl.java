@@ -202,14 +202,18 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     @Override
-    public void execute(ThrowingRunnable<Exception> runnable) {
-        taskScheduler.execute(() -> {
+    public void execute(@Nullable Duration delay, @NotNull ThrowingRunnable<Exception> runnable) {
+        Date startDate = new Date();
+        if (delay != null) {
+            startDate = new Date(System.currentTimeMillis() + delay.toMillis());
+        }
+        taskScheduler.schedule(() -> {
             try {
                 runnable.run();
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }
-        });
+        }, startDate.toInstant());
     }
 
     @Override
@@ -288,6 +292,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             @Override
             public @NotNull ScheduleBuilder<T> onError(@NotNull Consumer<Exception> errorListener) {
                 context.errorListener = errorListener;
+                return this;
+            }
+
+            @Override
+            public @NotNull ScheduleBuilder<T> onFinally(@NotNull Runnable finallyListener) {
+                context.finallyListener = finallyListener;
                 return this;
             }
 
@@ -652,6 +662,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private final Date creationTime = new Date();
         // in case if start = false
         public Function<Runnable, ScheduledFuture<?>> postponeScheduleHandler;
+        public Runnable finallyListener;
         private boolean throwOnError;
         private Authentication authentication;
         private Path logFile;
@@ -767,6 +778,13 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             stopped = true;
             if (!showOnUI || hideOnUIAfterCancel) {
                 EntityContextBGPImpl.this.schedulers.remove(name);
+            }
+            if (finallyListener != null) {
+                try {
+                    finallyListener.run();
+                } catch (Exception uex) {
+                    log.error("Unexpected error in thread finally listener <{}>", CommonUtils.getErrorMessage(uex));
+                }
             }
         }
     }

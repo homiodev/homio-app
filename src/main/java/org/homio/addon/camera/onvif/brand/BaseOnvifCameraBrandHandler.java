@@ -12,6 +12,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Executors;
 import lombok.Getter;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
@@ -30,8 +31,7 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
   protected final String password;
   protected final String ip;
   protected final String entityID;
-  @Getter
-  private final OnvifCameraService service;
+  protected final OnvifCameraService service;
 
   public BaseOnvifCameraBrandHandler(OnvifCameraService service) {
     this.service = service;

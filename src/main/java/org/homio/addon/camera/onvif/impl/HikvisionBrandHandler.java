@@ -40,7 +40,6 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
     if (msg == null || ctx == null) {
       return;
     }
-    OnvifCameraService service = getService();
     try {
       int debounce = 3;
       String content = msg.toString();
@@ -202,12 +201,10 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
   public void hikSendXml(String httpPutURL, String xml) {
     log.debug("[{}]: Body for PUT:{} is going to be:{}", entityID, httpPutURL, xml);
     FullHttpRequest fullHttpRequest = buildFullHttpRequest(httpPutURL, xml, HttpMethod.PUT, MediaType.APPLICATION_XML);
-    getService().sendHttpPUT(httpPutURL, fullHttpRequest);
+    service.sendHttpPUT(httpPutURL, fullHttpRequest);
   }
 
   public void hikChangeSetting(String httpGetPutURL, String removeElement, String replaceRemovedElementWith) {
-    OnvifCameraService service = getService();
-
     ChannelTracking localTracker = service.channelTrackingMap.get(httpGetPutURL);
     if (localTracker == null) {
       service.sendHttpGET(httpGetPutURL);
@@ -362,13 +359,12 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
     }
     if (fieldCount == 0 && pirCount == 0 && faceCount == 0 && takenCount == 0 && leftCount == 0 && vmdCount == 0
         && lineCount == 0) {
-        getService().motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+      service.motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
     }
   }
 
   @Override
   public void runOncePerMinute(EntityContext entityContext) {
-    OnvifCameraService service = getService();
     if (checkAlarmInput) {
       service.sendHttpGET("/ISAPI/System/IO/inputs/" + nvrChannel + "/status"); // must stay in element 0.
     }
@@ -381,7 +377,6 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
 
   @Override
   public void pollCameraRunnable() {
-    OnvifCameraService service = getService();
     if (service.streamIsStopped("/ISAPI/Event/notification/alertStream")) {
       log.info("[{}]: The alarm stream was not running for camera {}, re-starting it now",
           entityID, getEntity().getIp());
@@ -391,8 +386,6 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
 
   @Override
   public void initialize(EntityContext entityContext) {
-    OnvifCameraService service = getService();
-
     if (StringUtils.isEmpty(service.getMjpegUri())) {
       service.setMjpegUri("/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "02" + "/httppreview");
     }

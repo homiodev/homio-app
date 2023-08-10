@@ -93,7 +93,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         return this;
     }
 
-    @UIFieldPort
+    @UIFieldPort(min = 0)
     @UIField(order = 35)
     public int getOnvifPort() {
         return getJsonData("onvifPort", 8000);

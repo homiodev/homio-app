@@ -41,7 +41,6 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
         if (msg == null || ctx == null) {
             return;
         }
-        OnvifCameraService service = getService();
         try {
             String content = msg.toString();
             log.debug("[{}]: HTTP Result back from camera is \t:{}:", entityID, content);
@@ -107,7 +106,6 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     @Override
     public Consumer<Boolean> getIRLedHandler() {
         return on -> {
-            OnvifCameraService service = getService();
             // Disable the auto mode first
             service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
             setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED, OnOffType.OFF);
@@ -128,9 +126,9 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     public void autoLED(boolean on) {
         if (on) {
             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LED, null/*UnDefType.UNDEF*/);
-            getService().sendHttpGET(CG + "setInfraLedConfig&mode=0&usr=" + username + "&pwd=" + password);
+            service.sendHttpGET(CG + "setInfraLedConfig&mode=0&usr=" + username + "&pwd=" + password);
         } else {
-            getService().sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
+            service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
         }
     }
 
@@ -138,7 +136,6 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     public void setAudioAlarmThreshold(int audioThreshold) {
         if (audioThreshold != this.audioThreshold) {
             this.audioThreshold = audioThreshold;
-            OnvifCameraService service = getService();
             if (audioThreshold == 0) {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=0&usr="
                     + username + "&pwd=" + password);
@@ -159,13 +156,13 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     public void setMotionAlarmThreshold(int threshold) {
         if (threshold > 0) {
             if (getEntity().getCustomAudioAlarmUrl().isEmpty()) {
-                getService().sendHttpGET(CG + "setAudioAlarmConfig&isEnable=1&usr="
+                service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=1&usr="
                     + username + "&pwd=" + password);
             } else {
-                getService().sendHttpGET(getEntity().getCustomAudioAlarmUrl());
+                service.sendHttpGET(getEntity().getCustomAudioAlarmUrl());
             }
         } else {
-            getService().sendHttpGET(CG + "setAudioAlarmConfig&isEnable=0&usr="
+            service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=0&usr="
                 + username + "&pwd=" + password);
         }
     }
@@ -177,7 +174,6 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
     public void setEnableMotionAlarm(boolean on) {
-        OnvifCameraService service = getService();
         if (on) {
             if (getEntity().getCustomMotionAlarmUrl().isEmpty()) {
                 service.sendHttpGET(CG + "setMotionDetectConfig&isEnable=1&usr="
@@ -197,7 +193,6 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
     @Override
     public void runOncePerMinute(EntityContext entityContext) {
-        OnvifCameraService service = getService();
         service.sendHttpGET(CG + "getDevState&usr=" + username + "&pwd=" + password);
         service.sendHttpGET(CG + "getAudioAlarmConfig&usr=" + username + "&pwd=" + password);
     }
@@ -205,7 +200,6 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     @Override
     public void initialize(EntityContext entityContext) {
         OnvifCameraEntity cameraEntity = getEntity();
-        OnvifCameraService service = getService();
         // Foscam needs any special char like spaces (%20) to be encoded for URLs.
         cameraEntity.setUser(Helper.encodeSpecialChars(cameraEntity.getUser()));
         cameraEntity.setPassword(Helper.encodeSpecialChars(cameraEntity.getPassword().asString()));

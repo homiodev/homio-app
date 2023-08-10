@@ -28,7 +28,6 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
     if (msg == null || ctx == null) {
       return;
     }
-    OnvifCameraService service = getService();
     try {
       String content = msg.toString();
       log.debug("[{}]: HTTP Result back from camera is \t:{}:", entityID, content);
@@ -51,7 +50,6 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
 
   @Override
   public void pollCameraRunnable() {
-    OnvifCameraService service = getService();
     if (service.streamIsStopped("/bha-api/monitor.cgi?ring=doorbell,motionsensor")) {
       log.info("[{}]: The alarm stream was not running for camera {}, re-starting it now",
           entityID, getEntity().getIp());
@@ -61,7 +59,6 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
 
   @Override
   public void initialize(EntityContext entityContext) {
-    OnvifCameraService service = getService();
     if (StringUtils.isEmpty(service.getMjpegUri())) {
       service.setMjpegUri("/bha-api/video.cgi");
     }
@@ -78,21 +75,21 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_EXTERNAL_LIGHT, order = 200, icon = "fas fa-sun")
   public void externalLight(boolean on) {
     if (on) {
-      getService().sendHttpGET("/bha-api/light-on.cgi");
+      service.sendHttpGET("/bha-api/light-on.cgi");
     }
   }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT2, order = 47, icon = "fas fa-bell")
   public void activateAlarmOutput2(boolean on) {
     if (on) {
-      getService().sendHttpGET("/bha-api/open-door.cgi?r=2");
+      service.sendHttpGET("/bha-api/open-door.cgi?r=2");
     }
   }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
   public void activateAlarmOutput(boolean on) {
     if (on) {
-      getService().sendHttpGET("/bha-api/open-door.cgi");
+      service.sendHttpGET("/bha-api/open-door.cgi");
     }
   }
 }

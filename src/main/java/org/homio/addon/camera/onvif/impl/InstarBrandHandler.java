@@ -29,6 +29,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
     private String requestUrl = "Empty";
     private int audioThreshold;
+    private boolean newApi;
 
     public InstarBrandHandler(OnvifCameraService service) {
         super(service);
@@ -88,13 +89,35 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PIR_ALARM, OnOffType.OFF);
                     }
                     // Reset the Alarm, need to find better place to put this.
-                    getService().motionDetected(false, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
+                    service.motionDetected(false, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
                 }
                 case "/param.cgi?cmd=getioattr" -> {// External Alarm Input
                     if (content.contains("var io_enable=\"1\"")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, OnOffType.ON);
                     } else {
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
+                    }
+                }
+                default -> {
+                    if (requestUrl.startsWith("/param.cgi?cmd=setasaction&-server=1&enable=1")
+                        && content.contains("response=\"200\";")) {// new
+                        newApi = true;
+                        log.debug("Alarm server successfully setup for a 2k+ Instar camera");
+                        if (getEntity().getFfmpegInput().isEmpty()) {
+                            service.setOverrideRtspUri("rtsp://%s/livestream/12".formatted(service.getEntity().getIp()));
+                        }
+                        if (service.getEntity().getMjpegUrl().equals("ffmpeg")) {
+                            service.setMjpegUri("/livestream/12?action=play&media=mjpeg");
+                        }
+                        if (service.getEntity().getSnapshotUrl().equals("ffmpeg")) {
+                            service.setSnapshotUri("/snap.cgi?chn=12");
+                        }
+                    } else if (requestUrl.startsWith("/param.cgi?cmd=setmdalarm&-aname=server2&-switch=on&-interval=1")
+                        && content.startsWith("[Succeed]set ok")) {
+                        newApi = false;
+                        log.debug("Alarm server successfully setup for a 1080p Instar camera");
+                    } else {
+                        log.debug("Unknown reply from URI:{}", requestUrl);
                     }
                 }
             }
@@ -107,7 +130,6 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     public void setAudioAlarmThreshold(int audioThreshold) {
         if (audioThreshold != this.audioThreshold) {
             this.audioThreshold = audioThreshold;
-            OnvifCameraService service = getService();
             if (this.audioThreshold > 0) {
                 service.sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=setaudioalarmattr&-aa_enable=1");
                 service.sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=setaudioalarmattr&-aa_enable=1&-aa_value=" + audioThreshold);
@@ -120,7 +142,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
     public void enableMotionAlarm(boolean on) {
         int val = boolToInt(on);
-        getService().sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=setmdattr&-enable=" + val +
+        service.sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=setmdattr&-enable=" + val +
             "&-name=1&cmd=setmdattr&-enable=" + val + "&-name=2&cmd=setmdattr&-enable=" + val + "&-name=3&cmd=setmdattr&-enable=" + val +
             "&-name=4");
     }
@@ -129,9 +151,9 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     public void textOverlay(String value) {
         String text = Helper.encodeSpecialChars(value);
         if (text.isEmpty()) {
-            getService().sendHttpGET("/param.cgi?cmd=setoverlayattr&-region=1&-show=0");
+            service.sendHttpGET("/param.cgi?cmd=setoverlayattr&-region=1&-show=0");
         } else {
-            getService().sendHttpGET("/param.cgi?cmd=setoverlayattr&-region=1&-show=1&-name=" + text);
+            service.sendHttpGET("/param.cgi?cmd=setoverlayattr&-region=1&-show=1&-name=" + text);
         }
     }
 
@@ -144,9 +166,9 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     public Consumer<Boolean> getIRLedHandler() {
         return on -> {
             if (on) {
-                getService().sendHttpGET("/param.cgi?cmd=setinfrared&-infraredstat=auto");
+                service.sendHttpGET("/param.cgi?cmd=setinfrared&-infraredstat=auto");
             } else {
-                getService().sendHttpGET("/param.cgi?cmd=setinfrared&-infraredstat=close");
+                service.sendHttpGET("/param.cgi?cmd=setinfrared&-infraredstat=close");
             }
         };
     }
@@ -158,45 +180,32 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_PIR_ALARM, order = 120, icon = "fas fa-compress-alt")
     public void enablePirAlarm(boolean on) {
-        getService().sendHttpGET("/param.cgi?cmd=setpirattr&-pir_enable=" + boolToInt(on));
+        service.sendHttpGET("/param.cgi?cmd=setpirattr&-pir_enable=" + boolToInt(on));
     }
-
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, order = 250, icon = "fas fa-external-link-square-alt")
     public void enableExternalAlarmInput(boolean on) {
-        getService().sendHttpGET("/param.cgi?cmd=setioattr&-io_enable=" + boolToInt(on));
+        service.sendHttpGET("/param.cgi?cmd=setioattr&-io_enable=" + boolToInt(on));
     }
 
     public void alarmTriggered(String alarm) {
-        OnvifCameraService service = getService();
         log.debug("[{}]: Alarm has been triggered:{}", entityID, alarm);
         switch (alarm) {
-            case "/instar?&active=1":// The motion area boxes 1-4
-            case "/instar?&active=2":
-            case "/instar?&active=3":
-            case "/instar?&active=4":
+            case "/instar?&active=1", "/instar?&active=2", "/instar?&active=3", "/instar?&active=4" ->
                 service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
-                break;
-            case "/instar?&active=5":// PIR
+            case "/instar?&active=5" ->// PIR
                 service.motionDetected(true, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
-                break;
-            case "/instar?&active=6":// Audio Alarm
+            case "/instar?&active=6" ->// Audio Alarm
                 service.audioDetected(true);
-                break;
-            case "/instar?&active=7":// Motion Area 1
-            case "/instar?&active=8":// Motion Area 2
-            case "/instar?&active=9":// Motion Area 3
-            case "/instar?&active=10":// Motion Area 4
+            case "/instar?&active=7", "/instar?&active=8", "/instar?&active=9", "/instar?&active=10" ->// Motion Area 4
                 service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
-                break;
         }
     }
 
     @Override
     public void runOncePerMinute(EntityContext entityContext) {
-        OnvifCameraService service = getService();
         service.sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=getaudioalarmattr");
-        service.sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=getmdattr");
+        service.sendHttpGET(newApi ? "/param.cgi?cmd=getalarmattr" : "/cgi-bin/hi3510/param.cgi?cmd=getmdattr");
         service.sendHttpGET("/param.cgi?cmd=getinfrared");
         service.sendHttpGET("/param.cgi?cmd=getoverlayattr&-region=1");
         service.sendHttpGET("/param.cgi?cmd=getpirattr");
@@ -205,7 +214,6 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
     @Override
     public void pollCameraRunnable() {
-        OnvifCameraService service = getService();
         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
         service.audioDetected(false);
@@ -213,7 +221,6 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
     @Override
     public void initialize(EntityContext entityContext) {
-        OnvifCameraService service = getService();
         if (StringUtils.isEmpty(service.getMjpegUri())) {
             service.setMjpegUri("/tmpfs/snap.jpg");
         }
