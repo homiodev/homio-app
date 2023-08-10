@@ -251,7 +251,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     // this is parameter handles when motion/audio detects or when fires snapshot.mjpeg
     @UIField(order = 30)
-    @UIFieldSlider(min = 1, max = 30)
+    @UIFieldSlider(min = 1, max = 10)
     @UIFieldGroup(value = "STREAMING", order = 20, borderColor = "#773FD1")
     public int getSnapshotPollInterval() {
         return getJsonData("spi", 1);
@@ -290,7 +290,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         if (!isStart()) {
             throw new ServerException("ERROR.NOT_STARTED", getTitle());
         }
-        optService().ifPresent(BaseVideoService::startSnapshot);
+        optService().ifPresent(BaseVideoService::requestSnapshot);
     }
 
     @Override

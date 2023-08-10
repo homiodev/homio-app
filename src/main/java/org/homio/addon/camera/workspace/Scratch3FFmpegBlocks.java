@@ -14,6 +14,7 @@ import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
+import org.homio.api.state.DecimalType;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;
 import org.springframework.stereotype.Component;
@@ -72,7 +73,12 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
                 log.error("FFmpeg error: <{}>", error);
 
             }
-        }, log, RTSP_ALARMS, String.join(" ", ffmpegBuilder.inputArgs), input,
+
+                @Override
+                public DecimalType getMotionThreshold() {
+                    return new DecimalType(30);
+                }
+            }, log, RTSP_ALARMS, String.join(" ", ffmpegBuilder.inputArgs), input,
             String.join(" ", ffmpegBuilder.outputArgs),
             output, "", "", null);
         try {

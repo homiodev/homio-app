@@ -1,7 +1,8 @@
 package org.homio.addon.camera.service;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_AUDIO_ALARM;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_LAST_MOTION_TYPE;
@@ -19,10 +20,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -32,12 +31,17 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.homio.addon.camera.CameraController.OpenStreamsContainer;
+import org.homio.addon.camera.OpenStreams;
 import org.homio.addon.camera.entity.AbilityToStreamHLSOverFFMPEG;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
+import org.homio.addon.camera.onvif.util.ChannelTracking;
+import org.homio.addon.camera.service.util.FFMpegRtspAlarm;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.api.EntityContext;
+import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextBGP.ThreadContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
@@ -71,6 +75,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected abstract String getFFMPEGInputOptions(@Nullable String profile);
 
+    protected @NotNull Map<String, ChannelTracking> channelTrackingMap = new ConcurrentHashMap<>();
+
     private @Getter Path ffmpegOutputPath;
     private @Getter Path ffmpegGifOutputPath;
     private @Getter Path ffmpegMP4OutputPath;
@@ -79,8 +85,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     private @Getter final Map<String, State> attributes = new ConcurrentHashMap<>();
     private @Getter final Map<String, State> requestAttributes = new ConcurrentHashMap<>();
+
     private final Map<String, Consumer<Status>> stateListeners = new HashMap<>();
-    private final FFMpegRtspAlarm ffMpegRtspAlarm = new FFMpegRtspAlarm();
+    private final FFMpegRtspAlarm ffMpegRtspAlarm;
 
     protected ReentrantLock lockCurrentSnapshot = new ReentrantLock();
     protected @Getter byte[] latestSnapshot = new byte[0];
@@ -95,9 +102,12 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected @Getter boolean isHandlerInitialized;
 
-    protected ThreadContext<Void> videoConnectionJob;
-    protected ThreadContext<Void> pollVideoJob;
+    // run every 8 seconds to send requests to camera, etc...
+    protected ThreadContext<Void> pollCameraJob;
+    // not used
     protected ThreadContext<Void> cameraConnectionJob;
+    // scheduler to get snapshots
+    private EntityContextBGP.ThreadContext<Void> snapshotJob;
 
     // actions holder
     protected UIInputBuilder uiInputBuilder;
@@ -117,7 +127,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected @Setter @Getter @NotNull String mjpegUri = "";
     protected @Setter @Getter @NotNull String mjpegContentType = "";
-    protected @NotNull String snapshotUri = "";
+    protected @Setter @Getter @NotNull String snapshotUri = "";
 
     protected boolean updateAutoFps = false;
     protected @Getter boolean ffmpegSnapshotGeneration = false;
@@ -127,6 +137,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public BaseVideoService(T entity, EntityContext entityContext) {
         super(entityContext, entity, true);
+        ffMpegRtspAlarm = new FFMpegRtspAlarm(entityContext, entity);
+        camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
     }
 
     @Override
@@ -135,8 +147,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         deleteDirectories();
     }
 
-    public final void initializeVideo() {
-        log.info("[{}]: Initialize video: <{}>", entityID, getEntity());
+    public final void initializeCamera() {
+        log.info("[{}]: Initialize camera: <{}>", entityID, getEntity());
+        camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
         videoStreamParametersHashCode = entity.getVideoParametersHashCode();
         isHandlerInitialized = true;
         try {
@@ -147,8 +160,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
             initialize0();
 
-            videoConnectionJob = entityContext.bgp().builder("poll-video-connection-" + entityID)
-                                              .interval(Duration.ofSeconds(60)).execute(this::pollingVideoConnection);
             entity.setStatusOnline();
             entityUpdated();
         } catch (Exception ex) {
@@ -164,7 +175,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
                 getRtspUrlInternal(profile),
                 mp4OutOptions, filePath.toString(),
                 entity.getUser(), entity.getPassword().asString(), null);
-        fireFfmpeg(ffmpegMP4, FFMPEG::startConverting);
+        FFMPEG.run(ffmpegMP4, FFMPEG::startConverting);
     }
 
     private String getRtspUrlInternal(@Nullable String profile) {
@@ -181,7 +192,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             gifInputOptions, getRtspUrlInternal(profile),
             gifOutOptions, filePath.toString(), entity.getUser(),
             entity.getPassword().asString(), null);
-        fireFfmpeg(ffmpegGIF, FFMPEG::startConverting);
+        FFMPEG.run(ffmpegGIF, FFMPEG::startConverting);
     }
 
     // synchronized to work properly with isHandlerInitialized
@@ -212,10 +223,25 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public final void bringCameraOnline() {
         entity.setStatusOnline();
         lastAnswerFromVideo = System.currentTimeMillis();
-        if (pollVideoJob == null && isHandlerInitialized) {
-            disposeVideoConnectionJob();
-            pollVideoJob = entityContext.bgp().builder("poll-video-runnable-" + entityID)
-                                        .intervalWithDelay(Duration.ofSeconds(8)).execute(this::pollCameraRunnable);
+        if (EntityContextBGP.cancel(cameraConnectionJob)) {
+            cameraConnectionJob = null;
+        }
+
+        if (pollCameraJob == null && isHandlerInitialized) {
+            pollCameraJob = entityContext.bgp().builder("poll-video-runnable-" + entityID)
+                                         .intervalWithDelay(Duration.ofSeconds(8)).execute(this::pollCameraRunnable);
+        }
+
+        // auto restart mjpeg stream now camera is back online.
+        OpenStreams openStreams = camerasOpenStreams.get(entityID).openStreams;
+        if (!openStreams.isEmpty()) {
+            openCamerasStream();
+        }
+    }
+
+    public void openCamerasStream() {
+        if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
+            ffmpegMjpeg.startConverting();
         }
     }
 
@@ -250,12 +276,12 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         this.stateListeners.remove(key);
     }
 
-    public void startSnapshot() {
-        fireFfmpeg(ffmpegSnapshot, FFMPEG::startConverting);
+    public void requestSnapshot() {
+        FFMPEG.run(ffmpegSnapshot, FFMPEG::startConverting);
     }
 
     public void startMJPEGRecord() {
-        fireFfmpeg(ffmpegMjpeg, FFMPEG::startConverting);
+        FFMPEG.run(ffmpegMjpeg, FFMPEG::startConverting);
     }
 
     public String getFFMPEGInputOptions() {
@@ -268,7 +294,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         // this.ffmpegHLSStarted = on;
         if (on) {
             localHLS = ffmpegHLS;
-            fireFfmpeg(localHLS, ffmpeg -> {
+            FFMPEG.run(localHLS, ffmpeg -> {
                 ffmpeg.setKeepAlive(-1);// Now will run till manually stopped.
                 if (ffmpeg.startConverting()) {
                     setAttribute(CHANNEL_START_STREAM, OnOffType.ON);
@@ -276,7 +302,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             });
         } else {
             // Still runs but will be able to auto stop when the HLS stream is no longer used.
-            fireFfmpeg(ffmpegHLS, ffmpeg -> ffmpeg.setKeepAlive(1));
+            FFMPEG.run(ffmpegHLS, ffmpeg -> ffmpeg.setKeepAlive(1));
         }
     }
 
@@ -325,8 +351,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
                 entityContext.ui().updateItem(getEntity(), "lastSnapshot", latestSnapshot);
             }
         } finally {
-            lockCurrentSnapshot.unlock();
+            lastAnswerFromVideo = System.currentTimeMillis();
             currentSnapshotTime = Instant.now();
+            lockCurrentSnapshot.unlock();
         }
     }
 
@@ -340,6 +367,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         byte[] imageBytes =
             fireFfmpegSync(profile, output, snapshotInputOptions, entity.getSnapshotOutOptionsAsString(), 20);
         latestSnapshot = imageBytes;
+        lastAnswerFromVideo = System.currentTimeMillis();
         return new RawType(imageBytes, MimeTypeUtils.IMAGE_JPEG_VALUE);
     }
 
@@ -407,7 +435,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     @SneakyThrows
     protected void initialize() {
         if (!entity.isStart()) {
-            // check maybe status already offline/error
             if (entity.getStatus().isOnline() || isHandlerInitialized) {
                 this.disposeAndSetStatus(Status.OFFLINE, "Camera not started");
             }
@@ -416,7 +443,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
                 if (isRequireRestart()) {
                     dispose();
                     testVideoOnline();
-                    initializeVideo();
+                    initializeCamera();
                 }
             } catch (BadCredentialsException ex) {
                 this.disposeAndSetStatus(Status.REQUIRE_AUTH, CommonUtils.getErrorMessage(ex));
@@ -438,25 +465,15 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     }
 
-    public static void fireFfmpeg(FFMPEG ffmpeg, Consumer<FFMPEG> handler) {
-        if (ffmpeg != null) {
-            handler.accept(ffmpeg);
-        }
-    }
-
-    protected void pollingVideoConnection() {
-        startSnapshot();
-    }
-
     protected void pollCameraRunnable() {
-        fireFfmpeg(ffmpegHLS, FFMPEG::stopProcessIfNoKeepAlive);
-        fireFfmpeg(ffmpegMjpeg, FFMPEG::restartIfRequire);
+        FFMPEG.run(ffmpegHLS, FFMPEG::stopProcessIfNoKeepAlive);
+        FFMPEG.run(ffmpegMjpeg, FFMPEG::restartIfRequire);
 
         long timePassed = System.currentTimeMillis() - lastAnswerFromVideo;
         if (timePassed > 1200000) { // more than 2 min passed
             disposeAndSetStatus(Status.OFFLINE, "More that 2 min without answer from source");
-        } else if (timePassed > 30000) {
-            startSnapshot();
+        } else if (timePassed > 30000 || System.currentTimeMillis() - currentSnapshotTime.toEpochMilli() > 30000) {
+            requestSnapshot();
         }
     }
 
@@ -498,12 +515,16 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     protected void dispose0() {
-        fireFfmpeg(ffmpegHLS, FFMPEG::stopConverting);
-        fireFfmpeg(ffmpegMP4, FFMPEG::stopConverting);
-        fireFfmpeg(ffmpegGIF, FFMPEG::stopConverting);
-        fireFfmpeg(ffmpegMjpeg, FFMPEG::stopConverting);
-        fireFfmpeg(ffmpegSnapshot, FFMPEG::stopConverting);
+        if (EntityContextBGP.cancel(snapshotJob)) {
+            snapshotJob = null;
+        }
+        FFMPEG.run(ffmpegHLS, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegMP4, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegGIF, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegMjpeg, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
         ffMpegRtspAlarm.stop();
+        camerasOpenStreams.remove(entityID).dispose();
     }
 
     protected void setMotionAlarmThreshold(int threshold) {
@@ -528,7 +549,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private void dispose() {
         log.info("[{}]: Dispose video: <{}>", entityID, getEntity());
         isHandlerInitialized = false;
-        disposeVideoConnectionJob();
         disposePollVideoJob();
         try {
             dispose0();
@@ -537,17 +557,9 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
     }
 
-    private void disposeVideoConnectionJob() {
-        if (videoConnectionJob != null) {
-            videoConnectionJob.cancel();
-            videoConnectionJob = null;
-        }
-    }
-
     private void disposePollVideoJob() {
-        if (pollVideoJob != null) {
-            pollVideoJob.cancel();
-            pollVideoJob = null;
+        if (EntityContextBGP.cancel(pollCameraJob)) {
+            pollCameraJob = null;
         }
     }
 
@@ -604,7 +616,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public byte[] getSnapshot() {
         if (!entity.getStatus().isOnline()) {
-            // Single gray pixel JPG to keep streams open when the camera goes offline so they dont stop.
+            // Single gray pixel JPG to keep streams open when the camera goes offline, so they don't stop.
             return new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
                 0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, (byte) 0xff, (byte) 0xdb, 0x00, 0x43,
                 0x00, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x03, 0x03, 0x03, 0x03, 0x04,
@@ -628,69 +640,51 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
     }
 
+    public void startSnapshotPolling() {
+        if (snapshotPolling || isEmpty(snapshotUri)) {
+            return; // Already polling or creating with FFmpeg from RTSP
+        }
+        if (streamingSnapshotMjpeg || streamingAutoFps) {
+            snapshotPolling = true;
+            snapshotJob = entityContext.bgp()
+                                       .builder(entity.getTitle() + " SnapshotJob")
+                                       .delay(Duration.ofMillis(200))
+                                       .interval(Duration.ofSeconds(entity.getSnapshotPollInterval()))
+                                       .execute(this::updateSnapshot);
+        }
+    }
+
+    public void stopSnapshotPolling() {
+        if (!streamingSnapshotMjpeg) {
+            snapshotPolling = false;
+            if (snapshotJob != null) {
+                snapshotJob.cancel();
+            }
+        }
+    }
+
     protected void updateSnapshot() {
 
     }
 
-    private class FFMpegRtspAlarm {
-
-        private final Set<String> motionAlarmObservers = new HashSet<>();
-        private FFMPEG ffmpegRtspHelper = null;
-        private int motionThreshold;
-        private int audioThreshold;
-
-        public void addMotionAlarmListener(String listener) {
-            motionAlarmObservers.add(listener);
-            runFFMPEGRtspAlarmThread();
+    public String getTinyUrl(String httpRequestURL) {
+        if (httpRequestURL.startsWith(":")) {
+            int beginIndex = httpRequestURL.indexOf("/");
+            return httpRequestURL.substring(beginIndex);
         }
+        return httpRequestURL;
+    }
 
-        public void removeMotionAlarmListener(String listener) {
-            motionAlarmObservers.remove(listener);
-            if (motionAlarmObservers.isEmpty()) {
-                stop();
+    public ChannelTracking getChannelTrack(String url) {
+        return channelTrackingMap.get(url);
+    }
+
+    public void closeChannel(String url) {
+        ChannelTracking channelTracking = getChannelTrack(url);
+        if (channelTracking != null) {
+            if (channelTracking.getChannel().isOpen()) {
+                channelTracking.getChannel().close();
             }
-        }
-
-        public void stop() {
-            fireFfmpeg(ffmpegRtspHelper, FFMPEG::stopConverting);
-        }
-
-        private void runFFMPEGRtspAlarmThread() {
-            T videoStreamEntity = BaseVideoService.this.getEntity();
-            String inputOptions = BaseVideoService.this.getFFMPEGInputOptions();
-
-            if (ffmpegRtspHelper != null) {
-                // stop stream if threshold - 0
-                if (videoStreamEntity.getAudioThreshold() == 0 && videoStreamEntity.getMotionThreshold() == 0) {
-                    ffmpegRtspHelper.stopConverting();
-                    return;
-                }
-                // if values that involved in precious run same as new - just skip restarting
-                if (ffmpegRtspHelper.getIsAlive() && motionThreshold == videoStreamEntity.getMotionThreshold() &&
-                    audioThreshold == videoStreamEntity.getAudioThreshold()) {
-                    return;
-                }
-                ffmpegRtspHelper.stopConverting();
-            }
-            this.motionThreshold = videoStreamEntity.getMotionThreshold();
-            this.audioThreshold = videoStreamEntity.getAudioThreshold();
-            String input = defaultIfEmpty(entity.getAlarmInputUrl(), getRtspUri(null));
-
-            List<String> filterOptionsList = new ArrayList<>();
-            filterOptionsList.add(this.audioThreshold > 0 ? "-af silencedetect=n=-" + audioThreshold + "dB:d=2" : "-an");
-            if (this.motionThreshold > 0) {
-                filterOptionsList.addAll(videoStreamEntity.getMotionOptions());
-                filterOptionsList.add("-vf select='gte(scene," + (motionThreshold / 100F) + ")',metadata=print");
-            } else {
-                filterOptionsList.add("-vn");
-            }
-            ffmpegRtspHelper = entityContext.media().buildFFMPEG(entityID, "FFMPEG rtsp alarm",
-                BaseVideoService.this, log, FFMPEGFormat.RTSP_ALARMS, inputOptions, input,
-                String.join(" ", filterOptionsList), "-f null -",
-                entity.getUser(),
-                entity.getPassword().asString(), null);
-            fireFfmpeg(ffmpegRtspHelper, FFMPEG::startConverting);
-            setAttribute("FFMPEG_RTSP_ALARM", new StringType(String.join(" ", ffmpegRtspHelper.getCommandArrayList())));
         }
     }
 }

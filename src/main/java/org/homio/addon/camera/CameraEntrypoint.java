@@ -41,7 +41,7 @@ public class CameraEntrypoint implements AddonEntrypoint {
         }*/
 
         entityContext.setting().listenValueAndGet(CameraAutorunIntervalSetting.class, "cam-autorun", interval -> {
-            entityContext.bgp().builder("camera-schedule").cancelOnError(false)
+            entityContext.bgp().builder("camera-autorun").cancelOnError(false)
                          .interval(Duration.ofMinutes(interval))
                          .execute(this::fireStartCamera);
         });

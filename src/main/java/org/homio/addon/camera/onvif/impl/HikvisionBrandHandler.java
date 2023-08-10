@@ -205,7 +205,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
   }
 
   public void hikChangeSetting(String httpGetPutURL, String removeElement, String replaceRemovedElementWith) {
-    ChannelTracking localTracker = service.channelTrackingMap.get(httpGetPutURL);
+    ChannelTracking localTracker = service.getChannelTrack(httpGetPutURL);
     if (localTracker == null) {
       service.sendHttpGET(httpGetPutURL);
       log.debug("[{}]: Did not have a reply stored before hikChangeSetting was run, try again shortly as a reply has just been requested.", entityID);
@@ -223,7 +223,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
       int elementIndexStart = body.indexOf("<" + removeElement + ">");
       int elementIndexEnd = body.indexOf("</" + removeElement + ">");
       body = body.substring(0, elementIndexStart) + replaceRemovedElementWith
-          + body.substring(elementIndexEnd + removeElement.length() + 3, body.length());
+          + body.substring(elementIndexEnd + removeElement.length() + 3);
       log.debug("[{}]: Body for this PUT is going to be:{}", entityID, body);
       localTracker.setReply(body);
       FullHttpRequest fullHttpRequest = buildFullHttpRequest(httpGetPutURL, body, HttpMethod.PUT, MediaType.APPLICATION_XML);

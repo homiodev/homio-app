@@ -184,7 +184,7 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
             // If camera does not use the channel for X amount of time it will close.
             if (e.state() == IdleState.READER_IDLE) {
                 String urlToKeepOpen = service.getBrandHandler().getUrlToKeepOpenForIdleStateEvent();
-                ChannelTracking channelTracking = service.channelTrackingMap.get(urlToKeepOpen);
+                ChannelTracking channelTracking = service.getChannelTrack(urlToKeepOpen);
                 if (channelTracking != null) {
                     if (channelTracking.getChannel() == ctx.channel()) {
                         return; // don't auto close this as it is for the alarms.

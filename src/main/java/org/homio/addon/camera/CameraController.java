@@ -1,6 +1,5 @@
 package org.homio.addon.camera;
 
-import static org.homio.addon.camera.service.BaseVideoService.fireFfmpeg;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN;
 import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
 import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
@@ -30,6 +29,7 @@ import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.impl.InstarBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
+import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
@@ -66,7 +66,7 @@ public class CameraController {
     @PostMapping("/{entityID}/snapshot.jpg")
     public void postSnapshot(@PathVariable("entityID") String entityID, HttpServletRequest req) {
         ServletInputStream snapshotData = req.getInputStream();
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
+        BaseVideoEntity entity = entityContext.getEntityRequire(entityID);
         entity.getService().processSnapshot(snapshotData.readAllBytes());
         snapshotData.close();
     }
@@ -79,12 +79,9 @@ public class CameraController {
     }
 
     @GetMapping("/{entityID}/ipcamera.m3u8")
-    public void getIpCameraM3U8(
-        @PathVariable("entityID") String entityID,
-        HttpServletResponse resp) {
-
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
-        OnvifCameraService service = entity.getService();
+    public void getIpCameraM3U8(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
+        BaseVideoEntity entity = entityContext.getEntityRequire(entityID);
+        BaseVideoService service = entity.getService();
         FFMPEG ffmpeg = service.getFfmpegHLS();
         resp.setContentType("application/x-mpegURL");
         if (!ffmpeg.getIsAlive()) {
@@ -104,19 +101,15 @@ public class CameraController {
     }
 
     @GetMapping("/{entityID}/ipcamera.mpd")
-    public void requestCameraIpCameraMpd(
-        @PathVariable("entityID") String entityID,
-        HttpServletResponse resp) {
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
+    public void requestCameraIpCameraMpd(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
+        BaseVideoEntity entity = entityContext.getEntityRequire(entityID);
         resp.setContentType("application/dash+xml");
         sendFile(resp, entity.getService().getFfmpegMP4OutputPath() + "/ipcamera.mpd");
     }
 
     @GetMapping("/{entityID}/ipcamera.gif")
-    public void requestCameraIpCameraGif(
-        @PathVariable("entityID") String entityID,
-        HttpServletResponse resp) {
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
+    public void requestCameraIpCameraGif(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
+        BaseVideoEntity entity = entityContext.getEntityRequire(entityID);
         resp.setContentType("image/gif");
         sendFile(resp, entity.getService().getFfmpegMP4OutputPath() + "/ipcamera.gif");
     }
@@ -126,8 +119,8 @@ public class CameraController {
         @PathVariable("entityID") String entityID,
         HttpServletRequest req,
         HttpServletResponse resp) {
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
-        OnvifCameraService handler = entity.getService();
+        BaseVideoEntity entity = entityContext.getEntityRequire(entityID);
+        BaseVideoService handler = entity.getService();
         // Use cached image if recent. Cameras can take > 1sec to send back a reply.
         // Example an Image item/widget may have a 1 second refresh.
         if (isUseCachedImage(handler)) {
@@ -152,18 +145,16 @@ public class CameraController {
         }
     }
 
-    private static boolean isUseCachedImage(OnvifCameraService handler) {
+    private static boolean isUseCachedImage(BaseVideoService handler) {
         return handler.isFfmpegSnapshotGeneration()
             || Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() < 1200;
     }
 
     @SneakyThrows
     @GetMapping("/{entityID}/snapshots.mjpeg")
-    public void requestCameraSnapshotsMjpeg(
-        @PathVariable("entityID") String entityID,
-        HttpServletResponse resp) {
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
-        OnvifCameraService handler = entity.getService();
+    public void requestCameraSnapshotsMjpeg(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
+        BaseVideoEntity entity = entityContext.getEntityRequire(entityID);
+        BaseVideoService handler = entity.getService();
         handler.setStreamingSnapshotMjpeg(true);
         handler.startSnapshotPolling();
         StreamOutput output = new StreamOutput(resp);
@@ -190,11 +181,9 @@ public class CameraController {
 
     @SneakyThrows
     @GetMapping("/{entityID}/ipcamera.mjpeg")
-    public void requestCameraIpCameraMjpeg(
-        @PathVariable("entityID") String entityID,
-        HttpServletResponse resp) {
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
-        OnvifCameraService handler = entity.getService();
+    public void requestCameraIpCameraMjpeg(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
+        BaseVideoEntity entity = entityContext.getEntityRequire(entityID);
+        BaseVideoService handler = entity.getService();
         StreamOutput output;
         OpenStreams openStreams = getOpenStreamsContainer(entityID).openStreams;
         String mjpegUri = handler.getMjpegUri();
@@ -210,7 +199,7 @@ public class CameraController {
         } else if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
             output = new StreamOutput(resp);
         } else {
-            ChannelTracking tracker = handler.channelTrackingMap.get(handler.getTinyUrl(mjpegUri));
+            ChannelTracking tracker = handler.getChannelTrack(handler.getTinyUrl(mjpegUri));
             if (tracker == null || !tracker.getChannel().isOpen()) {
                 log.debug("Not the first stream requested but the stream from camera was closed");
                 handler.openCamerasStream();
@@ -227,7 +216,7 @@ public class CameraController {
                 log.debug("Now there are {} ipcamera.mjpeg streams open.", openStreams.getNumberOfStreams());
                 if (openStreams.isEmpty()) {
                     if (output.isSnapshotBased()) {
-                        fireFfmpeg(handler.getFfmpegMjpeg(), FFMPEG::stopConverting);
+                        FFMPEG.run(handler.getFfmpegMjpeg(), FFMPEG::stopConverting);
                         // Set reference to ffmpegMjpeg to null to prevent automatic reconnection
                         // in handler's pollCameraRunnable() check for frozen camera
                         handler.setFfmpegMjpeg(null);
@@ -243,11 +232,9 @@ public class CameraController {
 
     @SneakyThrows
     @GetMapping("/{entityID}/autofps.mjpeg")
-    public void requestCameraAutoFps(
-        @PathVariable("entityID") String entityID,
-        HttpServletResponse resp) {
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
-        OnvifCameraService service = entity.getService();
+    public void requestCameraAutoFps(@PathVariable("entityID") String entityID, HttpServletResponse resp) {
+        BaseVideoEntity entity = entityContext.getEntityRequire(entityID);
+        BaseVideoService service = entity.getService();
 
         service.setStreamingAutoFps(true);
         StreamOutput output = new StreamOutput(resp);
@@ -279,9 +266,7 @@ public class CameraController {
     }
 
     @GetMapping("/{entityID}/instar")
-    public void requestCameraInstar(
-        @PathVariable("entityID") String entityID,
-        HttpServletRequest req) {
+    public void requestCameraInstar(@PathVariable("entityID") String entityID, HttpServletRequest req) {
         OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
         InstarBrandHandler instar = (InstarBrandHandler) entity.getService().getBrandHandler();
         instar.alarmTriggered(req.getPathInfo() + "?" + req.getQueryString());
@@ -325,7 +310,7 @@ public class CameraController {
 
     private void sendFile(String entityID, String filename, HttpServletResponse resp) {
         String truncated = filename.substring(filename.lastIndexOf("/"));
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
+        BaseVideoEntity entity = entityContext.getEntityRequire(entityID);
         sendFile(resp, entity.getService().getFfmpegMP4OutputPath() + truncated);
     }
 
@@ -394,5 +379,11 @@ public class CameraController {
         public final OpenStreams openStreams = new OpenStreams();
         public final OpenStreams openSnapshotStreams = new OpenStreams();
         public final OpenStreams openAutoFpsStreams = new OpenStreams();
+
+        public void dispose() {
+            openStreams.closeAllStreams();
+            openSnapshotStreams.closeAllStreams();
+            openAutoFpsStreams.closeAllStreams();
+        }
     }
 }

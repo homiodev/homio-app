@@ -2,7 +2,6 @@ package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import de.onvif.soap.OnvifDeviceState;
@@ -45,7 +44,6 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
-import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
@@ -89,7 +87,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     private final @NotNull EventLoopGroup mainEventLoopGroup = new NioEventLoopGroup(1);
     @Getter
     private final @NotNull OnvifDeviceState onvifDeviceState;
-    public @NotNull Map<String, ChannelTracking> channelTrackingMap = new ConcurrentHashMap<>();
     public boolean useDigestAuth = false;
 
     private Bootstrap mainBootstrap;
@@ -98,12 +95,10 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     private @NotNull FullHttpRequest postRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("POST"), "");
     private String basicAuth = "";
 
-    private EntityContextBGP.ThreadContext<Void> snapshotJob;
     private EntityContextBGP.ThreadContext<Void> pullConfigJob;
 
     public OnvifCameraService(EntityContext entityContext, OnvifCameraEntity entity) {
         super(entity, entityContext);
-        camerasOpenStreams.putIfAbsent(entityID, new OpenStreamsContainer());
 
         onvifDeviceState = new OnvifDeviceState(entity.getEntityID());
         onvifDeviceState.setUpdateListener(() -> entityContext.ui().updateItem(entity));
@@ -231,14 +226,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         sendHttpRequest("GET", httpRequestURL, null);
     }
 
-    public String getTinyUrl(String httpRequestURL) {
-        if (httpRequestURL.startsWith(":")) {
-            int beginIndex = httpRequestURL.indexOf("/");
-            return httpRequestURL.substring(beginIndex);
-        }
-        return httpRequestURL;
-    }
-
     // Always use this as sendHttpGET(GET/POST/PUT/DELETE, "/foo/bar",null)//
     // The authHandler will generate a digest string and re-send using this same function when needed.
     @SuppressWarnings("null")
@@ -307,7 +294,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                          if (future.isDone() && future.isSuccess()) {
                              Channel ch = future.channel();
                              openChannels.add(ch);
-                             bringCameraOnline();
+                             lastAnswerFromVideo = System.currentTimeMillis();
                              log.debug("[{}]: Sending camera: {}: http://{}:{}{}", getEntityID(), httpMethod,
                                  entity.getIp(), port, httpRequestURL);
                              channelTrackingMap.put(httpRequestURL, new ChannelTracking(ch, httpRequestURL));
@@ -327,7 +314,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     public void storeHttpReply(String url, String content) {
-        ChannelTracking channelTracking = channelTrackingMap.get(url);
+        ChannelTracking channelTracking = getChannelTrack(url);
         if (channelTracking != null) {
             channelTracking.setReply(content);
         }
@@ -383,11 +370,11 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    public void startSnapshot() {
+    public void requestSnapshot() {
         if (!isEmpty(snapshotUri)) {
             sendHttpGET(snapshotUri);// Allows this to change Image FPS on demand
         } else {
-            super.startSnapshot();
+            super.requestSnapshot();
         }
     }
 
@@ -465,13 +452,14 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     public boolean streamIsStopped(String url) {
-        ChannelTracking channelTracking = channelTrackingMap.get(url);
+        ChannelTracking channelTracking = getChannelTrack(url);
         if (channelTracking != null) {
             return !channelTracking.getChannel().isActive(); // stream is running.
         }
         return true; // Stream stopped or never started.
     }
 
+    @Override
     public void openCamerasStream() {
         if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
             ffmpegMjpeg.startConverting();
@@ -521,15 +509,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                 }));
     }
 
-    public void closeChannel(String url) {
-        ChannelTracking channelTracking = channelTrackingMap.get(url);
-        if (channelTracking != null) {
-            if (channelTracking.getChannel().isOpen()) {
-                channelTracking.getChannel().close();
-            }
-        }
-    }
-
     /**
      * This method should never run under normal use, if there is a bug in a camera or binding it may be possible to open large amounts of channels. This may
      * help to keep it under control and WARN the user every 8 seconds this is still occurring.
@@ -555,11 +534,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Override
     protected void assembleAdditionalVideoActions(UIInputBuilder uiInputBuilder) {
         brandHandler.assembleActions(uiInputBuilder);
-    }
-
-    @Override
-    protected void pollingVideoConnection() {
-        startSnapshot();
     }
 
     @Override
@@ -598,7 +572,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
         brandHandler.initialize(entityContext);
 
-        pullConfigJob = entityContext.bgp().builder("Camera " + entity.getEntityID() + " run per minute")
+        pullConfigJob = entityContext.bgp().builder("video-run-per-min-" + entity.getEntityID())
                                      .delay(Duration.ofSeconds(30)).interval(Duration.ofSeconds(60)).execute(() -> {
                 try {
                     onvifDeviceState.runOncePerMinute();
@@ -633,21 +607,16 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             pullConfigJob.cancel();
         }
 
-        if (snapshotJob != null) {
-            snapshotJob.cancel();
-        }
-        /*if (this.onvifPollCameraEach8Sec != null) {
-            this.onvifPollCameraEach8Sec.cancel();
-        }*/
-        //        groupTracker.onlineCameraMap.remove(cameraEntity.getEntityID());
-        // inform all group handlers that this camera has gone offline
-  /*      for (IpCameraGroupHandler handle : groupTracker.listOfGroupHandlers) {
-            handle.cameraOffline(this);
-        }*/
         basicAuth = ""; // clear out stored Password hash
         useDigestAuth = false;
         openChannels.close();
         channelTrackingMap.clear();
+    }
+
+    @Override
+    public void destroy() {
+        super.destroy();
+        mainEventLoopGroup.shutdownGracefully();
     }
 
     @Override
@@ -724,30 +693,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             return Integer.parseInt(httpRequestURL.substring(1, end));
         }
         return entity.getRestPort();
-    }
-
-    public void stopSnapshotPolling() {
-        if (!streamingSnapshotMjpeg) {
-            snapshotPolling = false;
-            if (snapshotJob != null) {
-                snapshotJob.cancel();
-            }
-        }
-    }
-
-    public void startSnapshotPolling() {
-        if (snapshotPolling || isEmpty(snapshotUri)) {
-            return; // Already polling or creating with FFmpeg from RTSP
-        }
-        if (streamingSnapshotMjpeg || streamingAutoFps) {
-            snapshotPolling = true;
-            OnvifCameraEntity entity = getEntity();
-            snapshotJob = entityContext.bgp()
-                                       .builder(entity.getTitle() + " SnapshotJob")
-                                       .delay(Duration.ofMillis(200))
-                                       .interval(Duration.ofSeconds(entity.getSnapshotPollInterval()))
-                                       .execute(() -> sendHttpGET(snapshotUri));
-        }
     }
 
     public static class SupportPTZ implements Predicate<Object> {

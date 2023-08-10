@@ -135,12 +135,6 @@
     </dependency>
 
     <dependency>
-      <artifactId>addon-tuya</artifactId>
-      <groupId>org.homio.addon</groupId>
-      <version>1.0.0-SNAPSHOT</version>
-    </dependency>
-
-    <dependency>
       <artifactId>addon-camera</artifactId>
       <groupId>org.homio.addon</groupId>
       <version>${homio-primary-addons.version}</version>
