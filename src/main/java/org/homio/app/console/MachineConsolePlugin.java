@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.EntityContext;
-import org.homio.api.EntityContextSetting;
 import org.homio.api.console.ConsolePluginTable;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.ui.field.UIField;
@@ -103,7 +102,7 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
     }
 
     private Object onLinux(ThrowingSupplier<Object, Exception> supplier) throws Exception {
-        return EntityContextSetting.isLinuxEnvironment() ? supplier.get() : "N/A";
+        return SystemUtils.IS_OS_LINUX ? supplier.get() : "N/A";
     }
 
     @Getter

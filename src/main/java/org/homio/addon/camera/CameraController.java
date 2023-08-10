@@ -97,30 +97,7 @@ public class CameraController {
         }
         sendFile(resp, entity.getService().getFfmpegMP4OutputPath() + "/ipcamera.m3u8");
     }
-
-    @GetMapping("/ipcamera.m3u8")
-    public void getGroupIpCameraM3U8(HttpServletResponse resp) {
-
-        OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
-        OnvifCameraService service = entity.getService();
-        FFMPEG ffmpeg = service.ffmpegHLS;
-        resp.setContentType("application/x-mpegURL");
-        if (!ffmpeg.getIsAlive()) {
-            ffmpeg.startConverting();
-        } else {
-            ffmpeg.setKeepAlive(8);
-            sendFile(resp, entity.getService().getFfmpegMP4OutputPath() + "/ipcamera.m3u8");
-            return;
-        }
-        // Allow files to be created, or you get old m3u8 from the last time this ran.
-        try {
-            Thread.sleep(HLS_STARTUP_DELAY_MS);
-        } catch (InterruptedException e) {
-            return;
-        }
-        sendFile(resp, entity.getService().getFfmpegMP4OutputPath() + "/ipcamera.m3u8");
-    }
-
+    
     @GetMapping("/{entityID}/ipcamera.mpd")
     public void requestCameraIpCameraMpd(
         @PathVariable("entityID") String entityID,
