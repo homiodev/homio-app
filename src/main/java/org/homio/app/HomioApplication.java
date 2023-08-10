@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.util.Properties;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.api.util.CommonUtils;
 import org.homio.app.config.AppConfig;
 import org.homio.app.manager.common.impl.EntityContextSettingImpl;
@@ -30,8 +31,10 @@ public class HomioApplication implements WebMvcConfigurer {
 
     @SneakyThrows
     public static void main(String[] args) throws IOException {
-        log.info("Run homio-app v.{}", HomioApplication.class.getPackage().getImplementationVersion());
+        String version = StringUtils.defaultIfEmpty(HomioApplication.class.getPackage().getImplementationVersion(), "0.0");
+        System.setProperty("server.version", version);
         setProperty("server.port", "port", "9111");
+        log.info("Run homio-app v.{}", version);
         setDatabaseProperties();
 
         try {

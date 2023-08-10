@@ -76,7 +76,7 @@ public class IpCameraGroupHandler {
     String camerasm3u8 = "";
     OnvifCameraService handle = cameraOrder.get(cameraIndex);
     try {
-      Path file = handle.getFfmpegHLSOutputPath().resolve("ipvideo.m3u8");
+      Path file = handle.getFfmpegHLSOutputPath().resolve("ipcamera.m3u8");
       camerasm3u8 = new String(Files.readAllBytes(file));
     } catch (IOException e) {
       log.warn("[{}]: Error occurred fetching a groupDisplay cameras m3u8 file :{}", handle.getEntityID(), e.getMessage());

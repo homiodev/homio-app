@@ -106,7 +106,7 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
 
         log.info("Onvif ip alive: <{}>. Fetching camera capabilities", host);
         OnvifDeviceState onvifDeviceState = new OnvifDeviceState("-");
-        onvifDeviceState.updateParameters(ipAddress, port, 0, user, password);
+        onvifDeviceState.updateParameters(ipAddress, port, user, password);
         try {
             onvifDeviceState.checkForErrors();
             foundDeviceServices(onvifDeviceState, false, rediscoverIpAddresses, existsCameraByIpPort);
@@ -126,7 +126,7 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
             "been changed");
         for (OnvifCameraEntity entity : allSavedCameraEntities) {
             OnvifDeviceState onvifDeviceState = new OnvifDeviceState("-");
-            onvifDeviceState.updateParameters(ipAddress, port, 0,
+            onvifDeviceState.updateParameters(ipAddress, port,
                 entity.getUser(), entity.getPassword().asString());
             try {
                 onvifDeviceState.checkForErrors();

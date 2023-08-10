@@ -1,6 +1,11 @@
 package org.homio.addon.camera.entity;
 
+import static java.lang.String.join;
+
 import jakarta.persistence.Entity;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -46,8 +51,7 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
 
     @Override
     protected void beforePersist() {
-        setSnapshotOutOptions("-update 1~~~-frames:v 1");
-        setServerPort(BaseVideoService.findFreeBootstrapServerPort());
+        setSnapshotOutOptions(join("~~~", "-update 1", "-frames:v 1"));
     }
 
     @Override

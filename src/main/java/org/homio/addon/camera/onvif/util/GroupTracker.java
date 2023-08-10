@@ -9,6 +9,7 @@ import org.homio.addon.camera.service.OnvifCameraService;
 /**
  * used so a 'group' thing can get a handle to each cameras handler, and the group and cameras can talk to each other.
  */
+@Deprecated // TODO: "Not worked at all"
 public class GroupTracker {
 
   public Map<String, OnvifCameraService> onlineCameraMap = new HashMap<>();

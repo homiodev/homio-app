@@ -10,23 +10,12 @@ import static org.homio.addon.camera.VideoConstants.CHANNEL_START_STREAM;
 import static org.homio.addon.camera.VideoConstants.MOTION_ALARM;
 import static org.homio.api.EntityContextMedia.CHANNEL_FFMPEG_MOTION_ALARM;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.stream.ChunkedWriteHandler;
-import io.netty.handler.timeout.IdleStateHandler;
 import java.io.IOException;
-import java.net.BindException;
-import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -35,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import lombok.Getter;
@@ -53,7 +41,6 @@ import org.homio.api.EntityContextBGP.ThreadContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
-import org.homio.api.exception.ServerException;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService;
 import org.homio.api.state.DecimalType;
@@ -82,69 +69,47 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected abstract String getFFMPEGInputOptions(@Nullable String profile);
 
-    protected abstract BaseVideoStreamServerHandler createVideoStreamServerHandler();
+    private @Getter Path ffmpegOutputPath;
+    private @Getter Path ffmpegGifOutputPath;
+    private @Getter Path ffmpegMP4OutputPath;
+    private @Getter Path ffmpegHLSOutputPath;
+    private @Getter Path ffmpegImageOutputPath;
 
-    protected abstract void streamServerStarted();
-
-    private static final Map<String, Integer> bootstrapServerPortMap = new HashMap<>();
-
-    @Getter
-    protected int serverPort;
-    @Getter
-    private Path ffmpegGifOutputPath;
-    @Getter
-    private Path ffmpegMP4OutputPath;
-    @Getter
-    private Path ffmpegHLSOutputPath;
-    @Getter
-    private Path ffmpegImageOutputPath;
-    @Getter
-    private final Map<String, State> attributes = new ConcurrentHashMap<>();
-    @Getter
-    private final Map<String, State> requestAttributes = new ConcurrentHashMap<>();
+    private @Getter final Map<String, State> attributes = new ConcurrentHashMap<>();
+    private @Getter final Map<String, State> requestAttributes = new ConcurrentHashMap<>();
     private final Map<String, Consumer<Status>> stateListeners = new HashMap<>();
     private final FFMpegRtspAlarm ffMpegRtspAlarm = new FFMpegRtspAlarm();
     public ReentrantLock lockCurrentSnapshot = new ReentrantLock();
+
+    private @Getter byte[] latestSnapshot = new byte[0];
+    private @Getter long lastAnswerFromVideo;
+    private @Getter boolean motionDetected;
     public FFMPEG ffmpegHLS;
+    public FFMPEG ffmpegGIF;
+    public FFMPEG ffmpegSnapshot;
+    public FFMPEG ffmpegMjpeg;
+    public FFMPEG ffmpegMP4;
     @Getter
-    private byte[] latestSnapshot = new byte[0];
-    @Getter
-    private long lastAnswerFromVideo;
-    @Getter
-    private boolean motionDetected = false;
-    @Getter
-    private FFMPEG ffmpegGIF;
-    @Getter
-    private FFMPEG ffmpegSnapshot;
-    @Getter
-    private FFMPEG ffmpegMjpeg;
-    @Getter
-    private FFMPEG ffmpegMP4 = null;
-    @Getter
-    private boolean isHandlerInitialized = false;
+    private boolean isHandlerInitialized;
     private ThreadContext<Void> videoConnectionJob;
     private ThreadContext<Void> pollVideoJob;
     // actions holder
     private UIInputBuilder uiInputBuilder;
-    private ServerBootstrap serverBootstrap;
-    private EventLoopGroup serversLoopGroup = new NioEventLoopGroup();
+
     private String snapshotSource;
     private String snapshotInputOptions;
+
     private String mp4OutOptions;
     private String gifOutOptions;
+
     private long videoStreamParametersHashCode;
+
+    public Instant lastSnapshotRequest = Instant.now();
+    public Instant currentSnapshotTime = Instant.now();
 
     public BaseVideoService(T entity, EntityContext entityContext) {
         super(entityContext);
         this.entity = entity;
-    }
-
-    public static int findFreeBootstrapServerPort() {
-        AtomicInteger freePort = new AtomicInteger(9200);
-        while (bootstrapServerPortMap.values().stream().anyMatch(h -> h == freePort.get())) {
-            freePort.incrementAndGet();
-        }
-        return freePort.get();
     }
 
     @Override
@@ -339,41 +304,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             }
         } finally {
             lockCurrentSnapshot.unlock();
-        }
-    }
-
-    public final void startStreamServer() {
-        if (serverBootstrap == null) {
-            try {
-                serversLoopGroup = new NioEventLoopGroup();
-                serverBootstrap = new ServerBootstrap();
-                serverBootstrap.group(serversLoopGroup);
-                serverBootstrap.channel(NioServerSocketChannel.class);
-                // IP "0.0.0.0" will bind the server to all network connections//
-                serverBootstrap.localAddress(new InetSocketAddress("0.0.0.0", serverPort));
-                serverBootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel socketChannel) {
-                        socketChannel.pipeline().addLast("idleStateHandler",
-                            new IdleStateHandler(0, 60, 0));
-                        socketChannel.pipeline().addLast("HttpServerCodec", new HttpServerCodec());
-                        socketChannel.pipeline().addLast("ChunkedWriteHandler", new ChunkedWriteHandler());
-                        socketChannel.pipeline().addLast("streamServerHandler",
-                            BaseVideoService.this.createVideoStreamServerHandler());
-                    }
-                });
-                ChannelFuture serverFuture = serverBootstrap.bind().sync();
-                serverFuture.await(4000);
-                log.info("[{}]: File server for video at {} has started on port {} for all NIC's.", getEntityID(), getEntity(),
-                    serverPort);
-            } catch (Exception ex) {
-                if (ex instanceof BindException) {
-                    throw new ServerException("ERROR.CAMERA_PORT_BUSY", serverPort);
-                }
-                throw new IllegalStateException(
-                    "Exception when starting server: " + CommonUtils.getErrorMessage(ex));
-            }
-            this.streamServerStarted();
+            currentSnapshotTime = Instant.now();
         }
     }
 
@@ -405,9 +336,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     @Override
     protected void firstInitialize() {
-        serverPort = entity.getServerPort();
-
-        Path ffmpegOutputPath = CommonUtils.getMediaPath().resolve(entity.getFolderName()).resolve(entityID);
+        ffmpegOutputPath = CommonUtils.getMediaPath().resolve(entity.getFolderName()).resolve(entityID);
         ffmpegImageOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("images"));
         ffmpegGifOutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("gif"));
         ffmpegMP4OutputPath = CommonUtils.createDirectoriesIfNotExists(ffmpegOutputPath.resolve("mp4"));
@@ -417,20 +346,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         } catch (IOException e) {
             throw new RuntimeException("Unable to clean path: " + ffmpegHLSOutputPath);
         }
-
-        bootstrapServerPortMap.remove(entityID);
-        if (bootstrapServerPortMap.containsValue(serverPort)) {
-            entity.setStatusError("Server port already in use");
-            return;
-        }
-        bootstrapServerPortMap.put(entityID, serverPort);
         initialize();
     }
-
-   /* @UIVideoActionGetter(CHANNEL_START_STREAM)
-    public OnOffType getHKSStreamState() {
-        return OnOffType.of(this.ffmpegHLSStarted);
-    }*/
 
     @UIVideoAction(name = CHANNEL_MOTION_THRESHOLD, order = 110, icon = "fas fa-expand-arrows-alt",
                    type = UIVideoAction.ActionType.Dimmer, max = 1000)
@@ -499,7 +416,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     }
 
-    protected final void fireFfmpeg(FFMPEG ffmpeg, Consumer<FFMPEG> handler) {
+    public static void fireFfmpeg(FFMPEG ffmpeg, Consumer<FFMPEG> handler) {
         if (ffmpeg != null) {
             handler.accept(ffmpeg);
         }
@@ -532,28 +449,25 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
         ffmpegMjpeg = entityContext.media().buildFFMPEG(entityID, "FFMPEG mjpeg", this, log,
             FFMPEGFormat.MJPEG, getFFMPEGInputOptions() + " -hide_banner -loglevel warning", rtspUri,
-            mgpegOutOptions, "http://127.0.0.1:" + serverPort + "/ipvideo.jpg",
+            mgpegOutOptions, entity.getUrl("ipcamera.jpg"),
             videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString(), null);
         setAttribute("FFMPEG_MJPEG", new StringType(String.join(" ", ffmpegMjpeg.getCommandArrayList())));
 
         ffmpegSnapshot = entityContext.media().buildFFMPEG(entityID, "FFMPEG snapshot", this, log,
             FFMPEGFormat.SNAPSHOT, snapshotInputOptions, rtspUri,
             videoStreamEntity.getSnapshotOutOptionsAsString(),
-            "http://127.0.0.1:" + serverPort + "/snapshot.jpg",
-            videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString(), () -> {
-            });
+            entity.getUrl("snapshot.jpg"),
+            videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString(), null);
         setAttribute("FFMPEG_SNAPSHOT", new StringType(String.join(" ", ffmpegSnapshot.getCommandArrayList())));
 
         if (videoStreamEntity instanceof AbilityToStreamHLSOverFFMPEG) {
             ffmpegHLS = entityContext.media().buildFFMPEG(entityID, "FFMPEG HLS", this, log, FFMPEGFormat.HLS,
                 "-hide_banner -loglevel warning " + getFFMPEGInputOptions(), createHlsRtspUri(),
-                buildHlsOptions(), getFfmpegHLSOutputPath().resolve("ipvideo.m3u8").toString(),
+                buildHlsOptions(), getFfmpegHLSOutputPath().resolve("ipcamera.m3u8").toString(),
                 videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString(),
                 () -> setAttribute(CHANNEL_START_STREAM, OnOffType.OFF));
             setAttribute("FFMPEG_HLS", new StringType(String.join(" ", ffmpegHLS.getCommandArrayList())));
         }
-
-        startStreamServer();
     }
 
     protected String createHlsRtspUri() {
@@ -567,7 +481,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         fireFfmpeg(ffmpegMjpeg, FFMPEG::stopConverting);
         fireFfmpeg(ffmpegSnapshot, FFMPEG::stopConverting);
         ffMpegRtspAlarm.stop();
-        stopStreamServer();
     }
 
     protected void setMotionAlarmThreshold(int threshold) {
@@ -613,13 +526,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             pollVideoJob.cancel();
             pollVideoJob = null;
         }
-    }
-
-    @SneakyThrows
-    private void stopStreamServer() {
-        bootstrapServerPortMap.remove(entityID);
-        serversLoopGroup.shutdownGracefully().sync();
-        serverBootstrap = null;
     }
 
     @SneakyThrows

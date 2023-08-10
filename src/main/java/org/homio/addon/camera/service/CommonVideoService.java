@@ -72,16 +72,6 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
     }
 
     @Override
-    protected BaseVideoStreamServerHandler createVideoStreamServerHandler() {
-        return new RtspCameraStreamHandler(this);
-    }
-
-    @Override
-    protected void streamServerStarted() {
-
-    }
-
-    @Override
     protected long getEntityHashCode(CommonVideoStreamEntity entity) {
         String ieeeAddress = entity.getIeeeAddress();
         return ieeeAddress == null ? 0 : ieeeAddress.hashCode();
@@ -94,25 +84,5 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
         UNKNOWN("");
 
         private final String ffmpegInputOptions;
-    }
-
-    private static class RtspCameraStreamHandler extends BaseVideoStreamServerHandler<CommonVideoService> {
-
-        public RtspCameraStreamHandler(CommonVideoService service) {
-            super(service);
-        }
-
-        @Override
-        protected void handleLastHttpContent(byte[] incomingJpeg) {
-        }
-
-        @Override
-        protected boolean streamServerReceivedPostHandler(HttpRequest httpRequest) {
-            return false;
-        }
-
-        @Override
-        protected void handlerChildRemoved(ChannelHandlerContext ctx) {
-        }
     }
 }

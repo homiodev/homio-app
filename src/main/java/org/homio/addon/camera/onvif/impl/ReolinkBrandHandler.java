@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.netty.channel.ChannelPipeline;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -67,6 +68,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     private final RestTemplate restTemplate = new RestTemplate();
     private long tokenExpiration;
     private String token;
+    private String requestUrl;
 
     public ReolinkBrandHandler(OnvifCameraService service) {
         super(service);
@@ -789,5 +791,10 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             }
             return Collections.emptyList();
         }
+    }
+
+    @Override
+    public void handleSetURL(ChannelPipeline pipeline, String httpRequestURL) {
+        requestUrl = httpRequestURL;
     }
 }

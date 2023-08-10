@@ -101,37 +101,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     }
 
     @Override
-    protected BaseVideoStreamServerHandler createVideoStreamServerHandler() {
-        return new UsbCameraStreamHandler(this);
-    }
-
-    @Override
-    protected void streamServerStarted() {
-
-    }
-
-    @Override
     protected boolean hasAudioStream() {
         return super.hasAudioStream() || isNotEmpty(entity.getAudioSource());
-    }
-
-    private static class UsbCameraStreamHandler extends BaseVideoStreamServerHandler<UsbCameraService> {
-
-        public UsbCameraStreamHandler(UsbCameraService usbCameraService) {
-            super(usbCameraService);
-        }
-
-        @Override
-        protected void handleLastHttpContent(byte[] incomingJpeg) {
-        }
-
-        @Override
-        protected boolean streamServerReceivedPostHandler(HttpRequest httpRequest) {
-            return false;
-        }
-
-        @Override
-        protected void handlerChildRemoved(ChannelHandlerContext ctx) {
-        }
     }
 }

@@ -1,5 +1,6 @@
 package org.homio.addon.camera.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.onvif.soap.OnvifDeviceState;
 import jakarta.persistence.Entity;
 import java.net.URI;
@@ -240,6 +241,11 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
             "onvifMediaProfile", "user", "pwd");
     }
 
+    @JsonIgnore
+    public long getPollTime() {
+        return 1000;
+    }
+
     @Override
     protected @NotNull String getDevicePrefix() {
         return "onvifcam";
@@ -291,7 +297,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
                         String password = params.getString("password");
                         OnvifCameraEntity entity = entityContext.getEntityRequire(getEntityID());
                         OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
-                        onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), 0, user, password);
+                        onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), user, password);
                         try {
                             onvifDeviceState.checkForErrors();
                             entity.setUser(user);

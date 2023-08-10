@@ -159,10 +159,6 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
     getService().sendHttpGET(IpCameraBindingConstants.CM + "setConfig&LeLensMask[0].Enable=" + on);
   }
 
-  public void setURL(String url) {
-    requestUrl = url;
-  }
-
   // This handles the incoming http replies back from the camera.
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -245,7 +241,6 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
 
   @Override
   public void handleSetURL(ChannelPipeline pipeline, String httpRequestURL) {
-    AmcrestBrandHandler amcrestHandler = (AmcrestBrandHandler) pipeline.get("amcrestHandler");
-    amcrestHandler.setURL(httpRequestURL);
+    requestUrl = httpRequestURL;
   }
 }

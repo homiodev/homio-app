@@ -2,7 +2,7 @@ package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import de.onvif.soap.OnvifDeviceState;
 import io.netty.bootstrap.Bootstrap;
@@ -22,7 +22,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContent;
@@ -30,12 +29,9 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -46,8 +42,8 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,6 +54,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
+import org.homio.addon.camera.CameraController;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
@@ -65,9 +62,9 @@ import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
-import org.homio.addon.camera.onvif.impl.InstarBrandHandler;
 import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
+import org.homio.addon.camera.onvif.util.Helper;
 import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.onvif.util.MyNettyAuthHandler;
 import org.homio.addon.camera.ui.UICameraActionConditional;
@@ -76,7 +73,6 @@ import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP;
-import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -86,7 +82,6 @@ import org.homio.api.state.OnOffType;
 import org.homio.api.state.RawType;
 import org.homio.api.state.StringType;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.api.util.CommonUtils;
 import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -95,17 +90,13 @@ import org.jetbrains.annotations.Nullable;
 public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, OnvifCameraService> {
 
     private static @NotNull final Map<String, CameraBrandHandlerDescription> cameraBrands = new ConcurrentHashMap<>();
-    // ChannelGroup is thread safe
-    public final @NotNull ChannelGroup mjpegChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    private final @NotNull ChannelGroup openChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+
     @Getter
     private final @NotNull BaseOnvifCameraBrandHandler brandHandler;
     // private GroupTracker groupTracker;
-    private final @NotNull ChannelGroup snapshotMjpegChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
-    private final @NotNull ChannelGroup autoSnapshotMjpegChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-
-    private final @NotNull ChannelGroup openChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-    private final @NotNull EventLoopGroup mainEventLoopGroup = new NioEventLoopGroup();
+    private final @NotNull EventLoopGroup mainEventLoopGroup = new NioEventLoopGroup(1);
     @Getter
     private final @NotNull OnvifDeviceState onvifDeviceState;
     public @NotNull Map<String, ChannelTracking> channelTrackingMap = new ConcurrentHashMap<>();
@@ -113,20 +104,24 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Setter
     @Getter
     public String mjpegUri = "";
-    public boolean snapshotPolling = false;
+    public String mjpegContentType = "";
     @Setter
     @Getter
     private String snapshotUri;
-    private boolean streamingAutoFps = false;
     private Bootstrap mainBootstrap;
     private @NotNull FullHttpRequest putRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("PUT"), "");
     // basicAuth MUST remain private as it holds the cameraEntity.getPassword()
     private @NotNull FullHttpRequest postRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("POST"), "");
     private String basicAuth = "";
-    private @NotNull Object firstStreamedMsg = new Object();
-    private boolean streamingSnapshotMjpeg = false;
-    private boolean updateAutoFps = false;
 
+    //
+    public boolean updateAutoFps = false;
+    public boolean ffmpegSnapshotGeneration = false;
+    public boolean snapshotPolling = false;
+    public boolean streamingSnapshotMjpeg = false;
+    public boolean streamingAutoFps = false;
+
+    //
     private EntityContextBGP.ThreadContext<Void> snapshotJob;
     private EntityContextBGP.ThreadContext<Void> pullConfigJob;
 
@@ -136,8 +131,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         onvifDeviceState = new OnvifDeviceState(entity.getEntityID());
         onvifDeviceState.setUpdateListener(() -> entityContext.ui().updateItem(entity));
 
-        onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
-            entity.getServerPort(), entity.getUser(), entity.getPassword().asString());
+        onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), entity.getUser(), entity.getPassword().asString());
 
         onvifDeviceState.setUnreachableHandler(message -> this.disposeAndSetStatus(Status.OFFLINE, message));
 
@@ -260,11 +254,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         sendHttpRequest("GET", httpRequestURL, null);
     }
 
-    public void sendHttpPOST(String httpRequestURL, FullHttpRequest request) {
-        postRequestWithBody = request; // use Global so the authhandler can use it when resent with DIGEST.
-        sendHttpRequest("POST", httpRequestURL, null);
-    }
-
     public String getTinyUrl(String httpRequestURL) {
         if (httpRequestURL.startsWith(":")) {
             int beginIndex = httpRequestURL.indexOf("/");
@@ -341,157 +330,29 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                          if (future.isDone() && future.isSuccess()) {
                              Channel ch = future.channel();
                              openChannels.add(ch);
+                             entity.setStatusOnline();
                              log.debug("[{}]: Sending camera: {}: http://{}:{}{}", getEntityID(), httpMethod,
                                  entity.getIp(), port, httpRequestURL);
                              channelTrackingMap.put(httpRequestURL, new ChannelTracking(ch, httpRequestURL));
 
                              CommonCameraHandler commonHandler = (CommonCameraHandler) ch.pipeline().get(IpCameraBindingConstants.COMMON_HANDLER);
-                             commonHandler.setURL(httpRequestURLFull);
+                             commonHandler.setRequestUrl(httpRequestURLFull);
                              MyNettyAuthHandler authHandler = (MyNettyAuthHandler) ch.pipeline().get(IpCameraBindingConstants.AUTH_HANDLER);
                              authHandler.setURL(httpMethod, httpRequestURL);
 
                              brandHandler.handleSetURL(ch.pipeline(), httpRequestURL);
                              ch.writeAndFlush(request);
                          } else { // an error occurred
-                             log.warn("[{}]: Error handle camera: <{}>. Error: <{}>", getEntityID(), entity,
-                                 CommonUtils.getErrorMessage(future.cause()));
-
-                        /*if (!this.restartingBgp) {
-                            log.error("Error in camera <{}> boostrap: <{}>", cameraEntity.getTitle(),
-                                    CommonUtils.getErrorMessage(future.cause()));
-                            this.retryCount *= 2;
-                            this.restartingBgp = true;
-                            log.info("Try restart camera <{}> in <{}> sec", cameraEntity.getTitle(), this.retryCount);
-                            entityContext.bgp().run("Restart camera " + cameraEntity.getTitle(), retryCount * 1000, () -> {
-                                boolean restarted = restart("Connection Timeout: Check your IP and PORT are correct and the camera can be reached
-                                .", null, false);
-                                if (restarted) {
-                                    this.retryCount = 1;
-                                }
-                                this.restartingBgp = false;
-                            }, false);
-                        }*/
+                             log.warn("[{}]: Error handle camera: <{}>. Error: <{}>", getEntityID(), entity, getErrorMessage(future.cause()));
+                             entity.setStatusError("Connection Timeout");
                          }
                      });
-    }
-
-    public void setupSnapshotStreaming(boolean stream, ChannelHandlerContext ctx, boolean auto) {
-        if (stream) {
-            sendMjpegFirstPacket(ctx);
-            if (auto) {
-                autoSnapshotMjpegChannelGroup.add(ctx.channel());
-                lockCurrentSnapshot.lock();
-                try {
-                    sendMjpegFrame(getLatestSnapshot(), autoSnapshotMjpegChannelGroup);
-                    // iOS uses a FIFO? and needs two frames to display a pic
-                    sendMjpegFrame(getLatestSnapshot(), autoSnapshotMjpegChannelGroup);
-                } finally {
-                    lockCurrentSnapshot.unlock();
-                }
-                streamingAutoFps = true;
-            } else {
-                snapshotMjpegChannelGroup.add(ctx.channel());
-                lockCurrentSnapshot.lock();
-                try {
-                    sendMjpegFrame(getLatestSnapshot(), snapshotMjpegChannelGroup);
-                } finally {
-                    lockCurrentSnapshot.unlock();
-                }
-                streamingSnapshotMjpeg = true;
-                startSnapshotPolling();
-            }
-        } else {
-            snapshotMjpegChannelGroup.remove(ctx.channel());
-            autoSnapshotMjpegChannelGroup.remove(ctx.channel());
-            if (streamingSnapshotMjpeg && snapshotMjpegChannelGroup.isEmpty()) {
-                streamingSnapshotMjpeg = false;
-                stopSnapshotPolling();
-                log.info("[{}]: All snapshots.mjpeg streams have stopped.", getEntityID());
-            } else if (streamingAutoFps && autoSnapshotMjpegChannelGroup.isEmpty()) {
-                streamingAutoFps = false;
-                stopSnapshotPolling();
-                log.info("[{}]: All autofps.mjpeg streams have stopped.", getEntityID());
-            }
-        }
-    }
-
-    // If start is true the CTX is added to the list to stream video to, false stops
-    // the stream.
-    public void setupMjpegStreaming(boolean start, ChannelHandlerContext ctx) {
-        if (start) {
-            if (mjpegChannelGroup.isEmpty()) {// first stream being requested.
-                mjpegChannelGroup.add(ctx.channel());
-                if (mjpegUri.isEmpty() || mjpegUri.equals("ffmpeg")) {
-                    sendMjpegFirstPacket(ctx);
-                    startMJPEGRecord();
-                } else {
-                    try {
-                        // fix Dahua reboots when refreshing a mjpeg stream.
-                        TimeUnit.MILLISECONDS.sleep(500);
-                    } catch (InterruptedException ignored) {
-                    }
-                    sendHttpGET(mjpegUri);
-                }
-            } else if (getFfmpegMjpeg() != null) {// not first stream and we will use ffmpeg
-                sendMjpegFirstPacket(ctx);
-                mjpegChannelGroup.add(ctx.channel());
-            } else {// not first stream and camera supplies the mjpeg source.
-                ctx.channel().writeAndFlush(firstStreamedMsg);
-                mjpegChannelGroup.add(ctx.channel());
-            }
-        } else {
-            mjpegChannelGroup.remove(ctx.channel());
-            if (mjpegChannelGroup.isEmpty()) {
-                log.info("[{}]: All ipcamera.mjpeg streams have stopped.", getEntityID());
-                if (mjpegUri.equals("ffmpeg") || mjpegUri.isEmpty()) {
-                    FFMPEG localMjpeg = getFfmpegMjpeg();
-                    if (localMjpeg != null) {
-                        localMjpeg.stopConverting();
-                    }
-                } else {
-                    closeChannel(getTinyUrl(mjpegUri));
-                }
-            }
-        }
     }
 
     public void storeHttpReply(String url, String content) {
         ChannelTracking channelTracking = channelTrackingMap.get(url);
         if (channelTracking != null) {
             channelTracking.setReply(content);
-        }
-    }
-
-    // sends direct to ctx so can be either snapshots.mjpeg or normal mjpeg stream
-    public void sendMjpegFirstPacket(ChannelHandlerContext ctx) {
-        final String boundary = "thisMjpegStream";
-        String contentType = "multipart/x-mixed-replace; boundary=" + boundary;
-        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        response.headers().add(HttpHeaderNames.CONTENT_TYPE, contentType);
-        response.headers().set(HttpHeaderNames.CACHE_CONTROL, HttpHeaderValues.NO_CACHE);
-        response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-        response.headers().add(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-        response.headers().add(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, "*");
-        ctx.channel().writeAndFlush(response);
-    }
-
-    public void sendMjpegFrame(byte[] jpg, ChannelGroup channelGroup) {
-        final String boundary = "thisMjpegStream";
-        ByteBuf imageByteBuf = Unpooled.copiedBuffer(jpg);
-        int length = imageByteBuf.readableBytes();
-        String header = "--" + boundary + "\r\n" + "content-type: image/jpeg" + "\r\n" + "content-length: " + length
-            + "\r\n\r\n";
-        ByteBuf headerBbuf = Unpooled.copiedBuffer(header, 0, header.length(), StandardCharsets.UTF_8);
-        ByteBuf footerBbuf = Unpooled.copiedBuffer("\r\n", 0, 2, StandardCharsets.UTF_8);
-        streamToGroup(headerBbuf, channelGroup, false);
-        streamToGroup(imageByteBuf, channelGroup, false);
-        streamToGroup(footerBbuf, channelGroup, true);
-    }
-
-    public void streamToGroup(Object msg, ChannelGroup channelGroup, boolean flush) {
-        channelGroup.write(msg);
-        if (flush) {
-            channelGroup.flush();
         }
     }
 
@@ -524,24 +385,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         } else {
             if (streamingAutoFps) {
                 stopSnapshotPolling();
-            }
-        }
-    }
-
-    @Override
-    public void processSnapshot(byte[] incomingSnapshot) {
-        super.processSnapshot(incomingSnapshot);
-
-        if (streamingSnapshotMjpeg) {
-            sendMjpegFrame(incomingSnapshot, snapshotMjpegChannelGroup);
-        }
-        if (streamingAutoFps) {
-            if (isMotionDetected()) {
-                sendMjpegFrame(incomingSnapshot, autoSnapshotMjpegChannelGroup);
-            } else if (updateAutoFps) {
-                // only happens every 8 seconds as some browsers need a frame that often to keep stream alive.
-                sendMjpegFrame(incomingSnapshot, autoSnapshotMjpegChannelGroup);
-                updateAutoFps = false;
             }
         }
     }
@@ -652,10 +495,51 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return true; // Stream stopped or never started.
     }
 
+    public byte[] getSnapshot() {
+        if (!entity.getStatus().isOnline()) {
+            // Single gray pixel JPG to keep streams open when the camera goes offline so they dont stop.
+            return new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+                0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, (byte) 0xff, (byte) 0xdb, 0x00, 0x43,
+                0x00, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x03, 0x03, 0x03, 0x03, 0x04,
+                0x06, 0x04, 0x04, 0x04, 0x04, 0x04, 0x08, 0x06, 0x06, 0x05, 0x06, 0x09, 0x08, 0x0a, 0x0a, 0x09,
+                0x08, 0x09, 0x09, 0x0a, 0x0c, 0x0f, 0x0c, 0x0a, 0x0b, 0x0e, 0x0b, 0x09, 0x09, 0x0d, 0x11, 0x0d,
+                0x0e, 0x0f, 0x10, 0x10, 0x11, 0x10, 0x0a, 0x0c, 0x12, 0x13, 0x12, 0x10, 0x13, 0x0f, 0x10, 0x10,
+                0x10, (byte) 0xff, (byte) 0xc9, 0x00, 0x0b, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00,
+                (byte) 0xff, (byte) 0xcc, 0x00, 0x06, 0x00, 0x10, 0x10, 0x05, (byte) 0xff, (byte) 0xda, 0x00, 0x08,
+                0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, (byte) 0xd2, (byte) 0xcf, 0x20, (byte) 0xff, (byte) 0xd9};
+        }
+        // Most cameras will return a 503 busy error if snapshot is faster than 1 second
+        long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
+        if (!snapshotPolling && !ffmpegSnapshotGeneration && lastUpdatedMs >= entity.getPollTime()) {
+            updateSnapshot();
+        }
+        lockCurrentSnapshot.lock();
+        try {
+            return getLatestSnapshot();
+        } finally {
+            lockCurrentSnapshot.unlock();
+        }
+    }
+
+    public void openCamerasStream() {
+        if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
+            ffmpegMjpeg.startConverting();
+        } else {
+            closeChannel(getTinyUrl(mjpegUri));
+            // Dahua cameras crash if you refresh (close and open) the stream without this delay.
+            mainEventLoopGroup.schedule(() -> sendHttpGET(mjpegUri), 300, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private void updateSnapshot() {
+        lastSnapshotRequest = Instant.now();
+        mainEventLoopGroup.schedule(() -> sendHttpGET(snapshotUri), 0, TimeUnit.MILLISECONDS);
+    }
+
     @Override
     protected void initialize() {
         onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
-            entity.getServerPort(), entity.getUser(), entity.getPassword().asString());
+            entity.getUser(), entity.getPassword().asString());
         super.initialize();
         // change camera name if possible
         tryChangeCameraName();
@@ -685,7 +569,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                 }));
     }
 
-    void closeChannel(String url) {
+    public void closeChannel(String url) {
         ChannelTracking channelTracking = channelTrackingMap.get(url);
         if (channelTracking != null) {
             if (channelTracking.getChannel().isOpen()) {
@@ -714,25 +598,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                 channel.close();
             }
         }
-    }
-
-    void snapshotRunnable() {
-        sendHttpGET(snapshotUri);
-    }
-
-    @Override
-    protected void streamServerStarted() {
-        if (entity.getCameraType().equals("instar")) {
-            log.info("[{}]: Setting up the Alarm Server settings in the camera now", getEntityID());
-            sendHttpGET("/param.cgi?cmd=setmdalarm&-aname=server2&-switch=on&-interval=1&cmd=setalarmserverattr&-as_index=3&-as_server="
-                + MACHINE_IP_ADDRESS + "&-as_port=" + serverPort + "&-as_path=/instar&-as_queryattr1=&-as_queryval1=&-as_queryattr2" +
-                "=&-as_queryval2=&-as_queryattr3=&-as_queryval3=&-as_activequery=1&-as_auth=0&-as_query1=0&-as_query2=0&-as_query3=0");
-        }
-    }
-
-    @Override
-    protected BaseVideoStreamServerHandler createVideoStreamServerHandler() {
-        return new OnvifCameraStreamHandler(this);
     }
 
     @Override
@@ -787,7 +652,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                     onvifDeviceState.runOncePerMinute();
                     brandHandler.runOncePerMinute(entityContext);
                 } catch (Exception ex) {
-                    log.error("[{}]: Error during execute onvif service: {}", entityID, CommonUtils.getErrorMessage(ex));
+                    log.error("[{}]: Error during execute onvif service: {}", entityID, getErrorMessage(ex));
                     if (ex.getCause() instanceof ConnectException) {
                         entity.setStatusError("Connection exception");
                     }
@@ -859,13 +724,14 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     private void tryChangeCameraName() {
-        if (onvifDeviceState.getInitialDevices() != null && this.isHandlerInitialized()) {
+        onvifDeviceState.getInitialDevices();
+        if (isHandlerInitialized()) {
             try {
                 if (!Objects.equals(onvifDeviceState.getInitialDevices().getName(), entity.getName())) {
                     onvifDeviceState.getInitialDevices().setName(entity.getName());
                 }
             } catch (Exception ex) {
-                log.error("[{}]: Unable to change onvif camera name: {}", getEntityID(), CommonUtils.getErrorMessage(ex));
+                log.error("[{}]: Unable to change onvif camera name: {}", getEntityID(), getErrorMessage(ex));
             }
         }
     }
@@ -908,7 +774,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return entity.getRestPort();
     }
 
-    private void stopSnapshotPolling() {
+    public void stopSnapshotPolling() {
         if (!streamingSnapshotMjpeg) {
             snapshotPolling = false;
             if (snapshotJob != null) {
@@ -917,7 +783,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         }
     }
 
-    private void startSnapshotPolling() {
+    public void startSnapshotPolling() {
         if (snapshotPolling || isEmpty(snapshotUri)) {
             return; // Already polling or creating with FFmpeg from RTSP
         }
@@ -945,14 +811,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         private byte[] incomingJpeg = new byte[0];
         private String incomingMessage = "";
         private String contentType = "empty";
-        private Object reply = new Object();
-        private String requestUrl = "";
-        private boolean closeConnection = true;
-        private boolean isChunked = false;
-
-        public void setURL(String url) {
-            requestUrl = url;
-        }
+        private String boundary = "";
+        private @Setter String requestUrl = "";
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -960,35 +820,23 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                 return;
             }
             try {
-                if (msg instanceof HttpResponse) {
-                    HttpResponse response = (HttpResponse) msg;
-                    if (response.status().code() != 401) {
+                if (msg instanceof HttpResponse response) {
+                    if (response.status().code() == 200) {
                         if (!response.headers().isEmpty()) {
                             for (String name : response.headers().names()) {
                                 // Some cameras use first letter uppercase and others don't.
                                 switch (name.toLowerCase()) { // Possible localization issues doing this
                                     case "content-type" -> contentType = response.headers().getAsString(name);
                                     case "content-length" -> bytesToReceive = Integer.parseInt(response.headers().getAsString(name));
-                                    case "connection" -> {
-                                        if (response.headers().getAsString(name).contains("keep-alive")) {
-                                            closeConnection = false;
-                                        }
-                                    }
-                                    case "transfer-encoding" -> {
-                                        if (response.headers().getAsString(name).contains("chunked")) {
-                                            isChunked = true;
-                                        }
-                                    }
                                 }
                             }
                             if (contentType.contains("multipart")) {
-                                closeConnection = false;
+                                boundary = Helper.searchString(contentType, "boundary=");
                                 if (mjpegUri.equals(requestUrl)) {
                                     if (msg instanceof HttpMessage) {
                                         // very start of stream only
-                                        ReferenceCountUtil.retain(msg, 1);
-                                        firstStreamedMsg = msg;
-                                        streamToGroup(firstStreamedMsg, mjpegChannelGroup, true);
+                                        mjpegContentType = contentType;
+                                        CameraController.openStreams.updateContentType(contentType, boundary);
                                     }
                                 }
                             } else if (contentType.contains("image/jp")) {
@@ -999,31 +847,27 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                                 incomingJpeg = new byte[bytesToReceive];
                             }
                         }
+                    } else {
+                        // Non 200 OK replies are logged and handled in pipeline by MyNettyAuthHandler.java
+                        return;
                     }
                 }
-                if (msg instanceof HttpContent) {
-                    if (mjpegUri.equals(requestUrl)) {
+                if (msg instanceof HttpContent content) {
+                    if (mjpegUri.equals(requestUrl) && !(content instanceof LastHttpContent)) {
                         // multiple MJPEG stream packets come back as this.
-                        ReferenceCountUtil.retain(msg, 1);
-                        streamToGroup(msg, mjpegChannelGroup, true);
+                        byte[] chunkedFrame = new byte[content.content().readableBytes()];
+                        content.content().getBytes(content.content().readerIndex(), chunkedFrame);
+                        CameraController.openStreams.queueFrame(chunkedFrame);
                     } else {
-                        HttpContent content = (HttpContent) msg;
+
                         // Found some cameras use Content-Type: image/jpg instead of image/jpeg
                         if (contentType.contains("image/jp")) {
                             for (int i = 0; i < content.content().capacity(); i++) {
                                 incomingJpeg[bytesAlreadyReceived++] = content.content().getByte(i);
                             }
                             if (content instanceof LastHttpContent) {
-                                bringVideoOnline();
                                 processSnapshot(incomingJpeg);
-                                // testing next line and if works need to do a full cleanup of this function.
-                                closeConnection = true;
-                                if (closeConnection) {
-                                    ctx.close();
-                                } else {
-                                    bytesToReceive = 0;
-                                    bytesAlreadyReceived = 0;
-                                }
+                                ctx.close();
                             }
                         } else { // incomingMessage that is not an IMAGE
                             if (incomingMessage.isEmpty()) {
@@ -1035,32 +879,48 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                             if (content instanceof LastHttpContent) {
                                 // If it is not an image send it on to the next handler//
                                 if (bytesAlreadyReceived != 0) {
-                                    reply = incomingMessage;
-                                    super.channelRead(ctx, reply);
+                                    super.channelRead(ctx, incomingMessage);
                                 }
                             }
                             // Alarm Streams never have a LastHttpContent as they always stay open//
                             else if (contentType.contains("multipart")) {
-                                if (bytesAlreadyReceived != 0) {
-                                    reply = incomingMessage;
-                                    incomingMessage = "";
-                                    bytesToReceive = 0;
-                                    bytesAlreadyReceived = 0;
+                                int beginIndex, endIndex;
+                                if (bytesToReceive == 0) {
+                                    beginIndex = incomingMessage.indexOf("Content-Length:");
+                                    if (beginIndex != -1) {
+                                        endIndex = incomingMessage.indexOf("\r\n", beginIndex);
+                                        if (endIndex != -1) {
+                                            bytesToReceive = Integer.parseInt(
+                                                incomingMessage.substring(beginIndex + 15, endIndex).strip());
+                                        }
+                                    }
+                                }
+                                // --boundary and headers are not included in the Content-Length value
+                                if (bytesAlreadyReceived > bytesToReceive) {
+                                    // Check if message has a second --boundary
+                                    endIndex = incomingMessage.indexOf("--" + boundary, bytesToReceive);
+                                    Object reply;
+                                    if (endIndex == -1) {
+                                        reply = incomingMessage;
+                                        incomingMessage = "";
+                                        bytesToReceive = 0;
+                                        bytesAlreadyReceived = 0;
+                                    } else {
+                                        reply = incomingMessage.substring(0, endIndex);
+                                        incomingMessage = incomingMessage.substring(endIndex);
+                                        bytesToReceive = 0;// Triggers search next time for Content-Length:
+                                        bytesAlreadyReceived = incomingMessage.length() - endIndex;
+                                    }
                                     super.channelRead(ctx, reply);
                                 }
-                            }
-                            // Foscam needs this as will other cameras with chunks//
-                            if (isChunked && bytesAlreadyReceived != 0) {
-                                reply = incomingMessage;
                             }
                         }
                     }
                 } else { // msg is not HttpContent
                     // Foscam cameras need this
                     if (!contentType.contains("image/jp") && bytesAlreadyReceived != 0) {
-                        reply = incomingMessage;
                         log.trace("[{}]: Packet back from camera is {}", getEntityID(), incomingMessage);
-                        super.channelRead(ctx, reply);
+                        super.channelRead(ctx, incomingMessage);
                     }
                 }
             } finally {
@@ -1100,8 +960,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             if (ctx == null) {
                 return;
             }
-            if (evt instanceof IdleStateEvent) {
-                IdleStateEvent e = (IdleStateEvent) evt;
+            if (evt instanceof IdleStateEvent e) {
                 // If camera does not use the channel for X amount of time it will close.
                 if (e.state() == IdleState.READER_IDLE) {
                     String urlToKeepOpen = brandHandler.getUrlToKeepOpenForIdleStateEvent();
@@ -1111,81 +970,9 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                             return; // don't auto close this as it is for the alarms.
                         }
                     }
+                    log.debug("[{}]: Closing an idle channel for camera:{}", entity.getEntityID(), entity.getTitle());
                     ctx.close();
                 }
-            }
-        }
-    }
-
-    private class OnvifCameraStreamHandler extends BaseVideoStreamServerHandler<OnvifCameraService> {
-
-        private boolean onvifEvent;
-        private boolean handlingMjpeg = false; // used to remove ctx from group when handler is removed.
-        private boolean handlingSnapshotStream = false; // used to remove ctx from group when handler is removed.
-
-        public OnvifCameraStreamHandler(OnvifCameraService service) {
-            super(service);
-        }
-
-        @Override
-        protected void handleLastHttpContent(byte[] bytes) {
-            if (onvifEvent) {
-                onvifDeviceState.getEventDevices().fireEvent(new String(bytes, StandardCharsets.UTF_8));
-            } else { // handles the snapshots that make up mjpeg from rtsp to ffmpeg conversions.
-                if (bytes.length > 1000) {
-                    sendMjpegFrame(bytes, mjpegChannelGroup);
-                }
-            }
-        }
-
-        @Override
-        protected void handleChildrenHttpRequest(QueryStringDecoder queryStringDecoder, ChannelHandlerContext ctx) {
-            switch (queryStringDecoder.path()) {
-                case "/ipvideo.jpg" -> {
-                    if (!snapshotPolling && !snapshotUri.equals("")) {
-                        sendHttpGET(snapshotUri);
-                    }
-                    if (getLatestSnapshot().length == 1) {
-                        log.warn("[{}]: ipvideo.jpg was requested but there is no jpg in ram to send.", getEntityID());
-                    }
-                }
-                case "/snapshots.mjpeg" -> {
-                    handlingSnapshotStream = true;
-                    startSnapshotPolling();
-                    setupSnapshotStreaming(true, ctx, false);
-                }
-                case "/ipvideo.mjpeg" -> {
-                    setupMjpegStreaming(true, ctx);
-                    handlingMjpeg = true;
-                }
-                case "/autofps.mjpeg" -> {
-                    handlingSnapshotStream = true;
-                    setupSnapshotStreaming(true, ctx, true);
-                }
-                case "/instar" -> {
-                    InstarBrandHandler instar = new InstarBrandHandler(OnvifCameraService.this);
-                    instar.alarmTriggered(queryStringDecoder.uri());
-                    ctx.close();
-                }
-            }
-        }
-
-        @Override
-        protected boolean streamServerReceivedPostHandler(HttpRequest httpRequest) {
-            if ("/OnvifEvent".equals(httpRequest.uri())) {
-                onvifEvent = true;
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        protected void handlerChildRemoved(ChannelHandlerContext ctx) {
-            if (handlingMjpeg) {
-                setupMjpegStreaming(false, ctx);
-            } else if (handlingSnapshotStream) {
-                handlingSnapshotStream = false;
-                setupSnapshotStreaming(false, ctx, false);
             }
         }
     }

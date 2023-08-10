@@ -1,5 +1,7 @@
 package org.homio.addon.camera.entity;
 
+import static java.lang.String.join;
+import static org.homio.api.EntityContextSetting.SERVER_PORT;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -27,7 +29,6 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldCodeEditor;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldIgnore;
-import org.homio.api.ui.field.UIFieldNumber;
 import org.homio.api.ui.field.UIFieldSlider;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.action.UIActionButton;
@@ -142,17 +143,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return this;
     }
 
-    @UIField(order = 250, hideInView = true)
-    @UIFieldNumber(min = 1025, max = 65535)
-    @UIFieldGroup("GENERAL")
-    public Integer getServerPort() {
-        return getJsonData("serverPort", 9000);
-    }
-
-    public void setServerPort(int value) {
-        setJsonData("serverPort", value);
-    }
-
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @UIField(order = 500, hideInEdit = true)
     @UIFieldImage
@@ -226,7 +216,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     @JsonIgnore
     public String getSnapshotOutOptionsAsString() {
-        return String.join(" ", getSnapshotOutOptions());
+        return join(" ", getSnapshotOutOptions());
     }
 
     @UIField(order = 140, hideInView = true, type = UIFieldType.Chips)
@@ -281,44 +271,19 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setJsonData("mp4OutOptions", value);
     }
 
-    @JsonIgnore
-    public String getHlsStreamUrl() {
-        return "http://%s:%s/ipvideo.m3u8".formatted(MACHINE_IP_ADDRESS, getService().getServerPort());
-    }
-
-    @JsonIgnore
-    public String getSnapshotsMjpegUrl() {
-        return "http://%s:%s/snapshots.mjpeg".formatted(MACHINE_IP_ADDRESS, getService().getServerPort());
-    }
-
-    @JsonIgnore
-    public String getAutofpsMjpegUrl() {
-        return "http://%s:%s/autofps.mjpeg".formatted(MACHINE_IP_ADDRESS, getService().getServerPort());
-    }
-
-    @JsonIgnore
-    public String getImageUrl() {
-        return "http://%s:%s/ipvideo.jpg".formatted(MACHINE_IP_ADDRESS, getService().getServerPort());
-    }
-
-    @JsonIgnore
-    public String getIpVideoMjpeg() {
-        return "http://%s:%s/ipvideo.mjpeg".formatted(MACHINE_IP_ADDRESS, getService().getServerPort());
-    }
-
     public Set<String> getVideoSources() {
-        return Set.of("autofps.mjpeg", "snapshots.mjpeg", "ipvideo.mjpeg", "HLS");
+        return Set.of("autofps.mjpeg", "snapshots.mjpeg", "ipcamera.mjpeg", "HLS");
     }
 
     public String getStreamUrl(String source) {
-        return switch (source) {
-            case "autofps.mjpeg" -> getAutofpsMjpegUrl();
-            case "snapshots.mjpeg" -> getSnapshotsMjpegUrl();
-            case "HLS" -> getHlsStreamUrl();
-            case "ipvideo.mjpeg" -> getIpVideoMjpeg();
-            case "image.jpg" -> getImageUrl();
-            default -> null;
-        };
+        if (source.equals("HLS")) {
+            return getUrl("ipcamera.m3u8");
+        }
+        return getUrl(source);
+    }
+
+    public String getUrl(String path) {
+        return "http://%s:%s/rest/camera/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
     }
 
     protected void fireUpdateSnapshot(EntityContext entityContext, JSONObject params) {
@@ -330,13 +295,12 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     @Override
     protected void beforePersist() {
-        setMp4OutOptions("-c:v copy~~~-c:a copy");
-        setMjpegOutOptions("-q:v 5~~~-r 2~~~-vf scale=640:-2~~~-update 1");
-        setSnapshotOutOptions("-vsync vfr~~~-q:v 2~~~-update 1~~~-frames:v 1");
+        setMp4OutOptions(join("~~~", "-c:v copy", "-c:a copy"));
+        setMjpegOutOptions(join("~~~", "-q:v 5", "-r 2", "-vf scale=640:-2", "-update 1"));
+        setSnapshotOutOptions(join("~~~", "-vsync vfr", "-q:v 2", "-update 1", "-frames:v 1"));
         setGifOutOptions(
-            "-r 2~~~-filter_complex scale=-2:360:flags=lanczos,setpts=0.5*PTS,split[o1][o2];[o1]palettegen[p];[o2]fifo[o3];" +
-                "[o3][p]paletteuse");
-        setServerPort(BaseVideoService.findFreeBootstrapServerPort());
+            join("~~~", "-r 2", "-filter_complex scale=-2:360:flags=lanczos,setpts=0.5*PTS,split[o1][o2];[o1]palettegen[p];[o2]fifo[o3];" +
+                "[o3][p]paletteuse"));
     }
 
     public static class UpdateSnapshotActionHandler implements UIActionHandler {
@@ -350,7 +314,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     public long getVideoParametersHashCode() {
-        return getJsonDataHashCode("serverPort", "gifOutOptions", "mjpegOutOptions", "imgOutOptions",
+        return getJsonDataHashCode("gifOutOptions", "mjpegOutOptions", "imgOutOptions",
             "motionOptions", "mp4OutOptions");
     }
 }

@@ -1,5 +1,7 @@
 package org.homio.addon.camera.entity;
 
+import static java.lang.String.join;
+
 import jakarta.persistence.Entity;
 import java.util.List;
 import java.util.Objects;
@@ -91,10 +93,10 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
   protected void beforePersist() {
     super.beforePersist();
     setVideoCodec("libx264");
-    setSnapshotOutOptions("-vsync vfr~~~-q:v 2~~~-update 1~~~-frames:v 10");
-    setStreamOptions(
-        "-vcodec libx264~~~-s 800x600~~~-bufsize:v 5M~~~-preset ultrafast~~~-vcodec libx264~~~-tune zerolatency~~~-b:v " +
-            "2.5M");
+    setSnapshotOutOptions(join("~~~", "-vsync vfr", "-q:v 2", "-update 1", "-frames:v 10"));
+    setStreamOptions(join("~~~",
+        "-vcodec libx264", "-s 800x600", "-bufsize:v 5M", "-preset ultrafast", "-vcodec libx264", "-tune zerolatency", "-b:v " +
+            "2.5M"));
   }
 
     @Override

@@ -1,6 +1,7 @@
 package org.homio.app.ssh;
 
 import static java.lang.String.format;
+import static org.homio.api.EntityContextSetting.SERVER_PORT;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 
@@ -49,7 +50,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
     private static final String TOKEN = "token";
     private static final String COLS = "cols";
     private static final String WEBSSH_PATH = CUSTOM_WEB_SOCKET_ENDPOINT + "/webssh";
-    private static final String FORMAT = "ws://%s:9111%s?%s=${TOKEN}&Authentication=${BEARER}&%s=${COLS}";
+    private static final String FORMAT = "ws://%s:%s%s?%s=${TOKEN}&Authentication=${BEARER}&%s=${COLS}";
 
     private static final PassiveExpiringMap<String, SessionContext> sessionByToken = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
     private static final PassiveExpiringMap<String, SessionContext> sessionBySessionId = new PassiveExpiringMap<>(24, TimeUnit.HOURS);
@@ -97,7 +98,8 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
 
         String token = UUID.randomUUID().toString();
 
-        SshSession<SshGenericEntity> session = new SshSession<>(token, format(FORMAT, MACHINE_IP_ADDRESS, WEBSSH_PATH, TOKEN, COLS), entity);
+        String url = format(FORMAT, MACHINE_IP_ADDRESS, SERVER_PORT, WEBSSH_PATH, TOKEN, COLS);
+        SshSession<SshGenericEntity> session = new SshSession<>(token, url, entity);
         sessionByToken.put(token, new SessionContext(session));
 
         return session;

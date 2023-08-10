@@ -3,6 +3,7 @@ package org.homio.app.service.cloud;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.homio.api.EntityContextSetting.SERVER_PORT;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
@@ -76,7 +77,7 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
             ssh.getContext().getForwardingPolicy().allowForwarding();
             log.info("SSH cloud: start remote forwarding");
             entity.setStatusOnline();
-            ssh.startRemoteForwarding("homio.org", 80, "127.0.0.1", 9111);
+            ssh.startRemoteForwarding("homio.org", 80, "127.0.0.1", SERVER_PORT);
             log.info("SSH cloud: wait for disconnect");
             ssh.getConnection().getDisconnectFuture().waitForever();
             log.warn("Ssh connection finished: {}", entity);

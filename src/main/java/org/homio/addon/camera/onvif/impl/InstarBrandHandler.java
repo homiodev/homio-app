@@ -34,10 +34,6 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
         super(service);
     }
 
-    public void setURL(String url) {
-        requestUrl = url;
-    }
-
     // This handles the incoming http replies back from the camera.
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -49,14 +45,14 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
             String content = msg.toString();
             log.debug("[{}]: HTTP Result back from camera is \t:{}:", entityID, content);
             switch (requestUrl) {
-                case "/param.cgi?cmd=getinfrared":
+                case "/param.cgi?cmd=getinfrared" -> {
                     if (content.contains("var infraredstat=\"auto")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED, OnOffType.ON);
                     } else {
                         setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED, OnOffType.OFF);
                     }
-                    break;
-                case "/param.cgi?cmd=getoverlayattr&-region=1":// Text Overlays
+                }
+                case "/param.cgi?cmd=getoverlayattr&-region=1" -> {// Text Overlays
                     if (content.contains("var show_1=\"0\"")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, StringType.EMPTY);
                     } else {
@@ -65,16 +61,16 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                             setAttribute(IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, new StringType(value1));
                         }
                     }
-                    break;
-                case "/cgi-bin/hi3510/param.cgi?cmd=getmdattr":// Motion Alarm
+                }
+                case "/cgi-bin/hi3510/param.cgi?cmd=getmdattr" -> {// Motion Alarm
                     // Motion Alarm
                     if (content.contains("var m1_enable=\"1\"")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.ON);
                     } else {
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.OFF);
                     }
-                    break;
-                case "/cgi-bin/hi3510/param.cgi?cmd=getaudioalarmattr":// Audio Alarm
+                }
+                case "/cgi-bin/hi3510/param.cgi?cmd=getaudioalarmattr" -> {// Audio Alarm
                     if (content.contains("var aa_enable=\"1\"")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.ON);
                         value1 = Helper.searchString(content, "var aa_value=\"");
@@ -84,8 +80,8 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                     } else {
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.OFF);
                     }
-                    break;
-                case "param.cgi?cmd=getpirattr":// PIR Alarm
+                }
+                case "param.cgi?cmd=getpirattr" -> {// PIR Alarm
                     if (content.contains("var pir_enable=\"1\"")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_PIR_ALARM, OnOffType.ON);
                     } else {
@@ -93,14 +89,14 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                     }
                     // Reset the Alarm, need to find better place to put this.
                     getService().motionDetected(false, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
-                    break;
-                case "/param.cgi?cmd=getioattr":// External Alarm Input
+                }
+                case "/param.cgi?cmd=getioattr" -> {// External Alarm Input
                     if (content.contains("var io_enable=\"1\"")) {
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, OnOffType.ON);
                     } else {
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT, OnOffType.OFF);
                     }
-                    break;
+                }
             }
         } finally {
             ReferenceCountUtil.release(msg);
@@ -228,7 +224,6 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
     @Override
     public void handleSetURL(ChannelPipeline pipeline, String httpRequestURL) {
-        InstarBrandHandler instarHandler = (InstarBrandHandler) pipeline.get("instarHandler");
-        instarHandler.setURL(httpRequestURL);
+        requestUrl = httpRequestURL;
     }
 }
