@@ -1,5 +1,10 @@
 package org.homio.app.model.entity.widget.impl.fm;
 
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_PDF_VALUE;
+import static org.springframework.http.MediaType.IMAGE_JPEG_VALUE;
+import static org.springframework.http.MediaType.IMAGE_PNG_VALUE;
+
 import co.elastic.thumbnails4j.core.Dimensions;
 import co.elastic.thumbnails4j.core.Thumbnailer;
 import co.elastic.thumbnails4j.doc.DOCThumbnailer;
@@ -62,7 +67,7 @@ public class WidgetFMNodeValue {
                 // Base64.getEncoder().encodeToString(convertedValue);
             } else if (contentType.startsWith("text/")
                 || contentType.equals("application/javascript")
-                || contentType.equals("application/json")) {
+                || contentType.equals(APPLICATION_JSON_VALUE)) {
                 if (treeNode.getAttributes().getSize() <= FileUtils.ONE_MB) {
                     try (InputStream stream = treeNode.getInputStream()) {
                         this.content = IOUtils.toString(stream, StandardCharsets.UTF_8);
@@ -87,25 +92,16 @@ public class WidgetFMNodeValue {
     }
 
     private Thumbnailer buildThumbnail(String contentType) {
-        switch (contentType) {
-            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-                return new DOCXThumbnailer();
-            case "application/msword":
-                return new DOCThumbnailer();
-            case "image/jpeg":
-            case "image/gif":
-            case "image/png":
-                return new ImageThumbnailer("png");
-            case "application/pdf":
-                return new PDFThumbnailer();
-            case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-                return new PPTXThumbnailer();
-            case "application/vnd.ms-excel":
-                return new XLSThumbnailer();
-            case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-                return new XLSXThumbnailer();
-        }
-        return null;
+        return switch (contentType) {
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> new DOCXThumbnailer();
+            case "application/msword" -> new DOCThumbnailer();
+            case "image/jpg", "image/gif", IMAGE_JPEG_VALUE, IMAGE_PNG_VALUE -> new ImageThumbnailer("png");
+            case APPLICATION_PDF_VALUE -> new PDFThumbnailer();
+            case "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> new PPTXThumbnailer();
+            case "application/vnd.ms-excel" -> new XLSThumbnailer();
+            case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> new XLSXThumbnailer();
+            default -> null;
+        };
     }
 
     private enum ResolveContentType {

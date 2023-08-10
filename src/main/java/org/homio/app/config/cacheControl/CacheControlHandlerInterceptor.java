@@ -1,5 +1,8 @@
 package org.homio.app.config.cacheControl;
 
+import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
+import static org.springframework.http.HttpHeaders.EXPIRES;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Calendar;
@@ -14,9 +17,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * @author Scott Rossillo
  */
 public class CacheControlHandlerInterceptor implements HandlerInterceptor {
-
-    private static final String HEADER_EXPIRES = "Expires";
-    private static final String HEADER_CACHE_CONTROL = "Cache-Control";
 
     private boolean useExpiresHeader = true;
 
@@ -64,9 +64,9 @@ public class CacheControlHandlerInterceptor implements HandlerInterceptor {
         final String cacheControlHeader = this.createCacheControlHeader(cacheControl);
 
         if (cacheControlHeader != null) {
-            response.setHeader(HEADER_CACHE_CONTROL, cacheControlHeader);
+            response.setHeader(CACHE_CONTROL, cacheControlHeader);
             if (useExpiresHeader) {
-                response.setDateHeader(HEADER_EXPIRES, createExpiresHeader(cacheControl));
+                response.setDateHeader(EXPIRES, createExpiresHeader(cacheControl));
             }
         }
     }

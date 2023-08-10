@@ -3,6 +3,9 @@ package org.homio.app.rest;
 import static java.lang.String.format;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LOCATION;
+import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
+import static org.springframework.http.HttpHeaders.ETAG;
+import static org.springframework.http.HttpHeaders.LAST_MODIFIED;
 
 import dev.failsafe.ExecutionContext;
 import dev.failsafe.Failsafe;
@@ -342,9 +345,9 @@ public class MediaController {
     private ResponseEntity<InputStreamResource> toResponse(ImageResponse response, String eTag) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(new MediaType("image", "jpeg"));
-        headers.add("Cache-Control", "max-age=31536000, public");
-        headers.add("ETag", eTag);
-        headers.add("Last-Modified", new Date(System.currentTimeMillis()).toString());
+        headers.add(CACHE_CONTROL, "max-age=31536000, public");
+        headers.add(ETAG, eTag);
+        headers.add(LAST_MODIFIED, new Date(System.currentTimeMillis()).toString());
         return CommonUtils.inputStreamToResource(response.stream(), response.mediaType(), headers);
     }
 

@@ -1,6 +1,11 @@
 package org.homio.addon.camera;
 
 import static org.homio.addon.camera.service.BaseVideoService.fireFfmpeg;
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN;
+import static org.springframework.http.HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS;
+import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+import static org.springframework.http.HttpHeaders.PRAGMA;
 
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.ServletInputStream;
@@ -16,6 +21,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -29,6 +36,7 @@ import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.Status;
 import org.onvif.ver10.schema.Profile;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,16 +52,14 @@ public class CameraController {
     private static final long HLS_STARTUP_DELAY_MS = 4500;
 
     private final EntityContext entityContext;
-    public static final OpenStreams openStreams = new OpenStreams();
-    public static final OpenStreams openSnapshotStreams = new OpenStreams();
-    public static final OpenStreams openAutoFpsStreams = new OpenStreams();
+    public static final Map<String, OpenStreamsContainer> camerasOpenStreams = new ConcurrentHashMap<>();
 
     @SneakyThrows
     @PostMapping("/{entityID}/ipcamera.jpg")
     public void postIpCamera(@PathVariable("entityID") String entityID, HttpServletRequest req) {
         // ffmpeg sends data here for ipcamera.mjpeg streams when camera has no native stream.
         ServletInputStream snapshotData = req.getInputStream();
-        openStreams.queueFrame(snapshotData.readAllBytes());
+        getOpenStreamsContainer(entityID).openStreams.queueFrame(snapshotData.readAllBytes());
         snapshotData.close();
     }
 
@@ -97,7 +103,7 @@ public class CameraController {
         }
         sendFile(resp, entity.getService().getFfmpegMP4OutputPath() + "/ipcamera.m3u8");
     }
-    
+
     @GetMapping("/{entityID}/ipcamera.mpd")
     public void requestCameraIpCameraMpd(
         @PathVariable("entityID") String entityID,
@@ -161,6 +167,7 @@ public class CameraController {
         handler.streamingSnapshotMjpeg = true;
         handler.startSnapshotPolling();
         StreamOutput output = new StreamOutput(resp);
+        OpenStreams openSnapshotStreams = getOpenStreamsContainer(entityID).openSnapshotStreams;
         openSnapshotStreams.addStream(output);
         do {
             try {
@@ -189,6 +196,7 @@ public class CameraController {
         OnvifCameraEntity entity = entityContext.getEntityRequire(entityID);
         OnvifCameraService handler = entity.getService();
         StreamOutput output;
+        OpenStreams openStreams = getOpenStreamsContainer(entityID).openStreams;
         if (openStreams.isEmpty()) {
             log.debug("First stream requested, opening up stream from camera");
             handler.openCamerasStream();
@@ -241,6 +249,7 @@ public class CameraController {
 
         service.streamingAutoFps = true;
         StreamOutput output = new StreamOutput(resp);
+        OpenStreams openAutoFpsStreams = getOpenStreamsContainer(entityID).openAutoFpsStreams;
         openAutoFpsStreams.addStream(output);
         int counter = 0;
         do {
@@ -326,11 +335,11 @@ public class CameraController {
             return;
         }
         response.setBufferSize((int) file.length());
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Expose-Headers", "*");
-        response.setHeader("Content-Length", String.valueOf(file.length()));
-        response.setHeader("Pragma", "no-cache");
-        response.setHeader("Cache-Control", "max-age=0, no-cache, no-store");
+        response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+        response.setHeader(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
+        response.setHeader(CONTENT_TYPE, String.valueOf(file.length()));
+        response.setHeader(PRAGMA, "no-cache");
+        response.setHeader(CACHE_CONTROL, "max-age=0, no-cache, no-store");
         BufferedInputStream input = null;
         BufferedOutputStream output = null;
         try {
@@ -372,8 +381,8 @@ public class CameraController {
 
     @SneakyThrows
     protected void sendSnapshotImage(HttpServletResponse response, byte[] snapshot) {
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Expose-Headers", "*");
+        response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+        response.setHeader(ACCESS_CONTROL_EXPOSE_HEADERS, "*");
         response.setContentType("image/jpg");
         if (snapshot.length == 1) {
             log.warn("ipcamera.jpg was requested but there was no jpg in ram to send.");
@@ -382,5 +391,16 @@ public class CameraController {
         response.setContentLength(snapshot.length);
         ServletOutputStream servletOut = response.getOutputStream();
         servletOut.write(snapshot);
+    }
+
+    private static OpenStreamsContainer getOpenStreamsContainer(String entityID) {
+        return camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
+    }
+
+    public static final class OpenStreamsContainer {
+
+        public final OpenStreams openStreams = new OpenStreams();
+        public final OpenStreams openSnapshotStreams = new OpenStreams();
+        public final OpenStreams openAutoFpsStreams = new OpenStreams();
     }
 }

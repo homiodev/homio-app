@@ -2,7 +2,18 @@ package org.homio.addon.http;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.springframework.http.HttpHeaders.ACCEPT;
+import static org.springframework.http.HttpHeaders.ACCEPT_ENCODING;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+import static org.springframework.http.HttpHeaders.HOST;
+import static org.springframework.http.HttpHeaders.LOCATION;
+import static org.springframework.http.HttpHeaders.USER_AGENT;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
+import static org.springframework.http.MediaType.TEXT_HTML_VALUE;
+import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.pivovarit.function.ThrowingBiConsumer;
@@ -263,15 +274,21 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         @UIField(order = 2, icon = "fa fa-list", fullWidth = true)
         @UIFieldKeyValue(maxSize = 10, keyPlaceholder = "Header name", valuePlaceholder = "Header value",
                          options = {
-                             @Option(key = "Accept", values = {"text/plain", "text/html", "application/json", "application/xml"}),
-                             @Option(key = "Accept-Encoding", values = {"gzip", "deflate", "compress", "br"}),
-                             @Option(key = "Authorization", values = {}),
-                             @Option(key = "Content-Type", values = {"text/css", "text/plain", "text/html", "application/json", "application/xml",
-                                 "application/zip"}),
-                             @Option(key = "Cache-Control", values = {"max-age=0", "max-age=86400", "no-cache"}),
-                             @Option(key = "User-Agent", values = {"Mozilla/5.0"}),
-                             @Option(key = "Location", values = {}),
-                             @Option(key = "Host", values = {})
+                             @Option(key = ACCEPT, values = {TEXT_PLAIN_VALUE, TEXT_HTML_VALUE, APPLICATION_JSON_VALUE, APPLICATION_XML_VALUE}),
+                             @Option(key = ACCEPT_ENCODING, values = {"gzip", "deflate", "compress", "br"}),
+                             @Option(key = AUTHORIZATION, values = {}),
+                             @Option(key = CONTENT_TYPE, values = {
+                                 "text/css",
+                                 "application/zip",
+                                 TEXT_PLAIN_VALUE,
+                                 TEXT_HTML_VALUE,
+                                 APPLICATION_JSON_VALUE,
+                                 APPLICATION_XML_VALUE
+                             }),
+                             @Option(key = CACHE_CONTROL, values = {"max-age=0", "max-age=86400", "no-cache"}),
+                             @Option(key = USER_AGENT, values = {"Mozilla/5.0"}),
+                             @Option(key = LOCATION, values = {}),
+                             @Option(key = HOST, values = {})
                          })
         private String httpHeaders;
 

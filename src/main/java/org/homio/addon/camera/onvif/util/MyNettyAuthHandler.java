@@ -41,9 +41,9 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
     try {
       MessageDigest messageDigest = MessageDigest.getInstance("MD5");
       byte[] array = messageDigest.digest(toHash.getBytes());
-      StringBuffer stringBuffer = new StringBuffer();
-      for (int i = 0; i < array.length; ++i) {
-        stringBuffer.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1, 3));
+      StringBuilder stringBuffer = new StringBuilder();
+      for (byte bt : array) {
+        stringBuffer.append(Integer.toHexString((bt & 0xFF) | 0x100), 1, 3);
       }
       return stringBuffer.toString();
     } catch (NoSuchAlgorithmException e) {
@@ -162,13 +162,5 @@ public class MyNettyAuthHandler extends ChannelDuplexHandler {
     }
     // Pass the Message back to the pipeline for the next handler to process//
     super.channelRead(ctx, msg);
-  }
-
-  @Override
-  public void handlerAdded(ChannelHandlerContext ctx) {
-  }
-
-  @Override
-  public void handlerRemoved(ChannelHandlerContext ctx) {
   }
 }
