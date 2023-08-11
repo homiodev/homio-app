@@ -29,8 +29,6 @@ public class CameraEntrypoint implements AddonEntrypoint {
 
     @SneakyThrows
     public void init() {
-        entityContext.ui().addNotificationBlockOptional("CAMERA", "CAMERA", new Icon("fas fa-video", "#367387"));
-
         entityContext.event().runOnceOnInternetUp("scan-cameras", () -> {
             // fire rescan whole possible items to see if ip address has been changed
             entityContext.getBean(OnvifCameraHttpScanner.class).executeScan(entityContext, null, null, true);
@@ -52,26 +50,27 @@ public class CameraEntrypoint implements AddonEntrypoint {
         @Nullable Supplier<String> titleSupplier,
         @NotNull Icon icon,
         @Nullable Consumer<UILayoutBuilder> settingsBuilder) {
-        entityContext.ui().updateNotificationBlock("CAMERA", builder -> {
-            String text = titleSupplier == null ? entity.getTitle() : titleSupplier.get();
-            NotificationInfoLineBuilder info = builder.addInfo(text, icon);
-            if (!entity.isStart()) {
-                info.setTextColor(Color.WARNING);
-            } else if (entity.getStatus().isOnline()) {
-                info.setTextColor(Color.GREEN);
-            }
-            info.setStatus(entity).setAsLink(entity);
-            if (!entity.isStart() || settingsBuilder == null) {
+        entityContext.ui().addOrUpdateNotificationBlock("CAMERA", "CAMERA", new Icon("fas fa-video", "#367387"),
+            builder -> {
+                String text = titleSupplier == null ? entity.getTitle() : titleSupplier.get();
+                NotificationInfoLineBuilder info = builder.addInfo(text, icon);
                 if (!entity.isStart()) {
-                    info.setRightButton(new Icon("fas fa-play"), "START", null, (ec, params) -> {
-                        ec.save(entity.setStart(true));
-                        return ActionResponseModel.fired();
-                    });
+                    info.setTextColor(Color.WARNING);
+                } else if (entity.getStatus().isOnline()) {
+                    info.setTextColor(Color.GREEN);
                 }
-            } else {
-                info.setRightSettingsButton(settingsBuilder);
-            }
-        });
+                info.setStatus(entity).setAsLink(entity);
+                if (!entity.isStart() || settingsBuilder == null) {
+                    if (!entity.isStart()) {
+                        info.setRightButton(new Icon("fas fa-play"), "START", null, (ec, params) -> {
+                            ec.save(entity.setStart(true));
+                            return ActionResponseModel.fired();
+                        });
+                    }
+                } else {
+                    info.setRightSettingsButton(settingsBuilder);
+                }
+            });
     }
 
     private void fireStartCamera() {

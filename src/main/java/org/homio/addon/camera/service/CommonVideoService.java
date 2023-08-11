@@ -7,11 +7,11 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.homio.addon.camera.CameraEntrypoint;
+import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.entity.CommonVideoStreamEntity;
 import org.homio.addon.camera.rtsp.message.sdp.SdpMessage;
 import org.homio.addon.camera.scanner.RtspStreamScanner;
 import org.homio.api.EntityContext;
-import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
@@ -22,28 +22,6 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
 
     public CommonVideoService(EntityContext entityContext, CommonVideoStreamEntity entity) {
         super(entity, entityContext);
-    }
-
-    @Override
-    public void testVideoOnline() {
-        if (entity.getIeeeAddress() == null) {
-            throw new ServerException("Url must be not null");
-        }
-
-        videoSourceType = VideoSourceType.UNKNOWN;
-        String ieeeAddress = entity.getIeeeAddress();
-        if (ieeeAddress != null) {
-            if (ieeeAddress.endsWith("m3u8")) {
-                videoSourceType = VideoSourceType.HLS;
-            } else if (ieeeAddress.startsWith("rtsp://")) {
-                videoSourceType = VideoSourceType.RTSP;
-            }
-        }
-    }
-
-    @Override
-    public String getRtspUri(String profile) {
-        return entity.getIeeeAddress();
     }
 
     @Override
@@ -59,6 +37,26 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
     @Override
     protected void dispose0() {
         // ignore
+    }
+
+    @Override
+    protected void postInitializeCamera() {
+        // ignore
+    }
+
+    @Override
+    protected void pollingCameraConnection() throws ConfigurationException {
+        String ieeeAddress = entity.getIeeeAddress();
+        if (ieeeAddress == null) {
+            throw new ConfigurationException("Url must be not null");
+        }
+
+        videoSourceType = VideoSourceType.UNKNOWN;
+        if (ieeeAddress.endsWith("m3u8")) {
+            videoSourceType = VideoSourceType.HLS;
+        } else if (ieeeAddress.startsWith("rtsp://")) {
+            videoSourceType = VideoSourceType.RTSP;
+        }
     }
 
     @Override

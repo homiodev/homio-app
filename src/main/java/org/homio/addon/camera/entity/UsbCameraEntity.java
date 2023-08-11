@@ -14,9 +14,11 @@ import org.homio.api.model.OptionModel;
 import org.homio.api.ui.action.DynamicOptionLoader;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldIgnore;
+import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldType;
 import org.homio.api.ui.field.selection.UIFieldSelectValueOnEmpty;
 import org.homio.api.ui.field.selection.UIFieldSelection;
+import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
@@ -24,11 +26,11 @@ import org.jetbrains.annotations.NotNull;
 public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbCameraService>
     implements AbilityToStreamHLSOverFFMPEG<UsbCameraEntity>, HasEntityLog {
 
-    @Override
-    @UIField(order = 5, label = "usb")
-    public String getIeeeAddress() {
-        return super.getIeeeAddress();
-    }
+  @Override
+  @UIField(order = 5, label = "usb")
+  public String getIeeeAddress() {
+    return super.getIeeeAddress();
+  }
 
   @Override
   @UIFieldIgnore
@@ -57,6 +59,7 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
   }
 
   @UIField(order = 90, hideInView = true)
+  @UIFieldPort
   public int getStreamStartPort() {
     return getJsonData("streamPort", 35001);
   }
@@ -86,7 +89,12 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
 
   @Override
   public String getHlsRtspUri() {
-    return "udp://@" + getService().outputs.get(1);
+    return "udp://@%s:%s".formatted(CommonUtils.MACHINE_IP_ADDRESS, getStreamStartPort() + 1);
+  }
+
+  @Override
+  public @NotNull String getRtspUri() {
+    return "udp://@%s:%s".formatted(CommonUtils.MACHINE_IP_ADDRESS, getStreamStartPort());
   }
 
   @Override
@@ -104,10 +112,10 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
             "2.5M"));
   }
 
-    @Override
-    public @NotNull Icon getEntityIcon() {
-        return new Icon("fas fa-usb", "#4E783D");
-    }
+  @Override
+  public @NotNull Icon getEntityIcon() {
+    return new Icon("fas fa-usb", "#4E783D");
+  }
 
   @Override
   public @NotNull Class<UsbCameraService> getEntityServiceItemClass() {
@@ -121,8 +129,8 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
 
   @Override
   public void logBuilder(EntityLogBuilder entityLogBuilder) {
-      entityLogBuilder.addTopicFilterByEntityID("org.homio.addon.camera");
-      entityLogBuilder.addTopicFilterByEntityID("org.homio.api.video");
+    entityLogBuilder.addTopicFilterByEntityID("org.homio.addon.camera");
+    entityLogBuilder.addTopicFilterByEntityID("org.homio.api.video");
   }
 
   public static class SelectAudioSource implements DynamicOptionLoader {

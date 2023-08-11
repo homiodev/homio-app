@@ -10,6 +10,7 @@ import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.api.EntityContext;
 import org.homio.api.state.OnOffType;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * responsible for handling commands, which are sent to one of the channels.
@@ -58,13 +59,13 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
   }
 
   @Override
-  public void initialize(EntityContext entityContext) {
-    if (StringUtils.isEmpty(service.getMjpegUri())) {
-      service.setMjpegUri("/bha-api/video.cgi");
-    }
-    if (StringUtils.isEmpty(service.getSnapshotUri())) {
-      service.setSnapshotUri("/bha-api/image.cgi");
-    }
+  public @Nullable String getMjpegUri() {
+    return "/bha-api/video.cgi";
+  }
+
+  @Override
+  public @Nullable String getSnapshotUri() {
+    return "/bha-api/image.cgi";
   }
 
   @Override

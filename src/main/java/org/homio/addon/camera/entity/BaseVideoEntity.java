@@ -286,11 +286,26 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return "http://%s:%s/rest/camera/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
     }
 
+    @JsonIgnore
+    public @NotNull String getRawSnapshotUrl() {
+        return "ffmpeg";
+    }
+
+    @JsonIgnore
+    public @NotNull String getMjpegUrl() {
+        return "ffmpeg";
+    }
+
+    @JsonIgnore
+    public @NotNull String getRtspUri() {
+        return "ffmpeg";
+    }
+
     protected void fireUpdateSnapshot(EntityContext entityContext, JSONObject params) {
         if (!isStart()) {
             throw new ServerException("ERROR.NOT_STARTED", getTitle());
         }
-        optService().ifPresent(BaseVideoService::requestSnapshot);
+        optService().ifPresent(BaseVideoService::scheduleRequestSnapshot);
     }
 
     @Override

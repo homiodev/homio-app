@@ -18,6 +18,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
 
 /**
@@ -385,13 +386,13 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
   }
 
   @Override
-  public void initialize(EntityContext entityContext) {
-    if (StringUtils.isEmpty(service.getMjpegUri())) {
-      service.setMjpegUri("/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "02" + "/httppreview");
-    }
-    if (StringUtils.isEmpty(service.getSnapshotUri())) {
-      service.setSnapshotUri("/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "01" + "/picture");
-    }
+  public @Nullable String getMjpegUri() {
+    return "/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "02" + "/httppreview";
+  }
+
+  @Override
+  public @Nullable String getSnapshotUri() {
+    return "/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "01" + "/picture";
   }
 
   @Override

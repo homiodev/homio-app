@@ -1,6 +1,5 @@
 package org.homio.addon.camera.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.onvif.soap.OnvifDeviceState;
 import jakarta.persistence.Entity;
 import java.net.URI;
@@ -14,7 +13,6 @@ import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
-import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.log.HasEntityLog;
@@ -34,7 +32,6 @@ import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.color.UIFieldColorStatusMatch;
 import org.homio.api.ui.field.selection.UIFieldSelection;
-import org.homio.api.util.Lang;
 import org.homio.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -74,13 +71,14 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     @UIField(order = 12, hideInEdit = true, hideOnEmpty = true)
     @UIFieldColorStatusMatch(handlePrefixes = true)
     public String getEventSubscription() {
-        return optService().filter(BaseVideoService::isHandlerInitialized).map(s -> {
-            String subscriptionError = s.getOnvifDeviceState().getSubscriptionError();
+        if (getStatus().isOnline()) {
+            String subscriptionError = getService().getOnvifDeviceState().getSubscriptionError();
             if (subscriptionError != null) {
                 return Status.ERROR.name() + " " + subscriptionError;
             }
             return Status.ONLINE.name();
-        }).orElse(Status.UNKNOWN.name());
+        }
+        return Status.UNKNOWN.name();
     }
 
     @UIField(order = 15, type = UIFieldType.IpAddress)
@@ -147,15 +145,16 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         setJsonData("nvrChannel", value);
     }
 
-    @UIField(order = 75, hideInView = true)
+    @UIField(order = 75)
     public String getSnapshotUrl() {
-        String snapshotUrl = getJsonData("snapshotUrl");
-        OnvifCameraService service = optService().orElse(null);
-        if (service != null && service.isHandlerInitialized() &&
-            (StringUtils.isEmpty(snapshotUrl) || snapshotUrl.equals("ffmpeg"))) {
-            snapshotUrl = service.getOnvifDeviceState().getMediaDevices().getSnapshotUri();
+        if (getStatus().isOnline()) {
+            return getService().getSnapshotUri();
         }
-        return StringUtils.isEmpty(snapshotUrl) ? "ffmpeg" : snapshotUrl;
+        return getRawSnapshotUrl();
+    }
+
+    public @NotNull String getRawSnapshotUrl() {
+        return getJsonDataRequire("snapshotUrl", "ffmpeg");
     }
 
     public void setSnapshotUrl(String value) {
@@ -181,8 +180,13 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @UIField(order = 95, hideInView = true)
-    public String getMjpegUrl() {
-        return getJsonData("mjpegUrl", "ffmpeg");
+    public @NotNull String getMjpegUrl() {
+        return getJsonDataRequire("mjpegUrl", "ffmpeg");
+    }
+
+    @Override
+    public @NotNull String getRtspUri() {
+        return getFfmpegInput();
     }
 
     public void setMjpegUrl(String value) {

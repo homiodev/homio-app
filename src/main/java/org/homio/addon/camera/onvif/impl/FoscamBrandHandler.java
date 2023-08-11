@@ -20,6 +20,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * responsible for handling commands, which are sent to one of the channels.
@@ -203,13 +204,17 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
         // Foscam needs any special char like spaces (%20) to be encoded for URLs.
         cameraEntity.setUser(Helper.encodeSpecialChars(cameraEntity.getUser()));
         cameraEntity.setPassword(Helper.encodeSpecialChars(cameraEntity.getPassword().asString()));
-        if (StringUtils.isEmpty(service.getMjpegUri())) {
-            service.setMjpegUri("/cgi-bin/CGIStream.cgi?cmd=GetMJStream&usr=" + cameraEntity.getUser() + "&pwd="
-                + cameraEntity.getPassword().asString());
-        }
-        if (StringUtils.isEmpty(service.getSnapshotUri())) {
-            service.setSnapshotUri("/cgi-bin/CGIProxy.fcgi?usr=" + cameraEntity.getUser() + "&pwd="
-                + cameraEntity.getPassword().asString() + "&cmd=snapPicture2");
-        }
+    }
+
+    @Override
+    public @Nullable String getMjpegUri() {
+        return "/cgi-bin/CGIStream.cgi?cmd=GetMJStream&usr=" + getEntity().getUser() + "&pwd="
+            + getEntity().getPassword().asString();
+    }
+
+    @Override
+    public @Nullable String getSnapshotUri() {
+        return "/cgi-bin/CGIProxy.fcgi?usr=" + getEntity().getUser() + "&pwd="
+            + getEntity().getPassword().asString() + "&cmd=snapPicture2";
     }
 }

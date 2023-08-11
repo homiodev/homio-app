@@ -7,7 +7,6 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
@@ -20,6 +19,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * responsible for handling commands, which are sent to one of the channels.
@@ -226,13 +226,13 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
   }
 
   @Override
-  public void initialize(EntityContext entityContext) {
-    if (StringUtils.isEmpty(service.getMjpegUri())) {
-      service.setMjpegUri("/cgi-bin/mjpg/video.cgi?channel=" + getEntity().getNvrChannel() + "&subtype=1");
-    }
-    if (StringUtils.isEmpty(service.getSnapshotUri())) {
-      service.setSnapshotUri("/cgi-bin/snapshot.cgi?channel=" + getEntity().getNvrChannel());
-    }
+  public @Nullable String getMjpegUri() {
+    return "/cgi-bin/mjpg/video.cgi?channel=" + getEntity().getNvrChannel() + "&subtype=1";
+  }
+
+  @Override
+  public @Nullable String getSnapshotUri() {
+    return "/cgi-bin/snapshot.cgi?channel=" + getEntity().getNvrChannel();
   }
 
   @Override

@@ -30,6 +30,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.ToString;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
@@ -439,6 +440,12 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @Override
+    public @Nullable String getSnapshotUri() {
+        return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio&token=%s".formatted(
+            service.getEntity().getNvrChannel(), token);
+    }
+
+    @Override
     public void pollCameraRunnable() {
        /* OnvifCameraService service = getService();
         if (getEntity().getNvrChannel() > 0) {
@@ -727,6 +734,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @Getter
+    @Setter
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Root {
 
@@ -738,6 +746,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         private ObjectNode range;
 
         @Getter
+        @Setter
         @ToString
         public static class Error {
 

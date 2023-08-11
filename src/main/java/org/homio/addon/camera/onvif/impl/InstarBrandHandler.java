@@ -19,6 +19,7 @@ import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * responsible for handling commands, which are sent to one of the channels.
@@ -109,7 +110,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                         if (service.getEntity().getMjpegUrl().equals("ffmpeg")) {
                             service.setMjpegUri("/livestream/12?action=play&media=mjpeg");
                         }
-                        if (service.getEntity().getSnapshotUrl().equals("ffmpeg")) {
+                        if (service.getEntity().getRawSnapshotUrl().equals("ffmpeg")) {
                             service.setSnapshotUri("/snap.cgi?chn=12");
                         }
                     } else if (requestUrl.startsWith("/param.cgi?cmd=setmdalarm&-aname=server2&-switch=on&-interval=1")
@@ -220,13 +221,13 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     }
 
     @Override
-    public void initialize(EntityContext entityContext) {
-        if (StringUtils.isEmpty(service.getMjpegUri())) {
-            service.setMjpegUri("/tmpfs/snap.jpg");
-        }
-        if (StringUtils.isEmpty(service.getSnapshotUri())) {
-            service.setSnapshotUri("/mjpegstream.cgi?-chn=12");
-        }
+    public @Nullable String getMjpegUri() {
+        return "/tmpfs/snap.jpg";
+    }
+
+    @Override
+    public @Nullable String getSnapshotUri() {
+        return "/mjpegstream.cgi?-chn=12";
     }
 
     @Override

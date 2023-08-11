@@ -12,8 +12,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.Executors;
-import lombok.Getter;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
 import org.homio.addon.camera.handler.BaseBrandCameraHandler;
@@ -22,6 +20,7 @@ import org.homio.addon.camera.ui.CameraActionBuilder;
 import org.homio.api.EntityContext;
 import org.homio.api.state.State;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
 
 public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler implements VideoActionsContext, BaseBrandCameraHandler {
@@ -68,6 +67,14 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
 
   public void assembleActions(UIInputBuilder uiInputBuilder) {
     CameraActionBuilder.assembleActions(this, uiInputBuilder);
+  }
+
+  public @Nullable String getSnapshotUri() {
+    return null;
+  }
+
+  public @Nullable String getMjpegUri() {
+    return null;
   }
 
   protected void setAttribute(String key, State state) {

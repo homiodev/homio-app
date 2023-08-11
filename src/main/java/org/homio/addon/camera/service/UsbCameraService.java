@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.addon.camera.CameraEntrypoint;
+import org.homio.addon.camera.ConfigurationException;
 import org.homio.addon.camera.entity.UsbCameraEntity;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
@@ -28,13 +29,17 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     }
 
     @Override
-    protected long getEntityHashCode(UsbCameraEntity entity) {
-        return entity.getDeepHashCode();
+    protected void pollingCameraConnection() throws Exception {
+        Set<String> aliveVideoDevices = entityContext.media().getVideoDevices();
+        if (!aliveVideoDevices.contains(entity.getIeeeAddress())) {
+            throw new ConfigurationException("Wrong camera configuration");
+        }
+        super.pollingCameraConnection();
     }
 
     @Override
-    public String getRtspUri(String profile) {
-        return "udp://@" + outputs.get(0);
+    protected long getEntityHashCode(UsbCameraEntity entity) {
+        return entity.getDeepHashCode();
     }
 
     @Override
@@ -56,7 +61,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     }
 
     @Override
-    protected void initialize0() {
+    protected void postInitializeCamera() {
         UsbCameraEntity entity = getEntity();
         String url = "video=\"" + entity.getIeeeAddress() + "\"";
         if (isNotEmpty(entity.getAudioSource())) {
@@ -79,21 +84,11 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
             outputs.stream().map(o -> "[f=mpegts]udp://" + o + "?pkt_size=1316").collect(Collectors.joining("|")),
             "", "", null);
         ffmpegUsbStream.startConverting();
-
-        super.initialize0();
     }
 
     @Override
     protected void dispose0() {
-        ffmpegUsbStream.stopConverting();
-    }
-
-    @Override
-    protected void testVideoOnline() {
-        Set<String> aliveVideoDevices = entityContext.media().getVideoDevices();
-        if (!aliveVideoDevices.contains(entity.getIeeeAddress())) {
-            throw new RuntimeException("Camera not available");
-        }
+        FFMPEG.run(ffmpegUsbStream, FFMPEG::stopConverting);
     }
 
     @Override

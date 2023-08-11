@@ -3,13 +3,10 @@ package org.homio.addon.camera.entity;
 import static java.lang.String.join;
 
 import jakarta.persistence.Entity;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.homio.addon.camera.service.BaseVideoService;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.service.CommonVideoService;
 import org.homio.api.EntityContext;
 import org.homio.api.model.Icon;
@@ -79,5 +76,10 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
         return super.getVideoParametersHashCode() +
             (getIeeeAddress() == null ? 0 : getIeeeAddress().hashCode()) +
             getJsonDataHashCode("extraOpts", "hlsListSize", "vcodec", "acodec", "hls_scale");
+    }
+
+    @Override
+    public @NotNull String getRtspUri() {
+        return StringUtils.defaultString(getIeeeAddress(), "");
     }
 }
