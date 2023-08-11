@@ -200,10 +200,10 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
     @Override
     public void initialize(EntityContext entityContext) {
-        OnvifCameraEntity cameraEntity = getEntity();
+        OnvifCameraEntity entity = getEntity();
         // Foscam needs any special char like spaces (%20) to be encoded for URLs.
-        cameraEntity.setUser(Helper.encodeSpecialChars(cameraEntity.getUser()));
-        cameraEntity.setPassword(Helper.encodeSpecialChars(cameraEntity.getPassword().asString()));
+        entity.setUser(Helper.encodeSpecialChars(entity.getUser()));
+        entity.setPassword(Helper.encodeSpecialChars(entity.getPassword().asString()));
     }
 
     @Override

@@ -45,7 +45,7 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
     }
 
     @Override
-    protected void pollingCameraConnection() throws ConfigurationException {
+    protected void pollCameraConnection() throws ConfigurationException {
         String ieeeAddress = entity.getIeeeAddress();
         if (ieeeAddress == null) {
             throw new ConfigurationException("Url must be not null");

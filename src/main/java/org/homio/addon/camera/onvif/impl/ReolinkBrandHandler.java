@@ -431,11 +431,6 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @Override
     public void initialize(EntityContext entityContext) {
-        /*OnvifCameraService service = getService();
-        if (StringUtils.isEmpty(service.getSnapshotUri())) {
-            service.setSnapshotUri("/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=openHAB%token=".formatted(
-                service.getEntity().getNvrChannel(), token));
-        }*/
         runOncePerMinute(entityContext);
     }
 

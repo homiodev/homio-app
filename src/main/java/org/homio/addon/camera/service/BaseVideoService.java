@@ -8,10 +8,13 @@ import static org.homio.addon.camera.VideoConstants.CHANNEL_LAST_MOTION_TYPE;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_MOTION_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_START_STREAM;
 import static org.homio.addon.camera.VideoConstants.MOTION_ALARM;
+import static org.homio.addon.camera.service.util.VideoUrls.getCorrectUrlFormat;
 import static org.homio.api.EntityContextMedia.CHANNEL_FFMPEG_MOTION_ALARM;
 import static org.homio.api.model.Status.ERROR;
 import static org.homio.api.model.Status.REQUIRE_AUTH;
+import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,7 +44,7 @@ import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.util.FFMpegRtspAlarm;
-import org.homio.addon.camera.service.util.VideoUtils;
+import org.homio.addon.camera.service.util.VideoUrls;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.api.EntityContext;
@@ -53,6 +56,8 @@ import org.homio.api.EntityContextMedia.FFMPEGHandler;
 import org.homio.api.model.Status;
 import org.homio.api.service.EntityService;
 import org.homio.api.state.DecimalType;
+import org.homio.api.state.JsonType;
+import org.homio.api.state.ObjectType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.RawType;
 import org.homio.api.state.State;
@@ -101,7 +106,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected @Getter FFMPEG ffmpegHLS;
     protected @Getter FFMPEG ffmpegSnapshot;
-    protected @Getter @Setter FFMPEG ffmpegMjpeg;
+    protected @Getter FFMPEG ffmpegMjpeg;
 
     // run every 8 seconds to send requests to camera, etc...
     protected @Nullable ThreadContext<Void> pollCameraJob;
@@ -122,14 +127,11 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected Instant lastSnapshotRequest = Instant.now();
     protected @Getter Instant currentSnapshotTime = Instant.now();
 
-    protected @Setter @Getter @NotNull String mjpegUri = "ffmpeg";
-    protected @Setter @Getter @NotNull String mjpegContentType = "";
-    protected @Setter @Getter @NotNull String snapshotUri = "ffmpeg";
-    protected @Setter @Getter @NotNull String rtspUri = "ffmpeg";
-
-    protected boolean updateAutoFps = false;
     protected @Setter boolean streamingSnapshotMjpeg = false;
     protected @Setter boolean streamingAutoFps = false;
+
+    private @Getter @Setter @NotNull String mjpegContentType = "";
+    protected final VideoUrls urls = new VideoUrls();
 
     public BaseVideoService(T entity, EntityContext entityContext) {
         super(entityContext, entity, true);
@@ -143,7 +145,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             .intervalWithDelay(Duration.ofSeconds(8))
             .execute(() -> {
                 try {
-                    pollingCameraConnection();
+                    pollCameraConnection();
                 } catch (Exception ex) {
                     String message = CommonUtils.getErrorMessage(ex);
                     if (ex instanceof ConfigurationException
@@ -157,7 +159,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             });
     }
 
-    protected void pollingCameraConnection() throws Exception {
+    protected void pollCameraConnection() throws Exception {
         keepMjpegRunning();
         recordImageSync(null);
         bringCameraOnline();
@@ -166,6 +168,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected void keepMjpegRunning() {
         OpenStreamsContainer openStreams = camerasOpenStreams.get(entityID);
         if (!openStreams.openStreams.isEmpty()) {
+            String mjpegUri = urls.getMjpegUri();
             if (!mjpegUri.isEmpty() && !"ffmpeg".equals(mjpegUri)) {
                 openStreams.openStreams.queueFrame(("--" + openStreams.openStreams.boundary + "\r\n\r\n").getBytes());
             }
@@ -175,10 +178,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public void cameraCommunicationError(String reason) {
         // will try to reconnect again as camera may be rebooting.
-        boolean isOnline = entity.getStatus().isOnline();
+        boolean wasOnline = entity.getStatus().isOnline();
         entity.setStatus(Status.ERROR, reason);
         entityUpdated();
-        if (isOnline) {
+        if (wasOnline) {
             resetAndRetryConnecting();
         }
     }
@@ -195,6 +198,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public final void initializeCamera() {
+        this.urls.clear();
         log.info("[{}]: Initialize camera: <{}>", entityID, getEntity());
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
         videoStreamParametersHashCode = entity.getVideoParametersHashCode();
@@ -204,14 +208,16 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
                     "Unable to init video <" + getEntity() + "> with different id than: " + entityID);
             }
 
-            this.rtspUri = entity.getRtspUri();
-            this.mjpegUri = VideoUtils.getCorrectUrlFormat(entity.getMjpegUrl());
-            this.snapshotUri = VideoUtils.getCorrectUrlFormat(entity.getRawSnapshotUrl());
+            this.urls.setRtspUri(entity.getRtspUri());
+            this.urls.setMjpegUri(getCorrectUrlFormat(entity.getMjpegUrl()));
+            this.urls.setSnapshotUri(getCorrectUrlFormat(entity.getRawSnapshotUrl()));
+
             this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -skip_frame nokey -hide_banner -loglevel warning -an";
             this.mp4OutOptions = String.join(" ", entity.getMp4OutOptions());
             this.gifOutOptions = String.join(" ", entity.getGifOutOptions());
             String mgpegOutOptions = String.join(" ", entity.getMjpegOutOptions());
 
+            String rtspUri = urls.getRtspUri();
             ffmpegMjpeg = entityContext.media().buildFFMPEG(entityID, "FFMPEG mjpeg", this, log,
                 FFMPEGFormat.MJPEG, getFFMPEGInputOptions() + " -hide_banner -loglevel warning", rtspUri,
                 mgpegOutOptions, entity.getUrl("ipcamera.jpg"),
@@ -236,10 +242,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             }
 
             postInitializeCamera();
-
-            setAttribute("SNAPSHOT_URI", new StringType(snapshotUri));
-            setAttribute("MJPEG_URI", new StringType(mjpegUri));
-            setAttribute("RTSP_URI", new StringType(rtspUri));
 
             tryConnecting();
         } catch (Exception ex) {
@@ -275,8 +277,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public final void bringCameraOnline() {
         log.debug("Bring camera online");
+        setAttribute("URLS", new ObjectType(urls));
         lastAnswerFromVideo = System.currentTimeMillis();
         if (!entity.getStatus().isOnline()) {
+            setAttribute("URLS", new JsonType(OBJECT_MAPPER.convertValue(urls, ObjectNode.class)));
             entity.setStatusOnline();
             cameraConnected();
             if (EntityContextBGP.cancel(cameraConnectionJob)) {
@@ -301,7 +305,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public void openCamerasStream() {
-        if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
+        if (urls.getMjpegUri().equals("ffmpeg")) {
             ffmpegMjpeg.startConverting();
         }
     }
@@ -330,7 +334,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public void scheduleRequestSnapshot() {
-        if ("ffmpeg".equals(snapshotUri)) {
+        if ("ffmpeg".equals(urls.getSnapshotUri())) {
             FFMPEG.run(ffmpegSnapshot, FFMPEG::startConverting);
         } else {
             requestSnapshotByUri();
@@ -490,7 +494,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     @Override
     @SneakyThrows
-    protected void initialize() {
+    protected final void initialize() {
         if (!entity.isStart()) {
             this.disposeAndSetStatus(Status.OFFLINE, "Camera not started");
         } else {
@@ -532,7 +536,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public void startSnapshotPolling() {
-        if (snapshotJob != null || snapshotUri.equals("ffmpeg")) {
+        if (snapshotJob != null || urls.getSnapshotUri().equals("ffmpeg")) {
             return; // Already polling or creating with FFmpeg from RTSP
         }
         if (streamingSnapshotMjpeg || streamingAutoFps) {
@@ -603,7 +607,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             Files.createFile(path);
             entityContext.media().fireFfmpeg(
                 inputArguments + " " + getFFMPEGInputOptions(profile),
-                snapshotUri,
+                urls.getSnapshotUri(profile),
                 outOptions + " " + output,
                 maxTimeout);
             return IOUtils.toByteArray(Files.newInputStream(path));
@@ -695,17 +699,13 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
     }
 
-    protected String getRtspUriByProfile(String profile) {
-        return rtspUri;
-    }
-
     public final void recordMp4(@NotNull Path filePath, @Nullable String profile, int secondsToRecord) {
         String inputOptions = getFFMPEGInputOptions(profile);
         inputOptions = "-y -t " + secondsToRecord + " -hide_banner -loglevel warning " + inputOptions;
         FFMPEG ffmpegMP4 = entityContext
             .media()
             .buildFFMPEG(entityID, "FFMPEG record MP4", this, log, FFMPEGFormat.RECORD, inputOptions,
-                getRtspUriByProfile(profile),
+                urls.getRtspUri(profile),
                 mp4OutOptions, filePath.toString(),
                 entity.getUser(), entity.getPassword().asString(), null);
         FFMPEG.run(ffmpegMP4, FFMPEG::startConverting);
@@ -714,7 +714,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public final void recordGif(Path filePath, @Nullable String profile, int secondsToRecord) {
         String gifInputOptions = "-y -t " + secondsToRecord + " -hide_banner -loglevel warning " + getFFMPEGInputOptions();
         FFMPEG ffmpegGIF = entityContext.media().buildFFMPEG(entityID, "FFMPEG GIF", this, log, FFMPEGFormat.GIF,
-            gifInputOptions, getRtspUriByProfile(profile),
+            gifInputOptions, urls.getRtspUri(profile),
             gifOutOptions, filePath.toString(), entity.getUser(),
             entity.getPassword().asString(), null);
         FFMPEG.run(ffmpegGIF, FFMPEG::startConverting);

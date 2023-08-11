@@ -29,12 +29,12 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     }
 
     @Override
-    protected void pollingCameraConnection() throws Exception {
+    protected void pollCameraConnection() throws Exception {
         Set<String> aliveVideoDevices = entityContext.media().getVideoDevices();
         if (!aliveVideoDevices.contains(entity.getIeeeAddress())) {
             throw new ConfigurationException("Wrong camera configuration");
         }
-        super.pollingCameraConnection();
+        super.pollCameraConnection();
     }
 
     @Override

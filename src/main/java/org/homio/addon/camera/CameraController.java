@@ -217,9 +217,6 @@ public class CameraController {
                 if (openStreams.isEmpty()) {
                     if (output.isSnapshotBased()) {
                         FFMPEG.run(handler.getFfmpegMjpeg(), FFMPEG::stopConverting);
-                        // Set reference to ffmpegMjpeg to null to prevent automatic reconnection
-                        // in handler's pollCameraRunnable() check for frozen camera
-                        handler.setFfmpegMjpeg(null);
                     } else {
                         handler.closeChannel(handler.getTinyUrl(mjpegUri));
                     }

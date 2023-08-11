@@ -1,8 +1,5 @@
 package org.homio.addon.camera.service;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.apache.commons.lang3.StringUtils.defaultString;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.homio.api.util.CommonUtils.getErrorMessage;
 
 import de.onvif.soap.OnvifDeviceState;
@@ -33,10 +30,8 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -61,7 +56,6 @@ import org.homio.addon.camera.ui.UICameraDimmerButton;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.api.EntityContext;
-import org.homio.api.EntityContextBGP;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -73,6 +67,7 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.hquery.Curl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.onvif.ver10.schema.Profile;
 
 @Log4j2
 public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, OnvifCameraService> {
@@ -93,8 +88,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     // basicAuth MUST remain private as it holds the cameraEntity.getPassword()
     private @NotNull FullHttpRequest postRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("POST"), "");
     private String basicAuth = "";
-
-    private EntityContextBGP.ThreadContext<Void> pullConfigJob;
+    private long lastLowRequest;
 
     public OnvifCameraService(EntityContext entityContext, OnvifCameraEntity entity) {
         super(entity, entityContext);
@@ -166,7 +160,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Override
     public String getFFMPEGInputOptions(@Nullable String profile) {
         String inputOptions = entity.getFfmpegInputOptions();
-        String rtspUri = getRtspUri(profile);
+        String rtspUri = urls.getRtspUri(profile);
         if (rtspUri.isEmpty()) {
             log.warn("[{}]: The camera tried to use a FFmpeg feature when no valid input for FFmpeg is provided.", getEntityID());
             return null;
@@ -434,10 +428,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentZoomPercentage()));
     }
 
-    public String getRtspUri(@Nullable String profile) {
-        return defaultIfEmpty(entity.getFfmpegInput(), onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile));
-    }
-
     @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_GOTO_PRESET)
     public DecimalType getGotoPreset() {
         return new DecimalType(0);
@@ -460,7 +450,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     public void openCamerasStream() {
-        if (mjpegUri.isEmpty() || "ffmpeg".equals(mjpegUri)) {
+        String mjpegUri = urls.getMjpegUri();
+        if (mjpegUri.equals("ffmpeg")) {
             ffmpegMjpeg.startConverting();
         } else {
             closeChannel(getTinyUrl(mjpegUri));
@@ -472,24 +463,15 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Override
     protected void requestSnapshotByUri() {
         lastSnapshotRequest = Instant.now();
-        mainEventLoopGroup.schedule(() -> sendHttpGET(snapshotUri), 0, TimeUnit.MILLISECONDS);
-    }
-
-    @Override
-    protected void initialize() {
-        onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
-            entity.getUser(), entity.getPassword().asString());
-        super.initialize();
-        // change camera name if possible
-        tryChangeCameraName();
+        mainEventLoopGroup.schedule(() -> sendHttpGET(urls.getSnapshotUri()), 0, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public RawType recordImageSync(String profile) {
+        String snapshotUri = urls.getSnapshotUri(profile);
         if (snapshotUri.equals("ffmpeg")) {
             return super.recordImageSync(profile);
         }
-        String snapshotUri = onvifDeviceState.getMediaDevices().getSnapshotUri(profile);
         OnvifCameraEntity entity = getEntity();
         return new RawType(Curl.download(snapshotUri, entity.getUser(), entity.getPassword().asString()));
     }
@@ -538,17 +520,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Override
     protected void pollCameraRunnable() {
         super.pollCameraRunnable();
-
-        // Snapshot should be first to keep consistent time between shots
-        if (streamingAutoFps) {
-            updateAutoFps = true;
-            if (snapshotJob == null && isEmpty(snapshotUri)) {
-                // Don't need to poll if creating from RTSP stream with FFmpeg or we are polling at full rate already.
-                sendHttpGET(snapshotUri);
-            }
-        } else if (!isEmpty(snapshotUri) && snapshotJob == null) {// we need to check camera is still online.
-            sendHttpGET(snapshotUri);
-        }
         // what needs to be done every poll//
         brandHandler.pollCameraRunnable();
 
@@ -556,54 +527,46 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
             log.debug("[{}]: There are {} open Channels being tracked.", getEntityID(), openChannels.size());
             cleanChannels();
         }
+
+        if (System.currentTimeMillis() - lastLowRequest > 60000) {
+            lastLowRequest = System.currentTimeMillis();
+            try {
+                onvifDeviceState.runOncePerMinute();
+                brandHandler.runOncePerMinute(entityContext);
+            } catch (Exception ex) {
+                log.error("[{}]: Error during execute onvif service: {}", entityID, getErrorMessage(ex));
+                if (ex.getCause() instanceof ConnectException) {
+                    entity.setStatusError("Connection exception");
+                }
+            }
+        }
     }
 
     @Override
     protected void postInitializeCamera() {
-        this.onvifDeviceState.initFully(entity.getOnvifMediaProfile(), brandHandler.isSupportOnvifEvents());
+        onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(),
+            entity.getUser(), entity.getPassword().asString());
+        String snapshotUri = urls.getSnapshotUri();
         if (snapshotUri.equals("ffmpeg")) {
-            snapshotUri = onvifDeviceState.getMediaDevices().getSnapshotUri();
+            urls.setSnapshotUri(brandHandler.getSnapshotUri());
         }
-
-        setAttribute("PROFILES", new ObjectType(onvifDeviceState.getProfiles()));
-
-        if (snapshotUri.equals("ffmpeg")) {
-            snapshotUri = defaultString(brandHandler.getSnapshotUri(), snapshotUri);
-        }
+        String mjpegUri = urls.getMjpegUri();
         if (mjpegUri.equals("ffmpeg")) {
-            mjpegUri = defaultString(brandHandler.getMjpegUri(), mjpegUri);
+            urls.setMjpegUri(brandHandler.getMjpegUri());
         }
-
         brandHandler.initialize(entityContext);
-
-        if (("ffmpeg".equals(snapshotUri) || isEmpty(snapshotUri)) && isEmpty(getRtspUri(null))) {
-            throw new RuntimeException("Camera unable to find valid Snapshot and/or RTSP URL.");
-        }
     }
 
     @Override
     protected void cameraConnected() {
-        pullConfigJob = entityContext.bgp().builder("video-run-per-min-" + entity.getEntityID())
-                                     .delay(Duration.ofSeconds(30)).interval(Duration.ofSeconds(60)).execute(() -> {
-                try {
-                    onvifDeviceState.runOncePerMinute();
-                    brandHandler.runOncePerMinute(entityContext);
-                } catch (Exception ex) {
-                    log.error("[{}]: Error during execute onvif service: {}", entityID, getErrorMessage(ex));
-                    if (ex.getCause() instanceof ConnectException) {
-                        entity.setStatusError("Connection exception");
-                    }
-                }
-            });
+        this.lastLowRequest = System.currentTimeMillis();
+        brandHandler.cameraConnected();
     }
 
     @Override
     protected void offline() {
         super.offline();
         onvifDeviceState.dispose();
-        if (pullConfigJob != null) {
-            pullConfigJob.cancel();
-        }
         openChannels.close();
     }
 
@@ -615,9 +578,15 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    protected void pollingCameraConnection() throws Exception {
-        super.pollingCameraConnection();
+    protected void pollCameraConnection() throws Exception {
         onvifDeviceState.checkForErrors();
+        onvifDeviceState.initFully(entity.getOnvifMediaProfile(), brandHandler.isSupportOnvifEvents());
+        setAttribute("PROFILES", new ObjectType(onvifDeviceState.getProfiles()));
+        for (Profile profile : onvifDeviceState.getProfiles()) {
+            urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getName()));
+            urls.setSnapshotUri(onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getName()));
+        }
+        super.pollCameraConnection();
     }
 
     @Override
@@ -649,18 +618,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Override
     protected long getEntityHashCode(OnvifCameraEntity entity) {
         return entity.getDeepHashCode();
-    }
-
-    private void tryChangeCameraName() {
-        if (entity.getStatus().isOnline()) {
-            try {
-                if (!Objects.equals(onvifDeviceState.getInitialDevices().getName(), entity.getName())) {
-                    onvifDeviceState.getInitialDevices().setName(entity.getName());
-                }
-            } catch (Exception ex) {
-                log.error("[{}]: Unable to change onvif camera name: {}", getEntityID(), getErrorMessage(ex));
-            }
-        }
     }
 
     private int getPortFromShortenedUrl(String httpRequestURL, OnvifCameraEntity entity) {
