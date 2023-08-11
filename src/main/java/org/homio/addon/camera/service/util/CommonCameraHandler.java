@@ -30,7 +30,7 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
     private String incomingMessage = "";
     private String contentType = "empty";
     private String boundary = "";
-    private @Setter String requestUrl = "";
+    private @Setter String requestUrl = "ffmpeg";
 
     private final OnvifCameraService service;
 
@@ -52,7 +52,7 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
                         }
                         if (contentType.contains("multipart")) {
                             boundary = Helper.searchString(contentType, "boundary=");
-                            if (service.getMjpegUri().equals(requestUrl)) {
+                            if (service.urls.getMjpegUri().equals(requestUrl)) {
                                 if (msg instanceof HttpMessage) {
                                     // very start of stream only
                                     service.setMjpegContentType(contentType);
@@ -73,7 +73,7 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
                 }
             }
             if (msg instanceof HttpContent content) {
-                if (service.getMjpegUri().equals(requestUrl) && !(content instanceof LastHttpContent)) {
+                if (service.urls.getMjpegUri().equals(requestUrl) && !(content instanceof LastHttpContent)) {
                     // multiple MJPEG stream packets come back as this.
                     byte[] chunkedFrame = new byte[content.content().readableBytes()];
                     content.content().getBytes(content.content().readerIndex(), chunkedFrame);

@@ -148,7 +148,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     @UIField(order = 75)
     public String getSnapshotUrl() {
         if (getStatus().isOnline()) {
-            return getService().getSnapshotUri();
+            return getService().urls.getSnapshotUri();
         }
         return getRawSnapshotUrl();
     }

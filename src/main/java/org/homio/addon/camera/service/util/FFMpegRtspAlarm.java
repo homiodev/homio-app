@@ -43,7 +43,6 @@ public class FFMpegRtspAlarm {
     }
 
     private void runFFMPEGRtspAlarmThread() {
-        //T videoStreamEntity = BaseVideoService.this.getEntity();
         BaseVideoService service = videoStreamEntity.getService();
         String inputOptions = service.getFFMPEGInputOptions();
 
@@ -62,7 +61,7 @@ public class FFMpegRtspAlarm {
         }
         this.motionThreshold = videoStreamEntity.getMotionThreshold();
         this.audioThreshold = videoStreamEntity.getAudioThreshold();
-        String input = defaultIfEmpty(videoStreamEntity.getAlarmInputUrl(), service.getRtspUri());
+        String input = defaultIfEmpty(videoStreamEntity.getAlarmInputUrl(), service.urls.getRtspUri());
 
         List<String> filterOptionsList = new ArrayList<>();
         filterOptionsList.add(this.audioThreshold > 0 ? "-af silencedetect=n=-" + audioThreshold + "dB:d=2" : "-an");

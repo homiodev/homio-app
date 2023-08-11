@@ -28,7 +28,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -87,8 +86,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     private Bootstrap mainBootstrap;
     private @NotNull FullHttpRequest putRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("PUT"), "");
-    // basicAuth MUST remain private as it holds the cameraEntity.getPassword()
-    private @NotNull FullHttpRequest postRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("POST"), "");
     private String basicAuth = "";
 
     public List<String> lowPriorityRequests = new ArrayList<>(0);
@@ -279,7 +276,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         } else if ("PUT".equals(httpMethod)) {
             request = putRequestWithBody;
         } else {
-            request = postRequestWithBody;
+            throw new IllegalStateException("Http method: " + httpMethod + " not implemented");
         }
 
         if (!basicAuth.isEmpty()) {

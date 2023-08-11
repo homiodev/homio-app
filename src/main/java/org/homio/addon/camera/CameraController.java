@@ -186,7 +186,7 @@ public class CameraController {
         BaseVideoService handler = entity.getService();
         StreamOutput output;
         OpenStreams openStreams = getOpenStreamsContainer(entityID).openStreams;
-        String mjpegUri = handler.getMjpegUri();
+        String mjpegUri = handler.urls.getMjpegUri();
 
         if (openStreams.isEmpty()) {
             log.debug("First stream requested, opening up stream from camera");
