@@ -386,15 +386,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    public void requestSnapshot() {
-        if (!isEmpty(snapshotUri)) {
-            sendHttpGET(snapshotUri);// Allows this to change Image FPS on demand
-        } else {
-            super.requestSnapshot();
-        }
-    }
-
-    @Override
     public void testVideoOnline() {
         getOnvifDeviceState().checkForErrors();
     }
@@ -487,7 +478,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    protected void updateSnapshot() {
+    protected void requestSnapshotByUri() {
         lastSnapshotRequest = Instant.now();
         mainEventLoopGroup.schedule(() -> sendHttpGET(snapshotUri), 0, TimeUnit.MILLISECONDS);
     }
@@ -634,19 +625,9 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    protected boolean pollingCameraConnectionChild() {
-        if (brandHandler instanceof UnknownBrandHandler ||
-            brandHandler instanceof DoorBirdBrandHandler) {
-            if (snapshotUri.isEmpty() || "ffmpeg".equals(snapshotUri)) {
-                snapshotIsFfmpeg(getRtspUri(null));
-            } else {
-                ffmpegSnapshotGeneration = false;
-                updateSnapshot();
-            }
-            return true;
-        }
+    protected void pollingCameraConnection() {
+        super.pollingCameraConnection();
         onvifDeviceState.checkForErrors();
-        return false;
     }
 
     @Override

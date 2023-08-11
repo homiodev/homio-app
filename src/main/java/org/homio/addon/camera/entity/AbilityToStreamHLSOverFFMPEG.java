@@ -5,8 +5,11 @@ import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldType;
+import org.jetbrains.annotations.Nullable;
 
 public interface AbilityToStreamHLSOverFFMPEG<T> extends HasJsonData {
+
+    @Nullable String getHlsRtspUri();
 
     @UIField(order = 1000, hideInView = true, type = UIFieldType.Chips)
     @UIFieldGroup("HLS_GROUP")

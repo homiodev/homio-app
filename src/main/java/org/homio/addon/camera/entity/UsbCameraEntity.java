@@ -84,7 +84,12 @@ public final class UsbCameraEntity extends BaseVideoEntity<UsbCameraEntity, UsbC
     return Objects.hashCode(getIeeeAddress()) + getJsonDataHashCode("asource", "stream", "streamPort");
   }
 
-    @Override
+  @Override
+  public String getHlsRtspUri() {
+    return "udp://@" + getService().outputs.get(1);
+  }
+
+  @Override
   protected @NotNull String getDevicePrefix() {
     return "usbcam";
   }

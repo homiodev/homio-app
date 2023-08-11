@@ -32,16 +32,16 @@ public class FFMPEGImpl implements FFMPEG {
     private final FFMPEGHandler handler;
     private final Logger log;
     private final Runnable destroyListener;
-    @Getter private final String description;
-    @Getter private final Date creationDate = new Date();
+    private final @Getter String description;
+    private final @Getter Date creationDate = new Date();
     private final FFMPEGFormat format;
-    @Getter private final List<String> commandArrayList = new ArrayList<>();
+    private final @Getter List<String> commandArrayList = new ArrayList<>();
     private Process process = null;
     private IpVideoFfmpegThread ipVideoFfmpegThread;
     private int keepAlive = 8;
     private final String entityID;
     private boolean notFrozen = true;
-    private boolean running;
+    private @Getter boolean running;
 
     public FFMPEGImpl(@NotNull String entityID, @NotNull String description,
         @NotNull FFMPEGHandler handler, @NotNull Logger log, @NotNull FFMPEGFormat format,
@@ -78,14 +78,6 @@ public class FFMPEGImpl implements FFMPEG {
         // ffmpegLocation may have a space in its folder
         commandArrayList.add(0, FFMPEG_LOCATION);
         log.warn("\n\n[{}]: Generated ffmpeg command for: {}.\n{}\n\n", entityID, format, String.join(" ", commandArrayList));
-    }
-
-    @Override
-    public void restartIfRequire() {
-        if (running && !getIsAlive()) {
-            stopProcessIfNoKeepAlive();
-            startConverting();
-        }
     }
 
     public void setKeepAlive(int seconds) {

@@ -3,8 +3,6 @@ package org.homio.addon.camera.service;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.api.EntityContextMedia.FFMPEGFormat.GENERAL;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpRequest;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -22,7 +20,7 @@ import org.homio.api.util.CommonUtils;
 @Log4j2
 public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCameraService> {
 
-    private final List<String> outputs = new ArrayList<>();
+    public final List<String> outputs = new ArrayList<>();
     private FFMPEG ffmpegUsbStream;
 
     public UsbCameraService(UsbCameraEntity entity, EntityContext entityContext) {
@@ -96,11 +94,6 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         if (!aliveVideoDevices.contains(entity.getIeeeAddress())) {
             throw new RuntimeException("Camera not available");
         }
-    }
-
-    @Override
-    protected String createHlsRtspUri() {
-        return "udp://@" + outputs.get(1);
     }
 
     @Override

@@ -45,6 +45,11 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
     }
 
     @Override
+    public String getHlsRtspUri() {
+        return null;
+    }
+
+    @Override
     protected @NotNull String getDevicePrefix() {
         return "vstream";
     }

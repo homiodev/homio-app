@@ -146,7 +146,7 @@ public class CameraController {
     }
 
     private static boolean isUseCachedImage(BaseVideoService handler) {
-        return handler.isFfmpegSnapshotGeneration()
+        return handler.getFfmpegSnapshot().isRunning()
             || Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() < 1200;
     }
 

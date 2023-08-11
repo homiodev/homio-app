@@ -104,7 +104,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                         newApi = true;
                         log.debug("Alarm server successfully setup for a 2k+ Instar camera");
                         if (getEntity().getFfmpegInput().isEmpty()) {
-                            service.setOverrideRtspUri("rtsp://%s/livestream/12".formatted(service.getEntity().getIp()));
+                            service.setRtspUri("rtsp://%s/livestream/12".formatted(service.getEntity().getIp()));
                         }
                         if (service.getEntity().getMjpegUrl().equals("ffmpeg")) {
                             service.setMjpegUri("/livestream/12?action=play&media=mjpeg");
