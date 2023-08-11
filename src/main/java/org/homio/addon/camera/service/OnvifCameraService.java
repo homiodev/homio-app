@@ -52,7 +52,6 @@ import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
-import org.homio.addon.camera.onvif.impl.DoorBirdBrandHandler;
 import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
@@ -550,11 +549,11 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         // Snapshot should be first to keep consistent time between shots
         if (streamingAutoFps) {
             updateAutoFps = true;
-            if (!snapshotPolling && isEmpty(snapshotUri)) {
+            if (snapshotJob == null && isEmpty(snapshotUri)) {
                 // Don't need to poll if creating from RTSP stream with FFmpeg or we are polling at full rate already.
                 sendHttpGET(snapshotUri);
             }
-        } else if (!isEmpty(snapshotUri) && !snapshotPolling) {// we need to check camera is still online.
+        } else if (!isEmpty(snapshotUri) && snapshotJob == null) {// we need to check camera is still online.
             sendHttpGET(snapshotUri);
         }
         // what needs to be done every poll//

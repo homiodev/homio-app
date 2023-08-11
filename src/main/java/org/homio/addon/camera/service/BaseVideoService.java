@@ -106,14 +106,14 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected @Getter boolean isHandlerInitialized;
 
     // run every 8 seconds to send requests to camera, etc...
-    protected ThreadContext<Void> pollCameraJob;
+    protected @Nullable ThreadContext<Void> pollCameraJob;
     // used to try to connect to camera
-    protected ThreadContext<Void> cameraConnectionJob;
+    protected @Nullable ThreadContext<Void> cameraConnectionJob;
     // scheduler to get snapshots
-    protected ThreadContext<Void> snapshotJob;
+    protected @Nullable ThreadContext<Void> snapshotJob;
 
     // actions holder
-    protected UIInputBuilder uiInputBuilder;
+    protected @Nullable UIInputBuilder uiInputBuilder;
 
     protected String snapshotInputOptions;
     protected String mp4OutOptions;
@@ -130,7 +130,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected @Setter @Getter @NotNull String rtspUri = "";
 
     protected boolean updateAutoFps = false;
-    protected boolean snapshotPolling = false;
     protected @Setter boolean streamingSnapshotMjpeg = false;
     protected @Setter boolean streamingAutoFps = false;
 
@@ -512,27 +511,42 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     }
 
-    protected void pollCameraRunnable() {
-        FFMPEG.run(ffmpegHLS, FFMPEG::stopProcessIfNoKeepAlive);
-        FFMPEG.run(ffmpegMjpeg, FFMPEG::restartIfRequire);
-        if (!snapshotPolling) {
-            checkCameraConnection();
+    public byte[] getSnapshot() {
+        if (!entity.getStatus().isOnline()) {
+            // Single gray pixel JPG to keep streams open when the camera goes offline, so they don't stop.
+            return new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+                0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, (byte) 0xff, (byte) 0xdb, 0x00, 0x43,
+                0x00, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x03, 0x03, 0x03, 0x03, 0x04,
+                0x06, 0x04, 0x04, 0x04, 0x04, 0x04, 0x08, 0x06, 0x06, 0x05, 0x06, 0x09, 0x08, 0x0a, 0x0a, 0x09,
+                0x08, 0x09, 0x09, 0x0a, 0x0c, 0x0f, 0x0c, 0x0a, 0x0b, 0x0e, 0x0b, 0x09, 0x09, 0x0d, 0x11, 0x0d,
+                0x0e, 0x0f, 0x10, 0x10, 0x11, 0x10, 0x0a, 0x0c, 0x12, 0x13, 0x12, 0x10, 0x13, 0x0f, 0x10, 0x10,
+                0x10, (byte) 0xff, (byte) 0xc9, 0x00, 0x0b, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00,
+                (byte) 0xff, (byte) 0xcc, 0x00, 0x06, 0x00, 0x10, 0x10, 0x05, (byte) 0xff, (byte) 0xda, 0x00, 0x08,
+                0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, (byte) 0xd2, (byte) 0xcf, 0x20, (byte) 0xff, (byte) 0xd9};
+        }
+        // Most cameras will return a 503 busy error if snapshot is faster than 1 second
+        long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
+        if (snapshotJob == null && !ffmpegSnapshot.isRunning() && lastUpdatedMs >= entity.getSnapshotPollInterval()) {
+            requestSnapshotByUri();
+        }
+        lockCurrentSnapshot.lock();
+        try {
+            return latestSnapshot;
+        } finally {
+            lockCurrentSnapshot.unlock();
         }
     }
 
-    private void checkCameraConnection() {
-        if (snapshotPolling) {// Currently polling a real URL for snapshots, so camera must be online.
-            return;
-        } else if (ffmpegSnapshot.isRunning()) {// Use RTSP stream creating snapshots to know camera is online.
-            if (!ffmpegSnapshot.getIsAlive()) {
-                cameraCommunicationError("FFmpeg Snapshots Stopped: Check your camera can be reached.");
-                return;
-            }
-            return;// ffmpeg snapshot stream is still alive
+    public void startSnapshotPolling() {
+        if (snapshotJob != null || isEmpty(snapshotUri)) {
+            return; // Already polling or creating with FFmpeg from RTSP
         }
-        if (!pingCamera()) {
-            cameraCommunicationError(
-                "Connection Timeout: Check your IP and PORT are correct and the camera can be reached.");
+        if (streamingSnapshotMjpeg || streamingAutoFps) {
+            snapshotJob = entityContext.bgp()
+                                       .builder(entity.getTitle() + " SnapshotJob")
+                                       .delay(Duration.ofMillis(200))
+                                       .interval(Duration.ofSeconds(entity.getSnapshotPollInterval()))
+                                       .execute(this::requestSnapshotByUri);
         }
     }
 
@@ -590,7 +604,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected void offline() {
         entity.setStatus(Status.OFFLINE);
         isHandlerInitialized = false;
-        snapshotPolling = false;
         if (EntityContextBGP.cancel(pollCameraJob)) {
             pollCameraJob = null;
         }
@@ -664,49 +677,32 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return String.join(" ", options);
     }
 
-    public byte[] getSnapshot() {
-        if (!entity.getStatus().isOnline()) {
-            // Single gray pixel JPG to keep streams open when the camera goes offline, so they don't stop.
-            return new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
-                0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, (byte) 0xff, (byte) 0xdb, 0x00, 0x43,
-                0x00, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x03, 0x03, 0x03, 0x03, 0x04,
-                0x06, 0x04, 0x04, 0x04, 0x04, 0x04, 0x08, 0x06, 0x06, 0x05, 0x06, 0x09, 0x08, 0x0a, 0x0a, 0x09,
-                0x08, 0x09, 0x09, 0x0a, 0x0c, 0x0f, 0x0c, 0x0a, 0x0b, 0x0e, 0x0b, 0x09, 0x09, 0x0d, 0x11, 0x0d,
-                0x0e, 0x0f, 0x10, 0x10, 0x11, 0x10, 0x0a, 0x0c, 0x12, 0x13, 0x12, 0x10, 0x13, 0x0f, 0x10, 0x10,
-                0x10, (byte) 0xff, (byte) 0xc9, 0x00, 0x0b, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00,
-                (byte) 0xff, (byte) 0xcc, 0x00, 0x06, 0x00, 0x10, 0x10, 0x05, (byte) 0xff, (byte) 0xda, 0x00, 0x08,
-                0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, (byte) 0xd2, (byte) 0xcf, 0x20, (byte) 0xff, (byte) 0xd9};
-        }
-        // Most cameras will return a 503 busy error if snapshot is faster than 1 second
-        long lastUpdatedMs = Duration.between(lastSnapshotRequest, Instant.now()).toMillis();
-        if (!snapshotPolling && !ffmpegSnapshot.isRunning() && lastUpdatedMs >= entity.getSnapshotPollInterval()) {
-            requestSnapshotByUri();
-        }
-        lockCurrentSnapshot.lock();
-        try {
-            return latestSnapshot;
-        } finally {
-            lockCurrentSnapshot.unlock();
+    protected void pollCameraRunnable() {
+        FFMPEG.run(ffmpegHLS, FFMPEG::stopProcessIfNoKeepAlive);
+        FFMPEG.run(ffmpegMjpeg, FFMPEG::restartIfRequire);
+        if (snapshotJob == null) {
+            checkCameraConnection();
         }
     }
 
-    public void startSnapshotPolling() {
-        if (snapshotPolling || isEmpty(snapshotUri)) {
-            return; // Already polling or creating with FFmpeg from RTSP
+    private void checkCameraConnection() {
+        if (snapshotJob != null) {// Currently polling a real URL for snapshots, so camera must be online.
+            return;
+        } else if (ffmpegSnapshot.isRunning()) {// Use RTSP stream creating snapshots to know camera is online.
+            if (!ffmpegSnapshot.getIsAlive()) {
+                cameraCommunicationError("FFmpeg Snapshots Stopped: Check your camera can be reached.");
+                return;
+            }
+            return;// ffmpeg snapshot stream is still alive
         }
-        if (streamingSnapshotMjpeg || streamingAutoFps) {
-            snapshotPolling = true;
-            snapshotJob = entityContext.bgp()
-                                       .builder(entity.getTitle() + " SnapshotJob")
-                                       .delay(Duration.ofMillis(200))
-                                       .interval(Duration.ofSeconds(entity.getSnapshotPollInterval()))
-                                       .execute(this::requestSnapshotByUri);
+        if (!pingCamera()) {
+            cameraCommunicationError(
+                "Connection Timeout: Check your IP and PORT are correct and the camera can be reached.");
         }
     }
 
     public void stopSnapshotPolling() {
         if (!streamingSnapshotMjpeg) {
-            snapshotPolling = false;
             if (EntityContextBGP.cancel(snapshotJob)) {
                 snapshotJob = null;
             }
