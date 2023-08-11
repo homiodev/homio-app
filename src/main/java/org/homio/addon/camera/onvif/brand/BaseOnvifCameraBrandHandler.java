@@ -77,9 +77,7 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
     return null;
   }
 
-  public void cameraConnected() {
-
-  }
+  public abstract void cameraConnected();
 
   protected void setAttribute(String key, State state) {
     service.setAttribute(key, state);
@@ -97,10 +95,6 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
   }
 
   public void initialize(EntityContext entityContext) {
-
-  }
-
-  public void runOncePerMinute(EntityContext entityContext) {
 
   }
 

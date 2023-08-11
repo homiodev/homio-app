@@ -6,7 +6,6 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
@@ -15,7 +14,6 @@ import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
-import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
@@ -196,13 +194,6 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     }
 
     @Override
-    public void runOncePerMinute(EntityContext entityContext) {
-        service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=AudioDetect[0]");
-        service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=CrossLineDetection[0]");
-        service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[0]");
-    }
-
-    @Override
     public void pollCameraRunnable() {
         // Check for alarms, channel for NVRs appears not to work at filtering.
         if (service.streamIsStopped("/cgi-bin/eventManager.cgi?action=attach&codes=[All]")) {
@@ -214,6 +205,13 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     @Override
     public @Nullable String getMjpegUri() {
         return "/cgi-bin/mjpg/video.cgi?channel=" + getEntity().getNvrChannel() + "&subtype=1";
+    }
+
+    @Override
+    public void cameraConnected() {
+        service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=AudioDetect[0]");
+        service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=CrossLineDetection[0]");
+        service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[0]");
     }
 
     @Override

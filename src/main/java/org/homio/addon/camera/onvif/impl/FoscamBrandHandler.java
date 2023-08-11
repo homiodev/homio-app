@@ -6,7 +6,6 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
@@ -193,12 +192,6 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     }
 
     @Override
-    public void runOncePerMinute(EntityContext entityContext) {
-        service.sendHttpGET(CG + "getDevState&usr=" + username + "&pwd=" + password);
-        service.sendHttpGET(CG + "getAudioAlarmConfig&usr=" + username + "&pwd=" + password);
-    }
-
-    @Override
     public void initialize(EntityContext entityContext) {
         OnvifCameraEntity entity = getEntity();
         // Foscam needs any special char like spaces (%20) to be encoded for URLs.
@@ -210,6 +203,12 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     public @Nullable String getMjpegUri() {
         return "/cgi-bin/CGIStream.cgi?cmd=GetMJStream&usr=" + getEntity().getUser() + "&pwd="
             + getEntity().getPassword().asString();
+    }
+
+    @Override
+    public void cameraConnected() {
+        service.sendHttpGET(CG + "getDevState&usr=" + username + "&pwd=" + password);
+        service.sendHttpGET(CG + "getAudioAlarmConfig&usr=" + username + "&pwd=" + password);
     }
 
     @Override

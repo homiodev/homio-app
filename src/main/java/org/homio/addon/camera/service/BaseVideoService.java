@@ -131,7 +131,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected @Setter boolean streamingAutoFps = false;
 
     private @Getter @Setter @NotNull String mjpegContentType = "";
-    protected final VideoUrls urls = new VideoUrls();
+    public final VideoUrls urls = new VideoUrls();
 
     public BaseVideoService(T entity, EntityContext entityContext) {
         super(entityContext, entity, true);

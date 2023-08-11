@@ -7,7 +7,6 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.util.Helper;
@@ -105,13 +104,13 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                         newApi = true;
                         log.debug("Alarm server successfully setup for a 2k+ Instar camera");
                         if (getEntity().getFfmpegInput().isEmpty()) {
-                            service.setRtspUri("rtsp://%s/livestream/12".formatted(service.getEntity().getIp()));
+                            service.urls.setRtspUri("rtsp://%s/livestream/12".formatted(service.getEntity().getIp()));
                         }
                         if (service.getEntity().getMjpegUrl().equals("ffmpeg")) {
-                            service.setMjpegUri("/livestream/12?action=play&media=mjpeg");
+                            service.urls.setMjpegUri("/livestream/12?action=play&media=mjpeg");
                         }
                         if (service.getEntity().getRawSnapshotUrl().equals("ffmpeg")) {
-                            service.setSnapshotUri("/snap.cgi?chn=12");
+                            service.urls.setSnapshotUri("/snap.cgi?chn=12");
                         }
                     } else if (requestUrl.startsWith("/param.cgi?cmd=setmdalarm&-aname=server2&-switch=on&-interval=1")
                         && content.startsWith("[Succeed]set ok")) {
@@ -204,20 +203,33 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     }
 
     @Override
-    public void runOncePerMinute(EntityContext entityContext) {
-        service.sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=getaudioalarmattr");
-        service.sendHttpGET(newApi ? "/param.cgi?cmd=getalarmattr" : "/cgi-bin/hi3510/param.cgi?cmd=getmdattr");
-        service.sendHttpGET("/param.cgi?cmd=getinfrared");
-        service.sendHttpGET("/param.cgi?cmd=getoverlayattr&-region=1");
-        service.sendHttpGET("/param.cgi?cmd=getpirattr");
-        service.sendHttpGET("/param.cgi?cmd=getioattr"); // ext alarm input on/off
-    }
-
-    @Override
     public void pollCameraRunnable() {
         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
         service.motionDetected(false, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
         service.audioDetected(false);
+    }
+
+    @Override
+    public void cameraConnected() {
+        service.sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=getaudioalarmattr");
+        service.sendHttpGET("/param.cgi?cmd=getioattr");
+        service.sendHttpGET(newApi ? "/param.cgi?cmd=getalarmattr" : "/cgi-bin/hi3510/param.cgi?cmd=getmdattr");
+        service.sendHttpGET("/param.cgi?cmd=getpirattr");
+        service.sendHttpGET("/param.cgi?cmd=getinfrared");
+        service.sendHttpGET("/param.cgi?cmd=getoverlayattr&-region=1");
+    }
+
+    @Override
+    public void initialize(EntityContext entityContext) {
+        if (service.lowPriorityRequests.isEmpty()) {
+            service.lowPriorityRequests.add("/param.cgi?cmd=getaudioalarmattr");
+            service.lowPriorityRequests.add("/cgi-bin/hi3510/param.cgi?cmd=getmdattr");
+            service.lowPriorityRequests.add("/param.cgi?cmd=getalarmattr");
+            service.lowPriorityRequests.add("/param.cgi?cmd=getinfrared");
+            service.lowPriorityRequests.add("/param.cgi?cmd=getoverlayattr&-region=1");
+            service.lowPriorityRequests.add("/param.cgi?cmd=getpirattr");
+            service.lowPriorityRequests.add("/param.cgi?cmd=getioattr"); // ext alarm input on/off
+        }
     }
 
     @Override

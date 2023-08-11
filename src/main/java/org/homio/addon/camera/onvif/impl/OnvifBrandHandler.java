@@ -15,7 +15,12 @@ public class OnvifBrandHandler extends BaseOnvifCameraBrandHandler {
     super(service);
   }
 
-  @Override
+    @Override
+    public void cameraConnected() {
+
+    }
+
+    @Override
   public boolean isSupportOnvifEvents() {
     return true;
   }

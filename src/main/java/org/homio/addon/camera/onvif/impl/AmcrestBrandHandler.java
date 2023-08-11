@@ -212,14 +212,6 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
   }
 
   @Override
-  public void runOncePerMinute(EntityContext entityContext) {
-    service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=AudioDetect[0]");
-    service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=LeLensMask[0]");
-    service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[0]");
-    service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=CrossLineDetection[0]");
-  }
-
-  @Override
   public void pollCameraRunnable() {
     service.sendHttpGET("/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion");
     service.sendHttpGET("/cgi-bin/eventManager.cgi?action=getEventIndexes&code=AudioMutation");
@@ -228,6 +220,14 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
   @Override
   public @Nullable String getMjpegUri() {
     return "/cgi-bin/mjpg/video.cgi?channel=" + getEntity().getNvrChannel() + "&subtype=1";
+  }
+
+  @Override
+  public void cameraConnected() {
+    service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=AudioDetect[0]");
+    service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=LeLensMask[0]");
+    service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[0]");
+    service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=CrossLineDetection[0]");
   }
 
   @Override

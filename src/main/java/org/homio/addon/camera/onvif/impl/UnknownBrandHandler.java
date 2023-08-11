@@ -8,4 +8,9 @@ public class UnknownBrandHandler extends BaseOnvifCameraBrandHandler {
   public UnknownBrandHandler(OnvifCameraService service) {
     super(service);
   }
+
+  @Override
+  public void cameraConnected() {
+
+  }
 }

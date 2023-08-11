@@ -5,7 +5,6 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
@@ -29,7 +28,6 @@ import org.springframework.http.MediaType;
 public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implements BrandCameraHasMotionAlarm {
 
   private int lineCount, vmdCount, leftCount, takenCount, faceCount, pirCount, fieldCount;
-  private boolean checkAlarmInput;
 
   public HikvisionBrandHandler(OnvifCameraService service) {
     super(service);
@@ -163,7 +161,6 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
             if (content.contains("<requestURL>/ISAPI/System/IO/inputs/" + nvrChannel + "/status</requestURL>")) {
               // Stops checking the external alarm if camera does not have feature.
               if (content.contains("<statusString>Invalid Operation</statusString>")) {
-                checkAlarmInput = false;
                 log.debug("[{}]: Stopping checks for alarm inputs as camera appears to be missing this feature.", entityID);
               }
             }
@@ -365,18 +362,6 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
   }
 
   @Override
-  public void runOncePerMinute(EntityContext entityContext) {
-    if (checkAlarmInput) {
-      service.sendHttpGET("/ISAPI/System/IO/inputs/" + nvrChannel + "/status"); // must stay in element 0.
-    }
-    service.sendHttpGET("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection");
-    service.sendHttpGET("/ISAPI/Smart/LineDetection/" + nvrChannel + "01");
-    service.sendHttpGET("/ISAPI/Smart/AudioDetection/channels/" + nvrChannel + "01");
-    service.sendHttpGET("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1");
-    service.sendHttpGET("/ISAPI/System/IO/inputs/" + nvrChannel);
-  }
-
-  @Override
   public void pollCameraRunnable() {
     if (service.streamIsStopped("/ISAPI/Event/notification/alertStream")) {
       log.info("[{}]: The alarm stream was not running for camera {}, re-starting it now",
@@ -386,13 +371,29 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
   }
 
   @Override
+  public @Nullable String getSnapshotUri() {
+    return "/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "01" + "/picture";
+  }
+
+  @Override
   public @Nullable String getMjpegUri() {
     return "/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "02" + "/httppreview";
   }
 
   @Override
-  public @Nullable String getSnapshotUri() {
-    return "/ISAPI/Streaming/channels/" + getEntity().getNvrChannel() + "01" + "/picture";
+  public void initialize(EntityContext entityContext) {
+    if (service.lowPriorityRequests.isEmpty()) {
+      service.lowPriorityRequests.add("/ISAPI/System/IO/inputs/" + getEntity().getNvrChannel() + "/status");
+    }
+  }
+
+  @Override
+  public void cameraConnected() {
+    service.sendHttpGET("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection");
+    service.sendHttpGET("/ISAPI/Smart/LineDetection/" + nvrChannel + "01");
+    service.sendHttpGET("/ISAPI/Smart/AudioDetection/channels/" + nvrChannel + "01");
+    service.sendHttpGET("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1");
+    service.sendHttpGET("/ISAPI/System/IO/inputs/" + nvrChannel);
   }
 
   @Override

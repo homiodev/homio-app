@@ -63,7 +63,12 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
     return "/bha-api/video.cgi";
   }
 
-  @Override
+    @Override
+    public void cameraConnected() {
+      // do nothing
+    }
+
+    @Override
   public @Nullable String getSnapshotUri() {
     return "/bha-api/image.cgi";
   }

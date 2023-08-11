@@ -430,31 +430,13 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @Override
-    public void initialize(EntityContext entityContext) {
-        runOncePerMinute(entityContext);
-    }
-
-    @Override
     public @Nullable String getSnapshotUri() {
         return "/cgi-bin/api.cgi?cmd=Snap&channel=%s&rs=homio&token=%s".formatted(
             service.getEntity().getNvrChannel(), token);
     }
 
     @Override
-    public void pollCameraRunnable() {
-       /* OnvifCameraService service = getService();
-        if (getEntity().getNvrChannel() > 0) {
-            service.sendHttpGET("/api.cgi?cmd=GetAiState&channel=" + getEntity().getNvrChannel() + "&user="
-                + getEntity().getUser() + "&password=" + getEntity().getPassword().asString());
-            service.sendHttpGET("/api.cgi?cmd=GetMdState&channel=" + getEntity().getNvrChannel() + "&user="
-                + getEntity().getUser() + "&password=" + getEntity().getPassword().asString());
-            return false;
-        }
-        return true;*/
-    }
-
-    @Override
-    public void runOncePerMinute(EntityContext entityContext) {
+    public void cameraConnected() {
         loginIfRequire();
 
         Root[] roots = firePost("", true,
@@ -485,6 +467,19 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                 }
             }
         }
+    }
+
+    @Override
+    public void pollCameraRunnable() {
+       /* OnvifCameraService service = getService();
+        if (getEntity().getNvrChannel() > 0) {
+            service.sendHttpGET("/api.cgi?cmd=GetAiState&channel=" + getEntity().getNvrChannel() + "&user="
+                + getEntity().getUser() + "&password=" + getEntity().getPassword().asString());
+            service.sendHttpGET("/api.cgi?cmd=GetMdState&channel=" + getEntity().getNvrChannel() + "&user="
+                + getEntity().getUser() + "&password=" + getEntity().getPassword().asString());
+            return false;
+        }
+        return true;*/
     }
 
     @Override

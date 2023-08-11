@@ -31,6 +31,8 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -88,7 +90,9 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     // basicAuth MUST remain private as it holds the cameraEntity.getPassword()
     private @NotNull FullHttpRequest postRequestWithBody = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod("POST"), "");
     private String basicAuth = "";
-    private long lastLowRequest;
+
+    public List<String> lowPriorityRequests = new ArrayList<>(0);
+    private byte lowPriorityCounter = 0;
 
     public OnvifCameraService(EntityContext entityContext, OnvifCameraEntity entity) {
         super(entity, entityContext);
@@ -519,6 +523,15 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected void pollCameraRunnable() {
+        onvifDeviceState.getEventDevices().pollCameraRunnable();
+        // NOTE: Use lowPriorityRequests if get request is not needed every poll.
+        if (!lowPriorityRequests.isEmpty()) {
+            if (lowPriorityCounter >= lowPriorityRequests.size()) {
+                lowPriorityCounter = 0;
+            }
+            sendHttpGET(lowPriorityRequests.get(lowPriorityCounter++));
+        }
+
         super.pollCameraRunnable();
         // what needs to be done every poll//
         brandHandler.pollCameraRunnable();
@@ -526,19 +539,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         if (openChannels.size() > 10) {
             log.debug("[{}]: There are {} open Channels being tracked.", getEntityID(), openChannels.size());
             cleanChannels();
-        }
-
-        if (System.currentTimeMillis() - lastLowRequest > 60000) {
-            lastLowRequest = System.currentTimeMillis();
-            try {
-                onvifDeviceState.runOncePerMinute();
-                brandHandler.runOncePerMinute(entityContext);
-            } catch (Exception ex) {
-                log.error("[{}]: Error during execute onvif service: {}", entityID, getErrorMessage(ex));
-                if (ex.getCause() instanceof ConnectException) {
-                    entity.setStatusError("Connection exception");
-                }
-            }
         }
     }
 
@@ -559,7 +559,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected void cameraConnected() {
-        this.lastLowRequest = System.currentTimeMillis();
         brandHandler.cameraConnected();
     }
 

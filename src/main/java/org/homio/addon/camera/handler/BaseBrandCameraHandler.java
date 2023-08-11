@@ -23,8 +23,6 @@ public interface BaseBrandCameraHandler {
 
   void initialize(EntityContext entityContext);
 
-  void runOncePerMinute(EntityContext entityContext);
-
   String getUrlToKeepOpenForIdleStateEvent();
 
   default Consumer<Boolean> getIRLedHandler() {
