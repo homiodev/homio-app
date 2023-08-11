@@ -45,6 +45,11 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     }
 
     @Override
+    protected boolean pingCamera() {
+        return true;
+    }
+
+    @Override
     protected void updateNotificationBlock() {
         CameraEntrypoint.updateCamera(entityContext, getEntity(),
             null,
@@ -82,9 +87,7 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
 
     @Override
     protected void dispose0() {
-        super.dispose0();
         ffmpegUsbStream.stopConverting();
-
     }
 
     @Override

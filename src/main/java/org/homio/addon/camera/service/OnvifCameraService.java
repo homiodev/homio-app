@@ -9,6 +9,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -51,6 +52,7 @@ import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.brand.CameraBrandHandlerDescription;
+import org.homio.addon.camera.onvif.impl.DoorBirdBrandHandler;
 import org.homio.addon.camera.onvif.impl.UnknownBrandHandler;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
@@ -183,6 +185,20 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return inputOptions;
     }
 
+    @Override
+    protected boolean pingCamera() {
+        // Open a HTTP connection without sending any requests as we do not need a snapshot.
+        Bootstrap localBootstrap = mainBootstrap;
+        if (localBootstrap != null) {
+            ChannelFuture chFuture = localBootstrap.connect(new InetSocketAddress(entity.getIp(), entity.getRestPort()));
+            if (chFuture.awaitUninterruptibly(500)) {
+                chFuture.channel().close();
+                return true;
+            }
+        }
+        return false;
+    }
+
     public VideoPlaybackStorage getVideoPlaybackStorage() {
         return (VideoPlaybackStorage) brandHandler;
     }
@@ -294,7 +310,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                          if (future.isDone() && future.isSuccess()) {
                              Channel ch = future.channel();
                              openChannels.add(ch);
-                             lastAnswerFromVideo = System.currentTimeMillis();
+                             bringCameraOnline();
                              log.debug("[{}]: Sending camera: {}: http://{}:{}{}", getEntityID(), httpMethod,
                                  entity.getIp(), port, httpRequestURL);
                              channelTrackingMap.put(httpRequestURL, new ChannelTracking(ch, httpRequestURL));
@@ -308,7 +324,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                              ch.writeAndFlush(request);
                          } else { // an error occurred
                              log.warn("[{}]: Error handle camera: <{}>. Error: <{}>", getEntityID(), entity, getErrorMessage(future.cause()));
-                             entity.setStatusError("Connection Timeout");
+                             cameraCommunicationError("Connection Timeout");
                          }
                      });
     }
@@ -572,19 +588,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
         brandHandler.initialize(entityContext);
 
-        pullConfigJob = entityContext.bgp().builder("video-run-per-min-" + entity.getEntityID())
-                                     .delay(Duration.ofSeconds(30)).interval(Duration.ofSeconds(60)).execute(() -> {
-                try {
-                    onvifDeviceState.runOncePerMinute();
-                    brandHandler.runOncePerMinute(entityContext);
-                } catch (Exception ex) {
-                    log.error("[{}]: Error during execute onvif service: {}", entityID, getErrorMessage(ex));
-                    if (ex.getCause() instanceof ConnectException) {
-                        entity.setStatusError("Connection exception");
-                    }
-                }
-            });
-
         if (("ffmpeg".equals(snapshotUri) || isEmpty(snapshotUri)) && isEmpty(getRtspUri(null))) {
             throw new RuntimeException("Camera unable to find valid Snapshot and/or RTSP URL.");
         }
@@ -598,19 +601,52 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    protected void dispose0() {
-        super.dispose0();
-        snapshotPolling = false;
-        onvifDeviceState.dispose();
+    protected void cameraConnected() {
+        pullConfigJob = entityContext.bgp().builder("video-run-per-min-" + entity.getEntityID())
+                                     .delay(Duration.ofSeconds(30)).interval(Duration.ofSeconds(60)).execute(() -> {
+                try {
+                    onvifDeviceState.runOncePerMinute();
+                    brandHandler.runOncePerMinute(entityContext);
+                } catch (Exception ex) {
+                    log.error("[{}]: Error during execute onvif service: {}", entityID, getErrorMessage(ex));
+                    if (ex.getCause() instanceof ConnectException) {
+                        entity.setStatusError("Connection exception");
+                    }
+                }
+            });
+    }
 
+    @Override
+    protected void offline() {
+        super.offline();
+        onvifDeviceState.dispose();
         if (pullConfigJob != null) {
             pullConfigJob.cancel();
         }
+        openChannels.close();
+    }
+
+    @Override
+    protected void dispose0() {
 
         basicAuth = ""; // clear out stored Password hash
         useDigestAuth = false;
-        openChannels.close();
-        channelTrackingMap.clear();
+    }
+
+    @Override
+    protected boolean pollingCameraConnectionChild() {
+        if (brandHandler instanceof UnknownBrandHandler ||
+            brandHandler instanceof DoorBirdBrandHandler) {
+            if (snapshotUri.isEmpty() || "ffmpeg".equals(snapshotUri)) {
+                snapshotIsFfmpeg(getRtspUri(null));
+            } else {
+                ffmpegSnapshotGeneration = false;
+                updateSnapshot();
+            }
+            return true;
+        }
+        onvifDeviceState.checkForErrors();
+        return false;
     }
 
     @Override

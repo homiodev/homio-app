@@ -2,8 +2,6 @@ package org.homio.addon.camera.service;
 
 import static org.apache.commons.lang3.StringUtils.defaultString;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpRequest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +49,16 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
     @Override
     public String getFFMPEGInputOptions(String profile) {
         return videoSourceType.ffmpegInputOptions;
+    }
+
+    @Override
+    protected boolean pingCamera() {
+        return true;
+    }
+
+    @Override
+    protected void dispose0() {
+        // ignore
     }
 
     @Override

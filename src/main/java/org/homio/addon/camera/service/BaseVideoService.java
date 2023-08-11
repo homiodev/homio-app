@@ -31,6 +31,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.homio.addon.camera.CameraController.OpenStreamsContainer;
 import org.homio.addon.camera.OpenStreams;
 import org.homio.addon.camera.entity.AbilityToStreamHLSOverFFMPEG;
@@ -75,6 +76,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected abstract String getFFMPEGInputOptions(@Nullable String profile);
 
+    protected abstract boolean pingCamera();
+
+    protected abstract void dispose0();
+
     protected @NotNull Map<String, ChannelTracking> channelTrackingMap = new ConcurrentHashMap<>();
 
     private @Getter Path ffmpegOutputPath;
@@ -104,10 +109,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     // run every 8 seconds to send requests to camera, etc...
     protected ThreadContext<Void> pollCameraJob;
-    // not used
+    // used to try to connect to camera
     protected ThreadContext<Void> cameraConnectionJob;
     // scheduler to get snapshots
-    private EntityContextBGP.ThreadContext<Void> snapshotJob;
+    protected ThreadContext<Void> snapshotJob;
 
     // actions holder
     protected UIInputBuilder uiInputBuilder;
@@ -141,6 +146,82 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
     }
 
+    private void tryConnecting() {
+        cameraConnectionJob = entityContext.bgp().builder("video-connect-" + entityID)
+                                           .intervalWithDelay(Duration.ofSeconds(8))
+                                           .execute(this::pollingCameraConnection);
+    }
+
+    private void pollingCameraConnection() {
+        keepMjpegRunning();
+        String rtspUri = getRtspUri(null);
+        if (isEmpty(rtspUri)) {
+            log.warn("Binding has not been supplied with a FFmpeg Input URL, so some features will not work.");
+        }
+        if(pollingCameraConnectionChild()) {
+            return;
+        }
+        if ("ffmpeg".equals(snapshotUri)) {
+            snapshotIsFfmpeg(rtspUri);
+        } else if (!snapshotUri.isEmpty()) {
+            ffmpegSnapshotGeneration = false;
+            updateSnapshot();
+        } else if (!rtspUri.isEmpty()) {
+            snapshotIsFfmpeg(rtspUri);
+        } else {
+            entity.setStatus(Status.ERROR, "Camera failed to report a valid Snapshot and/or RTSP URL");
+        }
+    }
+
+    protected boolean pollingCameraConnectionChild() {
+        return false;
+    }
+
+    protected void snapshotIsFfmpeg(String rtspUri) {
+        snapshotUri = "";// ffmpeg is a valid option. Simplify further checks.
+        log.debug("Binding has no snapshot url. Will use your CPU and FFmpeg to create snapshots from the cameras RTSP.");
+        bringCameraOnline();
+        if (StringUtils.isNotEmpty(rtspUri)) {
+            // updateImageChannel = false;
+            ffmpegSnapshotGeneration = true;
+            ffmpegSnapshot.startConverting();
+            //updateState(CHANNEL_POLL_IMAGE, OnOffType.ON);
+        } else {
+            cameraConfigError("Binding can not find a RTSP url for this camera, please provide a FFmpeg Input URL.");
+        }
+    }
+
+    public void cameraConfigError(String reason) {
+        // won't try to reconnect again due to a config error being the cause.
+        entity.setStatus(Status.ERROR, reason);
+        dispose();
+    }
+
+    protected void keepMjpegRunning() {
+        OpenStreamsContainer openStreams = camerasOpenStreams.get(entityID);
+        if (!openStreams.openStreams.isEmpty()) {
+            if (!mjpegUri.isEmpty() && !"ffmpeg".equals(mjpegUri)) {
+                openStreams.openStreams.queueFrame(("--" + openStreams.openStreams.boundary + "\r\n\r\n").getBytes());
+            }
+            openStreams.openStreams.queueFrame(getSnapshot());
+        }
+    }
+
+    public void cameraCommunicationError(String reason) {
+        // will try to reconnect again as camera may be rebooting.
+        boolean isOnline = entity.getStatus().isOnline();
+        entity.setStatus(Status.ERROR, reason);
+        entityUpdated();
+        if (isOnline) {
+            resetAndRetryConnecting();
+        }
+    }
+
+    protected void resetAndRetryConnecting() {
+        offline();
+        tryConnecting();
+    }
+
     @Override
     public void destroy() {
         dispose();
@@ -159,9 +240,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             }
 
             initialize0();
-
-            entity.setStatusOnline();
-            entityUpdated();
         } catch (Exception ex) {
             disposeAndSetStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
         }
@@ -221,22 +299,32 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public final void bringCameraOnline() {
-        entity.setStatusOnline();
+        log.debug("Bring camera online");
         lastAnswerFromVideo = System.currentTimeMillis();
-        if (EntityContextBGP.cancel(cameraConnectionJob)) {
-            cameraConnectionJob = null;
-        }
+        if (!entity.getStatus().isOnline()) {
+            entity.setStatusOnline();
+            cameraConnected();
+            if (EntityContextBGP.cancel(cameraConnectionJob)) {
+                cameraConnectionJob = null;
+            }
 
-        if (pollCameraJob == null && isHandlerInitialized) {
-            pollCameraJob = entityContext.bgp().builder("poll-video-runnable-" + entityID)
-                                         .intervalWithDelay(Duration.ofSeconds(8)).execute(this::pollCameraRunnable);
-        }
+            if (isHandlerInitialized) {
+                pollCameraJob = entityContext.bgp().builder("poll-video-runnable-" + entityID)
+                                             .delay(Duration.ofSeconds(1))
+                                             .interval(Duration.ofSeconds(8))
+                                             .execute(this::pollCameraRunnable);
+            }
 
-        // auto restart mjpeg stream now camera is back online.
-        OpenStreams openStreams = camerasOpenStreams.get(entityID).openStreams;
-        if (!openStreams.isEmpty()) {
-            openCamerasStream();
+            // auto restart mjpeg stream now camera is back online.
+            OpenStreams openStreams = camerasOpenStreams.get(entityID).openStreams;
+            if (!openStreams.isEmpty()) {
+                openCamerasStream();
+            }
+            entityUpdated();
         }
+    }
+
+    protected void cameraConnected() {
     }
 
     public void openCamerasStream() {
@@ -468,12 +556,24 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     protected void pollCameraRunnable() {
         FFMPEG.run(ffmpegHLS, FFMPEG::stopProcessIfNoKeepAlive);
         FFMPEG.run(ffmpegMjpeg, FFMPEG::restartIfRequire);
+        if (!snapshotPolling) {
+            checkCameraConnection();
+        }
+    }
 
-        long timePassed = System.currentTimeMillis() - lastAnswerFromVideo;
-        if (timePassed > 1200000) { // more than 2 min passed
-            disposeAndSetStatus(Status.OFFLINE, "More that 2 min without answer from source");
-        } else if (timePassed > 30000 || System.currentTimeMillis() - currentSnapshotTime.toEpochMilli() > 30000) {
-            requestSnapshot();
+    private void checkCameraConnection() {
+        if (snapshotPolling) {// Currently polling a real URL for snapshots, so camera must be online.
+            return;
+        } else if (ffmpegSnapshotGeneration) {// Use RTSP stream creating snapshots to know camera is online.
+            if (!ffmpegSnapshot.getIsAlive()) {
+                cameraCommunicationError("FFmpeg Snapshots Stopped: Check your camera can be reached.");
+                return;
+            }
+            return;// ffmpeg snapshot stream is still alive
+        }
+        if (!pingCamera()) {
+            cameraCommunicationError(
+                "Connection Timeout: Check your IP and PORT are correct and the camera can be reached.");
         }
     }
 
@@ -508,23 +608,11 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
                 () -> setAttribute(CHANNEL_START_STREAM, OnOffType.OFF));
             setAttribute("FFMPEG_HLS", new StringType(String.join(" ", ffmpegHLS.getCommandArrayList())));
         }
+        tryConnecting();
     }
 
     protected String createHlsRtspUri() {
         return getRtspUrlInternal(null);
-    }
-
-    protected void dispose0() {
-        if (EntityContextBGP.cancel(snapshotJob)) {
-            snapshotJob = null;
-        }
-        FFMPEG.run(ffmpegHLS, FFMPEG::stopConverting);
-        FFMPEG.run(ffmpegMP4, FFMPEG::stopConverting);
-        FFMPEG.run(ffmpegGIF, FFMPEG::stopConverting);
-        FFMPEG.run(ffmpegMjpeg, FFMPEG::stopConverting);
-        FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
-        ffMpegRtspAlarm.stop();
-        camerasOpenStreams.remove(entityID).dispose();
     }
 
     protected void setMotionAlarmThreshold(int threshold) {
@@ -546,20 +634,40 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         return entity.isHasAudioStream();
     }
 
+    protected void offline() {
+        entity.setStatus(Status.OFFLINE);
+        isHandlerInitialized = false;
+        snapshotPolling = false;
+        if (EntityContextBGP.cancel(pollCameraJob)) {
+            pollCameraJob = null;
+        }
+        if (EntityContextBGP.cancel(cameraConnectionJob)) {
+            cameraConnectionJob = null;
+        }
+        if (EntityContextBGP.cancel(snapshotJob)) {
+            snapshotJob = null;
+        }
+
+        FFMPEG.run(ffmpegHLS, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegMP4, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegGIF, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegMjpeg, FFMPEG::stopConverting);
+        FFMPEG.run(ffmpegSnapshot, FFMPEG::stopConverting);
+
+        ffMpegRtspAlarm.stop();
+    }
+
     private void dispose() {
         log.info("[{}]: Dispose video: <{}>", entityID, getEntity());
-        isHandlerInitialized = false;
-        disposePollVideoJob();
+        offline();
+
+        camerasOpenStreams.remove(entityID).dispose();
+        channelTrackingMap.clear();
+
         try {
             dispose0();
         } catch (Exception ex) {
             log.error("[{}]: Error while dispose video: <{}>", entityID, getEntity(), ex);
-        }
-    }
-
-    private void disposePollVideoJob() {
-        if (EntityContextBGP.cancel(pollCameraJob)) {
-            pollCameraJob = null;
         }
     }
 
@@ -657,8 +765,8 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     public void stopSnapshotPolling() {
         if (!streamingSnapshotMjpeg) {
             snapshotPolling = false;
-            if (snapshotJob != null) {
-                snapshotJob.cancel();
+            if (EntityContextBGP.cancel(snapshotJob)) {
+                snapshotJob = null;
             }
         }
     }
