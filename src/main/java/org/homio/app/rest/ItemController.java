@@ -141,13 +141,13 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuAction.class)) {
             UIContextMenuAction menuAction = method.getDeclaredAnnotation(UIContextMenuAction.class);
             if (menuAction.value().equals(request.getEntityID())) {
-                return executeMethodAction(method, actionHolder, entityContext, actionEntity, request.getParams());
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, request.metadata);
             }
         }
         for (Method method : MethodUtils.getMethodsWithAnnotation(actionHolder.getClass(), UIContextMenuUploadAction.class)) {
             UIContextMenuUploadAction menuAction = method.getDeclaredAnnotation(UIContextMenuUploadAction.class);
             if (menuAction.value().equals(request.getEntityID())) {
-                return executeMethodAction(method, actionHolder, entityContext, actionEntity, request.getParams());
+                return executeMethodAction(method, actionHolder, entityContext, actionEntity, request.metadata);
             }
         }
         // in case when action attached to field or method
@@ -158,14 +158,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                                              .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
             if (field != null) {
                 for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
-                    if (actionButton.name().equals(request.getEntityID())) {
-                        CommonUtils.newInstance(actionButton.actionHandler()).handleAction(entityContext, request.params);
+                    if (actionButton.name().equals(request.metadata.get("action"))) {
+                        return CommonUtils.newInstance(actionButton.actionHandler()).handleAction(entityContext, request.metadata);
                     }
                 }
             }
         }
         if (actionHolder instanceof HasDynamicContextMenuActions) {
-            return ((HasDynamicContextMenuActions) actionHolder).handleAction(entityContext, request.getEntityID(), request.params);
+            return ((HasDynamicContextMenuActions) actionHolder).handleAction(entityContext, request.getEntityID(), request.metadata);
         }
         throw new IllegalArgumentException("Unable to find action: <" + request.getEntityID() + "> for model: " + actionHolder);
     }
@@ -352,10 +352,11 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         @RequestParam("data") MultipartFile[] files) {
         try {
             BaseEntity<?> entity = entityContext.getEntityRequire(entityID);
-            request.params.put("files", files);
-            for (String key : request.params.keySet().stream().filter(k -> k.startsWith("field.")).toList()) {
-                request.params.put(key.substring("field.".length()), request.params.get(key));
+            request.metadata.put("files", files);
+            for (String key : request.metadata.keySet().stream().filter(k -> k.startsWith("field.")).toList()) {
+                request.metadata.put(key.substring("field.".length()), request.metadata.get(key));
             }
+            request.metadata.put("entityID", entityID);
             return executeAction(request, entity, entity);
         } catch (Exception ex) {
             log.error("Error while execute action: {}", CommonUtils.getErrorMessage(ex));
@@ -367,7 +368,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel notificationAction(@PathVariable("entityID") String entityID,
         @RequestBody ActionModelRequest request) throws Exception {
-        return entityContext.ui().handleNotificationAction(entityID, request.entityID, request.params);
+        return entityContext.ui().handleNotificationAction(entityID, request.entityID, request.metadata);
     }
 
     @GetMapping("/{type}/actions")
@@ -890,6 +891,5 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         private String entityID;
         private JSONObject metadata;
-        private JSONObject params;
     }
 }

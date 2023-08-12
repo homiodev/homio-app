@@ -420,7 +420,7 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
                                          .toString());
         }),
         LastImage("Last image", (workspaceBlock, scratch) -> {
-            return new RawType(scratch.getEntity(workspaceBlock, scratch.menuFfmpegCamera).getLastSnapshot(),
+            return new RawType(scratch.getEntity(workspaceBlock, scratch.menuFfmpegCamera).getSnapshot(),
                 MimeTypeUtils.IMAGE_JPEG_VALUE);
         });
 

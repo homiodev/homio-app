@@ -99,7 +99,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private final FFMpegRtspAlarm ffMpegRtspAlarm;
 
     protected ReentrantLock lockCurrentSnapshot = new ReentrantLock();
-    protected @Getter byte[] latestSnapshot = new byte[0];
+    protected byte[] latestSnapshot = new byte[0];
     protected @Getter long lastAnswerFromVideo;
     protected @Getter boolean motionDetected;
 
@@ -588,7 +588,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         log.info("[{}]: Dispose video: <{}>", entityID, getEntity());
         offline();
 
-        camerasOpenStreams.remove(entityID).dispose();
+        OpenStreamsContainer container = camerasOpenStreams.remove(entityID);
+        if (container != null) {
+            container.dispose();
+        }
         channelTrackingMap.clear();
 
         try {

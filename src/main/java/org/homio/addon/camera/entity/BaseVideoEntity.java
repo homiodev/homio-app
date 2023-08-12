@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,6 +22,8 @@ import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.FileContentType;
+import org.homio.api.model.FileModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.state.State;
 import org.homio.api.ui.action.UIActionHandler;
@@ -148,8 +151,10 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @UIFieldImage
     @UIActionButton(name = "refresh", icon = "fas fa-sync",
                     actionHandler = BaseVideoEntity.UpdateSnapshotActionHandler.class)
-    public byte[] getLastSnapshot() {
-        return optService().map(BaseVideoService::getLatestSnapshot).orElse(null);
+    @UIActionButton(name = "get", icon = "fas fa-camera",
+                    actionHandler = BaseVideoEntity.GetSnapshotActionHandler.class)
+    public byte[] getSnapshot() {
+        return optService().map(BaseVideoService::getSnapshot).orElse(null);
     }
 
     // not all entity has user name
@@ -305,7 +310,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         if (!isStart()) {
             throw new ServerException("ERROR.NOT_STARTED", getTitle());
         }
-        optService().ifPresent(BaseVideoService::scheduleRequestSnapshot);
+        getService().scheduleRequestSnapshot();
     }
 
     @Override
@@ -325,6 +330,18 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
             BaseVideoEntity entity = entityContext.getEntityRequire(params.getString("entityID"));
             entity.fireUpdateSnapshot(entityContext, params);
             return null;
+        }
+    }
+
+    public static class GetSnapshotActionHandler implements UIActionHandler {
+
+        @Override
+        public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
+            BaseVideoEntity entity = entityContext.getEntityRequire(params.getString("entityID"));
+            String encodedValue =
+                "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(entity.getSnapshot());
+            FileModel snapshot = new FileModel("Snapshot", encodedValue, FileContentType.image, true);
+            return ActionResponseModel.showFile(snapshot);
         }
     }
 

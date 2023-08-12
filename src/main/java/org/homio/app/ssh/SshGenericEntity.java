@@ -19,7 +19,6 @@ import com.sshtools.common.publickey.SshPublicKeyFile;
 import com.sshtools.common.publickey.SshPublicKeyFileFactory;
 import com.sshtools.common.ssh.components.SshKeyPair;
 import jakarta.persistence.Entity;
-import java.util.Collections;
 import java.util.Objects;
 import lombok.SneakyThrows;
 import org.homio.api.EntityContext;
@@ -287,7 +286,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         }
         String publicKey = getJsonData("pub_key");
         FileModel publicKeyModel = new FileModel("Public key", publicKey, FileContentType.plaintext, true);
-        return ActionResponseModel.showFiles(Collections.singleton(publicKeyModel));
+        return ActionResponseModel.showFile(publicKeyModel);
     }
 
     @SneakyThrows

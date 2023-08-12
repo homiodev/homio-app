@@ -130,7 +130,7 @@ public class ConsoleController implements ContextRefreshed {
             HasEntityIdentifier identifier = table.findEntity(entityID);
             return itemController.executeAction(request, identifier, entityContext.getEntity(identifier.getEntityID()));
         }
-        return consolePlugin.executeAction(entityID, request.getMetadata(), request.getParams());
+        return consolePlugin.executeAction(entityID, request.getMetadata());
     }
 
     @GetMapping("/tab/{tab}/{entityID}/{fieldName}/options")
