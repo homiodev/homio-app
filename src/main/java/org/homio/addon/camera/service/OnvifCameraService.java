@@ -7,7 +7,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -33,6 +32,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -52,6 +52,7 @@ import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.onvif.util.MyNettyAuthHandler;
 import org.homio.addon.camera.service.util.CommonCameraHandler;
+import org.homio.addon.camera.service.util.VideoUtils;
 import org.homio.addon.camera.ui.UICameraActionConditional;
 import org.homio.addon.camera.ui.UICameraDimmerButton;
 import org.homio.addon.camera.ui.UIVideoAction;
@@ -65,7 +66,7 @@ import org.homio.api.state.ObjectType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.RawType;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
-import org.homio.hquery.Curl;
+import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.schema.Profile;
@@ -179,15 +180,10 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected boolean pingCamera() {
-        // Open a HTTP connection without sending any requests as we do not need a snapshot.
-        Bootstrap localBootstrap = mainBootstrap;
-        if (localBootstrap != null) {
-            ChannelFuture chFuture = localBootstrap.connect(new InetSocketAddress(entity.getIp(), entity.getRestPort()));
-            if (chFuture.awaitUninterruptibly(500)) {
-                chFuture.channel().close();
-                return true;
-            }
-        }
+        try {
+            CommonUtils.ping(entity.getIp(), entity.getRestPort());
+            return true;
+        } catch (Exception ignore) {}
         return false;
     }
 
@@ -473,8 +469,10 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         if (snapshotUri.equals("ffmpeg")) {
             return super.recordImageSync(profile);
         }
-        OnvifCameraEntity entity = getEntity();
-        return new RawType(Curl.download(snapshotUri, entity.getUser(), entity.getPassword().asString()));
+        if (snapshotUri.startsWith("/")) {
+            snapshotUri = "http://%s:%s%s".formatted(getEntity().getIp(), getEntity().getRestPort(), brandHandler.getSnapshotUri());
+        }
+        return new RawType(VideoUtils.downloadImage(snapshotUri, entity.getUser(), entity.getPassword().asString()));
     }
 
     @Override
@@ -502,7 +500,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
                 if (!channelTracking.getChannel().isOpen() && channelTracking.getReply().isEmpty()) {
                     channelTrackingMap.remove(channelTracking.getRequestUrl());
                 }
-                if (channelTracking.getChannel() == channel) {
+                if (Objects.equals(channelTracking.getChannel(), channel)) {
                     log.debug("[{}]: Open channel to camera is used for URL:{}", getEntityID(), channelTracking.getRequestUrl());
                     oldChannel = false;
                 }
@@ -575,12 +573,11 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected void pollCameraConnection() throws Exception {
-        onvifDeviceState.checkForErrors();
         onvifDeviceState.initFully(entity.getOnvifMediaProfile(), brandHandler.isSupportOnvifEvents());
         setAttribute("PROFILES", new ObjectType(onvifDeviceState.getProfiles()));
         for (Profile profile : onvifDeviceState.getProfiles()) {
-            urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getName()));
-            urls.setSnapshotUri(onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getName()));
+            urls.setRtspUri(onvifDeviceState.getMediaDevices().getRTSPStreamUri(profile.getName()), profile.getName());
+            urls.setSnapshotUri(onvifDeviceState.getMediaDevices().getSnapshotUri(profile.getName()), profile.getName());
         }
         super.pollCameraConnection();
     }

@@ -32,6 +32,7 @@ import org.homio.api.ui.field.action.v1.UIEntityItemBuilder;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.color.UIFieldColorStatusMatch;
 import org.homio.api.ui.field.selection.UIFieldSelection;
+import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -256,19 +257,15 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         return true;
     }
 
-    public void tryUpdateData(EntityContext entityContext, String ip, Integer port, String name) {
-        String prevName = Objects.requireNonNull(getName());
-        if (!getIp().equals(ip) || getOnvifPort() != port || !prevName.equals(name)) {
+    public void tryUpdateData(EntityContext entityContext, String ip, Integer port) {
+        if (!getIp().equals(ip) || getOnvifPort() != port) {
             if (!getIp().equals(ip)) {
                 log.info("[{}]: Onvif camera <{}> changed ip address from <{}> to <{}>", getEntityID(), this, getIp(), ip);
             }
             if (!getIp().equals(ip)) {
                 log.info("[{}]: Onvif camera <{}> changed port from <{}> to <{}>", getEntityID(), this, getOnvifPort(), port);
             }
-            if (!prevName.equals(name)) {
-                log.info("[{}]: Onvif camera <{}> changed name from <{}> to <{}>", getEntityID(), this, prevName, name);
-            }
-            entityContext.updateDelayed(this, entity -> entity.setIp(ip).setOnvifPort(port).setName(name));
+            entityContext.updateDelayed(this, entity -> entity.setIp(ip).setOnvifPort(port));
         }
     }
 
@@ -298,7 +295,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
                         OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
                         onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), user, password);
                         try {
-                            onvifDeviceState.checkForErrors();
+                            CommonUtils.ping(entity.getIp(), entity.getRestPort());
                             entity.setUser(user);
                             entity.setPassword(password);
                             entity.setName(onvifDeviceState.getInitialDevices().getName());

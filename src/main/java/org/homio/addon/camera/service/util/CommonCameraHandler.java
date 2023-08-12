@@ -12,6 +12,7 @@ import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -186,7 +187,7 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
                 String urlToKeepOpen = service.getBrandHandler().getUrlToKeepOpenForIdleStateEvent();
                 ChannelTracking channelTracking = service.getChannelTrack(urlToKeepOpen);
                 if (channelTracking != null) {
-                    if (channelTracking.getChannel() == ctx.channel()) {
+                    if (Objects.equals(channelTracking.getChannel(), ctx.channel())) {
                         return; // don't auto close this as it is for the alarms.
                     }
                 }

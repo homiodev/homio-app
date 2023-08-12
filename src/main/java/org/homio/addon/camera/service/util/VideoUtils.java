@@ -1,0 +1,50 @@
+package org.homio.addon.camera.service.util;
+
+import java.io.InputStream;
+import java.net.Authenticator;
+import java.net.PasswordAuthentication;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.charset.StandardCharsets;
+import lombok.SneakyThrows;
+import org.homio.hquery.Curl.RawResponse;
+
+public class VideoUtils {
+
+    @SneakyThrows
+    public static RawResponse downloadImage(String snapshotUri, String user, String password) {
+        HttpRequest request = HttpRequest.newBuilder().uri(new URI(snapshotUri)).GET().build();
+        HttpResponse<InputStream> response;
+        if (user == null || password == null || snapshotUri.contains("&token=")) {
+            response = HttpClient.newHttpClient().send(request, BodyHandlers.ofInputStream());
+        } else {
+            response = HttpClient.newBuilder()
+                                 .authenticator(new Authenticator() {
+                                     @Override
+                                     protected PasswordAuthentication getPasswordAuthentication() {
+                                         return new PasswordAuthentication(
+                                             user,
+                                             password.toCharArray());
+                                     }
+                                 }).build()
+                                 .send(request, BodyHandlers.ofInputStream());
+            // 401 if wrong user/password
+            if (response.statusCode() != 200) {
+                String body;
+                try (InputStream stream = response.body()) {
+                    body = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+                }
+                throw new RuntimeException("Error while download snapshot <" + snapshotUri + ">. Code: " +
+                    response.statusCode() + ". Msg: " + body);
+            }
+        }
+
+        String contentType = response.headers().firstValue("Content-Type").orElse("image/jpg");
+        try (InputStream inputStream = response.body()) {
+            return new RawResponse(inputStream.readAllBytes(), contentType, "image-%s.jpg".formatted(System.currentTimeMillis()));
+        }
+    }
+}

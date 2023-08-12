@@ -10,6 +10,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP.ScheduleBuilder;
 import org.homio.api.EntityContextBGP.ThreadContext;
 import org.homio.api.model.Status;
+import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.common.impl.EntityContextBGPImpl;
 import org.homio.app.utils.InternalUtil;
 
@@ -37,7 +38,7 @@ public class InternetAvailabilityBgpService {
             })
             .tap(context -> internetThreadContext = context);
 
-        internetAccessBuilder.execute(context -> InternalUtil.checkUrlAccessible() != null);
+        internetAccessBuilder.execute(context -> CommonUtils.ping("google.com", 80) != null);
     }
 
     @SneakyThrows

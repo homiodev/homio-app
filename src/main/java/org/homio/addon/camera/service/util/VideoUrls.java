@@ -5,10 +5,12 @@ import static org.apache.commons.lang3.StringUtils.defaultString;
 import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Getter
 @Setter
@@ -19,55 +21,78 @@ public class VideoUrls {
     private final Map<String, ProfileUrls> urls = new ConcurrentHashMap<>();
 
     public String getMjpegUri() {
-        return defaultProfile.getMjpegUri();
-    }
-
-    public void setMjpegUri(String url) {
-        defaultProfile.mjpegUri = url;
-    }
-
-    public String getMjpegUri(String profile) {
-        return urls.getOrDefault(profile, defaultProfile).mjpegUri;
-    }
-
-    public void setMjpegUri(String url, String profile) {
-        urls.computeIfAbsent(profile, s -> new ProfileUrls()).mjpegUri = defaultString(url, defaultProfile.mjpegUri);
-    }
-
-    public String getSnapshotUri() {
-        return defaultProfile.getSnapshotUri();
-    }
-
-    public void setSnapshotUri(String url) {
-        defaultProfile.snapshotUri = url;
-    }
-
-    public String getSnapshotUri(String profile) {
-        return urls.getOrDefault(profile, defaultProfile).snapshotUri;
-    }
-
-    public void setSnapshotUri(String url, String profile) {
-        urls.computeIfAbsent(profile, s -> new ProfileUrls()).snapshotUri = defaultString(url, defaultProfile.snapshotUri);
+        return getOrDefaultUri(profile -> profile.mjpegUri);
     }
 
     public String getRtspUri() {
-        return defaultProfile.getRtspUri();
+        return getOrDefaultUri(profile -> profile.rtspUri);
     }
 
-    public void setRtspUri(String url) {
-        defaultProfile.rtspUri = url;
+    public String getSnapshotUri() {
+        return getOrDefaultUri(profile -> profile.snapshotUri);
     }
 
-    public String getRtspUri(String profile) {
-        return urls.getOrDefault(profile, defaultProfile).rtspUri;
+    public void setMjpegUri(@Nullable String url) {
+        defaultProfile.mjpegUri = defaultString(url, "ffmpeg");
     }
 
-    public void setRtspUri(String url, String profile) {
-        urls.computeIfAbsent(profile, s -> new ProfileUrls()).rtspUri = defaultString(url, defaultProfile.rtspUri);
+    public void setRtspUri(@Nullable String url) {
+        defaultProfile.rtspUri = defaultString(url, "ffmpeg");
+    }
+
+    public void setSnapshotUri(@Nullable String url) {
+        defaultProfile.snapshotUri = defaultString(url, "ffmpeg");
+    }
+
+    public String getMjpegUri(@Nullable String profile) {
+        return getOrDefaultUri(profile, p -> p.mjpegUri);
+    }
+
+    public String getSnapshotUri(@Nullable String profile) {
+        return getOrDefaultUri(profile, p -> p.snapshotUri);
+    }
+
+    public String getRtspUri(@Nullable String profile) {
+        return getOrDefaultUri(profile, p -> p.rtspUri);
+    }
+
+    public void setSnapshotUri(@Nullable String url, @Nullable String profile) {
+        if (profile == null) {
+            setSnapshotUri(url);
+        } else {
+            urls.computeIfAbsent(profile, s -> new ProfileUrls()).snapshotUri = defaultString(url, defaultProfile.snapshotUri);
+        }
+    }
+
+    public void setRtspUri(@Nullable String url, @Nullable String profile) {
+        if (profile == null) {
+            setRtspUri(url);
+        } else {
+            urls.computeIfAbsent(profile, s -> new ProfileUrls()).rtspUri = defaultString(url, defaultProfile.rtspUri);
+        }
     }
 
     public void clear() {
         this.urls.clear();
+    }
+
+    private String getOrDefaultUri(String profile, Function<ProfileUrls, String> uriGetter) {
+        String url = null;
+        if(profile != null && urls.containsKey(profile)) {
+            url = uriGetter.apply(urls.get(profile));
+        }
+        if(url == null) {
+            url = uriGetter.apply(defaultProfile);
+        }
+        return url;
+    }
+
+    private String getOrDefaultUri(Function<ProfileUrls, String> uriGetter) {
+        String defaultUri = uriGetter.apply(defaultProfile);
+        if (defaultUri.equals("ffmpeg") && !urls.isEmpty()) {
+            return uriGetter.apply(urls.values().iterator().next());
+        }
+        return defaultUri;
     }
 
     @Getter

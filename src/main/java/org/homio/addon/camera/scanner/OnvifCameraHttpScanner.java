@@ -2,6 +2,7 @@ package org.homio.addon.camera.scanner;
 
 import de.onvif.soap.BadCredentialException;
 import de.onvif.soap.OnvifDeviceState;
+import java.net.ConnectException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -108,7 +109,7 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
         OnvifDeviceState onvifDeviceState = new OnvifDeviceState("-");
         onvifDeviceState.updateParameters(ipAddress, port, user, password);
         try {
-            onvifDeviceState.checkForErrors();
+            testCamera(ipAddress, 80, onvifDeviceState);
             foundDeviceServices(onvifDeviceState, false, rediscoverIpAddresses, existsCameraByIpPort);
         } catch (BadCredentialException bex) {
             if (!tryFindCameraFromDb(allSavedCameraEntities, ipAddress, port, existsCameraByIpPort)) {
@@ -120,6 +121,12 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
         }
     }
 
+    private static void testCamera(String ipAddress, Integer port, OnvifDeviceState onvifDeviceState) throws ConnectException {
+        CommonUtils.ping(ipAddress, port);
+        // check for Authentication validation
+        onvifDeviceState.getInitialDevices().getDeviceInformation();
+    }
+
     private boolean tryFindCameraFromDb(List<OnvifCameraEntity> allSavedCameraEntities, String ipAddress, Integer port,
         Map<String, OnvifCameraEntity> existsCameraByIpPort) {
         log.info("Onvif camera got fault auth response. Checking user/pwd from other all saved cameras. Maybe ip address has " +
@@ -129,7 +136,7 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
             onvifDeviceState.updateParameters(ipAddress, port,
                 entity.getUser(), entity.getPassword().asString());
             try {
-                onvifDeviceState.checkForErrors();
+                testCamera(ipAddress, entity.getRestPort(), onvifDeviceState);
                 foundDeviceServices(onvifDeviceState, false, false, existsCameraByIpPort);
                 return true;
             } catch (Exception ignore) {
@@ -185,8 +192,7 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
 
     private void updateCameraIpPortName(OnvifDeviceState onvifDeviceState, OnvifCameraEntity existedCamera) {
         try {
-            existedCamera.tryUpdateData(entityContext, onvifDeviceState.getIp(), onvifDeviceState.getOnvifPort(),
-                onvifDeviceState.getInitialDevices().getName());
+            existedCamera.tryUpdateData(entityContext, onvifDeviceState.getIp(), onvifDeviceState.getOnvifPort());
         } catch (Exception ex) {
             log.error("Error while trying update camera: <{}>", CommonUtils.getErrorMessage(ex));
         }

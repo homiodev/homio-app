@@ -57,7 +57,6 @@ import org.homio.api.model.Status;
 import org.homio.api.service.EntityService;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.JsonType;
-import org.homio.api.state.ObjectType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.RawType;
 import org.homio.api.state.State;
@@ -277,7 +276,6 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public final void bringCameraOnline() {
         log.debug("Bring camera online");
-        setAttribute("URLS", new ObjectType(urls));
         lastAnswerFromVideo = System.currentTimeMillis();
         if (!entity.getStatus().isOnline()) {
             setAttribute("URLS", new JsonType(OBJECT_MAPPER.convertValue(urls, ObjectNode.class)));
