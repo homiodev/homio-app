@@ -1,0 +1,162 @@
+{
+  "version": "1",
+  "endpoints": [
+    {
+      "dp": 1,
+      "order": 1,
+      "name": "switch_1",
+      "persistent": true,
+      "icon": "fa-star-half-stroke",
+      "iconColor": "#56AB26"
+    },
+    {
+      "dp": 9,
+      "order": 5,
+      "name": "countdown_1",
+      "unit": "s",
+      "stateless": true,
+      "icon": "fa-circle-down",
+      "iconColor": "#27608C"
+    },
+    {
+      "dp": 17,
+      "name": "add_ele",
+      "unit": "kwh",
+      "stateless": true,
+      "icon": "fa-plug-circle-bolt",
+      "iconColor": "#A69A2D"
+    },
+    {
+      "dp": 18,
+      "order": 10,
+      "name": "cur_current",
+      "unit": "mA",
+      "persistent": true,
+      "icon": "fa-bolt",
+      "iconColor": "#9357EF"
+    },
+    {
+      "dp": 19,
+      "order": 11,
+      "name": "cur_power",
+      "unit": "W",
+      "persistent": true,
+      "icon": "fa-plug-circle-bolt",
+      "iconColor": "#9357EF"
+    },
+    {
+      "dp": 20,
+      "order": 12,
+      "name": "cur_voltage",
+      "unit": "V",
+      "persistent": true,
+      "icon": "fa-truck-ramp-box",
+      "iconColor": "#299974"
+    },
+    {
+      "dp": 21,
+      "name": "test_bit",
+      "stateless": true,
+      "icon": "fa-vials",
+      "iconColor": "#A095F7"
+    },
+    {
+      "dp": 22,
+      "name": "voltage_coe",
+      "stateless": true,
+      "icon": "fa-cash-register",
+      "iconColor": "#B06C51"
+    },
+    {
+      "dp": 23,
+      "name": "electric_coe",
+      "stateless": true,
+      "icon": "fa-dice-d20",
+      "iconColor": "#5172B0"
+    },
+    {
+      "dp": 24,
+      "name": "power_coe",
+      "stateless": true,
+      "icon": "fa-tower-observation",
+      "iconColor": "#563AB0"
+    },
+    {
+      "dp": 25,
+      "name": "electricity_coe",
+      "stateless": true,
+      "icon": "fa-gopuram",
+      "iconColor": "#A82F9E"
+    },
+    {
+      "dp": 26,
+      "order": 10,
+      "name": "fault",
+      "icon": "fa-plug-circle-exclamation",
+      "iconColor": "#DD5F24"
+    },
+    {
+      "dp": 38,
+      "name": "relay_status",
+      "stateless": true,
+      "icon": "fa-shuffle",
+      "iconColor": "#538273"
+    },
+    {
+      "dp": 39,
+      "name": "overcharge_switch",
+      "icon": "fa-person-booth",
+      "iconColor": "#AB2200"
+    },
+    {
+      "dp": 40,
+      "name": "light_mode",
+      "stateless": true,
+      "icon": "fa-stopwatch",
+      "iconColor": "#618750"
+    },
+    {
+      "dp": 41,
+      "name": "child_lock",
+      "stateless": true,
+      "persistent": true,
+      "icon": "fa-lock",
+      "iconColor": "#AB2631"
+    },
+    {
+      "dp": 42,
+      "name": "cycle_time",
+      "stateless": true,
+      "icon": "fa-stopwatch-20",
+      "iconColor": "#7C2D9C"
+    },
+    {
+      "dp": 43,
+      "name": "random_time",
+      "stateless": true,
+      "icon": "fa-truck-ramp-box",
+      "iconColor": "#95A346"
+    },
+    {
+      "dp": 44,
+      "name": "switch_inching",
+      "stateless": true,
+      "icon": "fa-truck-ramp-box",
+      "iconColor": "#299974"
+    },
+    {
+      "dp": 0,
+      "name": "last_seen",
+      "icon": "fa-eye",
+      "iconColor": "#2D9C2C",
+      "order": 100
+    },
+    {
+      "dp": 0,
+      "name": "device_status",
+      "icon": "fa-globe",
+      "iconColor": "#42B52D",
+      "order": 4000
+    }
+  ]
+}

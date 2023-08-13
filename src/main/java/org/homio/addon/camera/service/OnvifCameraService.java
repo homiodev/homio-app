@@ -28,6 +28,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,7 +65,6 @@ import org.homio.api.model.Status;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.ObjectType;
 import org.homio.api.state.OnOffType;
-import org.homio.api.state.RawType;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
@@ -464,15 +464,15 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    public RawType recordImageSync(String profile) {
+    protected void takeSnapshotSync(@Nullable String profile, Path output) {
         String snapshotUri = urls.getSnapshotUri(profile);
         if (snapshotUri.equals("ffmpeg")) {
-            return super.recordImageSync(profile);
+            super.takeSnapshotSync(profile, output);
         }
         if (snapshotUri.startsWith("/")) {
             snapshotUri = "http://%s:%s%s".formatted(getEntity().getIp(), getEntity().getRestPort(), brandHandler.getSnapshotUri());
         }
-        return new RawType(VideoUtils.downloadImage(snapshotUri, entity.getUser(), entity.getPassword().asString()));
+        VideoUtils.downloadImage(snapshotUri, entity.getUser(), entity.getPassword().asString(), output);
     }
 
     @Override
@@ -566,7 +566,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected void dispose0() {
-
         basicAuth = ""; // clear out stored Password hash
         useDigestAuth = false;
     }

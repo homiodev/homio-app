@@ -9,13 +9,15 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import lombok.SneakyThrows;
-import org.homio.hquery.Curl.RawResponse;
 
 public class VideoUtils {
 
     @SneakyThrows
-    public static RawResponse downloadImage(String snapshotUri, String user, String password) {
+    public static void downloadImage(String snapshotUri, String user, String password, Path output) {
         HttpRequest request = HttpRequest.newBuilder().uri(new URI(snapshotUri)).GET().build();
         HttpResponse<InputStream> response;
         if (user == null || password == null || snapshotUri.contains("&token=")) {
@@ -41,10 +43,8 @@ public class VideoUtils {
                     response.statusCode() + ". Msg: " + body);
             }
         }
-
-        String contentType = response.headers().firstValue("Content-Type").orElse("image/jpg");
         try (InputStream inputStream = response.body()) {
-            return new RawResponse(inputStream.readAllBytes(), contentType, "image-%s.jpg".formatted(System.currentTimeMillis()));
+            Files.copy(inputStream, output, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 }

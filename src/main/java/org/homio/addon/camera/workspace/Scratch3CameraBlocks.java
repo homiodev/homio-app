@@ -343,9 +343,8 @@ public class Scratch3CameraBlocks extends Scratch3ExtensionBlocks {
 
     @RequiredArgsConstructor
     private enum CameraProfileReportCommands implements KeyValueEnum {
-        Snapshot("Snapshot", (workspaceBlock, scratch, cameraProfile) -> {
-            return cameraProfile.entity.getService().recordImageSync(cameraProfile.profile);
-        }),
+        Snapshot("Snapshot", (workspaceBlock, scratch, cameraProfile) ->
+            cameraProfile.entity.getService().recordImageSync(cameraProfile.profile)),
         LastPlayback("Last playback", (workspaceBlock, scratch, cameraProfile) -> {
             BaseVideoEntity entity = cameraProfile.entity;
             if (entity instanceof VideoPlaybackStorage videoPlaybackStorage) {

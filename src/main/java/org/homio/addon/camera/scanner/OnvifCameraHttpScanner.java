@@ -74,7 +74,7 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
 
         Map<String, Callable<Integer>> tasks = new HashMap<>();
         for (String ipRange : ipRangeList) {
-            tasks.putAll(networkHardwareRepository.buildPingIpAddressTasks(ipRange, log::info, ports, pingTimeout, (ipAddress, port) ->
+            tasks.putAll(networkHardwareRepository.buildPingIpAddressTasks(ipRange, log::debug, ports, pingTimeout, (ipAddress, port) ->
                 buildCameraTask(rediscoverIpAddresses, allSavedCameraEntities, existsCameraByIpPort, user, password,
                     ipAddress, port)));
         }

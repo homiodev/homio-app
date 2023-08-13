@@ -1,7 +1,9 @@
 package org.homio.addon.camera.entity;
 
 import static java.lang.String.join;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
+import static org.homio.api.ui.field.UIFieldType.HTML;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -18,12 +20,16 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
 import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
+import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.entity.types.MediaEntity;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
+import org.homio.api.model.device.ConfigDeviceDefinition;
+import org.homio.api.model.device.ConfigDeviceDefinitionService;
+import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
 import org.homio.api.state.State;
 import org.homio.api.ui.UISidebarMenu;
@@ -39,10 +45,13 @@ import org.homio.api.ui.field.action.UIActionButton;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIContextMenuAction;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
+import org.homio.api.ui.field.color.UIFieldColorBgRef;
+import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.image.UIFieldImage;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
 @SuppressWarnings("unused")
@@ -50,7 +59,7 @@ import org.json.JSONObject;
 @UISidebarMenu(icon = "fas fa-video", order = 1, parent = UISidebarMenu.TopSidebarMenu.MEDIA,
                bg = "#5950A7", allowCreateNewItems = true, overridePath = "media")
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
-    extends MediaEntity implements EntityService<S, T> {
+    extends MediaEntity implements DeviceEndpointsBehaviourContract, EntityService<S, T> {
 
     @UIField(order = 300, hideInView = true)
     public boolean isHasAudioStream() {
@@ -85,11 +94,6 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     public abstract String getFolderName();
-
-    @UIField(order = 500, hideInEdit = true, type = UIFieldType.Duration)
-    public long getLastAnswerFromVideo() {
-        return optService().map(BaseVideoService::getLastAnswerFromVideo).orElse(0L);
-    }
 
     @UIContextMenuAction(value = "RECORD_MP4", icon = "fas fa-file-video", inputs = {
         @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
@@ -351,5 +355,40 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     public long getVideoParametersHashCode() {
         return getJsonDataHashCode("gifOutOptions", "mjpegOutOptions", "imgOutOptions",
             "motionOptions", "mp4OutOptions");
+    }
+
+    @Override
+    public @NotNull String getDeviceFullName() {
+        return "%s(%s) [${%s}]".formatted(
+            getTitle(),
+            getIeeeAddress(),
+            defaultIfEmpty(getPlace(), "W.ERROR.PLACE_NOT_SET"));
+    }
+
+    @Override
+    public @NotNull Map<String, ? extends DeviceEndpoint> getDeviceEndpoints() {
+        return optService().map(BaseVideoService::getEndpoints).orElse(Map.of());
+    }
+
+    @Override
+    @UIField(order = 1, hideOnEmpty = true, fullWidth = true, color = "#89AA50", type = HTML, hideInEdit = true)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    @UIFieldColorBgRef(value = "statusColor", animate = true)
+    public @Nullable String getDescription() {
+        /*String message = getStatusMessage();
+        if (message != null && message.contains("Failed to connect")) {
+            return "TUYA.CONNECT_ISSUE";
+        }*/
+        return null;
+    }
+
+    @Override
+    public @NotNull ConfigDeviceDefinitionService getConfigDeviceDefinitionService() {
+        return BaseVideoService.CONFIG_DEVICE_SERVICE;
+    }
+
+    @Override
+    public @NotNull List<ConfigDeviceDefinition> findMatchDeviceConfigurations() {
+        return getService().findDevices();
     }
 }
