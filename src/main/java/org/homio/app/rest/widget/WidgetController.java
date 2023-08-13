@@ -337,7 +337,7 @@ public class WidgetController {
 
     @PostMapping("/create/{tabId}/{type}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public BaseEntity<?> createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
+    public BaseEntity createWidget(@PathVariable("tabId") String tabId, @PathVariable("type") String type) throws Exception {
         log.debug("Request creating widget entity by type: <{}> in tabId <{}>", type, tabId);
         WidgetTabEntity widgetTabEntity = entityContext.getEntity(tabId);
         if (widgetTabEntity == null) {
@@ -353,7 +353,7 @@ public class WidgetController {
 
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     @PostMapping("/create/{tabId}/{type}/{addon}")
-    public BaseEntity<?> createExtraWidget(
+    public BaseEntity createExtraWidget(
         @PathVariable("tabId") String tabId,
         @PathVariable("type") String type,
         @PathVariable("addon") String addon) {
@@ -407,9 +407,11 @@ public class WidgetController {
     @PostMapping("/tab/{name}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public OptionModel createWidgetTab(@PathVariable("name") String name) {
-        BaseEntity<?> widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
+        BaseEntity widgetTab = entityContext.getEntity(WidgetTabEntity.PREFIX + name);
         if (widgetTab == null) {
-            WidgetTabEntity widgetTabEntity = new WidgetTabEntity().setEntityID(name).setName(name);
+            WidgetTabEntity widgetTabEntity = new WidgetTabEntity();
+            widgetTabEntity.setEntityID(name);
+            widgetTabEntity.setName(name);
             widgetTabEntity.setOrder(this.findHighestOrder() + 1);
             widgetTab = entityContext.save(widgetTabEntity);
             return OptionModel.of(widgetTab.getEntityID(), widgetTab.getName());
@@ -431,7 +433,8 @@ public class WidgetController {
         WidgetTabEntity newEntity = widgetTabRepository.getByName(name);
 
         if (newEntity == null) {
-            entityContext.save(entity.setName(name));
+            entity.setName(name);
+            entityContext.save(entity);
         }
     }
 
@@ -501,7 +504,7 @@ public class WidgetController {
     }
 
     private WidgetTabEntity getWidgetTabEntity(String tabId) {
-        BaseEntity<?> baseEntity = entityContext.getEntity(tabId);
+        BaseEntity baseEntity = entityContext.getEntity(tabId);
         if (baseEntity instanceof WidgetTabEntity) {
             return (WidgetTabEntity) baseEntity;
         }

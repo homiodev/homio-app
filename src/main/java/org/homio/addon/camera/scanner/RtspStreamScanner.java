@@ -104,7 +104,9 @@ public class RtspStreamScanner implements VideoStreamScanner {
                     },
                     () -> {
                         log.info("Confirm save rtsp stream entity: <{}>", sdpMessage.getSessionName());
-                        entityContext.save(new CommonVideoStreamEntity().setIeeeAddress(uriStr));
+                        CommonVideoStreamEntity entity = new CommonVideoStreamEntity();
+                        entity.setIeeeAddress(uriStr);
+                        entityContext.save(entity);
                     });
             } else {
                 result.getExistedCount().incrementAndGet();

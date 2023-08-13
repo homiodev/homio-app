@@ -68,7 +68,8 @@ import org.json.JSONObject;
     overridePath = "variable")
 @AttributeOverride(name = "name", column = @Column(nullable = false))
 @UIHideEntityIfFieldNotNull("parent")
-public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
+@NoArgsConstructor
+public class WorkspaceGroup extends BaseEntity
     implements HasJsonData, SelectionParent {
 
     public static final String PREFIX = "group_";
@@ -114,6 +115,11 @@ public class WorkspaceGroup extends BaseEntity<WorkspaceGroup>
     @JsonIgnore
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "parent")
     private Set<WorkspaceGroup> childrenGroups;
+
+    public WorkspaceGroup(String groupId, String name) {
+        this.groupId = name;
+        setName(name);
+    }
 
     @JsonIgnore
     public WorkspaceGroup getParent() {

@@ -68,7 +68,7 @@ import org.json.JSONObject;
     iconColor = "#28A60C",
     description = "Group variables")
 @NoArgsConstructor
-public class WorkspaceVariable extends BaseEntity<WorkspaceVariable>
+public class WorkspaceVariable extends BaseEntity
     implements HasJsonData,
     HasAggregateValueFromSeries,
     UIFieldSelectionParent.SelectionParent,

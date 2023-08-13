@@ -41,7 +41,7 @@ import org.jetbrains.annotations.NotNull;
 @UISidebarMenu(icon = "fas fa-tachometer-alt", bg = "#107d6b", overridePath = "widgets")
 @Accessors(chain = true)
 @NoArgsConstructor
-public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity<T>
+public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity
     implements HasPosition<WidgetBaseEntity>, HasStyle, HasJsonData {
 
     private static final String PREFIX = "widget_";

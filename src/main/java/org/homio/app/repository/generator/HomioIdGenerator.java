@@ -11,9 +11,9 @@ public class HomioIdGenerator implements IdentifierGenerator {
     @Override
     public Object generate(SharedSessionContractImplementor session, Object object) {
         if (object instanceof BaseEntity) {
-            String entityID = ((BaseEntity<?>) object).getEntityID();
+            String entityID = ((BaseEntity) object).getEntityID();
             if (entityID == null) {
-                String prefix = ((BaseEntity<?>) object).getEntityPrefix();
+                String prefix = ((BaseEntity) object).getEntityPrefix();
                 entityID = prefix + UUID.randomUUID();
 
             }

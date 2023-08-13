@@ -46,8 +46,8 @@ import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
 import org.homio.addon.z2m.service.Z2MDeviceService;
 import org.homio.api.EntityContextUI;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.entity.HasStatusAndMsg;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.widget.AggregationType;
 import org.homio.api.entity.widget.PeriodRequest;
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
@@ -114,7 +114,7 @@ public class UtilsController {
 
     private static final LoadingCache<String, GitHubReadme> readmeCache =
         CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
-            public @NotNull GitHubReadme load(String url) {
+            public @NotNull GitHubReadme load(@NotNull String url) {
                 return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
             }
         });
@@ -127,7 +127,7 @@ public class UtilsController {
             entities.addAll(coordinator.getService().getDeviceHandlers().values().stream()
                                        .map(Z2MDeviceService::getDeviceEntity).toList());
         }
-        entities.removeIf(e -> !(e instanceof HasStatusAndMsg<?>) || ((HasStatusAndMsg<?>) e).getStatus() == null);
+        entities.removeIf(e -> !(e instanceof HasStatusAndMsg) || ((HasStatusAndMsg) e).getStatus() == null);
         Map<String, List<BaseEntity>> groups =
             entities.stream().collect(Collectors.groupingBy(obj -> {
 
@@ -270,10 +270,10 @@ public class UtilsController {
         RunScriptResponse runScriptResponse = new RunScriptResponse();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintStream logOutputStream = new PrintStream(outputStream);
-        ScriptEntity scriptEntity = new ScriptEntity()
-            .setEntityID(request.entityID)
-            .setJavaScript(request.javaScript)
-            .setJavaScriptParameters(request.javaScriptParameters);
+        ScriptEntity scriptEntity = new ScriptEntity();
+        scriptEntity.setEntityID(request.entityID);
+        scriptEntity.setJavaScript(request.javaScript);
+        scriptEntity.setJavaScriptParameters(request.javaScriptParameters);
 
         try {
             runScriptResponse.result =

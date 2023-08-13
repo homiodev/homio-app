@@ -12,6 +12,7 @@ import java.util.Map;
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
+import org.homio.api.entity.BaseEntity;
 import org.homio.api.exception.ServerException;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -57,8 +58,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entity.getEntityID());
         }
         if (plugin != null) {
-            if (plugin.availableForEntity() != null) {
-                entity.setPages(Collections.singleton(plugin.availableForEntity().getSimpleName()));
+            Class<? extends BaseEntity> availableForEntity = plugin.availableForEntity();
+            if (availableForEntity != null) {
+                entity.setPages(Collections.singleton(availableForEntity.getSimpleName()));
             }
             entity.setDefaultValue(plugin.getDefaultValue());
             entity.setOrder(plugin.order());
@@ -136,7 +138,9 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
         for (SettingPlugin settingPlugin : EntityContextSettingImpl.settingPluginsBy(p -> !p.transientState())) {
             SettingEntity settingEntity = entityContext.getEntity(getKey(settingPlugin));
             if (settingEntity == null) {
-                entityContext.save(new SettingEntity().setEntityID(getKey(settingPlugin)));
+                SettingEntity entity = new SettingEntity();
+                entity.setEntityID(getKey(settingPlugin));
+                entityContext.save(entity);
             }
         }
     }

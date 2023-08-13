@@ -38,21 +38,20 @@ import org.json.JSONObject;
 @Log4j2
 @Entity
 @UISidebarChildren(icon = "fas fa-cloud", color = "#644DAB")
-public class SshCloudEntity extends IdentityEntity<SshCloudEntity> implements
-    CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog
-    /*, HasDynamicContextMenuActions*/ {
+public class SshCloudEntity extends IdentityEntity implements
+    CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog {
 
     public static SshCloudEntity ensureEntityExists(EntityContextImpl entityContext) {
         SshCloudEntity entity = entityContext.getEntity(SshCloudEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             entity = new SshCloudEntity()
-                .setEntityID(PRIMARY_DEVICE)
-                .setName("Homio cloud")
                 .setHostname("homio.org")
                 .setProvider(DataSourceUtil.buildBeanSource(SshTunnelCloudProviderService.class))
                 .setSyncUrl("https://homio.org/server/sync")
                 .setPort(2222)
                 .setPrimary(true);
+            entity.setEntityID(PRIMARY_DEVICE);
+            entity.setName("Homio cloud");
             entity.setJsonData("dis_del", true);
             entity.setJsonData("dis_edit", true);
             entityContext.save(entity);

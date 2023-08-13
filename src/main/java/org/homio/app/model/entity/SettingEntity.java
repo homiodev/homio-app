@@ -28,7 +28,7 @@ import org.json.JSONObject;
 @Setter
 @Entity
 @Accessors(chain = true)
-public class SettingEntity extends BaseEntity<SettingEntity> {
+public class SettingEntity extends BaseEntity {
 
     public static final String PREFIX = "st_";
 

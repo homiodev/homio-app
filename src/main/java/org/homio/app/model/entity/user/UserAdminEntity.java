@@ -35,7 +35,9 @@ public final class UserAdminEntity extends UserBaseEntity<UserAdminEntity> {
     public static void ensureUserExists(EntityContextImpl entityContext) {
         List<UserAdminEntity> users = entityContext.findAll(UserAdminEntity.class);
         if (users.isEmpty()) {
-            entityContext.save(new UserAdminEntity().setEntityID(PRIMARY_DEVICE));
+            UserAdminEntity entity = new UserAdminEntity();
+            entity.setEntityID(PRIMARY_DEVICE);
+            entityContext.save(entity);
         }
     }
 }

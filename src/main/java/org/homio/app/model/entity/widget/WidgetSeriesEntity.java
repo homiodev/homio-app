@@ -25,8 +25,7 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
-    extends BaseEntity<WidgetSeriesEntity>
-    implements HasDynamicParameterFields, HasJsonData {
+    extends BaseEntity implements HasDynamicParameterFields, HasJsonData {
 
     private int priority;
 

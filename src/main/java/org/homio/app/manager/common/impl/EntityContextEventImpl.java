@@ -405,14 +405,14 @@ public class EntityContextEventImpl implements EntityContextEvent {
         Insert((context, entity) -> {
             postInsertUpdate(context, entity, true);
             if (entity instanceof BaseEntity) {
-                context.ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", ((BaseEntity<?>) entity).getEntityID()));
+                context.ui().sendSuccessMessage(Lang.getServerMessage("ENTITY_CREATED", ((BaseEntity) entity).getEntityID()));
             }
         }),
         Update((context, entity) -> postInsertUpdate(context, entity, false)),
         Delete((context, entity) -> {
             if (entity instanceof BaseEntity) {
                 // execute in separate thread
-                context.bgp().builder("delete-delay-entity-" + ((BaseEntity<?>) entity).getEntityID())
+                context.bgp().builder("delete-delay-entity-" + ((BaseEntity) entity).getEntityID())
                        .execute(() -> {
                            // destroy any additional services
                            if (entity instanceof EntityService) {
@@ -424,7 +424,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
                            }
                            ((BaseEntity) entity).afterDelete(context);
 
-                           String entityID = ((BaseEntity<?>) entity).getEntityID();
+                           String entityID = ((BaseEntity) entity).getEntityID();
                            // remove all status for entity
                            EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
                            // remove in-memory data if any exists

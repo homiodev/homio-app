@@ -1,6 +1,6 @@
 package org.homio.app.repository.device;
 
-import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Repository;

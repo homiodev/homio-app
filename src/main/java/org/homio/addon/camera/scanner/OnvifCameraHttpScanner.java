@@ -182,8 +182,8 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
                 entity.setUser(onvifDeviceState.getUsername());
                 entity.setPassword(onvifDeviceState.getPassword());
                 if (!requireAuth) {
-                    entity.setName(onvifDeviceState.getInitialDevices().getName())
-                          .setIeeeAddress(onvifDeviceState.getIEEEAddress());
+                    entity.setName(onvifDeviceState.getInitialDevices().getName());
+                    entity.setIeeeAddress(onvifDeviceState.getIEEEAddress());
                 }
 
                 entityContext.save(entity);

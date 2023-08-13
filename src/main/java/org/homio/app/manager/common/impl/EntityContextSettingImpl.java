@@ -294,9 +294,10 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     private SettingEntity createSettingEntityFromPlugin(SettingPlugin<?> settingPlugin) {
-        SettingEntity settingEntity = new SettingEntity().setEntityID(getKey(settingPlugin));
-        fulfillEntityFromPlugin(settingEntity, entityContext, settingPlugin);
-        return settingEntity;
+        SettingEntity entity = new SettingEntity();
+        entity.setEntityID(getKey(settingPlugin));
+        fulfillEntityFromPlugin(entity, entityContext, settingPlugin);
+        return entity;
     }
 
     @Nullable

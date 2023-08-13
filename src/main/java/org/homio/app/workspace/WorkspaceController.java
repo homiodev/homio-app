@@ -2,7 +2,6 @@ package org.homio.app.workspace;
 
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -13,11 +12,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.exception.NotFoundException;
 import org.homio.api.model.OptionModel;
-import org.homio.api.util.CommonUtils;
 import org.homio.app.manager.AddonService;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.model.entity.WorkspaceEntity;
@@ -27,9 +24,6 @@ import org.homio.app.repository.device.WorkspaceRepository;
 import org.homio.app.utils.UIFieldSelectionUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -202,9 +196,10 @@ public class WorkspaceController {
     @PostMapping("/tab/{name}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public OptionModel createWorkspaceTab(@PathVariable("name") String name) {
-        WorkspaceEntity workspaceEntity = entityContext.getEntity(WorkspaceEntity.PREFIX + name);
-        if (workspaceEntity == null) {
-            WorkspaceEntity entity = entityContext.save(new WorkspaceEntity().setName(name).setEntityID(name));
+        WorkspaceEntity entity = entityContext.getEntity(WorkspaceEntity.PREFIX + name);
+        if (entity == null) {
+            entity = new WorkspaceEntity(name, name);
+            entity = entityContext.save(entity);
             return OptionModel.of(entity.getEntityID(), entity.getTitle());
         }
         throw new IllegalArgumentException("Workspace tab with name <" + name + "> already exists");
@@ -231,7 +226,8 @@ public class WorkspaceController {
             WorkspaceEntity newEntity = workspaceRepository.getByName(option.getKey());
 
             if (newEntity == null) {
-                entityContext.save(entity.setName(option.getKey()));
+                entity.setName(option.getKey());
+                entityContext.save(entity);
             } else {
                 throw new IllegalArgumentException("Workspace tab with name <" + option.getKey() + "> already exists");
             }
@@ -259,7 +255,8 @@ public class WorkspaceController {
         if (workspaceVariable == null) {
             return entityContext.save(new WorkspaceVariable(variableId, variableName, workspaceGroup, VariableType.Any));
         } else if (!Objects.equals(variableName, workspaceVariable.getName())) {
-            return entityContext.save(workspaceVariable.setName(variableName));
+            workspaceVariable.setName(variableName);
+            return entityContext.save(workspaceVariable);
         }
         return workspaceVariable;
     }
@@ -267,9 +264,10 @@ public class WorkspaceController {
     private WorkspaceGroup createOrRenameGroup(String groupId, String groupName) {
         WorkspaceGroup workspaceGroup = entityContext.getEntity(WorkspaceGroup.PREFIX + groupId);
         if (workspaceGroup == null) {
-            return entityContext.save(new WorkspaceGroup().setGroupId(groupId).setName(groupName));
+            return entityContext.save(new WorkspaceGroup(groupId, groupName));
         } else if (!Objects.equals(groupName, workspaceGroup.getName())) {
-            return entityContext.save(workspaceGroup.setName(groupName));
+            workspaceGroup.setName(groupName);
+            return entityContext.save(workspaceGroup);
         }
         return workspaceGroup;
     }

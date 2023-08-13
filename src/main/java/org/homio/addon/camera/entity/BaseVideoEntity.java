@@ -26,6 +26,7 @@ import org.homio.api.model.FileContentType;
 import org.homio.api.model.FileModel;
 import org.homio.api.service.EntityService;
 import org.homio.api.state.State;
+import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.action.UIActionHandler;
 import org.homio.api.ui.field.MonacoLanguage;
 import org.homio.api.ui.field.UIField;
@@ -46,8 +47,10 @@ import org.json.JSONObject;
 
 @SuppressWarnings("unused")
 @Log4j2
+@UISidebarMenu(icon = "fas fa-video", order = 1, parent = UISidebarMenu.TopSidebarMenu.MEDIA,
+               bg = "#5950A7", allowCreateNewItems = true, overridePath = "media")
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
-    extends MediaEntity<T> implements EntityService<S, T> {
+    extends MediaEntity implements EntityService<S, T> {
 
     @UIField(order = 300, hideInView = true)
     public boolean isHasAudioStream() {
@@ -157,7 +160,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return optService().map(BaseVideoService::getSnapshot).orElse(null);
     }
 
-    // not all entity has user name
+    // not all entity has username
     public String getUser() {
         return getJsonData("user", "");
     }

@@ -31,7 +31,7 @@ import java.util.stream.StreamSupport;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.util.ApplicationContextHolder;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.scratch.Scratch3ExtensionBlocks;

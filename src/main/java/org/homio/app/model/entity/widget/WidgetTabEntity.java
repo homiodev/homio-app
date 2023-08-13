@@ -23,7 +23,7 @@ import org.jetbrains.annotations.NotNull;
 @Getter
 @Setter
 @Entity
-public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> implements HasOrder {
+public final class WidgetTabEntity extends BaseEntity implements HasOrder {
 
     public static final String PREFIX = "tab_";
     public static final String MAIN_TAB_ID = PREFIX + "main";
@@ -47,7 +47,9 @@ public final class WidgetTabEntity extends BaseEntity<WidgetTabEntity> implement
     public static void ensureMainTabExists(EntityContextImpl entityContext) {
         if (entityContext.getEntity(MAIN_TAB_ID) == null) {
             String name = Lang.getServerMessage("MAIN_TAB_NAME");
-            WidgetTabEntity mainTab = new WidgetTabEntity().setEntityID(MAIN_TAB_ID).setName(name);
+            WidgetTabEntity mainTab = new WidgetTabEntity();
+            mainTab.setEntityID(MAIN_TAB_ID);
+            mainTab.setName(name);
             mainTab.setOrder(0);
             entityContext.save(mainTab);
         }

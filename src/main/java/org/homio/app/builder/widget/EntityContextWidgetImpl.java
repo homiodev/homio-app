@@ -11,7 +11,7 @@ import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextWidget;
-import org.homio.api.entity.DeviceEndpointsBaseEntity;
+import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
@@ -50,7 +50,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
     private final EntityContextImpl entityContext;
 
     @NotNull
-    private static ActionResponseModel fireCreateTemplateWidget(@NotNull DeviceEndpointsBaseEntity entity, WidgetDefinition widgetDefinition,
+    private static ActionResponseModel fireCreateTemplateWidget(@NotNull DeviceEndpointsBehaviourContract entity, WidgetDefinition widgetDefinition,
         TemplateWidgetBuilder widgetBuilder, EntityContext entityContext, JSONObject params) {
         String tab = params.getString("SELECTION.DASHBOARD_TAB");
         val includeEndpoints = widgetDefinition.getEndpoints(entity).stream()
@@ -71,7 +71,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
     private static void addPropertyDefinitions(
         @NotNull WidgetDefinition widgetDefinition,
         @NotNull UIFlexLayoutBuilder flex,
-        @NotNull DeviceEndpointsBaseEntity entity) {
+        @NotNull DeviceEndpointsBehaviourContract entity) {
         val existedProperties = widgetDefinition.getEndpoints(entity);
         if (existedProperties.isEmpty()) {
             return;
@@ -88,7 +88,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     private static void addRequests(@NotNull WidgetDefinition widgetDefinition,
         @NotNull UIFlexLayoutBuilder flex,
-        @NotNull DeviceEndpointsBaseEntity entity) {
+        @NotNull DeviceEndpointsBehaviourContract entity) {
         List<WidgetDefinition.Requests> requests = widgetDefinition.getRequests();
         if (requests != null) {
             flex.addFlex("inputs", builder -> {
@@ -248,7 +248,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
     @Override
     public void createTemplateWidgetActions(
         @NotNull UIInputBuilder uiInputBuilder,
-        @NotNull DeviceEndpointsBaseEntity entity,
+        @NotNull DeviceEndpointsBehaviourContract entity,
         @NotNull List<WidgetDefinition> widgets) {
         for (WidgetDefinition widgetDefinition : widgets) {
             WidgetDefinition.WidgetType type = widgetDefinition.getType();

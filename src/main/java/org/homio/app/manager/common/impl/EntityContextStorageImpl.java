@@ -18,8 +18,8 @@ import org.homio.api.EntityContextSetting.MemSetterHandler;
 import org.homio.api.EntityContextStorage;
 import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.entity.HasStatusAndMsg;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -88,9 +88,9 @@ public class EntityContextStorageImpl implements EntityContextStorage {
         }
 
         if (sendUpdateToUI) {
-            entityContext.ui().updateItem((BaseEntity<?>) entity, key, value);
-            if (key.equals("status") && entity instanceof DeviceBaseEntity<?> device) {
-                entityContext.ui().updateItem((BaseEntity<?>) entity, "entityStatus", device.getEntityStatus());
+            entityContext.ui().updateItem((BaseEntity) entity, key, value);
+            if (key.equals("status") && entity instanceof DeviceBaseEntity device) {
+                entityContext.ui().updateItem((BaseEntity) entity, "entityStatus", device.getEntityStatus());
             }
         }
     }

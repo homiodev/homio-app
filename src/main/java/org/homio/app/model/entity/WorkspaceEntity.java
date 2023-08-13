@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.homio.api.converter.JSONConverter;
@@ -16,7 +17,8 @@ import org.jetbrains.annotations.NotNull;
 @Setter
 @Entity
 @Accessors(chain = true)
-public final class WorkspaceEntity extends BaseEntity<WorkspaceEntity> implements HasJsonData {
+@NoArgsConstructor
+public final class WorkspaceEntity extends BaseEntity implements HasJsonData {
 
     public static final String PREFIX = "space_";
 
@@ -29,6 +31,11 @@ public final class WorkspaceEntity extends BaseEntity<WorkspaceEntity> implement
     @Convert(converter = JSONConverter.class)
     @NotNull
     private JSON jsonData = new JSON();
+
+    public WorkspaceEntity(String entityID, String name) {
+        setEntityID(entityID);
+        setName(name);
+    }
 
     @Override
     public String getDefaultName() {

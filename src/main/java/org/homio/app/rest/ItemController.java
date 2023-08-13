@@ -351,7 +351,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         @RequestPart ActionModelRequest request,
         @RequestParam("data") MultipartFile[] files) {
         try {
-            BaseEntity<?> entity = entityContext.getEntityRequire(entityID);
+            BaseEntity entity = entityContext.getEntityRequire(entityID);
             request.metadata.put("files", files);
             for (String key : request.metadata.keySet().stream().filter(k -> k.startsWith("field.")).toList()) {
                 request.metadata.put(key.substring("field.".length()), request.metadata.get(key));
@@ -380,19 +380,19 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @PostMapping("/{type}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public BaseEntity<?> create(@PathVariable("type") String type) {
+    public BaseEntity create(@PathVariable("type") String type) {
         log.debug("Request creating entity by type: <{}>", type);
         Class<? extends EntityFieldMetadata> typeClass = EntityContextImpl.uiFieldClasses.get(type);
         if (typeClass == null) {
             throw new IllegalArgumentException("Unable to find base entity with type: " + type);
         }
-        BaseEntity<?> baseEntity = (BaseEntity<?>) CommonUtils.newInstance(typeClass);
+        BaseEntity baseEntity = (BaseEntity) CommonUtils.newInstance(typeClass);
         return entityContext.save(baseEntity);
     }
 
     @PostMapping("/{entityID}/copy")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public BaseEntity<?> copyEntityByID(@PathVariable("entityID") String entityID) {
+    public BaseEntity copyEntityByID(@PathVariable("entityID") String entityID) {
         return entityContext.copyEntity(entityContext.getEntityRequire(entityID));
     }
 
@@ -425,14 +425,14 @@ public class ItemController implements ContextCreated, ContextRefreshed {
      */
     @PutMapping
     @SneakyThrows
-    public BaseEntity<?> updateItems(@RequestBody String json) {
+    public BaseEntity updateItems(@RequestBody String json) {
         updateItemLock.lock();
         try {
             JSONObject jsonObject = new JSONObject(json);
-            BaseEntity<?> resultField = null;
+            BaseEntity resultField = null;
             for (String entityId : jsonObject.keySet()) {
                 log.info("Put update item: <{}>", entityId);
-                BaseEntity<?> entity = entityContext.getEntity(entityId);
+                BaseEntity entity = entityContext.getEntity(entityId);
 
                 if (entity == null) {
                     throw new NotFoundException("Entity '" + entityId + "' not found");
@@ -445,13 +445,13 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 for (String fieldName : entityFields.keySet()) {
                     Field field = FieldUtils.getField(entity.getClass(), fieldName, true);
                     if (field != null && BaseEntity.class.isAssignableFrom(field.getType())) {
-                        BaseEntity<?> refEntity = entityContext.getEntity(entityFields.getString(fieldName));
+                        BaseEntity refEntity = entityContext.getEntity(entityFields.getString(fieldName));
                         FieldUtils.writeField(field, entity, refEntity);
                     }
                 }
 
                 // update entity
-                BaseEntity<?> savedEntity = entityContext.save(entity);
+                BaseEntity savedEntity = entityContext.save(entity);
                 if (resultField == null) {
                     resultField = savedEntity;
                 }
@@ -520,25 +520,25 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     @GetMapping("/{entityID}")
-    public BaseEntity<?> getItem(@PathVariable("entityID") String entityID) {
+    public BaseEntity getItem(@PathVariable("entityID") String entityID) {
         return entityManager.getEntityWithFetchLazy(entityID);
     }
 
     @SneakyThrows
     @PutMapping("/{entityID}/mappedBy/{mappedBy}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public BaseEntity<?> putToItem(@PathVariable("entityID") String entityID, @PathVariable("mappedBy") String mappedBy, @RequestBody String json) {
+    public BaseEntity putToItem(@PathVariable("entityID") String entityID, @PathVariable("mappedBy") String mappedBy, @RequestBody String json) {
         // to avoid problem with lost values in case of parallel call of putToItem rest API
         // of course we may use hashtable for locks but this method not fires often at all
         putItemsLock.lock();
         try {
             JSONObject jsonObject = new JSONObject(json);
-            BaseEntity<?> owner = entityContext.getEntityRequire(entityID);
+            BaseEntity owner = entityContext.getEntityRequire(entityID);
 
             for (String type : jsonObject.keySet()) {
                 Class<? extends BaseEntity> className = (Class<? extends BaseEntity>) entityManager.getUIFieldClassByType(type);
                 JSONObject entityFields = jsonObject.getJSONObject(type);
-                BaseEntity<?> newEntity = objectMapper.readValue(entityFields.toString(), className);
+                BaseEntity newEntity = objectMapper.readValue(entityFields.toString(), className);
                 FieldUtils.writeField(newEntity, mappedBy, owner, true);
                 entityContext.save(newEntity);
             }
@@ -552,9 +552,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @SneakyThrows
     @DeleteMapping("/{entityID}/field/{field}/item/{entityToRemove}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
-    public BaseEntity<?> removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("field") String field,
+    public BaseEntity removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("field") String field,
         @PathVariable("entityToRemove") String entityToRemove) {
-        BaseEntity<?> entity = entityContext.getEntityRequire(entityID);
+        BaseEntity entity = entityContext.getEntityRequire(entityID);
         entityContext.delete(entityToRemove);
         return entityContext.getEntity(entity);
     }
@@ -568,7 +568,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateBlockPosition(
         @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPositionRequest position) {
-        BaseEntity<?> entity = entityContext.getEntity(entityID);
+        BaseEntity entity = entityContext.getEntity(entityID);
         if (entity != null) {
             if (entity instanceof HasPosition<?> hasPosition) {
                 hasPosition.setXb(position.xb);
@@ -691,7 +691,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             returnType = method.getReturnType();
         }
         if (returnType.getDeclaredAnnotation(Entity.class) != null) {
-            Class<BaseEntity<?>> clazz = (Class<BaseEntity<?>>) returnType;
+            Class<BaseEntity> clazz = (Class<BaseEntity>) returnType;
             List<? extends BaseEntity> selectedOptions = entityContext.findAll(clazz);
             List<OptionModel> options = selectedOptions.stream()
                                                        .map(t -> OptionModel.of(t.getEntityID(), t.getTitle()))
@@ -761,7 +761,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     private Collection<BaseEntity> getUsages(
-        String entityID, AbstractRepository<BaseEntity<?>> repository) {
+        String entityID, AbstractRepository<BaseEntity> repository) {
         Object baseEntity = repository.getByEntityIDWithFetchLazy(entityID, false);
         Map<String, BaseEntity> usages = new HashMap<>();
         fillEntityRelationships(baseEntity, usages);

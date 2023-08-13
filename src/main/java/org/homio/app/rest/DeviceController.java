@@ -20,7 +20,8 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.api.EntityContext;
-import org.homio.api.entity.DeviceEndpointsBaseEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
+import org.homio.api.entity.device.DeviceEndpointsBehaviourContract;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.endpoint.DeviceEndpoint;
@@ -115,7 +116,7 @@ public class DeviceController {
         @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
         @RequestParam(value = "type", defaultValue = "any") @NotNull String type) {
         String ieeeAddress = defaultIfEmpty(ieeeAddress0, defaultIfEmpty(ieeeAddress1, defaultIfEmpty(ieeeAddress2, ieeeAddress3)));
-        DeviceEndpointsBaseEntity entity = getDevice(ieeeAddress);
+        DeviceEndpointsBehaviourContract entity = getDevice(ieeeAddress);
         return entity == null ? List.of() :
             entity.getDeviceEndpoints().values().stream()
                   .filter(buildEndpointAccessFilter(access))
@@ -124,15 +125,15 @@ public class DeviceController {
                   .collect(Collectors.toList());
     }
 
-    private @Nullable DeviceEndpointsBaseEntity getDevice(String ieeeAddress) {
+    private @Nullable DeviceEndpointsBehaviourContract getDevice(String ieeeAddress) {
         if (StringUtils.isEmpty(ieeeAddress)) {
             return null;
         }
-        return entityContext.findAll(DeviceEndpointsBaseEntity.class)
-                            .stream()
-                            .filter(d -> ieeeAddress.equals(d.getIeeeAddress()))
-                            .findAny()
-                            .orElse(null);
+        return (DeviceEndpointsBehaviourContract)
+            entityContext.findAll(DeviceBaseEntity.class)
+                         .stream()
+                         .filter(d -> ieeeAddress.equals(d.getIeeeAddress()))
+                         .findAny().orElse(null);
     }
 
     private @NotNull Predicate<? super DeviceEndpoint> buildEndpointAccessFilter(@NotNull String access) {
@@ -152,7 +153,7 @@ public class DeviceController {
         };
     }
 
-    private @NotNull Predicate<DeviceEndpointsBaseEntity> buildDeviceAccessFilter(@NotNull String access, @NotNull String type) {
+    private @NotNull Predicate<DeviceEndpointsBehaviourContract> buildDeviceAccessFilter(@NotNull String access, @NotNull String type) {
         return switch (access) {
             case "read" -> device -> device.getDeviceEndpoints().values().stream()
                                            .anyMatch(dv -> dv.isReadable() && filterByType(dv, type));
@@ -171,15 +172,17 @@ public class DeviceController {
         };
     }
 
-    private @NotNull Collection<OptionModel> getDevices(@NotNull Predicate<DeviceEndpointsBaseEntity> deviceFilter) {
+    private @NotNull Collection<OptionModel> getDevices(@NotNull Predicate<DeviceEndpointsBehaviourContract> deviceFilter) {
         Collection<OptionModel> list = new ArrayList<>();
-        for (DeviceEndpointsBaseEntity deviceEntity : entityContext.findAll(DeviceEndpointsBaseEntity.class)) {
-            if (deviceFilter.test(deviceEntity)) {
-                Icon icon = deviceEntity.getEntityIcon();
-                list.add(OptionModel.of(Objects.requireNonNull(deviceEntity.getIeeeAddress()), deviceEntity.getDeviceFullName())
-                                    .setDescription(deviceEntity.getDescription())
-                                    .setIcon(icon.getIcon())
-                                    .setColor(icon.getColor()));
+        for (DeviceBaseEntity deviceEntity : entityContext.findAll(DeviceBaseEntity.class)) {
+            if (deviceEntity instanceof DeviceEndpointsBehaviourContract deviceContract) {
+                if (deviceFilter.test(deviceContract)) {
+                    Icon icon = deviceEntity.getEntityIcon();
+                    list.add(OptionModel.of(Objects.requireNonNull(deviceEntity.getIeeeAddress()), deviceContract.getDeviceFullName())
+                                        .setDescription(deviceContract.getDescription())
+                                        .setIcon(icon.getIcon())
+                                        .setColor(icon.getColor()));
+                }
             }
         }
         return list;

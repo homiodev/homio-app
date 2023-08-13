@@ -46,8 +46,10 @@ public class UsbCameraScanner implements VideoStreamScanner {
                     messages -> messages.add(Lang.getServerMessage("NEW_DEVICE.NAME", foundUsbVideoDevice.getName())),
                     () -> {
                         log.info("Confirm save usb camera: <{}>", foundUsbVideoDevice.getName());
-                        entityContext.save(new UsbCameraEntity().setName(foundUsbVideoDevice.getName())
-                                                                .setIeeeAddress(foundUsbVideoDevice.getName()));
+                        UsbCameraEntity entity = new UsbCameraEntity();
+                        entity.setName(foundUsbVideoDevice.getName());
+                        entity.setIeeeAddress(foundUsbVideoDevice.getName());
+                        entityContext.save(entity);
                     });
             } else {
                 result.getExistedCount().incrementAndGet();

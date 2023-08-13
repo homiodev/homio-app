@@ -26,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 @Log4j2
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
-public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity>
+public class LocalBoardEntity extends MicroControllerBaseEntity
     implements BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
 
     @Override
@@ -36,7 +36,7 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
 
     @UIField(order = 200)
     public @NotNull String getFileSystemRoot() {
-        return getJsonData("fs_root", CommonUtils.getRootPath().toString());
+        return getJsonDataRequire("fs_root", CommonUtils.getRootPath().toString());
     }
 
     public void setFileSystemRoot(String value) {
@@ -108,7 +108,9 @@ public class LocalBoardEntity extends MicroControllerBaseEntity<LocalBoardEntity
     public static void ensureDeviceExists(EntityContext entityContext) {
         if (entityContext.getEntity(LocalBoardEntity.class, PRIMARY_DEVICE) == null) {
             log.info("Save default compute board device");
-            entityContext.save(new LocalBoardEntity().setEntityID(PRIMARY_DEVICE));
+            LocalBoardEntity entity = new LocalBoardEntity();
+            entity.setEntityID(PRIMARY_DEVICE);
+            entityContext.save(entity);
         }
     }
 

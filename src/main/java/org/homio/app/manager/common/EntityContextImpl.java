@@ -36,9 +36,9 @@ import org.homio.api.EntityContextHardware;
 import org.homio.api.EntityContextMedia;
 import org.homio.api.EntityContextStorage;
 import org.homio.api.entity.BaseEntity;
-import org.homio.api.entity.DeviceBaseEntity;
 import org.homio.api.entity.EntityFieldMetadata;
 import org.homio.api.entity.HasJsonData;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
 import org.homio.api.model.HasEntityIdentifier;
 import org.homio.api.model.Icon;
@@ -459,7 +459,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     @Override
-    public BaseEntity<? extends BaseEntity> delete(@NotNull String entityID) {
+    public BaseEntity delete(@NotNull String entityID) {
         AbstractRepository repository = getRepository(entityID);
         BaseEntity deletedEntity = repository.deleteByEntityID(entityID);
         cacheService.clearCache();
@@ -541,9 +541,9 @@ public class EntityContextImpl implements EntityContext {
             return;
         }
         if (type == ItemAction.Remove) {
-            ui().removeItem((BaseEntity<?>) entity);
+            ui().removeItem((BaseEntity) entity);
         } else {
-            ui().updateItem((BaseEntity<?>) entity);
+            ui().updateItem((BaseEntity) entity);
         }
         if (showEntityState) {
             type.messageEvent.accept(this);
@@ -561,9 +561,9 @@ public class EntityContextImpl implements EntityContext {
                                   .collect(Collectors.toList());
     }
 
-    public BaseEntity<?> copyEntity(BaseEntity entity) {
+    public BaseEntity copyEntity(BaseEntity entity) {
         BaseEntity newEntity = copyEntityItem(entity);
-        BaseEntity<?> saved = save(newEntity, false);
+        BaseEntity saved = save(newEntity, false);
 
         // copy children if current entity is layout(it may contain children)
         if (entity instanceof WidgetLayoutEntity) {

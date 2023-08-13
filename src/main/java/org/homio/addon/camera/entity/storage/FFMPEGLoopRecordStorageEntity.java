@@ -16,7 +16,7 @@ import org.homio.addon.camera.service.BaseVideoService;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
-import org.homio.api.entity.DeviceBaseEntity;
+import org.homio.api.entity.device.DeviceBaseEntity;
 import org.homio.api.model.Icon;
 import org.homio.api.state.DecimalType;
 import org.homio.api.ui.UISidebarChildren;

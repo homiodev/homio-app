@@ -192,7 +192,9 @@ public class EntityContextVarImpl implements EntityContextVar {
         if (workspaceGroup != null
             && (!Objects.equals(workspaceGroup.getName(), name)
             || !Objects.equals(workspaceGroup.getDescription(), description))) {
-            entityContext.save(workspaceGroup.setName(name).setDescription(description));
+            workspaceGroup.setName(name);
+            workspaceGroup.setDescription(description);
+            entityContext.save(workspaceGroup);
             return true;
         }
         return false;
@@ -204,7 +206,9 @@ public class EntityContextVarImpl implements EntityContextVar {
         if (workspaceVariable != null
             && (!Objects.equals(workspaceVariable.getName(), name)
             || !Objects.equals(workspaceVariable.getDescription(), description))) {
-            entityContext.save(workspaceVariable.setName(name).setDescription(description));
+            workspaceVariable.setName(name);
+            workspaceVariable.setDescription(description);
+            entityContext.save(workspaceVariable);
             return true;
         }
         return false;
@@ -435,10 +439,8 @@ public class EntityContextVarImpl implements EntityContextVar {
         @NotNull Consumer<WorkspaceGroup> additionalHandler) {
         WorkspaceGroup entity = entityContext.getEntity(WorkspaceGroup.PREFIX + groupId);
         if (entity == null) {
-            WorkspaceGroup workspaceGroup = new WorkspaceGroup()
-                    .setGroupId(groupId)
+            WorkspaceGroup workspaceGroup = new WorkspaceGroup(groupId, groupName)
                     .setLocked(locked)
-                    .setName(groupName)
                     .setIcon(icon.getIcon())
                     .setIconColor(icon.getColor())
                     .setDescription(description);
@@ -450,8 +452,10 @@ public class EntityContextVarImpl implements EntityContextVar {
             || !Objects.equals(entity.getIconColor(), icon.getColor())
             || !Objects.equals(entity.getIcon(), icon.getIcon())
             || entity.isLocked() != locked) {
-            entityContext.save(entity.setName(groupName).setDescription(description)
-                                     .setIconColor(icon.getColor()).setIcon(icon.getIcon()).setLocked(locked));
+            entity.setName(groupName);
+            entity.setDescription(description);
+            entityContext.save(entity
+                .setIconColor(icon.getColor()).setIcon(icon.getIcon()).setLocked(locked));
         }
         return false;
     }

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Transient;
 import java.io.StringReader;
 import java.util.HashSet;
@@ -37,7 +36,7 @@ import org.springframework.core.env.Environment;
 @UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
                overridePath = "scripts")
 @Accessors(chain = true)
-public class ScriptEntity extends BaseEntity<ScriptEntity> implements HasJsonData {
+public class ScriptEntity extends BaseEntity implements HasJsonData {
 
     public static final String PREFIX = "script_";
 

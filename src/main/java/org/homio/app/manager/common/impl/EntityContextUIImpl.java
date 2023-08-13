@@ -28,6 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContextUI;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.entity.BaseEntity;
+import org.homio.api.entity.BaseEntityIdentifier;
 import org.homio.api.entity.HasFirmwareVersion;
 import org.homio.api.entity.HasStatusAndMsg;
 import org.homio.api.entity.UserEntity;
@@ -172,7 +173,7 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public void removeItem(@NotNull BaseEntity<?> entity) {
+    public void removeItem(@NotNull BaseEntity entity) {
         ObjectNode metadata =
             OBJECT_MAPPER
                 .createObjectNode()
@@ -183,13 +184,13 @@ public class EntityContextUIImpl implements EntityContextUI {
     }
 
     @Override
-    public void updateItem(@NotNull BaseEntity<?> entity) {
+    public void updateItem(@NotNull BaseEntity entity) {
         updateItem(entity, false);
     }
 
     @Override
     public void updateItem(
-        @NotNull BaseEntity<?> entity,
+        @NotNull BaseEntityIdentifier entity,
         @NotNull String updateField,
         @Nullable Object value) {
         if (isUpdateNotRegistered(entity)) {
@@ -205,7 +206,7 @@ public class EntityContextUIImpl implements EntityContextUI {
 
     @Override
     public void updateInnerSetItem(
-        @NotNull BaseEntity<?> parentEntity,
+        @NotNull BaseEntityIdentifier parentEntity,
         @NotNull String parentFieldName,
         @NotNull String innerEntityID,
         @NotNull String updateField,
@@ -234,11 +235,11 @@ public class EntityContextUIImpl implements EntityContextUI {
         }));
     }
 
-    private boolean isUpdateNotRegistered(@NotNull BaseEntity<?> parentEntity) {
+    private boolean isUpdateNotRegistered(@NotNull BaseEntityIdentifier parentEntity) {
         return !this.dynamicUpdateRegisters.containsKey(new DynamicUpdateRequest("entity-type-" + parentEntity.getDynamicUpdateType()));
     }
 
-    public void updateItem(@NotNull BaseEntity<?> entity, boolean ignoreExtra) {
+    public void updateItem(@NotNull BaseEntity entity, boolean ignoreExtra) {
         if (isUpdateNotRegistered(entity)) {
             return;
         }
@@ -775,7 +776,7 @@ public class EntityContextUIImpl implements EntityContextUI {
             Info info = notificationBlock.addInfoLine(entity.getEntityID(), entity.getTitle(), icon);
             info.setAsLink(entity);
 
-            if (entity instanceof HasStatusAndMsg<?> sm) {
+            if (entity instanceof HasStatusAndMsg sm) {
                 info.setRightText(sm.getStatus());
                 setStatus(sm.getStatus());
             }
@@ -802,7 +803,7 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
     }
 
-    private record SendUpdateContext(BaseEntity entity, Supplier<ObjectNode> handler) {
+    private record SendUpdateContext(BaseEntityIdentifier entity, Supplier<ObjectNode> handler) {
 
     }
 }

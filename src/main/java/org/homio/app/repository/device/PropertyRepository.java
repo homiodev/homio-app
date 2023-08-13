@@ -1,6 +1,6 @@
 package org.homio.app.repository.device;
 
-import org.homio.api.entity.PropertyBaseEntity;
+import org.homio.api.entity.device.PropertyBaseEntity;
 import org.homio.app.repository.AbstractRepository;
 import org.springframework.stereotype.Repository;
 

@@ -65,8 +65,9 @@ public class SettingController implements ContextRefreshed {
         this.transientSettings = new HashMap<>();
         for (SettingPlugin<?> settingPlugin : EntityContextSettingImpl.settingPluginsByPluginKey.values()) {
             if (settingPlugin.transientState()) {
-                SettingEntity settingEntity = new SettingEntity().setEntityID(getKey(settingPlugin));
-                this.transientSettings.put((Class<? extends SettingPlugin<?>>) settingPlugin.getClass(), settingEntity);
+                SettingEntity entity = new SettingEntity();
+                entity.setEntityID(getKey(settingPlugin));
+                this.transientSettings.put((Class<? extends SettingPlugin<?>>) settingPlugin.getClass(), entity);
             }
             if (settingPlugin instanceof ConsoleSettingPlugin
                 && !settingPlugin.getClass().getSimpleName().startsWith("Console")) {
@@ -268,9 +269,9 @@ public class SettingController implements ContextRefreshed {
                     settingEntity
                         .setSettingType(SettingType.Description)
                         .setVisible(true)
-                        .setEntityID(SettingEntity.PREFIX + addonEntrypoint.getAddonID() + "_Description")
                         .setValue(descriptionKey)
                         .setOrder(1);
+                    settingEntity.setEntityID(SettingEntity.PREFIX + addonEntrypoint.getAddonID() + "_Description");
                     this.descriptionSettings.add(settingEntity);
                 }
             }

@@ -35,10 +35,10 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
 
     public static void ensureEntityExists(EntityContextImpl entityContext) {
         if (entityContext.getEntity(SshTmateEntity.class, PRIMARY_DEVICE) == null) {
-            SshTmateEntity tmateSshEntity = new SshTmateEntity()
-                .setEntityID(PRIMARY_DEVICE)
-                .setName("Tmate");
-            entityContext.save(tmateSshEntity);
+            SshTmateEntity entity = new SshTmateEntity();
+            entity.setEntityID(PRIMARY_DEVICE);
+            entity.setName("Tmate");
+            entityContext.save(entity);
         }
     }
 

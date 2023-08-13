@@ -32,7 +32,7 @@ import org.json.JSONObject;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Entity
-public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityEntity<T>
+public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityEntity
     implements UserEntity, HasEntityLog, HasDynamicContextMenuActions {
 
     public static final String LOG_RESOURCE = "ROLE_LOG";

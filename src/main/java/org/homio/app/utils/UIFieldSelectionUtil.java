@@ -355,7 +355,7 @@ public final class UIFieldSelectionUtil {
             }
         }
         if (dynamicOptionLoader != null) {
-            BaseEntity<?> baseEntity = classEntityForDynamicOptionLoader instanceof BaseEntity ? (BaseEntity<?>) classEntityForDynamicOptionLoader : null;
+            BaseEntity baseEntity = classEntityForDynamicOptionLoader instanceof BaseEntity ? (BaseEntity) classEntityForDynamicOptionLoader : null;
             return dynamicOptionLoader.loadOptions(
                 new DynamicOptionLoader.DynamicOptionLoaderParameters(baseEntity, entityContext, uiFieldTargetSelection.staticParameters(), deps));
         }

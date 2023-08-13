@@ -12,7 +12,7 @@ import org.homio.api.ui.field.UIFieldType;
  * @param <S> - service
  */
 @SuppressWarnings({"rawtypes"})
-public abstract class SshBaseEntity<T extends SshBaseEntity, S extends EntityService.ServiceInstance & SshProviderService<T>> extends IdentityEntity<T>
+public abstract class SshBaseEntity<T extends SshBaseEntity, S extends EntityService.ServiceInstance & SshProviderService<T>> extends IdentityEntity
     implements EntityService<S, T> {
 
     @UIField(order = 1, hideOnEmpty = true, fullWidth = true, bg = "#334842C2", type = UIFieldType.HTML)
