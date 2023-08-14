@@ -210,7 +210,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     }
 
     @Override
-    public void cameraConnected() {
+    public void onCameraConnected() {
         service.sendHttpGET(CG + "getDevState&usr=" + username + "&pwd=" + password);
         service.sendHttpGET(CG + "getAudioAlarmConfig&usr=" + username + "&pwd=" + password);
     }

@@ -226,7 +226,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
   }
 
   @Override
-  public void cameraConnected() {
+  public void onCameraConnected() {
     service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=AudioDetect[0]");
     service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=LeLensMask[0]");
     service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[0]");

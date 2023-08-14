@@ -10,7 +10,7 @@ public class UnknownBrandHandler extends BaseOnvifCameraBrandHandler {
   }
 
   @Override
-  public void cameraConnected() {
+  public void onCameraConnected() {
 
   }
 }

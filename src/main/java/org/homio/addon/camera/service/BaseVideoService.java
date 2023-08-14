@@ -281,7 +281,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         if (!entity.getStatus().isOnline()) {
             setAttribute("URLS", new JsonType(OBJECT_MAPPER.convertValue(urls, ObjectNode.class)));
             updateEntityStatus(ONLINE, null);
-            cameraConnected();
+            onCameraConnected();
             if (EntityContextBGP.cancel(cameraConnectionJob)) {
                 cameraConnectionJob = null;
             }
@@ -299,7 +299,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
     }
 
-    protected void cameraConnected() {
+    protected void onCameraConnected() {
     }
 
     public void openCamerasStream() {

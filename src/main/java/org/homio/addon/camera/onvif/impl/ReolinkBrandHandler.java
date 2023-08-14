@@ -346,8 +346,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_MAIN_BITRATE, order = 82, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
-                   subGroupIcon = "fas " +
-                       "fa-dice-six")
+                   subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "bitRate"})
     public void setStreamMainBitRate(String value) {
         setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "mainStream", "bitRate"));
@@ -360,8 +359,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_MAIN_FRAMERATE, order = 83, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
-                   subGroupIcon = "fas " +
-                       "fa-dice-six")
+                   subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "frameRate"})
     public void setStreamMainFrameRate(String value) {
         setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "mainStream", "frameRate"));
@@ -374,8 +372,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_MAIN_H264_PROFILE, order = 84, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
-                   subGroupIcon = "fas " +
-                       "fa-dice-six")
+                   subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "profile"})
     public void setStreamMainH264Profile(String value) {
         setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "mainStream", "profile"));
@@ -388,8 +385,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_RESOLUTION, order = 90, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
-                   subGroupIcon = "fas " +
-                       "fa-dice-six")
+                   subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectResolution.class, staticParameters = {"subStream"})
     public void setStreamSecondaryResolution(String value) {
         setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "subStream", "size"));
@@ -402,8 +398,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_BITRATE, order = 91, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
-                   subGroupIcon = "fas " +
-                       "fa-dice-six")
+                   subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "bitRate"})
     public void setStreamSecondaryBitRate(String value) {
         setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "subStream", "bitRate"));
@@ -416,8 +411,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_FRAMERATE, order = 92, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
-                   subGroupIcon = "fas " +
-                       "fa-dice-six")
+                   subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "frameRate"})
     public void setStreamSecondaryFrameRate(String value) {
         setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "subStream", "frameRate"));
@@ -430,8 +424,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_H264_PROFILE, order = 93, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
-                   subGroupIcon = "fas" +
-                       " fa-dice-six")
+                   subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "profile"})
     public void setStreamSecondaryH264Profile(String value) {
         setSetting(ReolinkCommand.SetEnc, isp -> isp.set(value, "subStream", "profile"));
@@ -445,7 +438,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @Override
-    public void cameraConnected() {
+    public void onCameraConnected() {
         loginIfRequire();
 
         Root[] roots = firePost("", true,

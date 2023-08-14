@@ -16,7 +16,7 @@ public class OnvifBrandHandler extends BaseOnvifCameraBrandHandler {
   }
 
     @Override
-    public void cameraConnected() {
+    public void onCameraConnected() {
 
     }
 

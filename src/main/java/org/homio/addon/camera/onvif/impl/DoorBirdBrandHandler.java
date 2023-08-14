@@ -64,7 +64,7 @@ public class DoorBirdBrandHandler extends BaseOnvifCameraBrandHandler {
   }
 
     @Override
-    public void cameraConnected() {
+    public void onCameraConnected() {
       // do nothing
     }
 

@@ -113,7 +113,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                         if (service.getEntity().getMjpegUrl().equals("ffmpeg")) {
                             service.urls.setMjpegUri("/livestream/12?action=play&media=mjpeg");
                         }
-                        if (service.getEntity().getRawSnapshotUrl().equals("ffmpeg")) {
+                        if (service.getEntity().getSnapshotUrl().equals("ffmpeg")) {
                             service.urls.setSnapshotUri("/snap.cgi?chn=12");
                         }
                     } else if (requestUrl.startsWith("/param.cgi?cmd=setmdalarm&-aname=server2&-switch=on&-interval=1")
@@ -214,7 +214,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     }
 
     @Override
-    public void cameraConnected() {
+    public void onCameraConnected() {
         service.sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=getaudioalarmattr");
         service.sendHttpGET("/param.cgi?cmd=getioattr");
         service.sendHttpGET(newApi ? "/param.cgi?cmd=getalarmattr" : "/cgi-bin/hi3510/param.cgi?cmd=getmdattr");

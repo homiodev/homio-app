@@ -388,7 +388,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
   }
 
   @Override
-  public void cameraConnected() {
+  public void onCameraConnected() {
     service.sendHttpGET("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection");
     service.sendHttpGET("/ISAPI/Smart/LineDetection/" + nvrChannel + "01");
     service.sendHttpGET("/ISAPI/Smart/AudioDetection/channels/" + nvrChannel + "01");

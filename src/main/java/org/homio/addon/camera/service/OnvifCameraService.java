@@ -553,8 +553,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     }
 
     @Override
-    protected void cameraConnected() {
-        brandHandler.cameraConnected();
+    protected void onCameraConnected() {
+        brandHandler.onCameraConnected();
     }
 
     @Override

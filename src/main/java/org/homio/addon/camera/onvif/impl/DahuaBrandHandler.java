@@ -212,7 +212,7 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
     }
 
     @Override
-    public void cameraConnected() {
+    public void onCameraConnected() {
         service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=AudioDetect[0]");
         service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=CrossLineDetection[0]");
         service.sendHttpGET("/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect[0]");
