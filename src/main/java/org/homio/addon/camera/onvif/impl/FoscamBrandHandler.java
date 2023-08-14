@@ -1,5 +1,9 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import java.util.Optional;
@@ -73,21 +77,21 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
             ////////////// Sound Threshold //////////////
             if (content.contains("<sensitivity>0</sensitivity>")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_AUDIO_THRESHOLD, DecimalType.ZERO);
+                setAttribute(ENDPOINT_AUDIO_THRESHOLD, DecimalType.ZERO);
             }
             if (content.contains("<sensitivity>1</sensitivity>")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_AUDIO_THRESHOLD, new DecimalType(50));
+                setAttribute(ENDPOINT_AUDIO_THRESHOLD, new DecimalType(50));
             }
             if (content.contains("<sensitivity>2</sensitivity>")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_AUDIO_THRESHOLD, DecimalType.HUNDRED);
+                setAttribute(ENDPOINT_AUDIO_THRESHOLD, DecimalType.HUNDRED);
             }
 
             //////////////// Infrared LED /////////////////////
             if (content.contains("<infraLedState>0</infraLedState>")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LED, OnOffType.OFF);
+                setAttribute(ENDPOINT_ENABLE_LED, OnOffType.OFF);
             }
             if (content.contains("<infraLedState>1</infraLedState>")) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LED, OnOffType.ON);
+                setAttribute(ENDPOINT_ENABLE_LED, OnOffType.ON);
             }
 
             if (content.contains("</CGI_Result>")) {
@@ -98,7 +102,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
         }
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_LED, order = 50, icon = "far fa-lightbulb")
+    @UIVideoAction(name = ENDPOINT_ENABLE_LED, order = 50, icon = "far fa-lightbulb")
     public void enableLED(boolean on) {
         getIRLedHandler().accept(on);
     }
@@ -108,7 +112,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
         return on -> {
             // Disable the auto mode first
             service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
-            setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED, OnOffType.OFF);
+            setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
             if (on) {
                 service.sendHttpGET(CG + "openInfraLed&usr=" + username + "&pwd=" + password);
             } else {
@@ -119,13 +123,13 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
     @Override
     public Supplier<Boolean> getIrLedValueHandler() {
-        return () -> Optional.ofNullable(getAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LED)).map(State::boolValue).orElse(false);
+        return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
+    @UIVideoAction(name = ENDPOINT_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
     public void autoLED(boolean on) {
         if (on) {
-            setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LED, null/*UnDefType.UNDEF*/);
+            setAttribute(ENDPOINT_ENABLE_LED, null/*UnDefType.UNDEF*/);
             service.sendHttpGET(CG + "setInfraLedConfig&mode=0&usr=" + username + "&pwd=" + password);
         } else {
             service.sendHttpGET(CG + "setInfraLedConfig&mode=1&usr=" + username + "&pwd=" + password);
@@ -192,7 +196,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     }
 
     @Override
-    public void initialize(EntityContext entityContext) {
+    public void postInitializeCamera(EntityContext entityContext) {
         OnvifCameraEntity entity = getEntity();
         // Foscam needs any special char like spaces (%20) to be encoded for URLs.
         entity.setUser(Helper.encodeSpecialChars(entity.getUser()));

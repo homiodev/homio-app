@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -533,7 +534,7 @@ public class EntityContextVarImpl implements EntityContextVar {
         }
 
         @Override
-        public @NotNull VariableMetaBuilder setValues(List<String> values) {
+        public @NotNull VariableMetaBuilder setValues(Set<String> values) {
             entity.setJsonData("options", String.join("~~~", values));
             return this;
         }

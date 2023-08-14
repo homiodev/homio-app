@@ -2,6 +2,8 @@ package org.homio.addon.camera.entity;
 
 import static java.lang.String.join;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
 import static org.homio.api.ui.field.UIFieldType.HTML;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
@@ -32,6 +34,7 @@ import org.homio.api.model.device.ConfigDeviceDefinitionService;
 import org.homio.api.model.endpoint.DeviceEndpoint;
 import org.homio.api.service.EntityService;
 import org.homio.api.state.State;
+import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarMenu;
 import org.homio.api.ui.action.UIActionHandler;
 import org.homio.api.ui.field.MonacoLanguage;
@@ -48,6 +51,7 @@ import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.color.UIFieldColorBgRef;
 import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.api.ui.field.image.UIFieldImage;
+import org.homio.api.ui.field.model.HrefModel;
 import org.homio.api.util.SecureString;
 import org.homio.api.workspace.WorkspaceBlock;
 import org.jetbrains.annotations.NotNull;
@@ -56,8 +60,6 @@ import org.json.JSONObject;
 
 @SuppressWarnings("unused")
 @Log4j2
-@UISidebarMenu(icon = "fas fa-video", order = 1, parent = UISidebarMenu.TopSidebarMenu.MEDIA,
-               bg = "#5950A7", allowCreateNewItems = true, overridePath = "media")
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
     extends MediaEntity implements DeviceEndpointsBehaviourContract, EntityService<S, T> {
 
@@ -69,6 +71,28 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     public T setHasAudioStream(boolean value) {
         setJsonData("hasAudioStream", value);
         return (T) this;
+    }
+
+    @UIField(order = 1, hideOnEmpty = true)
+    @UIFieldGroup(value = "HARDWARE", order = 10, borderColor = Color.RED)
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    public String getFirmwareVersion() {
+        return getJsonData("fv");
+    }
+
+    public void setFirmwareVersion(String value) {
+        setJsonData("fv", value);
+    }
+
+    @UIField(order = 2)
+    @UIFieldGroup("HARDWARE")
+    @UIFieldShowOnCondition("return !context.get('compactMode')")
+    public String getManufacturer() {
+        return getJsonData("mf");
+    }
+
+    public void setManufacturer(String value) {
+        setJsonData("mf", value);
     }
 
     @Override
@@ -242,23 +266,23 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @UIField(order = 110)
-    @UIFieldSlider(min = 1, max = 100)
+    @UIFieldSlider(min = 0, max = 100)
     public int getMotionThreshold() {
-        return getJsonData("motionThreshold", 40);
+        return getJsonData(ENDPOINT_MOTION_THRESHOLD, 40);
     }
 
     public void setMotionThreshold(int value) {
-        setJsonData("motionThreshold", value);
+        setJsonData(ENDPOINT_MOTION_THRESHOLD, value);
     }
 
     @UIField(order = 112)
-    @UIFieldSlider(min = 1, max = 100)
+    @UIFieldSlider(min = 0, max = 100)
     public int getAudioThreshold() {
-        return getJsonData("audioThreshold", 40);
+        return getJsonData(ENDPOINT_AUDIO_THRESHOLD, 40);
     }
 
     public void setAudioThreshold(int value) {
-        setJsonData("audioThreshold", value);
+        setJsonData(ENDPOINT_AUDIO_THRESHOLD, value);
     }
 
     // this is parameter handles when motion/audio detects or when fires snapshot.mjpeg
@@ -298,17 +322,14 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         return "http://%s:%s/rest/camera/%s/%s".formatted(MACHINE_IP_ADDRESS, SERVER_PORT, getEntityID(), path);
     }
 
-    @JsonIgnore
-    public @NotNull String getRawSnapshotUrl() {
+    public @NotNull String getSnapshotUrl() {
         return "ffmpeg";
     }
 
-    @JsonIgnore
     public @NotNull String getMjpegUrl() {
         return "ffmpeg";
     }
 
-    @JsonIgnore
     public @NotNull String getRtspUri() {
         return "ffmpeg";
     }
@@ -322,6 +343,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     @Override
     protected void beforePersist() {
+        setAudioThreshold(40);
+        setMotionThreshold(40);
         setMp4OutOptions(join("~~~", "-c:v copy", "-c:a copy"));
         setMjpegOutOptions(join("~~~", "-q:v 5", "-r 2", "-vf scale=640:-2", "-update 1"));
         setSnapshotOutOptions(join("~~~", "-vsync vfr", "-q:v 2", "-update 1", "-frames:v 1"));

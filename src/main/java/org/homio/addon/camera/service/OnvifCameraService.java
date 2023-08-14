@@ -549,7 +549,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         if (mjpegUri.equals("ffmpeg")) {
             urls.setMjpegUri(brandHandler.getMjpegUri());
         }
-        brandHandler.initialize(entityContext);
+        brandHandler.postInitializeCamera(entityContext);
     }
 
     @Override

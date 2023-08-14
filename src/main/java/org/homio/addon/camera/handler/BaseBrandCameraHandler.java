@@ -21,7 +21,7 @@ public interface BaseBrandCameraHandler {
 
   void pollCameraRunnable();
 
-  void initialize(EntityContext entityContext);
+  void postInitializeCamera(EntityContext entityContext);
 
   String getUrlToKeepOpenForIdleStateEvent();
 

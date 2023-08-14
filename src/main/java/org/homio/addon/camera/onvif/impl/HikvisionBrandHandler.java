@@ -381,7 +381,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
   }
 
   @Override
-  public void initialize(EntityContext entityContext) {
+  public void postInitializeCamera(EntityContext entityContext) {
     if (service.lowPriorityRequests.isEmpty()) {
       service.lowPriorityRequests.add("/ISAPI/System/IO/inputs/" + getEntity().getNvrChannel() + "/status");
     }

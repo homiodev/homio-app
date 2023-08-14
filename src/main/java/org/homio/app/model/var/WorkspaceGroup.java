@@ -117,7 +117,7 @@ public class WorkspaceGroup extends BaseEntity
     private Set<WorkspaceGroup> childrenGroups;
 
     public WorkspaceGroup(String groupId, String name) {
-        this.groupId = name;
+        this.groupId = groupId;
         setName(name);
     }
 

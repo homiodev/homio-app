@@ -1,21 +1,17 @@
 package org.homio.addon.camera.service;
 
-import static org.homio.api.util.CommonUtils.splitNameToReadableFormat;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
-import org.homio.api.EntityContextVar.VariableMetaBuilder;
-import org.homio.api.EntityContextVar.VariableType;
 import org.homio.api.model.Icon;
 import org.homio.api.model.device.ConfigDeviceEndpoint;
 import org.homio.api.model.endpoint.BaseDeviceEndpoint;
+import org.homio.api.state.DecimalType;
+import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
+import org.homio.api.state.StringType;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder.InfoType;
 import org.jetbrains.annotations.NotNull;
@@ -26,21 +22,46 @@ import org.jetbrains.annotations.Nullable;
 public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
 
     private final @NotNull WriteHandler writeHandler;
-    @Setter
-    @Getter
-    private Set<String> variableEnumValues;
+    private @Nullable @Setter Consumer<State> updateHandler;
 
     public VideoDeviceEndpoint(
         @NotNull BaseVideoEntity device,
         @NotNull String endpointEntityID,
-        EndpointType endpointType,
-        boolean writable) {
+        float min, float max) {
+        this(true, device, endpointEntityID, EndpointType.number, min, max, null);
+    }
+
+    public VideoDeviceEndpoint(
+        @NotNull BaseVideoEntity device,
+        @NotNull String endpointEntityID,
+        Set<String> range) {
+        this(true, device, endpointEntityID, EndpointType.select, null, null, range);
+    }
+
+    public VideoDeviceEndpoint(
+        @NotNull BaseVideoEntity device,
+        @NotNull String endpointEntityID,
+        EndpointType endpointType) {
+        this(false, device, endpointEntityID, endpointType, null, null, null);
+    }
+
+    private VideoDeviceEndpoint(
+        boolean writable,
+        @NotNull BaseVideoEntity device,
+        @NotNull String endpointEntityID,
+        @NotNull EndpointType endpointType,
+        @Nullable Float min,
+        @Nullable Float max,
+        @Nullable Set<String> range) {
+        super("VIDEO");
         ConfigDeviceEndpoint configEndpoint = BaseVideoService.CONFIG_DEVICE_SERVICE.getDeviceEndpoints().get(endpointEntityID);
 
-        setIcon(new Icon(
+        this.min = min;
+        this.max = max;
+        this.range = range;
+        this.icon = new Icon(
             "fa fa-fw " + (configEndpoint == null ? "fa-camera" : configEndpoint.getIcon()),
-            configEndpoint == null ? "#3894B5" : configEndpoint.getIconColor())
-        );
+            configEndpoint == null ? "#3894B5" : configEndpoint.getIconColor());
 
         init(
             BaseVideoService.CONFIG_DEVICE_SERVICE,
@@ -52,41 +73,39 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
             writable,
             endpointEntityID,
             endpointType);
+
+        if (device.getJsonData().has(endpointEntityID)) {
+            State value = endpointType.getReader().apply(device.getJsonData(), endpointEntityID);
+            setValue(value, false);
+        }
+
         this.writeHandler = createExternalWriteHandler();
     }
 
     @Override
-    public @NotNull String getName(boolean shortFormat) {
-        String l1Name = getEndpointEntityID();
-        String name = splitNameToReadableFormat(l1Name);
-        return shortFormat ? name : "${video.%s~%s}".formatted(l1Name, name);
-    }
-
-    @Override
-    public @Nullable String getDescription() {
-        return "${video.%s~%s}".formatted("schemaDp.getCode()", "schemaDp.getCode()");
-    }
-
-    @Override
     public void writeValue(@NotNull State state) {
-        /*Object targetValue;
         State targetState;
-        switch (tuyaEndpointType) {
+        Object targetValue;
+        switch (endpointType) {
             case bool -> {
-                targetState = OnOffType.of(state.boolValue());
+                targetState = state instanceof OnOffType ? state : OnOffType.of(state.boolValue());
                 targetValue = targetState.boolValue();
             }
-            case number, dimmer -> {
-                targetState = state instanceof DecimalType ? (DecimalType) state : new DecimalType(state.intValue());
-                targetValue = targetState.intValue();
+            case number -> {
+                targetState = state instanceof DecimalType ? state : new DecimalType(state.intValue());
+                targetValue = state.floatValue();
             }
             default -> {
                 targetState = state;
-                targetValue = state.toString();
+                targetValue = state.stringValue();
             }
         }
         setValue(targetState, true);
-        getDevice().getService().send(Map.of(dp, targetValue));*/
+        device.setJsonData(endpointEntityID, targetValue);
+        entityContext.save(device);
+        if (updateHandler != null) {
+            updateHandler.accept(targetState);
+        }
     }
 
     @Override
@@ -146,64 +165,8 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
         return writeHandler.write(rawValue, externalUpdate);
     }
 
-    @Override
-    protected Consumer<VariableMetaBuilder> getVariableMetaBuilder() {
-        return builder -> {
-            builder.setDescription(getVariableDescription()).setReadOnly(!isWritable()).setColor(getIcon().getColor());
-            List<String> attributes = new ArrayList<>();
-            /*if (schemaDp.getMax() > 0) {
-                attributes.add("min:" + schemaDp.getMin());
-                attributes.add("max:" + schemaDp.getMax());
-            }
-            if (!schemaDp.getRange().isEmpty()) {
-                attributes.add("range:" + String.join(";", schemaDp.getRange()));
-            }*/
-            builder.setAttributes(attributes);
-        };
-    }
-
-    @Override
-    public @NotNull Set<String> getSelectValues() {
-        return Set.of();//schemaDp.getRange();
-    }
-
-    private String getVariableDescription() {
-        List<String> description = new ArrayList<>();
-        description.add(getDescription());
-        /*if (!schemaDp.getRange().isEmpty()) {
-            description.add("(range:%s)".formatted(String.join(";", schemaDp.getRange())));
-        }
-        if (schemaDp.getMax() > 0) {
-            description.add("(min-max:%S...%s)".formatted(schemaDp.getMin(), schemaDp.getMax()));
-        }*/
-        return String.join(" ", description);
-    }
-
-    @Override
-    protected @NotNull VariableType getVariableType() {
-        /*switch (tuyaEndpointType) {
-            case bool -> {
-                return VariableType.Bool;
-            }
-            case dimmer, number -> {
-                return VariableType.Float;
-            }
-            case select -> {
-                return VariableType.Enum;
-            }
-            case color -> {
-                return VariableType.Color;
-            }
-            default -> {
-                return VariableType.Any;
-            }
-        }*/
-        return VariableType.Any;
-    }
-
     private WriteHandler createExternalWriteHandler() {
-        return null;
-        /*switch (tuyaEndpointType) {
+        switch (endpointType) {
             case bool -> {
                 return (rawValue, eu) -> {
                     if (Boolean.class.isAssignableFrom(rawValue.getClass())) {
@@ -222,33 +185,6 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
                     return false;
                 };
             }
-            case color -> {
-                return (rawValue, eu) -> {
-                    if (rawValue instanceof String) {
-                        oldColorMode = ((String) rawValue).length() == 14;
-                        setValue(new StringType(hexColorDecode((String) rawValue)), eu);
-                        return true;
-                    }
-                    return false;
-                };
-            }
-            case dimmer -> {
-                // brightness
-                return (rawValue, eu) -> {
-                    if (Double.class.isAssignableFrom(rawValue.getClass())) {
-                        double value = (double) rawValue;
-                        if (value <= 0) {
-                            setValue(DecimalType.ZERO, eu);
-                        } else if (value >= schemaDp.getMax()) {
-                            setValue(DecimalType.HUNDRED, eu);
-                        } else {
-                            setValue(new DecimalType(new BigDecimal(100.0 * value / (schemaDp.getMax() - 0))), eu);
-                        }
-                        return true;
-                    }
-                    return false;
-                };
-            }
             default -> {
                 // select, string
                 return (rawValue, eu) -> {
@@ -259,7 +195,7 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
                     return false;
                 };
             }
-        }*/
+        }
     }
 
     @Override

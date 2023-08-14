@@ -1,12 +1,13 @@
 package org.homio.addon.camera.service;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.homio.addon.camera.CameraController.camerasOpenStreams;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_AUDIO_ALARM;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_AUDIO_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_LAST_MOTION_TYPE;
-import static org.homio.addon.camera.VideoConstants.CHANNEL_MOTION_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.CHANNEL_START_STREAM;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_MOTION_THRESHOLD;
 import static org.homio.addon.camera.VideoConstants.MOTION_ALARM;
 import static org.homio.addon.camera.service.util.VideoUrls.getCorrectUrlFormat;
 import static org.homio.api.EntityContextMedia.CHANNEL_FFMPEG_MOTION_ALARM;
@@ -34,6 +35,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -58,10 +61,10 @@ import org.homio.api.EntityContextBGP.ThreadContext;
 import org.homio.api.EntityContextMedia.FFMPEG;
 import org.homio.api.EntityContextMedia.FFMPEGFormat;
 import org.homio.api.EntityContextMedia.FFMPEGHandler;
+import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
 import org.homio.api.model.device.ConfigDeviceDefinition;
 import org.homio.api.model.device.ConfigDeviceDefinitionService;
-import org.homio.api.model.device.ConfigDeviceEndpoint;
 import org.homio.api.model.endpoint.DeviceEndpoint.EndpointType;
 import org.homio.api.service.EntityService;
 import org.homio.api.state.DecimalType;
@@ -70,6 +73,7 @@ import org.homio.api.state.OnOffType;
 import org.homio.api.state.RawType;
 import org.homio.api.state.State;
 import org.homio.api.state.StringType;
+import org.homio.api.ui.UI;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.action.v1.item.UIInfoItemBuilder.InfoType;
 import org.homio.api.util.CommonUtils;
@@ -157,7 +161,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
     }
 
-    private void tryConnecting() {
+    private void createConnectionJob() {
         cameraConnectionJob = entityContext
             .bgp().builder("video-connect-" + entityID)
             .intervalWithDelay(Duration.ofSeconds(8))
@@ -205,7 +209,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     protected void resetAndRetryConnecting() {
         offline();
-        tryConnecting();
+        createConnectionJob();
     }
 
     @Override
@@ -216,16 +220,17 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
     public final void initializeCamera() {
         this.urls.clear();
+        createOrUpdateDeviceGroup();
+        addPrimaryEndpoint();
         updateEntityStatus(INITIALIZE, null);
         log.info("[{}]: Initialize camera: <{}>", entityID, getEntity());
         camerasOpenStreams.computeIfAbsent(entityID, s -> new OpenStreamsContainer());
         videoStreamParametersHashCode = entity.getVideoParametersHashCode();
 
         try {
-            addPrimaryEndpoint();
             this.urls.setRtspUri(entity.getRtspUri());
             this.urls.setMjpegUri(getCorrectUrlFormat(entity.getMjpegUrl()));
-            this.urls.setSnapshotUri(getCorrectUrlFormat(entity.getRawSnapshotUrl()));
+            this.urls.setSnapshotUri(getCorrectUrlFormat(entity.getSnapshotUrl()));
 
             this.snapshotInputOptions = getFFMPEGInputOptions() + " -threads 1 -skip_frame nokey -hide_banner -loglevel warning -an";
             this.mp4OutOptions = String.join(" ", entity.getMp4OutOptions());
@@ -236,39 +241,10 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
 
             postInitializeCamera();
 
-            tryConnecting();
+            createConnectionJob();
         } catch (Exception ex) {
             disposeAndSetStatus(Status.ERROR, CommonUtils.getErrorMessage(ex));
         }
-    }
-
-    private void addPrimaryEndpoint() {
-        endpoints.computeIfAbsent(ENDPOINT_DEVICE_STATUS, key -> {
-            ConfigDeviceEndpoint endpoint = CONFIG_DEVICE_SERVICE.getDeviceEndpoints().get(key);
-            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, key, EndpointType.select, false) {
-                @Override
-                public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
-                    Status status = Status.valueOf(getValue().stringValue());
-                    uiInputBuilder.addInfo(status.name(), InfoType.Text).setColor(status.getColor());
-                    super.assembleUIAction(uiInputBuilder);
-                }
-            };
-            videoEndpoint.setVariableEnumValues(Status.set(ONLINE, ERROR, OFFLINE, REQUIRE_AUTH, UNKNOWN, INITIALIZE));
-            videoEndpoint.writeValue(INITIALIZE.toString(), false);
-            return videoEndpoint;
-        });
-
-        endpoints.computeIfAbsent(ENDPOINT_LAST_SEEN, key -> {
-            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, key, EndpointType.number, true) {
-
-                @Override
-                public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
-                    uiInputBuilder.addDuration(getValue().longValue(), null);
-                }
-            };
-            videoEndpoint.writeValue(System.currentTimeMillis(), false);
-            return videoEndpoint;
-        });
     }
 
     private boolean isRequireReinitialize() {
@@ -293,7 +269,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     private boolean updateEntityStatus(Status status, String reason) {
         if (entity.getStatus() != status || !Objects.equals(reason, entity.getStatusMessage())) {
             entity.setStatus(status, reason);
-            getEndpoints().get(ENDPOINT_DEVICE_STATUS).setValue(new StringType(toString()), true);
+            getEndpoints().get(ENDPOINT_DEVICE_STATUS).setValue(new StringType(status.toString()), true);
             updateNotificationBlock();
             return true;
         }
@@ -389,25 +365,23 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
     }
 
-    @UIVideoActionGetter(CHANNEL_AUDIO_THRESHOLD)
+    @UIVideoActionGetter(ENDPOINT_AUDIO_THRESHOLD)
     public DecimalType getAudioAlarmThreshold() {
         return new DecimalType(entity.getAudioThreshold());
     }
 
-    @UIVideoActionGetter(CHANNEL_MOTION_THRESHOLD)
+    @UIVideoActionGetter(ENDPOINT_MOTION_THRESHOLD)
     public DecimalType getMotionThreshold() {
         return new DecimalType(entity.getMotionThreshold());
     }
 
     public void setAttribute(String key, State state) {
         attributes.put(key, state);
-        entityContext.event().fireEventIfNotSame(key + ":" + entityID, state);
-
-        if (key.equals(CHANNEL_AUDIO_THRESHOLD)) {
-            entityContext.updateDelayed(getEntity(), e -> e.setAudioThreshold(state.intValue()));
-        } else if (key.equals(CHANNEL_MOTION_THRESHOLD)) {
-            entityContext.updateDelayed(getEntity(), e -> e.setMotionThreshold(state.intValue()));
+        VideoDeviceEndpoint endpoint = endpoints.get(key);
+        if (endpoint != null) {
+            endpoint.setValue(state, true);
         }
+        entityContext.event().fireEventIfNotSame(key + ":" + entityID, state);
     }
 
     @Override
@@ -460,13 +434,13 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     protected void setAudioAlarmThreshold(int threshold) {
-        setAttribute(CHANNEL_AUDIO_THRESHOLD, new StringType(threshold));
+        setAttribute(ENDPOINT_AUDIO_THRESHOLD, new StringType(threshold));
         if (threshold == 0) {
             audioDetected(false);
         }
     }
 
-    @UIVideoAction(name = CHANNEL_AUDIO_THRESHOLD, order = 120, icon = "fas fa-volume-up", type = UIVideoAction.ActionType.Dimmer)
+    @UIVideoAction(name = ENDPOINT_AUDIO_THRESHOLD, order = 120, icon = "fas fa-volume-up", type = UIVideoAction.ActionType.Dimmer)
     public void setAudioThreshold(int threshold) {
         entityContext.updateDelayed(getEntity(), e -> e.setAudioThreshold(threshold));
         setAudioAlarmThreshold(threshold);
@@ -487,7 +461,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         initialize();
     }
 
-    @UIVideoAction(name = CHANNEL_MOTION_THRESHOLD, order = 110, icon = "fas fa-expand-arrows-alt",
+    @UIVideoAction(name = ENDPOINT_MOTION_THRESHOLD, order = 110, icon = "fas fa-expand-arrows-alt",
                    type = UIVideoAction.ActionType.Dimmer, max = 1000)
     public void setMotionThreshold(int threshold) {
         entityContext.updateDelayed(getEntity(), e -> e.setMotionThreshold(threshold));
@@ -579,7 +553,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     protected void setMotionAlarmThreshold(int threshold) {
-        setAttribute(CHANNEL_MOTION_THRESHOLD, new StringType(threshold));
+        setAttribute(ENDPOINT_MOTION_THRESHOLD, new StringType(threshold));
         if (threshold == 0) {
             motionDetected(false, CHANNEL_FFMPEG_MOTION_ALARM);
         }
@@ -769,5 +743,75 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
                 () -> setAttribute(CHANNEL_START_STREAM, OnOffType.OFF));
             setAttribute("FFMPEG_HLS", new StringType(String.join(" ", ffmpegHLS.getCommandArrayList())));
         }
+    }
+
+    private void createOrUpdateDeviceGroup() {
+        List<ConfigDeviceDefinition> devices = findDevices();
+        Icon icon = new Icon(
+            CONFIG_DEVICE_SERVICE.getDeviceIcon(devices, "fas fa-video"),
+            CONFIG_DEVICE_SERVICE.getDeviceIconColor(devices, UI.Color.random())
+        );
+        entityContext.var().createGroup("video", "Video", true, new Icon("fas fa-video", "#0E578F"));
+        entityContext.var().createGroup("tuya", requireNonNull(entity.getIeeeAddress()), entity.getDeviceFullName(), true,
+            icon, getGroupDescription());
+    }
+
+    private String getGroupDescription() {
+        if (StringUtils.isEmpty(entity.getName()) || entity.getName().equals(entity.getIeeeAddress())) {
+            return entity.getIeeeAddress();
+        }
+        return "${%s} [%s]".formatted(entity.getName(), entity.getIeeeAddress());
+    }
+
+    private void addPrimaryEndpoint() {
+        endpoints.computeIfAbsent(ENDPOINT_DEVICE_STATUS, key -> {
+            Set<String> range = Status.set(ONLINE, ERROR, OFFLINE, REQUIRE_AUTH, UNKNOWN, INITIALIZE);
+            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, key, range) {
+                @Override
+                public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
+                    Status status = Status.valueOf(getValue().stringValue());
+                    uiInputBuilder.addInfo(status.name(), InfoType.Text).setColor(status.getColor());
+                    super.assembleUIAction(uiInputBuilder);
+                }
+            };
+            videoEndpoint.writeValue(INITIALIZE.toString(), false);
+            return videoEndpoint;
+        });
+
+        endpoints.computeIfAbsent(ENDPOINT_LAST_SEEN, key -> {
+            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, key, EndpointType.number) {
+
+                @Override
+                public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
+                    uiInputBuilder.addDuration(getValue().longValue(), null);
+                }
+            };
+            videoEndpoint.writeValue(System.currentTimeMillis(), false);
+            return videoEndpoint;
+        });
+
+        endpoints.computeIfAbsent(ENDPOINT_MOTION_THRESHOLD, key ->
+            new VideoDeviceEndpoint(entity, key, 0F, 100F));
+
+        if (entity.isHasAudioStream()) {
+            endpoints.computeIfAbsent(ENDPOINT_AUDIO_THRESHOLD, key ->
+                new VideoDeviceEndpoint(entity, key, 0F, 100F));
+        }
+    }
+
+    public void addEndpoint(String endpointId, Function<String, VideoDeviceEndpoint> handler, Consumer<State> updateHandler) {
+        endpoints.computeIfAbsent(endpointId, key -> {
+            VideoDeviceEndpoint endpoint = handler.apply(key);
+            endpoint.setUpdateHandler(updateHandler);
+            return endpoint;
+        });
+    }
+
+    public void addEndpointSwitch(String endpointId, Consumer<State> updateHandler) {
+        addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, EndpointType.bool), updateHandler);
+    }
+
+    public void addEndpointEnum(String endpointId, Set<String> range, Consumer<State> updateHandler) {
+        addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, range), updateHandler);
     }
 }

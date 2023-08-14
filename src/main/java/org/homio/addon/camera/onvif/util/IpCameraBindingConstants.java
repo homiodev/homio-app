@@ -24,7 +24,6 @@ public class IpCameraBindingConstants {
   public static final String CHANNEL_ITEM_LEFT = "itemLeft";
   public static final String CHANNEL_ITEM_TAKEN = "itemTaken";
   public static final String CHANNEL_AUDIO_ALARM = "audioAlarm";
-  public static final String CHANNEL_RECORD_AUDIO = "recordAudio";
 
   public static final String CHANNEL_STREAM_MAIN_RESOLUTION = "streamMainResolution";
   public static final String CHANNEL_STREAM_MAIN_BITRATE = "streamMainBitRate";
@@ -37,11 +36,9 @@ public class IpCameraBindingConstants {
   public static final String CHANNEL_STREAM_SECONDARY_H264_PROFILE = "streamSecondaryH264Profile";
 
   public static final String CHANNEL_ENABLE_MOTION_ALARM = "enableMotionAlarm";
-  public static final String CHANNEL_MOTION_THRESHOLD = "motionThreshold";
   public static final String CHANNEL_FFMPEG_MOTION_ALARM = "ffmpegMotionAlarm";
   public static final String CHANNEL_ENABLE_LINE_CROSSING_ALARM = "enableLineCrossingAlarm";
   public static final String CHANNEL_ENABLE_AUDIO_ALARM = "enableAudioAlarm";
-  public static final String CHANNEL_AUDIO_THRESHOLD = "audioThreshold";
   public static final String CHANNEL_ACTIVATE_ALARM_OUTPUT = "activateAlarmOutput";
   public static final String CHANNEL_ACTIVATE_ALARM_OUTPUT2 = "activateAlarmOutput2";
   public static final String CHANNEL_ENABLE_EXTERNAL_ALARM_INPUT = "enableExternalAlarmInput";
@@ -49,18 +46,12 @@ public class IpCameraBindingConstants {
   public static final String CHANNEL_EXTERNAL_ALARM_INPUT = "externalAlarmInput";
   public static final String CHANNEL_EXTERNAL_ALARM_INPUT2 = "externalAlarmInput2";
   public static final String CHANNEL_POSITION_NAME = "positionName";
-  public static final String CHANNEL_SHOW_WATERMARK = "showWatermark";
-  public static final String CHANNEL_SHOW_DATETIME = "showDateTime";
-  public static final String CHANNEL_IMAGE_ROTATE = "rotateImage";
   public static final String CHANNEL_ANTI_FLICKER = "antiFlicker";
   public static final String CHANNEL_EXPOSURE = "exposure";
   public static final String CHANNEL_IMAGE_MIRROR = "mirrorImage";
   public static final String CHANNEL_3DNR = "3dnr";
 
   public static final String CHANNEL_POSITION_DATETIME = "positionDateTime";
-  public static final String CHANNEL_DAY_NIGHT = "dayNight";
-  public static final String CHANNEL_AUTO_LED = "autoLED";
-  public static final String CHANNEL_ENABLE_LED = "enableLED";
   public static final String CHANNEL_ENABLE_PIR_ALARM = "enablePirAlarm";
   public static final String CHANNEL_PIR_ALARM = "pirAlarm";
   public static final String CHANNEL_CELL_MOTION_ALARM = "cellMotionAlarm";

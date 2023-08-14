@@ -1,5 +1,9 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
@@ -15,7 +19,6 @@ import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
-import org.homio.api.EntityContext;
 import org.homio.api.state.DecimalType;
 import org.homio.api.state.OnOffType;
 import org.homio.api.state.State;
@@ -47,9 +50,9 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
     }
   }
 
-  @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_LED, order = 50, icon = "far fa-lightbulb")
+  @UIVideoAction(name = ENDPOINT_ENABLE_LED, order = 50, icon = "far fa-lightbulb")
   public void enableLed(boolean on) {
-    setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED, OnOffType.OFF);
+    setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
     if (on) {
       service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Manual");
     } else {
@@ -57,10 +60,10 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
     }
   }
 
-  @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
+  @UIVideoAction(name = ENDPOINT_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
   public void autoLed(boolean on) {
     if (on) {
-      setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LED, null);
+      setAttribute(ENDPOINT_ENABLE_LED, null);
       service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Auto");
     }
   }
@@ -68,7 +71,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
   @Override
   public Consumer<Boolean> getIRLedHandler() {
     return on -> {
-      setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED, OnOffType.OFF);
+      setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
       if (on) {
         service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&Lighting[0][0].Mode=Manual");
       } else {
@@ -79,7 +82,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
 
   @Override
   public Supplier<Boolean> getIrLedValueHandler() {
-    return () -> Optional.ofNullable(getAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LED)).map(State::boolValue).orElse(false);
+    return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
   }
 
   @Override
@@ -196,7 +199,7 @@ public class AmcrestBrandHandler extends BaseOnvifCameraBrandHandler implements 
       // Handle AudioMutationThreshold alarm
       if (content.contains("table.AudioDetect[0].MutationThreold=")) {
         String value = service.returnValueFromString(content, "table.AudioDetect[0].MutationThreold=");
-        setAttribute(IpCameraBindingConstants.CHANNEL_AUDIO_THRESHOLD, new DecimalType(value));
+        setAttribute(ENDPOINT_AUDIO_THRESHOLD, new DecimalType(value));
       }
       // Privacy Mode on/off
       if (content.contains("Code=LensMaskOpen;") || content.contains("table.LeLensMask[0].Enable=true")) {

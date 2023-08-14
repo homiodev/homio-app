@@ -1,6 +1,9 @@
 package org.homio.addon.camera.entity;
 
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+
 import de.onvif.soap.OnvifDeviceState;
+import de.onvif.soap.devices.InitialDevices;
 import jakarta.persistence.Entity;
 import java.net.URI;
 import java.nio.file.Path;
@@ -35,7 +38,7 @@ import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.onvif.ver10.device.wsdl.GetDeviceInformationResponse;
 
 @SuppressWarnings("unused")
 @Log4j2
@@ -122,16 +125,19 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         setJsonData("onvifMediaProfile", value);
     }
 
+    @Override
     @UIField(order = 45, hideInView = true, label = "cameraUsername")
     public String getUser() {
         return super.getUser();
     }
 
+    @Override
     @UIField(order = 50, hideInView = true, label = "cameraPassword")
     public SecureString getPassword() {
         return super.getPassword();
     }
 
+    @Override
     @UIField(order = 80, hideInView = true)
     public String getAlarmInputUrl() {
         return super.getAlarmInputUrl();
@@ -146,15 +152,8 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         setJsonData("nvrChannel", value);
     }
 
-    @UIField(order = 75)
-    public String getSnapshotUrl() {
-        if (getStatus().isOnline()) {
-            return getService().urls.getSnapshotUri();
-        }
-        return getRawSnapshotUrl();
-    }
-
-    public @NotNull String getRawSnapshotUrl() {
+    @Override
+    public @NotNull String getSnapshotUrl() {
         return getJsonDataRequire("snapshotUrl", "ffmpeg");
     }
 
@@ -180,6 +179,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         setJsonData("customAudioAlarmUrl", value);
     }
 
+    @Override
     @UIField(order = 95, hideInView = true)
     public @NotNull String getMjpegUrl() {
         return getJsonDataRequire("mjpegUrl", "ffmpeg");
@@ -237,7 +237,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     @Override
-    public @Nullable Icon getEntityIcon() {
+    public @NotNull Icon getEntityIcon() {
         return new Icon("fas fa-video", "#4E783D");
     }
 
@@ -298,11 +298,9 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
                             CommonUtils.ping(entity.getIp(), entity.getRestPort());
                             entity.setUser(user);
                             entity.setPassword(password);
-                            entity.setName(onvifDeviceState.getInitialDevices().getName());
-                            entity.setIeeeAddress(onvifDeviceState.getIEEEAddress());
-                            entity.setStart(true);
 
-                            entityContext.save(entity);
+                            entity.setInfo(onvifDeviceState.getInitialDevices());
+                            entityContext.save(entity.setStart(true));
                             entityContext.ui()
                                          .sendSuccessMessage("Onvif camera: " + this + " authenticated successfully");
                         } catch (Exception ex) {
@@ -321,6 +319,15 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         }
 
         return uiInputBuilder;
+    }
+
+    public void setInfo(InitialDevices initialDevices) {
+        setName(initialDevices.getName());
+        GetDeviceInformationResponse deviceInformation = initialDevices.getDeviceInformation();
+        setModel(deviceInformation.getModel());
+        setIeeeAddress(defaultIfEmpty(deviceInformation.getSerialNumber(), deviceInformation.getHardwareId()));
+        setFirmwareVersion(deviceInformation.getFirmwareVersion());
+        setManufacturer(deviceInformation.getManufacturer());
     }
 
     @Override

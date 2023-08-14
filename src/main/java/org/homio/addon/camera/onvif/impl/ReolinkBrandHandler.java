@@ -1,5 +1,13 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_DAY_NIGHT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_ROTATE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_RECORD_AUDIO;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_SHOW_DATETIME;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_SHOW_WATERMARK;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -22,6 +30,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -69,7 +78,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     private final RestTemplate restTemplate = new RestTemplate();
     private long tokenExpiration;
     private String token;
-    private String requestUrl;
+    @SuppressWarnings("FieldCanBeLocal") private String requestUrl;
 
     public ReolinkBrandHandler(OnvifCameraService service) {
         super(service);
@@ -150,8 +159,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         return new DownloadFile(new UrlResource(path.toUri()), Files.size(path), fileId, null);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_AUTO_LED, order = 10, icon = "fas fa-lightbulb")
-    public void autoLed(boolean on) {
+    @UIVideoAction(name = ENDPOINT_ENABLE_LED, order = 10, icon = "fas fa-lightbulb")
+    public void setAutoLed(boolean on) {
         getIRLedHandler().accept(on);
     }
 
@@ -162,7 +171,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             request.irLights.state = on ? "Auto" : "Off";
             if (firePostGetCode(ReolinkCommand.SetIrLights, true,
                 new ReolinkCmd(0, "SetIrLights", request))) {
-                setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED, OnOffType.of(on));
+                setAttribute(ENDPOINT_ENABLE_LED, OnOffType.of(on));
                 getEntityContext().ui().sendSuccessMessage("Reolink set IR light applied successfully");
             }
         };
@@ -170,12 +179,12 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @Override
     public Supplier<Boolean> getIrLedValueHandler() {
-        return () -> Optional.ofNullable(getAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED)).map(State::boolValue).orElse(false);
+        return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_AUTO_LED)
+    @UIVideoActionGetter(ENDPOINT_ENABLE_LED)
     public State isAutoLed() {
-        return getAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED);
+        return getAttribute(ENDPOINT_ENABLE_LED);
     }
 
     @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_POSITION_NAME)
@@ -214,35 +223,35 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         });
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_SHOW_WATERMARK)
+    @UIVideoActionGetter(ENDPOINT_SHOW_WATERMARK)
     public State getShowWatermark() {
         JsonType osd = (JsonType) getAttribute("Osd");
         return osd == null ? null : OnOffType.of(osd.getJsonNode().path("watermark").asInt() == 1);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_SHOW_WATERMARK, order = 102, icon = "fas fa-copyright", group = "VIDEO.OSD")
+    @UIVideoAction(name = ENDPOINT_SHOW_WATERMARK, order = 102, icon = "fas fa-copyright", group = "VIDEO.OSD")
     public void setShowWatermark(boolean on) {
         setSetting(ReolinkCommand.SetOsd, osd -> osd.set(boolToInt(on), "watermark"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_SHOW_DATETIME)
+    @UIVideoActionGetter(ENDPOINT_SHOW_DATETIME)
     public State getShowDateTime() {
         JsonType osd = (JsonType) getAttribute("Osd");
         return osd == null ? null : OnOffType.of(osd.getJsonNode().path("osdTime").path("enable").asInt() == 1);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_SHOW_DATETIME, order = 103, icon = "fas fa-copyright", group = "VIDEO.OSD")
+    @UIVideoAction(name = ENDPOINT_SHOW_DATETIME, order = 103, icon = "fas fa-copyright", group = "VIDEO.OSD")
     public void setShowDateTime(boolean on) {
         setSetting(ReolinkCommand.SetOsd, osd -> osd.set(boolToInt(on), "osdTime", "enable"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_IMAGE_ROTATE)
+    @UIVideoActionGetter(ENDPOINT_IMAGE_ROTATE)
     public State getRotateImage() {
         JsonType isp = (JsonType) getAttribute("Isp");
         return isp == null ? null : OnOffType.of(isp.getJsonNode().path("rotation").asInt() == 1);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_IMAGE_ROTATE, order = 160, icon = "fas fa-copyright", group = "VIDEO.ISP")
+    @UIVideoAction(name = ENDPOINT_IMAGE_ROTATE, order = 160, icon = "fas fa-copyright", group = "VIDEO.ISP")
     public void setRotateImage(boolean on) {
         setSetting(ReolinkCommand.SetIsp, isp -> isp.set(boolToInt(on), "rotation"));
     }
@@ -282,13 +291,13 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         setSetting(ReolinkCommand.SetIsp, isp -> isp.set(value, "exposure"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_DAY_NIGHT)
+    @UIVideoActionGetter(ENDPOINT_DAY_NIGHT)
     public State getDayNight() {
         JsonType isp = (JsonType) getAttribute("Isp");
         return isp == null ? null : new StringType(isp.getJsonNode().path("dayNight").asText());
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_DAY_NIGHT, order = 164, icon = "fas fa-cloud-sun", group = "VIDEO.ISP")
+    @UIVideoAction(name = ENDPOINT_DAY_NIGHT, order = 164, icon = "fas fa-cloud-sun", group = "VIDEO.ISP")
     @UICameraSelectionAttributeValues(value = "IspRange", path = {"dayNight"})
     public void setDayNight(String value) {
         setSetting(ReolinkCommand.SetIsp, isp -> isp.set(value, "dayNight"));
@@ -305,13 +314,13 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         setSetting(ReolinkCommand.SetIsp, isp -> isp.set(boolToInt(on), "nr3d"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_RECORD_AUDIO)
+    @UIVideoActionGetter(ENDPOINT_RECORD_AUDIO)
     public State getRecAudio() {
         JsonType enc = (JsonType) getAttribute("Enc");
         return enc == null ? null : OnOffType.of(enc.getJsonNode().path("audio").asInt() == 1);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_RECORD_AUDIO, order = 80, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
+    @UIVideoAction(name = ENDPOINT_RECORD_AUDIO, order = 80, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
                    subGroupIcon = "fas fa-dice-six")
     public void setRecAudio(boolean on) {
         setSetting(ReolinkCommand.SetEnc, enc -> enc.set(boolToInt(on), "audio"));
@@ -324,8 +333,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_MAIN_RESOLUTION, order = 81, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
-                   subGroupIcon = "fas " +
-                       "fa-dice-six")
+                   subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectResolution.class, staticParameters = {"mainStream"})
     public void setStreamMainResolution(String value) {
         setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "mainStream", "size"));
@@ -463,7 +471,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                         setAttribute("Isp", new JsonType(objectNode.value.isp));
                         setAttribute("IspRange", new JsonType(objectNode.range.path("Isp")));
                     }
-                    case "GetIrLights" -> setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED,
+                    case "GetIrLights" -> setAttribute(ENDPOINT_ENABLE_LED,
                         OnOffType.of("Auto".equals(objectNode.value.irLights.path("state").asText())));
                 }
             }
@@ -481,6 +489,16 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             return false;
         }
         return true;*/
+    }
+
+    @Override
+    public void postInitializeCamera(EntityContext entityContext) {
+        service.addEndpointSwitch(ENDPOINT_ENABLE_LED, state -> setAutoLed(state.boolValue()));
+        service.addEndpointSwitch(ENDPOINT_SHOW_WATERMARK, state -> setShowWatermark(state.boolValue()));
+        service.addEndpointSwitch(ENDPOINT_SHOW_DATETIME, state -> setShowDateTime(state.boolValue()));
+        service.addEndpointSwitch(ENDPOINT_RECORD_AUDIO, state -> setRecAudio(state.boolValue()));
+        service.addEndpointSwitch(ENDPOINT_IMAGE_ROTATE, state -> setRotateImage(state.boolValue()));
+        service.addEndpointEnum(ENDPOINT_DAY_NIGHT, Set.of("Auto", "Color", "Black&White"), state -> setDayNight(state.stringValue()));
     }
 
     @Override

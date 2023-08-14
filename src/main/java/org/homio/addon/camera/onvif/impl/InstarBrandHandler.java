@@ -1,5 +1,9 @@
 package org.homio.addon.camera.onvif.impl;
 
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUDIO_THRESHOLD;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_AUTO_LED;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
@@ -48,9 +52,9 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
             switch (requestUrl) {
                 case "/param.cgi?cmd=getinfrared" -> {
                     if (content.contains("var infraredstat=\"auto")) {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED, OnOffType.ON);
+                        setAttribute(ENDPOINT_AUTO_LED, OnOffType.ON);
                     } else {
-                        setAttribute(IpCameraBindingConstants.CHANNEL_AUTO_LED, OnOffType.OFF);
+                        setAttribute(ENDPOINT_AUTO_LED, OnOffType.OFF);
                     }
                 }
                 case "/param.cgi?cmd=getoverlayattr&-region=1" -> {// Text Overlays
@@ -76,7 +80,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.ON);
                         value1 = Helper.searchString(content, "var aa_value=\"");
                         if (!value1.isEmpty()) {
-                            setAttribute(IpCameraBindingConstants.CHANNEL_AUDIO_THRESHOLD, new DecimalType(value1));
+                            setAttribute(ENDPOINT_AUDIO_THRESHOLD, new DecimalType(value1));
                         }
                     } else {
                         setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.OFF);
@@ -157,7 +161,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
         }
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
+    @UIVideoAction(name = ENDPOINT_AUTO_LED, order = 60, icon = "fas fa-lightbulb")
     public void autoLED(boolean on) {
         getIRLedHandler().accept(on);
     }
@@ -175,7 +179,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
 
     @Override
     public Supplier<Boolean> getIrLedValueHandler() {
-        return () -> Optional.ofNullable(getAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_LED)).map(State::boolValue).orElse(false);
+        return () -> Optional.ofNullable(getAttribute(ENDPOINT_ENABLE_LED)).map(State::boolValue).orElse(false);
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_PIR_ALARM, order = 120, icon = "fas fa-compress-alt")
@@ -220,7 +224,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     }
 
     @Override
-    public void initialize(EntityContext entityContext) {
+    public void postInitializeCamera(EntityContext entityContext) {
         if (service.lowPriorityRequests.isEmpty()) {
             service.lowPriorityRequests.add("/param.cgi?cmd=getaudioalarmattr");
             service.lowPriorityRequests.add("/cgi-bin/hi3510/param.cgi?cmd=getmdattr");
