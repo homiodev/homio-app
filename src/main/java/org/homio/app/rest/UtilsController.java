@@ -2,8 +2,8 @@ package org.homio.app.rest;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 import static java.lang.String.format;
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.rest.widget.EvaluateDatesAndValues.convertValuesToFloat;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;

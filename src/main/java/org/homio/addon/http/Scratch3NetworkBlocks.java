@@ -1,7 +1,7 @@
 package org.homio.addon.http;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.springframework.http.HttpHeaders.ACCEPT;
 import static org.springframework.http.HttpHeaders.ACCEPT_ENCODING;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
@@ -165,16 +165,13 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
                                             .setSocketTimeout(setting.socketTimeout * 1000).build();
         HttpRequestBase request = CommonUtils.newInstance(setting.httpMethod.httpRequestBaseClass);
         switch (setting.auth) {
-            case Basic:
+            case Basic -> {
                 String auth = setting.user + ":" + setting.password.asString();
                 byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
                 request.setHeader(AUTHORIZATION, "Basic " + new String(encodedAuth));
-                break;
-            case Digest:
-                throw new IllegalStateException("Not implemented yet");
-            case Bearer:
-                request.setHeader(AUTHORIZATION, "Basic " + setting.token);
-                break;
+            }
+            case Digest -> throw new IllegalStateException("Not implemented yet");
+            case Bearer -> request.setHeader(AUTHORIZATION, "Basic " + setting.token);
         }
 
         // build headers
@@ -207,12 +204,15 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
     @SneakyThrows
     private State convertResult(HttpResponse response, HttpRequestEntity setting) {
         switch (setting.responseType) {
-            case String:
+            case String -> {
                 return new StringType(IOUtils.toString(response.getEntity().getContent(), UTF_8));
-            case Binary:
+            }
+            case Binary -> {
                 return new RawType(IOUtils.toByteArray(response.getEntity().getContent()));
-            case Json:
+            }
+            case Json -> {
                 return new JsonType(IOUtils.toString(response.getEntity().getContent(), UTF_8));
+            }
         }
         Header contentType = response.getFirstHeader("Content-Type");
         String rawValue = IOUtils.toString(response.getEntity().getContent(), UTF_8);
@@ -246,9 +246,8 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
                 ((HttpEntityEnclosingRequestBase) request).setEntity(new StringEntity(payload));
             }
         }),
-        update_bearer_auth((workspaceBlock, request) -> {
-            request.setHeader(AUTHORIZATION, "Basic " + workspaceBlock.getInputString("TOKEN"));
-        }),
+        update_bearer_auth((workspaceBlock, request) ->
+            request.setHeader(AUTHORIZATION, "Basic " + workspaceBlock.getInputString("TOKEN"))),
         update_basic_auth((workspaceBlock, request) -> {
             String auth = workspaceBlock.getInputString("USER") + ":" + workspaceBlock.getInputString("PWD");
             byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));

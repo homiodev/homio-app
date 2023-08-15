@@ -1,6 +1,6 @@
 package org.homio.app.workspace;
 
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.pivovarit.function.ThrowingRunnable;
 import java.nio.charset.Charset;

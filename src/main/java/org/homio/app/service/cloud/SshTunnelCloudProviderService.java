@@ -5,7 +5,7 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.defaultString;
 import static org.homio.api.EntityContextSetting.SERVER_PORT;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;

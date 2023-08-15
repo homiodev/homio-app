@@ -45,13 +45,7 @@ public class IpCameraBindingConstants {
   public static final String CHANNEL_TRIGGER_EXTERNAL_ALARM_INPUT = "triggerExternalAlarmInput";
   public static final String CHANNEL_EXTERNAL_ALARM_INPUT = "externalAlarmInput";
   public static final String CHANNEL_EXTERNAL_ALARM_INPUT2 = "externalAlarmInput2";
-  public static final String CHANNEL_POSITION_NAME = "positionName";
-  public static final String CHANNEL_ANTI_FLICKER = "antiFlicker";
-  public static final String CHANNEL_EXPOSURE = "exposure";
-  public static final String CHANNEL_IMAGE_MIRROR = "mirrorImage";
-  public static final String CHANNEL_3DNR = "3dnr";
 
-  public static final String CHANNEL_POSITION_DATETIME = "positionDateTime";
   public static final String CHANNEL_ENABLE_PIR_ALARM = "enablePirAlarm";
   public static final String CHANNEL_PIR_ALARM = "pirAlarm";
   public static final String CHANNEL_CELL_MOTION_ALARM = "cellMotionAlarm";

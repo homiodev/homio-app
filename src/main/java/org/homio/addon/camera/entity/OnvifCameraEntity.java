@@ -242,7 +242,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     }
 
     public long getDeepHashCode() {
-        return Objects.hash(getIeeeAddress(), getName()) + getJsonDataHashCode("ip", "cameraType", "onvifPort", "restPort",
+        return Objects.hash(getIeeeAddress(), getName()) + getJsonDataHashCode("start", "ip", "cameraType", "onvifPort", "restPort",
             "onvifMediaProfile", "user", "pwd");
     }
 

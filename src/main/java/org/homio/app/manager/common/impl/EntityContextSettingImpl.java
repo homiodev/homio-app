@@ -1,6 +1,6 @@
 package org.homio.app.manager.common.impl;
 
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.manager.common.impl.EntityContextUIImpl.GlobalSendType.setting;
 import static org.homio.app.model.entity.SettingEntity.getKey;
 import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;

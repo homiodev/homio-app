@@ -79,8 +79,7 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
 
     @Override
     protected long getEntityHashCode(CommonVideoStreamEntity entity) {
-        String ieeeAddress = entity.getIeeeAddress();
-        return ieeeAddress == null ? 0 : ieeeAddress.hashCode();
+        return entity.getDeepHashCode();
     }
 
     @RequiredArgsConstructor

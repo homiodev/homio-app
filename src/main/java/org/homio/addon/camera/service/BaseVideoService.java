@@ -19,7 +19,7 @@ import static org.homio.api.model.Status.REQUIRE_AUTH;
 import static org.homio.api.model.Status.UNKNOWN;
 import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_DEVICE_STATUS;
 import static org.homio.api.model.endpoint.DeviceEndpoint.ENDPOINT_LAST_SEEN;
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
@@ -799,19 +799,23 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
     }
 
-    public void addEndpoint(String endpointId, Function<String, VideoDeviceEndpoint> handler, Consumer<State> updateHandler) {
-        endpoints.computeIfAbsent(endpointId, key -> {
+    public VideoDeviceEndpoint addEndpoint(String endpointId, Function<String, VideoDeviceEndpoint> handler, Consumer<State> updateHandler) {
+        return endpoints.computeIfAbsent(endpointId, key -> {
             VideoDeviceEndpoint endpoint = handler.apply(key);
             endpoint.setUpdateHandler(updateHandler);
             return endpoint;
         });
     }
 
-    public void addEndpointSwitch(String endpointId, Consumer<State> updateHandler) {
-        addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, EndpointType.bool), updateHandler);
+    public VideoDeviceEndpoint addEndpointSwitch(String endpointId, Consumer<State> updateHandler) {
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, EndpointType.bool), updateHandler);
     }
 
-    public void addEndpointEnum(String endpointId, Set<String> range, Consumer<State> updateHandler) {
-        addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, range), updateHandler);
+    public VideoDeviceEndpoint addEndpointEnum(String endpointId, Set<String> range, Consumer<State> updateHandler) {
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, range), updateHandler);
+    }
+
+    public VideoDeviceEndpoint addEndpointSlider(String endpointId, int min, int max, Consumer<State> updateHandler) {
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, (float) min, (float) max), updateHandler);
     }
 }

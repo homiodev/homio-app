@@ -3,7 +3,7 @@ package org.homio.app.utils;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.homio.api.util.CommonUtils.OBJECT_MAPPER;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 import static org.homio.app.utils.UIFieldUtils.buildDynamicParameterMetadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;

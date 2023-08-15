@@ -46,6 +46,11 @@ public class CommonVideoStreamEntity extends BaseVideoEntity<CommonVideoStreamEn
         return null;
     }
 
+    public long getDeepHashCode() {
+        return StringUtils.defaultString(getIeeeAddress(), "").hashCode()
+            + getJsonDataHashCode("start");
+    }
+
     @Override
     protected @NotNull String getDevicePrefix() {
         return "vstream";
