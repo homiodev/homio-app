@@ -11,7 +11,7 @@ public @interface UICameraSelectionAttributeValues {
 
   String value();
 
-  String[] path() default {};
+  String path() default "";
 
   String[] prependValues() default {};
 }

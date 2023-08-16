@@ -513,6 +513,11 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @Override
     protected void assembleAdditionalVideoActions(UIInputBuilder uiInputBuilder) {
+        uiInputBuilder.addSelectableButton("VIDEO.FETCH_DATA_FROM_CAMERA", (entityContext, params) -> {
+            brandHandler.fetchDataFromCamera();
+            entityContext.ui().updateItem(entity);
+            return ActionResponseModel.success();
+        }).setIcon(new Icon("fas fa-cloud-arrow-down"));
         brandHandler.assembleActions(uiInputBuilder);
     }
 

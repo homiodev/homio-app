@@ -25,108 +25,113 @@ import org.springframework.http.MediaType;
 
 public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler implements VideoActionsContext, BaseBrandCameraHandler {
 
-  protected final int nvrChannel;
-  protected final String username;
-  protected final String password;
-  protected final String ip;
-  protected final String entityID;
-  protected final OnvifCameraService service;
+    protected final int nvrChannel;
+    protected final String username;
+    protected final String password;
+    protected final String ip;
+    protected final String entityID;
+    protected final OnvifCameraService service;
 
-  public BaseOnvifCameraBrandHandler(OnvifCameraService service) {
-    this.service = service;
+    public BaseOnvifCameraBrandHandler(OnvifCameraService service) {
+        this.service = service;
 
-    OnvifCameraEntity entity = service.getEntity();
-    this.entityID = entity.getEntityID();
-    this.nvrChannel = entity.getNvrChannel();
-    this.username = entity.getUser();
-    this.password = entity.getPassword().asString();
-    this.ip = entity.getIp();
-  }
+        OnvifCameraEntity entity = service.getEntity();
+        this.entityID = entity.getEntityID();
+        this.nvrChannel = entity.getNvrChannel();
+        this.username = entity.getUser();
+        this.password = entity.getPassword().asString();
+        this.ip = entity.getIp();
+    }
 
-  public EntityContext getEntityContext() {
-    return service.getEntityContext();
-  }
+    public EntityContext getEntityContext() {
+        return service.getEntityContext();
+    }
 
-  @Override
-  public OnvifCameraEntity getEntity() {
-    return service.getEntity();
-  }
+    @Override
+    public OnvifCameraEntity getEntity() {
+        return service.getEntity();
+    }
 
-  @Override
-  public boolean isSharable() {
-    return true;
-  }
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
-  public State getAttribute(String name) {
-    return service.getAttributes().getOrDefault(name, null);
-  }
+    public State getAttribute(String name) {
+        return service.getAttributes().getOrDefault(name, null);
+    }
 
-  public int boolToInt(boolean on) {
-    return on ? 1 : 0;
-  }
+    public int boolToInt(boolean on) {
+        return on ? 1 : 0;
+    }
 
-  public void assembleActions(UIInputBuilder uiInputBuilder) {
-    CameraActionBuilder.assembleActions(this, uiInputBuilder);
-  }
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+        CameraActionBuilder.assembleActions(this, uiInputBuilder);
+    }
 
-  public @Nullable String getSnapshotUri() {
-    return null;
-  }
+    public @Nullable String getSnapshotUri() {
+        return null;
+    }
 
-  public @Nullable String getMjpegUri() {
-    return null;
-  }
+    public @Nullable String getMjpegUri() {
+        return null;
+    }
 
-  public abstract void onCameraConnected();
+    public void onCameraConnected() {
+      fetchDataFromCamera();
+    }
 
-  protected void setAttribute(String key, State state) {
-    service.setAttribute(key, state);
-  }
+    public void fetchDataFromCamera() {
+    }
 
-  protected void setAttributeRequest(String key, State state) {
-    service.setAttributeRequest(key, state);
-  }
+    protected void setAttribute(String key, State state) {
+        service.setAttribute(key, state);
+    }
 
-  protected State getAttributeRequest(String key) {
-    return service.getRequestAttributes().get(key);
-  }
+    protected void setAttributeRequest(String key, State state) {
+        service.setAttributeRequest(key, state);
+    }
 
-  public void pollCameraRunnable() {
-  }
+    protected State getAttributeRequest(String key) {
+        return service.getRequestAttributes().get(key);
+    }
 
-  public void postInitializeCamera(EntityContext entityContext) {
+    public void pollCameraRunnable() {
+    }
 
-  }
+    public void postInitializeCamera(EntityContext entityContext) {
 
-  public String getUrlToKeepOpenForIdleStateEvent() {
-    return "";
-  }
+    }
 
-  public void handleSetURL(ChannelPipeline pipeline, String httpRequestURL) {
+    public String getUrlToKeepOpenForIdleStateEvent() {
+        return "";
+    }
 
-  }
+    public void handleSetURL(ChannelPipeline pipeline, String httpRequestURL) {
 
-  protected FullHttpRequest buildFullHttpRequest(String httpPutURL, String xml, HttpMethod httpMethod, MediaType mediaType) {
-    FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod(httpMethod.name()), httpPutURL);
-    request.headers().set(HttpHeaderNames.HOST, getEntity().getIp());
-    request.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-    request.headers().add(HttpHeaderNames.CONTENT_TYPE, mediaType.toString());
-    ByteBuf bbuf = Unpooled.copiedBuffer(xml, StandardCharsets.UTF_8);
-    request.headers().set(HttpHeaderNames.CONTENT_LENGTH, bbuf.readableBytes());
-    request.content().clear().writeBytes(bbuf);
-    return request;
-  }
+    }
 
-  public String updateURL(String url) {
-    return url;
-  }
+    protected FullHttpRequest buildFullHttpRequest(String httpPutURL, String xml, HttpMethod httpMethod, MediaType mediaType) {
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, new HttpMethod(httpMethod.name()), httpPutURL);
+        request.headers().set(HttpHeaderNames.HOST, getEntity().getIp());
+        request.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        request.headers().add(HttpHeaderNames.CONTENT_TYPE, mediaType.toString());
+        ByteBuf bbuf = Unpooled.copiedBuffer(xml, StandardCharsets.UTF_8);
+        request.headers().set(HttpHeaderNames.CONTENT_LENGTH, bbuf.readableBytes());
+        request.content().clear().writeBytes(bbuf);
+        return request;
+    }
 
-  public boolean isSupportOnvifEvents() {
-    return false;
-  }
+    public String updateURL(String url) {
+        return url;
+    }
 
-  @Override
-  public ChannelHandler asBootstrapHandler() {
-    return this;
-  }
+    public boolean isSupportOnvifEvents() {
+        return false;
+    }
+
+    @Override
+    public ChannelHandler asBootstrapHandler() {
+        return this;
+    }
 }
