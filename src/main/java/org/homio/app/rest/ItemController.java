@@ -357,6 +357,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 request.metadata.put(key.substring("field.".length()), request.metadata.get(key));
             }
             request.metadata.put("entityID", entityID);
+            if (request.entityID.startsWith("field.")) {
+                request.entityID = request.entityID.substring("field.".length());
+            }
             return executeAction(request, entity, entity);
         } catch (Exception ex) {
             log.error("Error while execute action: {}", CommonUtils.getErrorMessage(ex));

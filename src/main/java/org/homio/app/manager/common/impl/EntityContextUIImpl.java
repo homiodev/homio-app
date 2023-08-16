@@ -217,21 +217,13 @@ public class EntityContextUIImpl implements EntityContextUI {
         }
         this.sendToUIMap.put(parentEntity.getEntityID() + parentFieldName + innerEntityID + updateField, new SendUpdateContext(
             parentEntity, () -> {
-            ObjectNode metadata =
-                OBJECT_MAPPER
-                    .createObjectNode()
-                    .put("type", "add")
-                    .put("entityID", parentEntity.getEntityID())
-                    .put("updateField", updateField)
-                    .putPOJO("value", value);
-
-            metadata.putPOJO(
-                "inner",
-                OBJECT_MAPPER
-                    .createObjectNode()
-                    .put("id", innerEntityID)
-                    .put("parentField", parentFieldName));
-            return metadata;
+            return OBJECT_MAPPER
+                .createObjectNode()
+                .put("type", "add")
+                .put("entityID", parentEntity.getEntityID())
+                .put("updateField", updateField)
+                .put("parentField", parentFieldName)
+                .putPOJO("value", value);
         }));
     }
 

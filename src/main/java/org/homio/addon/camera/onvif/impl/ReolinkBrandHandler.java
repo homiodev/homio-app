@@ -7,17 +7,22 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_BGCOLOR;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLACK_LIGHT;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLC;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_BLUE_GAIN;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_BRIGHT;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_CONTRAST;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_DATETIME_POSITION;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_DATETIME_SHOW;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_DAY_NIGHT;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_DRC;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_EXPOSURE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_HUE;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_MIRROR;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_IMAGE_ROTATE;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_NAME_POSITION;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_NAME_SHOW;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_RECORD_AUDIO;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_RED_GAIN;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_SATURATION;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_SHARPEN;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_WATERMARK_SHOW;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_WHITE_BALANCE;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
@@ -123,12 +128,19 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         configurations.add(new EndpointConfiguration(ENDPOINT_BLUE_GAIN, ConfigType.number, "Isp", "blueGain"));
         configurations.add(new EndpointConfiguration(ENDPOINT_BLC, ConfigType.number, "Isp", "blc"));
         configurations.add(new EndpointConfiguration(ENDPOINT_RED_GAIN, ConfigType.number, "Isp", "redGain"));
+
         configurations.add(new EndpointConfiguration(ENDPOINT_BGCOLOR, ConfigType.bool, "Osd", "bgcolor"));
         configurations.add(new EndpointConfiguration(ENDPOINT_NAME_SHOW, ConfigType.bool, "Osd", "osdChannel/enable"));
         configurations.add(new EndpointConfiguration(ENDPOINT_NAME_POSITION, ConfigType.select, "Osd", "osdChannel/pos"));
         configurations.add(new EndpointConfiguration(ENDPOINT_DATETIME_SHOW, ConfigType.bool, "Osd", "osdTime/enable"));
         configurations.add(new EndpointConfiguration(ENDPOINT_DATETIME_POSITION, ConfigType.select, "Osd", "osdTime/pos"));
         configurations.add(new EndpointConfiguration(ENDPOINT_WATERMARK_SHOW, ConfigType.bool, "Osd", "watermark"));
+
+        configurations.add(new EndpointConfiguration(ENDPOINT_BRIGHT, ConfigType.number, "Image", "bright"));
+        configurations.add(new EndpointConfiguration(ENDPOINT_CONTRAST, ConfigType.number, "Image", "contrast"));
+        configurations.add(new EndpointConfiguration(ENDPOINT_HUE, ConfigType.number, "Image", "hue"));
+        configurations.add(new EndpointConfiguration(ENDPOINT_SATURATION, ConfigType.number, "Image", "saturation"));
+        configurations.add(new EndpointConfiguration(ENDPOINT_SHARPEN, ConfigType.number, "Image", "sharpen"));
     }
 
     @Override
@@ -616,7 +628,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @SneakyThrows
     public Root[] firePost(String url, boolean requireAuth, ReolinkCmd... commands) {
         String fullUrl = getAuthUrl(url, requireAuth);
-        var requestEntity = RequestEntity.post(new URL(fullUrl).toURI()).contentType(MediaType.APPLICATION_JSON)
+        var requestEntity = RequestEntity.post(new URL(fullUrl).toURI())
+                                         .contentType(MediaType.APPLICATION_JSON)
                                          .body(Arrays.asList(commands));
         ResponseEntity<String> exchange = restTemplate.exchange(requestEntity, String.class);
         if (exchange.getBody() == null) {
@@ -724,7 +737,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
         private final int action;
         private final String cmd;
-        private final Object param;
+        private final JsonNode param;
     }
 
     @Getter
@@ -800,7 +813,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             Consumer<State> setter = state -> handler.setSetting(ReolinkCommand.valueOf("Set" + c.group), isp -> isp.set(state.stringValue(), c.key));
             Supplier<State> getter = () -> {
                 JsonType group = (JsonType) handler.getAttribute(c.group);
-                return group == null ? null : new StringType(group.getJsonNode().path(c.key).asText());
+                return group == null ? null : new StringType(JsonUtils.getJsonPath(group.getJsonNode(), c.key).asText());
             };
             handler.service.addEndpointEnum(c.endpointId, range, setter).setValue(getter.get(), true);
         });

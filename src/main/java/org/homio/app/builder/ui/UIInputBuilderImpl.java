@@ -76,9 +76,11 @@ public class UIInputBuilderImpl extends UIBaseLayoutBuilderImpl implements UIInp
     @Override
     public UIActionHandler findActionHandler(@NotNull String key) {
         for (UIEntityItemBuilder entityBuilder : this.getUiEntityItemBuilders(true)) {
-            if (entityBuilder.getEntityID().equals(key)
-                && entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
-                return ((UIBaseEntityItemBuilderImpl) entityBuilder).getActionHandler();
+            if (entityBuilder instanceof UIBaseEntityItemBuilderImpl) {
+                if (entityBuilder.getEntityID().equals(key)
+                    || entityBuilder.getEntityID().equals("field." + key)) {
+                    return ((UIBaseEntityItemBuilderImpl) entityBuilder).getActionHandler();
+                }
             }
         }
         return null;

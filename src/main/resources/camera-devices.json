@@ -12,147 +12,149 @@
     },
     {
       "name": "anti_flicker",
-      "stateless": true,
-      "icon": "fa-star-half-stroke",
+      "icon": "fa-flickr",
       "iconColor": "#56AB26"
     },
     {
       "name": "black_light",
-      "stateless": true,
-      "icon": "fa-star-half-stroke",
+      "icon": "fa-traffic-light",
       "iconColor": "#56AB26"
     },
     {
       "name": "blc",
-      "stateless": true,
       "icon": "fa-star-half-stroke",
       "iconColor": "#56AB26"
     },
     {
       "name": "blue_gain",
-      "stateless": true,
-      "stateless": true,
-      "icon": "fa-circle-down",
+      "icon": "fa-dice-six",
       "iconColor": "#27608C"
     },
     {
       "name": "drc",
-      "stateless": true,
-      "stateless": true,
       "icon": "fa-plug-circle-bolt",
       "iconColor": "#A69A2D"
     },
     {
       "name": "exposure",
-      "stateless": true,
-      "icon": "fa-bolt",
+      "icon": "fa-explosion",
       "iconColor": "#9357EF"
     },
     {
-      "name": "mirror",
-      "stateless": true,
-      "icon": "fa-plug-circle-bolt",
+      "name": "image_mirror",
+      "icon": "fa-arrow-right-arrow-left",
       "iconColor": "#9357EF"
     },
     {
       "name": "3dnr",
-      "stateless": true,
-      "icon": "fa-truck-ramp-box",
+      "icon": "fa-unity",
       "iconColor": "#299974"
     },
     {
       "name": "red_gain",
-      "stateless": true,
       "icon": "fa-vials",
       "iconColor": "#A095F7"
     },
     {
       "name": "white_balance",
-      "stateless": true,
-      "icon": "fa-cash-register",
+      "icon": "fa-scale-balanced",
       "iconColor": "#B06C51"
     },
     {
       "name": "position_datetime",
-      "stateless": true,
-      "icon": "fa-dice-d20",
+      "icon": "fa-arrows-up-down-left-right",
       "iconColor": "#5172B0"
     },
     {
       "name": "name_position",
-      "stateless": true,
-      "icon": "fa-tower-observation",
+      "icon": "fa-up-down-left-right",
       "iconColor": "#563AB0"
     },
     {
       "name": "show_name",
-      "stateless": true,
-      "icon": "fa-gopuram",
+      "icon": "fa-tags",
       "iconColor": "#A82F9E"
     },
     {
       "name": "day_night",
-      "stateless": true,
       "icon": "fa-cloud-sun",
       "iconColor": "#DD5F24"
     },
     {
-      "name": "rotate_image",
-      "stateless": true,
-      "icon": "fa-copyright",
-      "iconColor": "#538273"
+      "name": "image_rotate",
+      "icon": "fa-superscript",
+      "iconColor": "#415DBA"
     },
     {
       "name": "record_audio",
-      "stateless": true,
       "icon": "fa-dice-six",
       "iconColor": "#AB2200"
     },
     {
-      "name": "show_date_time",
-      "stateless": true,
-      "icon": "fa-copyright",
+      "name": "show_datetime",
+      "icon": "fa-calendar-days",
       "iconColor": "#618750"
     },
     {
       "name": "show_watermark",
-      "stateless": true,
-      "icon": "fa-copyright",
+      "icon": "fab fa-markdown",
       "iconColor": "#AB2631"
     },
     {
       "name": "enable_led",
-      "stateless": true,
       "icon": "fas fa-lightbulb",
       "iconColor": "#7C2D9C"
     },
     {
       "name": "auto_led",
-      "stateless": true,
       "icon": "fas fa-lightbulb",
       "iconColor": "#7C2D9C"
     },
     {
       "name": "audio_threshold",
-      "stateless": true,
       "icon": "fa-music",
       "iconColor": "#95A346"
     },
     {
       "name": "motion_threshold",
-      "stateless": true,
       "icon": "fa-person-running",
       "iconColor": "#299974"
     },
+
+    {
+      "name": "image_bright",
+      "icon": "fa-sun",
+      "iconColor": "#415DBA"
+    },
+    {
+      "name": "image_contrast",
+      "icon": "fa-circle-half-stroke",
+      "iconColor": "#415DBA"
+    },
+    {
+      "name": "image_hue",
+      "icon": "fa-swatchbook",
+      "iconColor": "#415DBA"
+    },
+    {
+      "name": "image_saturation",
+      "icon": "fa-pen-fancy",
+      "iconColor": "#415DBA"
+    },
+    {
+      "name": "image_sharpen",
+      "icon": "fa-cubes-stacked",
+      "iconColor": "#415DBA"
+    },
+
+
     {
       "name": "last_seen",
-      "stateless": true,
       "icon": "fa-eye",
       "iconColor": "#2D9C2C"
     },
     {
       "name": "device_status",
-      "stateless": true,
       "icon": "fa-globe",
       "iconColor": "#42B52D"
     }

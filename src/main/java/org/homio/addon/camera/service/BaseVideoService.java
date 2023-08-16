@@ -715,7 +715,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         FFMPEG.run(ffmpegGIF, FFMPEG::startConverting);
     }
 
-    private void updateLastSeen() {
+    public void updateLastSeen() {
         endpoints.get(ENDPOINT_LAST_SEEN).setValue(new DecimalType(System.currentTimeMillis()), true);
     }
 
@@ -779,7 +779,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         });
 
         endpoints.computeIfAbsent(ENDPOINT_LAST_SEEN, key -> {
-            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, key, EndpointType.number) {
+            VideoDeviceEndpoint videoEndpoint = new VideoDeviceEndpoint(entity, key, EndpointType.number, false) {
 
                 @Override
                 public void assembleUIAction(@NotNull UIInputBuilder uiInputBuilder) {
@@ -808,7 +808,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     public VideoDeviceEndpoint addEndpointSwitch(String endpointId, Consumer<State> updateHandler) {
-        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, EndpointType.bool), updateHandler);
+        return addEndpoint(endpointId, key -> new VideoDeviceEndpoint(entity, key, EndpointType.bool, true), updateHandler);
     }
 
     public VideoDeviceEndpoint addEndpointEnum(String endpointId, Set<String> range, Consumer<State> updateHandler) {
