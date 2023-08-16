@@ -37,4 +37,15 @@ public class VideoConstants {
     public static final String ENDPOINT_HUE = "image_hue";
     public static final String ENDPOINT_SATURATION = "image_saturation";
     public static final String ENDPOINT_SHARPEN = "image_sharpen";
+
+    public static final String ENDPOINT_STREAM_MAIN_RESOLUTION = "stream_main_resolution";
+    public static final String ENDPOINT_STREAM_MAIN_BITRATE = "stream_main_bit_rate";
+    public static final String ENDPOINT_STREAM_MAIN_FRAMERATE = "stream_main_frame_rate";
+    public static final String ENDPOINT_STREAM_MAIN_H264_PROFILE = "stream_main_H264_profile";
+
+    public static final String ENDPOINT_STREAM_SECONDARY_RESOLUTION = "stream_secondary_resolution";
+    public static final String ENDPOINT_STREAM_SECONDARY_BITRATE = "stream_secondary_bit_rate";
+    public static final String ENDPOINT_STREAM_SECONDARY_FRAMERATE = "stream_secondary_frame_rate";
+    public static final String ENDPOINT_STREAM_SECONDARY_H264_PROFILE = "stream_secondary_H264_profile";
+
 }

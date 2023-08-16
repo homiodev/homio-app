@@ -23,6 +23,14 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_RECORD_AUDIO;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_RED_GAIN;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_SATURATION;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_SHARPEN;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_BITRATE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_FRAMERATE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_H264_PROFILE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_MAIN_RESOLUTION;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_BITRATE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_FRAMERATE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_H264_PROFILE;
+import static org.homio.addon.camera.VideoConstants.ENDPOINT_STREAM_SECONDARY_RESOLUTION;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_WATERMARK_SHOW;
 import static org.homio.addon.camera.VideoConstants.ENDPOINT_WHITE_BALANCE;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
@@ -47,10 +55,11 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -67,6 +76,7 @@ import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
+import org.homio.addon.camera.onvif.impl.ReolinkBrandHandler.SearchRequest.Search;
 import org.homio.addon.camera.onvif.util.IpCameraBindingConstants;
 import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.addon.camera.ui.UICameraSelectionAttributeValues;
@@ -85,7 +95,6 @@ import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.JsonUtils;
 import org.jetbrains.annotations.Nullable;
-import org.json.JSONObject;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -98,7 +107,7 @@ import org.springframework.web.client.RestTemplate;
 public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     BrandCameraHasMotionAlarm, VideoPlaybackStorage {
 
-    private static final Set<EndpointConfiguration> configurations = new HashSet<>();
+    private static final Map<String, EndpointConfiguration> configurations = new HashMap<>();
 
     private final RestTemplate restTemplate = new RestTemplate();
     private long tokenExpiration;
@@ -115,40 +124,54 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     }
 
     static {
-        configurations.add(new EndpointConfiguration(ENDPOINT_EXPOSURE, ConfigType.select, "Isp", "exposure"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_DAY_NIGHT, ConfigType.select, "Isp", "dayNight"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_BLACK_LIGHT, ConfigType.select, "Isp", "backLight"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_WHITE_BALANCE, ConfigType.select, "Isp", "whiteBalance"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_ANTI_FLICKER, ConfigType.select, "Isp", "backLight"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_IMAGE_ROTATE, ConfigType.bool, "Isp", "rotation"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_3DNR, ConfigType.bool, "Isp", "nr3d"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_IMAGE_ROTATE, ConfigType.bool, "Isp", "rotation"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_IMAGE_MIRROR, ConfigType.bool, "Isp", "mirroring"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_DRC, ConfigType.number, "Isp", "drc"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_BLUE_GAIN, ConfigType.number, "Isp", "blueGain"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_BLC, ConfigType.number, "Isp", "blc"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_RED_GAIN, ConfigType.number, "Isp", "redGain"));
+        addConfig(new EndpointConfiguration(ENDPOINT_EXPOSURE, ConfigType.select, "Isp", "exposure"));
+        addConfig(new EndpointConfiguration(ENDPOINT_DAY_NIGHT, ConfigType.select, "Isp", "dayNight"));
+        addConfig(new EndpointConfiguration(ENDPOINT_BLACK_LIGHT, ConfigType.select, "Isp", "backLight"));
+        addConfig(new EndpointConfiguration(ENDPOINT_WHITE_BALANCE, ConfigType.select, "Isp", "whiteBalance"));
+        addConfig(new EndpointConfiguration(ENDPOINT_ANTI_FLICKER, ConfigType.select, "Isp", "backLight"));
+        addConfig(new EndpointConfiguration(ENDPOINT_IMAGE_ROTATE, ConfigType.bool, "Isp", "rotation"));
+        addConfig(new EndpointConfiguration(ENDPOINT_3DNR, ConfigType.bool, "Isp", "nr3d"));
+        addConfig(new EndpointConfiguration(ENDPOINT_IMAGE_MIRROR, ConfigType.bool, "Isp", "mirroring"));
+        addConfig(new EndpointConfiguration(ENDPOINT_DRC, ConfigType.number, "Isp", "drc"));
+        addConfig(new EndpointConfiguration(ENDPOINT_BLUE_GAIN, ConfigType.number, "Isp", "blueGain"));
+        addConfig(new EndpointConfiguration(ENDPOINT_BLC, ConfigType.number, "Isp", "blc"));
+        addConfig(new EndpointConfiguration(ENDPOINT_RED_GAIN, ConfigType.number, "Isp", "redGain"));
 
-        configurations.add(new EndpointConfiguration(ENDPOINT_BGCOLOR, ConfigType.bool, "Osd", "bgcolor"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_NAME_SHOW, ConfigType.bool, "Osd", "osdChannel/enable"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_NAME_POSITION, ConfigType.select, "Osd", "osdChannel/pos"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_DATETIME_SHOW, ConfigType.bool, "Osd", "osdTime/enable"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_DATETIME_POSITION, ConfigType.select, "Osd", "osdTime/pos"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_WATERMARK_SHOW, ConfigType.bool, "Osd", "watermark"));
+        addConfig(new EndpointConfiguration(ENDPOINT_BGCOLOR, ConfigType.bool, "Osd", "bgcolor"));
+        addConfig(new EndpointConfiguration(ENDPOINT_NAME_SHOW, ConfigType.bool, "Osd", "osdChannel/enable"));
+        addConfig(new EndpointConfiguration(ENDPOINT_NAME_POSITION, ConfigType.select, "Osd", "osdChannel/pos"));
+        addConfig(new EndpointConfiguration(ENDPOINT_DATETIME_SHOW, ConfigType.bool, "Osd", "osdTime/enable"));
+        addConfig(new EndpointConfiguration(ENDPOINT_DATETIME_POSITION, ConfigType.select, "Osd", "osdTime/pos"));
+        addConfig(new EndpointConfiguration(ENDPOINT_WATERMARK_SHOW, ConfigType.bool, "Osd", "watermark"));
 
-        configurations.add(new EndpointConfiguration(ENDPOINT_BRIGHT, ConfigType.number, "Image", "bright"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_CONTRAST, ConfigType.number, "Image", "contrast"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_HUE, ConfigType.number, "Image", "hue"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_SATURATION, ConfigType.number, "Image", "saturation"));
-        configurations.add(new EndpointConfiguration(ENDPOINT_SHARPEN, ConfigType.number, "Image", "sharpen"));
+        addConfig(new EndpointConfiguration(ENDPOINT_BRIGHT, ConfigType.number, "Image", "bright"));
+        addConfig(new EndpointConfiguration(ENDPOINT_CONTRAST, ConfigType.number, "Image", "contrast"));
+        addConfig(new EndpointConfiguration(ENDPOINT_HUE, ConfigType.number, "Image", "hue"));
+        addConfig(new EndpointConfiguration(ENDPOINT_SATURATION, ConfigType.number, "Image", "saturation"));
+        addConfig(new EndpointConfiguration(ENDPOINT_SHARPEN, ConfigType.number, "Image", "sharpen"));
+
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_RESOLUTION, ConfigType.select, "Enc", "mainStream/size"));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_BITRATE, ConfigType.select, "Enc", "mainStream/bitRate"));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_FRAMERATE, ConfigType.select, "Enc", "mainStream/frameRate"));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_MAIN_H264_PROFILE, ConfigType.select, "Enc", "mainStream/profile"));
+
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_RESOLUTION, ConfigType.select, "Enc", "mainStream/size"));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_BITRATE, ConfigType.select, "Enc", "mainStream/bitRate"));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_FRAMERATE, ConfigType.select, "Enc", "mainStream/frameRate"));
+        addConfig(new EndpointConfiguration(ENDPOINT_STREAM_SECONDARY_H264_PROFILE, ConfigType.select, "Enc", "mainStream/profile"));
+    }
+
+    private static void addConfig(EndpointConfiguration configuration) {
+        configurations.put(configuration.endpointId, configuration);
     }
 
     @Override
     public LinkedHashMap<Long, Boolean> getAvailableDaysPlaybacks(EntityContext entityContext, String profile, Date fromDate,
         Date toDate) {
         ReolinkBrandHandler reolinkBrandHandler = (ReolinkBrandHandler) getEntity().getService().getBrandHandler();
+        SearchRequest request = new SearchRequest(new Search(1, profile, Time.of(fromDate), Time.of(toDate)));
         Root[] root = reolinkBrandHandler.firePost("cmd=Search", true, new ReolinkBrandHandler.ReolinkCmd(1, "Search",
-            new SearchRequest(new SearchRequest.Search(1, profile, Time.of(fromDate), Time.of(toDate)))));
+            OBJECT_MAPPER.valueToTree(request)));
         if (root[0].error != null) {
             throw new RuntimeException(
                 "Reolink error fetch days: " + root[0].error.detail + ". RspCode: " + root[0].error.rspCode);
@@ -203,8 +226,9 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @SneakyThrows
     @Override
     public List<PlaybackFile> getPlaybackFiles(EntityContext entityContext, String profile, Date from, Date to) {
+        SearchRequest request = new SearchRequest(new Search(0, profile, Time.of(from), Time.of(to)));
         Root[] root = firePost("cmd=Search", true, new ReolinkBrandHandler.ReolinkCmd(1, "Search",
-            new SearchRequest(new SearchRequest.Search(0, profile, Time.of(from), Time.of(to)))));
+            OBJECT_MAPPER.valueToTree(request)));
         if (root[0].error != null) {
             throw new RuntimeException("RspCode: " + root[0].error.rspCode + ". Details: " + root[0].error.detail);
         }
@@ -228,10 +252,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @Override
     public Consumer<Boolean> getIRLedHandler() {
         return on -> {
-            SetIrLightsRequest request = new SetIrLightsRequest();
-            request.irLights.state = on ? "Auto" : "Off";
             if (firePostGetCode(ReolinkCommand.SetIrLights,
-                new ReolinkCmd(0, "SetIrLights", request))) {
+                new ReolinkCmd(0, "SetIrLights", OBJECT_MAPPER.valueToTree(new SetIrLightsRequest(on))))) {
                 setAttribute(ENDPOINT_AUTO_LED, OnOffType.of(on));
                 getEntityContext().ui().sendSuccessMessage("Reolink set IR light applied successfully");
             }
@@ -256,7 +278,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @UIVideoAction(name = ENDPOINT_NAME_POSITION, order = 100, icon = "fas fa-sort-amount-down-alt", group = "VIDEO.OSD")
     @UICameraSelectionAttributeValues(value = "OsdRange", path = {"osdChannel", "pos"}, prependValues = {"", "Hide"})
     public void setNamePosition(String position) {
-        setSetting(ReolinkCommand.SetOsd, osd -> {
+        setSetting(ENDPOINT_NAME_POSITION, osd -> {
             if ("".equals(position)) {
                 osd.set(false, "osdChannel", "enable");
             } else {
@@ -274,7 +296,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @UIVideoAction(name = ENDPOINT_DATETIME_POSITION, order = 101, icon = "fas fa-sort-numeric-up", group = "VIDEO.OSD")
     @UICameraSelectionAttributeValues(value = "OsdRange", path = {"osdTime", "pos"}, prependValues = {"", "Hide"})
     public void setDateTimePosition(String position) {
-        setSetting(ReolinkCommand.SetOsd, osd -> {
+        setSetting(ENDPOINT_DATETIME_POSITION, osd -> {
             if ("".equals(position)) {
                 osd.set(false, "osdTime", "enable");
             } else {
@@ -292,16 +314,18 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoAction(name = ENDPOINT_WATERMARK_SHOW, order = 102, icon = "fas fa-copyright", group = "VIDEO.OSD")
     public void setShowWatermark(boolean on) {
-        setSetting(ReolinkCommand.SetOsd, osd -> osd.set(boolToInt(on), "watermark"));
+        setSetting(ENDPOINT_WATERMARK_SHOW, osd -> osd.set(boolToInt(on), "watermark"));
     }
 
+    @UIVideoActionGetter(ENDPOINT_DATETIME_SHOW)
     public State getShowName() {
         JsonType osd = (JsonType) getAttribute("Osd");
         return osd == null ? null : OnOffType.of(osd.getJsonNode().path("osdChannel").path("enable").asInt() == 1);
     }
 
+    @UIVideoAction(name = ENDPOINT_NAME_SHOW, order = 102, icon = "fas fa-copyright", group = "VIDEO.OSD")
     public void setShowName(boolean on) {
-        setSetting(ReolinkCommand.SetOsd, osd -> osd.set(boolToInt(on), "osdChannel", "enable"));
+        setSetting(ENDPOINT_NAME_SHOW, osd -> osd.set(boolToInt(on), "osdChannel", "enable"));
     }
 
     @UIVideoActionGetter(ENDPOINT_DATETIME_SHOW)
@@ -318,12 +342,12 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoAction(name = ENDPOINT_IMAGE_ROTATE, order = 160, icon = "fas fa-copyright", group = "VIDEO.ISP")
     public void setRotateImage(boolean on) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(boolToInt(on), "rotation"));
+        setSetting(ENDPOINT_IMAGE_ROTATE, isp -> isp.set(boolToInt(on), "rotation"));
     }
 
     @UIVideoAction(name = ENDPOINT_DATETIME_SHOW, order = 103, icon = "fas fa-copyright", group = "VIDEO.OSD")
     public void setShowDateTime(boolean on) {
-        setSetting(ReolinkCommand.SetOsd, osd -> osd.set(boolToInt(on), "osdTime", "enable"));
+        setSetting(ENDPOINT_DATETIME_SHOW, osd -> osd.set(boolToInt(on), "osdTime", "enable"));
     }
 
     @UIVideoActionGetter(ENDPOINT_IMAGE_MIRROR)
@@ -334,7 +358,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoAction(name = ENDPOINT_IMAGE_MIRROR, order = 161, icon = "fas fa-copyright", group = "VIDEO.ISP")
     public void setMirrorImage(boolean on) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(boolToInt(on), "mirroring"));
+        setSetting(ENDPOINT_IMAGE_MIRROR, isp -> isp.set(boolToInt(on), "mirroring"));
     }
 
     @UIVideoActionGetter(ENDPOINT_ANTI_FLICKER)
@@ -346,7 +370,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @UIVideoAction(name = ENDPOINT_ANTI_FLICKER, order = 162, icon = "fab fa-flickr", group = "VIDEO.ISP")
     @UICameraSelectionAttributeValues(value = "IspRange", path = {"antiFlicker"})
     public void setAntiFlicker(String value) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(value, "antiFlicker"));
+        setSetting(ENDPOINT_ANTI_FLICKER, isp -> isp.set(value, "antiFlicker"));
     }
 
     @UIVideoActionGetter(ENDPOINT_EXPOSURE)
@@ -364,13 +388,13 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @UIVideoAction(name = ENDPOINT_DAY_NIGHT, order = 164, icon = "fas fa-cloud-sun", group = "VIDEO.ISP")
     @UICameraSelectionAttributeValues(value = "IspRange", path = {"dayNight"})
     public void setDayNight(String value) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(value, "dayNight"));
+        setSetting(ENDPOINT_DAY_NIGHT, isp -> isp.set(value, "dayNight"));
     }
 
     @UIVideoAction(name = ENDPOINT_EXPOSURE, order = 163, icon = "fas fa-sun", group = "VIDEO.ISP")
     @UICameraSelectionAttributeValues(value = "IspRange", path = {"exposure"})
     public void setExposure(String value) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(value, "exposure"));
+        setSetting(ENDPOINT_EXPOSURE, isp -> isp.set(value, "exposure"));
     }
 
     @UIVideoActionGetter(ENDPOINT_WHITE_BALANCE)
@@ -382,7 +406,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @UIVideoAction(name = ENDPOINT_WHITE_BALANCE, order = 165, icon = "fas fa-cloud-sun", group = "VIDEO.ISP")
     @UICameraSelectionAttributeValues(value = "IspRange", path = {"whiteBalance"})
     public void setWhiteBalance(String value) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(value, "whiteBalance"));
+        setSetting(ENDPOINT_WHITE_BALANCE, isp -> isp.set(value, "whiteBalance"));
     }
 
     @UIVideoActionGetter(ENDPOINT_RED_GAIN)
@@ -393,7 +417,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoAction(name = ENDPOINT_RED_GAIN, order = 166, icon = "fas fa-cloud-sun", group = "VIDEO.ISP")
     public void setRedGain(String value) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(value, "redGain"));
+        setSetting(ENDPOINT_RED_GAIN, isp -> isp.set(value, "redGain"));
     }
 
     @UIVideoActionGetter(ENDPOINT_DRC)
@@ -404,7 +428,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoAction(name = ENDPOINT_DRC, order = 166, icon = "fas fa-cloud-sun", group = "VIDEO.ISP")
     public void setDrc(String value) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(value, "drc"));
+        setSetting(ENDPOINT_DRC, isp -> isp.set(value, "drc"));
     }
 
     @UIVideoActionGetter(ENDPOINT_BLUE_GAIN)
@@ -415,7 +439,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoAction(name = ENDPOINT_BLUE_GAIN, order = 166, icon = "fas fa-cloud-sun", group = "VIDEO.ISP")
     public void setBlueGain(String value) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(value, "blueGain"));
+        setSetting(ENDPOINT_BLUE_GAIN, isp -> isp.set(value, "blueGain"));
     }
 
     @UIVideoActionGetter(ENDPOINT_BLC)
@@ -426,7 +450,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoAction(name = ENDPOINT_BLC, order = 166, icon = "fas fa-cloud-sun", group = "VIDEO.ISP")
     public void setBlc(String value) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(value, "blc"));
+        setSetting(ENDPOINT_BLC, isp -> isp.set(value, "blc"));
     }
 
     @UIVideoActionGetter(ENDPOINT_3DNR)
@@ -444,111 +468,111 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @UIVideoAction(name = ENDPOINT_RECORD_AUDIO, order = 80, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
                    subGroupIcon = "fas fa-dice-six")
     public void setRecAudio(boolean on) {
-        setSetting(ReolinkCommand.SetEnc, enc -> enc.set(boolToInt(on), "audio"));
+        setSetting(ENDPOINT_RECORD_AUDIO, enc -> enc.set(boolToInt(on), "audio"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_STREAM_MAIN_RESOLUTION)
+    @UIVideoActionGetter(ENDPOINT_STREAM_MAIN_RESOLUTION)
     public State getStreamMainResolution() {
         JsonType enc = (JsonType) getAttribute("Enc");
         return enc == null ? null : new StringType(enc.get("mainStream", "size").asText());
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_MAIN_RESOLUTION, order = 81, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
+    @UIVideoAction(name = ENDPOINT_STREAM_MAIN_RESOLUTION, order = 81, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
                    subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectResolution.class, staticParameters = {"mainStream"})
     public void setStreamMainResolution(String value) {
-        setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "mainStream", "size"));
+        setSetting(ENDPOINT_STREAM_MAIN_RESOLUTION, enc -> enc.set(value, "mainStream", "size"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_STREAM_MAIN_BITRATE)
+    @UIVideoActionGetter(ENDPOINT_STREAM_MAIN_BITRATE)
     public State getStreamMainBitRate() {
         JsonType enc = (JsonType) getAttribute("Enc");
         return enc == null ? null : new StringType(enc.get("mainStream", "bitRate").asText());
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_MAIN_BITRATE, order = 82, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
+    @UIVideoAction(name = ENDPOINT_STREAM_MAIN_BITRATE, order = 82, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
                    subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "bitRate"})
     public void setStreamMainBitRate(String value) {
-        setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "mainStream", "bitRate"));
+        setSetting(ENDPOINT_STREAM_MAIN_BITRATE, enc -> enc.set(value, "mainStream", "bitRate"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_STREAM_MAIN_FRAMERATE)
+    @UIVideoActionGetter(ENDPOINT_STREAM_MAIN_FRAMERATE)
     public State getStreamMainFrameRate() {
         JsonType enc = (JsonType) getAttribute("Enc");
         return enc == null ? null : new StringType(enc.get("mainStream", "frameRate").asText());
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_MAIN_FRAMERATE, order = 83, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
+    @UIVideoAction(name = ENDPOINT_STREAM_MAIN_FRAMERATE, order = 83, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
                    subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "frameRate"})
     public void setStreamMainFrameRate(String value) {
-        setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "mainStream", "frameRate"));
+        setSetting(ENDPOINT_STREAM_MAIN_FRAMERATE, enc -> enc.set(value, "mainStream", "frameRate"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_STREAM_MAIN_H264_PROFILE)
+    @UIVideoActionGetter(ENDPOINT_STREAM_MAIN_H264_PROFILE)
     public State getStreamMainH264Profile() {
         JsonType enc = (JsonType) getAttribute("Enc");
         return enc == null ? null : new StringType(enc.get("mainStream", "profile").asText());
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_MAIN_H264_PROFILE, order = 84, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
+    @UIVideoAction(name = ENDPOINT_STREAM_MAIN_H264_PROFILE, order = 84, group = "VIDEO.ENC", subGroup = "VIDEO.mainStream",
                    subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"mainStream", "profile"})
     public void setStreamMainH264Profile(String value) {
-        setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "mainStream", "profile"));
+        setSetting(ENDPOINT_STREAM_MAIN_H264_PROFILE, enc -> enc.set(value, "mainStream", "profile"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_RESOLUTION)
+    @UIVideoActionGetter(ENDPOINT_STREAM_SECONDARY_RESOLUTION)
     public State getStreamSecondaryResolution() {
         JsonType enc = (JsonType) getAttribute("Enc");
         return enc == null ? null : new StringType(enc.get("subStream", "size").asText());
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_RESOLUTION, order = 90, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
+    @UIVideoAction(name = ENDPOINT_STREAM_SECONDARY_RESOLUTION, order = 90, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
                    subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectResolution.class, staticParameters = {"subStream"})
     public void setStreamSecondaryResolution(String value) {
-        setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "subStream", "size"));
+        setSetting(ENDPOINT_STREAM_SECONDARY_RESOLUTION, enc -> enc.set(value, "subStream", "size"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_BITRATE)
+    @UIVideoActionGetter(ENDPOINT_STREAM_SECONDARY_BITRATE)
     public State getStreamSecondaryBitRate() {
         JsonType enc = (JsonType) getAttribute("Enc");
         return enc == null ? null : new StringType(enc.get("subStream", "bitRate").asText());
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_BITRATE, order = 91, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
+    @UIVideoAction(name = ENDPOINT_STREAM_SECONDARY_BITRATE, order = 91, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
                    subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "bitRate"})
     public void setStreamSecondaryBitRate(String value) {
-        setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "subStream", "bitRate"));
+        setSetting(ENDPOINT_STREAM_SECONDARY_BITRATE, enc -> enc.set(value, "subStream", "bitRate"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_FRAMERATE)
+    @UIVideoActionGetter(ENDPOINT_STREAM_SECONDARY_FRAMERATE)
     public State getStreamSecondaryFrameRate() {
         JsonType enc = (JsonType) getAttribute("Enc");
         return enc == null ? null : new StringType(enc.get("subStream", "frameRate").asText());
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_FRAMERATE, order = 92, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
+    @UIVideoAction(name = ENDPOINT_STREAM_SECONDARY_FRAMERATE, order = 92, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
                    subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "frameRate"})
     public void setStreamSecondaryFrameRate(String value) {
-        setSetting(ReolinkCommand.SetEnc, enc -> enc.set(value, "subStream", "frameRate"));
+        setSetting(ENDPOINT_STREAM_SECONDARY_FRAMERATE, enc -> enc.set(value, "subStream", "frameRate"));
     }
 
-    @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_H264_PROFILE)
+    @UIVideoActionGetter(ENDPOINT_STREAM_SECONDARY_H264_PROFILE)
     public State getStreamSecondaryH264Profile() {
         JsonType enc = (JsonType) getAttribute("Enc");
         return enc == null ? null : new StringType(enc.get("subStream", "profile").asText());
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_STREAM_SECONDARY_H264_PROFILE, order = 93, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
+    @UIVideoAction(name = ENDPOINT_STREAM_SECONDARY_H264_PROFILE, order = 93, group = "VIDEO.ENC", subGroup = "VIDEO.subStream",
                    subGroupIcon = "fas fa-dice-six")
     @UIFieldSelection(value = SelectStreamValue.class, staticParameters = {"subStream", "profile"})
     public void setStreamSecondaryH264Profile(String value) {
-        setSetting(ReolinkCommand.SetEnc, isp -> isp.set(value, "subStream", "profile"));
+        setSetting(ENDPOINT_STREAM_SECONDARY_H264_PROFILE, isp -> isp.set(value, "subStream", "profile"));
     }
 
     @Override
@@ -560,19 +584,20 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
     @UIVideoAction(name = ENDPOINT_3DNR, order = 165, icon = "fab fa-unity", group = "VIDEO.ISP")
     public void set3DNR(boolean on) {
-        setSetting(ReolinkCommand.SetIsp, isp -> isp.set(boolToInt(on), "nr3d"));
+        setSetting(ENDPOINT_3DNR, isp -> isp.set(boolToInt(on), "nr3d"));
     }
 
     @Override
     public void onCameraConnected() {
         loginIfRequire();
 
+        JsonNode request = OBJECT_MAPPER.valueToTree(new ChannelParam());
         Root[] roots = firePost("", true,
-            new ReolinkCmd(1, "GetIrLights", new ChannelParam()),
-            new ReolinkCmd(1, "GetOsd", new ChannelParam()),
-            new ReolinkCmd(1, "GetEnc", new ChannelParam()),
-            new ReolinkCmd(1, "GetImage", new ChannelParam()),
-            new ReolinkCmd(1, "GetIsp", new ChannelParam()));
+            new ReolinkCmd(1, "GetIrLights", request),
+            new ReolinkCmd(1, "GetOsd", request),
+            new ReolinkCmd(1, "GetEnc", request),
+            new ReolinkCmd(1, "GetImage", request),
+            new ReolinkCmd(1, "GetIsp", request));
         if (roots != null) {
             for (Root objectNode : roots) {
                 String cmd = objectNode.cmd;
@@ -586,7 +611,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
                     handleGetIrLightCommand(objectNode);
                 }
                 JsonNode configNode = objectNode.range.path(group);
-                configurations.stream().filter(c -> c.group.equals(group)).forEach(config -> {
+                configurations.values().stream().filter(c -> c.group.equals(group)).forEach(config -> {
                     if (JsonUtils.hasJsonPath(targetNode, config.key)) {
                         config.type.handler.handle(configNode, config, this);
                     }
@@ -668,8 +693,8 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     private void loginIfRequire() {
         if (this.tokenExpiration - System.currentTimeMillis() < 60000) {
             OnvifCameraEntity entity = getEntity();
-            LoginRequest loginRequest = new LoginRequest(new LoginRequest.User(entity.getUser(), entity.getPassword().asString()));
-            Root root = firePost("cmd=Login", false, new ReolinkCmd(0, "Login", loginRequest))[0];
+            LoginRequest request = new LoginRequest(new LoginRequest.User(entity.getUser(), entity.getPassword().asString()));
+            Root root = firePost("cmd=Login", false, new ReolinkCmd(0, "Login", OBJECT_MAPPER.valueToTree(request)))[0];
             if (root.getError() != null) {
                 throw new LoginFailedException(root.getError().toString());
             }
@@ -691,17 +716,20 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         return false;
     }
 
-    private void setSetting(ReolinkCommand command, Consumer<JsonType> updateHandler) {
-        String key = command.name().substring(3);
-        JsonType setting = (JsonType) getAttribute(key);
+    private void setSetting(String endpointID, Consumer<JsonType> updateHandler) {
+        EndpointConfiguration configuration = configurations.get(endpointID);
+        JsonType setting = (JsonType) getAttribute(configuration.key);
         if (setting == null) {
             return;
         }
         updateHandler.accept(setting);
         loginIfRequire();
+        ObjectNode request = OBJECT_MAPPER.createObjectNode();
+        request.set(configuration.key, setting.getJsonNode());
+        ReolinkCommand command = ReolinkCommand.valueOf("Set" + configuration.group);
         if (firePostGetCode(command,
-            new ReolinkCmd(0, command.name(), new JSONObject().put(key, setting.toString())))) {
-            getEntityContext().ui().sendSuccessMessage("Reolink " + command + " applied successfully");
+            new ReolinkCmd(0, command.name(), request))) {
+            getEntityContext().ui().sendSuccessMessage("Reolink '" + configuration.key + "' changed  successfully");
         }
     }
 
@@ -789,7 +817,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
     @RequiredArgsConstructor
     private enum ConfigType {
         number((config, c, handler) -> {
-            Consumer<State> setter = state -> handler.setSetting(ReolinkCommand.valueOf("Set" + c.group), isp -> isp.set(state.intValue(), c.key));
+            Consumer<State> setter = state -> handler.setSetting(c.endpointId, updHandler -> updHandler.set(state.intValue(), c.key));
             Supplier<State> getter = () -> {
                 JsonType group = (JsonType) handler.getAttribute(c.group);
                 return group == null ? null : new DecimalType(group.getJsonNode().path(c.key).asInt());
@@ -800,7 +828,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
             handler.service.addEndpointSlider(c.endpointId, min, max, setter).setValue(getter.get(), true);
         }),
         bool((config, c, handler) -> {
-            Consumer<State> setter = state -> handler.setSetting(ReolinkCommand.valueOf("Set" + c.group), isp -> isp.set(state.intValue(), c.key));
+            Consumer<State> setter = state -> handler.setSetting(c.endpointId, updHandler -> updHandler.set(state.intValue(), c.key));
             Supplier<State> getter = () -> {
                 JsonType group = (JsonType) handler.getAttribute(c.group);
                 return group == null ? null : OnOffType.of(group.getJsonNode().path(c.key).asInt() == 1);
@@ -810,7 +838,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         select((config, c, handler) -> {
             Set<String> range = new LinkedHashSet<>();
             JsonUtils.getJsonPath(config, c.key).forEach(jsonNode -> range.add(jsonNode.asText()));
-            Consumer<State> setter = state -> handler.setSetting(ReolinkCommand.valueOf("Set" + c.group), isp -> isp.set(state.stringValue(), c.key));
+            Consumer<State> setter = state -> handler.setSetting(c.endpointId, updHandler -> updHandler.set(state.stringValue(), c.key));
             Supplier<State> getter = () -> {
                 JsonType group = (JsonType) handler.getAttribute(c.group);
                 return group == null ? null : new StringType(JsonUtils.getJsonPath(group.getJsonNode(), c.key).asText());
@@ -830,6 +858,10 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
 
         @JsonProperty("IrLights")
         private IrLights irLights = new IrLights();
+
+        public SetIrLightsRequest(Boolean on) {
+            irLights.state = on ? "Auto" : "Off";
+        }
 
         @Getter
         public static class IrLights {

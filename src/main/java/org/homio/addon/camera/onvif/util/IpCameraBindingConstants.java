@@ -25,16 +25,6 @@ public class IpCameraBindingConstants {
   public static final String CHANNEL_ITEM_TAKEN = "itemTaken";
   public static final String CHANNEL_AUDIO_ALARM = "audioAlarm";
 
-  public static final String CHANNEL_STREAM_MAIN_RESOLUTION = "streamMainResolution";
-  public static final String CHANNEL_STREAM_MAIN_BITRATE = "streamMainBitRate";
-  public static final String CHANNEL_STREAM_MAIN_FRAMERATE = "streamMainFrameRate";
-  public static final String CHANNEL_STREAM_MAIN_H264_PROFILE = "streamMainH264Profile";
-
-  public static final String CHANNEL_STREAM_SECONDARY_RESOLUTION = "streamSecondaryResolution";
-  public static final String CHANNEL_STREAM_SECONDARY_BITRATE = "streamSecondaryBitRate";
-  public static final String CHANNEL_STREAM_SECONDARY_FRAMERATE = "streamSecondaryFrameRate";
-  public static final String CHANNEL_STREAM_SECONDARY_H264_PROFILE = "streamSecondaryH264Profile";
-
   public static final String CHANNEL_ENABLE_MOTION_ALARM = "enableMotionAlarm";
   public static final String CHANNEL_FFMPEG_MOTION_ALARM = "ffmpegMotionAlarm";
   public static final String CHANNEL_ENABLE_LINE_CROSSING_ALARM = "enableLineCrossingAlarm";
