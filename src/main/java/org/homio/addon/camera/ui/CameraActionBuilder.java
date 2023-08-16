@@ -1,5 +1,7 @@
 package org.homio.addon.camera.ui;
 
+import static org.springframework.objenesis.instantiator.util.ClassUtils.newInstance;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.lang.reflect.Constructor;
@@ -8,12 +10,15 @@ import java.lang.reflect.Parameter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.addon.camera.entity.VideoActionsContext;
+import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.VideoDeviceEndpoint;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.OptionModel.KeyValueEnum;
@@ -32,31 +37,47 @@ import org.homio.api.ui.field.action.v1.layout.UILayoutBuilder;
 import org.homio.api.ui.field.action.v1.layout.dialog.UIStickyDialogItemBuilder;
 import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.util.CommonUtils;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Log4j2
 public class CameraActionBuilder {
 
-    public static void assembleActions(VideoActionsContext instance, UIInputBuilder uiInputBuilder) {
+    public static void assembleActions(BaseOnvifCameraBrandHandler instance, UIInputBuilder uiInputBuilder) {
         Set<String> handledMethods = new HashSet<>();
-        for (Method method : MethodUtils.getMethodsWithAnnotation(instance.getClass(), UIVideoAction.class, true, false)) {
-            UICameraActionConditional cameraActionConditional = method.getDeclaredAnnotation(UICameraActionConditional.class);
-            if (handledMethods.add(method.getName()) && (cameraActionConditional == null ||
-                CommonUtils.newInstance(cameraActionConditional.value()).test((OnvifCameraService) instance, method))) {
+        Method[] actions = MethodUtils.getMethodsWithAnnotation(instance.getClass(), UIVideoAction.class, true, false);
+        Method[] endpointActions = MethodUtils.getMethodsWithAnnotation(instance.getClass(), UIVideoEndpointAction.class, true, false);
 
-                UIVideoAction uiVideoAction = method.getDeclaredAnnotation(UIVideoAction.class);
+        assembleActions(instance, uiInputBuilder, handledMethods, actions, method -> new ActionContext(method, instance.getService()));
+        assembleActions(instance, uiInputBuilder, handledMethods, endpointActions, method -> new ActionContext(method, instance.getService()));
+    }
+
+    private static void assembleActions(
+        VideoActionsContext instance,
+        UIInputBuilder uiInputBuilder,
+        Set<String> handledMethods,
+        Method[] actions,
+        Function<Method, ActionContext> actionContextGetter) {
+        for (Method method : actions) {
+            if (handledMethods.add(method.getName())) {
+                ActionContext context = actionContextGetter.apply(method);
+                if (!context.condition.test((OnvifCameraService) instance, method)) {
+                    continue;
+                }
+
                 Parameter actionParameter = method.getParameters()[0];
                 Function<String, Object> actionParameterConverter = buildParameterActionConverter(actionParameter);
 
                 UIFieldType type;
-                if (uiVideoAction.type() == VideoActionType.AutoDiscover) {
+                if (context.type == VideoActionType.auto) {
                     if (method.isAnnotationPresent(UICameraSelectionAttributeValues.class) || method.isAnnotationPresent(UIFieldSelection.class)) {
                         type = UIFieldType.SelectBox;
                     } else {
                         type = getFieldTypeFromMethod(actionParameter);
                     }
                 } else {
-                    type = uiVideoAction.type() == VideoActionType.Dimmer
-                        ? UIFieldType.Slider : uiVideoAction.type() == VideoActionType.Switch
+                    type = context.type == VideoActionType.slider
+                        ? UIFieldType.Slider : context.type == VideoActionType.bool
                         ? UIFieldType.Boolean : UIFieldType.String;
                 }
 
@@ -71,38 +92,38 @@ public class CameraActionBuilder {
 
                 UIEntityItemBuilder uiEntityItemBuilder;
                 UILayoutBuilder layoutBuilder = uiInputBuilder;
-                if (StringUtils.isNotEmpty(uiVideoAction.group())) {
+                if (StringUtils.isNotEmpty(context.group)) {
 
-                    if (StringUtils.isEmpty(uiVideoAction.subGroup())) {
-                        layoutBuilder = uiInputBuilder.addFlex(uiVideoAction.group(), uiVideoAction.order())
+                    if (StringUtils.isEmpty(context.subGroup)) {
+                        layoutBuilder = uiInputBuilder.addFlex(context.group, context.order)
                                                       .columnFlexDirection()
-                                                      .setBorderArea(uiVideoAction.group());
+                                                      .setBorderArea(context.group);
                     } else {
-                        UIStickyDialogItemBuilder stickyLayoutBuilder = layoutBuilder.addStickyDialogButton(uiVideoAction.group() + "_sb",
-                            new Icon(uiVideoAction.subGroupIcon()), uiVideoAction.order()).editButton(buttonItemBuilder ->
-                            buttonItemBuilder.setText(uiVideoAction.group()));
+                        UIStickyDialogItemBuilder stickyLayoutBuilder = layoutBuilder.addStickyDialogButton(context.group + "_sb",
+                            new Icon(context.subGroupIcon), context.order).editButton(buttonItemBuilder ->
+                            buttonItemBuilder.setText(context.group));
 
-                        layoutBuilder = stickyLayoutBuilder.addFlex(uiVideoAction.subGroup(), uiVideoAction.order())
-                                                           .setBorderArea(uiVideoAction.subGroup())
+                        layoutBuilder = stickyLayoutBuilder.addFlex(context.subGroup, context.order)
+                                                           .setBorderArea(context.subGroup)
                                                            .columnFlexDirection();
                     }
                 }
                 UICameraDimmerButton[] buttons = method.getDeclaredAnnotationsByType(UICameraDimmerButton.class);
                 if (buttons.length > 0) {
-                    if (uiVideoAction.type() != VideoActionType.Dimmer) {
+                    if (context.type != VideoActionType.slider) {
                         throw new RuntimeException(
                             "Method " + method.getName() + " annotated with @UICameraDimmerButton, but @UICameraAction has no dimmer type");
                     }
-                    UIFlexLayoutBuilder flex = layoutBuilder.addFlex("dimmer", uiVideoAction.order());
-                    UIMultiButtonItemBuilder multiButtonItemBuilder = flex.addMultiButton("dimm_btns", actionHandler, uiVideoAction.order());
+                    UIFlexLayoutBuilder flex = layoutBuilder.addFlex("dimmer", context.order);
+                    UIMultiButtonItemBuilder multiButtonItemBuilder = flex.addMultiButton("dimm_btns", actionHandler, context.order);
                     for (UICameraDimmerButton button : buttons) {
                         multiButtonItemBuilder.addButton(button.name(), new Icon(button.icon()));
                     }
                     layoutBuilder = flex;
                 }
 
-                uiEntityItemBuilder = (UIEntityItemBuilder) createUIEntity(uiVideoAction, type, layoutBuilder, actionHandler)
-                    .setIcon(new Icon(uiVideoAction.icon(), uiVideoAction.iconColor()));
+                uiEntityItemBuilder = (UIEntityItemBuilder) createUIEntity(context, type, layoutBuilder, actionHandler)
+                    .setIcon(context.icon);
 
                 if (type == UIFieldType.SelectBox) {
                     if (actionParameter.getType().isEnum()) {
@@ -147,7 +168,7 @@ public class CameraActionBuilder {
                                 )));
                     }
                 }
-                Method getter = findGetter(instance, uiVideoAction.name());
+                Method getter = findGetter(instance, context.name);
 
                 // add update value handler
                 if (getter != null) {
@@ -160,7 +181,7 @@ public class CameraActionBuilder {
                             uiEntityItemBuilder.setValue(type.getConvertToObject().apply(value));
                         } catch (Exception ex) {
                             log.error("Unable to fetch getter value for action: <{}>. Msg: <{}>",
-                                uiVideoAction.name(), CommonUtils.getErrorMessage(ex));
+                                context.name, CommonUtils.getErrorMessage(ex));
                         }
                     });
                 }
@@ -168,19 +189,19 @@ public class CameraActionBuilder {
         }
     }
 
-    private static UIEntityItemBuilder<?, ?> createUIEntity(UIVideoAction uiVideoAction, UIFieldType type,
+    private static UIEntityItemBuilder<?, ?> createUIEntity(ActionContext context, UIFieldType type,
         UILayoutBuilder flex,
         UIActionHandler handler) {
         return switch (type) {
-            case SelectBox -> flex.addSelectBox(uiVideoAction.name(), handler, uiVideoAction.order()).setSelectReplacer(uiVideoAction.min(),
-                                      uiVideoAction.max(), uiVideoAction.selectReplacer())
-                                  .setSeparatedText("CONTEXT.ACTION." + uiVideoAction.name());
-            case Slider -> flex.addSlider(uiVideoAction.name(), 0F, (float) uiVideoAction.min(),
-                                   (float) uiVideoAction.max(), handler, UISliderItemBuilder.SliderType.Regular, uiVideoAction.order())
-                               .setSeparatedText("CONTEXT.ACTION." + uiVideoAction.name());
-            case Boolean -> flex.addCheckbox(uiVideoAction.name(), false, handler, uiVideoAction.order())
-                                .setSeparatedText("CONTEXT.ACTION." + uiVideoAction.name());
-            case String -> flex.addInfo(uiVideoAction.name(), uiVideoAction.order());
+            case SelectBox -> flex.addSelectBox(context.name, handler, context.order).setSelectReplacer(context.min,
+                                      context.max, context.selectReplacer)
+                                  .setSeparatedText("CONTEXT.ACTION." + context.name);
+            case Slider -> flex.addSlider(context.name, 0F, (float) context.min,
+                                   (float) context.max, handler, UISliderItemBuilder.SliderType.Regular, context.order)
+                               .setSeparatedText("CONTEXT.ACTION." + context.name);
+            case Boolean -> flex.addCheckbox(context.name, false, handler, context.order)
+                                .setSeparatedText("CONTEXT.ACTION." + context.name);
+            case String -> flex.addInfo(context.name, context.order);
             default -> throw new RuntimeException("Unknown type: " + type);
         };
     }
@@ -223,5 +244,59 @@ public class CameraActionBuilder {
         }
 
         return UIFieldType.String;
+    }
+
+    private static class ActionContext {
+
+        private final String group;
+        private final @NotNull VideoActionType type;
+        private final @NotNull String name;
+        private final int order;
+        private final @NotNull Icon icon;
+        private BiPredicate<OnvifCameraService, Method> condition;
+
+        private final @Nullable String subGroup;
+        private final @Nullable String subGroupIcon;
+        private final @Nullable String selectReplacer;
+        private final int min;
+        private final int max;
+
+        public ActionContext(Method method, OnvifCameraService cameraService) {
+            UIVideoActionMetadata metadata = method.getDeclaredAnnotation(UIVideoActionMetadata.class);
+            this.subGroup = metadata == null ? null : metadata.subGroup();
+            this.subGroupIcon = metadata == null ? null : metadata.subGroupIcon();
+            this.selectReplacer = metadata == null ? null : metadata.selectReplacer();
+            this.min = metadata == null ? 0 : metadata.min();
+            this.max = metadata == null ? 0 : metadata.max();
+
+            UICameraActionConditional actionCondition = method.getDeclaredAnnotation(UICameraActionConditional.class);
+            if (actionCondition != null) {
+                condition = newInstance(actionCondition.value());
+            }
+            if (method.isAnnotationPresent(UIVideoAction.class)) {
+                UIVideoAction videoAction = method.getDeclaredAnnotation(UIVideoAction.class);
+                this.type = videoAction.type();
+                this.name = videoAction.name();
+                this.order = videoAction.order();
+                this.icon = new Icon(videoAction.icon(), videoAction.iconColor());
+                this.group = videoAction.group();
+            } else {
+                UIVideoEndpointAction videoAction = method.getDeclaredAnnotation(UIVideoEndpointAction.class);
+                this.type = videoAction.type();
+                this.name = videoAction.value();
+
+                if (condition == null) {
+                    condition = (s, m) -> s.getEndpoints().containsKey(this.name);
+                }
+                VideoDeviceEndpoint endpoint = cameraService.getEndpoints().get(this.name);
+                this.order = endpoint == null ? -1 : endpoint.getOrder();
+                this.icon = endpoint == null ? new Icon() : endpoint.getIcon();
+                this.group = endpoint == null ? null : "VIDEO." + endpoint.getGroup().toUpperCase();
+            }
+
+            if (condition == null) {
+                condition = (s, m) -> true;
+            }
+        }
     }
 }

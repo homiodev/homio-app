@@ -59,6 +59,7 @@ import org.homio.addon.camera.ui.UICameraActionConditional;
 import org.homio.addon.camera.ui.UICameraDimmerButton;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
+import org.homio.addon.camera.ui.UIVideoActionMetadata;
 import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
 import org.homio.api.model.ActionResponseModel;
@@ -326,7 +327,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         }
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_PAN, order = 3, icon = "fas fa-expand-arrows-alt", type = VideoActionType.Dimmer)
+    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_PAN, order = 3, icon = "fas fa-expand-arrows-alt", type = VideoActionType.slider)
     @UICameraActionConditional(SupportPTZCondition.class)
     @UICameraDimmerButton(name = "LEFT", icon = "fas fa-caret-left")
     @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
@@ -380,7 +381,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentPanPercentage()));
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TILT, order = 5, icon = "fas fa-sort", type = VideoActionType.Dimmer)
+    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TILT, order = 5, icon = "fas fa-sort", type = VideoActionType.slider)
     @UICameraActionConditional(SupportPTZCondition.class)
     @UICameraDimmerButton(name = "UP", icon = "fas fa-caret-up")
     @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
@@ -404,7 +405,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentTiltPercentage()));
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ZOOM, order = 7, icon = "fas fa-search-plus", type = VideoActionType.Dimmer)
+    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ZOOM, order = 7, icon = "fas fa-search-plus", type = VideoActionType.slider)
     @UICameraActionConditional(SupportPTZCondition.class)
     @UICameraDimmerButton(name = "IN", icon = "fas fa-search-plus")
     @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
@@ -432,8 +433,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return new DecimalType(0);
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_GOTO_PRESET, order = 30, icon = "fas fa-location-arrow", min = 1, max = 25, selectReplacer =
-        "Preset %0  ")
+    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_GOTO_PRESET, order = 30, icon = "fas fa-location-arrow")
+    @UIVideoActionMetadata(min = 1, max = 25, selectReplacer = "Preset %0  ")
     @UICameraActionConditional(SupportPTZCondition.class)
     public void gotoPreset(int preset) {
         onvifDeviceState.getPtzDevices().gotoPreset(preset);
@@ -526,7 +527,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
     @Override
     protected void pollCameraRunnable() {
         onvifDeviceState.getEventDevices().pollCameraRunnable();
-        // NOTE: Use lowPriorityRequests if get request is not needed every poll.
         if (!lowPriorityRequests.isEmpty()) {
             if (lowPriorityCounter >= lowPriorityRequests.size()) {
                 lowPriorityCounter = 0;
@@ -632,15 +632,6 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         @Override
         public boolean test(OnvifCameraService o, Method method) {
             return o.onvifDeviceState.getPtzDevices().supportPTZ();
-        }
-    }
-
-    public static class HasEndpointCondition implements BiPredicate<OnvifCameraService, Method> {
-
-        @Override
-        public boolean test(OnvifCameraService o, Method method) {
-            UIVideoAction videoAction = method.getDeclaredAnnotation(UIVideoAction.class);
-            return o.getEndpoints().containsKey(videoAction.name());
         }
     }
 }
