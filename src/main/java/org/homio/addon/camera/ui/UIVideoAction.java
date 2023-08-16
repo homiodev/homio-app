@@ -23,7 +23,7 @@ public @interface UIVideoAction {
 
     String iconColor() default "inherit";
 
-    ActionType type() default ActionType.AutoDiscover;
+    VideoActionType type() default VideoActionType.AutoDiscover;
 
     // for dimmer typ
     int min() default 0;
@@ -33,12 +33,4 @@ public @interface UIVideoAction {
 
     // uses if want replace dimmer with select box from min:
     String selectReplacer() default "";
-
-    enum ActionType {
-        Dimmer,
-        String,
-        Switch,
-        Select,
-        AutoDiscover // discover on type of first parameter type in method
-    }
 }

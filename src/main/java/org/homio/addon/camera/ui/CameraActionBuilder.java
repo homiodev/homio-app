@@ -13,6 +13,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.homio.addon.camera.entity.VideoActionsContext;
+import org.homio.addon.camera.service.OnvifCameraService;
 import org.homio.api.model.Icon;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.OptionModel.KeyValueEnum;
@@ -40,22 +41,22 @@ public class CameraActionBuilder {
         for (Method method : MethodUtils.getMethodsWithAnnotation(instance.getClass(), UIVideoAction.class, true, false)) {
             UICameraActionConditional cameraActionConditional = method.getDeclaredAnnotation(UICameraActionConditional.class);
             if (handledMethods.add(method.getName()) && (cameraActionConditional == null ||
-                CommonUtils.newInstance(cameraActionConditional.value()).test(instance))) {
+                CommonUtils.newInstance(cameraActionConditional.value()).test((OnvifCameraService) instance, method))) {
 
                 UIVideoAction uiVideoAction = method.getDeclaredAnnotation(UIVideoAction.class);
                 Parameter actionParameter = method.getParameters()[0];
                 Function<String, Object> actionParameterConverter = buildParameterActionConverter(actionParameter);
 
                 UIFieldType type;
-                if (uiVideoAction.type() == UIVideoAction.ActionType.AutoDiscover) {
+                if (uiVideoAction.type() == VideoActionType.AutoDiscover) {
                     if (method.isAnnotationPresent(UICameraSelectionAttributeValues.class) || method.isAnnotationPresent(UIFieldSelection.class)) {
                         type = UIFieldType.SelectBox;
                     } else {
                         type = getFieldTypeFromMethod(actionParameter);
                     }
                 } else {
-                    type = uiVideoAction.type() == UIVideoAction.ActionType.Dimmer
-                        ? UIFieldType.Slider : uiVideoAction.type() == UIVideoAction.ActionType.Switch
+                    type = uiVideoAction.type() == VideoActionType.Dimmer
+                        ? UIFieldType.Slider : uiVideoAction.type() == VideoActionType.Switch
                         ? UIFieldType.Boolean : UIFieldType.String;
                 }
 
@@ -88,7 +89,7 @@ public class CameraActionBuilder {
                 }
                 UICameraDimmerButton[] buttons = method.getDeclaredAnnotationsByType(UICameraDimmerButton.class);
                 if (buttons.length > 0) {
-                    if (uiVideoAction.type() != UIVideoAction.ActionType.Dimmer) {
+                    if (uiVideoAction.type() != VideoActionType.Dimmer) {
                         throw new RuntimeException(
                             "Method " + method.getName() + " annotated with @UICameraDimmerButton, but @UICameraAction has no dimmer type");
                     }
@@ -136,15 +137,14 @@ public class CameraActionBuilder {
                         } catch (Exception ex) {
                             throw new RuntimeException(ex);
                         }
-                        uiEntityItemBuilder.addFetchValueHandler("update-selection", () -> {
+                        uiEntityItemBuilder.addFetchValueHandler("update-selection", () ->
                             ((UISelectBoxItemBuilder) uiEntityItemBuilder)
                                 .setOptions(dynamicOptionLoader.loadOptions(
                                     new DynamicOptionLoader.DynamicOptionLoaderParameters(
                                         instance.getEntity(),
                                         instance.getEntityContext(),
                                         attributeValues.staticParameters(), null)
-                                ));
-                        });
+                                )));
                     }
                 }
                 Method getter = findGetter(instance, uiVideoAction.name());
@@ -196,10 +196,12 @@ public class CameraActionBuilder {
 
     private static Function<String, Object> buildParameterActionConverter(Parameter parameter) {
         switch (parameter.getType().getSimpleName()) {
-            case "boolean":
+            case "boolean" -> {
                 return Boolean::parseBoolean;
-            case "int":
+            }
+            case "int" -> {
                 return Integer::parseInt;
+            }
         }
         if (parameter.getType().isEnum()) {
             return value -> Enum.valueOf((Class<? extends Enum>) parameter.getType(), value);
@@ -209,10 +211,12 @@ public class CameraActionBuilder {
 
     private static UIFieldType getFieldTypeFromMethod(Parameter parameter) {
         switch (parameter.getType().getSimpleName()) {
-            case "boolean":
+            case "boolean" -> {
                 return UIFieldType.Boolean;
-            case "int":
+            }
+            case "int" -> {
                 return UIFieldType.Slider;
+            }
         }
         if (parameter.getType().isEnum()) {
             return UIFieldType.SelectBox;

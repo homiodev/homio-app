@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -36,7 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -58,6 +59,7 @@ import org.homio.addon.camera.ui.UICameraActionConditional;
 import org.homio.addon.camera.ui.UICameraDimmerButton;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
+import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
@@ -324,8 +326,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         }
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_PAN, order = 3, icon = "fas fa-expand-arrows-alt", type = UIVideoAction.ActionType.Dimmer)
-    @UICameraActionConditional(SupportPTZ.class)
+    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_PAN, order = 3, icon = "fas fa-expand-arrows-alt", type = VideoActionType.Dimmer)
+    @UICameraActionConditional(SupportPTZCondition.class)
     @UICameraDimmerButton(name = "LEFT", icon = "fas fa-caret-left")
     @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
     @UICameraDimmerButton(name = "RIGHT", icon = "fas fa-caret-right")
@@ -378,8 +380,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentPanPercentage()));
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TILT, order = 5, icon = "fas fa-sort", type = UIVideoAction.ActionType.Dimmer)
-    @UICameraActionConditional(SupportPTZ.class)
+    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TILT, order = 5, icon = "fas fa-sort", type = VideoActionType.Dimmer)
+    @UICameraActionConditional(SupportPTZCondition.class)
     @UICameraDimmerButton(name = "UP", icon = "fas fa-caret-up")
     @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
     @UICameraDimmerButton(name = "DOWN", icon = "fas fa-caret-down")
@@ -402,8 +404,8 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return new DecimalType(Math.round(onvifDeviceState.getPtzDevices().getCurrentTiltPercentage()));
     }
 
-    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ZOOM, order = 7, icon = "fas fa-search-plus", type = UIVideoAction.ActionType.Dimmer)
-    @UICameraActionConditional(SupportPTZ.class)
+    @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ZOOM, order = 7, icon = "fas fa-search-plus", type = VideoActionType.Dimmer)
+    @UICameraActionConditional(SupportPTZCondition.class)
     @UICameraDimmerButton(name = "IN", icon = "fas fa-search-plus")
     @UICameraDimmerButton(name = "OFF", icon = "fas fa-power-off")
     @UICameraDimmerButton(name = "OUT", icon = "fas fa-search-minus")
@@ -432,7 +434,7 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_GOTO_PRESET, order = 30, icon = "fas fa-location-arrow", min = 1, max = 25, selectReplacer =
         "Preset %0  ")
-    @UICameraActionConditional(SupportPTZ.class)
+    @UICameraActionConditional(SupportPTZCondition.class)
     public void gotoPreset(int preset) {
         onvifDeviceState.getPtzDevices().gotoPreset(preset);
     }
@@ -625,11 +627,20 @@ public class OnvifCameraService extends BaseVideoService<OnvifCameraEntity, Onvi
         return entity.getRestPort();
     }
 
-    public static class SupportPTZ implements Predicate<Object> {
+    public static class SupportPTZCondition implements BiPredicate<OnvifCameraService, Method> {
 
         @Override
-        public boolean test(Object o) {
-            return ((OnvifCameraService) o).onvifDeviceState.getPtzDevices().supportPTZ();
+        public boolean test(OnvifCameraService o, Method method) {
+            return o.onvifDeviceState.getPtzDevices().supportPTZ();
+        }
+    }
+
+    public static class HasEndpointCondition implements BiPredicate<OnvifCameraService, Method> {
+
+        @Override
+        public boolean test(OnvifCameraService o, Method method) {
+            UIVideoAction videoAction = method.getDeclaredAnnotation(UIVideoAction.class);
+            return o.getEndpoints().containsKey(videoAction.name());
         }
     }
 }

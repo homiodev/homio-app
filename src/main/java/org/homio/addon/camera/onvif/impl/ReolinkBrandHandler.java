@@ -78,6 +78,8 @@ import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasMotionAlarm;
 import org.homio.addon.camera.onvif.impl.ReolinkBrandHandler.SearchRequest.Search;
 import org.homio.addon.camera.service.OnvifCameraService;
+import org.homio.addon.camera.service.OnvifCameraService.HasEndpointCondition;
+import org.homio.addon.camera.ui.UICameraActionConditional;
 import org.homio.addon.camera.ui.UICameraSelectionAttributeValues;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
@@ -243,6 +245,7 @@ public class ReolinkBrandHandler extends BaseOnvifCameraBrandHandler implements
         return playbackFiles;
     }
 
+    @UICameraActionConditional(HasEndpointCondition.class)
     @UIVideoAction(name = ENDPOINT_AUTO_LED, order = 10, icon = "fas fa-lightbulb")
     public void setAutoLed(boolean on) {
         getIRLedHandler().accept(on);

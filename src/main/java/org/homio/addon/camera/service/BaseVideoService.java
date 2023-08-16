@@ -55,6 +55,7 @@ import org.homio.addon.camera.service.util.FFMpegRtspAlarm;
 import org.homio.addon.camera.service.util.VideoUrls;
 import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
+import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextBGP.ThreadContext;
@@ -440,7 +441,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
         }
     }
 
-    @UIVideoAction(name = ENDPOINT_AUDIO_THRESHOLD, order = 120, icon = "fas fa-volume-up", type = UIVideoAction.ActionType.Dimmer)
+    @UIVideoAction(name = ENDPOINT_AUDIO_THRESHOLD, order = 120, icon = "fas fa-volume-up", type = VideoActionType.Dimmer)
     public void setAudioThreshold(int threshold) {
         entityContext.updateDelayed(getEntity(), e -> e.setAudioThreshold(threshold));
         setAudioAlarmThreshold(threshold);
@@ -462,7 +463,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
     }
 
     @UIVideoAction(name = ENDPOINT_MOTION_THRESHOLD, order = 110, icon = "fas fa-expand-arrows-alt",
-                   type = UIVideoAction.ActionType.Dimmer, max = 1000)
+                   type = VideoActionType.Dimmer, max = 1000)
     public void setMotionThreshold(int threshold) {
         entityContext.updateDelayed(getEntity(), e -> e.setMotionThreshold(threshold));
         setMotionAlarmThreshold(threshold);

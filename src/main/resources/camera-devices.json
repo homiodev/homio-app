@@ -12,7 +12,7 @@
     },
     {
       "name": "anti_flicker",
-      "icon": "fa-flickr",
+      "icon": "fab fa-flickr",
       "iconColor": "#56AB26"
     },
     {
@@ -41,13 +41,8 @@
       "iconColor": "#9357EF"
     },
     {
-      "name": "image_mirror",
-      "icon": "fa-arrow-right-arrow-left",
-      "iconColor": "#9357EF"
-    },
-    {
       "name": "3dnr",
-      "icon": "fa-unity",
+      "icon": "fab fa-unity",
       "iconColor": "#299974"
     },
     {
@@ -79,11 +74,6 @@
       "name": "day_night",
       "icon": "fa-cloud-sun",
       "iconColor": "#DD5F24"
-    },
-    {
-      "name": "image_rotate",
-      "icon": "fa-superscript",
-      "iconColor": "#415DBA"
     },
     {
       "name": "record_audio",
@@ -120,43 +110,59 @@
       "icon": "fa-person-running",
       "iconColor": "#299974"
     },
-
-    {
-      "name": "image_bright",
-      "icon": "fa-sun",
-      "iconColor": "#415DBA"
-    },
-    {
-      "name": "image_contrast",
-      "icon": "fa-circle-half-stroke",
-      "iconColor": "#415DBA"
-    },
-    {
-      "name": "image_hue",
-      "icon": "fa-swatchbook",
-      "iconColor": "#415DBA"
-    },
-    {
-      "name": "image_saturation",
-      "icon": "fa-pen-fancy",
-      "iconColor": "#415DBA"
-    },
-    {
-      "name": "image_sharpen",
-      "icon": "fa-cubes-stacked",
-      "iconColor": "#415DBA"
-    },
-
-
     {
       "name": "last_seen",
+      "order": 1900,
       "icon": "fa-eye",
       "iconColor": "#2D9C2C"
     },
     {
       "name": "device_status",
+      "order": 1910,
       "icon": "fa-globe",
       "iconColor": "#42B52D"
+    },
+    {
+      "name": "image_mirror",
+      "order": 2000,
+      "icon": "fa-arrow-right-arrow-left",
+      "iconColor": "#9357EF"
+    },
+    {
+      "name": "image_rotate",
+      "order": 2005,
+      "icon": "fa-superscript",
+      "iconColor": "#415DBA"
+    },
+    {
+      "name": "image_bright",
+      "order": 2010,
+      "icon": "fa-sun",
+      "iconColor": "#415DBA"
+    },
+    {
+      "name": "image_contrast",
+      "order": 2020,
+      "icon": "fa-circle-half-stroke",
+      "iconColor": "#415DBA"
+    },
+    {
+      "name": "image_hue",
+      "order": 2030,
+      "icon": "fa-swatchbook",
+      "iconColor": "#415DBA"
+    },
+    {
+      "name": "image_saturation",
+      "order": 2040,
+      "icon": "fa-pen-fancy",
+      "iconColor": "#415DBA"
+    },
+    {
+      "name": "image_sharpen",
+      "order": 2050,
+      "icon": "fa-cubes-stacked",
+      "iconColor": "#415DBA"
     }
   ]
 }
