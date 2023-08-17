@@ -6,163 +6,248 @@
   "endpoints": [
     {
       "name": "bgcolor",
-      "stateless": true,
+      "quota": 10,
       "icon": "fa-star-half-stroke",
       "iconColor": "#56AB26"
     },
     {
       "name": "anti_flicker",
+      "quota": 10,
       "icon": "fab fa-flickr",
       "iconColor": "#56AB26"
     },
     {
       "name": "black_light",
+      "quota": 10,
       "icon": "fa-traffic-light",
       "iconColor": "#56AB26"
     },
     {
       "name": "blc",
+      "quota": 10,
       "icon": "fa-star-half-stroke",
       "iconColor": "#56AB26"
     },
     {
       "name": "blue_gain",
+      "quota": 10,
       "icon": "fa-dice-six",
       "iconColor": "#27608C"
     },
     {
       "name": "drc",
+      "quota": 10,
       "icon": "fa-plug-circle-bolt",
       "iconColor": "#A69A2D"
     },
     {
       "name": "exposure",
+      "quota": 10,
       "icon": "fa-explosion",
       "iconColor": "#9357EF"
     },
     {
       "name": "3dnr",
+      "quota": 10,
       "icon": "fab fa-unity",
       "iconColor": "#299974"
     },
     {
       "name": "red_gain",
+      "quota": 10,
       "icon": "fa-vials",
       "iconColor": "#A095F7"
     },
     {
       "name": "white_balance",
+      "quota": 10,
       "icon": "fa-scale-balanced",
       "iconColor": "#B06C51"
     },
     {
       "name": "position_datetime",
+      "quota": 10,
       "icon": "fa-arrows-up-down-left-right",
       "iconColor": "#5172B0"
     },
     {
       "name": "name_position",
+      "quota": 10,
       "icon": "fa-up-down-left-right",
       "iconColor": "#563AB0"
     },
     {
       "name": "show_name",
+      "quota": 10,
       "icon": "fa-tags",
       "iconColor": "#A82F9E"
     },
     {
       "name": "day_night",
+      "quota": 10,
       "icon": "fa-cloud-sun",
       "iconColor": "#DD5F24"
     },
     {
       "name": "record_audio",
+      "quota": 10,
       "icon": "fa-dice-six",
       "iconColor": "#AB2200"
     },
     {
       "name": "show_datetime",
+      "quota": 10,
       "icon": "fa-calendar-days",
       "iconColor": "#618750"
     },
     {
       "name": "show_watermark",
+      "quota": 10,
       "icon": "fab fa-markdown",
       "iconColor": "#AB2631"
     },
     {
       "name": "enable_led",
+      "quota": 10,
       "icon": "fas fa-lightbulb",
       "iconColor": "#7C2D9C"
     },
     {
       "name": "auto_led",
+      "quota": 10,
       "icon": "fas fa-lightbulb",
       "iconColor": "#7C2D9C"
     },
     {
       "name": "audio_threshold",
+      "quota": 10,
       "icon": "fa-music",
       "iconColor": "#95A346"
     },
     {
       "name": "motion_threshold",
+      "quota": 10,
       "icon": "fa-person-running",
       "iconColor": "#299974"
     },
     {
       "name": "last_seen",
+      "quota": 100,
       "order": 1900,
       "icon": "fa-eye",
       "iconColor": "#2D9C2C"
     },
     {
       "name": "device_status",
+      "quota": 100,
       "order": 1910,
       "icon": "fa-globe",
       "iconColor": "#42B52D"
     },
     {
       "name": "image_mirror",
+      "quota": 10,
       "order": 2000,
       "icon": "fa-arrow-right-arrow-left",
       "iconColor": "#9357EF"
     },
     {
       "name": "image_rotate",
+      "quota": 10,
       "order": 2005,
       "icon": "fa-superscript",
       "iconColor": "#415DBA"
     },
     {
       "name": "image_bright",
+      "quota": 10,
       "order": 2010,
       "icon": "fa-sun",
       "iconColor": "#415DBA"
     },
     {
       "name": "image_contrast",
+      "quota": 10,
       "order": 2020,
       "icon": "fa-circle-half-stroke",
       "iconColor": "#415DBA"
     },
     {
       "name": "image_hue",
+      "quota": 10,
       "order": 2030,
       "icon": "fa-swatchbook",
       "iconColor": "#415DBA"
     },
     {
       "name": "image_saturation",
+      "quota": 10,
       "order": 2040,
       "icon": "fa-pen-fancy",
       "iconColor": "#415DBA"
     },
     {
       "name": "image_sharpen",
+      "quota": 10,
       "order": 2050,
       "icon": "fa-cubes-stacked",
       "iconColor": "#415DBA"
+    },
+    {
+      "name": "stream_main_resolution",
+      "quota": 10,
+      "order": 2500,
+      "icon": "fa-dna",
+      "iconColor": "#AB38A1"
+    },
+    {
+      "name": "stream_main_bit_rate",
+      "quota": 10,
+      "order": 2510,
+      "icon": "fa-gauge-simple-high",
+      "iconColor": "#AB38A1"
+    },
+    {
+      "name": "stream_main_frame_rate",
+      "quota": 10,
+      "order": 2520,
+      "icon": "fa-film",
+      "iconColor": "#AB38A1"
+    },
+    {
+      "name": "stream_main_H264_profile",
+      "quota": 10,
+      "order": 2530,
+      "icon": "fa-address-card",
+      "iconColor": "#AB38A1"
+    },
+    {
+      "name": "stream_secondary_resolution",
+      "quota": 10,
+      "order": 2550,
+      "icon": "fa-dna",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "stream_secondary_bit_rate",
+      "quota": 10,
+      "order": 2560,
+      "icon": "fa-gauge-simple-high",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "stream_secondary_frame_rate",
+      "quota": 10,
+      "order": 2570,
+      "icon": "fa-film",
+      "iconColor": "#8035A6"
+    },
+    {
+      "name": "stream_secondary_H264_profile",
+      "quota": 10,
+      "order": 2580,
+      "icon": "fa-address-card",
+      "iconColor": "#8035A6"
     }
   ]
 }

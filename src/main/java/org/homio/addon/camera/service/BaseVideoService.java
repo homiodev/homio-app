@@ -53,10 +53,8 @@ import org.homio.addon.camera.entity.VideoActionsContext;
 import org.homio.addon.camera.onvif.util.ChannelTracking;
 import org.homio.addon.camera.service.util.FFMpegRtspAlarm;
 import org.homio.addon.camera.service.util.VideoUrls;
-import org.homio.addon.camera.ui.UIVideoAction;
 import org.homio.addon.camera.ui.UIVideoActionGetter;
 import org.homio.addon.camera.ui.UIVideoEndpointAction;
-import org.homio.addon.camera.ui.VideoActionType;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP;
 import org.homio.api.EntityContextBGP.ThreadContext;
@@ -753,7 +751,7 @@ public abstract class BaseVideoService<T extends BaseVideoEntity<T, S>, S extend
             CONFIG_DEVICE_SERVICE.getDeviceIconColor(devices, UI.Color.random())
         );
         entityContext.var().createGroup("video", "Video", true, new Icon("fas fa-video", "#0E578F"));
-        entityContext.var().createGroup("tuya", requireNonNull(entity.getIeeeAddress()), entity.getDeviceFullName(), true,
+        entityContext.var().createGroup("video", requireNonNull(entity.getIeeeAddress()), entity.getDeviceFullName(), true,
             icon, getGroupDescription());
     }
 

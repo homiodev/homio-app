@@ -43,17 +43,17 @@ import org.jetbrains.annotations.Nullable;
 @Log4j2
 public class CameraActionBuilder {
 
-    public static void assembleActions(BaseOnvifCameraBrandHandler instance, UIInputBuilder uiInputBuilder) {
+    public static void assembleActions(BaseOnvifCameraBrandHandler brandHandler, UIInputBuilder uiInputBuilder) {
         Set<String> handledMethods = new HashSet<>();
-        Method[] actions = MethodUtils.getMethodsWithAnnotation(instance.getClass(), UIVideoAction.class, true, false);
-        Method[] endpointActions = MethodUtils.getMethodsWithAnnotation(instance.getClass(), UIVideoEndpointAction.class, true, false);
+        Method[] actions = MethodUtils.getMethodsWithAnnotation(brandHandler.getClass(), UIVideoAction.class, true, false);
+        Method[] endpointActions = MethodUtils.getMethodsWithAnnotation(brandHandler.getClass(), UIVideoEndpointAction.class, true, false);
 
-        assembleActions(instance, uiInputBuilder, handledMethods, actions, method -> new ActionContext(method, instance.getService()));
-        assembleActions(instance, uiInputBuilder, handledMethods, endpointActions, method -> new ActionContext(method, instance.getService()));
+        assembleActions(brandHandler, uiInputBuilder, handledMethods, actions, method -> new ActionContext(method, brandHandler.getService()));
+        assembleActions(brandHandler, uiInputBuilder, handledMethods, endpointActions, method -> new ActionContext(method, brandHandler.getService()));
     }
 
     private static void assembleActions(
-        VideoActionsContext instance,
+        BaseOnvifCameraBrandHandler brandHandler,
         UIInputBuilder uiInputBuilder,
         Set<String> handledMethods,
         Method[] actions,
@@ -61,7 +61,7 @@ public class CameraActionBuilder {
         for (Method method : actions) {
             if (handledMethods.add(method.getName())) {
                 ActionContext context = actionContextGetter.apply(method);
-                if (!context.condition.test((OnvifCameraService) instance, method)) {
+                if (!context.condition.test(brandHandler.getService(), method)) {
                     continue;
                 }
 
@@ -83,7 +83,7 @@ public class CameraActionBuilder {
 
                 UIActionHandler actionHandler = (entityContext, params) -> {
                     try {
-                        method.invoke(instance, actionParameterConverter.apply(params.optString("value")));
+                        method.invoke(brandHandler, actionParameterConverter.apply(params.optString("value")));
                     } catch (Exception ex) {
                         log.error("Unable to invoke camera action: <{}>", CommonUtils.getErrorMessage(ex));
                     }
@@ -136,7 +136,7 @@ public class CameraActionBuilder {
                     } else if (method.isAnnotationPresent(UICameraSelectionAttributeValues.class)) {
                         uiEntityItemBuilder.addFetchValueHandler("update-selection", () -> {
                             UICameraSelectionAttributeValues attributeValues = method.getDeclaredAnnotation(UICameraSelectionAttributeValues.class);
-                            State state = instance.getAttribute(attributeValues.value());
+                            State state = brandHandler.getAttribute(attributeValues.value());
                             if (state instanceof JsonType) {
                                 JsonNode jsonNode = ((JsonType) state).get(attributeValues.path());
                                 if (jsonNode instanceof ArrayNode) {
@@ -152,9 +152,9 @@ public class CameraActionBuilder {
                         DynamicOptionLoader dynamicOptionLoader;
                         UIFieldSelection attributeValues = method.getDeclaredAnnotation(UIFieldSelection.class);
                         try {
-                            Constructor<? extends DynamicOptionLoader> constructor = attributeValues.value().getDeclaredConstructor(instance.getClass());
+                            Constructor<? extends DynamicOptionLoader> constructor = attributeValues.value().getDeclaredConstructor(brandHandler.getClass());
                             constructor.setAccessible(true);
-                            dynamicOptionLoader = constructor.newInstance(instance);
+                            dynamicOptionLoader = constructor.newInstance(brandHandler);
                         } catch (Exception ex) {
                             throw new RuntimeException(ex);
                         }
@@ -162,19 +162,19 @@ public class CameraActionBuilder {
                             ((UISelectBoxItemBuilder) uiEntityItemBuilder)
                                 .setOptions(dynamicOptionLoader.loadOptions(
                                     new DynamicOptionLoader.DynamicOptionLoaderParameters(
-                                        instance.getEntity(),
-                                        instance.getEntityContext(),
+                                        brandHandler.getEntity(),
+                                        brandHandler.getEntityContext(),
                                         attributeValues.staticParameters(), null)
                                 )));
                     }
                 }
-                Method getter = findGetter(instance, context.name);
+                Method getter = findGetter(brandHandler, context.name);
 
                 // add update value handler
                 if (getter != null) {
                     uiEntityItemBuilder.addFetchValueHandler("update-value", () -> {
                         try {
-                            Object value = getter.invoke(instance);
+                            Object value = getter.invoke(brandHandler);
                             if (value == null) {
                                 return;
                             }

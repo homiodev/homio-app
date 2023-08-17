@@ -400,7 +400,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     public @Nullable String getDescription() {
         /*String message = getStatusMessage();
         if (message != null && message.contains("Failed to connect")) {
-            return "TUYA.CONNECT_ISSUE";
+            return "CONNECT_ISSUE";
         }*/
         return null;
     }

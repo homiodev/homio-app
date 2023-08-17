@@ -489,6 +489,12 @@ public class EntityContextVarImpl implements EntityContextVar {
     public record VariableMetaBuilderImpl(WorkspaceVariable entity) implements VariableMetaBuilder {
 
         @Override
+        public @NotNull VariableMetaBuilder setQuota(int value) {
+            entity.setQuota(value);
+            return this;
+        }
+
+        @Override
         public @NotNull VariableMetaBuilder setReadOnly(boolean value) {
             entity.setReadOnly(value);
             return this;
