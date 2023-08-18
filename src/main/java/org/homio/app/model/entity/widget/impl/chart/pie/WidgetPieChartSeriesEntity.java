@@ -13,7 +13,7 @@ import org.homio.app.model.entity.widget.attributes.HasValueConverter;
 
 @Entity
 public class WidgetPieChartSeriesEntity extends WidgetSeriesEntity<WidgetPieChartEntity>
-    implements HasSingleValueDataSource, HasValueConverter {
+        implements HasSingleValueDataSource, HasValueConverter {
 
     @UIField(order = 20, isRevert = true)
     @UIFieldGroup(value = "CHART_UI", order = 54, borderColor = "#673AB7")

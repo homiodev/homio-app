@@ -13,12 +13,13 @@ import org.homio.app.model.entity.widget.WidgetBaseEntity;
 @Setter
 public class WidgetDataRequest {
 
-    @NotNull private String entityID;
+    @NotNull
+    private String entityID;
     private String liveEntity;
 
     @SneakyThrows
     public <T extends BaseEntity> T getEntity(
-        EntityContext entityContext, ObjectMapper objectMapper, Class<T> tClass) {
+            EntityContext entityContext, ObjectMapper objectMapper, Class<T> tClass) {
         if (liveEntity != null) {
             return objectMapper.readValue(liveEntity, tClass);
         }

@@ -14,6 +14,7 @@ import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.Mixer;
 import javax.sound.sampled.Port;
+
 import javazoom.jl.decoder.JavaLayerException;
 import javazoom.jl.player.advanced.AdvancedPlayer;
 import javazoom.jl.player.advanced.PlaybackEvent;
@@ -34,9 +35,9 @@ import org.springframework.stereotype.Component;
 public class JavaSoundAudioSink implements AudioSink {
 
     private static final Set<AudioFormat> SUPPORTED_AUDIO_FORMATS =
-        new HashSet<>(Arrays.asList(AudioFormat.MP3, AudioFormat.WAV));
+            new HashSet<>(Arrays.asList(AudioFormat.MP3, AudioFormat.WAV));
     private static final Set<Class<? extends AudioStream>> SUPPORTED_AUDIO_STREAMS =
-        new HashSet<>(Collections.singletonList(AudioStream.class));
+            new HashSet<>(Collections.singletonList(AudioStream.class));
     private static AdvancedPlayer streamPlayer;
     private final EntityContext entityContext;
     // for resume

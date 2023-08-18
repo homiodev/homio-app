@@ -3,6 +3,7 @@ package org.homio.app.manager.common;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import jakarta.persistence.EntityManagerFactory;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
@@ -23,6 +24,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -153,7 +155,7 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private final GitHubProject appGitHub = GitHubProject.of("homiodev", "homio-app", CommonUtils.getInstallPath().resolve("homio"))
-                                                         .setInstalledVersionResolver(() -> setting().getApplicationVersion());
+            .setInstalledVersionResolver(() -> setting().getApplicationVersion());
     private final EntityContextUIImpl entityContextUI;
     private final EntityContextInstallImpl entityContextInstall;
     private final EntityContextEventImpl entityContextEvent;
@@ -166,11 +168,15 @@ public class EntityContextImpl implements EntityContext {
     private final EntityContextServiceImpl entityContextService;
     private final EntityContextWorkspaceImpl entityContextWorkspace;
     private final EntityContextStorageImpl entityContextStorage;
-    @Getter private final EntityContextAddonImpl addon;
-    @Getter private final EntityContextStorageImpl entityContextStorageImpl;
+    @Getter
+    private final EntityContextAddonImpl addon;
+    @Getter
+    private final EntityContextStorageImpl entityContextStorageImpl;
     private final ClassFinder classFinder;
-    @Getter private final CacheService cacheService;
-    @Getter private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
+    @Getter
+    private final CacheService cacheService;
+    @Getter
+    private final Set<ApplicationContext> allApplicationContexts = new HashSet<>();
     private final EntityManager entityManager;
     private final WidgetRepository widgetRepository;
     private final WidgetSeriesRepository widgetSeriesRepository;
@@ -181,21 +187,21 @@ public class EntityContextImpl implements EntityContext {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public EntityContextImpl(
-        TransactionManagerContext transactionManagerContext,
-        List<AbstractRepository> repositories,
-        AllDeviceRepository allDeviceRepository,
-        WidgetRepository widgetRepository,
-        WidgetSeriesRepository widgetSeriesRepository,
-        EntityManager entityManager,
-        ClassFinder classFinder,
-        CacheService cacheService,
-        ThreadPoolTaskScheduler taskScheduler,
-        SimpMessagingTemplate messagingTemplate,
-        ConfigurableEnvironment environment,
-        VariableBackupRepository variableBackupRepository,
-        EntityManagerFactory entityManagerFactory,
-        MachineHardwareRepository machineHardwareRepository,
-        FfmpegHardwareRepository ffmpegHardwareRepository) {
+            TransactionManagerContext transactionManagerContext,
+            List<AbstractRepository> repositories,
+            AllDeviceRepository allDeviceRepository,
+            WidgetRepository widgetRepository,
+            WidgetSeriesRepository widgetSeriesRepository,
+            EntityManager entityManager,
+            ClassFinder classFinder,
+            CacheService cacheService,
+            ThreadPoolTaskScheduler taskScheduler,
+            SimpMessagingTemplate messagingTemplate,
+            ConfigurableEnvironment environment,
+            VariableBackupRepository variableBackupRepository,
+            EntityManagerFactory entityManagerFactory,
+            MachineHardwareRepository machineHardwareRepository,
+            FfmpegHardwareRepository ffmpegHardwareRepository) {
         this.classFinder = classFinder;
         this.cacheService = cacheService;
         this.entityManager = entityManager;
@@ -205,7 +211,7 @@ public class EntityContextImpl implements EntityContext {
 
         EntityContextImpl.allDeviceRepository = allDeviceRepository;
         EntityContextImpl.repositoriesByPrefix =
-            repositories.stream()
+                repositories.stream()
                         .filter(r -> !r.getClass().equals(AllDeviceRepository.class))
                         .collect(Collectors.toMap(AbstractRepository::getPrefix, r -> r));
 
@@ -263,7 +269,7 @@ public class EntityContextImpl implements EntityContext {
         addon.initializeInlineAddons();
 
         bgp().builder("app-version").interval(Duration.ofDays(1)).delay(Duration.ofSeconds(1))
-             .execute(this::updateAppNotificationBlock);
+                .execute(this::updateAppNotificationBlock);
         event().runOnceOnInternetUp("app-version", this::updateAppNotificationBlock);
 
         event().fireEventIfNotSame("app-status", Status.ONLINE);
@@ -273,9 +279,9 @@ public class EntityContextImpl implements EntityContext {
         });
         setting().listenValue(SystemSoftRestartButtonSetting.class, "soft-restart", () -> SystemSoftRestartButtonSetting.restart(this));
         setting().listenValue(ScanDevicesSetting.class, "scan-devices", () ->
-            ui().handleResponse(new BeansItemsDiscovery(ItemDiscoverySupport.class).handleAction(this, null)));
+                ui().handleResponse(new BeansItemsDiscovery(ItemDiscoverySupport.class).handleAction(this, null)));
         setting().listenValue(ScanVideoStreamSourcesSetting.class, "scan-video-sources", () ->
-            ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
+                ui().handleResponse(new BeansItemsDiscovery(VideoStreamScanner.class).handleAction(this, null)));
 
         this.entityContextStorageImpl.init();
     }
@@ -474,10 +480,10 @@ public class EntityContextImpl implements EntityContext {
     @Override
     public <T> @NotNull T getBean(@NotNull String beanName, @NotNull Class<T> clazz) {
         return this.allApplicationContexts.stream()
-                                          .filter(c -> c.containsBean(beanName))
-                                          .map(c -> c.getBean(beanName, clazz))
-                                          .findAny()
-                                          .orElseThrow(() -> new NoSuchBeanDefinitionException(beanName));
+                .filter(c -> c.containsBean(beanName))
+                .map(c -> c.getBean(beanName, clazz))
+                .findAny()
+                .orElseThrow(() -> new NoSuchBeanDefinitionException(beanName));
     }
 
     @Override
@@ -527,7 +533,7 @@ public class EntityContextImpl implements EntityContext {
 
     @Override
     public <T> @NotNull List<Class<? extends T>> getClassesWithAnnotation(
-        @NotNull Class<? extends Annotation> annotation) {
+            @NotNull Class<? extends Annotation> annotation) {
         return classFinder.getClassesWithAnnotation(annotation);
     }
 
@@ -556,9 +562,9 @@ public class EntityContextImpl implements EntityContext {
 
     public <T> List<T> getEntityServices(Class<T> serviceClass) {
         return allDeviceRepository.listAll().stream()
-                                  .filter(e -> serviceClass.isAssignableFrom(e.getClass()))
-                                  .map(e -> (T) e)
-                                  .collect(Collectors.toList());
+                .filter(e -> serviceClass.isAssignableFrom(e.getClass()))
+                .map(e -> (T) e)
+                .collect(Collectors.toList());
     }
 
     public BaseEntity copyEntity(BaseEntity entity) {
@@ -640,8 +646,8 @@ public class EntityContextImpl implements EntityContext {
 
     public void rebuildRepositoryByPrefixMap() {
         uiFieldClasses = classFinder.getClassesWithParent(EntityFieldMetadata.class)
-                                    .stream()
-                                    .collect(Collectors.toMap(Class::getSimpleName, s -> s));
+                .stream()
+                .collect(Collectors.toMap(Class::getSimpleName, s -> s));
     }
 
     @SneakyThrows
@@ -669,17 +675,17 @@ public class EntityContextImpl implements EntityContext {
             String latestVersion = appGitHub.getLastReleaseVersion();
             if (!Objects.equals(installedVersion, latestVersion)) {
                 builder.setUpdatable(
-                    (progressBar, version) -> appGitHub.updateProject("homio", progressBar, false, projectUpdate -> {
-                        Path jarLocation = Paths.get(setting().getEnvRequire("appPath", String.class, CommonUtils.getRootPath().toString(), true));
-                        Path archiveAppPath = jarLocation.resolve("homio-app.zip");
-                        Files.deleteIfExists(archiveAppPath);
-                        projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
-                        ui().reloadWindow("Finish update", 60);
-                        log.info("Exit app to restart it after update");
-                        restartApplication();
-                        return null;
-                    }, null),
-                    appGitHub.getReleasesSince(installedVersion, false));
+                        (progressBar, version) -> appGitHub.updateProject("homio", progressBar, false, projectUpdate -> {
+                            Path jarLocation = Paths.get(setting().getEnvRequire("appPath", String.class, CommonUtils.getRootPath().toString(), true));
+                            Path archiveAppPath = jarLocation.resolve("homio-app.zip");
+                            Files.deleteIfExists(archiveAppPath);
+                            projectUpdate.downloadReleaseFile(version, archiveAppPath.getFileName().toString(), archiveAppPath);
+                            ui().reloadWindow("Finish update", 60);
+                            log.info("Exit app to restart it after update");
+                            restartApplication();
+                            return null;
+                        }, null),
+                        appGitHub.getReleasesSince(installedVersion, false));
             }
             builder.fireOnFetch(() -> {
                 long runDuration = TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - START_TIME);
@@ -689,8 +695,8 @@ public class EntityContextImpl implements EntityContext {
                     time = runDuration + "m";
                 }
                 String serverStartMsg = Lang.getServerMessage("SERVER_STARTED", FlowMap.of("VALUE",
-                    new SimpleDateFormat("MM/dd HH:mm").format(new Date(START_TIME)),
-                    "TIME", time));
+                        new SimpleDateFormat("MM/dd HH:mm").format(new Date(START_TIME)),
+                        "TIME", time));
                 builder.addInfo("time", new Icon("fas fa-clock"), serverStartMsg);
             });
         });
@@ -715,14 +721,14 @@ public class EntityContextImpl implements EntityContext {
     }
 
     private <T extends HasEntityIdentifier> void runUpdateNotifyListeners(@Nullable T updatedEntity, T oldEntity,
-        EntityContextEventImpl.EntityListener... entityListeners) {
+                                                                          EntityContextEventImpl.EntityListener... entityListeners) {
         if (updatedEntity != null || oldEntity != null) {
             bgp().builder("entity-" + (updatedEntity == null ? oldEntity : updatedEntity).getEntityID() + "-updated").hideOnUI(true)
-                 .execute(() -> {
-                     for (EntityContextEventImpl.EntityListener entityListener : entityListeners) {
-                         entityListener.notify(updatedEntity, oldEntity);
-                     }
-                 });
+                    .execute(() -> {
+                        for (EntityContextEventImpl.EntityListener entityListener : entityListeners) {
+                            entityListener.notify(updatedEntity, oldEntity);
+                        }
+                    });
         }
     }
 

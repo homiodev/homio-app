@@ -2,6 +2,7 @@ package org.homio.app.js.assistant.impl;
 
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.Field;
@@ -21,6 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.exception.ServerException;
@@ -47,7 +49,7 @@ public class CodeParser {
     }
 
     public Set<Completion> addCompetitionFromManagerOrClass(String line, Stack<Param> stack, ParserContext context,
-        String allScript) throws NoSuchMethodException {
+                                                            String allScript) throws NoSuchMethodException {
         Set<Completion> completions = new HashSet<>();
         List<String> items = splitSpecial(line); // list of items split by '.'
         String firstItem = items.get(0);
@@ -67,7 +69,7 @@ public class CodeParser {
         if (completions.isEmpty()) {
             for (JavaScriptBinder javaScriptBinder : JavaScriptBinder.values()) {
                 completions.add(new Completion(javaScriptBinder.name(), "",
-                    javaScriptBinder.managerClass, javaScriptBinder.help, CompletionItemKind.Keyword));
+                        javaScriptBinder.managerClass, javaScriptBinder.help, CompletionItemKind.Keyword));
             }
         }
         return completions;
@@ -115,7 +117,7 @@ public class CodeParser {
     }
 
     private Set<Completion> addCompetitionFrom(String from, Class fromClass, String line, Stack<Param> stack,
-        ParserContext context) throws NoSuchMethodException {
+                                               ParserContext context) throws NoSuchMethodException {
         line = line.trim();
         Set<Completion> list = new HashSet<>();
         List<String> items = splitSpecial(line);
@@ -147,7 +149,7 @@ public class CodeParser {
     }
 
     private Set<Completion> tryEvaFromFunctionParameter(String supposeParameter, String allScript, String line)
-        throws NoSuchMethodException {
+            throws NoSuchMethodException {
         int index = allScript.indexOf(line);
         int funcIndex = allScript.lastIndexOf("function", index);
         int endFunc = allScript.indexOf(")", funcIndex);
@@ -171,31 +173,31 @@ public class CodeParser {
             for (Method method : fromClass.getMethods()) {
                 if (!method.isDefault()) {
                     content.append(method.getReturnType().getName()).append(" ").append(method.getName())
-                           .append(createParametersFromMethod(method, false)).append(" {\n\t\t\n\t}");
+                            .append(createParametersFromMethod(method, false)).append(" {\n\t\t\n\t}");
                 }
             }
             content.append("}");
         }
         content.append(";");
         list.add(new Completion(content.toString(), fromClass.getSimpleName(), fromClass, "",
-            CompletionItemKind.Method));
+                CompletionItemKind.Method));
     }
 
     private void addStaticCompletions(String finalNext, Class clazz, Set<Completion> list) {
         if (clazz != null) {
             list.addAll(getFitStaticMethods(finalNext, clazz).stream().map(this::convertMethodToCompletion)
-                                                             .collect(Collectors.toList()));
+                    .collect(Collectors.toList()));
             list.addAll(getFitStaticFields(finalNext, clazz).stream().map(this::convertFieldToCompletion)
-                                                            .collect(Collectors.toList()));
+                    .collect(Collectors.toList()));
         }
     }
 
     private void addCompletionsAtEndFunc(String finalNext, Class clazz, Set<Completion> list, Stack<Param> stack,
-        ParserContext context) throws NoSuchMethodException {
+                                         ParserContext context) throws NoSuchMethodException {
         if (clazz != null) {
             if (!finalNext.contains("(")) {
                 list.addAll(MethodParser.getFitMethods(finalNext, clazz).stream().map(this::convertMethodToCompletion)
-                                        .collect(Collectors.toList()));
+                        .collect(Collectors.toList()));
             } else {
                 String funcParameters = finalNext.substring(finalNext.indexOf("(") + 1);
                 int paramIndex = StringUtils.countMatches(funcParameters, ",");
@@ -237,9 +239,9 @@ public class CodeParser {
             String retValue;
             if (method.getAnnotatedReturnType() instanceof AnnotatedParameterizedType) {
                 List<String> retParameters = Stream.of(
-                                                       ((AnnotatedParameterizedType) method.getAnnotatedReturnType()).getAnnotatedActualTypeArguments())
-                                                   .filter(a -> a.getType() instanceof Class)
-                                                   .map(a -> ((Class) a.getType()).getSimpleName()).collect(Collectors.toList());
+                                ((AnnotatedParameterizedType) method.getAnnotatedReturnType()).getAnnotatedActualTypeArguments())
+                        .filter(a -> a.getType() instanceof Class)
+                        .map(a -> ((Class) a.getType()).getSimpleName()).collect(Collectors.toList());
                 retValue = method.getReturnType().getSimpleName() + "<" + StringUtils.join(retParameters, ", ") + ">";
             } else {
                 retValue = method.getReturnType().getSimpleName();
@@ -248,7 +250,7 @@ public class CodeParser {
             String help = apiOperation == null ? "" : apiOperation.value();
 
             return new Completion(method.getName() + parameters, retValue, method.getReturnType(), help,
-                CompletionItemKind.Method);
+                    CompletionItemKind.Method);
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new ServerException(ex);
@@ -258,7 +260,7 @@ public class CodeParser {
     private String createParametersFromMethod(Method method, boolean asComments) {
         int apiParamIndex = 0;
         Annotation[] apiParams =
-            method.getParameterAnnotations().length == 0 ? new Annotation[0] : method.getParameterAnnotations()[0];
+                method.getParameterAnnotations().length == 0 ? new Annotation[0] : method.getParameterAnnotations()[0];
         List<String> collect = new ArrayList<>();
         for (Parameter parameter : method.getParameters()) {
             String name = parameter.getName();
@@ -269,14 +271,14 @@ public class CodeParser {
         }
 
         return collect.isEmpty() ? "()" : "(" + (asComments ? "/*" : "") +
-            StringUtils.join(collect, (asComments ? "*/" : "") + "   , " + (asComments ? "/*" : "") + " ") +
-            (asComments ? "*/" : "") + ")";
+                StringUtils.join(collect, (asComments ? "*/" : "") + "   , " + (asComments ? "/*" : "") + " ") +
+                (asComments ? "*/" : "") + ")";
     }
 
     private Completion convertFieldToCompletion(Field field) {
         try {
             return new Completion(field.getName(), field.getType().getSimpleName(), field.getType(), "",
-                CompletionItemKind.Method);
+                    CompletionItemKind.Method);
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new ServerException(ex);
@@ -309,7 +311,7 @@ public class CodeParser {
     }
 
     private void addCompetitionFromManager2(int i, List<String> items, Set<Completion> list, Class clazz, Stack<Param> stack,
-        ParserContext context) throws NoSuchMethodException {
+                                            ParserContext context) throws NoSuchMethodException {
         if (items.size() == i + 1) {
             addCompletionsAtEndFunc(items.get(i), clazz, list, stack, context);
             addCompletionsAtEndFunc(items.get(i), clazz.getSuperclass(), list, stack, context);
@@ -325,7 +327,7 @@ public class CodeParser {
                         Parameter parameter = methodOptional.getParameters()[methodParameters.length - 1];
                         // getPinRequestType
                         addCompetitionFrom("", parameter.getType(), methodParameters[methodParameters.length - 1], new Stack<>(),
-                            context);
+                                context);
 
 
                     }

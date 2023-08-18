@@ -1,6 +1,7 @@
 package org.homio.app.extloader;
 
 import com.pivovarit.function.ThrowingRunnable;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -59,8 +61,12 @@ public class AddonContext {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {return true;}
-        if (o == null || getClass() != o.getClass()) {return false;}
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         AddonContext that = (AddonContext) o;
 
@@ -75,7 +81,9 @@ public class AddonContext {
             return false;
         }
 
-        if (contextFile != null && !contextFile.equals(that.contextFile)) {return false;}
+        if (contextFile != null && !contextFile.equals(that.contextFile)) {
+            return false;
+        }
         return pomFile == null || pomFile.getVersion().equals(that.pomFile.getVersion());
     }
 
@@ -112,8 +120,8 @@ public class AddonContext {
 
     public Set<String> getDependencies() {
         return this.pomFile.getDependencies().stream()
-                           .filter(d -> d.getGroupId().equals("org.homio") && d.getArtifactId().contains("addon"))
-                           .map(Dependency::getArtifactId).collect(Collectors.toSet());
+                .filter(d -> d.getGroupId().equals("org.homio") && d.getArtifactId().contains("addon"))
+                .map(Dependency::getArtifactId).collect(Collectors.toSet());
     }
 
     public String getAddonFriendlyName() {
@@ -158,7 +166,7 @@ public class AddonContext {
 
     @SneakyThrows
     public void load(ConfigurationBuilder configurationBuilder, Environment env, ApplicationContext parentContext,
-        ClassLoader classLoader) {
+                     ClassLoader classLoader) {
         URL addonUrl = contextFile.toUri().toURL();
         Reflections reflections = new Reflections(configurationBuilder.setUrls(addonUrl));
 
@@ -214,13 +222,13 @@ public class AddonContext {
 
             // set custom environments
             Map<String, Object> customEnv = Stream.of(addonConfiguration.env()).collect(
-                Collectors.toMap(AddonConfiguration.Env::key, e ->
-                    SpringUtils.replaceEnvValues(e.value(),
-                        (key, defValue, fullPrefix) -> env.getProperty(key, defValue))));
+                    Collectors.toMap(AddonConfiguration.Env::key, e ->
+                            SpringUtils.replaceEnvValues(e.value(),
+                                    (key, defValue, fullPrefix) -> env.getProperty(key, defValue))));
 
             if (!customEnv.isEmpty()) {
                 ctx.getEnvironment().getPropertySources()
-                   .addFirst(new MapPropertySource("AddonConfiguration PropertySource", customEnv));
+                        .addFirst(new MapPropertySource("AddonConfiguration PropertySource", customEnv));
             }
 
             // wake up spring context

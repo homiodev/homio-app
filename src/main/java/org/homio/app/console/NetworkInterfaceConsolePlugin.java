@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,12 +37,12 @@ public class NetworkInterfaceConsolePlugin implements ConsolePluginTable<Network
         List<NetworkInterfaceEntity> list = new ArrayList<>();
         for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
             list.add(new NetworkInterfaceEntity(
-                networkInterface.getName(),
-                networkInterface.getDisplayName(),
-                networkInterface.getMTU(),
-                networkInterface.getInterfaceAddresses().stream()
-                                .map(ia -> ia.getAddress().toString())
-                                .collect(Collectors.joining(" ~~~|~~~ "))));
+                    networkInterface.getName(),
+                    networkInterface.getDisplayName(),
+                    networkInterface.getMTU(),
+                    networkInterface.getInterfaceAddresses().stream()
+                            .map(ia -> ia.getAddress().toString())
+                            .collect(Collectors.joining(" ~~~|~~~ "))));
         }
         Collections.sort(list);
         return list;

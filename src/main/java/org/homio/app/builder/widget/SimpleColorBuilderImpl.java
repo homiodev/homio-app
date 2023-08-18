@@ -8,8 +8,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class SimpleColorBuilderImpl extends WidgetBaseBuilderImpl<SimpleColorWidgetBuilder, WidgetSimpleColorEntity>
-    implements SimpleColorWidgetBuilder,
-    HasAlignBuilder<WidgetSimpleColorEntity, SimpleColorWidgetBuilder> {
+        implements SimpleColorWidgetBuilder,
+        HasAlignBuilder<WidgetSimpleColorEntity, SimpleColorWidgetBuilder> {
 
     SimpleColorBuilderImpl(WidgetSimpleColorEntity widget, EntityContextImpl entityContext) {
         super(widget, entityContext);

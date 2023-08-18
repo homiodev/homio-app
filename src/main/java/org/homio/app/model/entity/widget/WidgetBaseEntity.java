@@ -11,7 +11,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.ManyToOne;
+
 import java.util.List;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -42,7 +44,7 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 @NoArgsConstructor
 public abstract class WidgetBaseEntity<T extends WidgetBaseEntity> extends BaseEntity
-    implements HasPosition<WidgetBaseEntity>, HasStyle, HasJsonData {
+        implements HasPosition<WidgetBaseEntity>, HasStyle, HasJsonData {
 
     private static final String PREFIX = "widget_";
 

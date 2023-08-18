@@ -11,7 +11,9 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+
 import java.nio.charset.StandardCharsets;
+
 import lombok.Getter;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoActionsContext;
@@ -79,7 +81,7 @@ public abstract class BaseOnvifCameraBrandHandler extends ChannelDuplexHandler i
     }
 
     public void onCameraConnected() {
-      fetchDataFromCamera();
+        fetchDataFromCamera();
     }
 
     public void fetchDataFromCamera() {

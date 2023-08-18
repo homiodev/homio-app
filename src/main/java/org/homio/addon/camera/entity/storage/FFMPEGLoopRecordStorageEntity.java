@@ -3,12 +3,14 @@ package org.homio.addon.camera.entity.storage;
 import static org.homio.api.EntityContextMedia.FFMPEGFormat.RECORD;
 
 import jakarta.persistence.Entity;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
@@ -173,7 +175,7 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
         Path path = Paths.get(target);
         if (!path.isAbsolute()) {
             path = CommonUtils.getMediaPath().resolve(videoStreamEntity.getFolderName() + "_" + profile)
-                              .resolve("ffmpeg").resolve(target);
+                    .resolve("ffmpeg").resolve(target);
         }
         Path folder = path.getParent();
         CommonUtils.createDirectoriesIfNotExists(folder);
@@ -181,9 +183,9 @@ public class FFMPEGLoopRecordStorageEntity extends VideoBaseStorageService<FFMPE
         String source = service.urls.getSnapshotUri(profile);
         log.info("[{}]: Start ffmpeg video recording from source: <{}> to: <{}>", getEntityID(), source, path);
         FFMPEG ffmpeg = entityContext.media().buildFFMPEG(getEntityID(), "FFMPEG loop record", ffmpegHandler, log,
-            RECORD, getVerbose() ? "" : "-hide_banner -loglevel warning", source,
-            buildFFMPEGRecordCommand(folder), path.toString(),
-            videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString(), null);
+                RECORD, getVerbose() ? "" : "-hide_banner -loglevel warning", source,
+                buildFFMPEGRecordCommand(folder), path.toString(),
+                videoStreamEntity.getUser(), videoStreamEntity.getPassword().asString(), null);
         ffmpegServices.put(id, ffmpeg);
         ffmpeg.startConverting();
     }

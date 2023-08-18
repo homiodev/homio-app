@@ -15,9 +15,9 @@ import org.homio.api.ui.field.condition.UIFieldShowOnCondition;
 import org.homio.app.model.entity.widget.attributes.HasChartTimePeriod;
 
 public interface HasLineChartBehaviour extends
-    HasJsonData,
-    HasMinMaxChartValue,
-    HasChartTimePeriod {
+        HasJsonData,
+        HasMinMaxChartValue,
+        HasChartTimePeriod {
 
     ChartType getChartType();
 

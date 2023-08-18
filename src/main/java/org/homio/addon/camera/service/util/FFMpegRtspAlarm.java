@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
@@ -54,7 +55,7 @@ public class FFMpegRtspAlarm {
             }
             // if values that involved in precious run same as new - just skip restarting
             if (ffmpegRtspHelper.getIsAlive() && motionThreshold == videoStreamEntity.getMotionThreshold() &&
-                audioThreshold == videoStreamEntity.getAudioThreshold()) {
+                    audioThreshold == videoStreamEntity.getAudioThreshold()) {
                 return;
             }
             ffmpegRtspHelper.stopConverting();
@@ -72,10 +73,10 @@ public class FFMpegRtspAlarm {
             filterOptionsList.add("-vn");
         }
         ffmpegRtspHelper = entityContext.media().buildFFMPEG(videoStreamEntity.getEntityID(), "FFMPEG rtsp alarm",
-            service, log, FFMPEGFormat.RTSP_ALARMS, inputOptions, input,
-            String.join(" ", filterOptionsList), "-f null -",
-            videoStreamEntity.getUser(),
-            videoStreamEntity.getPassword().asString(), null);
+                service, log, FFMPEGFormat.RTSP_ALARMS, inputOptions, input,
+                String.join(" ", filterOptionsList), "-f null -",
+                videoStreamEntity.getUser(),
+                videoStreamEntity.getPassword().asString(), null);
         FFMPEG.run(ffmpegRtspHelper, FFMPEG::startConverting);
         service.setAttribute("FFMPEG_RTSP_ALARM", new StringType(String.join(" ", ffmpegRtspHelper.getCommandArrayList())));
     }

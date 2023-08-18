@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -66,11 +67,11 @@ public class WorkspaceController {
     public List<OptionModel> getWorkspaceVariableValues() {
         List<OptionModel> options = new ArrayList<>();
         List<WorkspaceVariable> entities = entityContext.findAll(WorkspaceVariable.class)
-                                                        .stream()
-                                                        .filter(s -> !s.getWorkspaceGroup().getGroupId().equals("broadcasts"))
-                                                        .collect(Collectors.toList());
+                .stream()
+                .filter(s -> !s.getWorkspaceGroup().getGroupId().equals("broadcasts"))
+                .collect(Collectors.toList());
         UIFieldSelectionUtil.assembleItemsToOptions(options, WorkspaceVariable.class,
-            entities, entityContext, null);
+                entities, entityContext, null);
         return UIFieldSelectionUtil.groupingOptions(UIFieldSelectionUtil.filterOptions(options));
     }
 
@@ -221,7 +222,7 @@ public class WorkspaceController {
         }
 
         if (!WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(entity.getName())
-            && !WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(option.getKey())) {
+                && !WorkspaceRepository.GENERAL_WORKSPACE_TAB_NAME.equals(option.getKey())) {
 
             WorkspaceEntity newEntity = workspaceRepository.getByName(option.getKey());
 

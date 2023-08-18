@@ -98,7 +98,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                 switch (replyElement) {
                     case "MotionDetection version=":
                         service.storeHttpReply(
-                            "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection", content);
+                                "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection", content);
                         if (content.contains("<enabled>true</enabled>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, OnOffType.ON);
                         } else if (content.contains("<enabled>false</enabled>")) {
@@ -128,13 +128,13 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                         break;
                     case "TextOverlay version=":
                         service.storeHttpReply(
-                            "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1", content);
+                                "/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1", content);
                         String text = Helper.fetchXML(content, "<enabled>true</enabled>", "<displayText>");
                         setAttribute(IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, new StringType(text));
                         break;
                     case "AudioDetection version=":
                         service.storeHttpReply("/ISAPI/Smart/AudioDetection/channels/" + nvrChannel + "01",
-                            content);
+                                content);
                         if (content.contains("<enabled>true</enabled>")) {
                             setAttribute(IpCameraBindingConstants.CHANNEL_ENABLE_AUDIO_ALARM, OnOffType.ON);
                         } else if (content.contains("<enabled>false</enabled>")) {
@@ -168,10 +168,10 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
                     default:
                         if (content.contains("<EventNotificationAlert")) {
                             if (content.contains("hannelID>" + nvrChannel + "</")
-                                || content.contains("<channelID>0</channelID>")) {// some camera use c or
+                                    || content.contains("<channelID>0</channelID>")) {// some camera use c or
                                 // <dynChannelID>
                                 if (content.contains(
-                                    "<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>")) {
+                                        "<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>")) {
                                     if (vmdCount > 1) {
                                         vmdCount = 1;
                                     }
@@ -221,7 +221,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
             int elementIndexStart = body.indexOf("<" + removeElement + ">");
             int elementIndexEnd = body.indexOf("</" + removeElement + ">");
             body = body.substring(0, elementIndexStart) + replaceRemovedElementWith
-                + body.substring(elementIndexEnd + removeElement.length() + 3);
+                    + body.substring(elementIndexEnd + removeElement.length() + 3);
             log.debug("[{}]: Body for this PUT is going to be:{}", entityID, body);
             localTracker.setReply(body);
             FullHttpRequest fullHttpRequest = buildFullHttpRequest(httpGetPutURL, body, HttpMethod.PUT, MediaType.APPLICATION_XML);
@@ -234,12 +234,12 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
         log.debug("[{}]: Changing text overlay to {}", entityID, command);
         if (command.isEmpty()) {
             hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
-                "enabled", "<enabled>false</enabled>");
+                    "enabled", "<enabled>false</enabled>");
         } else {
             hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
-                "displayText", "<displayText>" + command + "</displayText>");
+                    "displayText", "<displayText>" + command + "</displayText>");
             hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "/overlays/text/1",
-                "enabled", "<enabled>true</enabled>");
+                    "enabled", "<enabled>true</enabled>");
         }
     }
 
@@ -263,7 +263,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
     public void setTriggerExternalAlarmInput(boolean on) {
         log.debug("[{}]: Changing triggering state of the external input 1 to {}", entityID, on);
         hikChangeSetting("/ISAPI/System/IO/inputs/" + nvrChannel, "triggering",
-            "<triggering>" + (on ? "high" : "low") + "</triggering>");
+                "<triggering>" + (on ? "high" : "low") + "</triggering>");
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_PIR_ALARM, order = 120, icon = "fas fa-compress-alt")
@@ -284,13 +284,13 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_LINE_CROSSING_ALARM, order = 150, icon = "fas fa-grip-lines-vertical")
     public void setEnableLineCrossingAlarm(boolean on) {
         hikChangeSetting("/ISAPI/Smart/LineDetection/" + nvrChannel + "01", "enabled",
-            "<enabled>" + on + "</enabled>");
+                "<enabled>" + on + "</enabled>");
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_MOTION_ALARM, order = 14, icon = "fas fa-running")
     public void enableMotionAlarm(boolean on) {
         hikChangeSetting("/ISAPI/System/Video/inputs/channels/" + nvrChannel + "01/motionDetection",
-            "enabled", "<enabled>" + on + "</enabled>");
+                "enabled", "<enabled>" + on + "</enabled>");
     }
 
     @UIVideoActionGetter(IpCameraBindingConstants.CHANNEL_ENABLE_FIELD_DETECTION_ALARM)
@@ -301,14 +301,14 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ENABLE_FIELD_DETECTION_ALARM, order = 140, icon = "fas fa-shield-alt")
     public void setEnableFieldDetectionAlarm(boolean on) {
         hikChangeSetting("/ISAPI/Smart/FieldDetection/" + nvrChannel + "01", "enabled",
-            "<enabled>" + on + "</enabled>");
+                "<enabled>" + on + "</enabled>");
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_ACTIVATE_ALARM_OUTPUT, order = 45, icon = "fas fa-bell")
     public void activateAlarmOutput(boolean on) {
         hikSendXml("/ISAPI/System/IO/outputs/" + nvrChannel + "/trigger",
-            "<IOPortData version=\"1.0\" xmlns=\"http://www.hikvision.com/ver10/XMLSchema\">\r\n    <outputState>" +
-                (on ? "high" : "low") + "</outputState>\r\n</IOPortData>\r\n");
+                "<IOPortData version=\"1.0\" xmlns=\"http://www.hikvision.com/ver10/XMLSchema\">\r\n    <outputState>" +
+                        (on ? "high" : "low") + "</outputState>\r\n</IOPortData>\r\n");
     }
 
     // This does debouncing of the alarms
@@ -356,7 +356,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
             fieldCount--;
         }
         if (fieldCount == 0 && pirCount == 0 && faceCount == 0 && takenCount == 0 && leftCount == 0 && vmdCount == 0
-            && lineCount == 0) {
+                && lineCount == 0) {
             service.motionDetected(false, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
         }
     }
@@ -365,7 +365,7 @@ public class HikvisionBrandHandler extends BaseOnvifCameraBrandHandler implement
     public void pollCameraRunnable() {
         if (service.streamIsStopped("/ISAPI/Event/notification/alertStream")) {
             log.info("[{}]: The alarm stream was not running for camera {}, re-starting it now",
-                entityID, getEntity().getIp());
+                    entityID, getEntity().getIp());
             service.sendHttpGET("/ISAPI/Event/notification/alertStream");
         }
     }

@@ -1,6 +1,7 @@
 package org.homio.app.model.rest;
 
 import java.util.Objects;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,8 +17,10 @@ import org.jetbrains.annotations.Nullable;
 @ToString
 public class DynamicUpdateRequest {
 
-    @NotNull private String dynamicUpdateId;
-    @Nullable private String entityID;
+    @NotNull
+    private String dynamicUpdateId;
+    @Nullable
+    private String entityID;
 
     public DynamicUpdateRequest(@NotNull String dynamicUpdateId) {
         this.dynamicUpdateId = dynamicUpdateId;

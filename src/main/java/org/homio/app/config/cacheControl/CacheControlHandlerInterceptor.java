@@ -5,9 +5,11 @@ import static org.springframework.http.HttpHeaders.EXPIRES;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
+
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -29,9 +31,9 @@ public class CacheControlHandlerInterceptor implements HandlerInterceptor {
 
     @Override
     public final boolean preHandle(
-        final HttpServletRequest request,
-        final HttpServletResponse response,
-        final Object handler) throws Exception {
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final Object handler) throws Exception {
 
         this.assignCacheControlHeader(request, response, handler);
 
@@ -56,9 +58,9 @@ public class CacheControlHandlerInterceptor implements HandlerInterceptor {
      * @param handler  the handler for the given <code>request</code>
      */
     protected final void assignCacheControlHeader(
-        final HttpServletRequest request,
-        final HttpServletResponse response,
-        final Object handler) {
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final Object handler) {
 
         final CacheControl cacheControl = this.getCacheControl(request, response, handler);
         final String cacheControlHeader = this.createCacheControlHeader(cacheControl);
@@ -136,9 +138,9 @@ public class CacheControlHandlerInterceptor implements HandlerInterceptor {
      * @return the <code>CacheControl</code> annotation specified by the given <code>handler</code> if present; <code>null</code> otherwise
      */
     protected final CacheControl getCacheControl(
-        final HttpServletRequest request,
-        final HttpServletResponse response,
-        final Object handler) {
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final Object handler) {
 
         if (handler == null || !(handler instanceof HandlerMethod)) {
             return null;

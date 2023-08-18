@@ -3,6 +3,7 @@ package org.homio.app.builder.widget;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContextWidget.SliderWidgetBuilder;
@@ -18,9 +19,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class SliderBuilderImpl extends WidgetBaseBuilderImpl<SliderWidgetBuilder, WidgetSliderEntity>
-    implements SliderWidgetBuilder,
-    HasPaddingBuilder<WidgetSliderEntity, SliderWidgetBuilder>,
-    HasNameBuilder<WidgetSliderEntity, SliderWidgetBuilder> {
+        implements SliderWidgetBuilder,
+        HasPaddingBuilder<WidgetSliderEntity, SliderWidgetBuilder>,
+        HasNameBuilder<WidgetSliderEntity, SliderWidgetBuilder> {
 
     @Getter
     private final List<WidgetSliderSeriesEntity> series = new ArrayList<>();
@@ -60,10 +61,10 @@ public class SliderBuilderImpl extends WidgetBaseBuilderImpl<SliderWidgetBuilder
 
 @RequiredArgsConstructor
 class SliderSeriesBuilderImpl implements SliderWidgetSeriesBuilder,
-    HasPaddingBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
-    HasValueTemplateBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
-    HasIconColorThresholdBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
-    HasNameBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder> {
+        HasPaddingBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
+        HasValueTemplateBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
+        HasIconColorThresholdBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder>,
+        HasNameBuilder<WidgetSliderSeriesEntity, SliderWidgetSeriesBuilder> {
 
     private final WidgetSliderSeriesEntity series;
 

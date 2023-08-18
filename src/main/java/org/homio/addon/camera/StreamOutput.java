@@ -2,9 +2,11 @@ package org.homio.addon.camera;
 
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
@@ -44,7 +46,7 @@ public class StreamOutput {
 
     public void sendSnapshotBasedFrame(byte[] currentSnapshot) throws IOException {
         String header = "--" + boundary + "\r\n" + "Content-Type: image/jpeg" + "\r\n" + "Content-Length: "
-            + currentSnapshot.length + "\r\n\r\n";
+                + currentSnapshot.length + "\r\n\r\n";
         if (!connected) {
             sendInitialHeaders();
             // iOS needs to have two jpgs sent for the picture to appear instantly.

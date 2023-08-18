@@ -24,8 +24,10 @@ import org.springframework.stereotype.Component;
 public class CloudService implements ContextCreated {
 
     private final EntityContext entityContext;
-    @SuppressWarnings("rawtypes") private CloudProviderService cloudProvider;
-    @SuppressWarnings("rawtypes") private SshCloud currentEntity;
+    @SuppressWarnings("rawtypes")
+    private CloudProviderService cloudProvider;
+    @SuppressWarnings("rawtypes")
+    private SshCloud currentEntity;
     private ThreadContext<Void> cloudServiceThread;
     private long entityHashCode;
 
@@ -65,9 +67,9 @@ public class CloudService implements ContextCreated {
             @Override
             public boolean isRequireRestartService() {
                 return currentEntity != null
-                    && currentEntity.isPrimary()
-                    && currentEntity.getStatus() == Status.ERROR
-                    && currentEntity.isRestartOnFailure();
+                        && currentEntity.isPrimary()
+                        && currentEntity.getStatus() == Status.ERROR
+                        && currentEntity.isRestartOnFailure();
             }
         });
     }

@@ -17,6 +17,7 @@ import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.pivovarit.function.ThrowingBiConsumer;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -25,6 +26,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Map.Entry;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -74,7 +76,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
     private final DatagramSocket udpSocket = new DatagramSocket();
 
     public Scratch3NetworkBlocks(EntityContext entityContext)
-        throws SocketException {
+            throws SocketException {
         super("#595F4B", entityContext, null, "net");
         this.udpSocket.setBroadcast(true);
 
@@ -94,7 +96,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         });
 
         blockCommand(40, HttpApplyHandler.update_bearer_auth.name(), "HTTP Bearer auth [TOKEN]", this::skipCommand, block ->
-            block.addArgument("TOKEN", "token"));
+                block.addArgument("TOKEN", "token"));
 
         blockCommand(50, HttpApplyHandler.update_payload.name(), "HTTP Body payload [PAYLOAD]", this::skipCommand, block -> {
             block.addArgument("PAYLOAD");
@@ -161,8 +163,8 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         String url = workspaceBlock.getInputString("URL");
 
         RequestConfig config = RequestConfig.custom()
-                                            .setConnectTimeout(setting.connectTimeout * 1000)
-                                            .setSocketTimeout(setting.socketTimeout * 1000).build();
+                .setConnectTimeout(setting.connectTimeout * 1000)
+                .setSocketTimeout(setting.socketTimeout * 1000).build();
         HttpRequestBase request = CommonUtils.newInstance(setting.httpMethod.httpRequestBaseClass);
         switch (setting.auth) {
             case Basic -> {
@@ -176,7 +178,8 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
         // build headers
         if (setting.httpHeaders != null) {
-            Map<String, String> headers = OBJECT_MAPPER.readValue(setting.httpHeaders, new TypeReference<>() {});
+            Map<String, String> headers = OBJECT_MAPPER.readValue(setting.httpHeaders, new TypeReference<>() {
+            });
             for (Entry<String, String> headerEntry : headers.entrySet()) {
                 request.setHeader(headerEntry.getKey(), headerEntry.getValue());
             }
@@ -185,7 +188,8 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
         // Build query uri
         URIBuilder uriBuilder = new URIBuilder(URI.create(url));
         if (setting.queryParameters != null) {
-            Map<String, String> queries = OBJECT_MAPPER.readValue(setting.queryParameters, new TypeReference<>() {});
+            Map<String, String> queries = OBJECT_MAPPER.readValue(setting.queryParameters, new TypeReference<>() {
+            });
             for (Entry<String, String> queryEntry : queries.entrySet()) {
                 uriBuilder.addParameter(queryEntry.getKey(), queryEntry.getValue());
             }
@@ -247,7 +251,7 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
             }
         }),
         update_bearer_auth((workspaceBlock, request) ->
-            request.setHeader(AUTHORIZATION, "Basic " + workspaceBlock.getInputString("TOKEN"))),
+                request.setHeader(AUTHORIZATION, "Basic " + workspaceBlock.getInputString("TOKEN"))),
         update_basic_auth((workspaceBlock, request) -> {
             String auth = workspaceBlock.getInputString("USER") + ":" + workspaceBlock.getInputString("PWD");
             byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
@@ -272,23 +276,23 @@ public class Scratch3NetworkBlocks extends Scratch3ExtensionBlocks {
 
         @UIField(order = 2, icon = "fa fa-list", fullWidth = true)
         @UIFieldKeyValue(maxSize = 10, keyPlaceholder = "Header name", valuePlaceholder = "Header value",
-                         options = {
-                             @Option(key = ACCEPT, values = {TEXT_PLAIN_VALUE, TEXT_HTML_VALUE, APPLICATION_JSON_VALUE, APPLICATION_XML_VALUE}),
-                             @Option(key = ACCEPT_ENCODING, values = {"gzip", "deflate", "compress", "br"}),
-                             @Option(key = AUTHORIZATION, values = {}),
-                             @Option(key = CONTENT_TYPE, values = {
-                                 "text/css",
-                                 "application/zip",
-                                 TEXT_PLAIN_VALUE,
-                                 TEXT_HTML_VALUE,
-                                 APPLICATION_JSON_VALUE,
-                                 APPLICATION_XML_VALUE
-                             }),
-                             @Option(key = CACHE_CONTROL, values = {"max-age=0", "max-age=86400", "no-cache"}),
-                             @Option(key = USER_AGENT, values = {"Mozilla/5.0"}),
-                             @Option(key = LOCATION, values = {}),
-                             @Option(key = HOST, values = {})
-                         })
+                options = {
+                        @Option(key = ACCEPT, values = {TEXT_PLAIN_VALUE, TEXT_HTML_VALUE, APPLICATION_JSON_VALUE, APPLICATION_XML_VALUE}),
+                        @Option(key = ACCEPT_ENCODING, values = {"gzip", "deflate", "compress", "br"}),
+                        @Option(key = AUTHORIZATION, values = {}),
+                        @Option(key = CONTENT_TYPE, values = {
+                                "text/css",
+                                "application/zip",
+                                TEXT_PLAIN_VALUE,
+                                TEXT_HTML_VALUE,
+                                APPLICATION_JSON_VALUE,
+                                APPLICATION_XML_VALUE
+                        }),
+                        @Option(key = CACHE_CONTROL, values = {"max-age=0", "max-age=86400", "no-cache"}),
+                        @Option(key = USER_AGENT, values = {"Mozilla/5.0"}),
+                        @Option(key = LOCATION, values = {}),
+                        @Option(key = HOST, values = {})
+                })
         private String httpHeaders;
 
         @UIField(order = 3, icon = "fa fa-cheese", fullWidth = true)

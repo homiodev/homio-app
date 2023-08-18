@@ -80,7 +80,7 @@ public class ColorThief {
      * @throws IllegalArgumentException if quality is &lt; 1
      */
     private static int[][] getPalette(
-        BufferedImage sourceImage, int colorCount, int quality, boolean ignoreWhite) {
+            BufferedImage sourceImage, int colorCount, int quality, boolean ignoreWhite) {
         MMCQ.CMap cmap = getColorMap(sourceImage, colorCount, quality, ignoreWhite);
         if (cmap == null) {
             return null;
@@ -100,7 +100,7 @@ public class ColorThief {
      * @throws IllegalArgumentException if quality is &lt; 1
      */
     private static MMCQ.CMap getColorMap(
-        BufferedImage sourceImage, int colorCount, int quality, boolean ignoreWhite) {
+            BufferedImage sourceImage, int colorCount, int quality, boolean ignoreWhite) {
         if (colorCount < 2 || colorCount > 256) {
             throw new IllegalArgumentException("Specified colorCount must be between 2 and 256.");
         }
@@ -134,7 +134,7 @@ public class ColorThief {
      * @return an array of pixels (each an RGB int array)
      */
     private static int[][] getPixelsFast(
-        BufferedImage sourceImage, int quality, boolean ignoreWhite) {
+            BufferedImage sourceImage, int quality, boolean ignoreWhite) {
         DataBufferByte imageData = (DataBufferByte) sourceImage.getRaster().getDataBuffer();
         byte[] pixels = imageData.getData();
         int pixelCount = sourceImage.getWidth() * sourceImage.getHeight();
@@ -157,11 +157,11 @@ public class ColorThief {
         int expectedDataLength = pixelCount * colorDepth;
         if (expectedDataLength != pixels.length) {
             throw new IllegalArgumentException(
-                "(expectedDataLength = "
-                    + expectedDataLength
-                    + ") != (pixels.length = "
-                    + pixels.length
-                    + ")");
+                    "(expectedDataLength = "
+                            + expectedDataLength
+                            + ") != (pixels.length = "
+                            + pixels.length
+                            + ")");
         }
 
         // Store the RGB values in an array format suitable for quantize function
@@ -225,7 +225,7 @@ public class ColorThief {
      * @return an array of pixels (each an RGB int array)
      */
     private static int[][] getPixelsSlow(
-        BufferedImage sourceImage, int quality, boolean ignoreWhite) {
+            BufferedImage sourceImage, int quality, boolean ignoreWhite) {
         int width = sourceImage.getWidth();
         int height = sourceImage.getHeight();
 

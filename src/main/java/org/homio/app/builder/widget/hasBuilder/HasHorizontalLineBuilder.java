@@ -4,7 +4,7 @@ import org.homio.api.EntityContextWidget.HasHorizontalLine;
 import org.jetbrains.annotations.Nullable;
 
 public interface HasHorizontalLineBuilder<T extends org.homio.app.model.entity.widget.impl.chart.HasHorizontalLine, R>
-    extends HasHorizontalLine<R> {
+        extends HasHorizontalLine<R> {
 
     T getWidget();
 

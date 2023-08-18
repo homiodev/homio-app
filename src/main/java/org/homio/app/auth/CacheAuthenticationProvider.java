@@ -3,8 +3,10 @@ package org.homio.app.auth;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -21,16 +23,16 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
 
     public CacheAuthenticationProvider() {
         this.attemptsCache = CacheBuilder.newBuilder().
-                                         expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
-                public @NotNull Integer load(String ignore) {
-                    return 0;
-                }
-            });
+                expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
+                    public @NotNull Integer load(String ignore) {
+                        return 0;
+                    }
+                });
     }
 
     @Override
     protected void additionalAuthenticationChecks(UserDetails userDetails, UsernamePasswordAuthenticationToken authentication)
-        throws AuthenticationException {
+            throws AuthenticationException {
         if (authentication.getCredentials() == null) {
             logger.debug("Authentication failed: no credentials provided");
             throw new BadCredentialsException("W.ERROR.USER_NOT_EXISTS_OR_WRONG_PASSWORD");
@@ -56,7 +58,7 @@ public class CacheAuthenticationProvider extends DaoAuthenticationProvider {
 
     private void checkPassword(UserDetails userDetails, String presentedPassword) {
         if (getPasswordEncoder().matches(presentedPassword, userDetails.getPassword())
-            || presentedPassword.equals(userDetails.getPassword())) {
+                || presentedPassword.equals(userDetails.getPassword())) {
             return;
         }
         throw new BadCredentialsException("W.ERROR.USER_NOT_EXISTS_OR_WRONG_PASSWORD");

@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
+
 import lombok.AllArgsConstructor;
 import org.homio.api.EntityContext;
 import org.jetbrains.annotations.Nullable;
@@ -16,7 +17,7 @@ public interface VideoPlaybackStorage {
     String getTitle();
 
     LinkedHashMap<Long, Boolean> getAvailableDaysPlaybacks(EntityContext entityContext, String profile, Date from, Date to)
-        throws Exception;
+            throws Exception;
 
     List<PlaybackFile> getPlaybackFiles(EntityContext entityContext, String profile, Date from, Date to) throws Exception;
 

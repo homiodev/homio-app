@@ -3,8 +3,10 @@ package org.homio.app.json.jsog;
 import com.fasterxml.jackson.annotation.ObjectIdGenerator;
 import com.fasterxml.jackson.annotation.ObjectIdResolver;
 import com.fasterxml.jackson.annotation.SimpleObjectIdResolver;
+
 import java.util.HashMap;
 import java.util.Map;
+
 import org.homio.api.entity.BaseEntity;
 
 /**

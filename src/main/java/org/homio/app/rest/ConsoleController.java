@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -103,9 +104,9 @@ public class ConsoleController implements ContextRefreshed {
             Class<? extends HasEntityIdentifier> clazz = tableConsolePlugin.getEntityClass();
 
             return new EntityContent()
-                .setList(baseEntities)
-                .setActions(UIFieldUtils.fetchUIActionsFromClass(clazz, entityContext))
-                .setUiFields(UIFieldUtils.fillEntityUIMetadataList(clazz, entityContext));
+                    .setList(baseEntities)
+                    .setActions(UIFieldUtils.fetchUIActionsFromClass(clazz, entityContext))
+                    .setUiFields(UIFieldUtils.fillEntityUIMetadataList(clazz, entityContext));
         }
         return consolePlugin.getValue();
     }
@@ -135,17 +136,17 @@ public class ConsoleController implements ContextRefreshed {
 
     @GetMapping("/tab/{tab}/{entityID}/{fieldName}/options")
     public Collection<OptionModel> loadSelectOptions(
-        @PathVariable("tab") String tab,
-        @PathVariable("entityID") String entityID,
-        @PathVariable("fieldName") String fieldName) {
+            @PathVariable("tab") String tab,
+            @PathVariable("entityID") String entityID,
+            @PathVariable("fieldName") String fieldName) {
         ConsolePlugin<?> consolePlugin = EntityContextUIImpl.consolePluginsMap.get(tab);
         if (consolePlugin instanceof ConsolePluginTable) {
             Collection<? extends HasEntityIdentifier> baseEntities = ((ConsolePluginTable<? extends HasEntityIdentifier>) consolePlugin).getValue();
             HasEntityIdentifier identifier =
-                baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(
-                    () -> new NotFoundException("Entity <" + entityID + "> not found"));
+                    baseEntities.stream().filter(e -> e.getEntityID().equals(entityID)).findAny().orElseThrow(
+                            () -> new NotFoundException("Entity <" + entityID + "> not found"));
             return UIFieldSelectionUtil.loadOptions(
-                identifier, entityContext, fieldName, null, null, null, null);
+                    identifier, entityContext, fieldName, null, null, null, null);
         }
         return null;
     }
@@ -161,7 +162,7 @@ public class ConsoleController implements ContextRefreshed {
 
         Map<String, ConsoleTab> parens = new HashMap<>();
         for (Map.Entry<String, ConsolePlugin<?>> entry :
-            EntityContextUIImpl.consolePluginsMap.entrySet()) {
+                EntityContextUIImpl.consolePluginsMap.entrySet()) {
             if (entry.getKey().equals("icl")) {
                 continue;
             }
@@ -217,7 +218,7 @@ public class ConsoleController implements ContextRefreshed {
         SshSession<?> sshSession = sessions.get(token);
         if (sshSession != null) {
             ((SshProviderService) sshSession.getEntity().getService())
-                .resizeSshConsole(sshSession, request.cols);
+                    .resizeSshConsole(sshSession, request.cols);
         }
     }
 
@@ -238,13 +239,13 @@ public class ConsoleController implements ContextRefreshed {
      */
     @SneakyThrows
     static void fetchUIHeaderActions(
-        ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
+            ConsolePlugin<?> consolePlugin, UIInputBuilder uiInputBuilder) {
         val actionMap = consolePlugin.getHeaderActions();
         if (actionMap != null) {
             for (val entry : actionMap.entrySet()) {
                 Class<? extends ConsoleHeaderSettingPlugin<?>> settingClass = entry.getValue();
                 ((UIInputBuilderImpl) uiInputBuilder).addFireActionBeforeChange(entry.getKey(), CommonUtils.newInstance(settingClass).fireActionsBeforeChange(),
-                    SettingEntity.getKey(settingClass), 0);
+                        SettingEntity.getKey(settingClass), 0);
             }
         }
         if (consolePlugin instanceof ConsolePluginEditor) {

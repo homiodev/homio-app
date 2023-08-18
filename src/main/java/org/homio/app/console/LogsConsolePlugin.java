@@ -3,6 +3,7 @@ package org.homio.app.console;
 import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
 
 import java.util.List;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContext;

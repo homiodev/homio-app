@@ -6,6 +6,7 @@ import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -78,10 +79,10 @@ public class VideoUrls {
 
     private String getOrDefaultUri(String profile, Function<ProfileUrls, String> uriGetter) {
         String url = null;
-        if(profile != null && urls.containsKey(profile)) {
+        if (profile != null && urls.containsKey(profile)) {
             url = uriGetter.apply(urls.get(profile));
         }
-        if(url == null) {
+        if (url == null) {
             url = uriGetter.apply(defaultProfile);
         }
         return url;

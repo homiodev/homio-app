@@ -1,8 +1,10 @@
 package org.homio.app.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.Collections;
 import java.util.concurrent.Executors;
+
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;

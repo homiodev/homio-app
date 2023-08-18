@@ -16,8 +16,8 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetToggleEntity
-    extends WidgetBaseEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
-    implements HasLayout, HasPadding, HasSourceServerUpdates, HasName {
+        extends WidgetBaseEntityAndSeries<WidgetToggleEntity, WidgetToggleSeriesEntity>
+        implements HasLayout, HasPadding, HasSourceServerUpdates, HasName {
 
     @UIField(order = 1)
     @UIFieldGroup(value = "NAME", order = 3)
@@ -71,11 +71,11 @@ public class WidgetToggleEntity
 
     private String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder
-            .builder(10, 60, 30)
-            .addRow(rb ->
-                rb.addCol("icon", UIFieldLayout.HorizontalAlign.right)
-                  .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                  .addCol("button", UIFieldLayout.HorizontalAlign.center))
-            .build();
+                .builder(10, 60, 30)
+                .addRow(rb ->
+                        rb.addCol("icon", UIFieldLayout.HorizontalAlign.right)
+                                .addCol("name", UIFieldLayout.HorizontalAlign.left)
+                                .addCol("button", UIFieldLayout.HorizontalAlign.center))
+                .build();
     }
 }

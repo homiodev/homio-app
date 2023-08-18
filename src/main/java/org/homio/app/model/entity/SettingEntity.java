@@ -5,8 +5,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Transient;
+
 import java.util.Collection;
 import java.util.Set;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -35,47 +37,68 @@ public class SettingEntity extends BaseEntity {
     @Column(length = 65535)
     private String value;
 
-    @Transient private String color;
+    @Transient
+    private String color;
 
-    @Transient private String defaultValue;
+    @Transient
+    private String defaultValue;
 
-    @Transient private String groupKey;
+    @Transient
+    private String groupKey;
 
-    @Transient private String groupIcon;
+    @Transient
+    private String groupIcon;
 
-    @Transient private String subGroupKey;
+    @Transient
+    private String subGroupKey;
 
-    @Transient private boolean visible;
+    @Transient
+    private boolean visible;
 
-    @Transient private Set<String> pages;
+    @Transient
+    private Set<String> pages;
 
-    @Transient private Set<ConsolePlugin.RenderType> renderTypes;
+    @Transient
+    private Set<ConsolePlugin.RenderType> renderTypes;
 
-    @Transient private int order;
+    @Transient
+    private int order;
 
-    @Transient private boolean advanced;
+    @Transient
+    private boolean advanced;
 
-    @Transient private boolean lazyLoad;
+    @Transient
+    private boolean lazyLoad;
 
-    @Transient private boolean storable;
+    @Transient
+    private boolean storable;
 
-    @Transient private Collection<OptionModel> availableValues;
+    @Transient
+    private Collection<OptionModel> availableValues;
 
-    @Transient private String icon;
+    @Transient
+    private String icon;
 
-    @Transient private String toggleIcon;
+    @Transient
+    private String toggleIcon;
 
-    @Transient private String settingType;
+    @Transient
+    private String settingType;
 
-    @Transient private Boolean reverted;
+    @Transient
+    private Boolean reverted;
 
-    @Transient private Boolean disabled;
+    @Transient
+    private Boolean disabled;
 
-    @Transient private Boolean required;
+    @Transient
+    private Boolean required;
 
-    @Transient private JSONObject parameters;
+    @Transient
+    private JSONObject parameters;
 
-    @Transient private boolean primary;
+    @Transient
+    private boolean primary;
 
     @Getter
     @JsonIgnore
@@ -86,7 +109,7 @@ public class SettingEntity extends BaseEntity {
     public static String getKey(SettingPlugin settingPlugin) {
         if (settingPlugin instanceof DynamicConsoleHeaderSettingPlugin) {
             return SettingEntity.PREFIX
-                + ((DynamicConsoleHeaderSettingPlugin) settingPlugin).getKey();
+                    + ((DynamicConsoleHeaderSettingPlugin) settingPlugin).getKey();
         }
         return SettingEntity.PREFIX + settingPlugin.getClass().getSimpleName();
     }

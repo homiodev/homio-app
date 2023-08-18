@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.function.Consumer;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -188,7 +189,7 @@ public class LoggerService implements ContextCreated {
 
         InternalLogger(boolean showDateTime, PrintStream stream) {
             super("OutputStreamLogger", Level.DEBUG, false, false, showDateTime, false, Strings.EMPTY, ParameterizedNoReferenceMessageFactory.INSTANCE,
-                new PropertiesUtil(new Properties()), stream);
+                    new PropertiesUtil(new Properties()), stream);
             this.showDateTime = showDateTime;
             if (showDateTime) {
                 this.dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS zzz");
@@ -200,7 +201,7 @@ public class LoggerService implements ContextCreated {
 
         @Override
         public void logMessage(
-            String fqcn, Level mgsLevel, Marker marker, Message msg, Throwable throwable) {
+                String fqcn, Level mgsLevel, Marker marker, Message msg, Throwable throwable) {
             final StringBuilder sb = new StringBuilder();
             // Append date-time if so configured
             if (showDateTime) {
@@ -263,8 +264,8 @@ public class LoggerService implements ContextCreated {
                 }
             } catch (Exception ignore) {
                 log.warn(
-                    "Unable to fetch old logs from stream <{}>",
-                    stream.getClass().getSimpleName());
+                        "Unable to fetch old logs from stream <{}>",
+                        stream.getClass().getSimpleName());
             }
             return Collections.emptyList();
         }

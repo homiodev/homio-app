@@ -1,6 +1,7 @@
 package org.homio.app.repository.generator;
 
 import java.util.UUID;
+
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.id.IdentifierGenerator;
 import org.homio.api.entity.BaseEntity;

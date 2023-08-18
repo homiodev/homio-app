@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextInstall;
@@ -24,8 +25,8 @@ public class EntityContextInstallImpl implements EntityContextInstall {
     public EntityContextInstallImpl(EntityContext entityContext) {
         this.entityContext = entityContext;
         entityContext.event().runOnceOnInternetUp("install-services", () ->
-            ffmpeg().requireAsync(null, () ->
-                log.info("FFPMEG service successfully installed")));
+                ffmpeg().requireAsync(null, () ->
+                        log.info("FFPMEG service successfully installed")));
     }
 
     @Override
@@ -70,17 +71,17 @@ public class EntityContextInstallImpl implements EntityContextInstall {
                     }
                     installing = true;
                     entityContext.bgp().runWithProgress("install-" + installer.getName())
-                                 .onFinally(exception -> {
-                                     installing = false;
-                                     for (Runnable waiter : waiters) {
-                                         waiter.run();
-                                     }
-                                     waiters.clear();
-                                 })
-                                 .execute(pb -> {
-                                     pb.progress(0, "install-" + installer.getName());
-                                     installer.installDependency(pb, version);
-                                 });
+                            .onFinally(exception -> {
+                                installing = false;
+                                for (Runnable waiter : waiters) {
+                                    waiter.run();
+                                }
+                                waiters.clear();
+                            })
+                            .execute(pb -> {
+                                pb.progress(0, "install-" + installer.getName());
+                                installer.installDependency(pb, version);
+                            });
                 }
 
                 @Override

@@ -4,6 +4,7 @@ import static org.apache.commons.lang3.StringUtils.defaultString;
 
 import java.util.Date;
 import java.util.Objects;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -51,8 +52,8 @@ public class BaseNotificationModel<T extends BaseNotificationModel> implements C
             return 0;
         }
         int compareValue =
-            defaultString(this.title, this.entityID)
-                .compareTo(defaultString(other.getTitle(), other.getEntityID()));
+                defaultString(this.title, this.entityID)
+                        .compareTo(defaultString(other.getTitle(), other.getEntityID()));
         if (compareValue == 0) {
             compareValue = String.valueOf(this.value).compareTo(String.valueOf(other.getValue()));
         }

@@ -2,6 +2,7 @@ package org.homio.app.builder.widget;
 
 import java.util.Objects;
 import java.util.function.Consumer;
+
 import lombok.Getter;
 import org.homio.api.EntityContextWidget.PulseBuilder;
 import org.homio.api.EntityContextWidget.ThresholdBuilder;
@@ -44,8 +45,8 @@ public class WidgetBaseBuilderImpl<T, W extends WidgetBaseEntity> implements Wid
 
     @Override
     public @NotNull T setBackground(@Nullable String backgroundColor,
-        @Nullable Consumer<ThresholdBuilder> colorBuilder,
-        @Nullable Consumer<PulseBuilder> pulseBuilder) {
+                                    @Nullable Consumer<ThresholdBuilder> colorBuilder,
+                                    @Nullable Consumer<PulseBuilder> pulseBuilder) {
         if (colorBuilder == null && pulseBuilder == null) {
             getWidget().setBackground(backgroundColor);
         } else {

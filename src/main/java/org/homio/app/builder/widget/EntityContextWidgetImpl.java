@@ -5,6 +5,7 @@ import static org.homio.app.model.entity.widget.WidgetTabEntity.MAIN_TAB_ID;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -51,11 +52,11 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @NotNull
     private static ActionResponseModel fireCreateTemplateWidget(@NotNull DeviceEndpointsBehaviourContract entity, WidgetDefinition widgetDefinition,
-        TemplateWidgetBuilder widgetBuilder, EntityContext entityContext, JSONObject params) {
+                                                                TemplateWidgetBuilder widgetBuilder, EntityContext entityContext, JSONObject params) {
         String tab = params.getString("SELECTION.DASHBOARD_TAB");
         val includeEndpoints = widgetDefinition.getEndpoints(entity).stream()
-                                               .filter(pd -> params.getBoolean(pd.getEndpointEntityID()))
-                                               .collect(Collectors.toList());
+                .filter(pd -> params.getBoolean(pd.getEndpointEntityID()))
+                .collect(Collectors.toList());
         List<WidgetDefinition.Requests> requests = widgetDefinition.getRequests();
         if (requests != null) {
             for (WidgetDefinition.Requests request : requests) {
@@ -69,9 +70,9 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
     }
 
     private static void addPropertyDefinitions(
-        @NotNull WidgetDefinition widgetDefinition,
-        @NotNull UIFlexLayoutBuilder flex,
-        @NotNull DeviceEndpointsBehaviourContract entity) {
+            @NotNull WidgetDefinition widgetDefinition,
+            @NotNull UIFlexLayoutBuilder flex,
+            @NotNull DeviceEndpointsBehaviourContract entity) {
         val existedProperties = widgetDefinition.getEndpoints(entity);
         if (existedProperties.isEmpty()) {
             return;
@@ -81,14 +82,14 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
             propertyBuilder.setBorderArea("Endpoints").setBorderColor(UI.Color.BLUE);
             for (DeviceEndpoint propertyDefinition : existedProperties) {
                 propertyBuilder.addCheckbox(propertyDefinition.getEndpointEntityID(), true, null)
-                               .setTitle(propertyDefinition.getName(false));
+                        .setTitle(propertyDefinition.getName(false));
             }
         });
     }
 
     private static void addRequests(@NotNull WidgetDefinition widgetDefinition,
-        @NotNull UIFlexLayoutBuilder flex,
-        @NotNull DeviceEndpointsBehaviourContract entity) {
+                                    @NotNull UIFlexLayoutBuilder flex,
+                                    @NotNull DeviceEndpointsBehaviourContract entity) {
         List<WidgetDefinition.Requests> requests = widgetDefinition.getRequests();
         if (requests != null) {
             flex.addFlex("inputs", builder -> {
@@ -96,7 +97,7 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
                 for (WidgetDefinition.Requests request : requests) {
                     if (request.getType() == WidgetDefinition.Requests.RequestType.number) {
                         builder.addNumberInput(request.getName(), Float.parseFloat(request.getValue()),
-                            request.getMin(), request.getMax(), null).setTitle(request.getTitle());
+                                request.getMin(), request.getMax(), null).setTitle(request.getTitle());
                     }
                 }
             });
@@ -190,8 +191,8 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createColorWidget(
-        @NotNull String entityID,
-        @NotNull Consumer<ColorWidgetBuilder> widgetBuilder) {
+            @NotNull String entityID,
+            @NotNull Consumer<ColorWidgetBuilder> widgetBuilder) {
 
         WidgetColorEntity widget = createStubWidget(entityID, new WidgetColorEntity());
         ColorWidgetBuilderImpl builder = new ColorWidgetBuilderImpl(widget, entityContext);
@@ -213,8 +214,8 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createLineChartWidget(
-        @NotNull String entityID,
-        @NotNull Consumer<LineChartBuilder> widgetBuilder) {
+            @NotNull String entityID,
+            @NotNull Consumer<LineChartBuilder> widgetBuilder) {
         WidgetLineChartEntity widget = createStubWidget(entityID, new WidgetLineChartEntity());
         LineChartBuilderImpl builder = new LineChartBuilderImpl(widget, entityContext);
         widgetBuilder.accept(builder);
@@ -247,9 +248,9 @@ public class EntityContextWidgetImpl implements EntityContextWidget {
 
     @Override
     public void createTemplateWidgetActions(
-        @NotNull UIInputBuilder uiInputBuilder,
-        @NotNull DeviceEndpointsBehaviourContract entity,
-        @NotNull List<WidgetDefinition> widgets) {
+            @NotNull UIInputBuilder uiInputBuilder,
+            @NotNull DeviceEndpointsBehaviourContract entity,
+            @NotNull List<WidgetDefinition> widgets) {
         for (WidgetDefinition widgetDefinition : widgets) {
             WidgetDefinition.WidgetType type = widgetDefinition.getType();
             TemplateWidgetBuilder widgetBuilder = TemplateWidgetBuilder.WIDGETS.get(type);

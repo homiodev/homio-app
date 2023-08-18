@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
@@ -46,12 +47,12 @@ public class NodeJsInstaller extends DependencyExecutableInstaller {
             hardware.installSoftware("nodejs", 600);
         } else {
             String url = entityContext.setting().getEnvRequire("source-ffmpeg", String.class,
-                "https://github.com/homiodev/static-files/raw/master/nodejs.7z", true);
+                    "https://github.com/homiodev/static-files/raw/master/nodejs.7z", true);
             CommonUtils.downloadAndExtract(url,
-                "nodejs.7z", (progress, message, error) -> {
-                    progressBar.progress(progress, message);
-                    log.info("NodeJS: {}", message);
-                });
+                    "nodejs.7z", (progress, message, error) -> {
+                        progressBar.progress(progress, message);
+                        log.info("NodeJS: {}", message);
+                    });
             return CommonUtils.getInstallPath().resolve("nodejs").resolve("node.exe");
         }
         return null;

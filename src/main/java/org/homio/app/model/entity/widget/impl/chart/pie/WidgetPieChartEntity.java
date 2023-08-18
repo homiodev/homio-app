@@ -12,8 +12,8 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetPieChartEntity
-    extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity>
-    implements HasChartTimePeriod {
+        extends ChartBaseEntity<WidgetPieChartEntity, WidgetPieChartSeriesEntity>
+        implements HasChartTimePeriod {
 
     @UIField(order = 52)
     @UIFieldSlider(min = 1, max = 4)

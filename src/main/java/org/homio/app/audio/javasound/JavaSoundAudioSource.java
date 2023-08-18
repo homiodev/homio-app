@@ -5,6 +5,7 @@ import java.util.Set;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.TargetDataLine;
+
 import org.homio.api.audio.AudioFormat;
 import org.homio.api.audio.AudioSource;
 import org.homio.api.audio.AudioStream;
@@ -19,7 +20,7 @@ public class JavaSoundAudioSource implements AudioSource {
      * Java Sound audio format
      */
     private final javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(16000.0f, 16, 1, true,
-        false);
+            false);
 
     /**
      * AudioFormat of the JavaSoundAudioSource
@@ -77,7 +78,7 @@ public class JavaSoundAudioSource implements AudioSource {
 
         float frameRate = audioFormat.getFrameRate();
         Integer bitRate = ((AudioSystem.NOT_SPECIFIED == frameRate) ? null
-            : (int) (frameRate * bitsPerFrame));
+                : (int) (frameRate * bitsPerFrame));
 
         float sampleRate = audioFormat.getSampleRate();
         Long frequency = ((AudioSystem.NOT_SPECIFIED == sampleRate) ? null : (long) sampleRate);

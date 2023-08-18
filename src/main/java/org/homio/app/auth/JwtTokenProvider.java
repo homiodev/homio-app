@@ -5,12 +5,14 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+
 import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -95,7 +97,7 @@ public class JwtTokenProvider implements ContextCreated {
             String userName = getUsername(key);
             UserDetails userDetails = userEntityDetailsService.loadUserByUsername(userName);
             return new UsernamePasswordAuthenticationToken(userDetails,
-                userDetails.getUsername(), userDetails.getAuthorities());
+                    userDetails.getUsername(), userDetails.getAuthorities());
         });
     }
 
@@ -122,14 +124,14 @@ public class JwtTokenProvider implements ContextCreated {
         Date validity = new Date(now.getTime() + TimeUnit.MINUTES.toMillis(jwtValidityTimeout));
 
         String token = Jwts.builder()
-                           .setId(UUID.randomUUID().toString())
-                           .setAudience(username)
-                           .claim("auth", authentication.getAuthorities())
-                           .setIssuedAt(now)
-                           .setIssuer("homio_app")
-                           .setExpiration(validity)
-                           .signWith(SignatureAlgorithm.HS256, securityId)
-                           .compact();
+                .setId(UUID.randomUUID().toString())
+                .setAudience(username)
+                .claim("auth", authentication.getAuthorities())
+                .setIssuedAt(now)
+                .setIssuer("homio_app")
+                .setExpiration(validity)
+                .signWith(SignatureAlgorithm.HS256, securityId)
+                .compact();
         userCache.put(token, authentication);
         removeOutdatedTokens();
         return token;

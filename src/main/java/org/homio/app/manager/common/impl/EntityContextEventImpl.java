@@ -6,6 +6,7 @@ import static org.apache.xmlbeans.XmlBeans.getTitle;
 import com.pivovarit.function.ThrowingBiConsumer;
 import com.pivovarit.function.ThrowingRunnable;
 import jakarta.persistence.EntityManagerFactory;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -22,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -61,18 +63,23 @@ import org.jetbrains.annotations.Nullable;
 @Log4j2
 public class EntityContextEventImpl implements EntityContextEvent {
 
-    @Getter private final EntityListener entityUpdateListeners = new EntityListener();
+    @Getter
+    private final EntityListener entityUpdateListeners = new EntityListener();
 
-    @Getter private final EntityListener entityCreateListeners = new EntityListener();
+    @Getter
+    private final EntityListener entityCreateListeners = new EntityListener();
 
-    @Getter private final EntityListener entityRemoveListeners = new EntityListener();
+    @Getter
+    private final EntityListener entityRemoveListeners = new EntityListener();
 
-    @Getter private final Set<OptionModel> events = new HashSet<>();
+    @Getter
+    private final Set<OptionModel> events = new HashSet<>();
     private final Map<String, Object> lastValues = new ConcurrentHashMap<>();
 
     private final Map<String, Map<String, Consumer<Object>>> eventListeners = new ConcurrentHashMap<>();
 
-    @Getter private final List<BiConsumer<String, Object>> globalEvenListeners = new ArrayList<>();
+    @Getter
+    private final List<BiConsumer<String, Object>> globalEvenListeners = new ArrayList<>();
 
     private final Map<String, UdpContext> listenUdpMap = new HashMap<>();
 
@@ -219,7 +226,7 @@ public class EntityContextEventImpl implements EntityContextEvent {
     @Override
     @SneakyThrows
     public void listenUdp(
-        String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
+            String key, String host, int port, BiConsumer<DatagramPacket, String> listener) {
         String hostPortKey = (host == null ? "0.0.0.0" : host) + ":" + port;
         if (!this.listenUdpMap.containsKey(hostPortKey)) {
             EntityContextBGP.ThreadContext<Void> scheduleFuture;
@@ -413,29 +420,29 @@ public class EntityContextEventImpl implements EntityContextEvent {
             if (entity instanceof BaseEntity) {
                 // execute in separate thread
                 context.bgp().builder("delete-delay-entity-" + ((BaseEntity) entity).getEntityID())
-                       .execute(() -> {
-                           // destroy any additional services
-                           if (entity instanceof EntityService) {
-                               try {
-                                   ((EntityService<?, ?>) entity).destroyService();
-                               } catch (Exception ex) {
-                                   log.warn("Unable to destroy service for entity: {}", getTitle());
-                               }
-                           }
-                           ((BaseEntity) entity).afterDelete(context);
+                        .execute(() -> {
+                            // destroy any additional services
+                            if (entity instanceof EntityService) {
+                                try {
+                                    ((EntityService<?, ?>) entity).destroyService();
+                                } catch (Exception ex) {
+                                    log.warn("Unable to destroy service for entity: {}", getTitle());
+                                }
+                            }
+                            ((BaseEntity) entity).afterDelete(context);
 
-                           String entityID = ((BaseEntity) entity).getEntityID();
-                           // remove all status for entity
-                           EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
-                           // remove in-memory data if any exists
-                           InMemoryDB.removeService(entityID);
-                           // clear all registered console plugins if any exists
-                           context.ui().unRegisterConsolePlugin(entityID);
-                           // remove any registered notifications/notification block
-                           context.ui().removeNotificationBlock(entityID);
-                           // remove in-memory data
-                           context.getEntityContextStorageImpl().remove(entityID);
-                       });
+                            String entityID = ((BaseEntity) entity).getEntityID();
+                            // remove all status for entity
+                            EntityContextStorageImpl.ENTITY_MEMORY_MAP.remove(entityID);
+                            // remove in-memory data if any exists
+                            InMemoryDB.removeService(entityID);
+                            // clear all registered console plugins if any exists
+                            context.ui().unRegisterConsolePlugin(entityID);
+                            // remove any registered notifications/notification block
+                            context.ui().removeNotificationBlock(entityID);
+                            // remove in-memory data
+                            context.getEntityContextStorageImpl().remove(entityID);
+                        });
             }
             context.sendEntityUpdateNotification(entity, ItemAction.Remove);
         });

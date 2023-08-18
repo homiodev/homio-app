@@ -65,12 +65,12 @@ public class Scratch3MiscBlocks extends Scratch3ExtensionBlocks {
             rawType = new RawType(workspaceBlock.getInputStringRequiredWithContext(VALUE).getBytes());
         }
         ObjectNode node =
-            OBJECT_MAPPER
-                .createObjectNode()
-                .put("block", workspaceBlock.getId())
-                .put("value", rawType.stringValue())
-                .put("mimeType", rawType.getMimeType())
-                .put("name", rawType.getName());
+                OBJECT_MAPPER
+                        .createObjectNode()
+                        .put("block", workspaceBlock.getId())
+                        .put("value", rawType.stringValue())
+                        .put("mimeType", rawType.getMimeType())
+                        .put("name", rawType.getName());
         entityContext.ui().sendNotification("-workspace-block-update", node);
     }
 }

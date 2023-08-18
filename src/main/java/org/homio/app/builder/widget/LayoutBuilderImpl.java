@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class LayoutBuilderImpl extends WidgetBaseBuilderImpl<LayoutWidgetBuilder, WidgetLayoutEntity>
-    implements LayoutWidgetBuilder {
+        implements LayoutWidgetBuilder {
 
     LayoutBuilderImpl(WidgetLayoutEntity widget, EntityContextImpl entityContext) {
         super(widget, entityContext);

@@ -2,6 +2,7 @@ package org.homio.addon.camera;
 
 import java.util.ArrayList;
 import java.util.Collection;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.BaseVideoEntity;
@@ -18,30 +19,30 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CameraSelfContainedAudioSources implements SelfContainedAudioSourceContainer {
 
-  private final EntityContext entityContext;
+    private final EntityContext entityContext;
 
-  @Override
-  public Collection<OptionModel> getAudioSource() {
-    Collection<OptionModel> models = new ArrayList<>();
-      for (BaseVideoEntity cameraEntity : entityContext.findAll(BaseVideoEntity.class)) {
-          // get sources from onvif audio streams
-          if (cameraEntity.isStart() && cameraEntity instanceof OnvifCameraEntity) {
-              OnvifCameraService service = (OnvifCameraService) cameraEntity.getService();
-              for (AudioSource audioSource : service.getOnvifDeviceState().getMediaDevices().getAudioSources()) {
-                  models.add(OptionModel.of(audioSource.getToken()));
-              }
-          }
-      }
-    return models;
-  }
+    @Override
+    public Collection<OptionModel> getAudioSource() {
+        Collection<OptionModel> models = new ArrayList<>();
+        for (BaseVideoEntity cameraEntity : entityContext.findAll(BaseVideoEntity.class)) {
+            // get sources from onvif audio streams
+            if (cameraEntity.isStart() && cameraEntity instanceof OnvifCameraEntity) {
+                OnvifCameraService service = (OnvifCameraService) cameraEntity.getService();
+                for (AudioSource audioSource : service.getOnvifDeviceState().getMediaDevices().getAudioSources()) {
+                    models.add(OptionModel.of(audioSource.getToken()));
+                }
+            }
+        }
+        return models;
+    }
 
-  @Override
-  public String getLabel() {
-    return "CAMERA_SOURCES";
-  }
+    @Override
+    public String getLabel() {
+        return "CAMERA_SOURCES";
+    }
 
-  @Override
-  public void play(String entityID) {
+    @Override
+    public void play(String entityID) {
 
-  }
+    }
 }

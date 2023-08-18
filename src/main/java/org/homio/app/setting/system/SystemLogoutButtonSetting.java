@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
 public class SystemLogoutButtonSetting
-    implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
+        implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 
     @Override
     public @NotNull GroupKey getGroupKey() {

@@ -2,6 +2,7 @@ package org.homio.app.builder.ui;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.homio.api.model.Icon;
@@ -11,8 +12,8 @@ import org.jetbrains.annotations.NotNull;
 
 @Getter
 public class UIMultiButtonItemBuilderImpl
-    extends UIBaseEntityItemBuilderImpl<UIMultiButtonItemBuilder, String>
-    implements UIMultiButtonItemBuilder {
+        extends UIBaseEntityItemBuilderImpl<UIMultiButtonItemBuilder, String>
+        implements UIMultiButtonItemBuilder {
 
     private final List<ExtraButton> buttons = new ArrayList<>();
 

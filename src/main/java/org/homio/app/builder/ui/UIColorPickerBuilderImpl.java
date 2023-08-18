@@ -9,8 +9,8 @@ import org.homio.api.ui.field.action.v1.item.UIColorPickerItemBuilder;
 @Getter
 @Accessors(chain = true)
 public class UIColorPickerBuilderImpl
-    extends UIBaseEntityItemBuilderImpl<UIColorPickerItemBuilder, String>
-    implements UIColorPickerItemBuilder {
+        extends UIBaseEntityItemBuilderImpl<UIColorPickerItemBuilder, String>
+        implements UIColorPickerItemBuilder {
 
     @Setter
     private ColorType colorType;

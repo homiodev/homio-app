@@ -5,10 +5,12 @@ import static org.homio.app.manager.CacheService.ENTITY_IDS_BY_CLASS_NAME;
 import static org.homio.app.manager.CacheService.ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI;
 
 import jakarta.persistence.Entity;
+
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.entity.BaseEntity;
@@ -34,8 +36,8 @@ public class EntityManager {
         for (Class<? extends EntityFieldMetadata> aClass : EntityContextImpl.uiFieldClasses.values()) {
             Entity entity = aClass.getDeclaredAnnotation(Entity.class);
             if (entity != null && entity.name().equals(type)
-                || aClass.getName().equals(type)
-                || aClass.getSimpleName().equals(type)) {
+                    || aClass.getName().equals(type)
+                    || aClass.getSimpleName().equals(type)) {
                 return aClass;
             }
         }
@@ -54,9 +56,9 @@ public class EntityManager {
 
         List<BaseEntity> list = repository.listAll();
         return list.stream()
-                   .filter(filter)
-                   .map(BaseEntity::getEntityID)
-                   .collect(Collectors.toSet());
+                .filter(filter)
+                .map(BaseEntity::getEntityID)
+                .collect(Collectors.toSet());
     }
 
     <T extends BaseEntity> @Nullable T getEntityNoCache(String entityID) {

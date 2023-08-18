@@ -19,7 +19,9 @@ import com.sshtools.common.publickey.SshPublicKeyFile;
 import com.sshtools.common.publickey.SshPublicKeyFileFactory;
 import com.sshtools.common.ssh.components.SshKeyPair;
 import jakarta.persistence.Entity;
+
 import java.util.Objects;
+
 import lombok.SneakyThrows;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
@@ -48,7 +50,7 @@ import org.json.JSONObject;
 @SuppressWarnings("unused")
 @UISidebarChildren(icon = "fas fa-terminal", color = "#0088CC")
 public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWebSocketService>
-    implements BaseFileSystemEntity<SshGenericEntity, SshGenericFileSystem> {
+        implements BaseFileSystemEntity<SshGenericEntity, SshGenericFileSystem> {
 
     @Override
     public void configureOptionModel(OptionModel optionModel) {
@@ -191,10 +193,10 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     @SneakyThrows
     @UIContextMenuAction(value = "GENERATE_PRIVATE_KEY", icon = "fab fa-creative-commons-sampling", inputs = {
-        @UIActionInput(name = "algorithm", type = select, value = "SSH2_RSA", values = {"SSH2_RSA", "ECDSA", "ED25519"}),
-        @UIActionInput(name = "passphrase", type = text),
-        @UIActionInput(name = "comment", type = text),
-        @UIActionInput(name = "bits", type = select, value = "3072", values = {"1024", "2048", "3072", "4096"})
+            @UIActionInput(name = "algorithm", type = select, value = "SSH2_RSA", values = {"SSH2_RSA", "ECDSA", "ED25519"}),
+            @UIActionInput(name = "passphrase", type = text),
+            @UIActionInput(name = "comment", type = text),
+            @UIActionInput(name = "bits", type = select, value = "3072", values = {"1024", "2048", "3072", "4096"})
     })
     public ActionResponseModel generatePrivateKey(EntityContext entityContext, JSONObject params) {
         if (isHasPrivateKey()) {
@@ -205,27 +207,27 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         int bits = params.optInt("bits", 3072);
         String alg = "SSH2_RSA".equals(algorithm) ? SSH2_RSA : "ECDSA".equals(algorithm) ? ECDSA : ED25519;
         entityContext.bgp().runWithProgress("generate-ssh")
-                     .onFinally(exception -> {
-                         if (exception != null) {
-                             entityContext.ui().sendErrorMessage("ERROR.SSH_GENERATE");
-                         } else {
-                             entityContext.ui().sendSuccessMessage("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
-                         }
-                     })
-                     .execute(progressBar -> {
-                         progressBar.progress(10, "PROGRESS.GENERATE_SSH");
-                         SshKeyPair keyPair = SshKeyPairGenerator.generateKeyPair(alg, bits);
-                         SshPrivateKeyFile kf = SshPrivateKeyFileFactory.create(keyPair, passphrase, params.optString("comment"));
-                         updateSSHData(this, passphrase, kf);
+                .onFinally(exception -> {
+                    if (exception != null) {
+                        entityContext.ui().sendErrorMessage("ERROR.SSH_GENERATE");
+                    } else {
+                        entityContext.ui().sendSuccessMessage("ACTION.RESPONSE.SUCCESS_SSH_GENERATE");
+                    }
+                })
+                .execute(progressBar -> {
+                    progressBar.progress(10, "PROGRESS.GENERATE_SSH");
+                    SshKeyPair keyPair = SshKeyPairGenerator.generateKeyPair(alg, bits);
+                    SshPrivateKeyFile kf = SshPrivateKeyFileFactory.create(keyPair, passphrase, params.optString("comment"));
+                    updateSSHData(this, passphrase, kf);
 
-                         entityContext.save(this);
-                     });
+                    entityContext.save(this);
+                });
         return null;
     }
 
     @UIContextMenuAction(value = "UPLOAD_PRIVATE_KEY", icon = "fas fa-upload", inputs = {
-        @UIActionInput(name = "privateKey", type = textarea),
-        @UIActionInput(name = "passphrase", type = text)
+            @UIActionInput(name = "privateKey", type = textarea),
+            @UIActionInput(name = "passphrase", type = text)
     })
     public ActionResponseModel uploadPrivateKey(EntityContext entityContext, JSONObject params) {
         return execUploadPrivateKey(this, entityContext, params);
@@ -238,7 +240,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
             return new SshClient(getHost(), getPort(), getUser(), connectionTimeout, buildSshKeyPair(this));
         } else if (!getPassword().asString().isEmpty()) {
             return new SshClient(getHost(), getPort(), getUser(), connectionTimeout,
-                getPassword().asString().toCharArray());
+                    getPassword().asString().toCharArray());
         } else {
             return new SshClient(getHost(), getPort(), getUser(), connectionTimeout);
         }
@@ -269,7 +271,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
         entity.setJsonData("prv_key", new String(kf.getFormattedKey()));
 
         SshPublicKeyFile publicKeyFile = SshPublicKeyFileFactory.create(keyPair.getPublicKey(),
-            kf.getComment(), SshPublicKeyFileFactory.OPENSSH_FORMAT);
+                kf.getComment(), SshPublicKeyFileFactory.OPENSSH_FORMAT);
 
         entity.setJsonData("pub_key", new String(publicKeyFile.getFormattedKey()));
         entity.setJsonData("pub_cmn", kf.getComment());
@@ -291,7 +293,7 @@ public class SshGenericEntity extends SshBaseEntity<SshGenericEntity, GenericWeb
 
     @SneakyThrows
     @UIContextMenuAction(value = "DELETE_PRIVATE_KEY", icon = "fas fa-trash-can", inputs = {
-        @UIActionInput(name = "passphrase", type = text)
+            @UIActionInput(name = "passphrase", type = text)
     })
     public ActionResponseModel deletePrivateKey(EntityContext entityContext, JSONObject params) {
         return execDeletePrivateKey(this, entityContext, params);

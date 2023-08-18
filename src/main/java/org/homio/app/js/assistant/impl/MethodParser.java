@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+
 import org.apache.commons.lang3.StringUtils;
 
 final class MethodParser {
@@ -20,8 +21,8 @@ final class MethodParser {
 
     public static Method getFitMethod(String finalNext, Class clazz) {
         Stream<Method> stream = clazz.getSuperclass() != null ?
-            Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
-            Stream.of(clazz.getMethods());
+                Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
+                Stream.of(clazz.getMethods());
 
         return getFitMethod(stream, finalNext, method -> true);
     }
@@ -32,13 +33,13 @@ final class MethodParser {
 
         Set<Method> methods = new HashSet<>();
         Stream<Method> stream = clazz.getSuperclass() != null ?
-            Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
-            Stream.of(clazz.getMethods());
+                Stream.concat(Stream.of(clazz.getMethods()), Stream.of(clazz.getSuperclass().getMethods())) :
+                Stream.of(clazz.getMethods());
 
         stream.forEach(method -> {
             if (!method.getDeclaringClass().getName().startsWith("org.homio.smart.") &&
-                !method.getDeclaringClass().getName().equals("java.lang.Object")
-                && !method.getDeclaringClass().getName().equals("java.lang.Enum")) {
+                    !method.getDeclaringClass().getName().equals("java.lang.Object")
+                    && !method.getDeclaringClass().getName().equals("java.lang.Enum")) {
                 if (methodFitParser.match(method, methodName)) {
                     methods.add(method);
                 }

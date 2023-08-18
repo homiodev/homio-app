@@ -61,10 +61,10 @@ public class SshCloudEntity extends IdentityEntity implements
 
     @Override
     public String getDescriptionImpl() {
-        if(getUser().isEmpty()) {
+        if (getUser().isEmpty()) {
             return "W.ERROR.USER_REQUIRED";
         }
-        if(getHostname().isEmpty()) {
+        if (getHostname().isEmpty()) {
             return "W.ERROR.HOST_REQUIRED";
         }
         return super.getDescriptionImpl();

@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -71,8 +72,8 @@ public class LocalFileSystemProvider implements FileSystemProvider {
             if (archivePath != null) {
                 List<File> children = ArchiveUtil.getChildren(archivePath, archivePath.relativize(fullPath).toString());
                 return children.stream().map(c -> buildTreeNode(true, c, c.isDirectory(),
-                                   archivePath.resolve(c.getPath()).toString(), null))
-                               .collect(Collectors.toSet());
+                                archivePath.resolve(c.getPath()).toString(), null))
+                        .collect(Collectors.toSet());
             }
         }
         try (Stream<Path> stream = Files.list(fullPath)) {
@@ -119,7 +120,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         for (Map.Entry<Path, Set<Path>> entry : archiveIds.entrySet()) {
             List<File> archiveEntries = ArchiveUtil.getArchiveEntries(entry.getKey(), null);
             Map<String, Path> valueToKey =
-                entry.getValue().stream().collect(Collectors.toMap(p -> entry.getKey().relativize(p).toString(), p -> p));
+                    entry.getValue().stream().collect(Collectors.toMap(p -> entry.getKey().relativize(p).toString(), p -> p));
 
             for (File archiveEntry : archiveEntries) {
                 Path path = valueToKey.get(archiveEntry.toString());
@@ -291,13 +292,13 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         Set<TreeNode> rootChildren = getChildren(trimToEmpty(rootPath));
         Set<TreeNode> currentChildren = rootChildren;
         List<Path> items = StreamSupport.stream(Paths.get(id).spliterator(), false)
-                                        .collect(Collectors.toList());
+                .collect(Collectors.toList());
         for (int i = 0; i < items.size() - 1; i++) {
             Path pathItemId = items.get(i);
             String pathItemIdStr = fixPath(pathItemId);
             TreeNode foundedObject =
-                currentChildren.stream().filter(c -> c.getId().equals(pathItemIdStr)).findAny().orElseThrow(() ->
-                    new IllegalStateException("Unable find object: " + pathItemIdStr));
+                    currentChildren.stream().filter(c -> c.getId().equals(pathItemIdStr)).findAny().orElseThrow(() ->
+                            new IllegalStateException("Unable find object: " + pathItemIdStr));
             currentChildren = getChildren(pathItemIdStr);
             foundedObject.addChildren(currentChildren);
         }
@@ -305,7 +306,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
     }
 
     public void copyEntries(Collection<TreeNode> entries, Path targetPath, CopyOption[] options, List<Path> result)
-        throws IOException {
+            throws IOException {
         // if copying to archive
         Path archivePath = getArchivePath(targetPath);
         if (archivePath != null) {
@@ -398,7 +399,7 @@ public class LocalFileSystemProvider implements FileSystemProvider {
         boolean isDirectory = file.isDirectory();
         boolean exists = file.exists();
         String contentType =
-            !isDirectory && exists ? StringUtils.defaultString(Files.probeContentType(path), TIKA.detect(path)) : null;
+                !isDirectory && exists ? StringUtils.defaultString(Files.probeContentType(path), TIKA.detect(path)) : null;
         return buildTreeNode(exists, file, isDirectory, fullPath, contentType);
     }
 

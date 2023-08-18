@@ -3,6 +3,7 @@ package org.homio.app.repository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.homio.app.config.TransactionManagerContext;
 import org.homio.app.model.var.VariableBackup;
 import org.homio.app.model.var.WorkspaceVariableMessage;
@@ -30,9 +31,9 @@ public class VariableBackupRepository {
     public List<VariableBackup> findAll(String variableId, int limit) {
         String jql = "select vd from VariableBackup as vd where vd.vid = :vid order by vd.created desc";
         return tmc.executeInTransactionReadOnly(em ->
-            em.createQuery(jql).setMaxResults(limit)
-              .setParameter("vid", variableId)
-              .getResultList());
+                em.createQuery(jql).setMaxResults(limit)
+                        .setParameter("vid", variableId)
+                        .getResultList());
     }
 
     public int count(String variableId) {
@@ -62,8 +63,8 @@ public class VariableBackupRepository {
         String jql = "delete from variable_backup where vid = :vid and id not in (select id from variable_backup order by created desc limit :limit)";
         return tmc.executeInTransaction(em -> {
             return em.createNativeQuery(jql)
-                     .setParameter("vid", variableId)
-                     .setParameter("limit", countToKeep).executeUpdate();
+                    .setParameter("vid", variableId)
+                    .setParameter("limit", countToKeep).executeUpdate();
         });
     }
 
@@ -72,8 +73,8 @@ public class VariableBackupRepository {
         String jql = "delete from VariableBackup where vid = :vid and created < :date";
         return tmc.executeInTransaction(em -> {
             return em.createQuery(jql)
-                     .setParameter("vid", variableId)
-                     .setParameter("date", date.toEpochDay()).executeUpdate();
+                    .setParameter("vid", variableId)
+                    .setParameter("date", date.toEpochDay()).executeUpdate();
         });
     }
 }

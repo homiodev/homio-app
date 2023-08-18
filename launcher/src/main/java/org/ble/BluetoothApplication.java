@@ -4,6 +4,7 @@ import static org.ble.CharacteristicFlag.C_READ_WRITE;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
 import lombok.Getter;
 import org.freedesktop.dbus.exceptions.DBusException;
 

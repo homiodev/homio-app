@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import lombok.Getter;
 import org.apache.logging.log4j.Logger;
 import org.homio.api.EntityContextMedia.FFMPEG;
@@ -44,10 +45,10 @@ public class FFMPEGImpl implements FFMPEG {
     private @Getter boolean running;
 
     public FFMPEGImpl(@NotNull String entityID, @NotNull String description,
-        @NotNull FFMPEGHandler handler, @NotNull Logger log, @NotNull FFMPEGFormat format,
-        @NotNull String inputArguments, @NotNull String input, @NotNull String outArguments,
-        @NotNull String output, @NotNull String username, @NotNull String password,
-        @Nullable Runnable destroyListener) {
+                      @NotNull FFMPEGHandler handler, @NotNull Logger log, @NotNull FFMPEGFormat format,
+                      @NotNull String inputArguments, @NotNull String input, @NotNull String outArguments,
+                      @NotNull String output, @NotNull String username, @NotNull String password,
+                      @Nullable Runnable destroyListener) {
         FFMPEGImpl.ffmpegMap.put(entityID + "_" + description, this);
 
         this.entityID = entityID;
@@ -164,10 +165,10 @@ public class FFMPEGImpl implements FFMPEG {
                                         countOfMotions++;
                                     }
                                     if (countOfMotions > 9
-                                        || countOfMotions > 4 && motionThreshold > 10
-                                        || countOfMotions > 3 && motionThreshold > 15
-                                        || countOfMotions > 2 && motionThreshold > 30
-                                        || countOfMotions > 0 && motionThreshold > 89) {
+                                            || countOfMotions > 4 && motionThreshold > 10
+                                            || countOfMotions > 3 && motionThreshold > 15
+                                            || countOfMotions > 2 && motionThreshold > 30
+                                            || countOfMotions > 0 && motionThreshold > 89) {
                                         handler.motionDetected(true, CHANNEL_FFMPEG_MOTION_ALARM);
                                         if (countOfMotions < 2) {
                                             countOfMotions = 4;// Used to debounce the Alarm.
@@ -194,7 +195,8 @@ public class FFMPEGImpl implements FFMPEG {
                                     handler.audioDetected(true);
                                 }
                             }
-                            case SNAPSHOT, MJPEG -> notFrozen = true;// RTSP_ALARMS, MJPEG and SNAPSHOT all set this to true, no break.
+                            case SNAPSHOT, MJPEG ->
+                                    notFrozen = true;// RTSP_ALARMS, MJPEG and SNAPSHOT all set this to true, no break.
                             default -> log.info("[{}]: {}", entityID, line);
                         }
                         if (line.contains("No such file or directory")) {

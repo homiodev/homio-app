@@ -16,12 +16,12 @@ import org.homio.app.rest.widget.TimeSeriesContext;
 
 @Entity
 public class WidgetBarTimeChartSeriesEntity extends WidgetSeriesEntity<WidgetBarTimeChartEntity>
-    implements HasChartDataSource {
+        implements HasChartDataSource {
 
     @Override
     public ChartDataset buildTargetDataset(TimeSeriesContext item) {
         WidgetBarTimeChartSeriesEntity seriesEntity =
-            (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
+                (WidgetBarTimeChartSeriesEntity) item.getSeriesEntity();
         ChartDataset dataset = new ChartDataset(item.getId(), ((HasEntityIdentifier) item.getSeriesEntity()).getEntityID());
 
         if (item.getValues() != null && !item.getValues().isEmpty()) {

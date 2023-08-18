@@ -5,6 +5,7 @@ import static org.homio.app.model.entity.user.UserBaseEntity.LOG_RESOURCE;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
@@ -16,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class ConsoleVisibleTabsSetting
-    implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
+        implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
 
     @Override
     public @NotNull Class<String> getType() {

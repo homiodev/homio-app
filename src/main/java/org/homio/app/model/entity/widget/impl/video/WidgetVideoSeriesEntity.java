@@ -1,9 +1,11 @@
 package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.model.OptionModel;
 import org.homio.api.model.StylePosition;
@@ -18,7 +20,7 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 @SuppressWarnings("unused")
 @Entity
 public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntity>
-    implements HasSingleValueDataSource {
+        implements HasSingleValueDataSource {
 
     @UIField(order = 11)
     public boolean isAutoPlay() {
@@ -104,8 +106,8 @@ public class WidgetVideoSeriesEntity extends WidgetSeriesEntity<WidgetVideoEntit
     @Override
     @UIField(order = 14, required = true, label = "widget.video_dataSource")
     @UIFieldSelection(
-        value = VideoSeriesDataSourceDynamicOptionLoader.class,
-        allowInputRawText = true)
+            value = VideoSeriesDataSourceDynamicOptionLoader.class,
+            allowInputRawText = true)
     @UIFieldTreeNodeSelection(pattern = ".*(\\.mp4|\\.m3u8)", iconColor = "#14A669")
     @UIFieldIgnoreParent
     public String getValueDataSource() {

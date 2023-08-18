@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -32,10 +33,10 @@ public class RouteController {
     private final SettingController settingController;
 
     public RouteController(
-        ClassFinder classFinder,
-        AddonService addonService,
-        SettingController settingController,
-        EntityContext entityContext) {
+            ClassFinder classFinder,
+            AddonService addonService,
+            SettingController settingController,
+            EntityContext entityContext) {
         this.uiSidebarMenuClasses = classFinder.getClassesWithAnnotation(UISidebarMenu.class);
         this.addonService = addonService;
         this.settingController = settingController;
@@ -73,9 +74,9 @@ public class RouteController {
     }
 
     private void getSubMenu(
-        Map<String, List<SidebarMenuItem>> sidebarMenus,
-        Class<?> item,
-        UISidebarMenu uiSidebarMenu) {
+            Map<String, List<SidebarMenuItem>> sidebarMenus,
+            Class<?> item,
+            UISidebarMenu uiSidebarMenu) {
         String parent = uiSidebarMenu.parent().name().toLowerCase();
         if (!sidebarMenus.containsKey(parent)) {
             sidebarMenus.put(parent, new ArrayList<>());
@@ -94,7 +95,7 @@ public class RouteController {
     }
 
     private void addRouteFromUISideBarMenu(
-        List<RouteDTO> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
+            List<RouteDTO> routes, Class<?> aClass, UISidebarMenu uiSidebarMenu) {
         String href = StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), aClass.getSimpleName());
         RouteDTO route = new RouteDTO(uiSidebarMenu.parent().name().toLowerCase() + "/" + href);
         route.type = aClass.getSimpleName();
@@ -118,11 +119,11 @@ public class RouteController {
 
         static SidebarMenuItem fromAnnotation(Class<?> clazz, UISidebarMenu uiSidebarMenu) {
             return new SidebarMenuItem(
-                StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), clazz.getSimpleName()),
-                uiSidebarMenu.icon(),
-                uiSidebarMenu.bg(),
-                clazz.getSimpleName(),
-                uiSidebarMenu.order());
+                    StringUtils.defaultIfEmpty(uiSidebarMenu.overridePath(), clazz.getSimpleName()),
+                    uiSidebarMenu.icon(),
+                    uiSidebarMenu.bg(),
+                    clazz.getSimpleName(),
+                    uiSidebarMenu.order());
         }
     }
 

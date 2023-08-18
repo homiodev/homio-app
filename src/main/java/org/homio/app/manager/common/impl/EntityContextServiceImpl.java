@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -67,13 +68,13 @@ public class EntityContextServiceImpl implements EntityContextService {
 
         @Override
         default boolean beforeHandshake(@NotNull ServerHttpRequest request, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler,
-            @NotNull Map<String, Object> attributes) {
+                                        @NotNull Map<String, Object> attributes) {
             return true;
         }
 
         @Override
         default void afterHandshake(@NotNull ServerHttpRequest request, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler,
-            Exception exception) {
+                                    Exception exception) {
         }
     }
 }

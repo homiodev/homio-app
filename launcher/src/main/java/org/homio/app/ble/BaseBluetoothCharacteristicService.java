@@ -1,12 +1,14 @@
 package org.homio.app.ble;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -126,16 +128,16 @@ public abstract class BaseBluetoothCharacteristicService {
     private String readWifiList() {
         if (SystemUtils.IS_OS_LINUX) {
             return networkHardwareRepository
-                .scan(selectedWifiInterface).stream()
-                .filter(distinctByKey(Network::getSsid))
-                .map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"));
+                    .scan(selectedWifiInterface).stream()
+                    .filter(distinctByKey(Network::getSsid))
+                    .map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"));
         }
         ArrayList<String> result = machineHardwareRepository
-            .executeNoErrorThrowList("netsh wlan show profiles", 60, null);
+                .executeNoErrorThrowList("netsh wlan show profiles", 60, null);
         return result.stream()
-                     .filter(s -> s.contains("All User Profile"))
-                     .map(s -> s.substring(s.indexOf(":") + 1).trim())
-                     .map(s -> s + "%&%-").collect(Collectors.joining("%#%"));
+                .filter(s -> s.contains("All User Profile"))
+                .map(s -> s.substring(s.indexOf(":") + 1).trim())
+                .map(s -> s + "%&%-").collect(Collectors.joining("%#%"));
     }
 
     @Getter

@@ -5,7 +5,7 @@ import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 
 public class SystemCPUFetchValueIntervalSetting
-    implements CoreSettingPlugin<Integer>, SettingPluginSlider {
+        implements CoreSettingPlugin<Integer>, SettingPluginSlider {
 
     @Override
     public @NotNull GroupKey getGroupKey() {

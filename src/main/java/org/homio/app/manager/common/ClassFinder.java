@@ -5,6 +5,7 @@ import static org.homio.app.manager.CacheService.JS_COMPLETIONS;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
@@ -40,7 +41,7 @@ public class ClassFinder {
         List<Class<?>> result = new ArrayList<>();
         if (!topClass.isAssignableFrom(childClass)) {
             throw new RuntimeException(
-                "Class <" + childClass.getSimpleName() + "> isn't assigned of class <" + topClass.getSimpleName() + ">");
+                    "Class <" + childClass.getSimpleName() + "> isn't assigned of class <" + topClass.getSimpleName() + ">");
         }
         while (!childClass.getSimpleName().equals(topClass.getSimpleName())) {
             result.add(childClass);
@@ -69,16 +70,16 @@ public class ClassFinder {
     }*/
 
     public <T> List<Class<? extends T>> getClassesWithParent(
-        @NotNull Class<T> parentClass,
-        @Nullable String basePackage,
-        @Nullable ClassLoader classLoader) {
+            @NotNull Class<T> parentClass,
+            @Nullable String basePackage,
+            @Nullable ClassLoader classLoader) {
 
         List<Class<? extends T>> foundClasses = new ArrayList<>();
         ClassPathScanningCandidateComponentProvider scanner = HomioClassLoader.getResourceScanner(false, classLoader);
         scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
 
         getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.homio"), null, scanner,
-            foundClasses);
+                foundClasses);
 
         if (foundClasses.isEmpty() && basePackage == null) {
             getClassesWithParentFromPackage("com.pi4j", null, scanner, foundClasses);
@@ -102,7 +103,7 @@ public class ClassFinder {
         scanner.addIncludeFilter(new AssignableTypeFilter(parentClass));
 
         getClassesWithParentFromPackage(StringUtils.defaultString(basePackage, "org.homio"), className, scanner,
-            foundClasses);
+                foundClasses);
 
         if (foundClasses.isEmpty() && basePackage == null) {
             getClassesWithParentFromPackage("com.pi4j", className, scanner, foundClasses);
@@ -111,7 +112,7 @@ public class ClassFinder {
         return foundClasses;
     }
 
-    public  <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation) {
+    public <T> List<Class<? extends T>> getClassesWithAnnotation(Class<? extends Annotation> annotation) {
         List<Class<? extends T>> foundClasses = new ArrayList<>();
         ClassPathScanningCandidateComponentProvider scanner = HomioClassLoader.getResourceScanner(true);
         scanner.addIncludeFilter(new AnnotationTypeFilter(annotation));
@@ -126,14 +127,14 @@ public class ClassFinder {
     }
 
     private <T> void getClassesWithParentFromPackage(String basePackage, String className,
-        ClassPathScanningCandidateComponentProvider scanner,
-        List<Class<? extends T>> foundClasses) {
+                                                     ClassPathScanningCandidateComponentProvider scanner,
+                                                     List<Class<? extends T>> foundClasses) {
         try {
             for (BeanDefinition bd : scanner.findCandidateComponents(basePackage)) {
                 if (className == null || bd.getBeanClassName().endsWith("." + className)) {
                     try {
                         foundClasses.add((Class<? extends T>) scanner.getResourceLoader().getClassLoader()
-                                                                     .loadClass(bd.getBeanClassName()));
+                                .loadClass(bd.getBeanClassName()));
                     } catch (ClassNotFoundException ignore) {
                     }
                 }

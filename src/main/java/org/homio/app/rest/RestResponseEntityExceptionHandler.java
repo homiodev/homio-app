@@ -2,6 +2,7 @@ package org.homio.app.rest;
 
 import java.nio.file.DirectoryNotEmptyException;
 import java.util.Objects;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
@@ -54,7 +55,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
     public ErrorHolderModel handleDirectoryNotEmptyException(DirectoryNotEmptyException ex) {
         String msg = CommonUtils.getErrorMessage(ex);
         return new ErrorHolderModel(
-            "Unable remove directory", "Directory " + msg + " not empty", ex);
+                "Unable remove directory", "Directory " + msg + " not empty", ex);
     }
 
     @ExceptionHandler({Exception.class})
@@ -64,11 +65,11 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
 
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(
-        @NotNull Exception ex,
-        @Nullable Object body,
-        @NotNull HttpHeaders headers,
-        @NotNull HttpStatusCode statusCode,
-        @NotNull WebRequest request) {
+            @NotNull Exception ex,
+            @Nullable Object body,
+            @NotNull HttpHeaders headers,
+            @NotNull HttpStatusCode statusCode,
+            @NotNull WebRequest request) {
         String msg = CommonUtils.getErrorMessage(ex);
         // addon linkage error
         if (ex.getCause() instanceof AbstractMethodError && msg.contains("org.homio.addon")) {
@@ -80,7 +81,7 @@ public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionH
         }
         log.error("Error <{}>", msg, ex);
         Objects.requireNonNull(((ServletWebRequest) request).getResponse())
-               .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         return new ResponseEntity<>(new ErrorHolderModel("ERROR", msg, ex), headers, statusCode);
     }
 }

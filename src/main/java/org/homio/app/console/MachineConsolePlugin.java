@@ -4,11 +4,13 @@ import static java.lang.String.format;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.pivovarit.function.ThrowingSupplier;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -46,8 +48,8 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         List<HardwarePluginEntity> list = new ArrayList<>();
 
         list.add(new HardwarePluginEntity("Database", format("Type: (%s). Url: (%s)",
-            entityContext.setting().getEnv("databaseType"),
-            entityContext.setting().getEnv("spring.datasource.url"))));
+                entityContext.setting().getEnv("databaseType"),
+                entityContext.setting().getEnv("spring.datasource.url"))));
         list.add(new HardwarePluginEntity("Cpu load", machineHardwareRepository.getCpuLoad()));
         list.add(new HardwarePluginEntity("Cpu temperature", onLinux(machineHardwareRepository::getCpuTemperature)));
         list.add(new HardwarePluginEntity("Ram memory", machineHardwareRepository.getRamMemory()));
@@ -57,10 +59,10 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
         list.add(new HardwarePluginEntity("Network interface", activeNetworkInterface));
         list.add(new HardwarePluginEntity("Internet stat", toString(networkHardwareRepository.stat(activeNetworkInterface))));
         list.add(new HardwarePluginEntity("Network description",
-            toString(networkHardwareRepository.getNetworkDescription(activeNetworkInterface))));
+                toString(networkHardwareRepository.getNetworkDescription(activeNetworkInterface))));
         list.add(new HardwarePluginEntity("Cpu num", Runtime.getRuntime().availableProcessors()));
         list.add(new HardwarePluginEntity("Os", "Name: " + SystemUtils.OS_NAME +
-            ". Version: " + SystemUtils.OS_VERSION + ". Arch: " + SystemUtils.OS_ARCH));
+                ". Version: " + SystemUtils.OS_VERSION + ". Arch: " + SystemUtils.OS_ARCH));
         list.add(new HardwarePluginEntity("Java", "Name: " + SystemUtils.JAVA_RUNTIME_NAME + ". Version: " + SystemUtils.JAVA_RUNTIME_VERSION));
 
         list.add(new HardwarePluginEntity("IP address", networkHardwareRepository.getIPAddress()));
@@ -73,8 +75,8 @@ public class MachineConsolePlugin implements ConsolePluginTable<MachineConsolePl
 
         for (SerialPort serialPort : SerialPort.getCommPorts()) {
             list.add(new HardwarePluginEntity("Com port <" + serialPort.getSystemPortName() + ">",
-                serialPort.getDescriptivePortName() +
-                    " [" + serialPort.getBaudRate() + "/" + serialPort.getPortDescription() + "]"));
+                    serialPort.getDescriptivePortName() +
+                            " [" + serialPort.getBaudRate() + "/" + serialPort.getPortDescription() + "]"));
         }
 
         Collections.sort(list);

@@ -4,6 +4,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContextWidget.PulseBuilder;
@@ -19,9 +20,9 @@ import org.json.JSONObject;
 public class ThresholdBuilderImpl implements ThresholdBuilder, PulseBuilder {
 
     private static final Set<String> ANIMATIONS = Set.of("fa-beat", "fa-beat-fade", "fa-bounce", "fa-fade", "fa-flip", "fa-shake", "fa-spin",
-        "fa-spin fa-spin-reverse");
+            "fa-spin fa-spin-reverse");
     private static final Set<String> ROTATIONS = Set.of("fa-rotate-90", "fa-rotate-180", "fa-rotate-270", "fa-flip-horizontal", "fa-flip-vertical",
-        "fa-flip-both");
+            "fa-flip-both");
     private static final Set<String> SPEED = Set.of("fa-speed-slow", "fa-speed-fast", "fa-speed-fastest");
 
     private static final String THRESHOLD_MODELS = "thresholdModel";
@@ -43,7 +44,7 @@ public class ThresholdBuilderImpl implements ThresholdBuilder, PulseBuilder {
 
     @Override
     public @NotNull ThresholdBuilder setThreshold(@NotNull String entity, @NotNull Object value,
-        @NotNull ValueCompare op, @Nullable String source) {
+                                                  @NotNull ValueCompare op, @Nullable String source) {
         return addThreshold(THRESHOLD_MODELS, entity, value, op, (items, json) -> {
             removeItem(items, ANIMATIONS, json, "spin");
             removeItem(items, ROTATIONS, json, "rotate");
@@ -53,12 +54,12 @@ public class ThresholdBuilderImpl implements ThresholdBuilder, PulseBuilder {
 
     @Override
     public @NotNull PulseBuilder setPulse(@NotNull PulseColor pulseColor, @NotNull Object value,
-        @NotNull ValueCompare op, @NotNull String source) {
+                                          @NotNull ValueCompare op, @NotNull String source) {
         return addThreshold(PULSE_ANIMATION, pulseColor.name(), value, op, null, source);
     }
 
     private ThresholdBuilderImpl addThreshold(@NotNull String key, @NotNull String entity, @NotNull Object value,
-        @NotNull ValueCompare op, @Nullable BiConsumer<Set<String>, JSONObject> builder, @Nullable String source) {
+                                              @NotNull ValueCompare op, @Nullable BiConsumer<Set<String>, JSONObject> builder, @Nullable String source) {
         JSONArray thresholds = node.optJSONArray(key);
         if (thresholds == null) {
             thresholds = new JSONArray();

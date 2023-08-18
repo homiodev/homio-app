@@ -6,7 +6,7 @@ import org.homio.app.model.entity.widget.impl.color.WidgetColorEntity;
 import org.jetbrains.annotations.NotNull;
 
 public final class ColorWidgetBuilderImpl extends WidgetBaseBuilderImpl<ColorWidgetBuilder, WidgetColorEntity>
-    implements ColorWidgetBuilder {
+        implements ColorWidgetBuilder {
 
     public ColorWidgetBuilderImpl(WidgetColorEntity widget, EntityContextImpl entityContext) {
         super(widget, entityContext);

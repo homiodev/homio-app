@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
@@ -70,7 +71,7 @@ public class SettingController implements ContextRefreshed {
                 this.transientSettings.put((Class<? extends SettingPlugin<?>>) settingPlugin.getClass(), entity);
             }
             if (settingPlugin instanceof ConsoleSettingPlugin
-                && !settingPlugin.getClass().getSimpleName().startsWith("Console")) {
+                    && !settingPlugin.getClass().getSimpleName().startsWith("Console")) {
                 throw new ServerException("Console plugin class <" + settingPlugin.getClass().getName() + "> must starts with name 'Console'");
             }
         }
@@ -78,7 +79,7 @@ public class SettingController implements ContextRefreshed {
 
     @GetMapping("/{entityID}/options")
     public Collection<OptionModel> loadSettingAvailableValues(@PathVariable("entityID") String entityID,
-        @RequestParam(value = "param0", required = false) String param0) {
+                                                              @RequestParam(value = "param0", required = false) String param0) {
         SettingPluginOptions<?> settingPlugin = (SettingPluginOptions<?>) EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         return SettingRepository.getOptions(settingPlugin, entityContext, new JSONObject().put("param0", param0));
     }
@@ -88,13 +89,13 @@ public class SettingController implements ContextRefreshed {
         SettingPlugin<?> settingPlugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(entityID);
         if (settingPlugin instanceof SettingPluginPackageInstall) {
             SettingPluginPackageInstall.PackageContext packageContext =
-                ((SettingPluginPackageInstall) settingPlugin).allPackages(entityContext);
+                    ((SettingPluginPackageInstall) settingPlugin).allPackages(entityContext);
             for (Map.Entry<String, Boolean> entry : addonService.getPackagesInProgress().entrySet()) {
                 SettingPluginPackageInstall.PackageModel singlePackage =
-                    packageContext.getPackages().stream()
-                                  .filter(p -> p.getName().equals(entry.getKey()))
-                                  .findFirst()
-                                  .orElse(null);
+                        packageContext.getPackages().stream()
+                                .filter(p -> p.getName().equals(entry.getKey()))
+                                .findFirst()
+                                .orElse(null);
                 if (singlePackage != null) {
                     if (entry.getValue()) {
                         singlePackage.setInstalling(true);
@@ -176,7 +177,7 @@ public class SettingController implements ContextRefreshed {
         for (Iterator<SettingEntity> iterator = settings.iterator(); iterator.hasNext(); ) {
             SettingEntity settingEntity = iterator.next();
             SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(
-                settingEntity.getEntityID());
+                    settingEntity.getEntityID());
             if (plugin != null) {
 
                 // fulfill pages
@@ -206,7 +207,7 @@ public class SettingController implements ContextRefreshed {
 
     private void assembleTransientSettings(List<SettingEntity> settings) {
         for (Map.Entry<Class<? extends SettingPlugin<?>>, SettingEntity> entry :
-            transientSettings.entrySet()) {
+                transientSettings.entrySet()) {
             SettingEntity settingEntity = entry.getValue();
             settingEntity.setValue(entityContext.setting().getRawValue((Class) entry.getKey()));
             if (DynamicConsoleHeaderContainerSettingPlugin.class.isAssignableFrom(entry.getKey())) {
@@ -230,12 +231,12 @@ public class SettingController implements ContextRefreshed {
             SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(settingEntity.getEntityID());
             if (plugin instanceof ConsoleSettingPlugin) {
                 for (Map.Entry<String, ConsolePlugin<?>> entry :
-                    EntityContextUIImpl.consolePluginsMap.entrySet()) {
+                        EntityContextUIImpl.consolePluginsMap.entrySet()) {
                     if (((ConsoleSettingPlugin<?>) plugin)
-                        .acceptConsolePluginPage(entry.getValue())) {
+                            .acceptConsolePluginPage(entry.getValue())) {
                         settingToPages
-                            .computeIfAbsent(settingEntity.getEntityID(), s -> new HashSet<>())
-                            .add(StringUtils.defaultString(entry.getValue().getParentTab(), entry.getKey()));
+                                .computeIfAbsent(settingEntity.getEntityID(), s -> new HashSet<>())
+                                .add(StringUtils.defaultString(entry.getValue().getParentTab(), entry.getKey()));
                     }
                 }
             }
@@ -247,12 +248,12 @@ public class SettingController implements ContextRefreshed {
      */
     private void updateSettingDescription(List<SettingEntity> settings) {
         Set<String> addonSettings =
-            settings.stream().map(e -> {
-                        SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(e.getEntityID());
-                        return SettingRepository.getSettingAddonName(entityContext, plugin.getClass());
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
+                settings.stream().map(e -> {
+                            SettingPlugin<?> plugin = EntityContextSettingImpl.settingPluginsByPluginKey.get(e.getEntityID());
+                            return SettingRepository.getSettingAddonName(entityContext, plugin.getClass());
+                        })
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
 
         for (AddonEntrypoint addonEntrypoint : addonService.getAddons()) {
             if (addonSettings.contains(addonEntrypoint.getAddonID())) {
@@ -267,10 +268,10 @@ public class SettingController implements ContextRefreshed {
                         }
                     };
                     settingEntity
-                        .setSettingType(SettingType.Description)
-                        .setVisible(true)
-                        .setValue(descriptionKey)
-                        .setOrder(1);
+                            .setSettingType(SettingType.Description)
+                            .setVisible(true)
+                            .setValue(descriptionKey)
+                            .setOrder(1);
                     settingEntity.setEntityID(SettingEntity.PREFIX + addonEntrypoint.getAddonID() + "_Description");
                     this.descriptionSettings.add(settingEntity);
                 }

@@ -14,8 +14,8 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSliderEntity
-    extends WidgetBaseEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity>
-    implements HasLayout, HasSourceServerUpdates, HasName, HasPadding {
+        extends WidgetBaseEntityAndSeries<WidgetSliderEntity, WidgetSliderSeriesEntity>
+        implements HasLayout, HasSourceServerUpdates, HasName, HasPadding {
 
     @UIField(order = 1)
     @UIFieldGroup(value = "NAME", order = 3)
@@ -78,12 +78,12 @@ public class WidgetSliderEntity
 
     private String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder
-            .builder(15, 20, 50, 15)
-            .addRow(rb ->
-                rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
-                  .addCol("name", UIFieldLayout.HorizontalAlign.left)
-                  .addCol("slider", UIFieldLayout.HorizontalAlign.center)
-                  .addCol("value", UIFieldLayout.HorizontalAlign.center))
-            .build();
+                .builder(15, 20, 50, 15)
+                .addRow(rb ->
+                        rb.addCol("icon", UIFieldLayout.HorizontalAlign.center)
+                                .addCol("name", UIFieldLayout.HorizontalAlign.left)
+                                .addCol("slider", UIFieldLayout.HorizontalAlign.center)
+                                .addCol("value", UIFieldLayout.HorizontalAlign.center))
+                .build();
     }
 }

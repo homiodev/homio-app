@@ -1,6 +1,7 @@
 package org.homio.app.workspace;
 
 import com.pivovarit.function.ThrowingRunnable;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
@@ -13,6 +14,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -55,29 +57,30 @@ public class WorkspaceService implements ContextRefreshed {
     private static final Pattern ID_PATTERN = Pattern.compile("[\\w-_]*");
 
     private static final List<Class<?>> systemScratches =
-        Arrays.asList(
-            Scratch3ControlBlocks.class,
-            Scratch3MiscBlocks.class,
-            Scratch3DataBlocks.class,
-            Scratch3EventsBlocks.class,
-            Scratch3OperatorBlocks.class,
-            Scratch3MutatorBlocks.class);
+            Arrays.asList(
+                    Scratch3ControlBlocks.class,
+                    Scratch3MiscBlocks.class,
+                    Scratch3DataBlocks.class,
+                    Scratch3EventsBlocks.class,
+                    Scratch3OperatorBlocks.class,
+                    Scratch3MutatorBlocks.class);
 
     private static final List<Class<?>> inlineScratches =
-        Arrays.asList(
-            Scratch3AudioBlocks.class,
-            Scratch3NetworkBlocks.class,
-            Scratch3HardwareBlocks.class,
-            Scratch3UIBlocks.class,
-            Scratch3FSBlocks.class,
-            Scratch3ImageEditBlocks.class);
+            Arrays.asList(
+                    Scratch3AudioBlocks.class,
+                    Scratch3NetworkBlocks.class,
+                    Scratch3HardwareBlocks.class,
+                    Scratch3UIBlocks.class,
+                    Scratch3FSBlocks.class,
+                    Scratch3ImageEditBlocks.class);
 
     private final Duration TIME_WAIT_OLD_WORKSPACE = Duration.ofSeconds(3);
     private final Set<String> ONCE_EXECUTION_BLOCKS =
-        new HashSet<>(Arrays.asList("boolean_link", "group_variable_link"));
+            new HashSet<>(Arrays.asList("boolean_link", "group_variable_link"));
     // tab <-> list of top blocks
     private final Map<String, WorkspaceTabHolder> tabs = new HashMap<>();
-    @Getter private final Set<Scratch3ExtensionImpl> extensions = new HashSet<>();
+    @Getter
+    private final Set<Scratch3ExtensionImpl> extensions = new HashSet<>();
     // constructor parameters
     private final EntityContext entityContext;
     private final AddonService addonService;
@@ -87,7 +90,7 @@ public class WorkspaceService implements ContextRefreshed {
     @Override
     public void onContextRefresh(EntityContext entityContext) {
         scratch3Blocks = this.entityContext.getBeansOfType(Scratch3ExtensionBlocks.class).stream()
-                                           .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
+                .collect(Collectors.toMap(Scratch3ExtensionBlocks::getId, s -> s));
         workspaceEventListeners = this.entityContext.getBeansOfType(WorkspaceEventListener.class);
 
         loadExtensions();
@@ -139,26 +142,26 @@ public class WorkspaceService implements ContextRefreshed {
         }
 
         workspaceTabHolder =
-            new WorkspaceTabHolder(workspaceTab.getEntityID(), entityContext, scratch3Blocks);
+                new WorkspaceTabHolder(workspaceTab.getEntityID(), entityContext, scratch3Blocks);
         tabs.put(workspaceTab.getEntityID(), workspaceTabHolder);
 
         if (StringUtils.isNotEmpty(workspaceTab.getContent())) {
             try {
                 parseWorkspace(workspaceTab, workspaceTabHolder);
                 workspaceTabHolder.blocks.values()
-                                         .stream()
-                                         .filter(workspaceBlock -> workspaceBlock.isTopLevel() && !workspaceBlock.isShadow())
-                                         .forEach(workspaceBlock -> {
-                                             if (ONCE_EXECUTION_BLOCKS.contains(workspaceBlock.getOpcode())) {
-                                                 executeOnce(workspaceBlock);
-                                             } else {
-                                                 this.entityContext
-                                                     .bgp()
-                                                     .builder("workspace-" + workspaceBlock.getId())
-                                                     .tap(workspaceBlock::setThreadContext)
-                                                     .execute(createWorkspaceThread(workspaceBlock));
-                                             }
-                                         });
+                        .stream()
+                        .filter(workspaceBlock -> workspaceBlock.isTopLevel() && !workspaceBlock.isShadow())
+                        .forEach(workspaceBlock -> {
+                            if (ONCE_EXECUTION_BLOCKS.contains(workspaceBlock.getOpcode())) {
+                                executeOnce(workspaceBlock);
+                            } else {
+                                this.entityContext
+                                        .bgp()
+                                        .builder("workspace-" + workspaceBlock.getId())
+                                        .tap(workspaceBlock::setThreadContext)
+                                        .execute(createWorkspaceThread(workspaceBlock));
+                            }
+                        });
             } catch (Exception ex) {
                 log.error("Unable to initialize workspace: " + ex.getMessage(), ex);
                 entityContext.ui().sendErrorMessage("Unable to initialize workspace: " + ex.getMessage(), ex);
@@ -181,7 +184,7 @@ public class WorkspaceService implements ContextRefreshed {
     }
 
     private void releaseWorkspaceEntity(
-        WorkspaceEntity workspaceTab, WorkspaceTabHolder oldWorkspaceTabHolder) {
+            WorkspaceEntity workspaceTab, WorkspaceTabHolder oldWorkspaceTabHolder) {
         oldWorkspaceTabHolder.broadcastLockManager.release();
 
         for (WorkspaceEventListener workspaceEventListener : workspaceEventListeners) {
@@ -203,7 +206,7 @@ public class WorkspaceService implements ContextRefreshed {
     }
 
     private void parseWorkspace(
-        WorkspaceEntity workspaceTab, WorkspaceTabHolder workspaceTabHolder) {
+            WorkspaceEntity workspaceTab, WorkspaceTabHolder workspaceTabHolder) {
         JSONObject jsonObject = new JSONObject(workspaceTab.getContent());
         JSONObject target = jsonObject.getJSONObject("target");
 
@@ -242,7 +245,7 @@ public class WorkspaceService implements ContextRefreshed {
     }
 
     private WorkspaceBlockImpl getOrCreateWorkspaceBlock(
-        WorkspaceTabHolder workspaceTabHolder, JSONObject block, String key) {
+            WorkspaceTabHolder workspaceTabHolder, JSONObject block, String key) {
         if (block.has(key) && !block.isNull(key)) {
             workspaceTabHolder.blocks.putIfAbsent(block.getString(key), new WorkspaceBlockImpl(block.getString(key), workspaceTabHolder));
             return workspaceTabHolder.blocks.get(block.getString(key));
@@ -257,14 +260,14 @@ public class WorkspaceService implements ContextRefreshed {
             log.error("Unable to load workspace. Looks like workspace has incorrect value", ex);
         }
         entityContext.event().addEntityUpdateListener(
-            WorkspaceEntity.class, "workspace-change-listener", this::reloadWorkspace);
+                WorkspaceEntity.class, "workspace-change-listener", this::reloadWorkspace);
         entityContext.event().addEntityRemovedListener(WorkspaceEntity.class, "workspace-remove-listener",
-            entity -> tabs.remove(entity.getEntityID()));
+                entity -> tabs.remove(entity.getEntityID()));
 
         // listen for clear workspace
         entityContext.setting().listenValue(WorkspaceClearButtonSetting.class, "wm-clear-workspace",
-            () -> entityContext.findAll(WorkspaceEntity.class)
-                               .forEach(entity -> entityContext.save(entity.setContent(""))));
+                () -> entityContext.findAll(WorkspaceEntity.class)
+                        .forEach(entity -> entityContext.save(entity.setContent(""))));
     }
 
     private void reloadWorkspaces() {
@@ -336,9 +339,9 @@ public class WorkspaceService implements ContextRefreshed {
         private final Map<String, WorkspaceBlockImpl> blocks = new HashMap<>();
 
         public WorkspaceTabHolder(
-            String tabId,
-            EntityContext entityContext,
-            Map<String, Scratch3ExtensionBlocks> scratch3Blocks) {
+                String tabId,
+                EntityContext entityContext,
+                Map<String, Scratch3ExtensionBlocks> scratch3Blocks) {
             this.tabId = tabId;
             this.scratch3Blocks = scratch3Blocks;
             this.entityContext = entityContext;

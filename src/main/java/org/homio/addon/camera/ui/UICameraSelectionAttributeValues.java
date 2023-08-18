@@ -9,9 +9,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UICameraSelectionAttributeValues {
 
-  String value();
+    String value();
 
-  String path() default "";
+    String path() default "";
 
-  String[] prependValues() default {};
+    String[] prependValues() default {};
 }

@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+
 import org.homio.api.AddonEntrypoint;
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
@@ -33,7 +34,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class SettingRepository extends AbstractRepository<SettingEntity>
-    implements ContextRefreshed {
+        implements ContextRefreshed {
 
     private static final Map<String, String> settingToAddonMap = new HashMap<>();
 
@@ -86,7 +87,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             }
             if (entity.isStorable()) {
                 if (entity.getSettingType().equals(UIFieldType.SelectBoxButton.name())
-                    || entity.getSettingType().equals(UIFieldType.SelectBox.name())) {
+                        || entity.getSettingType().equals(UIFieldType.SelectBox.name())) {
                     entity.setAvailableValues(SettingRepository.getOptions((SettingPluginOptions<?>) plugin, entityContext, null));
                 }
             }
@@ -106,7 +107,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
                     entity.setPages(new HashSet<>(Arrays.asList(pages)));
                 }
                 ConsolePlugin.RenderType[] renderTypes =
-                    ((ConsoleSettingPlugin<?>) plugin).renderTypes();
+                        ((ConsoleSettingPlugin<?>) plugin).renderTypes();
                 if (renderTypes != null && renderTypes.length > 0) {
                     entity.setRenderTypes(new HashSet<>(Arrays.asList(renderTypes)));
                 }
@@ -123,7 +124,7 @@ public class SettingRepository extends AbstractRepository<SettingEntity>
             if (name.startsWith(ADDON_PREFIX)) {
                 String pathName = name.substring(0, ADDON_PREFIX.length() + name.substring(ADDON_PREFIX.length()).indexOf('.'));
                 AddonEntrypoint addonEntrypoint = entityContext.getBeansOfType(AddonEntrypoint.class).stream()
-                                                               .filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
+                        .filter(b -> b.getClass().getName().startsWith(pathName)).findAny().orElse(null);
                 if (addonEntrypoint == null) {
                     throw new ServerException("Unable find addon entry-point for setting: " + key);
                 }

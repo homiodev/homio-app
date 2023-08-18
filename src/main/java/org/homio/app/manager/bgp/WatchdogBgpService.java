@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.service.EntityService;
@@ -21,8 +22,8 @@ public class WatchdogBgpService {
 
     public WatchdogBgpService(EntityContextBGPImpl entityContextBGP) {
         entityContextBGP.builder("watchdog")
-                        .intervalWithDelay(Duration.ofMinutes(1))
-                        .execute(this::runWatchDogService);
+                .intervalWithDelay(Duration.ofMinutes(1))
+                .execute(this::runWatchDogService);
     }
 
     public void addWatchDogService(String key, WatchdogService watchdogService) {

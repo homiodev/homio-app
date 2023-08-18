@@ -5,7 +5,7 @@ import org.homio.api.EntityContextWidget.HorizontalAlign;
 import org.homio.api.EntityContextWidget.VerticalAlign;
 
 public interface HasAlignBuilder<T extends org.homio.app.model.entity.widget.attributes.HasAlign, R>
-    extends HasAlign<R> {
+        extends HasAlign<R> {
 
     T getWidget();
 

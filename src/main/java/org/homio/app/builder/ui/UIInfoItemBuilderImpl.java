@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 @Getter
 public class UIInfoItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UIInfoItemBuilder, String>
-    implements UIInfoItemBuilder {
+        implements UIInfoItemBuilder {
 
     private final InfoType infoType;
     private String link;

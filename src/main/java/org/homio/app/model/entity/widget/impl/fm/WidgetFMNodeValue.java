@@ -14,6 +14,7 @@ import co.elastic.thumbnails4j.pdf.PDFThumbnailer;
 import co.elastic.thumbnails4j.pptx.PPTXThumbnailer;
 import co.elastic.thumbnails4j.xls.XLSThumbnailer;
 import co.elastic.thumbnails4j.xlsx.XLSXThumbnailer;
+
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -22,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import javax.imageio.ImageIO;
+
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -42,7 +44,7 @@ public class WidgetFMNodeValue {
     public WidgetFMNodeValue(TreeNode treeNode, int width, int height) {
         this.treeNode = treeNode;
         List<Dimensions> outputDimensions =
-            Collections.singletonList(new Dimensions(width, height));
+                Collections.singletonList(new Dimensions(width, height));
 
         String contentType = treeNode.getAttributes().getContentType();
         if (contentType != null) {
@@ -52,7 +54,7 @@ public class WidgetFMNodeValue {
                 try {
                     try (InputStream stream = treeNode.getInputStream()) {
                         BufferedImage output =
-                            thumbnailer.getThumbnails(stream, outputDimensions).get(0);
+                                thumbnailer.getThumbnails(stream, outputDimensions).get(0);
                         ByteArrayOutputStream os = new ByteArrayOutputStream();
                         OutputStream b64 = new Base64OutputStream(os);
                         ImageIO.write(output, "png", b64);
@@ -66,8 +68,8 @@ public class WidgetFMNodeValue {
                 // String encodedValue = "data:image/jpeg;base64," +
                 // Base64.getEncoder().encodeToString(convertedValue);
             } else if (contentType.startsWith("text/")
-                || contentType.equals("application/javascript")
-                || contentType.equals(APPLICATION_JSON_VALUE)) {
+                    || contentType.equals("application/javascript")
+                    || contentType.equals(APPLICATION_JSON_VALUE)) {
                 if (treeNode.getAttributes().getSize() <= FileUtils.ONE_MB) {
                     try (InputStream stream = treeNode.getInputStream()) {
                         this.content = IOUtils.toString(stream, StandardCharsets.UTF_8);

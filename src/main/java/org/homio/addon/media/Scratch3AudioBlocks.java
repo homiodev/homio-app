@@ -1,6 +1,7 @@
 package org.homio.addon.media;
 
 import com.pivovarit.function.ThrowingFunction;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -8,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -55,28 +57,28 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         // this.audioSourceMenu = menuServer("asMenu", "rest/media/audioSource");
 
         blockCommand(
-            10,
-            "play",
-            "Play file [FILE] to [SINK]|Volume [VOLUME]",
-            this::playFileCommand,
-            block -> {
-                block.addArgument("FILE", this.audioMenu);
-                block.addArgument("SINK", this.sinkMenu);
-                block.addArgument("VOLUME", 100);
-            });
+                10,
+                "play",
+                "Play file [FILE] to [SINK]|Volume [VOLUME]",
+                this::playFileCommand,
+                block -> {
+                    block.addArgument("FILE", this.audioMenu);
+                    block.addArgument("SINK", this.sinkMenu);
+                    block.addArgument("VOLUME", 100);
+                });
 
         blockCommand(
-            12,
-            "play_part",
-            "Play file [FILE] to [SINK]|Volume [VOLUME], From [FROM]sec. Length [LENGTH]sec.",
-            this::playPartFileCommand,
-            block -> {
-                block.addArgument("FILE", this.audioMenu);
-                block.addArgument("SINK", this.sinkMenu);
-                block.addArgument("VOLUME", 100);
-                block.addArgument("FROM", 10);
-                block.addArgument("LENGTH", 10);
-            });
+                12,
+                "play_part",
+                "Play file [FILE] to [SINK]|Volume [VOLUME], From [FROM]sec. Length [LENGTH]sec.",
+                this::playPartFileCommand,
+                block -> {
+                    block.addArgument("FILE", this.audioMenu);
+                    block.addArgument("SINK", this.sinkMenu);
+                    block.addArgument("VOLUME", 100);
+                    block.addArgument("FROM", 10);
+                    block.addArgument("LENGTH", 10);
+                });
 
         /* this.playSourceCommand = blockCommand(15, "play_src",
                  "Play source [SOURCE] to [SINK]|Volume [VOLUME]", this::playSourceCommand);
@@ -85,42 +87,42 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         this.playSourceCommand.addArgument("VOLUME", 100); */
 
         blockCommand(
-            20,
-            "stop",
-            "Stop [SINK]",
-            this::stopCommand,
-            block -> {
-                block.addArgument("SINK", this.sinkMenu);
-            });
+                20,
+                "stop",
+                "Stop [SINK]",
+                this::stopCommand,
+                block -> {
+                    block.addArgument("SINK", this.sinkMenu);
+                });
 
         blockCommand(
-            30,
-            "resume",
-            "Resume [SINK]",
-            this::resumeCommand,
-            block -> {
-                block.addArgument("SINK", this.sinkMenu);
-            });
+                30,
+                "resume",
+                "Resume [SINK]",
+                this::resumeCommand,
+                block -> {
+                    block.addArgument("SINK", this.sinkMenu);
+                });
 
         blockReporter(
-            100,
-            "info",
-            "[FILE] [VALUE]",
-            this::getInfoReporter,
-            block -> {
-                block.addArgument("FILE", this.audioMenu);
-                block.addArgument(VALUE, this.infoMenu);
-            });
+                100,
+                "info",
+                "[FILE] [VALUE]",
+                this::getInfoReporter,
+                block -> {
+                    block.addArgument("FILE", this.audioMenu);
+                    block.addArgument(VALUE, this.infoMenu);
+                });
 
         blockReporter(
-            130,
-            "tts",
-            "text [VALUE] to audio [TTS]",
-            this::getTextToAudioReporter,
-            block -> {
-                block.addArgument(VALUE, "Hello world");
-                block.addArgument("TTS", this.ttsMenu);
-            });
+                130,
+                "tts",
+                "text [VALUE] to audio [TTS]",
+                this::getTextToAudioReporter,
+                block -> {
+                    block.addArgument(VALUE, "Hello world");
+                    block.addArgument("TTS", this.ttsMenu);
+                });
     }
 
     private static float getAudioLength(AudioHeader audioHeader) {
@@ -136,8 +138,8 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
         String text = workspaceBlock.getInputString(VALUE);
         if (!text.isEmpty()) {
             TextToSpeechEntityService ttsService =
-                workspaceBlock.getEntityService(
-                    "TTS", this.ttsMenu, TextToSpeechEntityService.class);
+                    workspaceBlock.getEntityService(
+                            "TTS", this.ttsMenu, TextToSpeechEntityService.class);
             return new RawType(ttsService.synthesizeSpeech(text, true), "audio/mp3");
         }
         return null;
@@ -145,13 +147,13 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
 
     private State getInfoReporter(WorkspaceBlock workspaceBlock) throws Exception {
         return handleFile(
-            workspaceBlock,
-            file -> workspaceBlock.getMenuValue(VALUE, this.infoMenu).handler.apply(file));
+                workspaceBlock,
+                file -> workspaceBlock.getMenuValue(VALUE, this.infoMenu).handler.apply(file));
     }
 
     private <T> T handleFile(
-        WorkspaceBlock workspaceBlock, ThrowingFunction<File, T, Exception> handler)
-        throws Exception {
+            WorkspaceBlock workspaceBlock, ThrowingFunction<File, T, Exception> handler)
+            throws Exception {
         Path path = workspaceBlock.getFile("FILE", this.audioMenu, true);
         return handler.apply(path.toFile());
     }
@@ -173,27 +175,27 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
 
     private void playPartFileCommand(WorkspaceBlock workspaceBlock) throws Exception {
         handleFile(
-            workspaceBlock,
-            (ThrowingFunction<File, Void, Exception>)
-                file -> {
-                    int from = workspaceBlock.getInputIntegerRequired("FROM");
-                    int length = workspaceBlock.getInputIntegerRequired("LENGTH");
+                workspaceBlock,
+                (ThrowingFunction<File, Void, Exception>)
+                        file -> {
+                            int from = workspaceBlock.getInputIntegerRequired("FROM");
+                            int length = workspaceBlock.getInputIntegerRequired("LENGTH");
 
-                    AudioHeader audioHeader = AudioFileIO.read(file).getAudioHeader();
-                    float trackLength = getAudioLength(audioHeader);
-                    long frameCount = getAudioFrames(audioHeader, file);
-                    float framesPerSeconds = frameCount / trackLength;
+                            AudioHeader audioHeader = AudioFileIO.read(file).getAudioHeader();
+                            float trackLength = getAudioLength(audioHeader);
+                            long frameCount = getAudioFrames(audioHeader, file);
+                            float framesPerSeconds = frameCount / trackLength;
 
-                    from *= framesPerSeconds;
-                    int to = (int) (from + length * framesPerSeconds);
+                            from *= framesPerSeconds;
+                            int to = (int) (from + length * framesPerSeconds);
 
-                    playAudio(file, workspaceBlock, Math.abs(from), Math.abs(to));
-                    return null;
-                });
+                            playAudio(file, workspaceBlock, Math.abs(from), Math.abs(to));
+                            return null;
+                        });
     }
 
     private long getAudioFrames(AudioHeader audioHeader, File file)
-        throws IOException, UnsupportedAudioFileException {
+            throws IOException, UnsupportedAudioFileException {
         if (audioHeader instanceof MP3AudioHeader) {
             return ((MP3AudioHeader) audioHeader).getNumberOfFrames();
         } else {
@@ -203,16 +205,16 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
 
     private void playFileCommand(WorkspaceBlock workspaceBlock) throws Exception {
         handleFile(
-            workspaceBlock,
-            (ThrowingFunction<File, Void, Exception>)
-                file -> {
-                    playAudio(file, workspaceBlock, null, null);
-                    return null;
-                });
+                workspaceBlock,
+                (ThrowingFunction<File, Void, Exception>)
+                        file -> {
+                            playAudio(file, workspaceBlock, null, null);
+                            return null;
+                        });
     }
 
     private void playAudio(File file, WorkspaceBlock workspaceBlock, Integer from, Integer to)
-        throws Exception {
+            throws Exception {
         FileAudioStream audioStream = new FileAudioStream(file);
         Integer volume = workspaceBlock.getInputInteger("VOLUME", null);
         AudioSinkSource audioSinkSource = getSink(workspaceBlock);
@@ -252,10 +254,10 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
             return sink.getVolume();
         } catch (IOException e) {
             log.debug(
-                "An exception occurred while getting the volume of sink '{}' : {}",
-                sink.getId(),
-                e.getMessage(),
-                e);
+                    "An exception occurred while getting the volume of sink '{}' : {}",
+                    sink.getId(),
+                    e.getMessage(),
+                    e);
         }
         return null;
     }
@@ -267,10 +269,10 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
                 sink.setVolume(value);
             } catch (IOException e) {
                 log.debug(
-                    "An exception occurred while setting the volume of sink '{}' : {}",
-                    sink.getId(),
-                    e.getMessage(),
-                    e);
+                        "An exception occurred while setting the volume of sink '{}' : {}",
+                        sink.getId(),
+                        e.getMessage(),
+                        e);
             }
         }
     }
@@ -279,13 +281,13 @@ public class Scratch3AudioBlocks extends Scratch3ExtensionBlocks {
     private enum AudioInfo {
         Length(file -> new DecimalType(getAudioLength(AudioFileIO.read(file).getAudioHeader()))),
         BitRate(
-            file ->
-                new DecimalType(
-                    AudioFileIO.read(file).getAudioHeader().getBitRateAsNumber())),
+                file ->
+                        new DecimalType(
+                                AudioFileIO.read(file).getAudioHeader().getBitRateAsNumber())),
         SampleRate(
-            file ->
-                new DecimalType(
-                    AudioFileIO.read(file).getAudioHeader().getSampleRateAsNumber())),
+                file ->
+                        new DecimalType(
+                                AudioFileIO.read(file).getAudioHeader().getSampleRateAsNumber())),
         Format(file -> new DecimalType(AudioFileIO.read(file).getAudioHeader().getFormat())),
         Channels(file -> new DecimalType(AudioFileIO.read(file).getAudioHeader().getChannels()));
 

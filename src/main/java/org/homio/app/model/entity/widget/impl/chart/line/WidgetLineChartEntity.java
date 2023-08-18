@@ -15,8 +15,8 @@ import org.jetbrains.annotations.NotNull;
 @Setter
 @Entity
 public class WidgetLineChartEntity
-    extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
-    implements HasLineChartBehaviour, HasHorizontalLine, HasAxis {
+        extends ChartBaseEntity<WidgetLineChartEntity, WidgetLineChartSeriesEntity>
+        implements HasLineChartBehaviour, HasHorizontalLine, HasAxis {
 
     @Override
     public @NotNull String getImage() {

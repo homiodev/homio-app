@@ -51,7 +51,7 @@ public class AuthController {
 
         addUserNotificationBlock(userEntityID, email, false);
         String version = format("%s-%s-%s", entityContext.setting().getApplicationVersion(),
-            EntityContextAddonImpl.ADDON_UPDATE_COUNT, JwtTokenProvider.RUN_COUNT);
+                EntityContextAddonImpl.ADDON_UPDATE_COUNT, JwtTokenProvider.RUN_COUNT);
         return new StatusResponse(200, version);
     }
 
@@ -102,14 +102,14 @@ public class AuthController {
         String key = "user-" + entityID;
         if (replace || !entityContext.ui().isHasNotificationBlock(key)) {
             entityContext.ui().addNotificationBlock(key, email, new Icon("fas fa-user", "#AAAC2C"), builder ->
-                builder.visibleForUser(email)
-                       .linkToEntity(entityContext.getEntityRequire(entityID))
-                       .setBorderColor("#AAAC2C")
-                       .addInfo(key, null, "")
-                       .setRightButton(new Icon("fas fa-right-from-bracket"), "W.INFO.LOGOUT", "W.CONFIRM.LOGOUT", (ignore, params) -> {
-                           entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
-                           return null;
-                       }));
+                    builder.visibleForUser(email)
+                            .linkToEntity(entityContext.getEntityRequire(entityID))
+                            .setBorderColor("#AAAC2C")
+                            .addInfo(key, null, "")
+                            .setRightButton(new Icon("fas fa-right-from-bracket"), "W.INFO.LOGOUT", "W.CONFIRM.LOGOUT", (ignore, params) -> {
+                                entityContext.setting().setValue(SystemLogoutButtonSetting.class, new JSONObject());
+                                return null;
+                            }));
         }
     }
 

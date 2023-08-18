@@ -7,7 +7,7 @@ import org.homio.api.EntityContextWidget.Stepped;
 import org.jetbrains.annotations.Nullable;
 
 public interface HasLineChartBehaviourBuilder<T extends org.homio.app.model.entity.widget.impl.chart.HasLineChartBehaviour, R>
-    extends HasLineChartBehaviour<R> {
+        extends HasLineChartBehaviour<R> {
 
     T getWidget();
 

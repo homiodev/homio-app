@@ -19,8 +19,8 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetDoughnutChartEntity
-    extends ChartBaseEntity<WidgetDoughnutChartEntity, WidgetDoughnutChartSeriesEntity>
-    implements HasSingleValueDataSource, HasChartTimePeriod, HasValueConverter, HasValueTemplate {
+        extends ChartBaseEntity<WidgetDoughnutChartEntity, WidgetDoughnutChartSeriesEntity>
+        implements HasSingleValueDataSource, HasChartTimePeriod, HasValueConverter, HasValueTemplate {
 
     //   @UIField(order = 3)
 

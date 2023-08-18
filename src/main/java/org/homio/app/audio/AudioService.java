@@ -1,6 +1,7 @@
 package org.homio.app.audio;
 
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -87,7 +89,7 @@ public class AudioService implements ContextRefreshed {
     }
 
     private InputStream prepareInputStream(final String streamId, final HttpServletResponse resp)
-        throws Exception {
+            throws Exception {
         final AudioStream stream;
         final boolean multiAccess;
         if (oneTimeStreams.containsKey(streamId)) {

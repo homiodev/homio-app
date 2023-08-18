@@ -9,7 +9,7 @@ import org.homio.app.model.entity.widget.attributes.HasSingleValueDataSource;
 
 @Entity
 public class WidgetToggleSeriesEntity extends WidgetSeriesEntity<WidgetToggleEntity>
-    implements HasSingleValueDataSource, HasIcon, HasName, HasToggle {
+        implements HasSingleValueDataSource, HasIcon, HasName, HasToggle {
 
     @Override
     protected String getSeriesPrefix() {

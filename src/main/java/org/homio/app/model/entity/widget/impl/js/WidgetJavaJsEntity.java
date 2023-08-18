@@ -19,9 +19,11 @@ public class WidgetJavaJsEntity /*TODO: fix:   extends WidgetBaseEntity<WidgetJs
 
     public static final String PREFIX = "widget_js_";
 
-    @Transient private String javaScriptResponse;
+    @Transient
+    private String javaScriptResponse;
 
-    @Transient private String javaScriptErrorResponse;
+    @Transient
+    private String javaScriptErrorResponse;
 
     @UIField(order = 13)
     @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript)

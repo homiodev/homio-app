@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.tuple.Pair;
@@ -61,18 +62,18 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
         if (workspaceWarehouse.threadContext == null) {
             workspaceBlock
-                .getEntityContext()
-                .bgp()
-                .builder("BroadcastListenEvent-" + workspaceTabId)
-                .interval(Duration.ofMillis(1000))
-                .tap(context -> workspaceWarehouse.threadContext = context)
-                .execute(() -> {
-                    for (Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item : workspaceWarehouse.broadcastListenersMap.entrySet()) {
-                        if (item.getValue().getValue().get()) {
-                            item.getValue().getKey().signalAll();
+                    .getEntityContext()
+                    .bgp()
+                    .builder("BroadcastListenEvent-" + workspaceTabId)
+                    .interval(Duration.ofMillis(1000))
+                    .tap(context -> workspaceWarehouse.threadContext = context)
+                    .execute(() -> {
+                        for (Entry<String, Pair<BroadcastLockImpl, Supplier<Boolean>>> item : workspaceWarehouse.broadcastListenersMap.entrySet()) {
+                            if (item.getValue().getValue().get()) {
+                                item.getValue().getKey().signalAll();
+                            }
                         }
-                    }
-                });
+                    });
         }
 
         return lock;
@@ -80,7 +81,7 @@ public class BroadcastLockManagerImpl implements BroadcastLockManager {
 
     public void release() {
         for (Pair<BroadcastLockImpl, Supplier<Boolean>> pair :
-            workspaceWarehouse.broadcastListenersMap.values()) {
+                workspaceWarehouse.broadcastListenersMap.values()) {
             pair.getKey().release();
         }
         workspaceWarehouse.broadcastListenersMap.clear();

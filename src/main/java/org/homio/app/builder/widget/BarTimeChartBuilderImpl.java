@@ -3,6 +3,7 @@ package org.homio.app.builder.widget;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContextWidget.BarChartType;
@@ -21,12 +22,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartBuilder, WidgetBarTimeChartEntity>
-    implements BarTimeChartBuilder,
-    HasLegendBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
-    HasChartTimePeriodBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
-    HasHorizontalLineBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
-    HasMinMaxChartValueBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
-    HasAxisBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder> {
+        implements BarTimeChartBuilder,
+        HasLegendBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
+        HasChartTimePeriodBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
+        HasHorizontalLineBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
+        HasMinMaxChartValueBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder>,
+        HasAxisBuilder<WidgetBarTimeChartEntity, BarTimeChartBuilder> {
 
     @Getter
     private final List<WidgetBarTimeChartSeriesEntity> series = new ArrayList<>();
@@ -78,7 +79,7 @@ public class BarTimeChartBuilderImpl extends WidgetBaseBuilderImpl<BarTimeChartB
 
 @RequiredArgsConstructor
 class BarTimeSeriesBuilderImpl implements BarTimeChartSeriesBuilder,
-    HasChartDataSourceBuilder<WidgetBarTimeChartSeriesEntity, BarTimeChartSeriesBuilder> {
+        HasChartDataSourceBuilder<WidgetBarTimeChartSeriesEntity, BarTimeChartSeriesBuilder> {
 
     private final WidgetBarTimeChartSeriesEntity series;
 

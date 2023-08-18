@@ -6,9 +6,11 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
+
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
@@ -142,16 +144,16 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
             this.audioThreshold = audioThreshold;
             if (audioThreshold == 0) {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=0&usr="
-                    + username + "&pwd=" + password);
+                        + username + "&pwd=" + password);
             } else if (audioThreshold <= 33) {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=1&sensitivity=0&usr="
-                    + username + "&pwd=" + password);
+                        + username + "&pwd=" + password);
             } else if (audioThreshold <= 66) {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=1&sensitivity=1&usr="
-                    + username + "&pwd=" + password);
+                        + username + "&pwd=" + password);
             } else {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=1&sensitivity=2&usr="
-                    + username + "&pwd=" + password);
+                        + username + "&pwd=" + password);
             }
         }
     }
@@ -161,13 +163,13 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
         if (threshold > 0) {
             if (getEntity().getCustomAudioAlarmUrl().isEmpty()) {
                 service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=1&usr="
-                    + username + "&pwd=" + password);
+                        + username + "&pwd=" + password);
             } else {
                 service.sendHttpGET(getEntity().getCustomAudioAlarmUrl());
             }
         } else {
             service.sendHttpGET(CG + "setAudioAlarmConfig&isEnable=0&usr="
-                + username + "&pwd=" + password);
+                    + username + "&pwd=" + password);
         }
     }
 
@@ -181,17 +183,17 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
         if (on) {
             if (getEntity().getCustomMotionAlarmUrl().isEmpty()) {
                 service.sendHttpGET(CG + "setMotionDetectConfig&isEnable=1&usr="
-                    + username + "&pwd=" + password);
+                        + username + "&pwd=" + password);
                 service.sendHttpGET(CG + "setMotionDetectConfig1&isEnable=1&usr="
-                    + username + "&pwd=" + password);
+                        + username + "&pwd=" + password);
             } else {
                 service.sendHttpGET(getEntity().getCustomMotionAlarmUrl());
             }
         } else {
             service.sendHttpGET(CG + "setMotionDetectConfig&isEnable=0&usr="
-                + username + "&pwd=" + password);
+                    + username + "&pwd=" + password);
             service.sendHttpGET(CG + "setMotionDetectConfig1&isEnable=0&usr="
-                + username + "&pwd=" + password);
+                    + username + "&pwd=" + password);
         }
     }
 
@@ -206,7 +208,7 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     @Override
     public @Nullable String getMjpegUri() {
         return "/cgi-bin/CGIStream.cgi?cmd=GetMJStream&usr=" + getEntity().getUser() + "&pwd="
-            + getEntity().getPassword().asString();
+                + getEntity().getPassword().asString();
     }
 
     @Override
@@ -218,6 +220,6 @@ public class FoscamBrandHandler extends BaseOnvifCameraBrandHandler implements B
     @Override
     public @Nullable String getSnapshotUri() {
         return "/cgi-bin/CGIProxy.fcgi?usr=" + getEntity().getUser() + "&pwd="
-            + getEntity().getPassword().asString() + "&cmd=snapPicture2";
+                + getEntity().getPassword().asString() + "&cmd=snapPicture2";
     }
 }

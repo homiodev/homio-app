@@ -13,7 +13,7 @@ import org.homio.app.model.entity.widget.attributes.HasSourceServerUpdates;
 
 @Entity
 public abstract class ChartBaseEntity<T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
-    extends WidgetBaseEntityAndSeries<T, S> implements HasLegend, HasSourceServerUpdates {
+        extends WidgetBaseEntityAndSeries<T, S> implements HasLegend, HasSourceServerUpdates {
 
     @Override
     public WidgetGroup getGroup() {

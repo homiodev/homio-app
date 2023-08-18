@@ -15,7 +15,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 @Log4j2
 public class SystemSoftRestartButtonSetting
-    implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
+        implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 
     @Override
     public @NotNull GroupKey getGroupKey() {

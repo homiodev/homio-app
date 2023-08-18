@@ -1,8 +1,10 @@
 package org.homio.app.model.entity.widget.impl.video;
 
 import jakarta.persistence.Entity;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.entity.VideoPlaybackStorage;
 import org.homio.api.model.OptionModel;

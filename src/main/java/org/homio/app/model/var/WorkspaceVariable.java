@@ -13,12 +13,14 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ManyToOne;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -63,18 +65,18 @@ import org.json.JSONObject;
 @Getter
 @Accessors(chain = true)
 @UIFieldSelectionParent(
-    value = "OVERRIDES_BY_INTERFACE",
-    icon = "fas fa-layer-group",
-    iconColor = "#28A60C",
-    description = "Group variables")
+        value = "OVERRIDES_BY_INTERFACE",
+        icon = "fas fa-layer-group",
+        iconColor = "#28A60C",
+        description = "Group variables")
 @NoArgsConstructor
 public class WorkspaceVariable extends BaseEntity
-    implements HasJsonData,
-    HasAggregateValueFromSeries,
-    UIFieldSelectionParent.SelectionParent,
-    HasTimeValueSeries,
-    HasGetStatusValue,
-    HasSetStatusValue {
+        implements HasJsonData,
+        HasAggregateValueFromSeries,
+        UIFieldSelectionParent.SelectionParent,
+        HasTimeValueSeries,
+        HasGetStatusValue,
+        HasSetStatusValue {
 
     public static final String PREFIX = "var_";
 
@@ -191,7 +193,7 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public @Nullable Object getAggregateValueFromSeries(@NotNull PeriodRequest request, @NotNull AggregationType aggregationType, boolean exactNumber) {
         return ((EntityContextVarImpl) request.getEntityContext().var())
-            .aggregate(variableId, request.getFromTime(), request.getToTime(), aggregationType, exactNumber);
+                .aggregate(variableId, request.getFromTime(), request.getToTime(), aggregationType, exactNumber);
     }
 
     @Override
@@ -264,16 +266,16 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public SourceHistory getSourceHistory(GetStatusValueRequest request) {
         SourceHistory sourceHistory = ((EntityContextVarImpl) request.getEntityContext().var())
-            .getSourceHistory(variableId)
-            .setIcon(new Icon(icon, iconColor))
-            .setName(getName())
-            .setDescription(getDescription());
+                .getSourceHistory(variableId)
+                .setIcon(new Icon(icon, iconColor))
+                .setName(getName())
+                .setDescription(getDescription());
         sourceHistory.setAttributes(new ArrayList<>(Arrays.asList(
-            "Owner:" + workspaceGroup.getName(),
-            "Backup:" + backup,
-            "Quota:" + quota,
-            "Type:" + restriction.name().toLowerCase(),
-            "Writable:" + !readOnly)));
+                "Owner:" + workspaceGroup.getName(),
+                "Backup:" + backup,
+                "Quota:" + quota,
+                "Type:" + restriction.name().toLowerCase(),
+                "Writable:" + !readOnly)));
         if (unit != null) {
             sourceHistory.getAttributes().add("Unit: " + unit);
         }
@@ -290,16 +292,17 @@ public class WorkspaceVariable extends BaseEntity
     @Override
     public void setStatusValue(SetStatusValueRequest request) {
         ((EntityContextVarImpl) request.getEntityContext().var())
-            .set(variableId, request.getValue(), ignore -> {}, true);
+                .set(variableId, request.getValue(), ignore -> {
+                }, true);
     }
 
     @Override
     public String getStatusValueRepresentation(EntityContext entityContext) {
         Object value = entityContext.var().get(variableId);
         String str =
-            value == null ? null :
-                value instanceof Double ? format("%.2f", (Double) value) :
-                    value instanceof Float ? format("%.2f", (Float) value) : value.toString();
+                value == null ? null :
+                        value instanceof Double ? format("%.2f", (Double) value) :
+                                value instanceof Float ? format("%.2f", (Float) value) : value.toString();
         if (isEmpty(unit)) {
             return str;
         }
@@ -328,10 +331,10 @@ public class WorkspaceVariable extends BaseEntity
     }
 
     public boolean tryUpdateVariable(
-        String variableId,
-        String variableName,
-        Consumer<VariableMetaBuilder> builder,
-        VariableType variableType) {
+            String variableId,
+            String variableName,
+            Consumer<VariableMetaBuilder> builder,
+            VariableType variableType) {
         int entityHashCode = getEntityHashCode();
         String varId = Objects.toString(variableId, String.valueOf(System.currentTimeMillis()));
         this.setName(variableName);

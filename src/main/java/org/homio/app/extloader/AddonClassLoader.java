@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.jar.JarFile;
+
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -80,7 +81,7 @@ public class AddonClassLoader extends JarClassLoader {
                     protected URLConnection openConnection(URL u) throws IOException {
                         try {
                             URLConnection urlConnection = (URLConnection) MethodUtils
-                                .invokeMethod(urlHandler, true, "openConnection", u);
+                                    .invokeMethod(urlHandler, true, "openConnection", u);
                             resourceConnections.putIfAbsent(u, new ArrayList<>());
                             resourceConnections.get(u).add(urlConnection);
                             return urlConnection;
@@ -138,8 +139,8 @@ public class AddonClassLoader extends JarClassLoader {
             } else {
                 if (c <= 0x007F) {
                     if (c >= 'a' && c <= 'z' ||
-                        c >= 'A' && c <= 'Z' ||
-                        c >= '0' && c <= '9') {
+                            c >= 'A' && c <= 'Z' ||
+                            c >= '0' && c <= '9') {
                         retCC[retLen++] = c;
                     } else if (match(c, L_ENCODED, H_ENCODED)) {
                         retLen = escape(retCC, c, retLen);
@@ -186,8 +187,8 @@ public class AddonClassLoader extends JarClassLoader {
             // in the symbol range '&'-':' (includes '.', '/' and '0'-'9')
             // and more rarely in the A-Z range.
             if (c >= 'a' && c <= 'z' ||
-                c >= '&' && c <= ':' ||
-                c >= 'A' && c <= 'Z') {
+                    c >= '&' && c <= ':' ||
+                    c >= 'A' && c <= 'Z') {
                 continue;
             } else if (c > 0x007F || match(c, L_ENCODED, H_ENCODED)) {
                 return i;

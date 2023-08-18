@@ -7,6 +7,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -35,8 +36,8 @@ public class ImageService {
         }
         if (Files.exists(filePath)) {
             return new ImageResponse(
-                Files.newInputStream(filePath),
-                MediaType.parseMediaType(Files.probeContentType(filePath)));
+                    Files.newInputStream(filePath),
+                    MediaType.parseMediaType(Files.probeContentType(filePath)));
         }
         InputStream stream = addonService.getImageStream(entityID);
         if (stream != null) {
@@ -60,5 +61,6 @@ public class ImageService {
 
     }
 
-    public record ImageResponse(InputStream stream, MediaType mediaType) {}
+    public record ImageResponse(InputStream stream, MediaType mediaType) {
+    }
 }

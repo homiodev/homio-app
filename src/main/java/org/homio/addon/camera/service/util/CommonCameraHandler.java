@@ -12,7 +12,9 @@ import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+
 import java.util.Objects;
+
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -48,7 +50,8 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
                             // Some cameras use first letter uppercase and others don't.
                             switch (name.toLowerCase()) { // Possible localization issues doing this
                                 case "content-type" -> contentType = response.headers().getAsString(name);
-                                case "content-length" -> bytesToReceive = Integer.parseInt(response.headers().getAsString(name));
+                                case "content-length" ->
+                                        bytesToReceive = Integer.parseInt(response.headers().getAsString(name));
                             }
                         }
                         if (contentType.contains("multipart")) {
@@ -112,7 +115,7 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
                                     endIndex = incomingMessage.indexOf("\r\n", beginIndex);
                                     if (endIndex != -1) {
                                         bytesToReceive = Integer.parseInt(
-                                            incomingMessage.substring(beginIndex + 15, endIndex).strip());
+                                                incomingMessage.substring(beginIndex + 15, endIndex).strip());
                                     }
                                 }
                             }
@@ -168,10 +171,10 @@ public class CommonCameraHandler extends ChannelDuplexHandler {
         }
         if (cause instanceof ArrayIndexOutOfBoundsException) {
             log.debug("[{}]: Camera sent {} bytes when the content-length header was {}.", service.getEntityID(),
-                bytesAlreadyReceived, bytesToReceive);
+                    bytesAlreadyReceived, bytesToReceive);
         } else {
             log.warn("[{}]: !!!! Camera possibly closed the channel on the binding, cause reported is: {}",
-                service.getEntityID(), cause.getMessage());
+                    service.getEntityID(), cause.getMessage());
         }
         ctx.close();
     }

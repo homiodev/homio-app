@@ -1,6 +1,7 @@
 package org.homio.app.rest.widget;
 
 import java.util.List;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

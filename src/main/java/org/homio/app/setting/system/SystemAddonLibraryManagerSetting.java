@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
@@ -34,11 +35,11 @@ import org.json.JSONObject;
 
 @Log4j2
 public class SystemAddonLibraryManagerSetting
-    implements SettingPluginPackageInstall, CoreSettingPlugin<JSONObject> {
+        implements SettingPluginPackageInstall, CoreSettingPlugin<JSONObject> {
 
     private static final CachedValue<Collection<PackageModel>, EntityContext> addons =
-        new CachedValue<>(Duration.ofHours(24),
-            SystemAddonLibraryManagerSetting::readAddons);
+            new CachedValue<>(Duration.ofHours(24),
+                    SystemAddonLibraryManagerSetting::readAddons);
 
     @Override
     public int order() {
@@ -89,22 +90,22 @@ public class SystemAddonLibraryManagerSetting
     @Override
     public PackageContext installedPackages(EntityContext entityContext) {
         return new PackageContext(
-            null,
-            ((EntityContextImpl) entityContext).getAddon().getInstalledAddons()
-                                               .stream()
-                                               .map(this::build)
-                                               .collect(Collectors.toSet()));
+                null,
+                ((EntityContextImpl) entityContext).getAddon().getInstalledAddons()
+                        .stream()
+                        .map(this::build)
+                        .collect(Collectors.toSet()));
     }
 
     @Override
     public void installPackage(EntityContext entityContext, PackageRequest request, ProgressBar progressBar) {
         ((EntityContextImpl) entityContext).getAddon().installAddon(request.getName(), request.getUrl(),
-            request.getVersion(), progressBar);
+                request.getVersion(), progressBar);
     }
 
     @Override
     public void unInstallPackage(
-        EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
+            EntityContext entityContext, PackageRequest packageRequest, ProgressBar progressBar) {
         ((EntityContextImpl) entityContext).getAddon().uninstallAddon(packageRequest.getName(), true);
     }
 
@@ -115,11 +116,11 @@ public class SystemAddonLibraryManagerSetting
 
     private PackageModel build(AddonContext addonContext) {
         return new PackageModel(
-            addonContext.getAddonID(),
-            addonContext.getPomFile().getName(),
-            addonContext.getPomFile().getDescription())
-            .setVersion(addonContext.getVersion())
-            .setReadme(addonContext.getPomFile().getDescription());
+                addonContext.getAddonID(),
+                addonContext.getPomFile().getName(),
+                addonContext.getPomFile().getDescription())
+                .setVersion(addonContext.getVersion())
+                .setReadme(addonContext.getPomFile().getDescription());
     }
 
     private static Collection<PackageModel> readAddons(EntityContext entityContext) {
@@ -147,9 +148,9 @@ public class SystemAddonLibraryManagerSetting
 
             Map<String, Map<String, Object>> addons = Objects.requireNonNull(addonsRepo.getFile("addons.yml", Map.class));
             return addons.entrySet().stream()
-                         .map(entry -> readAddon(entry.getKey(), entry.getValue(), iconsPath))
-                         .filter(Objects::nonNull)
-                         .collect(Collectors.toList());
+                    .map(entry -> readAddon(entry.getKey(), entry.getValue(), iconsPath))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
         } catch (Exception ex) {
             log.error("Unable to fetch addons for repo: {}", repoURL, ex);
             throw ex;
@@ -157,10 +158,15 @@ public class SystemAddonLibraryManagerSetting
     }
 
     private static boolean isRequireDownloadIcons(Path iconsArchivePath, Path iconsPath, String iconsURL) {
-        if (!Files.exists(iconsPath) || !Files.exists(iconsArchivePath)) {return true;}
+        if (!Files.exists(iconsPath) || !Files.exists(iconsArchivePath)) {
+            return true;
+        }
         try {
-            if (Files.size(iconsArchivePath) != Curl.getFileSize(iconsURL)) {return true;}
-        } catch (Exception ignore) {} // ssl handshake error
+            if (Files.size(iconsArchivePath) != Curl.getFileSize(iconsURL)) {
+                return true;
+            }
+        } catch (Exception ignore) {
+        } // ssl handshake error
         return false;
     }
 

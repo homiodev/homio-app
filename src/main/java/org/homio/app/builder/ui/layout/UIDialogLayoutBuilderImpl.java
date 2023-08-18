@@ -3,6 +3,7 @@ package org.homio.app.builder.ui.layout;
 import static org.homio.api.ui.field.action.ActionInputParameter.NAME_PATTERN;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -36,7 +38,8 @@ import org.jetbrains.annotations.NotNull;
 @Accessors(chain = true)
 public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
 
-    @Getter private final String entityID;
+    @Getter
+    private final String entityID;
 
     private final Integer width;
     private final Map<String, UIEntityBuilder> inputBuilders = new LinkedHashMap<>();
@@ -46,9 +49,11 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
     private String iconColor;
 
     // this order only for flex
-    @Setter private int order;
+    @Setter
+    private int order;
 
-    @JsonIgnore private Map<String, String> styleMap;
+    @JsonIgnore
+    private Map<String, String> styleMap;
 
     public UIDialogLayoutBuilderImpl(String entityID, Integer width) {
         this.entityID = entityID + "_dialog";
@@ -77,9 +82,9 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
     @Override
     public String getStyle() {
         return styleMap == null ? null :
-            styleMap.entrySet().stream()
-                    .map(e -> e.getKey() + ":" + e.getValue() + ";")
-                    .collect(Collectors.joining());
+                styleMap.entrySet().stream()
+                        .map(e -> e.getKey() + ":" + e.getValue() + ";")
+                        .collect(Collectors.joining());
     }
 
     @Override
@@ -93,7 +98,7 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
     }
 
     public DialogEntity<UITextInputItemBuilder> addInput(@NotNull String name, String defaultValue, UITextInputItemBuilder.InputType inputType,
-        boolean required) {
+                                                         boolean required) {
         return addEntity(name, new UITextInputItemBuilderImpl(name, nextOrder(), defaultValue, inputType).setRequired(required));
     }
 
@@ -124,29 +129,33 @@ public class UIDialogLayoutBuilderImpl implements UIDialogLayoutBuilder {
         switch (input.type()) {
             case select -> {
                 UISelectBoxItemBuilderImpl selectBox = new UISelectBoxItemBuilderImpl(input.name(), nextOrder(), null)
-                    .setOptions(OptionModel.list(input.values()));
+                        .setOptions(OptionModel.list(input.values()));
                 addEntity(input.name(), selectBox.setValue(input.value()));
             }
             case text -> addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.Text, input.required());
             case json -> addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.JSON, input.required());
-            case textarea -> addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.TextArea, input.required());
-            case password -> addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.Password, input.required());
+            case textarea ->
+                    addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.TextArea, input.required());
+            case password ->
+                    addInput(input.name(), input.value(), UITextInputItemBuilder.InputType.Password, input.required());
             case number -> addEntity(input.name(),
-                new UISliderItemBuilderImpl(input.name(), nextOrder(), null, Float.parseFloat(input.value()), (float) input.min(), (float) input.max()))
-                .edit(sliderBuilder -> sliderBuilder
-                    .setSliderType(UISliderItemBuilder.SliderType.Input)
-                    .setRequired(input.required()));
-            case info -> addEntity(input.value(), new UIInfoItemBuilderImpl("txt_" + input.value().hashCode(), nextOrder(), input.value(), InfoType.Text));
-            case bool -> addEntity(input.name(), new UICheckboxItemBuilderImpl(input.name(), nextOrder(), null, Boolean.parseBoolean(input.value())));
+                    new UISliderItemBuilderImpl(input.name(), nextOrder(), null, Float.parseFloat(input.value()), (float) input.min(), (float) input.max()))
+                    .edit(sliderBuilder -> sliderBuilder
+                            .setSliderType(UISliderItemBuilder.SliderType.Input)
+                            .setRequired(input.required()));
+            case info ->
+                    addEntity(input.value(), new UIInfoItemBuilderImpl("txt_" + input.value().hashCode(), nextOrder(), input.value(), InfoType.Text));
+            case bool ->
+                    addEntity(input.name(), new UICheckboxItemBuilderImpl(input.name(), nextOrder(), null, Boolean.parseBoolean(input.value())));
         }
     }
 
     public UIInputEntity buildEntity() {
         List<UIInputEntity> entities =
-            getInputBuilders().values().stream()
-                              .map(UIEntityBuilder::buildEntity)
-                              .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
-                              .collect(Collectors.toList());
+                getInputBuilders().values().stream()
+                        .map(UIEntityBuilder::buildEntity)
+                        .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
+                        .collect(Collectors.toList());
         return new UIDialogInputEntity(entityID, this.order, UIItemType.Dialog.name(), title, icon, iconColor, getStyle(), width, entities);
     }
 }

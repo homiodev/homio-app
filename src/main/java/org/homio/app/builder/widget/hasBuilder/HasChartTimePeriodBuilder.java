@@ -3,7 +3,7 @@ package org.homio.app.builder.widget.hasBuilder;
 import org.homio.api.EntityContextWidget.HasChartTimePeriod;
 
 public interface HasChartTimePeriodBuilder<T extends org.homio.app.model.entity.widget.attributes.HasChartTimePeriod, R>
-    extends HasChartTimePeriod<R> {
+        extends HasChartTimePeriod<R> {
 
     T getWidget();
 

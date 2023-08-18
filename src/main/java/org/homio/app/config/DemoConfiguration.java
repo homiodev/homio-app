@@ -3,6 +3,7 @@ package org.homio.app.config;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.util.Iterator;
+
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.BaseEntity;
@@ -80,7 +81,7 @@ public class DemoConfiguration {
                 String id = iterator.next();
                 BaseEntity entity = entityContext.getEntity(repositoryPrefix + id);
                 if (entity != null &&
-                    MILLISECONDS.toMinutes(System.currentTimeMillis() - entity.getEntityUpdated().getTime()) > 10) {
+                        MILLISECONDS.toMinutes(System.currentTimeMillis() - entity.getEntityUpdated().getTime()) > 10) {
                     entityContext.delete(entity);
                     iterator.remove();
                 }

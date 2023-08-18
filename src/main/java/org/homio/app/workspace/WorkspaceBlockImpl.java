@@ -3,6 +3,7 @@ package org.homio.app.workspace;
 import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
 
 import com.pivovarit.function.ThrowingRunnable;
+
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,6 +21,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -48,25 +50,35 @@ import org.json.JSONObject;
 @Log4j2
 public class WorkspaceBlockImpl implements WorkspaceBlock {
 
-    @Getter private final String id;
+    @Getter
+    private final String id;
 
-    @Getter private final WorkspaceTabHolder workspaceTabHolder;
+    @Getter
+    private final WorkspaceTabHolder workspaceTabHolder;
 
-    @Getter private String extensionId;
+    @Getter
+    private String extensionId;
 
-    @Getter private String opcode;
+    @Getter
+    private String opcode;
 
-    @Getter private WorkspaceBlock next;
+    @Getter
+    private WorkspaceBlock next;
 
-    @Getter private WorkspaceBlockImpl parent;
+    @Getter
+    private WorkspaceBlockImpl parent;
 
-    @Getter private Map<String, JSONArray> inputs = new HashMap<>();
+    @Getter
+    private Map<String, JSONArray> inputs = new HashMap<>();
 
-    @Getter private Map<String, JSONArray> fields = new HashMap<>();
+    @Getter
+    private Map<String, JSONArray> fields = new HashMap<>();
 
-    @Getter private boolean shadow;
+    @Getter
+    private boolean shadow;
 
-    @Getter private boolean topLevel;
+    @Getter
+    private boolean topLevel;
 
     private Map<String, State> values = new HashMap<>();
 
@@ -126,7 +138,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     @Override
     public <P> List<P> getMenuValues(
-        String key, MenuBlock menuBlock, Class<P> type, String delimiter) {
+            String key, MenuBlock menuBlock, Class<P> type, String delimiter) {
         String menuId = this.inputs.get(key).getString(1);
         WorkspaceBlock refWorkspaceBlock = workspaceTabHolder.getBlocks().get(menuId);
         String value = refWorkspaceBlock.getField(menuBlock.getName());
@@ -145,8 +157,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             return items.stream().map(item -> (P) Long.valueOf(item)).collect(Collectors.toList());
         } else if (BaseEntity.class.isAssignableFrom(type)) {
             return items.stream()
-                        .map(item -> (P) getEntityContext().getEntity(item))
-                        .collect(Collectors.toList());
+                    .map(item -> (P) getEntityContext().getEntity(item))
+                    .collect(Collectors.toList());
         }
         logErrorAndThrow("Unable to handle menu value with type: " + type.getSimpleName());
         return null; // unreachable block
@@ -158,9 +170,9 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         if (menuBlock instanceof MenuBlock.ServerMenuBlock) {
             MenuBlock.ServerMenuBlock smb = (MenuBlock.ServerMenuBlock) menuBlock;
             if (smb.isRequire()
-                && (value == null
-                || value.toString().isEmpty()
-                || value.toString().equals("-"))) {
+                    && (value == null
+                    || value.toString().isEmpty()
+                    || value.toString().equals("-"))) {
                 logErrorAndThrow(smb.getFirstKey() + " menu value not found");
             }
         }
@@ -231,20 +243,20 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public void handle() {
         this.handleInternal(
-            scratch3Block -> {
-                try {
-                    scratch3Block.getHandler().handle(this);
-                } catch (Exception ex) {
-                    String err = "Workspace " + scratch3Block.getOpcode() + " scratch error\n" + CommonUtils.getErrorMessage(ex);
-                    getEntityContext().ui().sendErrorMessage(err, ex);
-                    log.error(err);
+                scratch3Block -> {
+                    try {
+                        scratch3Block.getHandler().handle(this);
+                    } catch (Exception ex) {
+                        String err = "Workspace " + scratch3Block.getOpcode() + " scratch error\n" + CommonUtils.getErrorMessage(ex);
+                        getEntityContext().ui().sendErrorMessage(err, ex);
+                        log.error(err);
+                        return null;
+                    }
+                    if (this.next != null && scratch3Block.getBlockType() != BlockType.hat) {
+                        this.next.handle();
+                    }
                     return null;
-                }
-                if (this.next != null && scratch3Block.getBlockType() != BlockType.hat) {
-                    this.next.handle();
-                }
-                return null;
-            });
+                });
     }
 
     public void handleOrEvaluate() {
@@ -258,14 +270,14 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public State evaluate() {
         return this.handleInternal(
-            scratch3Block -> {
-                try {
-                    return this.setValue(scratch3Block.getEvaluateHandler().handle(this));
-                } catch (Exception ex) {
-                    getEntityContext().ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
-                    throw new ServerException(ex);
-                }
-            });
+                scratch3Block -> {
+                    try {
+                        return this.setValue(scratch3Block.getEvaluateHandler().handle(this));
+                    } catch (Exception ex) {
+                        getEntityContext().ui().sendErrorMessage("Workspace " + scratch3Block.getOpcode() + " scratch error", ex);
+                        throw new ServerException(ex);
+                    }
+                });
     }
 
     public void setActiveWorkspace() {
@@ -274,7 +286,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     public Scratch3Block getScratch3Block() {
         Scratch3ExtensionBlocks scratch3ExtensionBlocks =
-            workspaceTabHolder.getScratch3Blocks().get(extensionId);
+                workspaceTabHolder.getScratch3Blocks().get(extensionId);
         if (scratch3ExtensionBlocks == null) {
             logErrorAndThrow(sendScratch3ExtensionNotFound(extensionId));
         } else {
@@ -393,8 +405,8 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
             case 2: // just a reference
                 String reference = objects.getString(1);
                 return fetchValue
-                    ? workspaceTabHolder.getBlocks().get(reference).evaluate()
-                    : reference;
+                        ? workspaceTabHolder.getBlocks().get(reference).evaluate()
+                        : reference;
             default:
                 logErrorAndThrow("Unable to fetch/parse integer value from input with key: " + key);
                 return null;
@@ -443,13 +455,13 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         }
         if (this.releaseListeners != null) {
             this.releaseListeners.forEach(
-                t -> {
-                    try {
-                        t.run();
-                    } catch (Exception ex) {
-                        log.error("Error occurs while release listener: <%s>", ex);
-                    }
-                });
+                    t -> {
+                        try {
+                            t.run();
+                        } catch (Exception ex) {
+                            log.error("Error occurs while release listener: <%s>", ex);
+                        }
+                    });
         }
         if (this.parent != null) {
             this.parent.release();
@@ -467,16 +479,16 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
     @Override
     public String toString() {
         return "WorkspaceBlockImpl{"
-            + "id='"
-            + id
-            + '\''
-            + ", extensionId='"
-            + extensionId
-            + '\''
-            + ", opcode='"
-            + opcode
-            + '\''
-            + '}';
+                + "id='"
+                + id
+                + '\''
+                + ", extensionId='"
+                + extensionId
+                + '\''
+                + ", opcode='"
+                + opcode
+                + '\''
+                + '}';
     }
 
     public State getLastValue() {
@@ -493,21 +505,21 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
 
     public void addLock(BroadcastLockImpl broadcastLock) {
         broadcastLock.addSignalListener(
-            value -> {
-                if (value instanceof Collection && ((Collection) value).size() > 1) {
-                    Collection col = (Collection) value;
-                    String key = null;
-                    for (Object item : col) {
-                        if (key == null) {
-                            key = (String) item;
-                        } else {
-                            this.setValue(key, State.of(item));
-                            key = null;
+                value -> {
+                    if (value instanceof Collection && ((Collection) value).size() > 1) {
+                        Collection col = (Collection) value;
+                        String key = null;
+                        for (Object item : col) {
+                            if (key == null) {
+                                key = (String) item;
+                            } else {
+                                this.setValue(key, State.of(item));
+                                key = null;
+                            }
                         }
                     }
-                }
-                this.setValue(State.of(value));
-            });
+                    this.setValue(State.of(value));
+                });
     }
 
     public void setThreadContext(EntityContextBGP.ThreadContext<?> threadContext) {
@@ -605,17 +617,17 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         WHOLE_NUM_PRIMITIVE,
         INTEGER_NUM_PRIMITIVE,
         CHECKBOX_NUM_PRIMITIVE(
-            array -> array.getBoolean(1),
-            (array, entityContext) -> {
-                return array.get(2);
-            }),
+                array -> array.getBoolean(1),
+                (array, entityContext) -> {
+                    return array.get(2);
+                }),
         COLOR_PICKER_PRIMITIVE,
         TEXT_PRIMITIVE,
         BROADCAST_PRIMITIVE(
-            array -> array.get(2),
-            (array, entityContext) -> {
-                return array.get(2);
-            }),
+                array -> array.get(2),
+                (array, entityContext) -> {
+                    return array.get(2);
+                }),
         VAR_PRIMITIVE /*(array -> array.get(2), (array, entityContext) -> {
                           WorkspaceStandaloneVariableEntity entity =
                                   entityContext.getEntity(WorkspaceStandaloneVariableEntity.PREFIX + array.get(2));
@@ -630,7 +642,7 @@ public class WorkspaceBlockImpl implements WorkspaceBlock {
         private Function<JSONArray, Object> refFn = array -> array.getString(1);
 
         private BiFunction<JSONArray, EntityContext, Object> valueFn =
-            (array, entityContext) -> array.getString(1);
+                (array, entityContext) -> array.getString(1);
 
         public Object getRef(JSONArray array) {
             return refFn.apply(array);

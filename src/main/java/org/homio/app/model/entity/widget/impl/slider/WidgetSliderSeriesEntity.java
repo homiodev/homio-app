@@ -21,14 +21,14 @@ import org.homio.app.model.entity.widget.attributes.HasValueTemplate;
 
 @Entity
 public class WidgetSliderSeriesEntity
-    extends WidgetSeriesEntity<WidgetSliderEntity>
-    implements HasSingleValueDataSource,
-    HasSetSingleValueDataSource,
-    HasIcon,
-    HasValueTemplate,
-    HasName,
-    HasPadding,
-    HasTextConverter {
+        extends WidgetSeriesEntity<WidgetSliderEntity>
+        implements HasSingleValueDataSource,
+        HasSetSingleValueDataSource,
+        HasIcon,
+        HasValueTemplate,
+        HasName,
+        HasPadding,
+        HasTextConverter {
 
     @UIField(order = 1, isRevert = true)
     @UIFieldGroup(value = "SLIDER", order = 2, borderColor = "#6AA427")

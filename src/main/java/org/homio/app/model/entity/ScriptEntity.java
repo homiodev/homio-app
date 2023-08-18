@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Transient;
+
 import java.io.StringReader;
 import java.util.HashSet;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Set;
 import javax.script.Compilable;
 import javax.script.CompiledScript;
 import javax.script.Invocable;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -34,7 +36,7 @@ import org.springframework.core.env.Environment;
 
 @Entity
 @UISidebarMenu(icon = "fab fa-js-square", order = 1, bg = "#9e7d18", allowCreateNewItems = true,
-               overridePath = "scripts")
+        overridePath = "scripts")
 @Accessors(chain = true)
 public class ScriptEntity extends BaseEntity implements HasJsonData {
 
@@ -65,7 +67,9 @@ public class ScriptEntity extends BaseEntity implements HasJsonData {
     private boolean autoStart = false;
 
     @Column(length = 1_000)
-    @Getter @Setter private String error;
+    @Getter
+    @Setter
+    private String error;
 
     @Getter
     @Setter
@@ -74,14 +78,18 @@ public class ScriptEntity extends BaseEntity implements HasJsonData {
     @UIFieldCodeEditor(editorType = MonacoLanguage.JavaScript, autoFormat = true)
     private String javaScript = "function before() { };\nfunction run() { };\nfunction after() { };";
 
-    @Transient @JsonIgnore private long formattedJavaScriptHash;
+    @Transient
+    @JsonIgnore
+    private long formattedJavaScriptHash;
 
     @Getter
     @Setter
     @UIField(order = 40)
     private int repeatInterval = 0;
 
-    @Transient @JsonIgnore private String formattedJavaScript;
+    @Transient
+    @JsonIgnore
+    private String formattedJavaScript;
 
     public static Set<String> getFunctionsWithPrefix(String javaScript, String prefix) {
         Set<String> functions = new HashSet<>();
@@ -124,12 +132,12 @@ public class ScriptEntity extends BaseEntity implements HasJsonData {
             Environment env = entityContext.getBean(Environment.class);
             JSONObject params = new JSONObject(jsonParams);
             String envFormattedJavaScript = SpringUtils.replaceEnvValues(javaScript,
-                (key, defValue, prefix) -> {
-                    if (params.has(key)) {
-                        return params.get(key).toString();
-                    }
-                    return env.getProperty(key, defValue);
-                });
+                    (key, defValue, prefix) -> {
+                        if (params.has(key)) {
+                            return params.get(key).toString();
+                        }
+                        return env.getProperty(key, defValue);
+                    });
             this.formattedJavaScript = detectReplaceableValues(params, engine, envFormattedJavaScript);
         }
         return this.formattedJavaScript;
@@ -152,15 +160,15 @@ public class ScriptEntity extends BaseEntity implements HasJsonData {
 
     @SneakyThrows
     private String detectReplaceableValues(
-        JSONObject params, Compilable engine, String formattedJavaScript) {
+            JSONObject params, Compilable engine, String formattedJavaScript) {
         List<String> patternValues = SpringUtils.getPatternValues(SpringUtils.HASH_PATTERN, formattedJavaScript);
         if (!patternValues.isEmpty()) {
             StringBuilder sb = new StringBuilder(formattedJavaScript);
             for (String patternValue : patternValues) {
                 String fnName = "rpl_" + Math.abs(patternValue.hashCode());
                 sb.append("\nfunction ").append(fnName).append("() {")
-                  .append(patternValue.contains("return ") ? patternValue : "return " + patternValue)
-                  .append(" }");
+                        .append(patternValue.contains("return ") ? patternValue : "return " + patternValue)
+                        .append(" }");
             }
 
             // fire rpl functions
@@ -168,10 +176,10 @@ public class ScriptEntity extends BaseEntity implements HasJsonData {
             CompiledScript compileScript = engine.compile(new StringReader(jsWithRplFunctions));
             compileScript.eval();
             return SpringUtils.replaceHashValues(jsWithRplFunctions,
-                (s, s2, prefix) -> {
-                    Object ret = ((Invocable) compileScript.getEngine()).invokeFunction("rpl_" + Math.abs(s.hashCode()), params);
-                    return ret == null ? "" : ret.toString();
-                });
+                    (s, s2, prefix) -> {
+                        Object ret = ((Invocable) compileScript.getEngine()).invokeFunction("rpl_" + Math.abs(s.hashCode()), params);
+                        return ret == null ? "" : ret.toString();
+                    });
         }
         return formattedJavaScript;
     }

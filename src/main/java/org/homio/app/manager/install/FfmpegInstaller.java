@@ -6,6 +6,7 @@ import static org.homio.app.manager.common.impl.EntityContextMediaImpl.FFMPEG_LO
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextHardware;
@@ -56,12 +57,12 @@ public class FfmpegInstaller extends DependencyExecutableInstaller {
             }
         } else {
             String url = entityContext.setting().getEnvRequire("source-ffmpeg", String.class,
-                "https://github.com/homiodev/static-files/raw/master/ffmpeg.7z", true);
+                    "https://github.com/homiodev/static-files/raw/master/ffmpeg.7z", true);
             CommonUtils.downloadAndExtract(url, "ffmpeg.7z",
-                (progress, message, error) -> {
-                    progressBar.progress(progress, message);
-                    log.info("FFMPEG: {}", message);
-                });
+                    (progress, message, error) -> {
+                        progressBar.progress(progress, message);
+                        log.info("FFMPEG: {}", message);
+                    });
         }
         return Path.of(FFMPEG_LOCATION);
     }

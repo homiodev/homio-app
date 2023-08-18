@@ -2,8 +2,10 @@ package org.homio.app.model.entity.widget.impl.color;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
@@ -22,7 +24,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorEntity>
-    implements HasSourceServerUpdates, HasAlign, HasSingleValueDataSource, HasSetSingleValueDataSource {
+        implements HasSourceServerUpdates, HasAlign, HasSingleValueDataSource, HasSetSingleValueDataSource {
 
     @Override
     public boolean isVisible() {
@@ -46,7 +48,7 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
 
     @UIField(order = 1)
     @UIFieldKeyValue(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
-                     defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
+            defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
     @UIFieldGroup(value = "COLORS", order = 10)
     public String getColors() {
         return getJsonData("colors");
@@ -92,8 +94,8 @@ public class WidgetSimpleColorEntity extends WidgetBaseEntity<WidgetSimpleColorE
         super.beforePersist();
         if (!getJsonData().has("colors")) {
             setColors(Stream.of("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FFFFFF")
-                            .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
-                            .collect(Collectors.joining(",", "[", "]")));
+                    .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
+                    .collect(Collectors.joining(",", "[", "]")));
         }
         if (!getJsonData().has("size")) {
             setCircleSize(20);

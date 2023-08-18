@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -31,7 +32,7 @@ public class CacheService {
 
     public static final String CACHE_CLASS_BY_TYPE = "CACHE_CLASS_BY_TYPE";
     public static final String ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI =
-        "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
+            "ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI";
     public static final String ENTITY_IDS_BY_CLASS_NAME = "ENTITY_IDS_BY_CLASS_NAME";
     public static final String JS_COMPLETIONS = "JS_COMPLETIONS";
 
@@ -42,12 +43,12 @@ public class CacheService {
 
     public static CacheManager createCacheManager() {
         return new ConcurrentMapCacheManager(
-            CLASSES_WITH_PARENT_CLASS,
-            ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI,
-            ENTITY_IDS_BY_CLASS_NAME,
-            REPOSITORY_BY_CLAZZ,
-            CACHE_CLASS_BY_TYPE,
-            JS_COMPLETIONS);
+                CLASSES_WITH_PARENT_CLASS,
+                ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI,
+                ENTITY_IDS_BY_CLASS_NAME,
+                REPOSITORY_BY_CLAZZ,
+                CACHE_CLASS_BY_TYPE,
+                JS_COMPLETIONS);
     }
 
     public void clearCache() {
@@ -64,7 +65,7 @@ public class CacheService {
         for (BaseEntity relatedEntity : relatedEntities) {
             if (relatedEntity != null) {
                 Objects.requireNonNull(cacheManager.getCache(ENTITY_WITH_FETCH_LAZY_IGNORE_NOT_UI))
-                       .evict(relatedEntity.getEntityID());
+                        .evict(relatedEntity.getEntityID());
             }
         }
         // need remove all because entity may create also another entities

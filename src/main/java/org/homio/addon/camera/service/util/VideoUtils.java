@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+
 import lombok.SneakyThrows;
 
 public class VideoUtils {
@@ -24,15 +25,15 @@ public class VideoUtils {
             response = HttpClient.newHttpClient().send(request, BodyHandlers.ofInputStream());
         } else {
             response = HttpClient.newBuilder()
-                                 .authenticator(new Authenticator() {
-                                     @Override
-                                     protected PasswordAuthentication getPasswordAuthentication() {
-                                         return new PasswordAuthentication(
-                                             user,
-                                             password.toCharArray());
-                                     }
-                                 }).build()
-                                 .send(request, BodyHandlers.ofInputStream());
+                    .authenticator(new Authenticator() {
+                        @Override
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(
+                                    user,
+                                    password.toCharArray());
+                        }
+                    }).build()
+                    .send(request, BodyHandlers.ofInputStream());
             // 401 if wrong user/password
             if (response.statusCode() != 200) {
                 String body;
@@ -40,7 +41,7 @@ public class VideoUtils {
                     body = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
                 }
                 throw new RuntimeException("Error while download snapshot <" + snapshotUri + ">. Code: " +
-                    response.statusCode() + ". Msg: " + body);
+                        response.statusCode() + ". Msg: " + body);
             }
         }
         try (InputStream inputStream = response.body()) {

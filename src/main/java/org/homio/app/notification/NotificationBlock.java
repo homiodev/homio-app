@@ -1,6 +1,7 @@
 package org.homio.app.notification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -115,7 +117,8 @@ public class NotificationBlock {
         private Icon buttonIcon;
         private String buttonText;
         private String confirmMessage;
-        @JsonIgnore private UIActionHandler handler;
+        @JsonIgnore
+        private UIActionHandler handler;
 
         private Icon settingIcon;
         private UIInputEntity settingButton;
@@ -146,7 +149,7 @@ public class NotificationBlock {
         @Override
         public @NotNull NotificationInfoLineBuilder setStatus(@NotNull HasStatusAndMsg entity) {
             this.status = entity.getStatus();
-            if(StringUtils.isNotEmpty(entity.getStatusMessage())) {
+            if (StringUtils.isNotEmpty(entity.getStatusMessage())) {
                 this.description = entity.getStatusMessage();
             }
             return this;
@@ -154,7 +157,7 @@ public class NotificationBlock {
 
         @Override
         public @NotNull NotificationInfoLineBuilder setRightButton(@Nullable Icon buttonIcon, @Nullable String buttonText, @Nullable String confirmMessage,
-            @Nullable UIActionHandler handler) {
+                                                                   @Nullable UIActionHandler handler) {
             this.buttonIcon = buttonIcon;
             this.buttonText = buttonText;
             this.confirmMessage = confirmMessage;
@@ -164,7 +167,7 @@ public class NotificationBlock {
 
         @Override
         public @NotNull NotificationInfoLineBuilder setRightSettingsButton(@NotNull Icon buttonIcon,
-            @NotNull Consumer<UILayoutBuilder> assembler) {
+                                                                           @NotNull Consumer<UILayoutBuilder> assembler) {
             UIStickyDialogItemBuilderImpl builder = new UIStickyDialogItemBuilderImpl("actions");
             assembler.accept(builder);
             settingIcon = buttonIcon;

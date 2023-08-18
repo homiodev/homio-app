@@ -2,9 +2,11 @@ package org.homio.app.rest.widget;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -55,10 +57,10 @@ public class WidgetChartsController {
         TimeSeriesChartData<ChartDataset> chartData = null;
         if (StringUtils.isNotEmpty(entity.getChartDataSource())) {
             chartData = timeSeriesUtil.buildTimeSeriesFullData(
-                entity.getEntityID(),
-                entity.buildTimePeriod(),
-                entity.getListenSourceUpdates(),
-                Collections.singleton(entity));
+                    entity.getEntityID(),
+                    entity.buildTimePeriod(),
+                    entity.getListenSourceUpdates(),
+                    Collections.singleton(entity));
         }
 
         return new DisplayDataResponse(values, chartData);
@@ -69,46 +71,46 @@ public class WidgetChartsController {
         WidgetLineChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetLineChartEntity.class);
 
         return timeSeriesUtil.buildTimeSeriesFullData(
-            entity.getEntityID(),
-            entity.buildTimePeriod(),
-            entity.getListenSourceUpdates(),
-            entity.getSeries());
+                entity.getEntityID(),
+                entity.buildTimePeriod(),
+                entity.getListenSourceUpdates(),
+                entity.getSeries());
     }
 
     @PostMapping("/bartime/series")
     public TimeSeriesChartData<ChartDataset> getBartimeSeries(
-        @Valid @RequestBody WidgetDataRequest request) {
+            @Valid @RequestBody WidgetDataRequest request) {
         WidgetBarTimeChartEntity entity = request.getEntity(entityContext, objectMapper, WidgetBarTimeChartEntity.class);
 
         return timeSeriesUtil.buildTimeSeriesFullData(
-            entity.getEntityID(),
-            entity.buildTimePeriod(),
-            entity.getListenSourceUpdates(),
-            entity.getSeries());
+                entity.getEntityID(),
+                entity.buildTimePeriod(),
+                entity.getListenSourceUpdates(),
+                entity.getSeries());
     }
 
     @PostMapping("/bar/series")
     public TimeSeriesChartData<ChartDataset> getBarSeries(
-        @Valid @RequestBody WidgetDataRequest request) {
+            @Valid @RequestBody WidgetDataRequest request) {
         return getValueDataset(request, WidgetBarChartEntity.class);
     }
 
     @PostMapping("/pie/series")
     public TimeSeriesChartData<ChartDataset> getPieSeries(
-        @Valid @RequestBody WidgetDataRequest request) {
+            @Valid @RequestBody WidgetDataRequest request) {
         return getValueDataset(request, WidgetPieChartEntity.class);
     }
 
     @PostMapping("/doughnut/series")
     public TimeSeriesChartData<ChartDataset> getDoughnutSeries(
-        @Valid @RequestBody WidgetDataRequest request) {
+            @Valid @RequestBody WidgetDataRequest request) {
         WidgetDoughnutChartEntity entity =
-            request.getEntity(entityContext, objectMapper, WidgetDoughnutChartEntity.class);
+                request.getEntity(entityContext, objectMapper, WidgetDoughnutChartEntity.class);
         TimeSeriesChartData<ChartDataset> result =
-            getValueDataset(request, WidgetDoughnutChartEntity.class);
+                getValueDataset(request, WidgetDoughnutChartEntity.class);
 
         DataSourceUtil.DataSourceContext source =
-            DataSourceUtil.getSource(entityContext, entity.getValueDataSource());
+                DataSourceUtil.getSource(entityContext, entity.getValueDataSource());
         if (source.getSource() != null) {
             result.value = timeSeriesUtil.getSingleValue(entity, entity, o -> o);
         }

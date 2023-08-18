@@ -3,6 +3,7 @@ package org.homio.app.builder.widget;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContextWidget.ToggleType;
@@ -19,9 +20,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ToggleBuilderImpl extends WidgetBaseBuilderImpl<ToggleWidgetBuilder, WidgetToggleEntity>
-    implements ToggleWidgetBuilder,
-    HasPaddingBuilder<WidgetToggleEntity, ToggleWidgetBuilder>,
-    HasNameBuilder<WidgetToggleEntity, ToggleWidgetBuilder> {
+        implements ToggleWidgetBuilder,
+        HasPaddingBuilder<WidgetToggleEntity, ToggleWidgetBuilder>,
+        HasNameBuilder<WidgetToggleEntity, ToggleWidgetBuilder> {
 
     @Getter
     private final List<WidgetToggleSeriesEntity> series = new ArrayList<>();
@@ -73,9 +74,9 @@ public class ToggleBuilderImpl extends WidgetBaseBuilderImpl<ToggleWidgetBuilder
 
 @RequiredArgsConstructor
 class ToggleSeriesBuilderImpl implements ToggleWidgetSeriesBuilder,
-    HasToggleBuilder<WidgetToggleSeriesEntity, ToggleWidgetSeriesBuilder>,
-    HasIconColorThresholdBuilder<WidgetToggleSeriesEntity, ToggleWidgetSeriesBuilder>,
-    HasNameBuilder<WidgetToggleSeriesEntity, ToggleWidgetSeriesBuilder> {
+        HasToggleBuilder<WidgetToggleSeriesEntity, ToggleWidgetSeriesBuilder>,
+        HasIconColorThresholdBuilder<WidgetToggleSeriesEntity, ToggleWidgetSeriesBuilder>,
+        HasNameBuilder<WidgetToggleSeriesEntity, ToggleWidgetSeriesBuilder> {
 
     private final WidgetToggleSeriesEntity series;
 

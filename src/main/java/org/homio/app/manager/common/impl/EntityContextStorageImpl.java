@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -67,7 +68,7 @@ public class EntityContextStorageImpl implements EntityContextStorage {
 
     @Override
     public <T extends DataStorageEntity> DataStorageService<T> getOrCreateInMemoryService(@NotNull Class<T> pojoClass, @NotNull String uniqueId,
-        @Nullable Long quota) {
+                                                                                          @Nullable Long quota) {
         return InMemoryDB.getOrCreateService(pojoClass, uniqueId, quota);
     }
 
@@ -96,7 +97,7 @@ public class EntityContextStorageImpl implements EntityContextStorage {
     }
 
     private void logUpdatedValue(@NotNull HasEntityIdentifier entity, @NotNull String key, @NotNull String title, @NotNull Object value,
-        EntityMemoryData data) {
+                                 EntityMemoryData data) {
         if (value instanceof Status status) {
             Level level = status == Status.ERROR ? Level.ERROR : Level.DEBUG;
             Object message = data.VALUE_MAP.get(key + "Message");
@@ -104,7 +105,7 @@ public class EntityContextStorageImpl implements EntityContextStorage {
                 LogManager.getLogger(entity.getClass()).log(level, "[{}]: Set {} '{}' status: {}", entity.getEntityID(), entity, title, status);
             } else {
                 LogManager.getLogger(entity.getClass())
-                          .log(level, "[{}]: Set {} '{}' status: {}. Msg: {}", entity.getEntityID(), entity, title, status, message);
+                        .log(level, "[{}]: Set {} '{}' status: {}. Msg: {}", entity.getEntityID(), entity, title, status, message);
             }
         }
     }
@@ -112,34 +113,34 @@ public class EntityContextStorageImpl implements EntityContextStorage {
     @SneakyThrows
     private void initSystemCpuListening() {
         entityContext.var().createGroup("hardware", "Hardware", true, new Icon("fas fa-microchip",
-            "#31BDB6"), "sys.hardware");
+                "#31BDB6"), "sys.hardware");
 
         String cpuUsageID = entityContext.var().createVariable("hardware", "sys_cpu_load", "sys.cpu_load",
-            VariableType.Float, builder ->
-                builder.setDescription("sys.cpu_load_description").setReadOnly(true).setUnit("%").setColor("#7B37B0"));
+                VariableType.Float, builder ->
+                        builder.setDescription("sys.cpu_load_description").setReadOnly(true).setUnit("%").setColor("#7B37B0"));
 
         String javaCpuUsageID = entityContext.var().createVariable("hardware", "java_cpu_load", "sys.java_cpu_load",
-            VariableType.Float, builder ->
-                builder.setDescription("sys.java_cpu_load_description").setReadOnly(true).setUnit("%").setColor("#B03780"));
+                VariableType.Float, builder ->
+                        builder.setDescription("sys.java_cpu_load_description").setReadOnly(true).setUnit("%").setColor("#B03780"));
 
         String memID = entityContext.var().createVariable("hardware", "sys_mem_load", "sys.mem_load",
-            VariableType.Float, builder ->
-                builder.setDescription("sys.mem_load_description").setReadOnly(true).setUnit("%").setColor("#939C35"));
+                VariableType.Float, builder ->
+                        builder.setDescription("sys.mem_load_description").setReadOnly(true).setUnit("%").setColor("#939C35"));
 
         entityContext.setting().listenValueAndGet(SystemCPUFetchValueIntervalSetting.class,
-            "hardware-cpu",
-            timeout -> {
-                if (this.hardwareCpuScheduler != null) {
-                    this.hardwareCpuScheduler.cancel();
-                }
-                this.hardwareCpuScheduler = entityContext.bgp().builder("hardware-cpu").interval(Duration.ofSeconds(timeout)).execute(
-                    () -> {
-                        entityContext.var().set(cpuUsageID, round100((float) (osBean.getCpuLoad() * 100F)));
-                        entityContext.var().set(javaCpuUsageID, round100((float) (osBean.getProcessCpuLoad() * 100F)));
-                        float memPercent = (TOTAL_MEMORY - osBean.getFreeMemorySize()) / (float) TOTAL_MEMORY * 100F;
-                        entityContext.var().set(memID, round100(memPercent));
-                    });
-            });
+                "hardware-cpu",
+                timeout -> {
+                    if (this.hardwareCpuScheduler != null) {
+                        this.hardwareCpuScheduler.cancel();
+                    }
+                    this.hardwareCpuScheduler = entityContext.bgp().builder("hardware-cpu").interval(Duration.ofSeconds(timeout)).execute(
+                            () -> {
+                                entityContext.var().set(cpuUsageID, round100((float) (osBean.getCpuLoad() * 100F)));
+                                entityContext.var().set(javaCpuUsageID, round100((float) (osBean.getProcessCpuLoad() * 100F)));
+                                float memPercent = (TOTAL_MEMORY - osBean.getFreeMemorySize()) / (float) TOTAL_MEMORY * 100F;
+                                entityContext.var().set(memID, round100(memPercent));
+                            });
+                });
     }
 
     private float round100(float input) {

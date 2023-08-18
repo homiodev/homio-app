@@ -7,9 +7,11 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
+
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
@@ -104,7 +106,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                 }
                 default -> {
                     if (requestUrl.startsWith("/param.cgi?cmd=setasaction&-server=1&enable=1")
-                        && content.contains("response=\"200\";")) {// new
+                            && content.contains("response=\"200\";")) {// new
                         newApi = true;
                         log.debug("Alarm server successfully setup for a 2k+ Instar camera");
                         if (getEntity().getFfmpegInput().isEmpty()) {
@@ -117,7 +119,7 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
                             service.urls.setSnapshotUri("/snap.cgi?chn=12");
                         }
                     } else if (requestUrl.startsWith("/param.cgi?cmd=setmdalarm&-aname=server2&-switch=on&-interval=1")
-                        && content.startsWith("[Succeed]set ok")) {
+                            && content.startsWith("[Succeed]set ok")) {
                         newApi = false;
                         log.debug("Alarm server successfully setup for a 1080p Instar camera");
                     } else {
@@ -147,8 +149,8 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
     public void enableMotionAlarm(boolean on) {
         int val = boolToInt(on);
         service.sendHttpGET("/cgi-bin/hi3510/param.cgi?cmd=setmdattr&-enable=" + val +
-            "&-name=1&cmd=setmdattr&-enable=" + val + "&-name=2&cmd=setmdattr&-enable=" + val + "&-name=3&cmd=setmdattr&-enable=" + val +
-            "&-name=4");
+                "&-name=1&cmd=setmdattr&-enable=" + val + "&-name=2&cmd=setmdattr&-enable=" + val + "&-name=3&cmd=setmdattr&-enable=" + val +
+                "&-name=4");
     }
 
     @UIVideoAction(name = IpCameraBindingConstants.CHANNEL_TEXT_OVERLAY, order = 100, icon = "fas fa-paragraph")
@@ -196,13 +198,13 @@ public class InstarBrandHandler extends BaseOnvifCameraBrandHandler implements B
         log.debug("[{}]: Alarm has been triggered:{}", entityID, alarm);
         switch (alarm) {
             case "/instar?&active=1", "/instar?&active=2", "/instar?&active=3", "/instar?&active=4" ->
-                service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                    service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
             case "/instar?&active=5" ->// PIR
-                service.motionDetected(true, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
+                    service.motionDetected(true, IpCameraBindingConstants.CHANNEL_PIR_ALARM);
             case "/instar?&active=6" ->// Audio Alarm
-                service.audioDetected(true);
+                    service.audioDetected(true);
             case "/instar?&active=7", "/instar?&active=8", "/instar?&active=9", "/instar?&active=10" ->// Motion Area 4
-                service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
+                    service.motionDetected(true, IpCameraBindingConstants.CHANNEL_MOTION_ALARM);
         }
     }
 

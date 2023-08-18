@@ -7,7 +7,7 @@ import org.homio.api.EntityContextWidget.VerticalAlign;
 import org.jetbrains.annotations.Nullable;
 
 public interface HasValueTemplateBuilder<T extends org.homio.app.model.entity.widget.attributes.HasValueTemplate, R>
-    extends HasValueTemplate<R> {
+        extends HasValueTemplate<R> {
 
     T getWidget();
 

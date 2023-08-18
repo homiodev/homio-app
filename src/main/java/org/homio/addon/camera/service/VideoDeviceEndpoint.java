@@ -2,6 +2,7 @@ package org.homio.addon.camera.service;
 
 import java.util.Set;
 import java.util.function.Consumer;
+
 import lombok.Setter;
 import org.homio.addon.camera.entity.BaseVideoEntity;
 import org.homio.api.model.ActionResponseModel;
@@ -16,38 +17,39 @@ import org.jetbrains.annotations.Nullable;
 
 public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
 
-    private @Nullable @Setter Consumer<State> updateHandler;
+    private @Nullable
+    @Setter Consumer<State> updateHandler;
 
     public VideoDeviceEndpoint(
-        @NotNull BaseVideoEntity device,
-        @NotNull String endpointEntityID,
-        float min, float max) {
+            @NotNull BaseVideoEntity device,
+            @NotNull String endpointEntityID,
+            float min, float max) {
         this(true, device, endpointEntityID, EndpointType.number, min, max, null);
     }
 
     public VideoDeviceEndpoint(
-        @NotNull BaseVideoEntity device,
-        @NotNull String endpointEntityID,
-        Set<String> range) {
+            @NotNull BaseVideoEntity device,
+            @NotNull String endpointEntityID,
+            Set<String> range) {
         this(true, device, endpointEntityID, EndpointType.select, null, null, range);
     }
 
     public VideoDeviceEndpoint(
-        @NotNull BaseVideoEntity device,
-        @NotNull String endpointEntityID,
-        EndpointType endpointType,
-        boolean writable) {
+            @NotNull BaseVideoEntity device,
+            @NotNull String endpointEntityID,
+            EndpointType endpointType,
+            boolean writable) {
         this(writable, device, endpointEntityID, endpointType, null, null, null);
     }
 
     private VideoDeviceEndpoint(
-        boolean writable,
-        @NotNull BaseVideoEntity device,
-        @NotNull String endpointEntityID,
-        @NotNull EndpointType endpointType,
-        @Nullable Float min,
-        @Nullable Float max,
-        @Nullable Set<String> range) {
+            boolean writable,
+            @NotNull BaseVideoEntity device,
+            @NotNull String endpointEntityID,
+            @NotNull EndpointType endpointType,
+            @Nullable Float min,
+            @Nullable Float max,
+            @Nullable Set<String> range) {
         super("VIDEO");
         ConfigDeviceEndpoint configEndpoint = BaseVideoService.CONFIG_DEVICE_SERVICE.getDeviceEndpoints().get(endpointEntityID);
 
@@ -55,19 +57,19 @@ public class VideoDeviceEndpoint extends BaseDeviceEndpoint<BaseVideoEntity> {
         this.max = max;
         this.range = range;
         this.icon = new Icon(
-            "fa fa-fw " + (configEndpoint == null ? "fa-camera" : configEndpoint.getIcon()),
-            configEndpoint == null ? "#3894B5" : configEndpoint.getIconColor());
+                "fa fa-fw " + (configEndpoint == null ? "fa-camera" : configEndpoint.getIcon()),
+                configEndpoint == null ? "#3894B5" : configEndpoint.getIconColor());
 
         init(
-            BaseVideoService.CONFIG_DEVICE_SERVICE,
-            endpointEntityID,
-            device,
-            device.getService().getEntityContext(),
-            configEndpoint == null ? null : configEndpoint.getUnit(),
-            true,
-            writable,
-            endpointEntityID,
-            endpointType);
+                BaseVideoService.CONFIG_DEVICE_SERVICE,
+                endpointEntityID,
+                device,
+                device.getService().getEntityContext(),
+                configEndpoint == null ? null : configEndpoint.getUnit(),
+                true,
+                writable,
+                endpointEntityID,
+                endpointType);
 
         if (device.getJsonData().has(endpointEntityID)) {
             State value = endpointType.getReader().apply(device.getJsonData(), endpointEntityID);

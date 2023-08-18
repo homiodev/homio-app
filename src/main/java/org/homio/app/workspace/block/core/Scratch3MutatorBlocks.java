@@ -1,8 +1,10 @@
 package org.homio.app.workspace.block.core;
 
 import com.jayway.jsonpath.JsonPath;
+
 import java.util.HashMap;
 import java.util.Map;
+
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
@@ -22,7 +24,7 @@ import org.springframework.stereotype.Component;
 @Getter
 @Component
 public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
-    implements WorkspaceEventListener {
+        implements WorkspaceEventListener {
 
     private final Map<Integer, CompileScriptContext> compileScriptContextMap = new HashMap<>();
     private final ScriptService scriptService;
@@ -56,14 +58,14 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
         State lastValue = ((WorkspaceBlockImpl) workspaceBlock).getLastValue();
 
         CompileScriptContext compileScriptContext = this.compileScriptContextMap.computeIfAbsent(map.hashCode(),
-            integer -> {
-                String code = map;
-                if (ScriptEntity.getFunctionWithName(code, "run") == null) {
-                    code = "function run() { " + code + " }";
-                }
-                ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(code);
-                return scriptService.createCompiledScript(scriptEntity, null, lastValue);
-            });
+                integer -> {
+                    String code = map;
+                    if (ScriptEntity.getFunctionWithName(code, "run") == null) {
+                        code = "function run() { " + code + " }";
+                    }
+                    ScriptEntity scriptEntity = new ScriptEntity().setJavaScript(code);
+                    return scriptService.createCompiledScript(scriptEntity, null, lastValue);
+                });
         compileScriptContext.getEngine().put("input", source);
         return scriptService.runJavaScript(compileScriptContext);
     }
@@ -76,7 +78,7 @@ public class Scratch3MutatorBlocks extends Scratch3ExtensionBlocks
 
     private State joinStringEvaluate(WorkspaceBlock workspaceBlock) {
         return new StringType(
-            workspaceBlock.getInputString("STRING1")
-                + workspaceBlock.getInputString("STRING2"));
+                workspaceBlock.getInputString("STRING1")
+                        + workspaceBlock.getInputString("STRING2"));
     }
 }

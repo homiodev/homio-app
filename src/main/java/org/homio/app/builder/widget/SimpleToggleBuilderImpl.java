@@ -10,10 +10,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class SimpleToggleBuilderImpl extends WidgetBaseBuilderImpl<SimpleToggleWidgetBuilder, WidgetSimpleToggleEntity>
-    implements SimpleToggleWidgetBuilder,
-    HasPaddingBuilder<WidgetSimpleToggleEntity, SimpleToggleWidgetBuilder>,
-    HasAlignBuilder<WidgetSimpleToggleEntity, SimpleToggleWidgetBuilder>,
-    HasToggleBuilder<WidgetSimpleToggleEntity, SimpleToggleWidgetBuilder> {
+        implements SimpleToggleWidgetBuilder,
+        HasPaddingBuilder<WidgetSimpleToggleEntity, SimpleToggleWidgetBuilder>,
+        HasAlignBuilder<WidgetSimpleToggleEntity, SimpleToggleWidgetBuilder>,
+        HasToggleBuilder<WidgetSimpleToggleEntity, SimpleToggleWidgetBuilder> {
 
     SimpleToggleBuilderImpl(WidgetSimpleToggleEntity widget, EntityContextImpl entityContext) {
         super(widget, entityContext);

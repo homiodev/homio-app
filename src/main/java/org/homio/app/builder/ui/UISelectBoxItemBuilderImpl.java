@@ -2,6 +2,7 @@ package org.homio.app.builder.ui;
 
 import java.util.ArrayList;
 import java.util.Collection;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -17,8 +18,8 @@ import org.jetbrains.annotations.Nullable;
 @Getter
 @Accessors(chain = true)
 public class UISelectBoxItemBuilderImpl
-    extends UIBaseEntityItemBuilderImpl<UISelectBoxItemBuilder, String>
-    implements UISelectBoxItemBuilder, UIInputEntityActionHandler {
+        extends UIBaseEntityItemBuilderImpl<UISelectBoxItemBuilder, String>
+        implements UISelectBoxItemBuilder, UIInputEntityActionHandler {
 
     @Setter
     private Collection<OptionModel> options;

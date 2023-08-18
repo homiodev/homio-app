@@ -6,6 +6,7 @@ import static org.homio.api.util.CommonUtils.getErrorMessage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Properties;
+
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -24,8 +25,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Log4j2
 @EnableHQuery(scanBaseClassesPackage = "org.homio")
 @SpringBootApplication(exclude = {
-    ErrorMvcAutoConfiguration.class,
-    MongoAutoConfiguration.class
+        ErrorMvcAutoConfiguration.class,
+        MongoAutoConfiguration.class
 })
 public class HomioApplication implements WebMvcConfigurer {
 
@@ -74,7 +75,7 @@ public class HomioApplication implements WebMvcConfigurer {
         }
 
         log.info("Use database of type '{}'. Url: {}. Auth: '{}'/'{}'", type,
-            defaultIfEmpty(url, defaultURL), user, pwd);
+                defaultIfEmpty(url, defaultURL), user, pwd);
 
         setProperty("databaseType", "dbType", defaultIfEmpty(type, "sqlite"));
         setProperty("spring.datasource.url", "dbUrl", defaultIfEmpty(url, defaultURL));

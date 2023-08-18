@@ -2,6 +2,7 @@ package org.homio.app.repository;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import org.homio.addon.z2m.model.Z2MDeviceEntity;
 import org.homio.addon.z2m.model.Z2MLocalCoordinatorEntity;
 import org.homio.addon.z2m.service.Z2MDeviceService;
@@ -23,7 +24,7 @@ public class Z2MDeviceRepository extends AbstractRepository<Z2MDeviceEntity> {
         EntityContext entityContext = ApplicationContextHolder.getBean(EntityContext.class);
         for (Z2MLocalCoordinatorEntity coordinator : entityContext.findAll(Z2MLocalCoordinatorEntity.class)) {
             list.addAll(coordinator.getService().getDeviceHandlers().values().stream()
-                                   .map(Z2MDeviceService::getDeviceEntity).toList());
+                    .map(Z2MDeviceService::getDeviceEntity).toList());
         }
         return list;
     }

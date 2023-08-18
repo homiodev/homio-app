@@ -17,15 +17,15 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleValueEntity extends WidgetBaseEntity<WidgetSimpleValueEntity>
-    implements
-    HasIcon,
-    HasActionOnClick,
-    HasSingleValueAggregatedDataSource,
-    HasValueTemplate,
-    HasPadding,
-    HasAlign,
-    HasValueConverter,
-    HasSourceServerUpdates {
+        implements
+        HasIcon,
+        HasActionOnClick,
+        HasSingleValueAggregatedDataSource,
+        HasValueTemplate,
+        HasPadding,
+        HasAlign,
+        HasValueConverter,
+        HasSourceServerUpdates {
 
     @Override
     public @NotNull String getImage() {

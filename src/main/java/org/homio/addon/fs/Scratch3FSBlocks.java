@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -63,46 +64,46 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
 
         // blocks
         blockCommand(15, "update_file",
-            "Update [VALUE] of [FILE] | [SETTING]", this::updateFileHandle,
-            block -> {
-                block.addArgument(VALUE, ArgumentType.string, "body");
-                block.addArgument("FILE", fileMenu);
-                block.addArgument("VALUE", "Content");
-                block.addSetting(ModifyFileSettings.class);
-            });
+                "Update [VALUE] of [FILE] | [SETTING]", this::updateFileHandle,
+                block -> {
+                    block.addArgument(VALUE, ArgumentType.string, "body");
+                    block.addArgument("FILE", fileMenu);
+                    block.addArgument("VALUE", "Content");
+                    block.addSetting(ModifyFileSettings.class);
+                });
 
         blockCommand(16, "create_file",
-            "Create file [NAME] of [FOLDER] | [SETTING]", this::createHandle,
-            block -> {
-                block.addArgument(VALUE, ArgumentType.string, "body");
-                block.addArgument("TYPE", nodeTypeMenu);
-                block.addArgument("NAME", "Test.txt");
-                block.addArgument("FOLDER", folderMenu);
-            });
+                "Create file [NAME] of [FOLDER] | [SETTING]", this::createHandle,
+                block -> {
+                    block.addArgument(VALUE, ArgumentType.string, "body");
+                    block.addArgument("TYPE", nodeTypeMenu);
+                    block.addArgument("NAME", "Test.txt");
+                    block.addArgument("FOLDER", folderMenu);
+                });
 
         blockReporter(20, "get_file_content", "Get [FILE]", this::getFieldContent,
-            block -> block.addArgument("FILE", fileMenu));
+                block -> block.addArgument("FILE", fileMenu));
 
         blockReporter(30, "get_count", "Count of [VALUE] in [FOLDER]", this::getCountOfNodesReporter,
-            block -> {
-                block.addArgument("FOLDER", folderMenu);
-                block.addArgument(VALUE, this.countMenu);
-            });
+                block -> {
+                    block.addArgument("FOLDER", folderMenu);
+                    block.addArgument(VALUE, this.countMenu);
+                });
 
         blockReporter(35, "get_used_quota", "Used quota of [ENTITY] | in [UNIT]", this::getUsedQuotaReporter,
-            block -> {
-                block.addArgument(ENTITY, fsEntityMenu);
-                block.addArgument("UNIT", unitMenu);
-            });
+                block -> {
+                    block.addArgument(ENTITY, fsEntityMenu);
+                    block.addArgument("UNIT", unitMenu);
+                });
 
         blockReporter(40, "get_total_quota", "Total quota of [ENTITY] | in [UNIT]", this::getTotalQuotaReporter,
-            block -> {
-                block.addArgument(ENTITY, fsEntityMenu);
-                block.addArgument("UNIT", unitMenu);
-            });
+                block -> {
+                    block.addArgument(ENTITY, fsEntityMenu);
+                    block.addArgument("UNIT", unitMenu);
+                });
 
         blockCommand(50, "delete", "Delete [FILE]", this::deleteFileHandle,
-            block -> block.addArgument("FILE", fileMenu));
+                block -> block.addArgument("FILE", fileMenu));
     }
 
     public static byte[] addAll(final byte[] array1, byte[] array2) {
@@ -166,7 +167,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
             fsItem.fileSystem.delete(Collections.singleton(fsItem.node));
         } catch (Exception ex) {
             workspaceBlock.logErrorAndThrow("Unable to delete file: <{}>. Msg: ",
-                fsItem.node, getErrorMessage(ex));
+                    fsItem.node, getErrorMessage(ex));
         }
     }
 
@@ -213,7 +214,7 @@ public class Scratch3FSBlocks extends Scratch3ExtensionBlocks {
             ModifyFileSettings setting = workspaceBlock.getSetting(ModifyFileSettings.class);
 
             FileSystemProvider.UploadOption uploadOption =
-                setting.getModifyOption() == ModifyOption.Append ? UploadOption.Append : FileSystemProvider.UploadOption.Replace;
+                    setting.getModifyOption() == ModifyOption.Append ? UploadOption.Append : FileSystemProvider.UploadOption.Replace;
             if (setting.prependNewLine) {
                 value = addAll("\n".getBytes(), value);
             }

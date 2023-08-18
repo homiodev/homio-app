@@ -6,9 +6,11 @@ import static org.homio.addon.camera.VideoConstants.ENDPOINT_ENABLE_LED;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
+
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.onvif.brand.BaseOnvifCameraBrandHandler;
 import org.homio.addon.camera.onvif.brand.BrandCameraHasAudioAlarm;
@@ -192,8 +194,8 @@ public class DahuaBrandHandler extends BaseOnvifCameraBrandHandler implements Br
             service.sendHttpGET(IpCameraBindingConstants.CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=false");
         } else {
             service.sendHttpGET(
-                IpCameraBindingConstants.CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=true&VideoWidget[0].CustomTitle[1].Text="
-                    + text);
+                    IpCameraBindingConstants.CM + "setConfig&VideoWidget[0].CustomTitle[1].EncodeBlend=true&VideoWidget[0].CustomTitle[1].Text="
+                            + text);
         }
     }
 

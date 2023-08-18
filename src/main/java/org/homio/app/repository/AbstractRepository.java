@@ -5,10 +5,12 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -64,7 +66,7 @@ public class AbstractRepository<T extends BaseEntity> {
     public @NotNull List<T> listAll() {
         String sql = "FROM " + getEntityClass().getSimpleName();
         return tmc.executeInTransactionReadOnly(em ->
-            em.createQuery(sql, getEntityClass()).getResultList());
+                em.createQuery(sql, getEntityClass()).getResultList());
     }
 
     public @Nullable T getByEntityID(String entityID) {
@@ -83,7 +85,7 @@ public class AbstractRepository<T extends BaseEntity> {
 
     protected @Nullable T findSingleByField(@NotNull String fieldName, @NotNull Object value) {
         return tmc.executeInTransactionReadOnly(entityManager ->
-            findByField(entityManager, fieldName, value).stream().findFirst().orElse(null));
+                findByField(entityManager, fieldName, value).stream().findFirst().orElse(null));
     }
 
     public @Nullable T getByEntityIDWithFetchLazy(@NotNull String entityID, boolean ignoreNotUILazy) {
@@ -103,7 +105,7 @@ public class AbstractRepository<T extends BaseEntity> {
                     return;
                 }
                 if (field.isAnnotationPresent(OneToMany.class) || field.isAnnotationPresent(OneToOne.class) ||
-                    field.isAnnotationPresent(ManyToOne.class) || field.isAnnotationPresent(ManyToMany.class)) {
+                        field.isAnnotationPresent(ManyToOne.class) || field.isAnnotationPresent(ManyToMany.class)) {
                     Object proxy = FieldUtils.readField(field, entity, true);
                     Hibernate.initialize(proxy);
                     if (proxy != null && visitedEntities.add(proxy)) {

@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
 @Repeatable(UICameraDimmerButtons.class)
 public @interface UICameraDimmerButton {
 
-  String name();
+    String name();
 
-  String icon() default "";
+    String icon() default "";
 }

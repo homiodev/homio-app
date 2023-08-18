@@ -1,6 +1,7 @@
 package org.homio.app.rest.widget;
 
 import java.util.List;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -17,11 +18,14 @@ public class TimeSeriesContext<T extends HasChartDataSource> {
     private final T seriesEntity;
     private final HasTimeValueSeries series;
 
-    @Setter private TimeSeriesValues<T> owner;
+    @Setter
+    private TimeSeriesValues<T> owner;
 
-    @Setter private List<Object[]> value;
+    @Setter
+    private List<Object[]> value;
 
-    @Setter private List<List<Float>> values;
+    @Setter
+    private List<List<Float>> values;
 
     @Override
     public boolean equals(Object o) {

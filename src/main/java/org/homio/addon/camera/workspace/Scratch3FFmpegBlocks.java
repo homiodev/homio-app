@@ -4,8 +4,10 @@ import static org.homio.api.EntityContextMedia.FFMPEGFormat.RTSP_ALARMS;
 import static org.homio.api.util.CommonUtils.addToListSafe;
 
 import com.pivovarit.function.ThrowingBiConsumer;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -31,9 +33,9 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
         setParent("media");
 
         blockCommand(10, FFmpegApplyHandler.argsInput.name(), "Input arg [VALUE]", this::skipHandler, block ->
-            block.addArgument(VALUE, ""));
+                block.addArgument(VALUE, ""));
         blockCommand(20, FFmpegApplyHandler.argsOutput.name(), "Output arg [VALUE]", this::skipHandler, block ->
-            block.addArgument(VALUE, ""));
+                block.addArgument(VALUE, ""));
 
         blockCommand(30, "fire_ffmpeg", "Run FFmpeg input [INPUT] output [OUTPUT]", this::fireFFmpegCommand, block -> {
             block.addArgument("INPUT", "");
@@ -52,35 +54,35 @@ public class Scratch3FFmpegBlocks extends Scratch3ExtensionBlocks {
         applyParentBlocks(ffmpegBuilder, workspaceBlock.getParent());
 
         FFMPEG ffmpeg = entityContext.media().buildFFMPEG(workspaceBlock.getId(),
-            "FFMPEG workspace", new FFMPEGHandler() {
-                @Override
-                public String getEntityID() {
-                    return null;
-                }
+                "FFMPEG workspace", new FFMPEGHandler() {
+                    @Override
+                    public String getEntityID() {
+                        return null;
+                    }
 
-                @Override
-                public void motionDetected(boolean on, String key) {
+                    @Override
+                    public void motionDetected(boolean on, String key) {
 
-                }
+                    }
 
-                @Override
-            public void audioDetected(boolean on) {
+                    @Override
+                    public void audioDetected(boolean on) {
 
-            }
+                    }
 
-            @Override
-            public void ffmpegError(String error) {
-                log.error("FFmpeg error: <{}>", error);
+                    @Override
+                    public void ffmpegError(String error) {
+                        log.error("FFmpeg error: <{}>", error);
 
-            }
+                    }
 
-                @Override
-                public DecimalType getMotionThreshold() {
-                    return new DecimalType(30);
-                }
-            }, log, RTSP_ALARMS, String.join(" ", ffmpegBuilder.inputArgs), input,
-            String.join(" ", ffmpegBuilder.outputArgs),
-            output, "", "", null);
+                    @Override
+                    public DecimalType getMotionThreshold() {
+                        return new DecimalType(30);
+                    }
+                }, log, RTSP_ALARMS, String.join(" ", ffmpegBuilder.inputArgs), input,
+                String.join(" ", ffmpegBuilder.outputArgs),
+                output, "", "", null);
         try {
             ffmpeg.startConverting();
             // wait to able process start

@@ -14,8 +14,8 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetBarTimeChartEntity
-    extends ChartBaseEntity<WidgetBarTimeChartEntity, WidgetBarTimeChartSeriesEntity>
-    implements HasChartTimePeriod, HasMinMaxChartValue, HasHorizontalLine, HasAxis {
+        extends ChartBaseEntity<WidgetBarTimeChartEntity, WidgetBarTimeChartSeriesEntity>
+        implements HasChartTimePeriod, HasMinMaxChartValue, HasHorizontalLine, HasAxis {
 
     @UIField(order = 40)
     @UIFieldGroup("CHART_AXIS")
@@ -42,7 +42,7 @@ public class WidgetBarTimeChartEntity
     @UIField(order = 12)
     @UIFieldGroup("CHART_UI")
     @UIFieldJSONLine(
-        template = "{\"top\": number}, \"left\": number, \"bottom\": number, \"right\": number")
+            template = "{\"top\": number}, \"left\": number, \"bottom\": number, \"right\": number")
     public String getBarBorderWidth() {
         return getJsonData("bbw", "{\"top\": 1, \"left\": 1, \"bottom\": 1, \"right\": 1}");
     }

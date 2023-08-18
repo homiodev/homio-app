@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -50,11 +51,11 @@ public final class InstallUtils {
 
         System.out.println("Downloading application..");
         GitHubDescription gitHubDescription =
-            Curl.get("https://api.github.com/repos/homiodev/homio-app/releases/latest", GitHubDescription.class);
+                Curl.get("https://api.github.com/repos/homiodev/homio-app/releases/latest", GitHubDescription.class);
 
         Asset asset = gitHubDescription.assets.stream()
-                                              .filter(a -> a.name.equals(archiveAppPath.getFileName().toString()))
-                                              .findAny().orElse(null);
+                .filter(a -> a.name.equals(archiveAppPath.getFileName().toString()))
+                .findAny().orElse(null);
         if (asset == null) {
             throw new IllegalStateException("Unable to find " + archiveAppPath.getFileName() + " asset from server");
         }

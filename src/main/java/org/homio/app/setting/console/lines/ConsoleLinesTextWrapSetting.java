@@ -1,6 +1,7 @@
 package org.homio.app.setting.console.lines;
 
 import java.util.Collection;
+
 import org.homio.api.EntityContext;
 import org.homio.api.console.ConsolePlugin;
 import org.homio.api.model.Icon;
@@ -11,7 +12,7 @@ import org.homio.api.setting.console.ConsoleSettingPlugin;
 import org.json.JSONObject;
 
 public class ConsoleLinesTextWrapSetting
-    implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
+        implements ConsoleSettingPlugin<String>, SettingPluginOptions<String> {
 
     @Override
     public SettingType getSettingType() {

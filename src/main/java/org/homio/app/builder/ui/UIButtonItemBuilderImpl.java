@@ -18,8 +18,8 @@ import org.json.JSONObject;
 @Setter
 @Accessors(chain = true)
 public class UIButtonItemBuilderImpl
-    extends UIBaseEntityItemBuilderImpl<UIButtonItemBuilder, String>
-    implements UIButtonItemBuilder {
+        extends UIBaseEntityItemBuilderImpl<UIButtonItemBuilder, String>
+        implements UIButtonItemBuilder {
 
     private String[] fireActionsBeforeChange;
     private String actionReference;
@@ -49,8 +49,8 @@ public class UIButtonItemBuilderImpl
 
     public UIInputEntity getDialogReference() {
         return dialogEntityBuilder == null
-            ? (stickyDialogBuilder == null ? null : stickyDialogBuilder.buildEntity())
-            : dialogEntityBuilder.buildEntity();
+                ? (stickyDialogBuilder == null ? null : stickyDialogBuilder.buildEntity())
+                : dialogEntityBuilder.buildEntity();
     }
 
     public boolean isSticky() {

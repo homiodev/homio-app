@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -50,7 +51,7 @@ public class WidgetService implements ContextCreated {
 
         AvailableWidget extraWidgets = new AvailableWidget("extra-widgets", "fas fa-cheese", null, new ArrayList<>());
         for (Map.Entry<String, Collection<WidgetBaseTemplate>> entry :
-            entityContext.getBeansOfTypeByAddons(WidgetBaseTemplate.class).entrySet()) {
+                entityContext.getBeansOfTypeByAddons(WidgetBaseTemplate.class).entrySet()) {
             AvailableWidget availableWidget = new AvailableWidget(entry.getKey(), "http", null, new ArrayList<>());
             for (WidgetBaseTemplate widgetBase : entry.getValue()) {
                 availableWidget.children.add(new AvailableWidget(widgetBase.getClass().getSimpleName(), widgetBase.getIcon(), null, null));

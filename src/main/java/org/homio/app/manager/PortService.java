@@ -1,6 +1,7 @@
 package org.homio.app.manager;
 
 import com.fazecast.jSerialComm.SerialPort;
+
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -8,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -36,7 +38,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
     private final EntityContextImpl entityContext;
 
     private final Map<Class<? extends SettingPlugin<SerialPort>>, Pair<String, Boolean>>
-        portListeners = new HashMap<>();
+            portListeners = new HashMap<>();
     private Set<String> ports = new HashSet<>();
     private List<SettingPluginOptions<SerialPort>> portSettingPlugins;
 
@@ -50,45 +52,45 @@ public class PortService implements ContextCreated, ContextRefreshed {
         listenPortAvailability();
         Duration checkPortInterval = entityContext.setting().getEnvRequire("interval-port-test", Duration.class, Duration.ofSeconds(10), true);
         this.entityContext
-            .bgp()
-            .builder("check-port")
-            .cancelOnError(false)
-            .interval(checkPortInterval)
-            .execute(this::checkPortsAvailability);
+                .bgp()
+                .builder("check-port")
+                .cancelOnError(false)
+                .interval(checkPortInterval)
+                .execute(this::checkPortsAvailability);
     }
 
     public void listenPortAvailability() {
         this.portListeners.clear();
         this.portSettingPlugins = EntityContextSettingImpl
-            .settingPluginsBy(sp -> SerialPort.class.equals(sp.getType()))
-            .stream()
-            .map(sp -> (SettingPluginOptions<SerialPort>) sp)
-            .collect(Collectors.toList());
+                .settingPluginsBy(sp -> SerialPort.class.equals(sp.getType()))
+                .stream()
+                .map(sp -> (SettingPluginOptions<SerialPort>) sp)
+                .collect(Collectors.toList());
 
         for (SettingPlugin<SerialPort> portSettingPlugin : portSettingPlugins) {
             Class<? extends SettingPlugin<SerialPort>> clazz =
-                (Class<? extends SettingPlugin<SerialPort>>) portSettingPlugin.getClass();
+                    (Class<? extends SettingPlugin<SerialPort>>) portSettingPlugin.getClass();
             String portRawValue = entityContext.setting().getRawValue(clazz);
             if (StringUtils.isNotEmpty(portRawValue)) {
                 addPortToListening(clazz, portRawValue, entityContext.setting().getValue(clazz));
             }
             entityContext.setting().listenValue(clazz,
-                "pm-listen-user-changes", serialPort -> {
-                    String newPortRawValue = entityContext.setting().getRawValue(clazz);
-                    if (StringUtils.isEmpty(newPortRawValue)) {
-                        portListeners.remove(clazz);
-                        portAvailable(newPortRawValue);
-                    } else {
-                        addPortToListening(clazz, newPortRawValue, serialPort);
-                    }
-                });
+                    "pm-listen-user-changes", serialPort -> {
+                        String newPortRawValue = entityContext.setting().getRawValue(clazz);
+                        if (StringUtils.isEmpty(newPortRawValue)) {
+                            portListeners.remove(clazz);
+                            portAvailable(newPortRawValue);
+                        } else {
+                            addPortToListening(clazz, newPortRawValue, serialPort);
+                        }
+                    });
         }
     }
 
     private void addPortToListening(
-        Class<? extends SettingPlugin<SerialPort>> clazz,
-        String portRawValue,
-        SerialPort serialPort) {
+            Class<? extends SettingPlugin<SerialPort>> clazz,
+            String portRawValue,
+            SerialPort serialPort) {
         portListeners.put(clazz, MutablePair.of(portRawValue, serialPort != null));
         if (serialPort == null) {
             addPortNotAvailableNotification(portRawValue);
@@ -112,7 +114,7 @@ public class PortService implements ContextCreated, ContextRefreshed {
             }
         }
         for (Map.Entry<Class<? extends SettingPlugin<SerialPort>>, Pair<String, Boolean>> entry :
-            portListeners.entrySet()) {
+                portListeners.entrySet()) {
             String portName = entry.getValue().getKey();
             if (ports.containsKey(portName)) {
                 // check if we didn't fire event already
@@ -132,13 +134,13 @@ public class PortService implements ContextCreated, ContextRefreshed {
     private void portAvailable(String portName) {
         log.info("Port became available: <{}>", portName);
         entityContext.ui().updateNotificationBlock("PORTS", blockBuilder ->
-            blockBuilder.removeInfo(portName));
+                blockBuilder.removeInfo(portName));
     }
 
     private void addPortNotAvailableNotification(String portName) {
         log.warn("Port became not available: <{}>", portName);
         entityContext.ui().addOrUpdateNotificationBlock("PORTS", "PORTS", new Icon("fab fa-usb", "#A18123"), blockBuilder ->
-            blockBuilder.addInfo(portName, new Icon("fas fa-square", Color.RED),
-                Lang.getServerMessage("ERROR.PORT_NOT_AVAILABLE", portName)));
+                blockBuilder.addInfo(portName, new Icon("fas fa-square", Color.RED),
+                        Lang.getServerMessage("ERROR.PORT_NOT_AVAILABLE", portName)));
     }
 }

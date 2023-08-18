@@ -3,6 +3,7 @@ package org.homio.addon.camera.setting;
 import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import java.util.Set;
+
 import org.homio.api.setting.SettingPlugin;
 import org.homio.api.setting.SettingPluginTextSet;
 import org.homio.hquery.hardware.network.NetworkDescription;

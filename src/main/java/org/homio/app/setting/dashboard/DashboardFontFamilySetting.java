@@ -3,6 +3,7 @@ package org.homio.app.setting.dashboard;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+
 import org.homio.api.EntityContext;
 import org.homio.api.model.OptionModel;
 import org.homio.api.setting.SettingPluginOptions;
@@ -11,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class DashboardFontFamilySetting
-    implements CoreSettingPlugin<String>, SettingPluginOptions<String> {
+        implements CoreSettingPlugin<String>, SettingPluginOptions<String> {
 
     @Override
     public @NotNull GroupKey getGroupKey() {
@@ -36,13 +37,13 @@ public class DashboardFontFamilySetting
     @Override
     public @NotNull Collection<OptionModel> getOptions(EntityContext entityContext, JSONObject params) {
         return new ArrayList<>(
-            Arrays.asList(
-                OptionModel.of("inherit"),
-                OptionModel.of("serif"),
-                OptionModel.of("sans-serif"),
-                OptionModel.of("monospace"),
-                OptionModel.of("cursive"),
-                OptionModel.of("'FontAwesome'")));
+                Arrays.asList(
+                        OptionModel.of("inherit"),
+                        OptionModel.of("serif"),
+                        OptionModel.of("sans-serif"),
+                        OptionModel.of("monospace"),
+                        OptionModel.of("cursive"),
+                        OptionModel.of("'FontAwesome'")));
     }
 
     @Override

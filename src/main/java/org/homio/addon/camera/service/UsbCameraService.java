@@ -8,6 +8,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.SystemUtils;
 import org.homio.addon.camera.CameraEntrypoint;
@@ -55,9 +56,9 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
     @Override
     protected void updateNotificationBlock() {
         CameraEntrypoint.updateCamera(entityContext, getEntity(),
-            null,
-            new Icon("fas fa-users-viewfinder", "#669618"),
-            null);
+                null,
+                new Icon("fas fa-users-viewfinder", "#669618"),
+                null);
     }
 
     @Override
@@ -79,10 +80,10 @@ public class UsbCameraService extends BaseVideoService<UsbCameraEntity, UsbCamer
         outputs.add(CommonUtils.MACHINE_IP_ADDRESS + ":" + (entity.getStreamStartPort() + 1));
 
         ffmpegUsbStream = entityContext.media().buildFFMPEG(getEntityID(), "FFmpeg usb udp re streamer", this, log,
-            GENERAL, "-loglevel warning " + (SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow"), url,
-            String.join(" ", outputParams),
-            outputs.stream().map(o -> "[f=mpegts]udp://" + o + "?pkt_size=1316").collect(Collectors.joining("|")),
-            "", "", null);
+                GENERAL, "-loglevel warning " + (SystemUtils.IS_OS_LINUX ? "-f v4l2" : "-f dshow"), url,
+                String.join(" ", outputParams),
+                outputs.stream().map(o -> "[f=mpegts]udp://" + o + "?pkt_size=1316").collect(Collectors.joining("|")),
+                "", "", null);
         ffmpegUsbStream.startConverting();
     }
 

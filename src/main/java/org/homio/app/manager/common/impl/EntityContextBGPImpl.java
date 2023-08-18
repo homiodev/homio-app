@@ -9,6 +9,7 @@ import com.pivovarit.function.ThrowingBiFunction;
 import com.pivovarit.function.ThrowingConsumer;
 import com.pivovarit.function.ThrowingFunction;
 import com.pivovarit.function.ThrowingRunnable;
+
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -39,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -69,10 +71,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @Log4j2
 public class EntityContextBGPImpl implements EntityContextBGP {
 
-    @Getter private final EntityContextImpl entityContext;
+    @Getter
+    private final EntityContextImpl entityContext;
     private final ThreadPoolTaskScheduler taskScheduler;
 
-    @Getter private final Map<String, ThreadContextImpl<?>> schedulers = new ConcurrentHashMap<>();
+    @Getter
+    private final Map<String, ThreadContextImpl<?>> schedulers = new ConcurrentHashMap<>();
 
     // not all threads may be run inside ThreadContextImpl, so we need addon able to register
     // custom
@@ -96,9 +100,9 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     public void onContextCreated() {
         // send update to UI about changed processes. Send only of user open console with thread/scheduler tab!
         this.builder("send-bgp-to-ui")
-            .interval(Duration.ofSeconds(1))
-            .cancelOnError(false)
-            .execute(() -> this.entityContext.ui().sendDynamicUpdate("bgp", getProcesses()));
+                .interval(Duration.ofSeconds(1))
+                .cancelOnError(false)
+                .execute(() -> this.entityContext.ui().sendDynamicUpdate("bgp", getProcesses()));
     }
 
     public BgpProcessResponse getProcesses() {
@@ -140,12 +144,12 @@ public class EntityContextBGPImpl implements EntityContextBGP {
 
     @Override
     public <P extends HasEntityIdentifier, T> void runInBatch(
-        @NotNull String batchName,
-        @Nullable Duration maxTerminateTimeout,
-        @NotNull Collection<P> batchItems,
-        @NotNull Function<P, Callable<T>> callableProducer,
-        @NotNull Consumer<Integer> progressConsumer,
-        @NotNull Consumer<List<T>> finallyProcessBlockHandler) {
+            @NotNull String batchName,
+            @Nullable Duration maxTerminateTimeout,
+            @NotNull Collection<P> batchItems,
+            @NotNull Function<P, Callable<T>> callableProducer,
+            @NotNull Consumer<Integer> progressConsumer,
+            @NotNull Consumer<List<T>> finallyProcessBlockHandler) {
         BatchRunContext<T> batchRunContext = prepareBatchProcessContext(batchName, batchItems.size());
         for (P batchItem : batchItems) {
             Callable<T> callable = callableProducer.apply(batchItem);
@@ -162,11 +166,11 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     @SneakyThrows
     @Override
     public <T> @NotNull List<T> runInBatchAndGet(
-        @NotNull String batchName,
-        @Nullable Duration maxTerminateTimeout,
-        int threadsCount,
-        @NotNull Map<String, Callable<T>> runnableTasks,
-        @NotNull Consumer<Integer> progressConsumer) {
+            @NotNull String batchName,
+            @Nullable Duration maxTerminateTimeout,
+            int threadsCount,
+            @NotNull Map<String, Callable<T>> runnableTasks,
+            @NotNull Consumer<Integer> progressConsumer) {
         BatchRunContext<T> batchRunContext = prepareBatchProcessContext(batchName, threadsCount);
         for (Map.Entry<String, Callable<T>> entry : runnableTasks.entrySet()) {
             batchRunContext.processes.put(entry.getKey(), batchRunContext.executor.submit(entry.getValue()));
@@ -390,8 +394,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             @Override
             public @NotNull ProcessContext execute(@NotNull String command) {
                 processContext.threadContext = builder(name)
-                    .onError(processContext::onError)
-                    .execute(() -> processContext.run(command));
+                        .onError(processContext::onError)
+                        .execute(() -> processContext.run(command));
                 return processContext;
             }
         };
@@ -400,7 +404,7 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     @Override
     @SneakyThrows
     public @NotNull ThreadContext<Void> runDirectoryWatchdog(@NotNull Path dir, @NotNull ThrowingConsumer<WatchEvent<Path>, Exception> onUpdateCommand,
-        Kind<?>... eventsToListen) {
+                                                             Kind<?>... eventsToListen) {
         String threadKey = "dir-watchdog-" + dir.getFileName().toString();
         if (isThreadExists(threadKey, true)) {
             throw new RuntimeException("Directory already watching");
@@ -415,20 +419,20 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         dir.register(watchService, eventsToListen);
 
         return builder(threadKey)
-            .interval(Duration.ofSeconds(1))
-            .execute(() -> {
-                WatchKey key;
-                while ((key = watchService.take()) != null) {
-                    for (WatchEvent<?> event : key.pollEvents()) {
-                        try {
-                            onUpdateCommand.accept((WatchEvent<Path>) event);
-                        } catch (Exception ex) {
-                            log.error("Error during handle on watch directory {}/{}", event.kind(), event.context());
+                .interval(Duration.ofSeconds(1))
+                .execute(() -> {
+                    WatchKey key;
+                    while ((key = watchService.take()) != null) {
+                        for (WatchEvent<?> event : key.pollEvents()) {
+                            try {
+                                onUpdateCommand.accept((WatchEvent<Path>) event);
+                            } catch (Exception ex) {
+                                log.error("Error during handle on watch directory {}/{}", event.kind(), event.context());
+                            }
                         }
+                        key.reset();
                     }
-                    key.reset();
-                }
-            });
+                });
     }
 
     @Override
@@ -451,10 +455,10 @@ public class EntityContextBGPImpl implements EntityContextBGP {
             ScheduleBuilder<Void> scheduleBuilder = builder("file-watchdog" + file);
             final AtomicLong lastModified = new AtomicLong(Files.readAttributes(file, BasicFileAttributes.class).lastModifiedTime().toMillis());
             fileWatchDog = scheduleBuilder.intervalWithDelay(Duration.ofSeconds(10))
-                                          .execute(context -> {
-                                              checkFileModifiedAndFireHandler(file, lastModified, (ThreadContextImpl) context);
-                                              return null;
-                                          });
+                    .execute(context -> {
+                        checkFileModifiedAndFireHandler(file, lastModified, (ThreadContextImpl) context);
+                        return null;
+                    });
             ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners = new ConcurrentHashMap<>();
             ((ThreadContextImpl) fileWatchDog).simpleWorkUnitListeners.put(key, onUpdateCommand);
         }
@@ -477,11 +481,11 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     }
 
     private <T> List<T> waitBatchToDone(
-        @NotNull String batchName,
-        @Nullable Duration maxTerminateTimeout,
-        @NotNull Consumer<Integer> progressConsumer,
-        @NotNull BatchRunContext<T> batchRunContext)
-        throws InterruptedException, ExecutionException {
+            @NotNull String batchName,
+            @Nullable Duration maxTerminateTimeout,
+            @NotNull Consumer<Integer> progressConsumer,
+            @NotNull BatchRunContext<T> batchRunContext)
+            throws InterruptedException, ExecutionException {
         ThreadPoolExecutor executor = batchRunContext.executor;
         executor.shutdown();
         long batchStarted = System.currentTimeMillis();
@@ -537,48 +541,49 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         this.schedulers.put(threadContext.name, threadContext);
 
         Runnable runnable =
-            () -> {
-                try {
-                    threadContext.runCount++;
-                    threadContext.state = "TITLE.STARTED";
-                    threadContext.setRetValue(threadContext.getCommand().apply(threadContext));
-                    threadContext.state = "TITLE.FINISHED";
-                    if (threadContext.scheduleType == ScheduleType.SINGLE) {
-                        if (threadContext.scheduledFuture == null) {
-                            try {
-                                Thread.sleep(100); // hack: sleep 100ms to allow assign
-                            } catch (InterruptedException ignore) {}
-                            // threadContext.scheduledFuture = ....
-                        }
-                        threadContext.processFinished();
-                    }
-                } catch (Exception ex) {
-                    if (ex instanceof CancellationException) {
+                () -> {
+                    try {
+                        threadContext.runCount++;
+                        threadContext.state = "TITLE.STARTED";
+                        threadContext.setRetValue(threadContext.getCommand().apply(threadContext));
                         threadContext.state = "TITLE.FINISHED";
-                        threadContext.processFinished();
-                        return;
-                    }
-                    threadContext.state = "W.ERROR.FINISHED_WITH_ERROR";
-                    threadContext.error = CommonUtils.getErrorMessage(ex);
-                    if (threadContext.throwOnError) {
-                        throw new ServerException(threadContext.error);
-                    }
+                        if (threadContext.scheduleType == ScheduleType.SINGLE) {
+                            if (threadContext.scheduledFuture == null) {
+                                try {
+                                    Thread.sleep(100); // hack: sleep 100ms to allow assign
+                                } catch (InterruptedException ignore) {
+                                }
+                                // threadContext.scheduledFuture = ....
+                            }
+                            threadContext.processFinished();
+                        }
+                    } catch (Exception ex) {
+                        if (ex instanceof CancellationException) {
+                            threadContext.state = "TITLE.FINISHED";
+                            threadContext.processFinished();
+                            return;
+                        }
+                        threadContext.state = "W.ERROR.FINISHED_WITH_ERROR";
+                        threadContext.error = CommonUtils.getErrorMessage(ex);
+                        if (threadContext.throwOnError) {
+                            throw new ServerException(threadContext.error);
+                        }
 
-                    log.error("Exception in thread: <{}>. Message: <{}>", threadContext.name, CommonUtils.getErrorMessage(ex), ex);
-                    entityContext.ui().sendErrorMessage(ex);
-                    if (threadContext.errorListener != null) {
-                        try {
-                            threadContext.errorListener.accept(ex);
-                        } catch (Exception uex) {
-                            log.error("Unexpected error in thread error listener <{}>", CommonUtils.getErrorMessage(uex));
+                        log.error("Exception in thread: <{}>. Message: <{}>", threadContext.name, CommonUtils.getErrorMessage(ex), ex);
+                        entityContext.ui().sendErrorMessage(ex);
+                        if (threadContext.errorListener != null) {
+                            try {
+                                threadContext.errorListener.accept(ex);
+                            } catch (Exception uex) {
+                                log.error("Unexpected error in thread error listener <{}>", CommonUtils.getErrorMessage(uex));
+                            }
+                        }
+
+                        if (threadContext.cancelOnError || threadContext.scheduleType == ScheduleType.SINGLE) {
+                            threadContext.processFinished();
                         }
                     }
-
-                    if (threadContext.cancelOnError || threadContext.scheduleType == ScheduleType.SINGLE) {
-                        threadContext.processFinished();
-                    }
-                }
-            };
+                };
         threadContext.scheduledFuture = (ScheduledFuture<T>) scheduleHandler.apply(runnable);
     }
 
@@ -602,7 +607,8 @@ public class EntityContextBGPImpl implements EntityContextBGP {
     @RequiredArgsConstructor
     private class ProgressBuilderImpl implements ProgressBuilder {
 
-        private @NotNull final String key;
+        private @NotNull
+        final String key;
         private boolean cancellable;
         private boolean logToConsole = true;
         private @Nullable Consumer<Exception> onFinally;
@@ -676,11 +682,15 @@ public class EntityContextBGPImpl implements EntityContextBGP {
         private T retValue;
         private String error;
         private ScheduledFuture<T> scheduledFuture;
-        @Setter private String state;
-        @Setter private String description;
+        @Setter
+        private String state;
+        @Setter
+        private String description;
         private boolean stopped;
-        @Setter private int runCount;
-        @Setter private boolean cancelOnError = true;
+        @Setter
+        private int runCount;
+        @Setter
+        private boolean cancelOnError = true;
         private Map<String, ThrowingBiFunction<T, T, Boolean, Exception>> valueListeners;
         private Map<String, ThrowingRunnable<Exception>> simpleWorkUnitListeners;
         private Consumer<Exception> errorListener;

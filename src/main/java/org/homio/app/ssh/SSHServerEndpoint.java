@@ -8,6 +8,7 @@ import static org.homio.app.config.WebSocketConfig.CUSTOM_WEB_SOCKET_ENDPOINT;
 import com.sshtools.client.SessionChannelNG;
 import com.sshtools.client.SshClient;
 import com.sshtools.client.tasks.ShellTask;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -16,6 +17,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -187,7 +189,7 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
 
     @Override
     public boolean beforeHandshake(@NotNull ServerHttpRequest serverHttpRequest, @NotNull ServerHttpResponse response, @NotNull WebSocketHandler wsHandler,
-        @NotNull Map<String, Object> attributes) {
+                                   @NotNull Map<String, Object> attributes) {
         if (serverHttpRequest instanceof ServletServerHttpRequest request) {
             String token = request.getServletRequest().getParameter(TOKEN);
             if (!StringUtils.isEmpty(token) && sessionByToken.containsKey(token)) {
@@ -207,7 +209,8 @@ public class SSHServerEndpoint extends BinaryWebSocketHandler implements Dynamic
     @RequiredArgsConstructor
     private class SessionContext {
 
-        private @NotNull final SshSession<SshGenericEntity> session;
+        private @NotNull
+        final SshSession<SshGenericEntity> session;
         private String sessionId;
         private WebSocketSession wsSession;
         private ThreadContext<Void> threadContext;

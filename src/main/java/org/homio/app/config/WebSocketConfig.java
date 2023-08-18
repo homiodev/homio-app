@@ -1,6 +1,7 @@
 package org.homio.app.config;
 
 import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
@@ -57,12 +58,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry webSocketHandlerRegistry) {
         webSocketHandlerRegistry.addHandler(new AbstractWebSocketHandler() {
-                                    @Override
-                                    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-                                        super.afterConnectionEstablished(session);
-                                    }
-                                }, "/tttt")
-                                .addInterceptors(new OriginHandshakeInterceptor())
-                                .setAllowedOrigins("*");
+                    @Override
+                    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+                        super.afterConnectionEstablished(session);
+                    }
+                }, "/tttt")
+                .addInterceptors(new OriginHandshakeInterceptor())
+                .setAllowedOrigins("*");
     }
 }

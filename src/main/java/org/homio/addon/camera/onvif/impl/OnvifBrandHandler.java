@@ -11,9 +11,9 @@ import org.homio.addon.camera.service.OnvifCameraService;
 @CameraBrandHandler("Onvif")
 public class OnvifBrandHandler extends BaseOnvifCameraBrandHandler {
 
-  public OnvifBrandHandler(OnvifCameraService service) {
-    super(service);
-  }
+    public OnvifBrandHandler(OnvifCameraService service) {
+        super(service);
+    }
 
     @Override
     public void onCameraConnected() {
@@ -21,12 +21,12 @@ public class OnvifBrandHandler extends BaseOnvifCameraBrandHandler {
     }
 
     @Override
-  public boolean isSupportOnvifEvents() {
-    return true;
-  }
+    public boolean isSupportOnvifEvents() {
+        return true;
+    }
 
-  @Override
-  public void channelRead(ChannelHandlerContext ctx, Object msg) {
-    ReferenceCountUtil.release(msg);
-  }
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        ReferenceCountUtil.release(msg);
+    }
 }

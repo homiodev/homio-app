@@ -1,6 +1,7 @@
 package org.homio.app.repository.widget;
 
 import java.util.List;
+
 import lombok.extern.log4j.Log4j2;
 import org.homio.app.model.entity.widget.WidgetSeriesEntity;
 import org.homio.app.repository.AbstractRepository;

@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetSimpleToggleEntity extends WidgetBaseEntity<WidgetSimpleToggleEntity>
-    implements HasSourceServerUpdates, HasSingleValueDataSource, HasToggle, HasAlign, HasPadding {
+        implements HasSourceServerUpdates, HasSingleValueDataSource, HasToggle, HasAlign, HasPadding {
 
     @Override
     public boolean isVisible() {

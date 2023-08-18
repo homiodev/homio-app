@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetLineChartSeriesEntity extends WidgetSeriesEntity<WidgetLineChartEntity>
-    implements HasChartDataSource {
+        implements HasChartDataSource {
 
     @Override
     public String getDefaultName() {

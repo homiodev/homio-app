@@ -5,7 +5,7 @@ import org.homio.api.entity.BaseEntity;
 import org.jetbrains.annotations.Nullable;
 
 public interface HasActionOnClickBuilder<T extends BaseEntity & org.homio.app.model.entity.widget.attributes.HasActionOnClick, R>
-    extends HasActionOnClick<R> {
+        extends HasActionOnClick<R> {
 
     T getWidget();
 

@@ -11,6 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -28,7 +29,8 @@ public class BroadcastLockImpl implements BroadcastLock {
     private Map<String, Runnable> releaseListeners;
     private List<Consumer<Object>> signalListener;
 
-    @Getter private Object value;
+    @Getter
+    private Object value;
 
     public BroadcastLockImpl(String id, Object expectedValue) {
         this.key = id;
@@ -37,7 +39,7 @@ public class BroadcastLockImpl implements BroadcastLock {
             this.valueCheck = o -> true;
         } else if (this.expectedValue instanceof Pattern) {
             this.valueCheck =
-                o -> ((Pattern) this.expectedValue).matcher(Objects.toString(value)).matches();
+                    o -> ((Pattern) this.expectedValue).matcher(Objects.toString(value)).matches();
         } else {
             this.valueCheck = o -> Objects.equals(o, this.expectedValue);
         }

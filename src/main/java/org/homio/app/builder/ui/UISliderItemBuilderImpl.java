@@ -9,7 +9,7 @@ import org.homio.api.ui.field.action.v1.item.UISliderItemBuilder;
 @Getter
 @Accessors(chain = true)
 public class UISliderItemBuilderImpl extends UIBaseEntityItemBuilderImpl<UISliderItemBuilder, Float>
-    implements UISliderItemBuilder {
+        implements UISliderItemBuilder {
 
     private final Float min;
     private final Float max;

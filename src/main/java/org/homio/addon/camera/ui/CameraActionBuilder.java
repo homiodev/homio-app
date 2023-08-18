@@ -4,6 +4,7 @@ import static org.springframework.objenesis.instantiator.util.ClassUtils.newInst
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -53,11 +55,11 @@ public class CameraActionBuilder {
     }
 
     private static void assembleActions(
-        BaseOnvifCameraBrandHandler brandHandler,
-        UIInputBuilder uiInputBuilder,
-        Set<String> handledMethods,
-        Method[] actions,
-        Function<Method, ActionContext> actionContextGetter) {
+            BaseOnvifCameraBrandHandler brandHandler,
+            UIInputBuilder uiInputBuilder,
+            Set<String> handledMethods,
+            Method[] actions,
+            Function<Method, ActionContext> actionContextGetter) {
         for (Method method : actions) {
             if (handledMethods.add(method.getName())) {
                 ActionContext context = actionContextGetter.apply(method);
@@ -77,8 +79,8 @@ public class CameraActionBuilder {
                     }
                 } else {
                     type = context.type == VideoActionType.slider
-                        ? UIFieldType.Slider : context.type == VideoActionType.bool
-                        ? UIFieldType.Boolean : UIFieldType.String;
+                            ? UIFieldType.Slider : context.type == VideoActionType.bool
+                            ? UIFieldType.Boolean : UIFieldType.String;
                 }
 
                 UIActionHandler actionHandler = (entityContext, params) -> {
@@ -96,23 +98,23 @@ public class CameraActionBuilder {
 
                     if (StringUtils.isEmpty(context.subGroup)) {
                         layoutBuilder = uiInputBuilder.addFlex(context.group, context.order)
-                                                      .columnFlexDirection()
-                                                      .setBorderArea(context.group);
+                                .columnFlexDirection()
+                                .setBorderArea(context.group);
                     } else {
                         UIStickyDialogItemBuilder stickyLayoutBuilder = layoutBuilder.addStickyDialogButton(context.group + "_sb",
-                            new Icon(context.subGroupIcon), context.order).editButton(buttonItemBuilder ->
-                            buttonItemBuilder.setText(context.group));
+                                new Icon(context.subGroupIcon), context.order).editButton(buttonItemBuilder ->
+                                buttonItemBuilder.setText(context.group));
 
                         layoutBuilder = stickyLayoutBuilder.addFlex(context.subGroup, context.order)
-                                                           .setBorderArea(context.subGroup)
-                                                           .columnFlexDirection();
+                                .setBorderArea(context.subGroup)
+                                .columnFlexDirection();
                     }
                 }
                 UICameraDimmerButton[] buttons = method.getDeclaredAnnotationsByType(UICameraDimmerButton.class);
                 if (buttons.length > 0) {
                     if (context.type != VideoActionType.slider) {
                         throw new RuntimeException(
-                            "Method " + method.getName() + " annotated with @UICameraDimmerButton, but @UICameraAction has no dimmer type");
+                                "Method " + method.getName() + " annotated with @UICameraDimmerButton, but @UICameraAction has no dimmer type");
                     }
                     UIFlexLayoutBuilder flex = layoutBuilder.addFlex("dimmer", context.order);
                     UIMultiButtonItemBuilder multiButtonItemBuilder = flex.addMultiButton("dimm_btns", actionHandler, context.order);
@@ -123,13 +125,13 @@ public class CameraActionBuilder {
                 }
 
                 uiEntityItemBuilder = (UIEntityItemBuilder) createUIEntity(context, type, layoutBuilder, actionHandler)
-                    .setIcon(context.icon);
+                        .setIcon(context.icon);
 
                 if (type == UIFieldType.SelectBox) {
                     if (actionParameter.getType().isEnum()) {
                         if (KeyValueEnum.class.isAssignableFrom(actionParameter.getType())) {
                             ((UISelectBoxItemBuilder) uiEntityItemBuilder).setOptions(
-                                OptionModel.list((Class<? extends KeyValueEnum>) actionParameter.getType()));
+                                    OptionModel.list((Class<? extends KeyValueEnum>) actionParameter.getType()));
                         } else {
                             ((UISelectBoxItemBuilder) uiEntityItemBuilder).setOptions(OptionModel.enumList((Class<? extends Enum>) actionParameter.getType()));
                         }
@@ -159,13 +161,13 @@ public class CameraActionBuilder {
                             throw new RuntimeException(ex);
                         }
                         uiEntityItemBuilder.addFetchValueHandler("update-selection", () ->
-                            ((UISelectBoxItemBuilder) uiEntityItemBuilder)
-                                .setOptions(dynamicOptionLoader.loadOptions(
-                                    new DynamicOptionLoader.DynamicOptionLoaderParameters(
-                                        brandHandler.getEntity(),
-                                        brandHandler.getEntityContext(),
-                                        attributeValues.staticParameters(), null)
-                                )));
+                                ((UISelectBoxItemBuilder) uiEntityItemBuilder)
+                                        .setOptions(dynamicOptionLoader.loadOptions(
+                                                new DynamicOptionLoader.DynamicOptionLoaderParameters(
+                                                        brandHandler.getEntity(),
+                                                        brandHandler.getEntityContext(),
+                                                        attributeValues.staticParameters(), null)
+                                        )));
                     }
                 }
                 Method getter = findGetter(brandHandler, context.name);
@@ -181,7 +183,7 @@ public class CameraActionBuilder {
                             uiEntityItemBuilder.setValue(type.getConvertToObject().apply(value));
                         } catch (Exception ex) {
                             log.error("Unable to fetch getter value for action: <{}>. Msg: <{}>",
-                                context.name, CommonUtils.getErrorMessage(ex));
+                                    context.name, CommonUtils.getErrorMessage(ex));
                         }
                     });
                 }
@@ -190,17 +192,17 @@ public class CameraActionBuilder {
     }
 
     private static UIEntityItemBuilder<?, ?> createUIEntity(ActionContext context, UIFieldType type,
-        UILayoutBuilder flex,
-        UIActionHandler handler) {
+                                                            UILayoutBuilder flex,
+                                                            UIActionHandler handler) {
         return switch (type) {
             case SelectBox -> flex.addSelectBox(context.name, handler, context.order).setSelectReplacer(context.min,
-                                      context.max, context.selectReplacer)
-                                  .setSeparatedText("CONTEXT.ACTION." + context.name);
+                            context.max, context.selectReplacer)
+                    .setSeparatedText("CONTEXT.ACTION." + context.name);
             case Slider -> flex.addSlider(context.name, 0F, (float) context.min,
-                                   (float) context.max, handler, UISliderItemBuilder.SliderType.Regular, context.order)
-                               .setSeparatedText("CONTEXT.ACTION." + context.name);
+                            (float) context.max, handler, UISliderItemBuilder.SliderType.Regular, context.order)
+                    .setSeparatedText("CONTEXT.ACTION." + context.name);
             case Boolean -> flex.addCheckbox(context.name, false, handler, context.order)
-                                .setSeparatedText("CONTEXT.ACTION." + context.name);
+                    .setSeparatedText("CONTEXT.ACTION." + context.name);
             case String -> flex.addInfo(context.name, context.order);
             default -> throw new RuntimeException("Unknown type: " + type);
         };

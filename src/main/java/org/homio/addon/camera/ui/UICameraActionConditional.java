@@ -7,11 +7,12 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
+
 import org.homio.addon.camera.service.OnvifCameraService;
 
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UICameraActionConditional {
 
-  Class<? extends BiPredicate<OnvifCameraService, Method>> value();
+    Class<? extends BiPredicate<OnvifCameraService, Method>> value();
 }

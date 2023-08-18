@@ -2,6 +2,7 @@ package org.homio.app.manager.common.impl;
 
 import java.util.Map;
 import java.util.Set;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -19,10 +20,11 @@ import org.jetbrains.annotations.Nullable;
 @RequiredArgsConstructor
 public class EntityContextMediaImpl implements EntityContextMedia {
 
-    @Getter private final EntityContextImpl entityContext;
+    @Getter
+    private final EntityContextImpl entityContext;
     private final FfmpegHardwareRepository repo;
     public static String FFMPEG_LOCATION = SystemUtils.IS_OS_LINUX ? "ffmpeg" :
-        CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe").toString();
+            CommonUtils.getInstallPath().resolve("ffmpeg").resolve("ffmpeg.exe").toString();
 
 
     @Override
@@ -47,10 +49,10 @@ public class EntityContextMediaImpl implements EntityContextMedia {
 
     @Override
     public @NotNull FFMPEG buildFFMPEG(@NotNull String entityID, @NotNull String description, @NotNull FFMPEGHandler handler, @NotNull Logger log,
-        @NotNull FFMPEGFormat format, @NotNull String inputArguments, @NotNull String input, @NotNull String outArguments, @NotNull String output,
-        @NotNull String username, @NotNull String password, @Nullable Runnable destroyListener) {
+                                       @NotNull FFMPEGFormat format, @NotNull String inputArguments, @NotNull String input, @NotNull String outArguments, @NotNull String output,
+                                       @NotNull String username, @NotNull String password, @Nullable Runnable destroyListener) {
         return new FFMPEGImpl(entityID, description, handler, log, format, inputArguments, input, outArguments, output, username,
-            password, destroyListener);
+                password, destroyListener);
     }
 
     public void onContextCreated() throws Exception {
@@ -59,8 +61,8 @@ public class EntityContextMediaImpl implements EntityContextMedia {
                 FFMPEG ffmpeg = threadEntry.getValue();
                 if (ffmpeg.getIsAlive()) {
                     threadPuller.addThread(threadEntry.getKey(), ffmpeg.getDescription(), ffmpeg.getCreationDate(),
-                        "working", null,
-                        "Command: " + String.join(" ", ffmpeg.getCommandArrayList())
+                            "working", null,
+                            "Command: " + String.join(" ", ffmpeg.getCommandArrayList())
                     );
                 }
             }

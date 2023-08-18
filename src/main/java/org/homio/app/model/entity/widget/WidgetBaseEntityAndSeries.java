@@ -7,7 +7,9 @@ import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
+
 import java.util.Set;
+
 import lombok.Getter;
 import lombok.Setter;
 import org.homio.api.entity.validation.MaxItems;
@@ -17,7 +19,7 @@ import org.homio.api.ui.field.UIField;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class WidgetBaseEntityAndSeries<T extends WidgetBaseEntityAndSeries, S extends WidgetSeriesEntity<T>>
-    extends WidgetBaseEntity<T> {
+        extends WidgetBaseEntity<T> {
 
     @Getter
     @Setter

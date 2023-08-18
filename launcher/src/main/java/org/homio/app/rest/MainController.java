@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Properties;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -58,9 +59,9 @@ public class MainController {
         }
         System.err.printf("Error '%s'%n", msg);
         Objects.requireNonNull(((ServletWebRequest) request).getResponse())
-               .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                             .body(new ErrorHolderModel("ERROR", msg, ex));
+                .body(new ErrorHolderModel("ERROR", msg, ex));
     }
 
     @GetMapping("/auth/status")
@@ -87,8 +88,8 @@ public class MainController {
         installing = true;
         new Thread(() -> {
             ProgressBar progressBar = (progress, message, error) ->
-                messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + "-global",
-                    new Progress(progress, message));
+                    messagingTemplate.convertAndSend(WebSocketConfig.DESTINATION_PREFIX + "-global",
+                            new Progress(progress, message));
             if (Files.exists(rootPath.resolve("homio-app.jar"))) {
                 System.err.println("homio-app.jar already downloaded. Made restart...");
                 finishInstallApp(progressBar);
@@ -199,7 +200,7 @@ public class MainController {
     @SneakyThrows
     private static Path getHomioPropertiesLocation() {
         Path propertiesFile = (SystemUtils.IS_OS_WINDOWS ? SystemUtils.getUserHome().toPath().resolve("homio") :
-            createDirectoriesIfNotExists(Paths.get("/opt/homio"))).resolve("homio.properties");
+                createDirectoriesIfNotExists(Paths.get("/opt/homio"))).resolve("homio.properties");
         if (!Files.exists(propertiesFile)) {
             ApplicationHome applicationHome = new ApplicationHome();
             Path jarLocation = applicationHome.getDir().toPath();

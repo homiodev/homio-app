@@ -2,6 +2,7 @@ package org.homio.app.workspace.block.core;
 
 import java.text.NumberFormat;
 import java.util.function.BiFunction;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -89,16 +90,18 @@ public class Scratch3DataBlocks extends Scratch3ExtensionBlocks {
     @RequiredArgsConstructor
     private enum WhenValueOperator {
         More(">",
-            (workspaceBlock, value) -> toNumber(value) > workspaceBlock.getInputFloat("ITEM")),
+                (workspaceBlock, value) -> toNumber(value) > workspaceBlock.getInputFloat("ITEM")),
         Less("<",
-            (workspaceBlock, value) -> toNumber(value) < workspaceBlock.getInputFloat("ITEM")),
+                (workspaceBlock, value) -> toNumber(value) < workspaceBlock.getInputFloat("ITEM")),
         Eq("=",
-            (workspaceBlock, value) -> value.toString().equals(workspaceBlock.getInputString("ITEM", ""))),
+                (workspaceBlock, value) -> value.toString().equals(workspaceBlock.getInputString("ITEM", ""))),
         Regexp("regex",
-            (workspaceBlock, value) -> {return value.toString().matches(workspaceBlock.getInputString("ITEM", ""));}),
+                (workspaceBlock, value) -> {
+                    return value.toString().matches(workspaceBlock.getInputString("ITEM", ""));
+                }),
         Any("any", (workspaceBlock, o) -> true),
         NotEq("!=",
-            (workspaceBlock, value) -> !value.toString().equals(workspaceBlock.getInputString("ITEM", "")));
+                (workspaceBlock, value) -> !value.toString().equals(workspaceBlock.getInputString("ITEM", "")));
 
         private final String op;
         private final BiFunction<WorkspaceBlock, Object, Boolean> checkFn;

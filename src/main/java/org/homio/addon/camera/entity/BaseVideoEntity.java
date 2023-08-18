@@ -10,13 +10,12 @@ import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FilenameUtils;
@@ -61,7 +60,7 @@ import org.json.JSONObject;
 @SuppressWarnings("unused")
 @Log4j2
 public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseVideoService<?, S>>
-    extends MediaEntity implements DeviceEndpointsBehaviourContract, EntityService<S, T> {
+        extends MediaEntity implements DeviceEndpointsBehaviourContract, EntityService<S, T> {
 
     @UIField(order = 300, hideInView = true)
     public boolean isHasAudioStream() {
@@ -120,8 +119,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     public abstract String getFolderName();
 
     @UIContextMenuAction(value = "RECORD_MP4", icon = "fas fa-file-video", inputs = {
-        @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
-        @UIActionInput(name = "secondsToRecord", type = UIActionInput.Type.number, value = "10", min = 5, max = 100)
+            @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
+            @UIActionInput(name = "secondsToRecord", type = UIActionInput.Type.number, value = "10", min = 5, max = 100)
     })
     public ActionResponseModel recordMP4(JSONObject params) {
         S service = getService();
@@ -144,8 +143,8 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @UIContextMenuAction(value = "RECORD_GIF", icon = "fas fa-magic", inputs = {
-        @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
-        @UIActionInput(name = "secondsToRecord", type = UIActionInput.Type.number, value = "3", min = 1, max = 10)
+            @UIActionInput(name = "fileName", value = "record_${timestamp}", min = 4, max = 30),
+            @UIActionInput(name = "secondsToRecord", type = UIActionInput.Type.number, value = "3", min = 1, max = 10)
     })
     public ActionResponseModel recordGif(JSONObject params) {
         S service = getService();
@@ -181,9 +180,9 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     @UIField(order = 500, hideInEdit = true)
     @UIFieldImage
     @UIActionButton(name = "refresh", icon = "fas fa-sync",
-                    actionHandler = BaseVideoEntity.UpdateSnapshotActionHandler.class)
+            actionHandler = BaseVideoEntity.UpdateSnapshotActionHandler.class)
     @UIActionButton(name = "get", icon = "fas fa-camera",
-                    actionHandler = BaseVideoEntity.GetSnapshotActionHandler.class)
+            actionHandler = BaseVideoEntity.GetSnapshotActionHandler.class)
     public byte[] getSnapshot() {
         return optService().map(BaseVideoService::getSnapshot).orElse(null);
     }
@@ -349,8 +348,21 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         setMjpegOutOptions(join("~~~", "-q:v 5", "-r 2", "-vf scale=640:-2", "-update 1"));
         setSnapshotOutOptions(join("~~~", "-vsync vfr", "-q:v 2", "-update 1", "-frames:v 1"));
         setGifOutOptions(
-            join("~~~", "-r 2", "-filter_complex scale=-2:360:flags=lanczos,setpts=0.5*PTS,split[o1][o2];[o1]palettegen[p];[o2]fifo[o3];" +
-                "[o3][p]paletteuse"));
+                join("~~~", "-r 2", "-filter_complex scale=-2:360:flags=lanczos,setpts=0.5*PTS,split[o1][o2];[o1]palettegen[p];[o2]fifo[o3];" +
+                        "[o3][p]paletteuse"));
+    }
+
+    @JsonIgnore
+    public @Nullable String getError() {
+        if (!isStart()) {
+            return "W.ERROR.NOT_STARTED";
+        }
+        return null;
+    }
+
+    @JsonIgnore
+    public @NotNull String getGroupID() {
+        return Objects.requireNonNull(getIeeeAddress());
     }
 
     public static class UpdateSnapshotActionHandler implements UIActionHandler {
@@ -369,7 +381,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
         public ActionResponseModel handleAction(EntityContext entityContext, JSONObject params) {
             BaseVideoEntity entity = entityContext.getEntityRequire(params.getString("entityID"));
             String encodedValue =
-                "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(entity.getSnapshot());
+                    "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(entity.getSnapshot());
             FileModel snapshot = new FileModel("Snapshot", encodedValue, FileContentType.image, true);
             return ActionResponseModel.showFile(snapshot);
         }
@@ -377,15 +389,15 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
 
     public long getVideoParametersHashCode() {
         return getJsonDataHashCode("gifOutOptions", "mjpegOutOptions", "imgOutOptions",
-            "motionOptions", "mp4OutOptions");
+                "motionOptions", "mp4OutOptions");
     }
 
     @Override
     public @NotNull String getDeviceFullName() {
         return "%s(%s) [${%s}]".formatted(
-            getTitle(),
-            getIeeeAddress(),
-            defaultIfEmpty(getPlace(), "W.ERROR.PLACE_NOT_SET"));
+                getTitle(),
+                getIeeeAddress(),
+                defaultIfEmpty(getPlace(), "W.ERROR.PLACE_NOT_SET"));
     }
 
     @Override

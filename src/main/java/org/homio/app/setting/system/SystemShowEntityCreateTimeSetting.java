@@ -5,7 +5,7 @@ import org.homio.app.setting.CoreSettingPlugin;
 import org.jetbrains.annotations.NotNull;
 
 public class SystemShowEntityCreateTimeSetting
-    implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
+        implements CoreSettingPlugin<Boolean>, SettingPluginBoolean {
 
     @Override
     public int order() {

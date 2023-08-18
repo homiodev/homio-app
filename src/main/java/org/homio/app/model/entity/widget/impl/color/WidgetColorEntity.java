@@ -4,8 +4,10 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.homio.api.entity.widget.ability.HasGetStatusValue;
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.UI;
@@ -34,12 +36,12 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
-    implements
-    HasLayout,
-    HasIconWithoutThreshold,
-    HasName,
-    HasSourceServerUpdates,
-    HasDynamicParameterFields {
+        implements
+        HasLayout,
+        HasIconWithoutThreshold,
+        HasName,
+        HasSourceServerUpdates,
+        HasDynamicParameterFields {
 
     @UIField(order = 1)
     @UIFieldGroup(value = "NAME", order = 3)
@@ -88,7 +90,7 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     @UIField(order = 1)
     @UIFieldKeyValue(maxSize = 20, keyType = UIFieldType.String, valueType = UIFieldType.ColorPicker,
-                     defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
+            defaultKey = "0", showKey = false, defaultValue = "#FFFFFF", keyValueType = KeyValueType.array)
     @UIFieldGroup(value = "COLORS", order = 10)
     public String getColors() {
         return getJsonData("colors");
@@ -290,8 +292,8 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
         super.beforePersist();
         if (!getJsonData().has("colors")) {
             setColors(Stream.of("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FFFFFF")
-                            .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
-                            .collect(Collectors.joining(",", "[", "]")));
+                    .map(color -> String.format("{\"key\":\"0\",\"value\":\"%s\"}", color))
+                    .collect(Collectors.joining(",", "[", "]")));
         }
         if (!getJsonData().has("size")) {
             setCircleSize(20);
@@ -306,14 +308,14 @@ public class WidgetColorEntity extends WidgetBaseEntity<WidgetColorEntity>
 
     private String getDefaultLayout() {
         return UIFieldLayout.LayoutBuilder
-            .builder(15, 20, 50, 15)
-            .addRow(rb -> rb
-                .addCol("icon", HorizontalAlign.center)
-                .addCol("name", HorizontalAlign.left)
-                .addCol("brightness", HorizontalAlign.center)
-                .addCol("onOff", HorizontalAlign.center))
-            .addRow(rb -> rb
-                .addCol("colors", HorizontalAlign.center, 4))
-            .build();
+                .builder(15, 20, 50, 15)
+                .addRow(rb -> rb
+                        .addCol("icon", HorizontalAlign.center)
+                        .addCol("name", HorizontalAlign.left)
+                        .addCol("brightness", HorizontalAlign.center)
+                        .addCol("onOff", HorizontalAlign.center))
+                .addRow(rb -> rb
+                        .addCol("colors", HorizontalAlign.center, 4))
+                .build();
     }
 }

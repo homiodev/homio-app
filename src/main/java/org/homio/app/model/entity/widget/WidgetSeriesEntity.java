@@ -8,7 +8,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.ManyToOne;
+
 import java.util.Set;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -25,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class WidgetSeriesEntity<T extends WidgetBaseEntityAndSeries>
-    extends BaseEntity implements HasDynamicParameterFields, HasJsonData {
+        extends BaseEntity implements HasDynamicParameterFields, HasJsonData {
 
     private int priority;
 

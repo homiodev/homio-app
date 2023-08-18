@@ -11,6 +11,7 @@ import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -116,9 +118,9 @@ public class CameraController {
 
     @GetMapping("/{entityID}/ipcamera.jpg")
     public void requestCameraIpCameraJpg(
-        @PathVariable("entityID") String entityID,
-        HttpServletRequest req,
-        HttpServletResponse resp) {
+            @PathVariable("entityID") String entityID,
+            HttpServletRequest req,
+            HttpServletResponse resp) {
         BaseVideoEntity entity = entityContext.getEntityRequire(entityID);
         BaseVideoService handler = entity.getService();
         // Use cached image if recent. Cameras can take > 1sec to send back a reply.
@@ -138,7 +140,7 @@ public class CameraController {
                     }
                 } // 5 sec timeout OR a new snapshot comes back from camera
                 while (Duration.between(startTime, Instant.now()).toMillis() < 5000
-                    && Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() > 1200);
+                        && Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() > 1200);
                 sendSnapshotImage(resp, handler.getSnapshot());
                 asyncContext.complete();
             });
@@ -147,7 +149,7 @@ public class CameraController {
 
     private static boolean isUseCachedImage(BaseVideoService handler) {
         return handler.getFfmpegSnapshot().isRunning()
-            || Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() < 1200;
+                || Duration.between(handler.getCurrentSnapshotTime(), Instant.now()).toMillis() < 1200;
     }
 
     @SneakyThrows
@@ -168,7 +170,7 @@ public class CameraController {
                 // Never stop streaming until IOException. Occurs when browser stops the stream.
                 openSnapshotStreams.removeStream(output);
                 log.debug("Now there are {} snapshots.mjpeg streams open.",
-                    openSnapshotStreams.getNumberOfStreams());
+                        openSnapshotStreams.getNumberOfStreams());
                 if (openSnapshotStreams.isEmpty()) {
                     handler.setStreamingSnapshotMjpeg(false);
                     handler.stopSnapshotPolling();
@@ -252,7 +254,7 @@ public class CameraController {
                 // Never stop streaming until IOException. Occurs when browser stops the stream.
                 openAutoFpsStreams.removeStream(output);
                 log.debug("Now there are {} autofps.mjpeg streams open.",
-                    openAutoFpsStreams.getNumberOfStreams());
+                        openAutoFpsStreams.getNumberOfStreams());
                 if (openAutoFpsStreams.isEmpty()) {
                     service.setStreamingAutoFps(false);
                     log.debug("All autofps.mjpeg streams have stopped.");
@@ -271,36 +273,36 @@ public class CameraController {
 
     @GetMapping("/{entityID}/{filename}.ts")
     public void requestCameraTs(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("filename") String filename,
-        HttpServletResponse resp) {
+            @PathVariable("entityID") String entityID,
+            @PathVariable("filename") String filename,
+            HttpServletResponse resp) {
         resp.setContentType("video/MP2T");
         sendFile(entityID, filename, resp);
     }
 
     @GetMapping("/{entityID}/{filename}.gif")
     public void requestCameraGif(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("filename") String filename,
-        HttpServletResponse resp) {
+            @PathVariable("entityID") String entityID,
+            @PathVariable("filename") String filename,
+            HttpServletResponse resp) {
         resp.setContentType("image/gif");
         sendFile(entityID, filename, resp);
     }
 
     @GetMapping("/{entityID}/{filename}.jpg")
     public void requestCameraJpg(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("filename") String filename,
-        HttpServletResponse resp) {
+            @PathVariable("entityID") String entityID,
+            @PathVariable("filename") String filename,
+            HttpServletResponse resp) {
         resp.setContentType("image/jpg");
         sendFile(entityID, filename, resp);
     }
 
     @GetMapping("/{entityID}/{filename}.mp4")
     public void requestCameraMP4(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("filename") String filename,
-        HttpServletResponse resp) {
+            @PathVariable("entityID") String entityID,
+            @PathVariable("filename") String filename,
+            HttpServletResponse resp) {
         resp.setContentType("video/mp4");
         sendFile(entityID, filename, resp);
     }
@@ -343,7 +345,7 @@ public class CameraController {
                     OnvifCameraService service = (OnvifCameraService) videoStreamEntity.getService();
                     for (Profile profile : service.getOnvifDeviceState().getProfiles()) {
                         list.add(OptionModel.of(videoStreamEntity.getEntityID() + "/" + profile.getToken(),
-                            videoStreamEntity.getTitle() + " (" + profile.getVideoEncoderConfiguration().getResolution().toString() + ")"));
+                                videoStreamEntity.getTitle() + " (" + profile.getVideoEncoderConfiguration().getResolution().toString() + ")"));
                     }
                 } else {
                     list.add(OptionModel.of(videoStreamEntity.getEntityID(), videoStreamEntity.getTitle()));

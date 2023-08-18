@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
@@ -27,6 +28,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -75,10 +77,10 @@ import org.jetbrains.annotations.NotNull;
 public final class UIFieldSelectionUtil {
 
     private static final List<? extends Class<? extends Annotation>> SELECT_ANNOTATIONS =
-        Stream.of(SelectHandler.values()).map(h -> h.selectClass).collect(Collectors.toList());
+            Stream.of(SelectHandler.values()).map(h -> h.selectClass).collect(Collectors.toList());
 
     public static List<OptionModel> loadOptions(Object classEntity, EntityContext entityContext, String fieldName, Object classEntityForDynamicOptionLoader,
-        String[] selectType, Map<String, String> deps, String param0) {
+                                                String[] selectType, Map<String, String> deps, String param0) {
 
         Method method = findMethodByName(classEntity.getClass(), fieldName, SELECT_ANNOTATIONS);
         if (method == null) {
@@ -102,7 +104,7 @@ public final class UIFieldSelectionUtil {
         }
 
         throw new NotFoundException(
-            "Unable to find select handler for entity type: " + classEntity.getClass().getSimpleName() + " and fieldName: " + fieldName);
+                "Unable to find select handler for entity type: " + classEntity.getClass().getSimpleName() + " and fieldName: " + fieldName);
     }
 
     public static List<OptionModel> groupingOptions(List<OptionModel> options) throws JsonProcessingException {
@@ -127,7 +129,7 @@ public final class UIFieldSelectionUtil {
     }
 
     public static void assembleItemsToOptions(List<OptionModel> list, Class<? extends HasEntityIdentifier> sourceClassType,
-        List<? extends BaseEntity> items, EntityContext entityContext, Object classEntityForDynamicOptionLoader) {
+                                              List<? extends BaseEntity> items, EntityContext entityContext, Object classEntityForDynamicOptionLoader) {
         for (BaseEntity baseEntity : items) {
             String lastValue = tryFetchCurrentValueFromEntity(baseEntity, entityContext);
             String title = baseEntity.getTitle();
@@ -146,14 +148,14 @@ public final class UIFieldSelectionUtil {
     }
 
     static void handleFieldSelections(UIFieldUtils.UIFieldContext uiFieldContext, EntityContext entityContext, EntityUIMetaData entityUIMetaData,
-        ObjectNode jsonTypeMetadata) {
+                                      ObjectNode jsonTypeMetadata) {
         Set<String> selectTypes = new HashSet<>();
         List<OptionModel> selectOptions = new ArrayList<>();
         ObjectNode meta = getTextBoxSelections(entityUIMetaData, jsonTypeMetadata);
 
         UIFieldBeanListSelection beanListSelection = uiFieldContext.getDeclaredAnnotation(UIFieldBeanListSelection.class);
         var beanSelections =
-            beanListSelection != null ? Arrays.asList(beanListSelection.value()) : uiFieldContext.getDeclaredAnnotationsByType(UIFieldBeanSelection.class);
+                beanListSelection != null ? Arrays.asList(beanListSelection.value()) : uiFieldContext.getDeclaredAnnotationsByType(UIFieldBeanSelection.class);
         if (!beanSelections.isEmpty()) {
             boolean lazyLoading = beanSelections.stream().anyMatch(UIFieldBeanSelection::lazyLoading);
             if (lazyLoading) {
@@ -168,7 +170,7 @@ public final class UIFieldSelectionUtil {
         }
 
         if (uiFieldContext.isAnnotationPresent(UIFieldEntityByClassSelection.class)
-            || uiFieldContext.isAnnotationPresent(UIFieldEntityByClassSelection.class)) {
+                || uiFieldContext.isAnnotationPresent(UIFieldEntityByClassSelection.class)) {
             selectTypes.add(SelectHandler.entityByClass.name());
         }
 
@@ -191,7 +193,7 @@ public final class UIFieldSelectionUtil {
         }
 
         if (uiFieldContext.getType().isEnum()
-            && uiFieldContext.getType().getEnumConstants().length < 20) {
+                && uiFieldContext.getType().getEnumConstants().length < 20) {
             selectOptions.addAll(OptionModel.enumList((Class<? extends Enum>) uiFieldContext.getType()));
         }
 
@@ -214,7 +216,7 @@ public final class UIFieldSelectionUtil {
         }
 
         UIFieldTreeNodeSelection fileSelection =
-            uiFieldContext.getDeclaredAnnotation(UIFieldTreeNodeSelection.class);
+                uiFieldContext.getDeclaredAnnotation(UIFieldTreeNodeSelection.class);
         if (fileSelection != null) {
             selectTypes.add("file");
             ObjectNode parameters = OBJECT_MAPPER.createObjectNode();
@@ -249,10 +251,10 @@ public final class UIFieldSelectionUtil {
     }
 
     private static List<OptionModel> loadOptions(AccessibleObject field, EntityContext entityContext, Class<?> targetClass, Object classEntity,
-        Object classEntityForDynamicOptionLoader, String[] selectType, Map<String, String> deps, String param0) {
+                                                 Object classEntityForDynamicOptionLoader, String[] selectType, Map<String, String> deps, String param0) {
 
         LoadOptionsParameters param = new LoadOptionsParameters(field, entityContext, targetClass, classEntity, classEntityForDynamicOptionLoader, deps,
-            param0);
+                param0);
         // fetch all options according to all selectType
         List<OptionModel> options = new ArrayList<>();
         boolean handled = selectType != null && assembleOptionsBySelectType(field, selectType, param, options);
@@ -286,17 +288,17 @@ public final class UIFieldSelectionUtil {
     }
 
     private static void buildGroupOption(List<OptionModel> result, Map<String, OptionModel> parentModels, Entry<SelectionParent, List<OptionModel>> entry,
-        SelectionParent parent) {
+                                         SelectionParent parent) {
         OptionModel parentModel = OptionModel.of(parent.key, parent.getName()).setIcon(parent.icon).setColor(parent.iconColor)
-                                             .setDescription(parent.description).setChildren(entry.getValue());
+                .setDescription(parent.description).setChildren(entry.getValue());
         if (parent.getParent() != null) {
             JsonNode superParent = entry.getKey().getParent();
             String superParentKey = superParent.get("key").asText();
             OptionModel optionModel = parentModels.computeIfAbsent(superParentKey, key ->
-                OptionModel.of(key, superParent.get("name").asText())
-                           .setIcon(superParent.path("icon").asText())
-                           .setColor(superParent.path("iconColor").asText())
-                           .setDescription(superParent.path("description").asText()));
+                    OptionModel.of(key, superParent.get("name").asText())
+                            .setIcon(superParent.path("icon").asText())
+                            .setColor(superParent.path("iconColor").asText())
+                            .setDescription(superParent.path("description").asText()));
             optionModel.addChild(parentModel);
         } else {
             result.add(parentModel);
@@ -305,7 +307,7 @@ public final class UIFieldSelectionUtil {
 
     @NotNull
     private static Map<SelectionParent, List<OptionModel>> buildGroupOptionsBySelectionParent(List<OptionModel> options, List<OptionModel> result)
-        throws JsonProcessingException {
+            throws JsonProcessingException {
         Map<SelectionParent, List<OptionModel>> groupedModels = new HashMap<>();
         for (OptionModel option : options) {
             JsonNode parent = option.getJson() == null ? null : option.getJson().remove("sp");
@@ -344,20 +346,20 @@ public final class UIFieldSelectionUtil {
     }
 
     private static List<OptionModel> fetchOptionsFromDynamicOptionLoader(Class<?> targetClass, Object classEntityForDynamicOptionLoader,
-        EntityContext entityContext,
-        UIFieldSelection uiFieldTargetSelection, Map<String, String> deps) {
+                                                                         EntityContext entityContext,
+                                                                         UIFieldSelection uiFieldTargetSelection, Map<String, String> deps) {
         DynamicOptionLoader dynamicOptionLoader = null;
         if (DynamicOptionLoader.class.isAssignableFrom(targetClass)) {
             dynamicOptionLoader = (DynamicOptionLoader) CommonUtils.newInstance(targetClass);
             if (dynamicOptionLoader == null) {
                 throw new RuntimeException(
-                    "Unable to instantiate DynamicOptionLoader class: " + targetClass.getName() + ". Does class has public modifier and no args constructor?");
+                        "Unable to instantiate DynamicOptionLoader class: " + targetClass.getName() + ". Does class has public modifier and no args constructor?");
             }
         }
         if (dynamicOptionLoader != null) {
             BaseEntity baseEntity = classEntityForDynamicOptionLoader instanceof BaseEntity ? (BaseEntity) classEntityForDynamicOptionLoader : null;
             return dynamicOptionLoader.loadOptions(
-                new DynamicOptionLoader.DynamicOptionLoaderParameters(baseEntity, entityContext, uiFieldTargetSelection.staticParameters(), deps));
+                    new DynamicOptionLoader.DynamicOptionLoaderParameters(baseEntity, entityContext, uiFieldTargetSelection.staticParameters(), deps));
         }
         return null;
     }
@@ -365,7 +367,7 @@ public final class UIFieldSelectionUtil {
     private static void buildSelectionsFromBean(List<UIFieldBeanSelection> selections, EntityContext entityContext, List<OptionModel> selectOptions) {
         for (UIFieldBeanSelection selection : selections) {
             for (Map.Entry<String, ?> entry :
-                entityContext.getBeansOfTypeWithBeanName(selection.value()).entrySet()) {
+                    entityContext.getBeansOfTypeWithBeanName(selection.value()).entrySet()) {
                 Object bean = entry.getValue();
                 // filter if bean is UIFieldBeanAwareCondition and visible is false
                 if (bean instanceof UIFieldSelectionCondition) {
@@ -394,14 +396,14 @@ public final class UIFieldSelectionUtil {
     }
 
     private static void updateSelectedOptionModel(Object target, Object requestedEntity, Class<?> sourceClassType, OptionModel optionModel,
-        String selectHandler) {
+                                                  String selectHandler) {
         optionModel.json(jsonObject ->
-            jsonObject.put("REQ_TARGET", sourceClassType.getSimpleName() + "~~~" + selectHandler));
+                jsonObject.put("REQ_TARGET", sourceClassType.getSimpleName() + "~~~" + selectHandler));
         setDescription(target, sourceClassType, optionModel);
 
         SelectionParent item = new SelectionParent();
         UIFieldSelectionParent selectionParent =
-            target.getClass().getDeclaredAnnotation(UIFieldSelectionParent.class);
+                target.getClass().getDeclaredAnnotation(UIFieldSelectionParent.class);
         if (selectionParent != null) {
             item.key = selectionParent.value();
             item.icon = selectionParent.icon();
@@ -429,11 +431,11 @@ public final class UIFieldSelectionUtil {
                 val dynamicParameterFields = ((SelectionWithDynamicParameterFields) target).getDynamicParameterFields(requestDynamicParameter);
                 if (dynamicParameterFields != null) {
                     DynamicParameter dynamicParameter =
-                        new DynamicParameter(
-                            dynamicParameterFields.getGroupName(),
-                            dynamicParameterFields.getBorderColor(),
-                            dynamicParameterFields.getClass().getSimpleName(),
-                            dynamicParameterFields);
+                            new DynamicParameter(
+                                    dynamicParameterFields.getGroupName(),
+                                    dynamicParameterFields.getBorderColor(),
+                                    dynamicParameterFields.getClass().getSimpleName(),
+                                    dynamicParameterFields);
                     json.set("dynamicParameter", OBJECT_MAPPER.valueToTree(dynamicParameter));
                 }
             });
@@ -442,7 +444,7 @@ public final class UIFieldSelectionUtil {
 
     private static void setDescription(Object target, Class<?> sourceClassType, OptionModel optionModel) {
         List<Method> classDescriptionMethods = MethodUtils.getMethodsListWithAnnotation(
-            sourceClassType, SelectDataSourceDescription.class);
+                sourceClassType, SelectDataSourceDescription.class);
         Method descriptionMethod = classDescriptionMethods.isEmpty() ? null : classDescriptionMethods.iterator().next();
         String entityTypeDescription;
         try {
@@ -492,15 +494,15 @@ public final class UIFieldSelectionUtil {
     }
 
     private static void assembleOptionsForEntityByClassSelection(LoadOptionsParameters params, List<OptionModel> list,
-        Class<? extends HasEntityIdentifier> sourceClassType) {
+                                                                 Class<? extends HasEntityIdentifier> sourceClassType) {
 
         for (Class<? extends HasEntityIdentifier> foundTargetType : params.entityContext.getClassesWithParent(sourceClassType)) {
             if (BaseEntity.class.isAssignableFrom(foundTargetType)) {
                 List<BaseEntity> items = params.entityContext.findAll((Class<BaseEntity>) foundTargetType)
-                                                             .stream().filter(baseEntity -> {
-                        // hack: check if sourceClassType is HasSetStatusValue and we if we are unable to write to value
-                        return !HasSetStatusValue.class.isAssignableFrom(sourceClassType) || ((HasSetStatusValue) baseEntity).isAbleToSetValue();
-                    }).collect(Collectors.toList());
+                        .stream().filter(baseEntity -> {
+                            // hack: check if sourceClassType is HasSetStatusValue and we if we are unable to write to value
+                            return !HasSetStatusValue.class.isAssignableFrom(sourceClassType) || ((HasSetStatusValue) baseEntity).isAbleToSetValue();
+                        }).collect(Collectors.toList());
                 assembleItemsToOptions(list, sourceClassType, items, params.entityContext, params.classEntityForDynamicOptionLoader);
             }
         }
@@ -521,13 +523,13 @@ public final class UIFieldSelectionUtil {
     private enum SelectHandler {
         simple(UIFieldSelection.class, params -> {
             params.classEntityForDynamicOptionLoader =
-                params.classEntityForDynamicOptionLoader == null ? params.classEntity : params.classEntityForDynamicOptionLoader;
+                    params.classEntityForDynamicOptionLoader == null ? params.classEntity : params.classEntityForDynamicOptionLoader;
             UIFieldSelection uiFieldTargetSelection = params.field.getDeclaredAnnotation(UIFieldSelection.class);
             if (uiFieldTargetSelection != null) {
                 params.targetClass = uiFieldTargetSelection.value();
             }
             List<OptionModel> options = fetchOptionsFromDynamicOptionLoader(params.targetClass, params.classEntityForDynamicOptionLoader, params.entityContext,
-                uiFieldTargetSelection, params.deps);
+                    uiFieldTargetSelection, params.deps);
             if (options != null) {
                 return options;
             }
@@ -544,9 +546,9 @@ public final class UIFieldSelectionUtil {
             return list;
         }),
         port(UIFieldDevicePortSelection.class, params ->
-            OptionModel.listOfPorts(false)),
+                OptionModel.listOfPorts(false)),
         clazz(UIFieldClassSelection.class, params ->
-            getOptionsForClassSelection(params.entityContext, params.field.getDeclaredAnnotation(UIFieldClassSelection.class))),
+                getOptionsForClassSelection(params.entityContext, params.field.getDeclaredAnnotation(UIFieldClassSelection.class))),
         entityByClass(UIFieldEntityByClassSelection.class, params -> {
             List<OptionModel> list = new ArrayList<>();
             for (UIFieldEntityByClassSelection item : params.field.getDeclaredAnnotationsByType(UIFieldEntityByClassSelection.class)) {

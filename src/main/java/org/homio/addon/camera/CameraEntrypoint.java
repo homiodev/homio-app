@@ -3,6 +3,7 @@ package org.homio.addon.camera;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -40,37 +41,37 @@ public class CameraEntrypoint implements AddonEntrypoint {
 
         entityContext.setting().listenValueAndGet(CameraAutorunIntervalSetting.class, "cam-autorun", interval -> {
             entityContext.bgp().builder("camera-autorun").cancelOnError(false)
-                         .interval(Duration.ofMinutes(interval))
-                         .execute(this::fireStartCamera);
+                    .interval(Duration.ofMinutes(interval))
+                    .execute(this::fireStartCamera);
         });
     }
 
     public static void updateCamera(
-        @NotNull EntityContext entityContext, BaseVideoEntity entity,
-        @Nullable Supplier<String> titleSupplier,
-        @NotNull Icon icon,
-        @Nullable Consumer<UILayoutBuilder> settingsBuilder) {
+            @NotNull EntityContext entityContext, BaseVideoEntity entity,
+            @Nullable Supplier<String> titleSupplier,
+            @NotNull Icon icon,
+            @Nullable Consumer<UILayoutBuilder> settingsBuilder) {
         entityContext.ui().addOrUpdateNotificationBlock("CAMERA", "CAMERA", new Icon("fas fa-video", "#367387"),
-            builder -> {
-                String text = titleSupplier == null ? entity.getTitle() : titleSupplier.get();
-                NotificationInfoLineBuilder info = builder.addInfo(text, icon);
-                if (!entity.isStart()) {
-                    info.setTextColor(Color.WARNING);
-                } else if (entity.getStatus().isOnline()) {
-                    info.setTextColor(Color.GREEN);
-                }
-                info.setStatus(entity).setAsLink(entity);
-                if (!entity.isStart() || settingsBuilder == null) {
+                builder -> {
+                    String text = titleSupplier == null ? entity.getTitle() : titleSupplier.get();
+                    NotificationInfoLineBuilder info = builder.addInfo(text, icon);
                     if (!entity.isStart()) {
-                        info.setRightButton(new Icon("fas fa-play"), "START", null, (ec, params) -> {
-                            ec.save(entity.setStart(true));
-                            return ActionResponseModel.fired();
-                        });
+                        info.setTextColor(Color.WARNING);
+                    } else if (entity.getStatus().isOnline()) {
+                        info.setTextColor(Color.GREEN);
                     }
-                } else {
-                    info.setRightSettingsButton(settingsBuilder);
-                }
-            });
+                    info.setStatus(entity).setAsLink(entity);
+                    if (!entity.isStart() || settingsBuilder == null) {
+                        if (!entity.isStart()) {
+                            info.setRightButton(new Icon("fas fa-play"), "START", null, (ec, params) -> {
+                                ec.save(entity.setStart(true));
+                                return ActionResponseModel.fired();
+                            });
+                        }
+                    } else {
+                        info.setRightSettingsButton(settingsBuilder);
+                    }
+                });
     }
 
     private void fireStartCamera() {

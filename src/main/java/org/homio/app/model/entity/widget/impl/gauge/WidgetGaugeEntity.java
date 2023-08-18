@@ -24,13 +24,13 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetGaugeEntity extends WidgetBaseEntity<WidgetGaugeEntity>
-    implements HasSingleValueDataSource,
-    HasIcon,
-    HasValueConverter,
-    HasTextConverter,
-    HasName,
-    HasValueTemplate,
-    HasSourceServerUpdates {
+        implements HasSingleValueDataSource,
+        HasIcon,
+        HasValueConverter,
+        HasTextConverter,
+        HasName,
+        HasValueTemplate,
+        HasSourceServerUpdates {
 
     @UIField(order = 1)
     @UIFieldGroup("UI")

@@ -1,6 +1,7 @@
 package org.homio.app.model.entity.widget.impl.toggle;
 
 import java.util.List;
+
 import org.homio.api.entity.widget.ability.HasSetStatusValue;
 import org.homio.api.ui.UI;
 import org.homio.api.ui.field.UIField;

@@ -31,7 +31,7 @@ import static org.homio.api.util.Constants.*;
 
 @Entity
 public abstract class UserBaseEntity extends IdentityEntity
-    implements UserEntity, HasEntityLog, HasDynamicContextMenuActions {
+        implements UserEntity, HasEntityLog, HasDynamicContextMenuActions {
 
     public static final String LOG_RESOURCE = "ROLE_LOG";
     public static final String LOG_RESOURCE_AUTHORIZE = "hasRole('" + LOG_RESOURCE + "')";
@@ -145,22 +145,22 @@ public abstract class UserBaseEntity extends IdentityEntity
         UserEntity user = uiInputBuilder.getEntityContext().getUser();
         if (user != null && user.isAdmin()) {
             uiInputBuilder.addOpenDialogSelectableButton("CHANGE_PASSWORD", new Icon("fas fa-unlock-keyhole",
-                              Color.RED), null, this::changePassword)
-                          .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
-                              if (this.getUserType() == UserType.ADMIN) {
-                                  flex.addTextInput("currentPassword", "", true);
-                              }
-                              flex.addTextInput("newPassword", "", true);
-                              flex.addTextInput("repeatNewPassword", "", true);
-                          }));
+                            Color.RED), null, this::changePassword)
+                    .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
+                        if (this.getUserType() == UserType.ADMIN) {
+                            flex.addTextInput("currentPassword", "", true);
+                        }
+                        flex.addTextInput("newPassword", "", true);
+                        flex.addTextInput("repeatNewPassword", "", true);
+                    }));
             uiInputBuilder.addOpenDialogSelectableButton("CHANGE_EMAIL", new Icon("fas fa-at",
-                              Color.PRIMARY_COLOR), null, this::changeEmail)
-                          .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
-                              if (this.getUserType() == UserType.ADMIN) {
-                                  flex.addTextInput("currentPassword", "", true);
-                              }
-                              flex.addTextInput("email", "", true);
-                          }));
+                            Color.PRIMARY_COLOR), null, this::changeEmail)
+                    .editDialog(dialogBuilder -> dialogBuilder.addFlex("main", flex -> {
+                        if (this.getUserType() == UserType.ADMIN) {
+                            flex.addTextInput("currentPassword", "", true);
+                        }
+                        flex.addTextInput("email", "", true);
+                    }));
         }
     }
 

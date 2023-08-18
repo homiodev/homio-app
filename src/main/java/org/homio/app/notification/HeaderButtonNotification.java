@@ -3,6 +3,7 @@ package org.homio.app.notification;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.function.Supplier;
+
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;

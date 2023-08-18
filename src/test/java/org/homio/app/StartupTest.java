@@ -15,7 +15,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 @ActiveProfiles(profiles = {"test"})
 public class StartupTest {
 
-    @Autowired private EntityContext entityContext;
+    @Autowired
+    private EntityContext entityContext;
 
     @Test
     public void testStartup() {

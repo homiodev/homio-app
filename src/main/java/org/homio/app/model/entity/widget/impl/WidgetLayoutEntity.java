@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 public class WidgetLayoutEntity extends WidgetBaseEntity<WidgetLayoutEntity>
-    implements HasLayout {
+        implements HasLayout {
 
     @Override
     public @NotNull String getImage() {

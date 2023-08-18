@@ -13,37 +13,37 @@ import java.util.Objects;
  */
 public final class Fmtp {
 
-  private final int format;
-  private final FmtpParameters parameters;
+    private final int format;
+    private final FmtpParameters parameters;
 
-  public Fmtp(int format, FmtpParameters parameters) {
-    this.format = format;
-    this.parameters = parameters;
-  }
-
-  public int getFormat() {
-    return format;
-  }
-
-  public FmtpParameters getParameters() {
-    return parameters;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    public Fmtp(int format, FmtpParameters parameters) {
+        this.format = format;
+        this.parameters = parameters;
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    Fmtp fmtp = (Fmtp) o;
-    return format == fmtp.format &&
-        Objects.equals(parameters, fmtp.parameters);
-  }
 
-  @Override
-  public int hashCode() {
-    return Objects.hash(format, parameters);
-  }
+    public int getFormat() {
+        return format;
+    }
+
+    public FmtpParameters getParameters() {
+        return parameters;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Fmtp fmtp = (Fmtp) o;
+        return format == fmtp.format &&
+                Objects.equals(parameters, fmtp.parameters);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(format, parameters);
+    }
 }

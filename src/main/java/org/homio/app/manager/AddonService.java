@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -100,8 +101,8 @@ public class AddonService implements ContextCreated, ContextRefreshed {
             packagesInProgress.put(packageRequest.getName(), true);
             String key = "Install " + packageRequest.getName() + "/" + packageRequest.getVersion();
             entityContext.ui().runWithProgress(key, false, progressBar ->
-                    settingPlugin.installPackage(entityContext, packageRequest, progressBar),
-                ex -> packagesInProgress.remove(packageRequest.getName()));
+                            settingPlugin.installPackage(entityContext, packageRequest, progressBar),
+                    ex -> packagesInProgress.remove(packageRequest.getName()));
         } else {
             entityContext.ui().sendErrorMessage("W.ERROR.UPDATE_IN_PROGRESS");
         }
@@ -111,8 +112,8 @@ public class AddonService implements ContextCreated, ContextRefreshed {
         if (!packagesInProgress.containsKey(packageRequest.getName())) {
             packagesInProgress.put(packageRequest.getName(), false);
             entityContext.ui().runWithProgress("Uninstall " + packageRequest.getName() + "/" + packageRequest.getVersion(), false,
-                progressBar -> settingPlugin.unInstallPackage(entityContext, packageRequest, progressBar),
-                ex -> packagesInProgress.remove(packageRequest.getName()));
+                    progressBar -> settingPlugin.unInstallPackage(entityContext, packageRequest, progressBar),
+                    ex -> packagesInProgress.remove(packageRequest.getName()));
         }
     }
 
@@ -133,7 +134,7 @@ public class AddonService implements ContextCreated, ContextRefreshed {
         List<AddonJson> addons = new ArrayList<>();
         for (AddonEntrypoint addonEntrypoint : getAddons()) {
             addons.add(new AddonJson(addonEntrypoint.getAddonID(),
-                getAddonColor(addonEntrypoint.getAddonID()), 0));
+                    getAddonColor(addonEntrypoint.getAddonID()), 0));
         }
         Collections.sort(addons);
         return addons;

@@ -4,6 +4,7 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.homio.api.util.Constants.ADMIN_ROLE_AUTHORIZE;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -99,8 +101,8 @@ public class DeviceController {
 
     @GetMapping
     public @NotNull Collection<OptionModel> getDevices(
-        @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
-        @RequestParam(value = "type", defaultValue = "any") @NotNull String type) {
+            @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
+            @RequestParam(value = "type", defaultValue = "any") @NotNull String type) {
         return getDevices(buildDeviceAccessFilter(access, type));
     }
 
@@ -109,20 +111,20 @@ public class DeviceController {
      */
     @GetMapping("/endpoints")
     public @NotNull Collection<OptionModel> getEndpoints(
-        @RequestParam(value = "deviceMenu", required = false) @Nullable String ieeeAddress0,
-        @RequestParam(value = "deviceReadMenu", required = false) @Nullable String ieeeAddress1,
-        @RequestParam(value = "deviceWriteMenu", required = false) @Nullable String ieeeAddress2,
-        @RequestParam(value = "deviceWriteBoolMenu", required = false) @Nullable String ieeeAddress3,
-        @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
-        @RequestParam(value = "type", defaultValue = "any") @NotNull String type) {
+            @RequestParam(value = "deviceMenu", required = false) @Nullable String ieeeAddress0,
+            @RequestParam(value = "deviceReadMenu", required = false) @Nullable String ieeeAddress1,
+            @RequestParam(value = "deviceWriteMenu", required = false) @Nullable String ieeeAddress2,
+            @RequestParam(value = "deviceWriteBoolMenu", required = false) @Nullable String ieeeAddress3,
+            @RequestParam(value = "access", defaultValue = "any") @NotNull String access,
+            @RequestParam(value = "type", defaultValue = "any") @NotNull String type) {
         String ieeeAddress = defaultIfEmpty(ieeeAddress0, defaultIfEmpty(ieeeAddress1, defaultIfEmpty(ieeeAddress2, ieeeAddress3)));
         DeviceEndpointsBehaviourContract entity = getDevice(ieeeAddress);
         return entity == null ? List.of() :
-            entity.getDeviceEndpoints().values().stream()
-                  .filter(buildEndpointAccessFilter(access))
-                  .filter(buildFilterByType(type))
-                  .map(this::createOptionModel)
-                  .collect(Collectors.toList());
+                entity.getDeviceEndpoints().values().stream()
+                        .filter(buildEndpointAccessFilter(access))
+                        .filter(buildFilterByType(type))
+                        .map(this::createOptionModel)
+                        .collect(Collectors.toList());
     }
 
     private @Nullable DeviceEndpointsBehaviourContract getDevice(String ieeeAddress) {
@@ -130,10 +132,10 @@ public class DeviceController {
             return null;
         }
         return (DeviceEndpointsBehaviourContract)
-            entityContext.findAll(DeviceBaseEntity.class)
-                         .stream()
-                         .filter(d -> ieeeAddress.equals(d.getIeeeAddress()))
-                         .findAny().orElse(null);
+                entityContext.findAll(DeviceBaseEntity.class)
+                        .stream()
+                        .filter(d -> ieeeAddress.equals(d.getIeeeAddress()))
+                        .findAny().orElse(null);
     }
 
     private @NotNull Predicate<? super DeviceEndpoint> buildEndpointAccessFilter(@NotNull String access) {
@@ -156,9 +158,9 @@ public class DeviceController {
     private @NotNull Predicate<DeviceEndpointsBehaviourContract> buildDeviceAccessFilter(@NotNull String access, @NotNull String type) {
         return switch (access) {
             case "read" -> device -> device.getDeviceEndpoints().values().stream()
-                                           .anyMatch(dv -> dv.isReadable() && filterByType(dv, type));
+                    .anyMatch(dv -> dv.isReadable() && filterByType(dv, type));
             case "write" -> device -> device.getDeviceEndpoints().values().stream()
-                                            .anyMatch(dv -> dv.isWritable() && filterByType(dv, type));
+                    .anyMatch(dv -> dv.isWritable() && filterByType(dv, type));
             default -> device -> true;
         };
     }
@@ -179,9 +181,9 @@ public class DeviceController {
                 if (deviceFilter.test(deviceContract)) {
                     Icon icon = deviceEntity.getEntityIcon();
                     list.add(OptionModel.of(Objects.requireNonNull(deviceEntity.getIeeeAddress()), deviceContract.getDeviceFullName())
-                                        .setDescription(deviceContract.getDescription())
-                                        .setIcon(icon.getIcon())
-                                        .setColor(icon.getColor()));
+                            .setDescription(deviceContract.getDescription())
+                            .setIcon(icon.getIcon())
+                            .setColor(icon.getColor()));
                 }
             }
         }
@@ -190,9 +192,9 @@ public class DeviceController {
 
     private @NotNull OptionModel createOptionModel(@NotNull DeviceEndpoint endpoint) {
         return OptionModel.of(endpoint.getEndpointEntityID(), endpoint.getName(false))
-                          .setDescription(endpoint.getDescription())
-                          .setIcon(endpoint.getIcon().getIcon())
-                          .setColor(endpoint.getIcon().getColor());
+                .setDescription(endpoint.getDescription())
+                .setIcon(endpoint.getIcon().getIcon())
+                .setColor(endpoint.getIcon().getColor());
     }
 
     @Getter
@@ -212,16 +214,16 @@ public class DeviceController {
     private String readWifiList() {
         if (SystemUtils.IS_OS_LINUX) {
             return networkHardwareRepository
-                .scan(selectedWifiInterface).stream()
-                .filter(distinctByKey(Network::getSsid))
-                .map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"));
+                    .scan(selectedWifiInterface).stream()
+                    .filter(distinctByKey(Network::getSsid))
+                    .map(n -> n.getSsid() + "%&%" + n.getStrength()).collect(Collectors.joining("%#%"));
         }
         ArrayList<String> result = machineHardwareRepository
-            .executeNoErrorThrowList("netsh wlan show profiles", 60, null);
+                .executeNoErrorThrowList("netsh wlan show profiles", 60, null);
         return result.stream()
-                     .filter(s -> s.contains("All User Profile"))
-                     .map(s -> s.substring(s.indexOf(":") + 1).trim())
-                     .map(s -> s + "%&%-").collect(Collectors.joining("%#%"));
+                .filter(s -> s.contains("All User Profile"))
+                .map(s -> s.substring(s.indexOf(":") + 1).trim())
+                .map(s -> s + "%&%-").collect(Collectors.joining("%#%"));
     }
 
     protected <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {

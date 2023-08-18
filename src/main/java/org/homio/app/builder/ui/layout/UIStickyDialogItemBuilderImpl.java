@@ -3,6 +3,7 @@ package org.homio.app.builder.ui.layout;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.ui.field.action.v1.UIEntityBuilder;
@@ -15,7 +16,7 @@ import org.homio.app.builder.ui.UIItemType;
 @Getter
 @RequiredArgsConstructor
 public class UIStickyDialogItemBuilderImpl extends UIBaseLayoutBuilderImpl
-    implements UIStickyDialogItemBuilder, UIInputEntity {
+        implements UIStickyDialogItemBuilder, UIInputEntity {
 
     private final String entityID;
     private final String itemType = UIItemType.StickDialog.name();
@@ -39,11 +40,11 @@ public class UIStickyDialogItemBuilderImpl extends UIBaseLayoutBuilderImpl
 
     public UIInputEntity buildEntity() {
         List<UIInputEntity> entities =
-            getUiEntityBuilders(false).stream()
-                                      .map(UIEntityBuilder::buildEntity)
-                                      .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
-                                      .collect(Collectors.toList());
+                getUiEntityBuilders(false).stream()
+                        .map(UIEntityBuilder::buildEntity)
+                        .sorted(Comparator.comparingInt(UIInputEntity::getOrder))
+                        .collect(Collectors.toList());
         return new UIDialogInputEntity(
-            entityID, 0, itemType, getTitle(), null, null, getStyle(), null, entities);
+                entityID, 0, itemType, getTitle(), null, null, getStyle(), null, entities);
     }
 }

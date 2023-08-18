@@ -1,6 +1,7 @@
 package org.homio.app.builder.ui;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -8,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
 import lombok.Getter;
 import org.homio.api.model.Icon;
 import org.homio.api.ui.action.UIActionHandler;
@@ -35,10 +37,12 @@ import org.json.JSONObject;
 
 public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
-    @Getter @JsonIgnore
+    @Getter
+    @JsonIgnore
     protected final Map<String, UIEntityBuilder> inputBuilders = new HashMap<>();
 
-    @JsonIgnore private Map<String, String> styleMap;
+    @JsonIgnore
+    private Map<String, String> styleMap;
 
     public abstract int getOrder();
 
@@ -105,7 +109,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
             String entityID = getText(name);
             stickyDialogBuilder = new UIStickyDialogItemBuilderImpl(entityID + "_dialog");
             buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, null, order))
-                .setStickyDialogBuilder(stickyDialogBuilder);
+                    .setStickyDialogBuilder(stickyDialogBuilder);
         }
         return new DialogEntity<>() {
             @Override
@@ -126,7 +130,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
         String entityID = getText(name);
         UIDialogLayoutBuilderImpl dialogEntityBuilder = new UIDialogLayoutBuilderImpl(entityID, width);
         UIButtonItemBuilderImpl buttonItemBuilder = ((UIButtonItemBuilderImpl) addButton(entityID, icon, null, order))
-            .setDialogEntityBuilder(dialogEntityBuilder);
+                .setDialogEntityBuilder(dialogEntityBuilder);
         return new DialogEntity<>() {
             @Override
             public UIDialogLayoutBuilder up() {
@@ -144,7 +148,7 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
     @Override
     public UITextInputItemBuilder addInput(@NotNull String name, String defaultValue, InputType inputType, boolean required) {
         return addEntity(new UITextInputItemBuilderImpl("field." + name, getNextOrder(), defaultValue, inputType)
-            .setRequired(required));
+                .setRequired(required));
     }
 
     @Override
@@ -174,10 +178,10 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Override
     public UISliderItemBuilder addSlider(@NotNull String name, Float value, Float min, Float max, UIActionHandler action,
-        UISliderItemBuilder.SliderType sliderType, int order) {
+                                         UISliderItemBuilder.SliderType sliderType, int order) {
         return addEntity(
-            new UISliderItemBuilderImpl("field." + name, order, action, value, min, max)
-                .setSliderType(sliderType));
+                new UISliderItemBuilderImpl("field." + name, order, action, value, min, max)
+                        .setSliderType(sliderType));
     }
 
     @Override
@@ -187,16 +191,16 @@ public abstract class UIBaseLayoutBuilderImpl implements UILayoutBuilder {
 
     @Override
     public UIButtonItemBuilder addTableLayoutButton(@NotNull String name, int maxRows, int maxColumns, String value, @Nullable Icon icon,
-        UIActionHandler action, int order) {
+                                                    UIActionHandler action, int order) {
         return addEntity(new UIButtonItemBuilderImpl(UIItemType.TableLayout, name, icon == null ? new Icon("fas fa-table") : icon, order, action)
-            .setMetadata(new JSONObject().put("maxRows", maxRows).put("maxColumns", maxColumns).put("value", value)));
+                .setMetadata(new JSONObject().put("maxRows", maxRows).put("maxColumns", maxColumns).put("value", value)));
     }
 
     @Override
     public UIButtonItemBuilder addSimpleUploadButton(@NotNull String name, @Nullable Icon icon, String[] supportedFormats,
-        UIActionHandler action, int order) {
+                                                     UIActionHandler action, int order) {
         return addEntity(new UIButtonItemBuilderImpl(UIItemType.SimpleUploadButton, name, icon, order, action)
-            .setMetadata(new JSONObject().put("supportedFormats", supportedFormats)));
+                .setMetadata(new JSONObject().put("supportedFormats", supportedFormats)));
     }
 
     @Override

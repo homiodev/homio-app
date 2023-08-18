@@ -12,10 +12,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -61,16 +63,16 @@ import org.json.JSONObject;
 @Getter
 @Accessors(chain = true)
 @UISidebarMenu(
-    icon = "fas fa-boxes-stacked",
-    order = 200,
-    bg = "#54AD24",
-    allowCreateNewItems = true,
-    overridePath = "variable")
+        icon = "fas fa-boxes-stacked",
+        order = 200,
+        bg = "#54AD24",
+        allowCreateNewItems = true,
+        overridePath = "variable")
 @AttributeOverride(name = "name", column = @Column(nullable = false))
 @UIHideEntityIfFieldNotNull("parent")
 @NoArgsConstructor
 public class WorkspaceGroup extends BaseEntity
-    implements HasJsonData, SelectionParent {
+        implements HasJsonData, SelectionParent {
 
     public static final String PREFIX = "group_";
 
@@ -93,11 +95,11 @@ public class WorkspaceGroup extends BaseEntity
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "workspaceGroup")
     @UIField(order = 30)
     @UIFieldInlineEditEntities(
-        bg = "#1E5E611F",
-        addRowLabel = "TITLE.CREATE_VAR",
-        noContentTitle = "W.ERROR.NO_VARIABLES",
-        removeRowCondition = "return !context.get('locked')",
-        addRowCondition = "return !context.get('locked')")
+            bg = "#1E5E611F",
+            addRowLabel = "TITLE.CREATE_VAR",
+            noContentTitle = "W.ERROR.NO_VARIABLES",
+            removeRowCondition = "return !context.get('locked')",
+            addRowCondition = "return !context.get('locked')")
     private Set<WorkspaceVariable> workspaceVariables;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -213,8 +215,8 @@ public class WorkspaceGroup extends BaseEntity
     }
 
     @UIContextMenuAction(value = "CLEAR_BACKUP", icon = "fas fa-database", inputs = {
-        @UIActionInput(name = "KEEP_DAYS", type = Type.number, value = "-1", min = -1, max = 365),
-        @UIActionInput(name = "KEEP_COUNT", type = Type.number, value = "-1", min = -1, max = 100_000)
+            @UIActionInput(name = "KEEP_DAYS", type = Type.number, value = "-1", min = -1, max = 365),
+            @UIActionInput(name = "KEEP_COUNT", type = Type.number, value = "-1", min = -1, max = 100_000)
     })
     public ActionResponseModel clearBackup(EntityContext entityContext, JSONObject params) {
         val repository = entityContext.getBean(VariableBackupRepository.class);
@@ -249,20 +251,20 @@ public class WorkspaceGroup extends BaseEntity
 
     private int clearAll(VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                                 .map(v -> repository.delete(v.getVariableId()))
-                                 .mapToInt(i -> i).sum();
+                .map(v -> repository.delete(v.getVariableId()))
+                .mapToInt(i -> i).sum();
     }
 
     private int clearByCount(int count, VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                                 .map(v -> repository.deleteButKeepCount(v.getVariableId(), count))
-                                 .mapToInt(i -> i).sum();
+                .map(v -> repository.deleteButKeepCount(v.getVariableId(), count))
+                .mapToInt(i -> i).sum();
     }
 
     private int clearByDays(int days, VariableBackupRepository repository) {
         return workspaceVariables.stream().filter(WorkspaceVariable::isBackup)
-                                 .map(v -> repository.deleteButKeepDays(v.getVariableId(), days))
-                                 .mapToInt(i -> i).sum();
+                .map(v -> repository.deleteButKeepDays(v.getVariableId(), days))
+                .mapToInt(i -> i).sum();
     }
 
     @Getter
@@ -310,7 +312,7 @@ public class WorkspaceGroup extends BaseEntity
         public WorkspaceVariableEntity(WorkspaceGroup childrenGroup) {
             this.entityID = childrenGroup.getEntityID();
             this.groupName = format("<div class=\"it-group\"><i class=\"%s\"></i>%s</div>",
-                childrenGroup.getIcon(), childrenGroup.getName());
+                    childrenGroup.getIcon(), childrenGroup.getName());
             this.color = childrenGroup.getIconColor();
         }
 
@@ -318,13 +320,13 @@ public class WorkspaceGroup extends BaseEntity
             this.entityID = variable.getEntityID();
 
             name = new JSONObject()
-                .put("color", variable.getColor())
-                .put("name", variable.getName())
-                .put("description", variable.getDescription())
-                .put("listeners", entityContext.event().getEntityUpdateListeners().getCount(variable.getEntityID()))
-                .put("linked", entityContext.var().isLinked(variable.getVariableId()))
-                .put("source", entityContext.var().buildDataSource(variable, false))
-                .put("readOnly", variable.isReadOnly());
+                    .put("color", variable.getColor())
+                    .put("name", variable.getName())
+                    .put("description", variable.getDescription())
+                    .put("listeners", entityContext.event().getEntityUpdateListeners().getCount(variable.getEntityID()))
+                    .put("linked", entityContext.var().isLinked(variable.getVariableId()))
+                    .put("source", entityContext.var().buildDataSource(variable, false))
+                    .put("readOnly", variable.isReadOnly());
             if (variable.isBackup()) {
                 name.put("backupCount", entityContext.var().backupCount(variable.getVariableId()));
             }

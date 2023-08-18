@@ -6,6 +6,7 @@ import static org.homio.app.model.entity.SettingEntity.getKey;
 import static org.homio.app.repository.SettingRepository.fulfillEntityFromPlugin;
 
 import com.pivovarit.function.ThrowingConsumer;
+
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,6 +20,7 @@ import java.util.Properties;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -84,15 +86,15 @@ public class EntityContextSettingImpl implements EntityContextSetting {
      */
     @Override
     public void reloadSettings(@NotNull Class<? extends DynamicConsoleHeaderContainerSettingPlugin> dynamicSettingPluginClass,
-        List<? extends DynamicConsoleHeaderSettingPlugin> dynamicSettings) {
+                               List<? extends DynamicConsoleHeaderSettingPlugin> dynamicSettings) {
         List<SettingEntity> dynamicEntities = dynamicSettings
-            .stream()
-            .map(this::createSettingEntityFromPlugin)
-            .collect(Collectors.toList());
+                .stream()
+                .map(this::createSettingEntityFromPlugin)
+                .collect(Collectors.toList());
         dynamicHeaderSettings.put(dynamicSettingPluginClass, dynamicEntities);
 
         entityContext.ui().sendGlobal(setting, SettingEntity.PREFIX + dynamicSettingPluginClass.getSimpleName(),
-            dynamicEntities, null, OBJECT_MAPPER.createObjectNode().put("subType", "dynamic"));
+                dynamicEntities, null, OBJECT_MAPPER.createObjectNode().put("subType", "dynamic"));
     }
 
     public Object getObjectValue(Class<?> settingPluginClazz) {
@@ -141,7 +143,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
 
     @Override
     public <T> void listenValueInRequest(Class<? extends SettingPlugin<T>> settingClass, @NotNull String key,
-        @NotNull ThrowingConsumer<T, Exception> listener) {
+                                         @NotNull ThrowingConsumer<T, Exception> listener) {
         httpRequestSettingListeners.putIfAbsent(settingClass.getName(), new HashMap<>());
         httpRequestSettingListeners.get(settingClass.getName()).put(key, listener);
     }
@@ -311,7 +313,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
     }
 
     private <T> void fireNotifyHandlers(Class<? extends SettingPlugin<T>> settingPluginClazz, T value,
-        SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
+                                        SettingPlugin pluginFor, String strValue, boolean fireUpdatesToUI) {
         if (settingListeners.containsKey(settingPluginClazz.getName())) {
             entityContext.bgp().builder("update-setting-" + settingPluginClazz.getSimpleName()).auth().execute(() -> {
                 for (ThrowingConsumer consumer : settingListeners.get(settingPluginClazz.getName()).values()) {
@@ -340,7 +342,7 @@ public class EntityContextSettingImpl implements EntityContextSetting {
 
         if (fireUpdatesToUI) {
             entityContext.ui().sendGlobal(setting, SettingEntity.getKey(settingPluginClazz), value, null,
-                OBJECT_MAPPER.createObjectNode().put("subType", "single"));
+                    OBJECT_MAPPER.createObjectNode().put("subType", "single"));
         }
     }
 

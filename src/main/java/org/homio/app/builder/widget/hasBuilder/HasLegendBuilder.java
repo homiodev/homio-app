@@ -5,7 +5,7 @@ import org.homio.api.EntityContextWidget.LegendAlign;
 import org.homio.api.EntityContextWidget.LegendPosition;
 
 public interface HasLegendBuilder<T extends org.homio.app.model.entity.widget.impl.chart.HasLegend, R>
-    extends HasLegend<R> {
+        extends HasLegend<R> {
 
     T getWidget();
 

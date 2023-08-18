@@ -1,16 +1,8 @@
 package org.homio.addon.camera.entity;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-
 import de.onvif.soap.OnvifDeviceState;
 import de.onvif.soap.devices.InitialDevices;
 import jakarta.persistence.Entity;
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -38,7 +30,17 @@ import org.homio.api.ui.field.selection.UIFieldSelection;
 import org.homio.api.util.CommonUtils;
 import org.homio.api.util.SecureString;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.onvif.ver10.device.wsdl.GetDeviceInformationResponse;
+
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Objects;
+
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 @SuppressWarnings("unused")
 @Log4j2
@@ -46,7 +48,7 @@ import org.onvif.ver10.device.wsdl.GetDeviceInformationResponse;
 @Getter
 @Entity
 public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifCameraService>
-    implements HasDynamicContextMenuActions, VideoPlaybackStorage, HasEntityLog {
+        implements HasDynamicContextMenuActions, VideoPlaybackStorage, HasEntityLog {
 
     @UIField(order = 16)
     @UIFieldSelection(SelectCameraBrand.class)
@@ -66,10 +68,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
 
     @Override
     public String getDescriptionImpl() {
-        if (getIeeeAddress() == null) {
-            return "W.ERROR.CAMERA_REQ_AUTH_DESCRIPTION";
-        }
-        return null;
+        return getError();
     }
 
     @UIField(order = 12, hideInEdit = true, hideOnEmpty = true)
@@ -190,6 +189,14 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
         return getFfmpegInput();
     }
 
+    @Override
+    public @Nullable String getError() {
+        if (getIeeeAddress() == null) {
+            return "W.ERROR.CAMERA_REQ_AUTH_DESCRIPTION";
+        }
+        return super.getError();
+    }
+
     public void setMjpegUrl(String value) {
         setJsonData("mjpegUrl", value);
     }
@@ -243,7 +250,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
 
     public long getDeepHashCode() {
         return Objects.hash(getIeeeAddress(), getName()) + getJsonDataHashCode("start", "ip", "cameraType", "onvifPort", "restPort",
-            "onvifMediaProfile", "user", "pwd");
+                "onvifMediaProfile", "user", "pwd");
     }
 
     @Override
@@ -287,28 +294,28 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
 
             if (StringUtils.isEmpty(getIeeeAddress()) || !getStatus().isOnline()) {
                 uiInputBuilder.addOpenDialogSelectableButton("AUTHENTICATE", new Icon("fas fa-sign-in-alt"), 250,
-                    (entityContext, params) -> {
+                        (entityContext, params) -> {
 
-                        String user = params.getString("user");
-                        String password = params.getString("password");
-                        OnvifCameraEntity entity = entityContext.getEntityRequire(getEntityID());
-                        OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
-                        onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), user, password);
-                        try {
-                            CommonUtils.ping(entity.getIp(), entity.getRestPort());
-                            entity.setUser(user);
-                            entity.setPassword(password);
+                            String user = params.getString("user");
+                            String password = params.getString("password");
+                            OnvifCameraEntity entity = entityContext.getEntityRequire(getEntityID());
+                            OnvifDeviceState onvifDeviceState = new OnvifDeviceState(getEntityID());
+                            onvifDeviceState.updateParameters(entity.getIp(), entity.getOnvifPort(), user, password);
+                            try {
+                                CommonUtils.ping(entity.getIp(), entity.getRestPort());
+                                entity.setUser(user);
+                                entity.setPassword(password);
 
-                            entity.setInfo(onvifDeviceState.getInitialDevices());
-                            entityContext.save(entity.setStart(true));
-                            entityContext.ui()
-                                         .sendSuccessMessage("Onvif camera: " + this + " authenticated successfully");
-                        } catch (Exception ex) {
-                            entityContext.ui().sendWarningMessage(
-                                "Onvif camera: " + this + " fault response: " + ex.getMessage());
-                        }
-                        return null;
-                    }).editDialog(dialogBuilder -> {
+                                entity.setInfo(onvifDeviceState.getInitialDevices());
+                                entityContext.save(entity.setStart(true));
+                                entityContext.ui()
+                                        .sendSuccessMessage("Onvif camera: " + this + " authenticated successfully");
+                            } catch (Exception ex) {
+                                entityContext.ui().sendWarningMessage(
+                                        "Onvif camera: " + this + " fault response: " + ex.getMessage());
+                            }
+                            return null;
+                        }).editDialog(dialogBuilder -> {
                     dialogBuilder.setTitle("AUTHENTICATE", new Icon("fas fa-sign-in-alt"));
                     dialogBuilder.addFlex("main", flex -> {
                         flex.addTextInput("user", getUser(), true);
@@ -332,7 +339,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
 
     @Override
     public LinkedHashMap<Long, Boolean> getAvailableDaysPlaybacks(EntityContext entityContext, String profile, Date from, Date to)
-        throws Exception {
+            throws Exception {
         return getService().getVideoPlaybackStorage().getAvailableDaysPlaybacks(entityContext, profile, from, to);
     }
 
@@ -343,7 +350,7 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
 
     @Override
     public DownloadFile downloadPlaybackFile(EntityContext entityContext, String profile, String fileId, Path path)
-        throws Exception {
+            throws Exception {
         return getService().getVideoPlaybackStorage().downloadPlaybackFile(entityContext, profile, fileId, path);
     }
 
@@ -384,9 +391,9 @@ public class OnvifCameraEntity extends BaseVideoEntity<OnvifCameraEntity, OnvifC
     @Override
     public long getVideoParametersHashCode() {
         return super.getVideoParametersHashCode() +
-            getJsonDataHashCode("cameraType", "ip", "onvifPort", "restPort",
-                "onvifMediaProfile", "user", "pwd", "alarmInputUrl", "nvrChannel", "snapshotUrl",
-                "customMotionAlarmUrl", "customAudioAlarmUrl", "mjpegUrl", "ffmpegInput",
-                "ffmpegInputOptions");
+                getJsonDataHashCode("cameraType", "ip", "onvifPort", "restPort",
+                        "onvifMediaProfile", "user", "pwd", "alarmInputUrl", "nvrChannel", "snapshotUrl",
+                        "customMotionAlarmUrl", "customAudioAlarmUrl", "mjpegUrl", "ffmpegInput",
+                        "ffmpegInputOptions");
     }
 }

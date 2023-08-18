@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 public class SystemClearCacheButtonSetting
-    implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
+        implements CoreSettingPlugin<JSONObject>, SettingPluginButton {
 
     @Override
     public @NotNull GroupKey getGroupKey() {

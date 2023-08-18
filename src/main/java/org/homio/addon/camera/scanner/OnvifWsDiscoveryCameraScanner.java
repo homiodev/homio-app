@@ -4,6 +4,7 @@ import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 import lombok.extern.log4j.Log4j2;
 import org.homio.addon.camera.entity.OnvifCameraEntity;
 import org.homio.addon.camera.onvif.OnvifDiscovery;
@@ -29,25 +30,25 @@ public class OnvifWsDiscoveryCameraScanner implements VideoStreamScanner {
         BaseItemsDiscovery.DeviceScannerResult result = new BaseItemsDiscovery.DeviceScannerResult();
         try {
             Map<String, OnvifCameraEntity> existsCamera = entityContext.findAll(OnvifCameraEntity.class)
-                                                                       .stream().collect(Collectors.toMap(OnvifCameraEntity::getIp, Function.identity()));
+                    .stream().collect(Collectors.toMap(OnvifCameraEntity::getIp, Function.identity()));
 
             onvifDiscovery.discoverCameras((brand, ipAddress, onvifPort) -> {
                 if (!existsCamera.containsKey(ipAddress)) {
                     result.getNewCount().incrementAndGet();
                     handleDevice(headerConfirmButtonKey,
-                        "onvif-" + ipAddress,
-                        brand + "/" + ipAddress, entityContext,
-                        messages -> {
-                            messages.add(Lang.getServerMessage("VIDEO_STREAM.PORT", String.valueOf(onvifPort)));
-                            messages.add(Lang.getServerMessage("VIDEO_STREAM.BRAND", brand.getName()));
-                        },
-                        () -> {
-                            log.info("Confirm save onvif camera with ip address: <{}>", ipAddress);
-                            entityContext.save(new OnvifCameraEntity()
-                                .setIp(ipAddress)
-                                .setOnvifPort(onvifPort)
-                                .setCameraType(brand.getID()));
-                        });
+                            "onvif-" + ipAddress,
+                            brand + "/" + ipAddress, entityContext,
+                            messages -> {
+                                messages.add(Lang.getServerMessage("VIDEO_STREAM.PORT", String.valueOf(onvifPort)));
+                                messages.add(Lang.getServerMessage("VIDEO_STREAM.BRAND", brand.getName()));
+                            },
+                            () -> {
+                                log.info("Confirm save onvif camera with ip address: <{}>", ipAddress);
+                                entityContext.save(new OnvifCameraEntity()
+                                        .setIp(ipAddress)
+                                        .setOnvifPort(onvifPort)
+                                        .setCameraType(brand.getID()));
+                            });
                 } else {
                     result.getExistedCount().incrementAndGet();
                 }

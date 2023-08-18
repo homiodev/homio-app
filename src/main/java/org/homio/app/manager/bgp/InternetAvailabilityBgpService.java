@@ -1,8 +1,10 @@
 package org.homio.app.manager.bgp;
 
 import com.pivovarit.function.ThrowingRunnable;
+
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -27,16 +29,16 @@ public class InternetAvailabilityBgpService {
         ScheduleBuilder<Boolean> builder = entityContextBGP.builder("internet-test");
         Duration interval = entityContext.setting().getEnvRequire("interval-internet-test", Duration.class, Duration.ofSeconds(10), true);
         ScheduleBuilder<Boolean> internetAccessBuilder = builder
-            .intervalWithDelay(interval)
-            .valueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
-                if (isInternetUp != isInternetWasUp) {
-                    internetUp.set(isInternetUp);
-                    entityContext.event().fireEventIfNotSame("internet-status",
-                        isInternetUp ? Status.ONLINE : Status.OFFLINE);
-                }
-                return null;
-            })
-            .tap(context -> internetThreadContext = context);
+                .intervalWithDelay(interval)
+                .valueListener("internet-hardware-event", (isInternetUp, isInternetWasUp) -> {
+                    if (isInternetUp != isInternetWasUp) {
+                        internetUp.set(isInternetUp);
+                        entityContext.event().fireEventIfNotSame("internet-status",
+                                isInternetUp ? Status.ONLINE : Status.OFFLINE);
+                    }
+                    return null;
+                })
+                .tap(context -> internetThreadContext = context);
 
         internetAccessBuilder.execute(context -> CommonUtils.ping("google.com", 80) != null);
     }

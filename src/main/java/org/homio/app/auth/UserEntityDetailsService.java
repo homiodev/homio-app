@@ -1,6 +1,7 @@
 package org.homio.app.auth;
 
 import java.util.Set;
+
 import lombok.RequiredArgsConstructor;
 import org.homio.app.model.entity.user.UserBaseEntity;
 import org.homio.app.repository.device.AllDeviceRepository;
@@ -24,10 +25,10 @@ public class UserEntityDetailsService implements UserDetailsService {
         }
         Set<String> roles = user.getRoles();
         return User
-            .withUsername(user.getEntityID() + "~~~" + name)
-            .password(user.getPassword().asString())
-            .authorities(roles.toArray(new String[0]))
-            .build();
+                .withUsername(user.getEntityID() + "~~~" + name)
+                .password(user.getPassword().asString())
+                .authorities(roles.toArray(new String[0]))
+                .build();
     }
 
     public static String getEmail(Authentication auth) {

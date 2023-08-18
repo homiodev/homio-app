@@ -4,9 +4,11 @@ import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
+
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.extern.log4j.Log4j2;
 import org.homio.api.EntityContext;
 import org.homio.api.entity.storage.BaseFileSystemEntity;
@@ -27,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
 @Log4j2
 @UISidebarChildren(icon = "", color = "", allowCreateItem = false)
 public class LocalBoardEntity extends MicroControllerBaseEntity
-    implements BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
+        implements BaseFileSystemEntity<LocalBoardEntity, LocalFileSystemProvider> {
 
     @Override
     public String getDefaultName() {

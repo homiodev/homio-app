@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -67,15 +68,15 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     @Override
     public void onContextCreated(EntityContextImpl entityContext) {
         this.entityContext.event().addEntityRemovedListener(BaseFileSystemEntity.class, "fs-remove",
-            e -> findAllFileSystems(this.entityContext));
+                e -> findAllFileSystems(this.entityContext));
         this.entityContext.event().addEntityCreateListener(BaseFileSystemEntity.class, "fs-create",
-            e -> findAllFileSystems(this.entityContext));
+                e -> findAllFileSystems(this.entityContext));
         entityContext.setting().listenValue(ConsoleFMClearCacheButtonSetting.class, "fs-cache",
-            jsonObject -> {
-                for (BaseFileSystemEntity fileSystem : fileSystems) {
-                    fileSystem.getFileSystem(entityContext).clearCache();
-                }
-            });
+                jsonObject -> {
+                    for (BaseFileSystemEntity fileSystem : fileSystems) {
+                        fileSystem.getFileSystem(entityContext).clearCache();
+                    }
+                });
 
         LocalBoardEntity LocalBoardEntity = this.entityContext.getEntityRequire(LocalBoardEntity.class, PRIMARY_DEVICE);
         localFileSystem = LocalBoardEntity.getFileSystem(this.entityContext);
@@ -128,7 +129,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     @PostMapping("/download")
     @PreAuthorize(FILE_MANAGER_RESOURCE_AUTHORIZE)
     public ResponseEntity<InputStreamResource> download(@RequestBody DownloadRequest request)
-        throws Exception {
+            throws Exception {
         FileSystemProvider fileSystem = getFileSystem(request.sourceFs);
         if (request.sourceFileIds.size() == 1) {
             TreeNode treeNode = fileSystem.toTreeNode(request.sourceFileIds.iterator().next());
@@ -146,7 +147,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
         } else {
             Path zipFile = archiveSource(request.sourceFs, "zip", request.sourceFileIds, "downloadContent", null, null);
             return CommonUtils.inputStreamToResource(
-                Files.newInputStream(zipFile), new MediaType("application", "zip"), null);
+                    Files.newInputStream(zipFile), new MediaType("application", "zip"), null);
         }
     }
 
@@ -216,10 +217,10 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
     @PostMapping("/upload")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public TreeNode upload(
-        @RequestParam("sourceFs") String sourceFs,
-        @RequestParam("sourceFileId") String sourceFileId,
-        @RequestParam("replace") boolean replace,
-        @RequestParam("data") MultipartFile[] files) {
+            @RequestParam("sourceFs") String sourceFs,
+            @RequestParam("sourceFileId") String sourceFileId,
+            @RequestParam("replace") boolean replace,
+            @RequestParam("data") MultipartFile[] files) {
         FileSystemProvider fileSystem = getFileSystem(sourceFs);
         Set<TreeNode> treeNodes = Stream.of(files).map(TreeNode::of).collect(Collectors.toSet());
         return fileSystem.copy(treeNodes, sourceFileId, FileSystemProvider.UploadOption.Replace);
@@ -289,7 +290,7 @@ public class FileSystemController implements ContextCreated, ContextRefreshed {
             List<Path> result = new ArrayList<>();
             localFileSystem.copyEntries(entries, tmpArchiveAssemblerPath, new CopyOption[]{REPLACE_EXISTING}, result);
             List<Path> filesToArchive =
-                Arrays.stream(Objects.requireNonNull(tmpArchiveAssemblerPath.toFile().listFiles())).map(File::toPath).collect(Collectors.toList());
+                    Arrays.stream(Objects.requireNonNull(tmpArchiveAssemblerPath.toFile().listFiles())).map(File::toPath).collect(Collectors.toList());
 
             ArchiveFormat archiveFormat = ArchiveFormat.getHandlerByExtension(format);
             ArchiveUtil.zip(filesToArchive, targetPath, archiveFormat, level, password, null);

@@ -11,8 +11,8 @@ public class BluetoothBundleService extends BaseBluetoothCharacteristicService {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public BluetoothBundleService(
-        MachineHardwareRepository machineHardwareRepository,
-        NetworkHardwareRepository networkHardwareRepository) {
+            MachineHardwareRepository machineHardwareRepository,
+            NetworkHardwareRepository networkHardwareRepository) {
         super(machineHardwareRepository, networkHardwareRepository);
         init();
     }

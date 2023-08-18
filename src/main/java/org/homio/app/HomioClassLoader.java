@@ -7,6 +7,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import lombok.RequiredArgsConstructor;
 import org.homio.app.extloader.AddonClassLoader;
 import org.jetbrains.annotations.Nullable;
@@ -73,15 +74,15 @@ public class HomioClassLoader extends ClassLoader {
     }
 
     public static ClassPathScanningCandidateComponentProvider getResourceScanner(
-        boolean includeInterfaces, @Nullable ClassLoader classLoader) {
+            boolean includeInterfaces, @Nullable ClassLoader classLoader) {
         ClassPathScanningCandidateComponentProvider provider =
-            !includeInterfaces ? new ClassPathScanningCandidateComponentProvider(false) :
-                new ClassPathScanningCandidateComponentProvider(false) {
-                    @Override
-                    protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
-                        return true;
-                    }
-                };
+                !includeInterfaces ? new ClassPathScanningCandidateComponentProvider(false) :
+                        new ClassPathScanningCandidateComponentProvider(false) {
+                            @Override
+                            protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
+                                return true;
+                            }
+                        };
         if (classLoader != null) {
             provider.setResourceLoader(new PathMatchingResourcePatternResolver(classLoader));
         }

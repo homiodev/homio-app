@@ -11,6 +11,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import jakarta.validation.Valid;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -113,11 +115,11 @@ public class UtilsController {
     private final CodeParser codeParser;
 
     private static final LoadingCache<String, GitHubReadme> readmeCache =
-        CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
-            public @NotNull GitHubReadme load(@NotNull String url) {
-                return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
-            }
-        });
+            CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS).build(new CacheLoader<>() {
+                public @NotNull GitHubReadme load(@NotNull String url) {
+                    return new GitHubReadme(url, Curl.get(url + "/raw/master/README.md", String.class));
+                }
+            });
 
     // get all device that able to get status
     @GetMapping("/deviceWithStatus")
@@ -125,21 +127,21 @@ public class UtilsController {
         List<BaseEntity> entities = new ArrayList<>(entityContext.findAll(DeviceBaseEntity.class));
         for (Z2MLocalCoordinatorEntity coordinator : entityContext.findAll(Z2MLocalCoordinatorEntity.class)) {
             entities.addAll(coordinator.getService().getDeviceHandlers().values().stream()
-                                       .map(Z2MDeviceService::getDeviceEntity).toList());
+                    .map(Z2MDeviceService::getDeviceEntity).toList());
         }
         entities.removeIf(e -> !(e instanceof HasStatusAndMsg) || ((HasStatusAndMsg) e).getStatus() == null);
         Map<String, List<BaseEntity>> groups =
-            entities.stream().collect(Collectors.groupingBy(obj -> {
+                entities.stream().collect(Collectors.groupingBy(obj -> {
 
-                Class<?> superClass = (Class<?>) MergedAnnotations
-                    .from(obj.getClass(), SearchStrategy.SUPERCLASS)
-                    .get(UISidebarMenu.class, MergedAnnotation::isDirectlyPresent)
-                    .getSource();
-                if (superClass != null && !DeviceBaseEntity.class.getSimpleName().equals(superClass.getSimpleName())) {
-                    return superClass.getSimpleName();
-                }
-                return obj.getClass().getSimpleName();
-            }));
+                    Class<?> superClass = (Class<?>) MergedAnnotations
+                            .from(obj.getClass(), SearchStrategy.SUPERCLASS)
+                            .get(UISidebarMenu.class, MergedAnnotation::isDirectlyPresent)
+                            .getSource();
+                    if (superClass != null && !DeviceBaseEntity.class.getSimpleName().equals(superClass.getSimpleName())) {
+                        return superClass.getSimpleName();
+                    }
+                    return obj.getClass().getSimpleName();
+                }));
 
         List<OptionModel> models = new ArrayList<>();
         for (Entry<String, List<BaseEntity>> entry : groups.entrySet()) {
@@ -148,7 +150,7 @@ public class UtilsController {
             BiConsumer<BaseEntity, OptionModel> configurator = null;
             if (!entry.getKey().equals(ZigBeeDeviceBaseEntity.class.getSimpleName())) {
                 configurator = (entity, optionModel) -> optionModel
-                    .setTitle(format("${SELECTION.%s}: %s", entity.getClass().getSimpleName(), entity.getTitle()));
+                        .setTitle(format("${SELECTION.%s}: %s", entity.getClass().getSimpleName(), entity.getTitle()));
             }
             parent.setChildren(OptionModel.entityList(entry.getValue(), configurator));
         }
@@ -190,8 +192,8 @@ public class UtilsController {
                 long min = minMax.getLeft(), max = minMax.getRight();
                 long delta = (max - min) / request.splitCount;
                 List<Date> dates = IntStream.range(0, request.splitCount)
-                                            .mapToObj(value -> new Date(min + delta * value))
-                                            .collect(Collectors.toList());
+                        .mapToObj(value -> new Date(min + delta * value))
+                        .collect(Collectors.toList());
                 List<List<Float>> values = convertValuesToFloat(dates, rawValues);
 
                 chartData.setTimestamp(dates.stream().map(Date::getTime).collect(Collectors.toList()));
@@ -209,7 +211,7 @@ public class UtilsController {
         DataSourceContext context = DataSourceUtil.getSource(entityContext, request.dataSource);
         val historyRequest = new GetStatusValueRequest(entityContext, request.dynamicParameters);
         return ((HasGetStatusValue) context.getSource()).getSourceHistoryItems(historyRequest,
-            request.getFrom(), request.getCount());
+                request.getFrom(), request.getCount());
     }
 
     @GetMapping("/frame/{entityID}")
@@ -229,44 +231,44 @@ public class UtilsController {
 
     @PostMapping("/getCompletions")
     public Set<Completion> getCompletions(@RequestBody CompletionRequest completionRequest)
-        throws NoSuchMethodException {
+            throws NoSuchMethodException {
         ParserContext context = ParserContext.noneContext();
         return codeParser.addCompetitionFromManagerOrClass(
-            CodeParser.removeAllComments(completionRequest.getLine()),
-            new Stack<>(),
-            context,
-            completionRequest.getAllScript());
+                CodeParser.removeAllComments(completionRequest.getLine()),
+                new Stack<>(),
+                context,
+                completionRequest.getAllScript());
     }
 
     @GetMapping(value = "/download/tmp/{fileName:.+}", produces = APPLICATION_OCTET_STREAM)
     public ResponseEntity<StreamingResponseBody> downloadFile(
-        @PathVariable("FILE_NAME") String fileName) {
+            @PathVariable("FILE_NAME") String fileName) {
         Path outputPath = CommonUtils.getTmpPath().resolve(fileName);
         if (!Files.exists(outputPath)) {
             throw new NotFoundException("Unable to find file: " + fileName);
         }
         HttpHeaders headers = new HttpHeaders();
         headers.add(
-            HttpHeaders.CONTENT_DISPOSITION,
-            format("attachment; filename=\"%s\"", outputPath.getFileName()));
+                HttpHeaders.CONTENT_DISPOSITION,
+                format("attachment; filename=\"%s\"", outputPath.getFileName()));
         headers.add(HttpHeaders.CONTENT_TYPE, APPLICATION_OCTET_STREAM);
 
         return new ResponseEntity<>(
-            outputStream -> {
-                try (FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ)) {
-                    long size = inChannel.size();
-                    WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
-                    inChannel.transferTo(0, size, writableByteChannel);
-                }
-            },
-            headers,
-            HttpStatus.OK);
+                outputStream -> {
+                    try (FileChannel inChannel = FileChannel.open(outputPath, StandardOpenOption.READ)) {
+                        long size = inChannel.size();
+                        WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+                        inChannel.transferTo(0, size, writableByteChannel);
+                    }
+                },
+                headers,
+                HttpStatus.OK);
     }
 
     @PostMapping("/code/run")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public RunScriptResponse runScriptOnce(@RequestBody RunScriptRequest request)
-        throws IOException {
+            throws IOException {
         RunScriptResponse runScriptResponse = new RunScriptResponse();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintStream logOutputStream = new PrintStream(outputStream);
@@ -277,11 +279,11 @@ public class UtilsController {
 
         try {
             runScriptResponse.result =
-                scriptService.executeJavaScriptOnce(
-                    scriptEntity,
-                    logOutputStream,
-                    false,
-                    State.of(request.contextParameters)).stringValue();
+                    scriptService.executeJavaScriptOnce(
+                            scriptEntity,
+                            logOutputStream,
+                            false,
+                            State.of(request.contextParameters)).stringValue();
         } catch (Exception ex) {
             runScriptResponse.error = ExceptionUtils.getStackTrace(ex);
         }
@@ -291,7 +293,7 @@ public class UtilsController {
             Path tempFile = CommonUtils.getTmpPath().resolve(name);
             Files.copy(tempFile, outputStream);
             runScriptResponse.logUrl =
-                "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
+                    "rest/download/tmp/" + CommonUtils.getTmpPath().relativize(tempFile);
         } else {
             runScriptResponse.log = outputStream.toString(StandardCharsets.UTF_8);
         }
@@ -310,7 +312,7 @@ public class UtilsController {
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void acceptDialog(@PathVariable("entityID") String entityID, @RequestBody DialogRequest dialogRequest) {
         entityContext.ui().handleDialog(entityID, EntityContextUI.DialogResponseType.Accepted, dialogRequest.pressedButton,
-            OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
+                OBJECT_MAPPER.readValue(dialogRequest.params, ObjectNode.class));
     }
 
     @DeleteMapping("/header/dialog/{entityID}")

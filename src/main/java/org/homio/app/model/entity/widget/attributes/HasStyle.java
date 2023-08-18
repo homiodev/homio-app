@@ -1,6 +1,7 @@
 package org.homio.app.model.entity.widget.attributes;
 
 import java.util.List;
+
 import org.homio.api.entity.HasJsonData;
 import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;

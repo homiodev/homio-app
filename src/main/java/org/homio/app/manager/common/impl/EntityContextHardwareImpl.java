@@ -1,6 +1,7 @@
 package org.homio.app.manager.common.impl;
 
 import java.util.ArrayList;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -15,7 +16,8 @@ import org.jetbrains.annotations.Nullable;
 @RequiredArgsConstructor
 public class EntityContextHardwareImpl implements EntityContextHardware {
 
-    @Getter private final EntityContextImpl entityContext;
+    @Getter
+    private final EntityContextImpl entityContext;
     private final MachineHardwareRepository hardwareRepository;
 
     @Override
@@ -30,7 +32,7 @@ public class EntityContextHardwareImpl implements EntityContextHardware {
 
     @Override
     public @NotNull ArrayList<String> executeNoErrorThrowList(@NotNull String command, int maxSecondsTimeout,
-        @Nullable ProgressBar progressBar) {
+                                                              @Nullable ProgressBar progressBar) {
         return hardwareRepository.executeNoErrorThrowList(command, maxSecondsTimeout, progressBar);
     }
 

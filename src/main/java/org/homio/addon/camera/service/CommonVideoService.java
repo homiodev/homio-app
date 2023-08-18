@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.StringUtils.defaultString;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
 import lombok.RequiredArgsConstructor;
 import org.homio.addon.camera.CameraEntrypoint;
 import org.homio.addon.camera.ConfigurationException;
@@ -72,9 +73,9 @@ public class CommonVideoService extends BaseVideoService<CommonVideoStreamEntity
     @Override
     protected void updateNotificationBlock() {
         CameraEntrypoint.updateCamera(entityContext, getEntity(),
-            null,
-            new Icon("fas fa-users-viewfinder", "#669618"),
-            null);
+                null,
+                new Icon("fas fa-users-viewfinder", "#669618"),
+                null);
     }
 
     @Override

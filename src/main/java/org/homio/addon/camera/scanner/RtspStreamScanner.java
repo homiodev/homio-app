@@ -26,6 +26,7 @@ import io.netty.handler.codec.rtsp.RtspVersions;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
+
 import java.net.URI;
 import java.time.Duration;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -99,16 +101,16 @@ public class RtspStreamScanner implements VideoStreamScanner {
                 result.getNewCount().incrementAndGet();
                 String name = Lang.getServerMessage("NEW_DEVICE.RTSP_STREAM") + sdpMessage.getSessionName();
                 handleDevice(headerConfirmButtonKey, "rtsp-" + uriStr.hashCode(), name, entityContext,
-                    messages -> {
-                        messages.add(Lang.getServerMessage("NEW_DEVICE.NAME", sdpMessage.getSessionName()));
-                        messages.add(Lang.getServerMessage("NEW_DEVICE.URL", uriStr));
-                    },
-                    () -> {
-                        log.info("Confirm save rtsp stream entity: <{}>", sdpMessage.getSessionName());
-                        CommonVideoStreamEntity entity = new CommonVideoStreamEntity();
-                        entity.setIeeeAddress(uriStr);
-                        entityContext.save(entity);
-                    });
+                        messages -> {
+                            messages.add(Lang.getServerMessage("NEW_DEVICE.NAME", sdpMessage.getSessionName()));
+                            messages.add(Lang.getServerMessage("NEW_DEVICE.URL", uriStr));
+                        },
+                        () -> {
+                            log.info("Confirm save rtsp stream entity: <{}>", sdpMessage.getSessionName());
+                            CommonVideoStreamEntity entity = new CommonVideoStreamEntity();
+                            entity.setIeeeAddress(uriStr);
+                            entityContext.save(entity);
+                        });
             } else {
                 result.getExistedCount().incrementAndGet();
             }
@@ -124,7 +126,7 @@ public class RtspStreamScanner implements VideoStreamScanner {
 
     public synchronized void scan(List<CommonVideoStreamEntity> rtspStreamEntities) throws InterruptedException {
         this.existsRtspStreamEntity = rtspStreamEntities.stream()
-                                                        .collect(Collectors.toMap(CommonVideoStreamEntity::getIeeeAddress, Function.identity()));
+                .collect(Collectors.toMap(CommonVideoStreamEntity::getIeeeAddress, Function.identity()));
         this.rtspAliveHandler = PING_HANDLER;
 
         NioEventLoopGroup mainEventLoopGroup = reCreateBootstrap();
@@ -146,11 +148,11 @@ public class RtspStreamScanner implements VideoStreamScanner {
     @SneakyThrows
     @Override
     public synchronized BaseItemsDiscovery.DeviceScannerResult scan(EntityContext entityContext, ProgressBar progressBar,
-        String headerConfirmButtonKey) {
+                                                                    String headerConfirmButtonKey) {
         this.headerConfirmButtonKey = headerConfirmButtonKey;
         this.result = new BaseItemsDiscovery.DeviceScannerResult();
         this.existsRtspStreamEntity = entityContext.findAll(CommonVideoStreamEntity.class)
-                                                   .stream().collect(Collectors.toMap(CommonVideoStreamEntity::getIeeeAddress, Function.identity()));
+                .stream().collect(Collectors.toMap(CommonVideoStreamEntity::getIeeeAddress, Function.identity()));
         this.rtspAliveHandler = DISCOVERY_HANDLER;
 
         NioEventLoopGroup mainEventLoopGroup = reCreateBootstrap();
@@ -164,13 +166,13 @@ public class RtspStreamScanner implements VideoStreamScanner {
         Map<String, Callable<Integer>> tasks = new HashMap<>();
         for (String ipRange : ipRangeList) {
             tasks.putAll(
-                networkHardwareRepository.buildPingIpAddressTasks(ipRange, log::info, ports, pingTimeout, ipAliveHandler(urls)));
+                    networkHardwareRepository.buildPingIpAddressTasks(ipRange, log::info, ports, pingTimeout, ipAliveHandler(urls)));
         }
 
         List<Integer> availableRtspAddresses = entityContext.bgp().runInBatchAndGet("scan-rtsp-batch-result",
-            Duration.ofMillis((long) pingTimeout * tasks.size()), THREAD_COUNT, tasks,
-            completedTaskCount -> progressBar.progress(100 / (float) tasks.size() * completedTaskCount,
-                "Rtsp stream done " + completedTaskCount + "/" + tasks.size() + " tasks"));
+                Duration.ofMillis((long) pingTimeout * tasks.size()), THREAD_COUNT, tasks,
+                completedTaskCount -> progressBar.progress(100 / (float) tasks.size() * completedTaskCount,
+                        "Rtsp stream done " + completedTaskCount + "/" + tasks.size() + " tasks"));
 
         if (bootstrap != null) {
             // TODO: mainEventLoopGroup.awaitTermination(10, TimeUnit.SECONDS);
@@ -202,8 +204,8 @@ public class RtspStreamScanner implements VideoStreamScanner {
         NioEventLoopGroup mainEventLoopGroup = new NioEventLoopGroup();
 
         this.bootstrap = new Bootstrap()
-            .group(mainEventLoopGroup)
-            .channel(NioSocketChannel.class);
+                .group(mainEventLoopGroup)
+                .channel(NioSocketChannel.class);
         this.bootstrap.option(ChannelOption.SO_RCVBUF, 131072);
         this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
         this.bootstrap.handler(new ClientChannelInitializer());
@@ -220,7 +222,7 @@ public class RtspStreamScanner implements VideoStreamScanner {
         public void channelActive(ChannelHandlerContext ctx) {
             int requestCseq = cseq++;
             DefaultFullHttpRequest request =
-                new DefaultFullHttpRequest(RtspVersions.RTSP_1_0, RtspMethods.DESCRIBE, uri.toString());
+                    new DefaultFullHttpRequest(RtspVersions.RTSP_1_0, RtspMethods.DESCRIBE, uri.toString());
             request.headers().add(RtspHeaderNames.CSEQ, requestCseq);
             ctx.writeAndFlush(request);
         }

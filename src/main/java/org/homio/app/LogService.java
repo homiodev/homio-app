@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import com.pivovarit.function.ThrowingConsumer;
 import com.sshtools.common.logger.DefaultLoggerContext;
 import com.sshtools.common.logger.Log;
+
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -25,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -61,19 +63,19 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class LogService
-    implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
+        implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, ContextCreated {
 
     private static final org.apache.logging.log4j.Logger maverickLogger = LogManager.getLogger("com.ssh.maverick");
 
     private static final GlobalAppender globalAppender = new GlobalAppender();
     private static final Set<String> excludeDebugPackages =
-        Set.of(
-            "org.springframework",
-            "com.mongodb",
-            "de.bwaldvogel",
-            "org.mongodb",
-            "com.zaxxer",
-            "org.hibernate");
+            Set.of(
+                    "org.springframework",
+                    "com.mongodb",
+                    "de.bwaldvogel",
+                    "org.mongodb",
+                    "com.zaxxer",
+                    "org.hibernate");
 
     static {
         Log.setDefaultContext(new DefaultLoggerContext() {
@@ -108,7 +110,7 @@ public class LogService
         DefinedAppenderConsumer definedAppender = globalAppender.definedAppender.get(tab);
         if (definedAppender != null) {
             return FileUtils.readLines(
-                new File(definedAppender.fileName), Charset.defaultCharset());
+                    new File(definedAppender.fileName), Charset.defaultCharset());
         }
         return null;
     }
@@ -126,8 +128,8 @@ public class LogService
 
     public @Nullable Path getEntityLogsFile(BaseEntity baseEntity) {
         return Optional.ofNullable(globalAppender.logConsumers.get(baseEntity.getEntityID()))
-                       .map(c -> c.path)
-                       .orElse(null);
+                .map(c -> c.path)
+                .orElse(null);
     }
 
     @SneakyThrows
@@ -140,7 +142,7 @@ public class LogService
                 Appender appender = configuration.getAppenders().get(appenderName);
                 if (appender instanceof RollingFileAppender) {
                     var defineAppender = new DefinedAppenderConsumer(fetchAppenderPrefixSet(configuration, appenderName),
-                        ((RollingFileAppender) appender).getFileName());
+                            ((RollingFileAppender) appender).getFileName());
                     globalAppender.definedAppender.put(appenderName, defineAppender);
                 }
             }
@@ -245,12 +247,12 @@ public class LogService
 
     private static String formatLogMessage(LogEvent event, String message) {
         return String.format(
-            "%s %-5s [%-25s] [%-25s] - %s",
-            CommonUtils.DATE_TIME_FORMAT.format(new Date(event.getTimeMillis())),
-            event.getLevel(),
-            maxLength(event.getThreadName()),
-            maxLength(event.getLoggerName()),
-            message);
+                "%s %-5s [%-25s] [%-25s] - %s",
+                CommonUtils.DATE_TIME_FORMAT.format(new Date(event.getTimeMillis())),
+                event.getLevel(),
+                maxLength(event.getThreadName()),
+                maxLength(event.getLoggerName()),
+                message);
     }
 
     private static String maxLength(String text) {
@@ -305,11 +307,11 @@ public class LogService
         // Scan LogConsumers and send to ui if match
         private void sendLogs(EntityContextImpl entityContext, LogEvent event) {
             if (allowDebugLevel && event.getLevel().intLevel() <= Level.DEBUG.intLevel()
-                || !allowDebugLevel && event.getLevel().intLevel() <= Level.INFO.intLevel()) {
+                    || !allowDebugLevel && event.getLevel().intLevel() <= Level.INFO.intLevel()) {
                 for (Entry<String, DefinedAppenderConsumer> entry : definedAppender.entrySet()) {
                     if (entry.getValue().accept(event.getLoggerName())) {
                         sendLogEvent(event, message ->
-                            entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message));
+                                entityContext.ui().sendDynamicUpdate("appender-log-" + entry.getKey(), message));
                     }
                 }
             }
@@ -375,21 +377,21 @@ public class LogService
         @Override
         public void addTopic(Class<?> topicClass, String filterByField) {
             String filterValue = isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity,
-                "get" + StringUtils.capitalize(filterByField)));
+                    "get" + StringUtils.capitalize(filterByField)));
             String topic = topicClass.getName();
             logConsumer.logTopics.add(filterValue == null
-                ? logEvent -> logEvent.getLoggerName().startsWith(topic)
-                : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
+                    ? logEvent -> logEvent.getLoggerName().startsWith(topic)
+                    : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
         }
 
         @Override
         @SneakyThrows
         public void addTopic(@NotNull String topic, String filterByField) {
             String filterValue =
-                isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity, "get" + StringUtils.capitalize(filterByField)));
+                    isEmpty(filterByField) ? null : String.valueOf(MethodUtils.invokeMethod(entity, "get" + StringUtils.capitalize(filterByField)));
             logConsumer.logTopics.add(filterValue == null
-                ? logEvent -> logEvent.getLoggerName().startsWith(topic)
-                : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
+                    ? logEvent -> logEvent.getLoggerName().startsWith(topic)
+                    : logEvent -> logEvent.getLoggerName().startsWith(topic) && logEvent.getMessage().getFormattedMessage().contains(filterValue));
         }
     }
 }

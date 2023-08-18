@@ -19,7 +19,7 @@ import org.jetbrains.annotations.NotNull;
 @SuppressWarnings("unused")
 @Entity
 public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, WidgetFMSeriesEntity>
-    implements HasDynamicContextMenuActions, HasLayout, HasSourceServerUpdates {
+        implements HasDynamicContextMenuActions, HasLayout, HasSourceServerUpdates {
 
     @Override
     protected @NotNull String getWidgetPrefix() {
@@ -132,12 +132,12 @@ public class WidgetFMEntity extends WidgetBaseEntityAndSeries<WidgetFMEntity, Wi
     @Override
     public void assembleActions(UIInputBuilder uiInputBuilder) {
         uiInputBuilder.addTableLayoutButton("LAYOUT", 8, 8, getLayout(), null,
-            (entityContext, params) -> {
-                this.setLayout(params.getString("value"));
-                entityContext.save(this);
-                return ActionResponseModel.showSuccess("SUCCESS");
-            },
-            0);
+                (entityContext, params) -> {
+                    this.setLayout(params.getString("value"));
+                    entityContext.save(this);
+                    return ActionResponseModel.showSuccess("SUCCESS");
+                },
+                0);
     }
 
     @Override

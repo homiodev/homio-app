@@ -10,6 +10,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
@@ -37,6 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -115,9 +117,9 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 public class ItemController implements ContextCreated, ContextRefreshed {
 
     private static final Map<String, List<Class<? extends BaseEntity>>> typeToEntityClassNames =
-        new ConcurrentHashMap<>();
+            new ConcurrentHashMap<>();
     private final Map<String, List<ItemContextResponse>> itemsBootstrapContextMap =
-        new ConcurrentHashMap<>();
+            new ConcurrentHashMap<>();
 
     private final ObjectMapper objectMapper;
     private final EntityContextImpl entityContext;
@@ -133,7 +135,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PostConstruct
     public void postConstruct() {
         entityContext.setting().listenValue(SystemClearCacheButtonSetting.class, "ic-clear-cache",
-            typeToEntityClassNames::clear);
+                typeToEntityClassNames::clear);
     }
 
     @SneakyThrows
@@ -155,7 +157,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             String fieldName = request.metadata.getString("field");
 
             AccessibleObject field = Optional.ofNullable((AccessibleObject) FieldUtils.getField(actionHolder.getClass(), fieldName, true))
-                                             .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
+                    .orElse(InternalUtil.findMethodByName(actionHolder.getClass(), fieldName));
             if (field != null) {
                 for (UIActionButton actionButton : field.getDeclaredAnnotationsByType(UIActionButton.class)) {
                     if (actionButton.name().equals(request.metadata.get("action"))) {
@@ -175,9 +177,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         this.entityContext.setting().listenValue(SystemClearCacheButtonSetting.class, "boot-clear", itemsBootstrapContextMap::clear);
         // invalidate UIField cache scenarios
         this.entityContext.setting().listenValue(SystemShowEntityCreateTimeSetting.class,
-            "invalidate-uifield-createTime-cache", this.itemsBootstrapContextMap::clear);
+                "invalidate-uifield-createTime-cache", this.itemsBootstrapContextMap::clear);
         this.entityContext.setting().listenValue(SystemShowEntityUpdateTimeSetting.class,
-            "invalidate-uifield-updateTime-cache", this.itemsBootstrapContextMap::clear);
+                "invalidate-uifield-updateTime-cache", this.itemsBootstrapContextMap::clear);
     }
 
     @Override
@@ -197,8 +199,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @GetMapping("/{type}/context")
     @CacheControl(maxAge = 3600, policy = CachePolicy.PUBLIC)
     public List<ItemContextResponse> getItemsBootstrapContext(
-        @PathVariable("type") String type,
-        @RequestParam(value = "subType", defaultValue = "") String subType) {
+            @PathVariable("type") String type,
+            @RequestParam(value = "subType", defaultValue = "") String subType) {
         String key = type + subType;
         itemsBootstrapContextMap.computeIfAbsent(key, s -> buildItemBootstrap(type, subType));
         return itemsBootstrapContextMap.get(key);
@@ -206,9 +208,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @PostMapping("/{entityID}/{fieldName}/options")
     public Collection<OptionModel> loadSelectOptions(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("fieldName") String fieldName,
-        @RequestBody GetOptionsRequest optionsRequest) {
+            @PathVariable("entityID") String entityID,
+            @PathVariable("fieldName") String fieldName,
+            @RequestBody GetOptionsRequest optionsRequest) {
         Object classEntity = entityContext.getEntity(entityID);
         if (classEntity == null) {
             // i.e in case we load Widget
@@ -229,7 +231,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         if (isNotEmpty(optionsRequest.getFieldFetchType())) {
             String[] addonAndClassName = optionsRequest.getFieldFetchType().split(":");
             entityClass = entityContext.getAddon()
-                                       .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]).getClass();
+                    .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]).getClass();
         }
 
         List<OptionModel> options = getEntityOptions(fieldName, classEntity, entityClass);
@@ -238,7 +240,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
 
         return UIFieldSelectionUtil.loadOptions(classEntity, entityContext, fieldName, null, optionsRequest.getSelectType(), optionsRequest.getDeps(),
-            optionsRequest.getParam0());
+                optionsRequest.getParam0());
     }
 
     @GetMapping("/options")
@@ -283,20 +285,20 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @GetMapping(value = "/{entityID}/logs")
     @PreAuthorize(LOG_RESOURCE_AUTHORIZE)
     public ResponseEntity<StreamingResponseBody> getLogs(
-        @PathVariable("entityID") String entityID,
-        @RequestParam(value = "source", required = false) String sourceID) {
+            @PathVariable("entityID") String entityID,
+            @RequestParam(value = "source", required = false) String sourceID) {
         BaseEntity entity = entityContext.getEntityRequire(entityID);
         if (isNotEmpty(sourceID)) {
             if (!(entity instanceof HasEntitySourceLog)) {
-                    throw new IllegalStateException("Entity: " + entityID + " not implement HasEntitySourceLog interface");
+                throw new IllegalStateException("Entity: " + entityID + " not implement HasEntitySourceLog interface");
             }
             return new ResponseEntity<>(
-                outputStream -> {
-                    try (InputStream inputStream = ((HasEntitySourceLog) entity).getSourceLogInputStream(sourceID)) {
-                        inputStream.transferTo(outputStream);
-                    }
-                },
-                HttpStatus.OK);
+                    outputStream -> {
+                        try (InputStream inputStream = ((HasEntitySourceLog) entity).getSourceLogInputStream(sourceID)) {
+                            inputStream.transferTo(outputStream);
+                        }
+                    },
+                    HttpStatus.OK);
         }
         Path logFile = logService.getEntityLogsFile(entity);
         if (logFile == null || !Files.exists(logFile)) {
@@ -304,20 +306,20 @@ public class ItemController implements ContextCreated, ContextRefreshed {
         }
 
         return new ResponseEntity<>(
-            outputStream -> {
-                try (FileChannel inChannel = FileChannel.open(logFile, StandardOpenOption.READ)) {
-                    long size = inChannel.size();
-                    WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
-                    inChannel.transferTo(0, size, writableByteChannel);
-                }
-            },
-            HttpStatus.OK);
+                outputStream -> {
+                    try (FileChannel inChannel = FileChannel.open(logFile, StandardOpenOption.READ)) {
+                        long size = inChannel.size();
+                        WritableByteChannel writableByteChannel = Channels.newChannel(outputStream);
+                        inChannel.transferTo(0, size, writableByteChannel);
+                    }
+                },
+                HttpStatus.OK);
     }
 
     @GetMapping(value = "/{entityID}/logs/source")
     @PreAuthorize(LOG_RESOURCE_AUTHORIZE)
     public @NotNull List<OptionModel> getSourceLogs(
-        @PathVariable("entityID") String entityID) {
+            @PathVariable("entityID") String entityID) {
         BaseEntity entity = entityContext.getEntityRequire(entityID);
         if (entity instanceof HasEntitySourceLog) {
             return ((HasEntitySourceLog) entity).getLogSources();
@@ -340,16 +342,16 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PostMapping(value = "/{entityID}/context/action")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel callAction(@PathVariable("entityID") String entityID,
-        @RequestBody ActionModelRequest request) {
+                                          @RequestBody ActionModelRequest request) {
         return callActionWithBinary(entityID, request, null);
     }
 
     @PostMapping(value = "/{entityID}/context/actionWithBinary")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel callActionWithBinary(
-        @PathVariable("entityID") String entityID,
-        @RequestPart ActionModelRequest request,
-        @RequestParam("data") MultipartFile[] files) {
+            @PathVariable("entityID") String entityID,
+            @RequestPart ActionModelRequest request,
+            @RequestParam("data") MultipartFile[] files) {
         try {
             BaseEntity entity = entityContext.getEntityRequire(entityID);
             request.metadata.put("files", files);
@@ -370,7 +372,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PostMapping("/{entityID}/notification/action")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public ActionResponseModel notificationAction(@PathVariable("entityID") String entityID,
-        @RequestBody ActionModelRequest request) throws Exception {
+                                                  @RequestBody ActionModelRequest request) throws Exception {
         return entityContext.ui().handleNotificationAction(entityID, request.entityID, request.metadata);
     }
 
@@ -495,20 +497,20 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @GetMapping("/service/{esName}")
     public List<EntityService> getItemsByEntityServiceType(@PathVariable("esName") String esName) {
         return entityContext.getEntityServices(EntityService.class)
-                            .stream().filter(e -> {
-                for (Class<?> anInterface : ClassUtils.getAllInterfaces(((EntityService<?, ?>) e).getEntityServiceItemClass())) {
-                    if (anInterface.getSimpleName().equals(esName)) {
-                        return true;
+                .stream().filter(e -> {
+                    for (Class<?> anInterface : ClassUtils.getAllInterfaces(((EntityService<?, ?>) e).getEntityServiceItemClass())) {
+                        if (anInterface.getSimpleName().equals(esName)) {
+                            return true;
+                        }
                     }
-                }
-                for (Class<?> anInterface : ClassUtils.getAllSuperclasses(((EntityService<?, ?>) e).getEntityServiceItemClass())) {
-                    if (anInterface.getSimpleName().equals(esName)) {
-                        return true;
+                    for (Class<?> anInterface : ClassUtils.getAllSuperclasses(((EntityService<?, ?>) e).getEntityServiceItemClass())) {
+                        if (anInterface.getSimpleName().equals(esName)) {
+                            return true;
+                        }
                     }
-                }
-                return false;
-            })
-                            .collect(Collectors.toList());
+                    return false;
+                })
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/type/{type}")
@@ -556,7 +558,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @DeleteMapping("/{entityID}/field/{field}/item/{entityToRemove}")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public BaseEntity removeFromItem(@PathVariable("entityID") String entityID, @PathVariable("field") String field,
-        @PathVariable("entityToRemove") String entityToRemove) {
+                                     @PathVariable("entityToRemove") String entityToRemove) {
         BaseEntity entity = entityContext.getEntityRequire(entityID);
         entityContext.delete(entityToRemove);
         return entityContext.getEntity(entity);
@@ -570,7 +572,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     @PostMapping("/{entityID}/block")
     @PreAuthorize(ADMIN_ROLE_AUTHORIZE)
     public void updateBlockPosition(
-        @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPositionRequest position) {
+            @PathVariable("entityID") String entityID, @RequestBody UpdateBlockPositionRequest position) {
         BaseEntity entity = entityContext.getEntity(entityID);
         if (entity != null) {
             if (entity instanceof HasPosition<?> hasPosition) {
@@ -600,9 +602,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @GetMapping("/{entityID}/{fieldName}/{selectedEntityID}/dynamicParameterOptions")
     public Collection<OptionModel> getDynamicParameterOptions(
-        @PathVariable("entityID") String entityID,
-        @PathVariable("fieldName") String fieldName,
-        @PathVariable("selectedEntityID") String selectedEntityID) {
+            @PathVariable("entityID") String entityID,
+            @PathVariable("fieldName") String fieldName,
+            @PathVariable("selectedEntityID") String selectedEntityID) {
         Object classEntity = entityContext.getEntity(entityID);
         if (classEntity == null) {
             throw NotFoundException.entityNotFound(entityID);
@@ -625,7 +627,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     @SneakyThrows
     static ActionResponseModel executeMethodAction(Method method, Object actionHolder, EntityContext entityContext,
-        BaseEntity actionEntity, JSONObject params) {
+                                                   BaseEntity actionEntity, JSONObject params) {
         List<Object> objects = new ArrayList<>();
         for (AnnotatedType parameterType : method.getAnnotatedParameterTypes()) {
             if (actionHolder.getClass().isAssignableFrom((Class) parameterType.getType())) {
@@ -651,9 +653,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             if (subType != null && subType.contains(":")) {
                 String[] addonAndClassName = subType.split(":");
                 Object subClassObject = entityContext.getAddon()
-                                                     .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]);
+                        .getBeanOfAddonsBySimpleName(addonAndClassName[0], addonAndClassName[1]);
                 List<EntityUIMetaData> subTypeFieldMetadata = UIFieldUtils.fillEntityUIMetadataList(subClassObject, new HashSet<>(), entityContext, false,
-                    null);
+                        null);
                 // add 'cutFromJson' because custom fields must be fetched from json parameter (uses first available json                    // parameter)
                 for (EntityUIMetaData data : subTypeFieldMetadata) {
                     data.setTypeMetaData(new JSONObject(StringUtils.defaultString(data.getTypeMetaData(), "{}")).put("cutFromJson", true).toString());
@@ -697,8 +699,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             Class<BaseEntity> clazz = (Class<BaseEntity>) returnType;
             List<? extends BaseEntity> selectedOptions = entityContext.findAll(clazz);
             List<OptionModel> options = selectedOptions.stream()
-                                                       .map(t -> OptionModel.of(t.getEntityID(), t.getTitle()))
-                                                       .collect(Collectors.toList());
+                    .map(t -> OptionModel.of(t.getEntityID(), t.getTitle()))
+                    .collect(Collectors.toList());
 
             // make filtering/add messages/etc...
             Method filterOptionMethod = findFilterOptionMethod(fieldName, classEntity);
@@ -718,9 +720,9 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
     private Set<OptionModel> fetchCreateItemTypes(Class<?> entityClassByType) {
         return classFinder.getClassesWithParent(entityClassByType).stream()
-                          .map(this::getUISideBarMenuOption)
-                          .filter(Objects::nonNull)
-                          .collect(Collectors.toSet());
+                .map(this::getUISideBarMenuOption)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
     }
 
     private @Nullable OptionModel getUISideBarMenuOption(Class<?> aClass) {
@@ -731,8 +733,8 @@ public class ItemController implements ContextCreated, ContextRefreshed {
                 return null;
             }
             optionModel.json(json ->
-                json.put("icon", uiSidebarChildren.icon())
-                    .put("color", uiSidebarChildren.color()));
+                    json.put("icon", uiSidebarChildren.icon())
+                            .put("color", uiSidebarChildren.color()));
         }
         return optionModel;
     }
@@ -764,7 +766,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
     }
 
     private Collection<BaseEntity> getUsages(
-        String entityID, AbstractRepository<BaseEntity> repository) {
+            String entityID, AbstractRepository<BaseEntity> repository) {
         Object baseEntity = repository.getByEntityIDWithFetchLazy(entityID, false);
         Map<String, BaseEntity> usages = new HashMap<>();
         fillEntityRelationships(baseEntity, usages);
@@ -776,7 +778,7 @@ public class ItemController implements ContextCreated, ContextRefreshed {
             FieldUtils.getAllFieldsList(baseEntity.getClass()).forEach(field -> {
                 try {
                     Class<? extends Annotation> aClass =
-                        field.isAnnotationPresent(OneToOne.class) ? OneToOne.class : (field.isAnnotationPresent(OneToMany.class) ? OneToMany.class : null);
+                            field.isAnnotationPresent(OneToOne.class) ? OneToOne.class : (field.isAnnotationPresent(OneToMany.class) ? OneToMany.class : null);
                     if (aClass != null) {
                         fillEntityRelationships(baseEntity, usages, field);
                     }
@@ -814,12 +816,12 @@ public class ItemController implements ContextCreated, ContextRefreshed {
 
         // if Class has only one selection and only one filtered method - use it
         long count = FieldUtils.getFieldsListWithAnnotation(entity.getClass(), UIField.class).stream().map(p -> p.getAnnotation(UIField.class).type())
-                               .filter(f -> f == UIFieldType.SelectBox).count();
+                .filter(f -> f == UIFieldType.SelectBox).count();
         if (count == 1) {
             List<Method> methodsListWithAnnotation = Stream
-                .of(entity.getClass().getDeclaredMethods())
-                .filter(m -> m.isAnnotationPresent(UIFilterOptions.class))
-                .toList();
+                    .of(entity.getClass().getDeclaredMethods())
+                    .filter(m -> m.isAnnotationPresent(UIFilterOptions.class))
+                    .toList();
 
             if (methodsListWithAnnotation.size() == 1) {
                 return methodsListWithAnnotation.get(0);

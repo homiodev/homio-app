@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -110,7 +111,7 @@ public class EntityContextAddonImpl {
     // initialize all installed addons as bunch
     public void initializeAddons(Map<String, AddonContext> artifactIdContextMap) {
         List<AddonContext> loadedAddons = artifactIdContextMap.values().stream().filter(context ->
-            !context.isInternal() && !context.isInitialized() && context.isLoaded()).toList();
+                !context.isInternal() && !context.isInitialized() && context.isLoaded()).toList();
         if (loadedAddons.isEmpty()) {
             return;
         }
@@ -207,7 +208,7 @@ public class EntityContextAddonImpl {
      */
     public void onContextCreated() throws Exception {
         entityContext.ui().addNotificationBlock("addons", "Addons", new Icon("fas fa-file-zipper", "#FF4400"),
-            block -> block.setBorderColor("#FF4400"));
+                block -> block.setBorderColor("#FF4400"));
         Path addonPath = CommonUtils.getAddonPath();
         for (Path contextFile : findAddonContextFilesFromPath(addonPath)) {
             try {
@@ -219,7 +220,7 @@ public class EntityContextAddonImpl {
                 }
             } catch (Exception ex) {
                 log.error("\n#{}\nUnable to parse addon: {}\n#{}",
-                    repeat("-", 50), contextFile.getFileName(), repeat("-", 50));
+                        repeat("-", 50), contextFile.getFileName(), repeat("-", 50));
             }
         }
         // set up addons, create spring contexts,...
@@ -251,7 +252,7 @@ public class EntityContextAddonImpl {
                     HardwareUtils.copyResources(externalFiles);
 
                     entityContext.ui().updateNotificationBlock("addons",
-                        builder -> addAddonNotificationRow(context, builder, false));
+                            builder -> addAddonNotificationRow(context, builder, false));
 
                     log.info("Addon context <{}> registered successfully.", context.getPomFile().getArtifactId());
                     addonContextMap.put(context.getAddonID(), context);
@@ -260,7 +261,7 @@ public class EntityContextAddonImpl {
                 }
             } catch (Exception ex) {
                 entityContext.ui().updateNotificationBlock("addons",
-                    builder -> addAddonNotificationRow(context, builder, true));
+                        builder -> addAddonNotificationRow(context, builder, true));
                 addonContextMap.remove(context.getAddonID());
                 log.error("Unable to load addon context <{}>.", context.getPomFile().getArtifactId(), ex);
                 throw ex;
@@ -286,8 +287,8 @@ public class EntityContextAddonImpl {
 
         // creates configuration builder to find all jar files
         ConfigurationBuilder configurationBuilder = new ConfigurationBuilder()
-            .setScanners(Scanners.SubTypes.filterResultsBy(s -> true), Scanners.TypesAnnotated, Scanners.Resources)
-            .setClassLoaders(new ClassLoader[]{classLoader});
+                .setScanners(Scanners.SubTypes.filterResultsBy(s -> true), Scanners.TypesAnnotated, Scanners.Resources)
+                .setClassLoaders(new ClassLoader[]{classLoader});
 
         context.load(configurationBuilder, applicationContext.getBean(Environment.class), applicationContext, classLoader);
 
@@ -322,7 +323,8 @@ public class EntityContextAddonImpl {
             try {
                 Files.deleteIfExists(path);
                 break;
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
             Thread.sleep(500);
         }
     }
@@ -346,7 +348,7 @@ public class EntityContextAddonImpl {
         String info = addonContext.getAddonFriendlyName() + (disabledAddon ? "(Disabled)" : "");
         PackageModel packageModel = getPackageModel(key);
         List<String> versions = packageModel == null ? Collections.emptyList() :
-            GitHubProject.getReleasesSince(addonContext.getVersion(), packageModel.getVersions(), false);
+                GitHubProject.getReleasesSince(addonContext.getVersion(), packageModel.getVersions(), false);
 
         if (versions.isEmpty()) {
             builder.addInfo(key, icon, info).setRightText(addonContext.getVersion());
@@ -354,29 +356,29 @@ public class EntityContextAddonImpl {
             builder.addFlexAction(key, flex -> {
                 flex.addInfo(info).setIcon(icon);
                 flex.addSelectBox("versions", (entityContext, params) ->
-                        handleUpdateAddon(addonContext, key, entityContext, params, versions, packageModel))
-                    .setHighlightSelected(false)
-                    .setOptions(OptionModel.list(versions))
-                    .setAsButton(new Icon("fas fa-cloud-download-alt", Color.PRIMARY_COLOR), addonContext.getVersion())
-                    .setHeight(20).setPrimary(true);
+                                handleUpdateAddon(addonContext, key, entityContext, params, versions, packageModel))
+                        .setHighlightSelected(false)
+                        .setOptions(OptionModel.list(versions))
+                        .setAsButton(new Icon("fas fa-cloud-download-alt", Color.PRIMARY_COLOR), addonContext.getVersion())
+                        .setHeight(20).setPrimary(true);
             });
         }
     }
 
     @Nullable
     private ActionResponseModel handleUpdateAddon(@NotNull AddonContext addonContext, @NotNull String key,
-        @NotNull EntityContext entityContext, @NotNull JSONObject params, @NotNull List<String> versions,
-        @NotNull PackageModel packageModel) {
+                                                  @NotNull EntityContext entityContext, @NotNull JSONObject params, @NotNull List<String> versions,
+                                                  @NotNull PackageModel packageModel) {
         String newVersion = params.getString("value");
         if (versions.contains(newVersion)) {
             String question = Lang.getServerMessage("PACKAGE_UPDATE_QUESTION",
-                FlowMap.of("NAME", addonContext.getPomFile().getName(), "VERSION", newVersion));
+                    FlowMap.of("NAME", addonContext.getPomFile().getName(), "VERSION", newVersion));
             entityContext.ui().sendConfirmation("update-" + key, "DIALOG.TITLE.UPDATE_PACKAGE", () ->
-                entityContext.getBean(AddonService.class).installPackage(
-                    new SystemAddonLibraryManagerSetting(),
-                    new PackageRequest().setName(packageModel.getName())
-                                        .setVersion(newVersion)
-                                        .setUrl(packageModel.getJarUrl())), Collections.singletonList(question), null);
+                    entityContext.getBean(AddonService.class).installPackage(
+                            new SystemAddonLibraryManagerSetting(),
+                            new PackageRequest().setName(packageModel.getName())
+                                    .setVersion(newVersion)
+                                    .setUrl(packageModel.getJarUrl())), Collections.singletonList(question), null);
             return null;
         }
         return ActionResponseModel.showError("Unable to find package or version");

@@ -5,6 +5,7 @@ import static java.lang.String.format;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.homio.api.EntityContextWidget;
@@ -29,15 +30,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuilder, WidgetDisplayEntity>
-    implements DisplayWidgetBuilder,
-    HasActionOnClickBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
-    HasLineChartBehaviourBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
-    HasHorizontalLineBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
-    HasChartTimePeriodBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
-    HasMinMaxChartValueBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
-    HasChartDataSourceBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
-    HasPaddingBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
-    HasNameBuilder<WidgetDisplayEntity, DisplayWidgetBuilder> {
+        implements DisplayWidgetBuilder,
+        HasActionOnClickBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+        HasLineChartBehaviourBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+        HasHorizontalLineBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+        HasChartTimePeriodBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+        HasMinMaxChartValueBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+        HasChartDataSourceBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+        HasPaddingBuilder<WidgetDisplayEntity, DisplayWidgetBuilder>,
+        HasNameBuilder<WidgetDisplayEntity, DisplayWidgetBuilder> {
 
     @Getter
     private final List<WidgetDisplaySeriesEntity> series = new ArrayList<>();
@@ -161,10 +162,10 @@ public class DisplayBuilderImpl extends WidgetBaseBuilderImpl<DisplayWidgetBuild
 
 @RequiredArgsConstructor
 class DisplaySeriesBuilderImpl implements DisplayWidgetSeriesBuilder,
-    HasValueConverterBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder>,
-    HasValueTemplateBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder>,
-    HasIconColorThresholdBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder>,
-    HasNameBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder> {
+        HasValueConverterBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder>,
+        HasValueTemplateBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder>,
+        HasIconColorThresholdBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder>,
+        HasNameBuilder<WidgetDisplaySeriesEntity, DisplayWidgetSeriesBuilder> {
 
     private final WidgetDisplaySeriesEntity series;
 
