@@ -97,7 +97,8 @@ public class RtspStreamScanner implements VideoStreamScanner {
         public void accept(String uriStr, SdpMessage sdpMessage) {
             if (!existsRtspStreamEntity.containsKey(uriStr)) {
                 result.getNewCount().incrementAndGet();
-                handleDevice(headerConfirmButtonKey, "rtsp-" + uriStr.hashCode(), sdpMessage.getSessionName(), entityContext,
+                String name = Lang.getServerMessage("NEW_DEVICE.RTSP_STREAM") + sdpMessage.getSessionName();
+                handleDevice(headerConfirmButtonKey, "rtsp-" + uriStr.hashCode(), name, entityContext,
                     messages -> {
                         messages.add(Lang.getServerMessage("NEW_DEVICE.NAME", sdpMessage.getSessionName()));
                         messages.add(Lang.getServerMessage("NEW_DEVICE.URL", uriStr));

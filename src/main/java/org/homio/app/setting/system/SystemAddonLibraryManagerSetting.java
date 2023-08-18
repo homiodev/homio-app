@@ -63,7 +63,7 @@ public class SystemAddonLibraryManagerSetting
             filterMatchPackages(entityContext, allPackageModels);
             packageContext.setPackages(allPackageModels);
         } catch (Exception ex) {
-            packageContext.setError(ex.getMessage());
+            packageContext.setError(CommonUtils.getErrorMessage(ex));
         }
         return packageContext;
     }
@@ -133,10 +133,10 @@ public class SystemAddonLibraryManagerSetting
     @SneakyThrows
     private static Collection<PackageModel> getAddons(String repoURL) {
         log.info("Fetch addons for repo: {}", repoURL);
-        Collection<PackageModel> list = new ArrayList<>();
         try {
             GitHubProject addonsRepo = GitHubProject.of(repoURL);
             Path addonPath = CommonUtils.getTmpPath().resolve(addonsRepo.getRepo());
+            Files.createDirectories(addonPath);
             Path iconsArchivePath = addonPath.resolve("icons.7z");
             Path iconsPath = addonPath.resolve("icons");
             String iconsURL = repoURL + "/raw/master/icons.7z";
@@ -152,8 +152,8 @@ public class SystemAddonLibraryManagerSetting
                          .collect(Collectors.toList());
         } catch (Exception ex) {
             log.error("Unable to fetch addons for repo: {}", repoURL, ex);
+            throw ex;
         }
-        return list;
     }
 
     private static boolean isRequireDownloadIcons(Path iconsArchivePath, Path iconsPath, String iconsURL) {
@@ -171,7 +171,7 @@ public class SystemAddonLibraryManagerSetting
             GitHubProject addonRepo = GitHubProject.of(repository);
             List<Object> versions = (List<Object>) addonConfig.get("versions");
             if (versions != null) {
-                List<String> strVersions = versions.stream().map(v -> v.toString()).collect(Collectors.toList());
+                List<String> strVersions = versions.stream().map(Object::toString).collect(Collectors.toList());
                 String lastReleaseVersion = strVersions.get(strVersions.size() - 1);
                 // String jarFile = addonRepo.getRepo() + ".jar";
                 // Model pomModel = addonRepo.getPomModel();

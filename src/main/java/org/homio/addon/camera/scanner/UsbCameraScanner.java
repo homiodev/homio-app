@@ -42,7 +42,8 @@ public class UsbCameraScanner implements VideoStreamScanner {
         for (VideoInputDevice foundUsbVideoDevice : foundUsbVideoCameraDevices) {
             if (!existsUsbCamera.containsKey(foundUsbVideoDevice.getName())) {
                 result.getNewCount().incrementAndGet();
-                handleDevice(headerConfirmButtonKey, foundUsbVideoDevice.getName(), foundUsbVideoDevice.getName(), entityContext,
+                String name = Lang.getServerMessage("NEW_DEVICE.USB_CAMERA") + foundUsbVideoDevice.getName();
+                handleDevice(headerConfirmButtonKey, foundUsbVideoDevice.getName(), name, entityContext,
                     messages -> messages.add(Lang.getServerMessage("NEW_DEVICE.NAME", foundUsbVideoDevice.getName())),
                     () -> {
                         log.info("Confirm save usb camera: <{}>", foundUsbVideoDevice.getName());

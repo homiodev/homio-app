@@ -161,9 +161,10 @@ public class OnvifCameraHttpScanner implements VideoStreamScanner {
         result.getNewCount().incrementAndGet();
 
         CameraBrandHandlerDescription brand = OnvifDiscovery.getBrandFromLoginPage(onvifDeviceState.getIp(), entityContext);
+        String name = Lang.getServerMessage("NEW_DEVICE.ONVIF_CAMERA") + onvifDeviceState.getHOST_IP();
         handleDevice(headerConfirmButtonKey,
             "onvif-http-" + onvifDeviceState.getHOST_IP(),
-            onvifDeviceState.getHOST_IP(), entityContext,
+                name, entityContext,
             messages -> {
                 messages.add(Lang.getServerMessage("VIDEO_STREAM.ADDRESS", onvifDeviceState.getHOST_IP()));
                 if (requireAuth) {
