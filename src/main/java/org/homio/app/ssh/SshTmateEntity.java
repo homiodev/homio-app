@@ -1,13 +1,6 @@
 package org.homio.app.ssh;
 
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-
 import jakarta.persistence.Entity;
-import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -17,6 +10,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.EntityContextBGP.ThreadContext;
 import org.homio.api.EntityContextHardware;
 import org.homio.api.model.Icon;
+import org.homio.api.model.Status;
 import org.homio.api.ui.UISidebarChildren;
 import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.v1.UIInputBuilder;
@@ -25,6 +19,14 @@ import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.ssh.SshTmateEntity.SshTmateService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
 
 @Entity
 @UISidebarChildren(icon = "fas fa-satellite-dish", color = "#0088CC", allowCreateItem = false)
@@ -40,6 +42,11 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
             entity.setName("Tmate");
             entityContext.save(entity);
         }
+    }
+
+    @Override
+    public String getDescriptionImpl() {
+        return Lang.getServerMessage("TMATE_DESCRIPTION");
     }
 
     @Override
@@ -81,7 +88,6 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
     @Override
     protected void beforePersist() {
         super.beforePersist();
-        setJsonData("description", Lang.getServerMessage("TMATE_DESCRIPTION"));
     }
 
     private void addTmateInstallButton(UIInputBuilder uiInputBuilder, EntityContextHardware hardware) {
@@ -108,7 +114,8 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
 
         @Override
         protected void initialize() {
-            if (SystemUtils.IS_OS_WINDOWS) {
+            if (!SystemUtils.IS_OS_LINUX) {
+                entity.setStatus(Status.OFFLINE, "Only linux compatible");
                 return;
             }
             if (entityContext.hardware().isSoftwareInstalled("tmate")) {
@@ -179,10 +186,10 @@ public class SshTmateEntity extends SshBaseEntity<SshTmateEntity, SshTmateServic
 
             public String find(String[] lines) {
                 return Stream.of(lines)
-                             .filter(l -> l.startsWith(prefix))
-                             .map(l -> l.substring(prefix.length()))
-                             .findAny()
-                             .orElse(null);
+                        .filter(l -> l.startsWith(prefix))
+                        .map(l -> l.substring(prefix.length()))
+                        .findAny()
+                        .orElse(null);
             }
         }
     }

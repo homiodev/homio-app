@@ -1,21 +1,8 @@
 package org.homio.app.service.cloud;
 
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.apache.commons.lang3.StringUtils.defaultString;
-import static org.homio.api.EntityContextSetting.SERVER_PORT;
-import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
-import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
-import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sshtools.client.SshClient;
 import com.sshtools.client.SshClientContext;
-import java.net.ConnectException;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -24,6 +11,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.homio.api.EntityContext;
 import org.homio.api.EntityContextUI.NotificationBlockBuilder;
+import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.service.CloudProviderService;
 import org.homio.api.ui.UI.Color;
@@ -34,15 +22,24 @@ import org.homio.app.ssh.SshCloudEntity;
 import org.homio.hquery.hardware.network.NetworkHardwareRepository;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
+
+import java.net.ConnectException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.defaultString;
+import static org.homio.api.EntityContextSetting.SERVER_PORT;
+import static org.homio.api.util.CommonUtils.MACHINE_IP_ADDRESS;
+import static org.homio.api.util.JsonUtils.OBJECT_MAPPER;
+import static org.homio.app.ssh.SshGenericEntity.buildSshKeyPair;
 
 @Log4j2
 @Component
@@ -64,15 +61,15 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         SshClientContext sshClientContext = new SshClientContext();
         log.info("SSH cloud: create client context successfully");
         log.info("SSH cloud: creating ssh client: {}@{}:{}. Thread: {}", entity.getUser(), entity.getHostname(), entity.getPort(),
-            Thread.currentThread().getName());
+                Thread.currentThread().getName());
         try {
             ssh = new SshClient(
-                entity.getHostname(),
-                entity.getPort(),
-                entity.getUser() + "-" + MACHINE_IP_ADDRESS,
-                sshClientContext,
-                entity.getConnectionTimeout() * 1000L,
-                buildSshKeyPair(entity));
+                    entity.getHostname(),
+                    entity.getPort(),
+                    entity.getUser() + "-" + MACHINE_IP_ADDRESS,
+                    sshClientContext,
+                    entity.getConnectionTimeout() * 1000L,
+                    buildSshKeyPair(entity));
             log.info("SSH cloud: allow forwarding");
             ssh.getContext().getForwardingPolicy().allowForwarding();
             log.info("SSH cloud: start remote forwarding");
@@ -97,6 +94,11 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         if (ssh != null) {
             ssh.close();
         }
+    }
+
+    @Override
+    public ActionResponseModel sync() {
+        return openSyncDialog();
     }
 
     @Override
@@ -130,11 +132,11 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         NetworkHardwareRepository repository = entityContext.getBean(NetworkHardwareRepository.class);
         RestTemplate restTemplate = new RestTemplate();
         LoginBody loginBody = new LoginBody(
-            params.get("field.email").asText(),
-            params.get("field.password").asText(),
-            params.get("field.passphrase").asText(),
-            repository.getIPAddress(),
-            true);
+                params.get("field.email").asText(),
+                params.get("field.password").asText(),
+                params.get("field.passphrase").asText(),
+                repository.getIPAddress(),
+                true);
         String url = entity.getSyncUrl();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -176,33 +178,35 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
 
     private Consumer<NotificationBlockBuilder> buildNotSyncHandler() {
         return builder ->
-            builder.addInfo("sync", null, "CLOUD.NOT_SYNC").setTextColor(Color.RED)
-                   .setRightButton(new Icon("fas fa-right-to-bracket"), "Sync", null,
-                       (entityContext, params) -> {
-                           entityContext.ui().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE",
-                               (responseType, pressedButton, parameters) ->
-                                   handleSync(entityContext, parameters),
-                               dialogModel -> {
-                                   dialogModel.disableKeepOnUi();
-                                   List<ActionInputParameter> inputs = new ArrayList<>();
-                                   inputs.add(ActionInputParameter.text("field.email", entityContext.getUserRequire().getEmail()));
-                                   inputs.add(ActionInputParameter.text("field.password", ""));
-                                   inputs.add(ActionInputParameter.text("field.passphrase", ""));
-                                   dialogModel.submitButton("Login", button -> {
-                                   }).group("General", inputs);
-                               });
-                           return null;
-                       });
+                builder.addInfo("sync", null, "CLOUD.NOT_SYNC").setTextColor(Color.RED)
+                        .setRightButton(new Icon("fas fa-right-to-bracket"), "Sync", null,
+                                (entityContext, params) -> openSyncDialog());
+    }
+
+    public ActionResponseModel openSyncDialog() {
+        entityContext.ui().sendDialogRequest("cloud_sync", "CLOUD.SYNC_TITLE",
+                (responseType, pressedButton, parameters) ->
+                        handleSync(entityContext, parameters),
+                dialogModel -> {
+                    dialogModel.disableKeepOnUi();
+                    List<ActionInputParameter> inputs = new ArrayList<>();
+                    inputs.add(ActionInputParameter.text("field.email", entityContext.getUserRequire().getEmail()));
+                    inputs.add(ActionInputParameter.text("field.password", ""));
+                    inputs.add(ActionInputParameter.text("field.passphrase", ""));
+                    dialogModel.submitButton("Login", button -> {
+                    }).group("General", inputs);
+                });
+        return null;
     }
 
     private Consumer<NotificationBlockBuilder> tryConnectHandler() {
         return builder -> builder.addInfo("sync", null, "CLOUD.NOT_SYNC")
-                                 .setTextColor(Color.RED)
-                                 .setRightButton(new Icon("fas fa-rss"), "Connect", null,
-                                     (entityContext, params) -> {
-                                         entityContext.getBean(CloudService.class).start();
-                                         return null;
-                                     });
+                .setTextColor(Color.RED)
+                .setRightButton(new Icon("fas fa-rss"), "Connect", null,
+                        (entityContext, params) -> {
+                            entityContext.getBean(CloudService.class).start();
+                            return null;
+                        });
     }
 
     private String getClientError(RestClientResponseException ce) {
@@ -210,7 +214,8 @@ public class SshTunnelCloudProviderService implements CloudProviderService<SshCl
         try {
             ObjectNode error = OBJECT_MAPPER.readValue(ce.getResponseBodyAsString(), ObjectNode.class);
             errorMessage = error.path("message").asText("W.ERROR.SYNC");
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
         return defaultString(errorMessage, "W.ERROR.SYNC");
     }
 

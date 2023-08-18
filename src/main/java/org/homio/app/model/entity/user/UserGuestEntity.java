@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 @Entity
 @UISidebarChildren(icon = "fas fa-person-walking-luggage", color = "#B5B812")
-public final class UserGuestEntity extends UserBaseEntity<UserGuestEntity> {
+public final class UserGuestEntity extends UserBaseEntity {
 
     @Override
     public @NotNull UserType getUserType() {

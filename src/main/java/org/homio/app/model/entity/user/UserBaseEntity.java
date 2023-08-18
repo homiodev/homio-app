@@ -1,13 +1,7 @@
 package org.homio.app.model.entity.user;
 
-import static org.homio.api.util.Constants.ADMIN_ROLE;
-import static org.homio.api.util.Constants.GUEST_ROLE;
-import static org.homio.api.util.Constants.PRIVILEGED_USER_ROLE;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
-import java.util.HashSet;
-import java.util.Set;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,7 +10,6 @@ import org.homio.api.EntityContext;
 import org.homio.api.entity.UserEntity;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.IdentityEntity;
-import org.homio.api.exception.ProhibitedExecution;
 import org.homio.api.model.ActionResponseModel;
 import org.homio.api.model.Icon;
 import org.homio.api.model.Status;
@@ -31,8 +24,13 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import static org.homio.api.util.Constants.*;
+
 @Entity
-public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityEntity
+public abstract class UserBaseEntity extends IdentityEntity
     implements UserEntity, HasEntityLog, HasDynamicContextMenuActions {
 
     public static final String LOG_RESOURCE = "ROLE_LOG";
@@ -86,7 +84,7 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         setJsonDataSecure("pwd", value);
     }
 
-    @JsonIgnore
+    @UIField(order = 10)
     public abstract @NotNull UserType getUserType();
 
     @Override
@@ -124,7 +122,7 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
         return currentPassword.equals(password) || passwordEncoder != null && passwordEncoder.matches(password, currentPassword);
     }
 
-    public T setPassword(String password, PasswordEncoder passwordEncoder) {
+    public void setPassword(String password, PasswordEncoder passwordEncoder) {
         if (passwordEncoder != null) {
             try {
                 passwordEncoder.upgradeEncoding(password);
@@ -133,13 +131,12 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
             }
         }
         setPassword(password);
-        return (T) this;
     }
 
     @Override
     @UIFieldIgnore
     @JsonIgnore
-    public Status getStatus() {
+    public @NotNull Status getStatus() {
         return Status.ONLINE;
     }
 
@@ -200,7 +197,8 @@ public abstract class UserBaseEntity<T extends UserBaseEntity> extends IdentityE
             throw new IllegalArgumentException("USER.PASSWORD_TOO_SHORT");
         }
         PasswordEncoder passwordEncoder = entityContext.getBean(PasswordEncoder.class);
-        entityContext.save(setPassword(newPassword, passwordEncoder));
+        setPassword(newPassword, passwordEncoder);
+        entityContext.save(this);
 
         entityContext.ui().reloadWindow("USER.ALTERED_RELOAD");
         return ActionResponseModel.showSuccess("USER.ALTERED");

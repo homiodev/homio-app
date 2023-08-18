@@ -394,10 +394,7 @@ public abstract class BaseVideoEntity<T extends BaseVideoEntity, S extends BaseV
     }
 
     @Override
-    @UIField(order = 1, hideOnEmpty = true, fullWidth = true, color = "#89AA50", type = HTML, hideInEdit = true)
-    @UIFieldShowOnCondition("return !context.get('compactMode')")
-    @UIFieldColorBgRef(value = "statusColor", animate = true)
-    public @Nullable String getDescription() {
+    public @Nullable String getDescriptionImpl() {
         /*String message = getStatusMessage();
         if (message != null && message.contains("Failed to connect")) {
             return "CONNECT_ISSUE";

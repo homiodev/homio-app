@@ -1,12 +1,5 @@
 package org.homio.app.ssh;
 
-import static org.homio.api.ui.field.action.UIActionInput.Type.text;
-import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
-import static org.homio.api.util.Constants.PRIMARY_DEVICE;
-import static org.homio.app.ssh.SshGenericEntity.execDeletePrivateKey;
-import static org.homio.app.ssh.SshGenericEntity.execUploadPrivateKey;
-import static org.homio.app.ssh.SshGenericEntity.updateSSHData;
-
 import com.sshtools.common.publickey.SshPrivateKeyFile;
 import com.sshtools.common.publickey.SshPrivateKeyFileFactory;
 import jakarta.persistence.Entity;
@@ -16,6 +9,7 @@ import org.homio.api.EntityContext;
 import org.homio.api.entity.log.HasEntityLog;
 import org.homio.api.entity.types.IdentityEntity;
 import org.homio.api.model.ActionResponseModel;
+import org.homio.api.model.Icon;
 import org.homio.api.service.CloudProviderService;
 import org.homio.api.ui.UI.Color;
 import org.homio.api.ui.UISidebarChildren;
@@ -23,33 +17,39 @@ import org.homio.api.ui.field.UIField;
 import org.homio.api.ui.field.UIFieldGroup;
 import org.homio.api.ui.field.UIFieldPort;
 import org.homio.api.ui.field.UIFieldSlider;
+import org.homio.api.ui.field.action.HasDynamicContextMenuActions;
 import org.homio.api.ui.field.action.UIActionInput;
 import org.homio.api.ui.field.action.UIContextMenuAction;
+import org.homio.api.ui.field.action.v1.UIInputBuilder;
 import org.homio.api.ui.field.selection.UIFieldBeanSelection;
 import org.homio.api.util.DataSourceUtil;
 import org.homio.api.util.DataSourceUtil.DataSourceContext;
 import org.homio.app.manager.common.EntityContextImpl;
 import org.homio.app.service.cloud.CloudService;
 import org.homio.app.service.cloud.SshTunnelCloudProviderService;
-import org.homio.app.ssh.SshGenericEntity.PublicKeyAuthSign;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
+
+import static org.homio.api.ui.field.action.UIActionInput.Type.text;
+import static org.homio.api.ui.field.action.UIActionInput.Type.textarea;
+import static org.homio.api.util.Constants.PRIMARY_DEVICE;
+import static org.homio.app.ssh.SshGenericEntity.*;
 
 @Log4j2
 @Entity
 @UISidebarChildren(icon = "fas fa-cloud", color = "#644DAB")
 public class SshCloudEntity extends IdentityEntity implements
-    CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog {
+        CloudProviderService.SshCloud<SshCloudEntity>, HasEntityLog, HasDynamicContextMenuActions {
 
     public static SshCloudEntity ensureEntityExists(EntityContextImpl entityContext) {
         SshCloudEntity entity = entityContext.getEntity(SshCloudEntity.class, PRIMARY_DEVICE);
         if (entity == null) {
             entity = new SshCloudEntity()
-                .setHostname("homio.org")
-                .setProvider(DataSourceUtil.buildBeanSource(SshTunnelCloudProviderService.class))
-                .setSyncUrl("https://homio.org/server/sync")
-                .setPort(2222)
-                .setPrimary(true);
+                    .setHostname("homio.org")
+                    .setProvider(DataSourceUtil.buildBeanSource(SshTunnelCloudProviderService.class))
+                    .setSyncUrl("https://homio.org/server/sync")
+                    .setPort(2222)
+                    .setPrimary(true);
             entity.setEntityID(PRIMARY_DEVICE);
             entity.setName("Homio cloud");
             entity.setJsonData("dis_del", true);
@@ -57,6 +57,17 @@ public class SshCloudEntity extends IdentityEntity implements
             entityContext.save(entity);
         }
         return entity;
+    }
+
+    @Override
+    public String getDescriptionImpl() {
+        if(getUser().isEmpty()) {
+            return "W.ERROR.USER_REQUIRED";
+        }
+        if(getHostname().isEmpty()) {
+            return "W.ERROR.HOST_REQUIRED";
+        }
+        return super.getDescriptionImpl();
     }
 
     @UIField(order = 1, hideInEdit = true, disableEdit = true)
@@ -220,8 +231,8 @@ public class SshCloudEntity extends IdentityEntity implements
 
     @SneakyThrows
     @UIContextMenuAction(value = "UPLOAD_PRIVATE_KEY", icon = "fas fa-upload", inputs = {
-        @UIActionInput(name = "privateKey", type = textarea),
-        @UIActionInput(name = "passphrase", type = text)
+            @UIActionInput(name = "privateKey", type = textarea),
+            @UIActionInput(name = "passphrase", type = text)
     })
     public ActionResponseModel uploadPrivateKey(EntityContext entityContext, JSONObject params) {
         return execUploadPrivateKey(this, entityContext, params);
@@ -229,7 +240,7 @@ public class SshCloudEntity extends IdentityEntity implements
 
     @SneakyThrows
     @UIContextMenuAction(value = "DELETE_PRIVATE_KEY", icon = "fas fa-trash-can", inputs = {
-        @UIActionInput(name = "passphrase", type = text)
+            @UIActionInput(name = "passphrase", type = text)
     })
     public ActionResponseModel deletePrivateKey(EntityContext entityContext, JSONObject params) {
         return execDeletePrivateKey(this, entityContext, params);
@@ -264,6 +275,17 @@ public class SshCloudEntity extends IdentityEntity implements
     @Override
     public void logBuilder(EntityLogBuilder builder) {
         builder.addTopic("com.ssh.maverick");
+    }
+
+    @Override
+    public void assembleActions(UIInputBuilder uiInputBuilder) {
+        if (!isHasPrivateKey() || "Auth fail".equals(getStatusMessage())) {
+            CloudProviderService<SshCloudEntity> service = getCloudProviderService(uiInputBuilder.getEntityContext());
+            if (service != null) {
+                uiInputBuilder.addSelectableButton("sync", new Icon("fas fa-right-to-bracket", Color.GREEN),
+                        (entityContext, params) -> service.sync());
+            }
+        }
     }
 
     /*@UIContextMenuAction(value = "CLOUD_SYNC", icon = "fas fa-right-to-bracket", iconColor = Color.RED, inputs = {
